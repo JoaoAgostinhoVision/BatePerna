@@ -46,6 +46,10 @@ com motor→frescor→offline reais mas rasos.**
 - Rota-armadilha (L2). Não se aplica — Rampa é modo **#4 condicional**, não #1.
 - CMS de verdade. Fio 1 = conteúdo-no-repo (Git-as-CMS).
 - Demais fichas da cesta (5–10). Entram no *crescer*, depois do esqueleto publicado.
+- **Condição de PRÊMIO (não de segurança)** — na Rampa, céu aberto vs. nuvem/nevoeiro modula a
+  *qualidade da vista* (dado real do João, 2026-08-02). Distinta do hazard de acesso (chuva→atola).
+  Fio 1: registrada só como **fricção honesta** (texto em `avisos`); NÃO lida pelo motor. Slot p/
+  engrossar: 2º sinal (Open-Meteo tem cobertura de nuvem) que modula o payoff, não o go/no-go.
 
 **Por que a Rampa é o fio 1:** hazard **binário** (qualquer chuva → não vá) mapeia perfeito no motor
 de um-estado; é experiência real do João (já tem deep-dive); roteiro-lugar + modo #4 ⇒ **não** toca as

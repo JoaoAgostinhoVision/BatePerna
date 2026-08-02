@@ -83,10 +83,15 @@ o design de um **walking-skeleton, thread 1**. Decisões travadas:
      §5 ajustados: `regra` ganha `janela_passado_horas`; motor usa `past_days` do Open-Meteo.
    - **(b)** **Confirmar sem login** → **mantido** (fricção mínima; anti-abuso engrossa depois). Sem mudança.
 2. ~~Ajustar o spec~~ **FEITO** (edições acima).
-3. **`git init`** neste diretório (não é repo; a cadeia superpowers/executing-plans assume git p/ os
-   checkpoints de review). ← **PRÓXIMO PASSO CONCRETO**
+3. ~~`git init`~~ **FEITO 2026-08-02** — repo em `C:\BatePerna2.0`, branch `main`, commit baseline
+   `81e18c5`. `.gitignore` ignora `node_modules/.next/.env`, o app **v1 `BatePerna/`** (repo próprio,
+   não aninhado — migrar deliberadamente se precisar) e `.claude/` (tooling). Esqueleto de conteúdo
+   criado: `content/fichas/rampa-do-pepe.json` (estrutura fechada + placeholders).
 4. Preencher o **conteúdo REAL da Rampa** no JSON (coords, waypoints, prêmio, textos) — só o João tem.
+   ← **PRÓXIMO PASSO CONCRETO** (arquivo já existe, só preencher os `"PREENCHER"`/`0`).
 5. Então **`superpowers:writing-plans`** → plano executável por agente → execução com Claude Code.
+   (Nota: onde o app Next.js novo mora — pasta nova vs. reaproveitar `BatePerna/` v1 — é decisão do
+   writing-plans; o v1 está fora do repo por ora.)
 
 **Itens 1–5 da agenda de design** (stack, dados, telas, motor, offline): foram resolvidos **dentro do
 escopo do fio 1** pelo spec. Só voltam a abrir no "crescer" (as outras fichas / engrossar o motor).

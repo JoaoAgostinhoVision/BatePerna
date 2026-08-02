@@ -2,30 +2,30 @@
   "slug": "rampa-do-pepe",
   "modos": ["condicional"],
   "rotulo_escaneio": "Só sem chuva",
-  "promessa": "Uma descida de tirar o fôlego — quando o tempo deixa.",
-  "voz": "O pepê é emoção pura. Mas é barro: molhou, não desce.",
-  "premio": "PREENCHER — o não-fungível, a alma da Rampa (o que só aqui se vê/sente).",
+  "promessa": "A serra pela mata e a vista lá de cima — quando o tempo deixa.",
+  "voz": "O pepê é emoção pura. Mas é barro: molhou, não vá.",
+  "premio": "A vista. E a subida da serra pela mata — a estrada vai subindo por dentro da mata, e é lindo.",
   "trajeto": {
     "waypoints": [
-      { "nome": "PREENCHER", "lat": 0, "lng": 0, "nota": "PREENCHER — a rota CERTA (REQ-4)" }
+      { "nome": "Rampa do Pepê", "lat": -7.907889, "lng": -36.019222, "nota": "A subida da serra pela mata, por dentro da estrada." }
     ]
   },
-  "acesso": "PREENCHER — o COMO que equipa (Nível B, o durável que brilha no L3).",
-  "avisos": "PREENCHER — encaixe honesto / fricção declarada (REQ-6).",
+  "acesso": "Dá pra ir de carro comum — mas só quando não estiver chovendo. Molhado, o risco é atolar.",
+  "avisos": "Só de carro comum em tempo seco: com chuva, risco de atolamento — se choveu, remarque pro próximo dia seco. E a vista rende mais com céu aberto — muita nuvem ou nevoeiro atrapalha o que você foi ver.",
   "condicao": {
-    "coords": { "lat": 0, "lng": 0 },
+    "coords": { "lat": -7.907889, "lng": -36.019222 },
     "regra": {
       "tipo": "chuva_binaria",
       "janela_previsao_horas": 48,
       "janela_passado_horas": 48,
       "limiar_mm": 0.2
     },
-    "regra_texto": "Choveu nas últimas horas OU há chuva na janela → não desça de carro.",
+    "regra_texto": "Choveu nas últimas horas OU há chuva na janela → não suba de carro comum.",
     "ressalva_proxy": "Chuva medida ≠ barro na entrada — a grade do modelo não vê a rampa. Confirme na entrada."
   },
   "discriminador": {
     "formato": "entrada",
-    "como_ler": "Na entrada da rampa: barro brilhando/pegajoso = não desce.",
+    "como_ler": "Na entrada da rampa: barro brilhando/pegajoso = não vá.",
     "permissao_abortar": "Dar meia-volta aqui é sabedoria, não fracasso."
   },
   "custo": { "tag": "gratis" }
