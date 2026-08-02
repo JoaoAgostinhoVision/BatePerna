@@ -89,9 +89,12 @@ o design de um **walking-skeleton, thread 1**. Decisões travadas:
    criado: `content/fichas/rampa-do-pepe.json` (estrutura fechada + placeholders).
 4. Preencher o **conteúdo REAL da Rampa** no JSON (coords, waypoints, prêmio, textos) — só o João tem.
    ← **PRÓXIMO PASSO CONCRETO** (arquivo já existe, só preencher os `"PREENCHER"`/`0`).
-5. Então **`superpowers:writing-plans`** → plano executável por agente → execução com Claude Code.
-   (Nota: onde o app Next.js novo mora — pasta nova vs. reaproveitar `BatePerna/` v1 — é decisão do
-   writing-plans; o v1 está fora do repo por ora.)
+5. ~~`superpowers:writing-plans`~~ **FEITO 2026-08-02** — plano executável em
+   `docs/superpowers/plans/2026-08-02-fase1-walking-skeleton.md` (11 tarefas TDD).
+   **Decisão travada no writing-plans:** o app Next.js novo mora na **raiz do repo** (`content/` já
+   está lá); v1 `BatePerna/` fica fora. Stack confirmada: Next 15 + Vitest + Tailwind + @libsql/client +
+   Zod + Serwist + Vercel Cron + Open-Meteo. **PRÓXIMO:** executar o plano (subagent-driven-development
+   recomendado) — precisa de `.env.local` (Turso URL/token, CRON_SECRET) e `db/schema.sql` aplicado.
 
 **Itens 1–5 da agenda de design** (stack, dados, telas, motor, offline): foram resolvidos **dentro do
 escopo do fio 1** pelo spec. Só voltam a abrir no "crescer" (as outras fichas / engrossar o motor).
