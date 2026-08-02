@@ -1,0 +1,376 @@
+<title>BatePerna — Estado da ideia ao plano</title>
+<style>
+  :root {
+    --paper: #f6f5f1;
+    --card: #fffffe;
+    --ink: #22271f;
+    --muted: #6c7268;
+    --faint: #8b9184;
+    --line: #e4e2d9;
+    --line-strong: #d4d2c6;
+    --accent: #1f6f5c;
+    --accent-ink: #164f42;
+    --accent-soft: #e6efe9;
+    --ok: #2f8f6b;
+    --warn: #a7791f;
+    --stop: #b0492f;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --maxw: 60rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #14170f;
+      --card: #1c2018;
+      --ink: #e9e7dd;
+      --muted: #9ba093;
+      --faint: #767c6e;
+      --line: #2a2f24;
+      --line-strong: #363c2e;
+      --accent: #58bf9f;
+      --accent-ink: #7fd0b6;
+      --accent-soft: #1d2b24;
+      --ok: #5cbf98;
+      --warn: #d0a54e;
+      --stop: #d97a60;
+    }
+  }
+  :root[data-theme="light"] {
+    --paper: #f6f5f1; --card: #fffffe; --ink: #22271f; --muted: #6c7268; --faint: #8b9184;
+    --line: #e4e2d9; --line-strong: #d4d2c6; --accent: #1f6f5c; --accent-ink: #164f42;
+    --accent-soft: #e6efe9; --ok: #2f8f6b; --warn: #a7791f; --stop: #b0492f;
+  }
+  :root[data-theme="dark"] {
+    --paper: #14170f; --card: #1c2018; --ink: #e9e7dd; --muted: #9ba093; --faint: #767c6e;
+    --line: #2a2f24; --line-strong: #363c2e; --accent: #58bf9f; --accent-ink: #7fd0b6;
+    --accent-soft: #1d2b24; --ok: #5cbf98; --warn: #d0a54e; --stop: #d97a60;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 1.5rem; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 0.6rem;
+  }
+
+  /* Header */
+  header.top {
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    position: sticky; top: 0; z-index: 10;
+    backdrop-filter: saturate(1.1) blur(6px);
+  }
+  .top-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: 1rem 0; flex-wrap: wrap; }
+  .brand { display: flex; align-items: baseline; gap: 0.7rem; }
+  .brand h1 { font-family: var(--serif); font-weight: 600; font-size: 1.35rem; margin: 0; letter-spacing: -0.01em; }
+  .brand .ver { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); border: 1px solid var(--line-strong); border-radius: 999px; padding: 0.12rem 0.5rem; }
+  .toggle {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.04em;
+    background: transparent; color: var(--muted); border: 1px solid var(--line-strong);
+    border-radius: 999px; padding: 0.3rem 0.7rem; cursor: pointer; transition: color .15s, border-color .15s;
+  }
+  .toggle:hover { color: var(--accent); border-color: var(--accent); }
+  .toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Hero / intro */
+  .hero { padding: 3rem 0 2rem; }
+  .hero .lead { font-family: var(--serif); font-size: clamp(1.5rem, 4.2vw, 2.3rem); line-height: 1.22; letter-spacing: -0.015em; margin: 0 0 1rem; text-wrap: balance; max-width: 30ch; }
+  .hero .lead em { font-style: italic; color: var(--accent-ink); }
+  .hero p { color: var(--muted); max-width: 62ch; margin: 0; font-size: 1.02rem; }
+  .hero p b { color: var(--ink); font-weight: 600; }
+
+  .pills { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.6rem; }
+  .pill { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.03em; padding: 0.28rem 0.65rem; border-radius: 999px; border: 1px solid var(--line-strong); display: inline-flex; align-items: center; gap: 0.4rem; color: var(--muted); }
+  .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+  .pill.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, var(--line-strong)); }
+  .pill.ok::before { background: var(--ok); }
+  .pill.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, var(--line-strong)); }
+  .pill.warn::before { background: var(--warn); }
+  .pill.accent { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line-strong)); }
+  .pill.accent::before { background: var(--accent); }
+
+  /* Sections */
+  section { padding: 2.2rem 0; border-top: 1px solid var(--line); }
+  .sec-head { margin: 0 0 1.4rem; }
+  .sec-head h2 { font-family: var(--serif); font-weight: 600; font-size: 1.45rem; margin: 0.1rem 0 0.3rem; letter-spacing: -0.01em; }
+  .sec-head p { margin: 0; color: var(--muted); max-width: 60ch; font-size: 0.95rem; }
+
+  .grid { display: grid; gap: 0.9rem; }
+  .g2 { grid-template-columns: repeat(2, 1fr); }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 640px) { .g2, .g3 { grid-template-columns: 1fr; } }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.15rem; }
+  .card h3 { margin: 0 0 0.35rem; font-size: 1rem; font-weight: 650; letter-spacing: -0.005em; display: flex; align-items: baseline; gap: 0.5rem; }
+  .card h3 .tag { font-family: var(--mono); font-size: 0.68rem; color: var(--accent); background: var(--accent-soft); border-radius: 5px; padding: 0.1rem 0.4rem; letter-spacing: 0.02em; white-space: nowrap; }
+  .card p { margin: 0; color: var(--muted); font-size: 0.9rem; line-height: 1.55; }
+  .card p + p { margin-top: 0.5rem; }
+  .card .win { color: var(--ink); font-weight: 600; }
+
+  /* Numbered list for principles */
+  .num { counter-reset: p; display: grid; gap: 0.2rem; }
+  .num .row { display: grid; grid-template-columns: 2.2rem 1fr; gap: 0.9rem; padding: 0.85rem 0; border-bottom: 1px dashed var(--line); align-items: start; }
+  .num .row:last-child { border-bottom: 0; }
+  .num .row::before { counter-increment: p; content: counter(p); font-family: var(--mono); font-size: 0.85rem; color: var(--accent); padding-top: 0.15rem; }
+  .num .row .t { margin: 0; }
+  .num .row .t b { font-weight: 650; }
+  .num .row .t span { color: var(--muted); }
+
+  /* Modes table */
+  .modes { display: grid; gap: 0.6rem; }
+  .mode { display: grid; grid-template-columns: auto 1fr; gap: 0.9rem; align-items: baseline; padding: 0.55rem 0; border-bottom: 1px solid var(--line); }
+  .mode:last-child { border-bottom: 0; }
+  .mode .n { font-family: var(--mono); font-size: 0.8rem; color: var(--paper); background: var(--accent); border-radius: 6px; padding: 0.15rem 0.5rem; font-weight: 600; }
+  .mode.cond .n { background: var(--warn); }
+  .mode .d b { font-weight: 650; }
+  .mode .d span { color: var(--muted); }
+  .fam { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); margin: 1rem 0 0.3rem; }
+
+  /* chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .chip { font-family: var(--mono); font-size: 0.74rem; padding: 0.25rem 0.55rem; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); }
+  .chip.out { background: transparent; color: var(--muted); border: 1px dashed var(--line-strong); }
+
+  .decision { display: flex; align-items: baseline; gap: 0.55rem; margin: 0 0 0.5rem; }
+  .decision .arrow { color: var(--accent); font-weight: 700; }
+  .decision b { font-weight: 650; }
+
+  /* Path */
+  .path { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.4rem; font-family: var(--mono); font-size: 0.8rem; margin-bottom: 1.4rem; }
+  .path .step { padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid var(--line-strong); color: var(--muted); }
+  .path .step.done { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, var(--line-strong)); }
+  .path .step.now { color: var(--paper); background: var(--accent); border-color: var(--accent); }
+  .path .sep { color: var(--faint); }
+
+  .agenda { display: grid; gap: 0.55rem; }
+  .agenda .item { display: grid; grid-template-columns: auto 1fr auto; gap: 0.8rem; align-items: baseline; padding: 0.7rem 0.9rem; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  .agenda .item .k { font-family: var(--mono); color: var(--accent); font-size: 0.8rem; }
+  .agenda .item .n { font-weight: 600; font-size: 0.92rem; }
+  .agenda .item .n span { color: var(--muted); font-weight: 400; }
+  .agenda .item .st { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--warn); }
+
+  footer { border-top: 1px solid var(--line); padding: 2rem 0 3rem; color: var(--faint); font-size: 0.82rem; }
+  footer b { color: var(--muted); font-weight: 600; }
+  footer .mono { font-family: var(--mono); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal { animation: rise .5s cubic-bezier(.2,.7,.3,1) both; }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+
+<header class="top">
+  <div class="wrap top-row">
+    <div class="brand">
+      <h1>BatePerna</h1>
+      <span class="ver">modelo v2.5 · 29 jul 2026</span>
+    </div>
+    <button class="toggle" id="themeToggle" type="button" aria-label="Alternar tema">tema</button>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="hero reveal" style="border-top:0;">
+      <p class="eyebrow">Estado da ideia ao plano</p>
+      <p class="lead">Vende a aventura, entregue pela <em>via segura</em>.</p>
+      <p>O produto real é o <b>trust-data</b> — e o que vale é o <b>Nível&nbsp;B</b>: o que só quem foi sabe (a gem sem cobertura de mapa, "a estrada feia é normal", como não virar alvo). O Nível A, qualquer um checa remoto — não é fosso. Esta página é o retrato das decisões; a autoridade viva são os documentos <span class="footer mono" style="font-family:var(--mono);font-size:0.85em;color:var(--muted)">.md</span> de origem.</p>
+      <div class="pills">
+        <span class="pill accent">modelo v2.5</span>
+        <span class="pill ok">Parte III fechada</span>
+        <span class="pill ok">escopo Fase 1 cravado</span>
+        <span class="pill warn">build-shaping em curso</span>
+      </div>
+    </section>
+
+    <section class="reveal">
+      <div class="sec-head">
+        <p class="eyebrow">Parte I</p>
+        <h2>Os cinco princípios</h2>
+        <p>O porquê estável — o que não muda quando a implementação mudar.</p>
+      </div>
+      <div class="num">
+        <div class="row"><p class="t"><b>Princípio-mãe.</b> <span>O curador não sanitiza; acha o caminho seguro pro lugar selvagem. Doma-se o perigo de dirigir (fungível); jamais a remotidão / o off-map — é ali que mora a alma.</span></p></div>
+        <div class="row"><p class="t"><b>Tese R1 — neutralizar o modo de falha.</b> <span>O produto não dá "a via segura" como slogan; ele neutraliza o que arruinaria aquela viagem específica pra quem não sabe. O modo varia por rota. Taxonomia aberta e composável.</span></p></div>
+        <div class="row"><p class="t"><b>Alma R3 — o razor do não-fungível.</b> <span>A alma é o que só aquela rota entrega. Duas espécies: roteiro-<b>lugar</b> ("vá AQUI") e roteiro-<b>método</b> ("aplique ESTE padrão", transferível — mas sempre ancorado no não-fungível).</span></p></div>
+        <div class="row"><p class="t"><b>Co-piloto, nunca piloto — em todo eixo.</b> <span>Informa + equipa; o humano calibra e decide. Nunca decide por você — nem no melhor sinal remoto (Nível A é falível), nem no conselho.</span></p></div>
+        <div class="row"><p class="t"><b>Teto de aventura + porta de expansão.</b> <span>O coração é bate-e-volta, teto ~Rampa do Pepe — já é emoção suficiente. Expedição / multimodal pesado não é o núcleo, mas é expansão futura: o modelo fica aberto sem ser desenhado em torno disso.</span></p></div>
+      </div>
+    </section>
+
+    <section class="reveal">
+      <div class="sec-head">
+        <p class="eyebrow">Taxonomia R1</p>
+        <h2>Os modos de falha</h2>
+        <p>Lista aberta. É o modo declarado que decide qual campo carrega o fosso e o tom da ficha — acalmar ou avisar.</p>
+      </div>
+      <p class="fam">Estáticos — leia a rota certa uma vez</p>
+      <div class="modes">
+        <div class="mode"><span class="n">#1</span><p class="d"><b>Desorientação / cilada.</b> <span>O Maps manda pela rota óbvia que é armadilha (Natuba). Fosso: a cadeia de waypoints certa.</span></p></div>
+        <div class="mode"><span class="n">#2</span><p class="d"><b>Desistência por dúvida.</b> <span>A estrada parece abandono; a pessoa volta achando que errou (Monte das Tabocas). Fosso: tranquilizar.</span></p></div>
+        <div class="mode"><span class="n">#3</span><p class="d"><b>Chegada oca.</b> <span>Sem a história vê "só um morro". Fosso: interpretação / significado.</span></p></div>
+      </div>
+      <p class="fam">Condicional — leia a condição toda vez, antes de ir</p>
+      <div class="modes">
+        <div class="mode cond"><span class="n">#4</span><p class="d"><b>Janela condicional.</b> <span>A rota liga e desliga com um sinal externo (Rampa do Pepe: o barro atola na chuva). Fosso: a regra de leitura da condição.</span></p></div>
+      </div>
+    </section>
+
+    <section class="reveal">
+      <div class="sec-head">
+        <p class="eyebrow">Composição · o achado mais recente</p>
+        <h2>Modos empilham em três regimes</h2>
+        <p>O que decide o regime não é o "tom" em abstrato — é a <b>relação entre os modos</b>. "Tom oposto" era só o sintoma da colisão.</p>
+      </div>
+      <div class="grid g3">
+        <div class="card">
+          <h3>Fundir <span class="tag">#2+#3</span></h3>
+          <p>Modos em <span class="win">decisões diferentes</span> — a ficha diz os dois de uma vez, sem atrito.</p>
+          <p>Salvador: permissão + significado.</p>
+        </div>
+        <div class="card">
+          <h3>Comutar <span class="tag">#2+#4</span></h3>
+          <p>Modos que <span class="win">colidem na mesma decisão</span>, com puxões opostos — a ficha carrega um discriminador in-situ, default cauteloso.</p>
+          <p>Praia do Sossego: acalmar vs. avisar na mesma poça.</p>
+        </div>
+        <div class="card">
+          <h3>Ramificar <span class="tag">#1+#4</span></h3>
+          <p>Um modo <span class="win">alimenta o outro</span> — a condição escolhe o caminho. A cadeia de waypoints vira condicional.</p>
+          <p>Marinho: seca → atalho; chuva → desvio. A Rampa é o caso do galho vazio ("não vá").</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="reveal">
+      <div class="sec-head">
+        <p class="eyebrow">Parte II</p>
+        <h2>Os dezesseis requisitos</h2>
+        <p>O contrato de comportamento, por tema. Sem telas nem schema — isto é o que o produto tem que fazer.</p>
+      </div>
+      <div class="grid g2">
+        <div class="card">
+          <h3>Anatomia do roteiro</h3>
+          <p><b>REQ-1</b> Ficha de 7 campos (+2 camadas p/ método) · <b>REQ-2</b> Relevo variável (destaca o que pesa) · <b>REQ-3</b> Declarar o(s) modo(s) → tom + regime de composição.</p>
+        </div>
+        <div class="card">
+          <h3>Artefatos de entrega</h3>
+          <p><b>REQ-4</b> Cadeia de waypoints (condicional) · <b>REQ-5</b> Envelope temporal · <b>REQ-6</b> Encaixe honesto / fricção · <b>REQ-7</b> Tag grátis/pago · <b>REQ-8</b> Camada que equipa (permissão bidirecional) · <b>REQ-9</b> Discriminador.</p>
+        </div>
+        <div class="card">
+          <h3>Mecânica de confiança</h3>
+          <p><b>REQ-10</b> Decaimento + Confirmar (condição-ciente) · <b>REQ-11</b> Coletar só o sinal fácil (a ausência rebaixa) · <b>REQ-12</b> Procedência A vs B por contraste.</p>
+        </div>
+        <div class="card">
+          <h3>Cold-start &amp; negócio</h3>
+          <p><b>REQ-13</b> Motor de confirmação = fundador · <b>REQ-14</b> 2º confirmador cedo · <b>REQ-15</b> Métrica "engrenou" · <b>REQ-16</b> Saída do fundador em rampa.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="reveal">
+      <div class="sec-head">
+        <p class="eyebrow">Parte IV</p>
+        <h2>Escopo da Fase 1</h2>
+        <p>Reconciliar os 16 REQs contra a linha do brief. O padrão dos forks: <b>construir a costura, não a máquina</b> — caro só no coração.</p>
+      </div>
+      <p class="eyebrow" style="color:var(--muted)">Dentro (o brief já pede)</p>
+      <div class="chips" style="margin-bottom:1.4rem;">
+        <span class="chip">REQ-1</span><span class="chip">REQ-2</span><span class="chip">REQ-3</span><span class="chip">REQ-4</span><span class="chip">REQ-6</span><span class="chip">REQ-7</span><span class="chip">REQ-8</span><span class="chip">REQ-12</span><span class="chip">REQ-13</span>
+      </div>
+      <div class="grid g2">
+        <div class="card"><h3>Frescor <span class="tag">fork 1</span></h3><p><span class="win">Motor completo.</span> A mecânica de confiança inteira, incl. invalidação por condição/evento. É o coração — construído real, não fingido com carimbo.</p></div>
+        <div class="card"><h3>Roteiro-método <span class="tag">fork 2</span></h3><p><span class="win">Hub pobre.</span> Card de método escrito 1×, instâncias apontam por link. Entidade-mãe formal fica pro 2º tipo de método.</p></div>
+        <div class="card"><h3>Reputação <span class="tag">fork 3</span></h3><p><span class="win">Só o substrato.</span> Multi-confirmador + 2 sinais separados. Pontuação e rank→curador = a ponte pra Fase 2.</p></div>
+        <div class="card"><h3>Condicional <span class="tag">fork 4</span></h3><p><span class="win">Discriminador pobre.</span> Semáforo co-piloto + 1 rota condicional + 1 de tom oposto com discriminador editorial sob medida. Componente generalizado fica pra depois.</p></div>
+      </div>
+      <p class="eyebrow" style="color:var(--muted);margin-top:1.4rem;">Fora / adiado</p>
+      <div class="chips">
+        <span class="chip out">REQ-15 métrica "engrenou"</span><span class="chip out">REQ-16 saída do fundador</span>
+      </div>
+    </section>
+
+    <section class="reveal">
+      <div class="sec-head">
+        <p class="eyebrow">Build-shaping · 29 jul 2026</p>
+        <h2>Decisões de forma do plano</h2>
+        <p>As duas realidades que o modelo calou de propósito — cravadas antes de escrever o plano.</p>
+      </div>
+      <div class="grid g3">
+        <div class="card">
+          <h3>Veículo</h3>
+          <p><span class="win">PWA</span> instalável, mobile-first + CMS simples pra autoria + backend fino pro motor + cache offline das fichas.</p>
+          <p>Serve planejar e estrada; navegação delegada ao Waze (nativo = overkill).</p>
+        </div>
+        <div class="card">
+          <h3>Quem constrói</h3>
+          <p><span class="win">João dirigindo o Claude Code.</span></p>
+          <p>Cabe no tamanho da Fase 1 e casa com um plano executável por agente.</p>
+        </div>
+        <div class="card">
+          <h3>Tipo de plano</h3>
+          <p><span class="win">Executável por agente.</span></p>
+          <p>Cadeia: brainstorming → design → writing-plans → execução. Não é PRD pesado pra time externo.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="reveal">
+      <div class="sec-head">
+        <p class="eyebrow">O caminho</p>
+        <h2>O que falta antes do plano</h2>
+        <p>A agenda de design da Fase 1 — cada item é uma sessão de decisão. Sugestão: começar pela fatia do MVP, que enxuga as outras cinco.</p>
+      </div>
+      <div class="path">
+        <span class="step done">brief</span><span class="sep">→</span>
+        <span class="step done">modelo v2.5</span><span class="sep">→</span>
+        <span class="step now">design Fase 1</span><span class="sep">→</span>
+        <span class="step">spec</span><span class="sep">→</span>
+        <span class="step">plano</span><span class="sep">→</span>
+        <span class="step">build</span>
+      </div>
+      <div class="agenda">
+        <div class="item"><span class="k">01</span><span class="n">Stack <span>— framework, banco, hospedagem, API de previsão</span></span><span class="st">aberto</span></div>
+        <div class="item"><span class="k">02</span><span class="n">Modelo de dados <span>— fichas, camadas do método, cadeia condicional, multi-confirmador, frescor</span></span><span class="st">aberto</span></div>
+        <div class="item"><span class="k">03</span><span class="n">Superfície / telas <span>— browse, ficha, mapa, Confirmar, autoria</span></span><span class="st">aberto</span></div>
+        <div class="item"><span class="k">04</span><span class="n">Como o motor roda <span>— job de previsão, Confirmar, decaimento, 2 sinais</span></span><span class="st">aberto</span></div>
+        <div class="item"><span class="k">05</span><span class="n">Estratégia offline <span>— o que cacheia; parte acionável sem sinal</span></span><span class="st">aberto</span></div>
+        <div class="item"><span class="k">06</span><span class="n">Fatia do MVP <span>— walking-skeleton: 1 ficha ponta-a-ponta com o motor</span></span><span class="st">aberto</span></div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <div class="wrap">
+      <p>Espelho do estado em <b>29 jul 2026</b>. Fonte viva: <span class="mono">bateperna-modelo-e-requisitos.md</span> (v2.5) + <span class="mono">fase-1-forma-do-plano-WIP.md</span>. Lastro: 7 roteiros reais do NE — Natuba, Monte das Tabocas, Rampa do Pepe, Salvador, Praia do Sossego, Recife→Jaboatão, Marinho.</p>
+    </div>
+  </footer>
+</main>
+
+<script>
+  (function () {
+    var btn = document.getElementById('themeToggle');
+    var root = document.documentElement;
+    btn.addEventListener('click', function () {
+      var current = root.getAttribute('data-theme');
+      if (!current) {
+        current = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+    });
+  })();
+</script>

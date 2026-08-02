@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js / build
+.next/
+out/
+build/
+dist/
+
+# Environment / secrets (Turso token etc. — config via Vercel env vars)
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel
+
+# PWA generated (next-pwa / Serwist)
+public/sw.js
+public/workbox-*.js
+public/worker-*.js
+public/sw.js.map
+public/fallback-*.js
+
+# v1 app — separate git repo with its own history; not nested here (migrate deliberately if needed)
+/BatePerna/
+
+# Claude Code local tooling (installed skills + machine-specific settings — regenerable)
+.claude/
+
+# Logs / OS / editor
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.tsbuildinfo
