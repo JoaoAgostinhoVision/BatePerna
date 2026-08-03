@@ -8,6 +8,7 @@ node_modules/
 out/
 build/
 dist/
+next-env.d.ts
 
 # Environment / secrets (Turso token etc. — config via Vercel env vars)
 .env
