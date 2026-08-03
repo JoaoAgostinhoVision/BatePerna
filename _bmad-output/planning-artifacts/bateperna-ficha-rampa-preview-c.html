@@ -1,0 +1,262 @@
+<title>BatePerna · Rampa do Pepê · Versão C</title>
+<style>
+  :root {
+    --paper: #EFE4CC;
+    --paper-2: #E7DABE;
+    --ink: #33291B;
+    --ink-soft: #6A5B41;
+    --ink-faint: #9C8B6B;
+    --rule: #DFD0AF;
+    --margin: #BE6E5C;
+    --accent: #97482A;
+    --stamp-go: #3C6A42;
+    --stamp-go-bg: rgba(60,106,66,.09);
+    --stamp-stop: #B0392B;
+    --stamp-stop-bg: rgba(176,57,43,.08);
+    --rain: #4A6E86;
+    --shadow: 0 1px 2px rgba(43,32,18,.1), 0 14px 40px rgba(43,32,18,.16);
+    --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+    --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+    --type: "Courier New", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1A1611; --paper-2: #211A12; --ink: #EADFC7; --ink-soft: #B2A585; --ink-faint: #7C7053;
+      --rule: #2A2217; --margin: #7C4239; --accent: #C87A4C;
+      --stamp-go: #72B07C; --stamp-go-bg: rgba(114,176,124,.1);
+      --stamp-stop: #E06B5C; --stamp-stop-bg: rgba(224,107,92,.1);
+      --rain: #7AA6C0;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 14px 40px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="light"] {
+    --paper:#EFE4CC; --paper-2:#E7DABE; --ink:#33291B; --ink-soft:#6A5B41; --ink-faint:#9C8B6B; --rule:#DFD0AF; --margin:#BE6E5C; --accent:#97482A;
+    --stamp-go:#3C6A42; --stamp-go-bg:rgba(60,106,66,.09); --stamp-stop:#B0392B; --stamp-stop-bg:rgba(176,57,43,.08); --rain:#4A6E86;
+    --shadow:0 1px 2px rgba(43,32,18,.1),0 14px 40px rgba(43,32,18,.16);
+  }
+  :root[data-theme="dark"] {
+    --paper:#1A1611; --paper-2:#211A12; --ink:#EADFC7; --ink-soft:#B2A585; --ink-faint:#7C7053; --rule:#2A2217; --margin:#7C4239; --accent:#C87A4C;
+    --stamp-go:#72B07C; --stamp-go-bg:rgba(114,176,124,.1); --stamp-stop:#E06B5C; --stamp-stop-bg:rgba(224,107,92,.1); --rain:#7AA6C0;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 40px rgba(0,0,0,.55);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background:
+      radial-gradient(100% 60% at 50% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 55%),
+      var(--paper-2);
+    color: var(--ink); font-family: var(--serif); line-height: 1.55; -webkit-font-smoothing: antialiased;
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+    padding: clamp(0px, 4vw, 2.5rem) clamp(0px, 3vw, 1rem) 2rem;
+  }
+
+  .preview-bar {
+    width: 100%; max-width: 25rem; margin-bottom: 1rem;
+    display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; font-family: var(--type); font-size: .72rem; color: var(--ink-faint);
+  }
+  .preview-bar .lbl { letter-spacing: .04em; text-transform: uppercase; }
+  .seg { display: inline-flex; background: color-mix(in srgb, var(--ink) 8%, transparent); border: 1px solid var(--rule); border-radius: 4px; padding: 3px; }
+  .seg button {
+    font-family: var(--type); font-size: .72rem; font-weight: 700; border: 0; background: transparent; color: var(--ink-soft);
+    cursor: pointer; padding: .32rem .7rem; border-radius: 3px; display: inline-flex; align-items: center; gap: .35rem; transition: background .18s, color .18s;
+  }
+  .seg button .d { width: .5rem; height: .5rem; border-radius: 50%; }
+  .seg button[data-for="fresco"] .d { background: var(--stamp-go); }
+  .seg button[data-for="frio"] .d { background: var(--stamp-stop); }
+  :root[data-state="fresco"] .seg button[data-for="fresco"] { background: var(--paper); color: var(--ink); box-shadow: var(--shadow); }
+  :root[data-state="frio"]   .seg button[data-for="frio"]   { background: var(--paper); color: var(--ink); box-shadow: var(--shadow); }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* the page — a leaf from a field notebook */
+  .page {
+    width: 100%; max-width: 25rem; position: relative; overflow: hidden;
+    background:
+      linear-gradient(90deg, transparent 0 2.55rem, var(--margin) 2.55rem 2.6rem, transparent 2.6rem),
+      repeating-linear-gradient(var(--paper) 0 31px, var(--rule) 31px 32px);
+    background-color: var(--paper);
+    border: 1px solid color-mix(in srgb, var(--ink) 12%, var(--rule));
+    border-radius: 4px; box-shadow: var(--shadow);
+    padding: 1.5rem 1.4rem 1.4rem 3.1rem;
+  }
+
+  .journal-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+  .eyebrow { font-family: var(--type); font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  .folio { font-family: var(--type); font-size: .68rem; color: var(--ink-faint); letter-spacing: .04em; }
+
+  h1 { font-family: var(--serif); font-weight: 600; font-size: 2.15rem; line-height: 1.05; letter-spacing: -.01em; margin: .55rem 0 .1rem; }
+  .promessa { color: var(--ink-soft); font-size: 1.05rem; font-style: italic; margin: 0 0 .4rem; }
+  .scan { font-family: var(--type); font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+
+  /* the rubber stamp — the verdict */
+  .stamp-wrap { display: flex; justify-content: center; padding: 1.5rem 0 .6rem; }
+  .stamp {
+    --c: var(--st-ink);
+    position: relative; transform: rotate(-4deg); color: var(--c);
+    border: 3px double var(--c); border-radius: 8px; padding: .55rem 1.4rem .65rem;
+    background: var(--st-bg); text-align: center; max-width: 17rem;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 25%, transparent);
+    transition: color .25s, border-color .25s, background .25s;
+  }
+  :root[data-state="fresco"] .stamp { --st-ink: var(--stamp-go); --st-bg: var(--stamp-go-bg); }
+  :root[data-state="frio"]   .stamp { --st-ink: var(--stamp-stop); --st-bg: var(--stamp-stop-bg); }
+  .stamp .mark { font-family: var(--sans); font-weight: 800; font-size: 1.85rem; line-height: 1; letter-spacing: .02em; text-transform: uppercase; }
+  .stamp .sub { font-family: var(--type); font-size: .64rem; letter-spacing: .18em; text-transform: uppercase; margin-top: .3rem; opacity: .85; }
+
+  .reason { text-align: center; font-size: 1rem; color: var(--ink-soft); max-width: 30ch; margin: .5rem auto 0; }
+  .reason b { color: var(--ink); font-weight: 700; }
+  .read-live { text-align: center; font-family: var(--type); font-size: .66rem; letter-spacing: .05em; color: var(--ink-faint); margin-top: .6rem; }
+
+  hr.rule { border: 0; border-top: 1px solid color-mix(in srgb, var(--ink) 18%, transparent); margin: 1.5rem 0; }
+
+  .entry { margin: 1.35rem 0; }
+  .entry .k { font-family: var(--type); font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: .3rem; }
+  .entry p { margin: 0; font-size: 1rem; }
+  .entry.premio p { font-size: 1.06rem; }
+
+  .voz { font-family: var(--serif); font-style: italic; font-size: 1.28rem; line-height: 1.42; color: var(--ink); margin: 1.4rem 0; }
+  .voz .who { display: block; font-family: var(--type); font-style: normal; font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin-top: .5rem; }
+
+  .caveat {
+    display: flex; gap: .55rem; font-size: .92rem; color: var(--ink-soft); font-style: italic;
+    border-left: 3px solid var(--rain); padding: .2rem 0 .2rem .8rem; margin: 1.3rem 0;
+  }
+  .caveat b { color: var(--ink); font-weight: 700; font-style: normal; }
+
+  .waypoint { border: 1px dashed color-mix(in srgb, var(--ink) 28%, transparent); border-radius: 6px; padding: .8rem .9rem; display: flex; align-items: center; justify-content: space-between; gap: .8rem; background: color-mix(in srgb, var(--paper) 60%, transparent); }
+  .waypoint .t { font-weight: 600; font-size: 1rem; }
+  .waypoint .n { color: var(--ink-soft); font-size: .86rem; font-style: italic; margin-top: .1rem; }
+  .waypoint .coord { font-family: var(--type); font-size: .68rem; color: var(--ink-faint); margin-top: .25rem; }
+  .maplink { flex: none; text-decoration: none; font-family: var(--type); font-weight: 700; font-size: .74rem; letter-spacing: .04em; text-transform: uppercase; color: var(--paper); background: var(--accent); padding: .5rem .75rem; border-radius: 5px; white-space: nowrap; }
+  .maplink:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  /* the gate note — a field annotation */
+  .gate { border: 2px dashed var(--accent); border-radius: 6px; padding: .95rem 1rem; margin: 1.4rem 0; }
+  .gate .k { font-family: var(--type); font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: .4rem; }
+  .gate .read { font-size: 1.02rem; font-weight: 600; }
+  .gate .read b { color: var(--stamp-stop); }
+  .gate .perm { font-style: italic; color: var(--ink-soft); margin-top: .5rem; }
+
+  .ticket {
+    margin: 1.4rem 0 .4rem; display: flex; align-items: center; gap: .7rem;
+    font-family: var(--type); font-size: .78rem; color: var(--ink-soft);
+    border-top: 1px dashed color-mix(in srgb, var(--ink) 25%, transparent); padding-top: 1rem;
+  }
+  .ticket .price { font-weight: 700; color: var(--accent); font-size: .95rem; }
+
+  .confirmar { margin-top: 1.3rem; text-align: center; color: var(--ink-faint); }
+  .confirmar .btn { display: inline-block; font-family: var(--type); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .74rem; color: var(--ink-faint); border: 1px dashed var(--ink-faint); border-radius: 5px; padding: .5rem 1.1rem; margin-bottom: .4rem; }
+  .confirmar .soon { font-family: var(--type); font-size: .64rem; letter-spacing: .08em; text-transform: uppercase; }
+
+  .disclaimer { max-width: 25rem; width: 100%; margin-top: 1.1rem; text-align: center; font-family: var(--type); font-size: .7rem; line-height: 1.6; color: var(--ink-faint); }
+  .disclaimer b { color: var(--ink-soft); font-weight: 700; }
+</style>
+
+<div class="preview-bar">
+  <span class="lbl">Prévia · estado</span>
+  <div class="seg" role="group" aria-label="Alternar estado de prévia">
+    <button data-for="fresco" onclick="setState('fresco')"><span class="d"></span>Não choveu</button>
+    <button data-for="frio" onclick="setState('frio')"><span class="d"></span>Choveu</button>
+  </div>
+</div>
+
+<div class="page">
+  <div class="journal-head">
+    <span class="eyebrow">BatePerna · Caderno de campo</span>
+    <span class="folio">Agreste · PE</span>
+  </div>
+  <h1>Rampa do Pepê</h1>
+  <p class="promessa">A serra pela mata e a vista lá de cima — quando o tempo deixa.</p>
+  <span class="scan">Só sem chuva</span>
+
+  <div class="stamp-wrap">
+    <div class="stamp">
+      <div class="mark" id="mark">Pode subir</div>
+      <div class="sub" id="sub">condição de hoje</div>
+    </div>
+  </div>
+  <p class="reason" id="reason"></p>
+  <div class="read-live" id="live">lido da chuva agora · 6h atrás + 3h à frente</div>
+
+  <hr class="rule">
+
+  <div class="entry premio">
+    <div class="k">O prêmio</div>
+    <p>A vista. E a subida da serra pela mata — a estrada vai subindo por dentro da mata, e é lindo.</p>
+  </div>
+
+  <div class="voz">
+    "O pepê é emoção pura. Mas é barro: molhou, não vá."
+    <span class="who">— a voz de quem conhece</span>
+  </div>
+
+  <div class="caveat">
+    <span><b>Chuva medida ≠ barro na entrada.</b> A grade do modelo não vê a rampa. A última leitura é sua, no portão.</span>
+  </div>
+
+  <div class="entry">
+    <div class="k">Trajeto</div>
+    <div class="waypoint">
+      <div>
+        <div class="t">Rampa do Pepê</div>
+        <div class="n">A subida da serra pela mata, por dentro da estrada.</div>
+        <div class="coord">-7.907889, -36.019222</div>
+      </div>
+      <a class="maplink" href="https://www.google.com/maps/search/?api=1&query=-7.907889,-36.019222" target="_blank" rel="noopener">Mapa</a>
+    </div>
+  </div>
+
+  <div class="entry">
+    <div class="k">Acesso</div>
+    <p>Dá pra ir de carro comum — mas só quando não estiver chovendo. Molhado, o risco é atolar.</p>
+  </div>
+
+  <div class="entry">
+    <div class="k">Avisos</div>
+    <p>Só de carro comum em tempo seco: com chuva, risco de atolamento — se choveu, remarque pro próximo dia seco. E a vista rende mais com céu aberto — muita nuvem ou nevoeiro atrapalha o que você foi ver.</p>
+  </div>
+
+  <div class="gate">
+    <div class="k">Na entrada — a checagem é sua</div>
+    <div class="read">Barro brilhando ou pegajoso? <b>Não vá.</b></div>
+    <div class="perm">"Dar meia-volta aqui é sabedoria, não fracasso."</div>
+  </div>
+
+  <div class="ticket">
+    <span class="price">R$ 5</span> por pessoa · cobrado no portão da entrada
+  </div>
+
+  <div class="confirmar">
+    <div class="btn">✓ Fui</div>
+    <div class="soon">confirmar — chega depois</div>
+  </div>
+</div>
+
+<p class="disclaimer">
+  Versão C — <b>caderno de campo de quem conhece</b>. Conteúdo real da Rampa.<br>
+  O carimbo é alternável só pra prévia; <b>no app real é calculado ao vivo</b> pela chuva (Open-Meteo).
+</p>
+
+<script>
+  var DATA = {
+    fresco: {
+      mark: "Pode subir", sub: "seco · carro comum",
+      reason: "Sem chuva nas últimas <b>~6h</b> e nada previsto pras próximas <b>~3h</b>. Área alta, escorre rápido — a serra firmou.",
+      live: "lido da chuva agora · 6h atrás + 3h à frente"
+    },
+    frio: {
+      mark: "Não suba", sub: "barro · dá um tempo",
+      reason: "Choveu nas últimas <b>~6h</b> (ou vem nas próximas <b>~3h</b>). O barro segura água — risco de atolar.",
+      live: "lido da chuva agora · 6h atrás + 3h à frente"
+    }
+  };
+  function setState(s) {
+    document.documentElement.setAttribute("data-state", s);
+    var d = DATA[s];
+    document.getElementById("mark").textContent = d.mark;
+    document.getElementById("sub").textContent = d.sub;
+    document.getElementById("reason").innerHTML = d.reason;
+    document.getElementById("live").textContent = d.live;
+  }
+  setState("fresco");
+</script>

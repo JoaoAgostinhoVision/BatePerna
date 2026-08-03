@@ -39,7 +39,7 @@ export const fichaSchema = z.object({
   avisos: z.string(),
   condicao: condicaoSchema,
   discriminador: discriminadorSchema,
-  custo: z.object({ tag: z.enum(["gratis", "pago"]) }),
+  custo: z.object({ tag: z.enum(["gratis", "pago"]), valor: z.string().optional() }),
 });
 
 export type Waypoint = z.infer<typeof waypointSchema>;

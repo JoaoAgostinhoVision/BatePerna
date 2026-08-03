@@ -1,0 +1,492 @@
+<title>BatePerna · Fase 1 · Walking-skeleton</title>
+<style>
+  :root {
+    --bg: #ECE7E0;
+    --surface: #FBF9F6;
+    --surface-2: #F3EFE9;
+    --ink: #211C17;
+    --ink-soft: #6B6157;
+    --line: #DAD2C7;
+    --accent: #A85A2A;
+    --accent-soft: #EBD9C9;
+    --go: #2F7D4F;
+    --go-bg: #DCEBE1;
+    --stop: #C13B2F;
+    --stop-bg: #F3DAD5;
+    --warn: #B27C12;
+    --warn-bg: #F1E3C4;
+    --rain: #3E6E8E;
+    --rain-bg: #D9E5EC;
+    --shadow: 0 1px 2px rgba(33,28,23,.06), 0 6px 20px rgba(33,28,23,.05);
+    --mono: ui-monospace, "Cascadia Mono", "SF Mono", "Consolas", monospace;
+    --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17130F;
+      --surface: #221C17;
+      --surface-2: #1D1813;
+      --ink: #F0EAE2;
+      --ink-soft: #A99E90;
+      --line: #352C24;
+      --accent: #DB8B54;
+      --accent-soft: #3A2A1E;
+      --go: #56B482;
+      --go-bg: #16281E;
+      --stop: #E56A5C;
+      --stop-bg: #2E1815;
+      --warn: #E0A94A;
+      --warn-bg: #2C2210;
+      --rain: #74A9CB;
+      --rain-bg: #14232C;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.32);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #ECE7E0; --surface: #FBF9F6; --surface-2: #F3EFE9; --ink: #211C17;
+    --ink-soft: #6B6157; --line: #DAD2C7; --accent: #A85A2A; --accent-soft: #EBD9C9;
+    --go: #2F7D4F; --go-bg: #DCEBE1; --stop: #C13B2F; --stop-bg: #F3DAD5;
+    --warn: #B27C12; --warn-bg: #F1E3C4; --rain: #3E6E8E; --rain-bg: #D9E5EC;
+    --shadow: 0 1px 2px rgba(33,28,23,.06), 0 6px 20px rgba(33,28,23,.05);
+  }
+  :root[data-theme="dark"] {
+    --bg: #17130F; --surface: #221C17; --surface-2: #1D1813; --ink: #F0EAE2;
+    --ink-soft: #A99E90; --line: #352C24; --accent: #DB8B54; --accent-soft: #3A2A1E;
+    --go: #56B482; --go-bg: #16281E; --stop: #E56A5C; --stop-bg: #2E1815;
+    --warn: #E0A94A; --warn-bg: #2C2210; --rain: #74A9CB; --rain-bg: #14232C;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.32);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 72rem; margin: 0 auto; padding: clamp(1.1rem, 3vw, 2.75rem); }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .72rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  h1 {
+    font-family: var(--sans);
+    font-weight: 750;
+    font-size: clamp(1.8rem, 4.6vw, 3rem);
+    line-height: 1.04;
+    letter-spacing: -.02em;
+    margin: .45rem 0 .55rem;
+    text-wrap: balance;
+  }
+  h2 {
+    font-size: 1.02rem;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    margin: 0;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .lede { color: var(--ink-soft); font-size: 1.06rem; max-width: 60ch; margin: 0; }
+
+  /* header */
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.6rem; margin-bottom: 1.9rem; }
+  .headrow { display: flex; flex-wrap: wrap; gap: 1.5rem 2rem; align-items: flex-end; justify-content: space-between; margin-top: 1.3rem; }
+
+  .progress { min-width: 15rem; flex: 1; }
+  .progress .nums { display: flex; align-items: baseline; gap: .5rem; font-family: var(--mono); }
+  .progress .big { font-size: 2rem; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .progress .of { color: var(--ink-soft); font-size: .95rem; }
+  .bar { height: 9px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; margin-top: .6rem; display: flex; }
+  .bar > i { display: block; height: 100%; }
+  .bar .done { background: var(--go); }
+  .bar .round1 { background: repeating-linear-gradient(45deg, var(--accent), var(--accent) 5px, color-mix(in srgb, var(--accent) 72%, transparent) 5px, color-mix(in srgb, var(--accent) 72%, transparent) 10px); }
+  .barkey { display: flex; gap: 1.1rem; flex-wrap: wrap; margin-top: .55rem; font-size: .76rem; color: var(--ink-soft); font-family: var(--mono); }
+  .barkey span { display: inline-flex; align-items: center; gap: .35rem; }
+  .dot { width: .62rem; height: .62rem; border-radius: 3px; display: inline-block; }
+
+  /* merged ribbon */
+  .shipped {
+    margin-top: 1.4rem; display: flex; flex-wrap: wrap; align-items: center; gap: .55rem 1rem;
+    background: var(--go-bg); border: 1px solid color-mix(in srgb, var(--go) 40%, transparent);
+    border-radius: 11px; padding: .7rem 1rem;
+  }
+  .shipped .tag {
+    font-family: var(--mono); font-size: .7rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--go); display: inline-flex; align-items: center; gap: .4rem;
+  }
+  .shipped .msg { font-size: .9rem; color: var(--ink); }
+  .shipped .msg b { font-weight: 650; }
+  .shipped code { font-family: var(--mono); font-size: .8em; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: .05rem .35rem; }
+
+  section { margin: 2.1rem 0; }
+  .sec-head { display: flex; align-items: baseline; gap: .7rem; margin-bottom: 1rem; }
+  .sec-head .n { font-family: var(--mono); color: var(--accent); font-size: .8rem; font-weight: 600; }
+  .sec-note { color: var(--ink-soft); font-size: .9rem; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+  }
+
+  /* architecture flow */
+  .flow { display: grid; grid-template-columns: 1fr; gap: .75rem; padding: 1.35rem; }
+  @media (min-width: 720px) { .flow { grid-template-columns: repeat(12, 1fr); align-items: stretch; } }
+  .node { border: 1px solid var(--line); border-radius: 11px; padding: .8rem .9rem; background: var(--surface-2); }
+  .node .k { font-family: var(--mono); font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
+  .node .v { font-weight: 650; font-size: .95rem; margin-top: .15rem; }
+  .node small { color: var(--ink-soft); font-size: .8rem; display: block; margin-top: .2rem; }
+  .node.rain { border-color: color-mix(in srgb, var(--rain) 45%, var(--line)); }
+  .node.rain .k { color: var(--rain); }
+  .node.state { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: var(--accent-soft); }
+  .node.built { position: relative; }
+  .node.built::after {
+    content: "✓"; position: absolute; top: .6rem; right: .7rem;
+    font-size: .78rem; font-weight: 700; color: var(--go);
+  }
+  .n-content { grid-column: span 12; }
+  .n-app { grid-column: span 12; }
+  .n-cron { grid-column: span 6; }
+  .n-meteo { grid-column: span 6; }
+  .n-turso { grid-column: span 6; }
+  .n-sw { grid-column: span 6; }
+  .flow-note { grid-column: span 12; font-size: .84rem; color: var(--ink-soft); font-family: var(--mono); text-align: center; padding-top: .1rem; }
+  .flow-note b { color: var(--accent); font-weight: 600; }
+
+  /* tasks */
+  .tasks { display: grid; gap: .7rem; }
+  .task {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: .55rem 1rem;
+    align-items: start;
+    padding: 1rem 1.15rem;
+  }
+  @media (max-width: 560px) { .task { grid-template-columns: auto 1fr; } .task .chip-wrap { grid-column: 1 / -1; justify-self: start; } }
+  .task .id {
+    font-family: var(--mono); font-weight: 700; font-size: .95rem;
+    color: var(--ink); background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 8px; padding: .15rem .5rem; font-variant-numeric: tabular-nums;
+  }
+  .task .body .t { font-weight: 650; font-size: 1rem; }
+  .task .body .d { color: var(--ink-soft); font-size: .9rem; margin-top: .12rem; }
+  .task .files { margin-top: .5rem; display: flex; flex-wrap: wrap; gap: .3rem; }
+  .task .files code {
+    font-family: var(--mono); font-size: .74rem; color: var(--ink-soft);
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: .08rem .4rem;
+  }
+  .chip {
+    font-family: var(--mono); font-size: .7rem; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; padding: .2rem .55rem; border-radius: 99px; white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .chip.todo { color: var(--ink-soft); background: var(--surface-2); border-color: var(--line); }
+  .chip.doing { color: var(--rain); background: var(--rain-bg); border-color: color-mix(in srgb, var(--rain) 40%, transparent); }
+  .chip.done { color: var(--go); background: var(--go-bg); border-color: color-mix(in srgb, var(--go) 40%, transparent); }
+  .chip.tdd { color: var(--accent); background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+  .chip.gate { color: var(--warn); background: var(--warn-bg); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+  .chip-wrap { display: flex; flex-direction: column; gap: .35rem; align-items: flex-end; }
+  .commit { font-family: var(--mono); font-size: .7rem; color: var(--ink-soft); }
+  .task.r1 { border-left: 3px solid var(--accent); }
+  .task.r1.shipped-task { border-left-color: var(--go); }
+  .task.later { opacity: .82; }
+
+  .roundlabel {
+    font-family: var(--mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-soft); margin: 1.25rem 0 .55rem; display: flex; align-items: center; gap: .6rem;
+  }
+  .roundlabel::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .roundlabel.shipped-label { color: var(--go); }
+
+  /* two-col */
+  .grid2 { display: grid; gap: 1.1rem; grid-template-columns: 1fr; }
+  @media (min-width: 820px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+  .panel { padding: 1.2rem 1.3rem; }
+  .panel h2 { margin-bottom: .7rem; }
+  pre {
+    margin: 0; overflow-x: auto; background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 10px; padding: .85rem 1rem; font-family: var(--mono); font-size: .78rem; line-height: 1.5;
+  }
+  pre .c { color: var(--ink-soft); }
+  pre .kw { color: var(--accent); }
+
+  .decisions { display: grid; gap: .55rem; }
+  .decision { display: grid; grid-template-columns: auto 1fr; gap: .7rem; align-items: baseline; padding: .55rem 0; border-bottom: 1px dashed var(--line); }
+  .decision:last-child { border-bottom: 0; }
+  .decision .lbl { font-family: var(--mono); font-size: .74rem; color: var(--accent); font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+  .decision .txt { font-size: .92rem; }
+  .decision .txt b { font-weight: 650; }
+
+  /* gates */
+  .gates { display: grid; gap: .5rem; }
+  .gate-row { display: grid; grid-template-columns: auto 1fr auto; gap: .6rem .8rem; align-items: baseline; padding: .5rem 0; border-bottom: 1px dashed var(--line); }
+  .gate-row:last-child { border-bottom: 0; }
+  .gate-row .g { font-family: var(--mono); font-size: .74rem; font-weight: 700; color: var(--warn); }
+  .gate-row .gt { font-size: .9rem; }
+  .gate-row .gwhen { font-family: var(--mono); font-size: .72rem; color: var(--ink-soft); white-space: nowrap; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .legend .pill { display: inline-flex; align-items: center; gap: .45rem; font-size: .82rem; padding: .3rem .65rem; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); }
+  .legend .sq { width: .7rem; height: .7rem; border-radius: 4px; }
+
+  footer { margin-top: 2.5rem; padding-top: 1.3rem; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: .82rem; font-family: var(--mono); display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; justify-content: space-between; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">BatePerna · Fase 1 · Walking-skeleton</div>
+    <h1>Fio 1: a Rampa do Pepê, ponta a ponta</h1>
+    <p class="lede">Uma ficha real, publicada como PWA, com o coração já de verdade mas raso: o motor lê a chuva, decide <b style="color:var(--go)">fresco</b> ou <b style="color:var(--stop)">frio</b>, e a ficha mostra. Cada camada foi desenhada pra <em>engrossar</em> depois sem re-arquitetar.</p>
+
+    <div class="headrow">
+      <div class="progress">
+        <div class="nums"><span class="big">7</span><span class="of">/ 11 tarefas concluídas</span></div>
+        <div class="bar" role="img" aria-label="7 de 11 tarefas concluídas; Rodada 1 (tarefas 1 a 7) completa e mergeada em main; tarefas 8 a 11 esperam infra">
+          <i class="done" style="width:63.6%"></i>
+        </div>
+        <div class="barkey">
+          <span><i class="dot" style="background:var(--go)"></i> concluída (1–7)</span>
+          <span><i class="dot" style="background:var(--surface-2);border:1px solid var(--line)"></i> depois (8–11)</span>
+        </div>
+      </div>
+      <div class="legend" aria-label="Legenda do semáforo de frescor">
+        <span class="pill"><i class="sq" style="background:var(--go)"></i> fresco — pode ir</span>
+        <span class="pill"><i class="sq" style="background:var(--stop)"></i> frio — não vá</span>
+        <span class="pill"><i class="sq" style="background:var(--surface-2);border:1px solid var(--line)"></i> sem dado</span>
+      </div>
+    </div>
+
+    <div class="shipped">
+      <span class="tag">✓ Rodada 1 mergeada</span>
+      <span class="msg"><b>Tarefas 1–7 na <code>main</code></b> · merge no-ff <code>a179e46</code> · review whole-branch (opus) limpo · <b>18/18</b> testes verdes</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head"><h2>Arquitetura</h2><span class="sec-note">o motor <b>empurra</b> o estado; a ficha <b>puxa</b> ao abrir · <span style="color:var(--go)">✓ = já construído</span></span></div>
+    <div class="card flow">
+      <div class="node n-content built">
+        <div class="k">conteúdo · imutável no repo</div>
+        <div class="v">content/fichas/rampa-do-pepe.json</div>
+        <small>7 campos + condição + discriminador. Edita → commit → rebuild. CMS pobre.</small>
+      </div>
+      <div class="node n-app built">
+        <div class="k">Next.js (App Router) · Vercel</div>
+        <div class="v">/api/confirmar · /api/cron/motor <span style="color:var(--ink-soft)">· páginas: depois</span></div>
+      </div>
+      <div class="node rain n-cron built">
+        <div class="k">Vercel Cron · 6/6h</div>
+        <div class="v">GET /api/cron/motor</div>
+        <small>lê a regra do dado · aplica · grava</small>
+      </div>
+      <div class="node rain n-meteo built">
+        <div class="k">Open-Meteo · sem chave</div>
+        <div class="v">chuva passada + prevista</div>
+        <small>past_days + forecast_days</small>
+      </div>
+      <div class="node state n-turso built">
+        <div class="k">Turso / libSQL · estado mutável</div>
+        <div class="v">freshness · confirmacoes</div>
+        <small>única coisa que precisa de rede</small>
+      </div>
+      <div class="node n-sw">
+        <div class="k">Serwist · service worker</div>
+        <div class="v">offline degradado</div>
+        <small>parte acionável cacheada + carimbo "visto há Xh" · tarefa 10</small>
+      </div>
+      <div class="flow-note">JSON no repo → <b>parte acionável fica offline de graça</b>; só o frescor (volátil) degrada, com honestidade.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Plano de execução</h2><span class="sec-note">11 tarefas · TDD onde há lógica testável · 1 commit por tarefa</span></div>
+
+    <div class="roundlabel shipped-label">Rodada 1 ✓ — completa · review limpo · mergeada em main</div>
+    <div class="tasks">
+
+      <div class="card task r1 shipped-task">
+        <span class="id">01</span>
+        <div class="body">
+          <div class="t">Scaffold + tooling</div>
+          <div class="d">Next 15 + Vitest + Tailwind na raiz do repo; casca do app; smoke test.</div>
+          <div class="files"><code>package.json</code><code>tsconfig.json</code><code>vitest.config.ts</code><code>src/app/</code></div>
+        </div>
+        <div class="chip-wrap"><span class="chip done">concluída</span><span class="commit">965ed9f</span></div>
+      </div>
+
+      <div class="card task r1 shipped-task">
+        <span class="id">02</span>
+        <div class="body">
+          <div class="t">Schema + loader da ficha</div>
+          <div class="d">Zod valida o JSON real da Rampa; loader lê content/. Trava o contrato de dados.</div>
+          <div class="files"><code>src/types/ficha.ts</code><code>src/lib/ficha.ts</code></div>
+        </div>
+        <div class="chip-wrap"><span class="chip done">concluída</span><span class="chip tdd">tdd</span><span class="commit">25602b3</span></div>
+      </div>
+
+      <div class="card task r1 shipped-task">
+        <span class="id">03</span>
+        <div class="body">
+          <div class="t">Motor — regra binária de chuva</div>
+          <div class="d">Função pura: chuva no passado <em>ou</em> na previsão ≥ limiar → frio. Fácil de testar.</div>
+          <div class="files"><code>src/lib/motor.ts</code></div>
+        </div>
+        <div class="chip-wrap"><span class="chip done">concluída</span><span class="chip tdd">tdd</span><span class="commit">bfdac7b</span></div>
+      </div>
+
+      <div class="card task r1 shipped-task">
+        <span class="id">04</span>
+        <div class="body">
+          <div class="t">Weather — Open-Meteo</div>
+          <div class="d">Monta URL (past + forecast), parseia precipitação em epoch. Fixture nos testes.</div>
+          <div class="files"><code>src/lib/weather.ts</code><code>fixtures/open-meteo-sample.json</code></div>
+        </div>
+        <div class="chip-wrap"><span class="chip done">concluída</span><span class="chip tdd">tdd</span><span class="commit">4ba1fb9</span></div>
+      </div>
+
+      <div class="card task r1 shipped-task">
+        <span class="id">05</span>
+        <div class="body">
+          <div class="t">Acesso a dados no Turso</div>
+          <div class="d">freshness (upsert idempotente/get) + confirmacoes (insert/count). Testa em :memory:.</div>
+          <div class="files"><code>src/lib/db.ts</code><code>db/schema.sql</code></div>
+        </div>
+        <div class="chip-wrap"><span class="chip done">concluída</span><span class="chip tdd">tdd</span><span class="commit">68dfefa</span></div>
+      </div>
+
+      <div class="card task r1 shipped-task">
+        <span class="id">06</span>
+        <div class="body">
+          <div class="t">Rota do motor (cron)</div>
+          <div class="d">Costura fetch → regra → upsert em todas as fichas com condição. Falha graciosa; guarda bruto.</div>
+          <div class="files"><code>src/lib/runMotor.ts</code><code>api/cron/motor/route.ts</code></div>
+        </div>
+        <div class="chip-wrap"><span class="chip done">concluída</span><span class="chip tdd">tdd</span><span class="commit">5d0e937</span></div>
+      </div>
+
+      <div class="card task r1 shipped-task">
+        <span class="id">07</span>
+        <div class="body">
+          <div class="t">Rota Confirmar</div>
+          <div class="d">POST grava 1 sinal e devolve a contagem. Sem login no fio 1.</div>
+          <div class="files"><code>src/lib/confirmar.ts</code><code>api/confirmar/route.ts</code></div>
+        </div>
+        <div class="chip-wrap"><span class="chip done">concluída</span><span class="chip tdd">tdd</span><span class="commit">b8c13d3</span></div>
+      </div>
+    </div>
+
+    <div class="roundlabel">Depois — precisa de Turso real / device / deploy · gates no ledger</div>
+    <div class="tasks">
+      <div class="card task later">
+        <span class="id">08</span>
+        <div class="body">
+          <div class="t">Browse + bandeira de frescor</div>
+          <div class="d">Lista estilo Booking com 1 card: rótulo de escaneio + frescor lido do Turso.</div>
+          <div class="files"><code>src/components/Card.tsx</code><code>src/app/page.tsx</code></div>
+        </div>
+        <div class="chip-wrap"><span class="chip todo">a fazer</span></div>
+      </div>
+      <div class="card task later">
+        <span class="id">09</span>
+        <div class="body">
+          <div class="t">Ficha — L5 semáforo + L7 discriminador</div>
+          <div class="d">Anatomia inteira: voz, prêmio, waypoints+Waze, acesso, avisos, semáforo, entrada, confirmar.</div>
+          <div class="files"><code>Semaforo.tsx</code><code>Discriminador.tsx</code><code>ficha/[slug]/page.tsx</code></div>
+        </div>
+        <div class="chip-wrap"><span class="chip todo">a fazer</span></div>
+      </div>
+      <div class="card task later">
+        <span class="id">10</span>
+        <div class="body">
+          <div class="t">PWA / offline</div>
+          <div class="d">Serwist + manifest; carimbo "visto há Xh — pode ter mudado"; Confirmar desabilitado offline.</div>
+          <div class="files"><code>src/app/sw.ts</code><code>src/lib/time.ts</code><code>manifest.ts</code></div>
+        </div>
+        <div class="chip-wrap"><span class="chip todo">a fazer</span></div>
+      </div>
+      <div class="card task later">
+        <span class="id">11</span>
+        <div class="body">
+          <div class="t">Deploy + verificação e2e</div>
+          <div class="d">Cron na Vercel, forçar o estado virar 🔴, instalar no celular, testar no modo avião.</div>
+          <div class="files"><code>vercel.json</code><code>README.md</code></div>
+        </div>
+        <div class="chip-wrap"><span class="chip todo">a fazer</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Portões de pré-deploy</h2><span class="sec-note">levantados pelo review whole-branch · gravados no ledger · obrigatórios antes de sair do esqueleto</span></div>
+    <div class="card panel">
+      <div class="gates">
+        <div class="gate-row">
+          <span class="g">G1</span>
+          <span class="gt"><b>CRON auth é fail-open.</b> Sem <code style="font-family:var(--mono);font-size:.85em">CRON_SECRET</code>, <code style="font-family:var(--mono);font-size:.85em">/api/cron/motor</code> fica acionável pelo mundo. Tornar fail-closed + <code style="font-family:var(--mono);font-size:.85em">vercel.json</code> mandando header Bearer.</span>
+          <span class="gwhen">tarefa 09</span>
+        </div>
+        <div class="gate-row">
+          <span class="g">G2</span>
+          <span class="gt"><b>Schema em prod.</b> <code style="font-family:var(--mono);font-size:.85em">ensureSchema</code> só roda em teste; prod assume <code style="font-family:var(--mono);font-size:.85em">db/schema.sql</code> aplicado à mão. Aplicar no Turso (ou chamar oportunisticamente).</span>
+          <span class="gwhen">tarefa 08</span>
+        </div>
+        <div class="gate-row">
+          <span class="g">G3</span>
+          <span class="gt"><b>npm audit.</b> 8 vulnerabilidades (1 crítica) transitivas — limpar antes de deploy público.</span>
+          <span class="gwhen">tarefa 11</span>
+        </div>
+        <div class="gate-row">
+          <span class="g">G4</span>
+          <span class="gt"><b>Bundle do <code style="font-family:var(--mono);font-size:.85em">content/</code>.</b> A ficha é lida via <code style="font-family:var(--mono);font-size:.85em">fs</code> em request-time — verificar que o build da Vercel inclui a pasta no bundle serverless.</span>
+          <span class="gwhen">tarefa 11</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="grid2">
+      <div class="card panel">
+        <h2>Modelo de dados</h2>
+        <p class="sec-note" style="margin:.1rem 0 .8rem">imutável no repo · mutável no Turso (2 tabelas, com slots pra engrossar) · <span style="color:var(--go)">✓ implementado em db/schema.sql</span></p>
+        <pre><span class="c">-- Turso · estado mutável</span>
+<span class="kw">CREATE TABLE</span> freshness (
+  ficha_slug     TEXT PRIMARY KEY,
+  estado         TEXT,     <span class="c">-- fresco | frio</span>
+  calculado_em   INTEGER,  <span class="c">-- epoch</span>
+  fonte          TEXT,
+  previsao_bruta TEXT       <span class="c">-- transparência</span>
+);
+<span class="kw">CREATE TABLE</span> confirmacoes (
+  id          INTEGER PRIMARY KEY,
+  ficha_slug  TEXT,
+  criado_em   INTEGER,
+  tipo        TEXT <span class="c">-- slot: 2 sinais depois</span>
+);</pre>
+      </div>
+
+      <div class="card panel">
+        <h2>Decisões travadas</h2>
+        <div class="decisions">
+          <div class="decision"><span class="lbl">rodada 1</span><span class="txt"><b>Mergeada em main.</b> 7 tarefas, review whole-branch limpo (opus), 18/18 testes. 8–11 esperam infra.</span></div>
+          <div class="decision"><span class="lbl">app</span><span class="txt"><b>Na raiz do repo.</b> O v1 <code style="font-family:var(--mono);font-size:.82em">BatePerna/</code> fica fora (repo próprio, gitignorado).</span></div>
+          <div class="decision"><span class="lbl">motor</span><span class="txt"><b>Chuva passada + prevista.</b> O barro segura água — não basta olhar só à frente <span style="color:var(--ink-soft)">(2026-08-02)</span>.</span></div>
+          <div class="decision"><span class="lbl">confirmar</span><span class="txt"><b>Sem login.</b> Fricção mínima; anti-abuso e 2 sinais engrossam depois.</span></div>
+          <div class="decision"><span class="lbl">fio 1</span><span class="txt">Rampa é roteiro-<b>lugar</b> + modo <b>#4</b> condicional ⇒ não toca hub L6 nem armadilha L2.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>BatePerna 2.0 · Fase 1 · fio 1 = Rampa do Pepê</span>
+    <span>fonte: specs/2026-07-30 · plano: 2026-08-02 · rodada 1 mergeada 2026-08-02</span>
+  </footer>
+</div>

@@ -16,11 +16,11 @@
     "coords": { "lat": -7.907889, "lng": -36.019222 },
     "regra": {
       "tipo": "chuva_binaria",
-      "janela_previsao_horas": 48,
-      "janela_passado_horas": 48,
+      "janela_previsao_horas": 3,
+      "janela_passado_horas": 6,
       "limiar_mm": 0.2
     },
-    "regra_texto": "Choveu nas últimas horas OU há chuva na janela → não suba de carro comum.",
+    "regra_texto": "Choveu nas últimas ~6h OU vem chuva nas próximas ~3h → não suba de carro comum; o barro segura água. Área alta, escorre rápido — passou disso, firma.",
     "ressalva_proxy": "Chuva medida ≠ barro na entrada — a grade do modelo não vê a rampa. Confirme na entrada."
   },
   "discriminador": {
@@ -28,5 +28,5 @@
     "como_ler": "Na entrada da rampa: barro brilhando/pegajoso = não vá.",
     "permissao_abortar": "Dar meia-volta aqui é sabedoria, não fracasso."
   },
-  "custo": { "tag": "gratis" }
+  "custo": { "tag": "pago", "valor": "R$ 5 por pessoa · cobrado no portão da entrada" }
 }

@@ -1,0 +1,355 @@
+<title>BatePerna · Rampa do Pepê</title>
+<style>
+  :root {
+    --bg: #E6E0D7;
+    --screen: #FBF9F6;
+    --surface-2: #F2EDE6;
+    --ink: #211C17;
+    --ink-soft: #6B6157;
+    --ink-faint: #9A8F82;
+    --line: #E0D8CC;
+    --line-soft: #EBE4DA;
+    --accent: #A85A2A;
+    --accent-soft: #EFDECE;
+    --go: #2F7D4F;
+    --go-ink: #1C5636;
+    --go-bg: #E1EFE6;
+    --go-line: #B8D8C4;
+    --stop: #C13B2F;
+    --stop-ink: #8E2A21;
+    --stop-bg: #F6DBD6;
+    --stop-line: #E7B4AC;
+    --rain: #3E6E8E;
+    --rain-bg: #E0EAF0;
+    --shadow-screen: 0 1px 3px rgba(33,28,23,.08), 0 18px 50px rgba(33,28,23,.14);
+    --shadow-card: 0 1px 2px rgba(33,28,23,.05);
+    --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+    --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #100D0A;
+      --screen: #1C1712;
+      --surface-2: #241E18;
+      --ink: #F0EAE2;
+      --ink-soft: #A99E90;
+      --ink-faint: #7C7266;
+      --line: #322A22;
+      --line-soft: #2A231C;
+      --accent: #DB8B54;
+      --accent-soft: #3A2A1E;
+      --go: #56B482;
+      --go-ink: #86D4A8;
+      --go-bg: #15271D;
+      --go-line: #2C4A38;
+      --stop: #E56A5C;
+      --stop-ink: #F0A99E;
+      --stop-bg: #2E1714;
+      --stop-line: #5A2A24;
+      --rain: #74A9CB;
+      --rain-bg: #14232C;
+      --shadow-screen: 0 1px 3px rgba(0,0,0,.4), 0 18px 50px rgba(0,0,0,.5);
+      --shadow-card: 0 1px 2px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg:#E6E0D7; --screen:#FBF9F6; --surface-2:#F2EDE6; --ink:#211C17; --ink-soft:#6B6157; --ink-faint:#9A8F82;
+    --line:#E0D8CC; --line-soft:#EBE4DA; --accent:#A85A2A; --accent-soft:#EFDECE;
+    --go:#2F7D4F; --go-ink:#1C5636; --go-bg:#E1EFE6; --go-line:#B8D8C4;
+    --stop:#C13B2F; --stop-ink:#8E2A21; --stop-bg:#F6DBD6; --stop-line:#E7B4AC;
+    --rain:#3E6E8E; --rain-bg:#E0EAF0;
+    --shadow-screen:0 1px 3px rgba(33,28,23,.08),0 18px 50px rgba(33,28,23,.14); --shadow-card:0 1px 2px rgba(33,28,23,.05);
+  }
+  :root[data-theme="dark"] {
+    --bg:#100D0A; --screen:#1C1712; --surface-2:#241E18; --ink:#F0EAE2; --ink-soft:#A99E90; --ink-faint:#7C7266;
+    --line:#322A22; --line-soft:#2A231C; --accent:#DB8B54; --accent-soft:#3A2A1E;
+    --go:#56B482; --go-ink:#86D4A8; --go-bg:#15271D; --go-line:#2C4A38;
+    --stop:#E56A5C; --stop-ink:#F0A99E; --stop-bg:#2E1714; --stop-line:#5A2A24;
+    --rain:#74A9CB; --rain-bg:#14232C;
+    --shadow-screen:0 1px 3px rgba(0,0,0,.4),0 18px 50px rgba(0,0,0,.5); --shadow-card:0 1px 2px rgba(0,0,0,.3);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background:
+      radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 60%),
+      var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: clamp(0px, 4vw, 2.5rem) clamp(0px, 3vw, 1rem) 2rem;
+  }
+
+  /* preview control — clearly not part of the product UI */
+  .preview-bar {
+    width: 100%; max-width: 26rem; margin-bottom: 1rem;
+    display: flex; align-items: center; gap: .7rem; flex-wrap: wrap;
+    font-family: var(--mono); font-size: .72rem; color: var(--ink-faint);
+  }
+  .preview-bar .lbl { letter-spacing: .06em; text-transform: uppercase; }
+  .seg { display: inline-flex; background: color-mix(in srgb, var(--ink) 6%, transparent); border: 1px solid var(--line); border-radius: 99px; padding: 3px; }
+  .seg button {
+    font-family: var(--mono); font-size: .72rem; font-weight: 600; letter-spacing: .02em;
+    border: 0; background: transparent; color: var(--ink-soft); cursor: pointer;
+    padding: .32rem .7rem; border-radius: 99px; display: inline-flex; align-items: center; gap: .35rem;
+    transition: background .18s ease, color .18s ease;
+  }
+  .seg button .d { width: .5rem; height: .5rem; border-radius: 50%; }
+  .seg button[data-for="fresco"] .d { background: var(--go); }
+  .seg button[data-for="frio"] .d { background: var(--stop); }
+  :root[data-state="fresco"] .seg button[data-for="fresco"] { background: var(--screen); color: var(--ink); box-shadow: var(--shadow-card); }
+  :root[data-state="frio"]   .seg button[data-for="frio"]   { background: var(--screen); color: var(--ink); box-shadow: var(--shadow-card); }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* phone screen */
+  .screen {
+    width: 100%; max-width: 26rem; background: var(--screen);
+    border: 1px solid var(--line); border-radius: 26px; overflow: hidden;
+    box-shadow: var(--shadow-screen);
+  }
+
+  /* app top bar */
+  .appbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .9rem 1.15rem .8rem; border-bottom: 1px solid var(--line-soft);
+  }
+  .brand { display: flex; align-items: center; gap: .5rem; font-weight: 750; letter-spacing: -.01em; font-size: .98rem; }
+  .brand .mk { width: 1.5rem; height: 1.5rem; border-radius: 7px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: .9rem; }
+  .appbar .back { font-family: var(--mono); font-size: .74rem; color: var(--ink-faint); }
+
+  /* hero: the semáforo — the whole point */
+  .hero { padding: 1.35rem 1.15rem 1.25rem; }
+  .scan {
+    display: inline-flex; align-items: center; gap: .4rem;
+    font-family: var(--mono); font-size: .72rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: .28rem .6rem;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 600; font-size: 1.9rem; line-height: 1.08;
+    letter-spacing: -.01em; margin: .7rem 0 .15rem; text-wrap: balance;
+  }
+  .promessa { color: var(--ink-soft); font-size: 1rem; margin: 0 0 1.15rem; max-width: 30ch; }
+
+  .semaforo {
+    border-radius: 16px; padding: 1.05rem 1.1rem;
+    border: 1px solid var(--sf-line); background: var(--sf-bg);
+    display: grid; grid-template-columns: auto 1fr; gap: .35rem 1rem; align-items: center;
+    transition: background .25s ease, border-color .25s ease;
+  }
+  :root[data-state="fresco"] .semaforo { --sf-bg: var(--go-bg); --sf-line: var(--go-line); --sf-ink: var(--go-ink); --sf-dot: var(--go); }
+  :root[data-state="frio"]   .semaforo { --sf-bg: var(--stop-bg); --sf-line: var(--stop-line); --sf-ink: var(--stop-ink); --sf-dot: var(--stop); }
+  .semaforo .light {
+    grid-row: span 2; width: 2.9rem; height: 2.9rem; border-radius: 50%;
+    background: var(--sf-dot); display: grid; place-items: center; color: #fff; font-size: 1.4rem;
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--sf-dot) 16%, transparent);
+  }
+  .semaforo .verdict { font-weight: 750; font-size: 1.28rem; letter-spacing: -.02em; color: var(--sf-ink); }
+  .semaforo .why { font-size: .92rem; color: var(--ink-soft); align-self: start; }
+  .semaforo .why b { color: var(--ink); font-weight: 650; }
+  .stamp {
+    margin-top: .7rem; display: flex; align-items: center; gap: .45rem;
+    font-family: var(--mono); font-size: .72rem; color: var(--ink-faint);
+  }
+  .stamp .pulse { width: .5rem; height: .5rem; border-radius: 50%; background: var(--rain); box-shadow: 0 0 0 0 color-mix(in srgb, var(--rain) 60%, transparent); }
+  @media (prefers-reduced-motion: no-preference) { .stamp .pulse { animation: pulse 2.4s ease-out infinite; } }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--rain) 55%,transparent);} 70%{box-shadow:0 0 0 6px transparent;} 100%{box-shadow:0 0 0 0 transparent;} }
+
+  /* proxy caveat — the co-pilot honesty */
+  .proxy {
+    margin: .8rem 1.15rem 0; padding: .7rem .85rem; border-radius: 12px;
+    background: var(--rain-bg); border: 1px solid color-mix(in srgb, var(--rain) 22%, transparent);
+    font-size: .86rem; color: var(--ink-soft); display: flex; gap: .55rem;
+  }
+  .proxy .ic { color: var(--rain); flex: none; }
+  .proxy b { color: var(--ink); font-weight: 650; }
+
+  /* body sections */
+  .body { padding: 1.35rem 1.15rem .3rem; display: flex; flex-direction: column; gap: 1.35rem; }
+  .sec .k {
+    font-family: var(--mono); font-size: .7rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-faint); margin-bottom: .4rem; display: flex; align-items: center; gap: .45rem;
+  }
+  .sec p { margin: 0; font-size: .97rem; }
+  .sec.premio p { font-size: 1.02rem; }
+
+  .voz {
+    border-left: 3px solid var(--accent); padding: .1rem 0 .1rem 1rem;
+    font-family: var(--serif); font-style: italic; font-size: 1.18rem; line-height: 1.4; color: var(--ink);
+  }
+  .voz .who { display: block; font-family: var(--mono); font-style: normal; font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); margin-top: .5rem; }
+
+  /* map waypoint */
+  .waypoint { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .wp-map {
+    height: 92px; position: relative;
+    background:
+      radial-gradient(60% 90% at 78% 30%, color-mix(in srgb, var(--go) 22%, transparent), transparent 60%),
+      repeating-linear-gradient(115deg, color-mix(in srgb, var(--accent) 7%, transparent) 0 2px, transparent 2px 16px),
+      var(--surface-2);
+  }
+  .wp-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-100%); font-size: 1.4rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,.25)); }
+  .wp-body { padding: .8rem .9rem; display: flex; align-items: center; justify-content: space-between; gap: .8rem; }
+  .wp-body .t { font-weight: 650; font-size: .95rem; }
+  .wp-body .n { color: var(--ink-soft); font-size: .82rem; margin-top: .1rem; }
+  .wp-body .coord { font-family: var(--mono); font-size: .68rem; color: var(--ink-faint); margin-top: .25rem; }
+  .maplink {
+    flex: none; text-decoration: none; font-weight: 650; font-size: .82rem; color: #fff; background: var(--accent);
+    padding: .5rem .8rem; border-radius: 10px; white-space: nowrap;
+  }
+  .maplink:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  .note { display: flex; gap: .55rem; font-size: .92rem; color: var(--ink-soft); }
+  .note .ic { flex: none; }
+
+  /* discriminador — the human check at the gate */
+  .gate {
+    margin: .3rem 1.15rem 0; padding: .95rem 1.05rem; border-radius: 14px;
+    background: var(--surface-2); border: 1px dashed color-mix(in srgb, var(--accent) 40%, var(--line));
+  }
+  .gate .k { font-family: var(--mono); font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: .5rem; display: flex; align-items: center; gap: .45rem; }
+  .gate .read { font-weight: 650; font-size: 1rem; }
+  .gate .perm { margin-top: .55rem; font-family: var(--serif); font-style: italic; font-size: 1rem; color: var(--ink-soft); }
+
+  /* deferred confirmar — shown as a ghost so the shape is visible but clearly "depois" */
+  .confirmar {
+    margin: 1.35rem 1.15rem 0; padding: .9rem 1rem; border-radius: 14px;
+    border: 1px dashed var(--line); background: transparent; text-align: center;
+    color: var(--ink-faint); font-size: .88rem;
+  }
+  .confirmar .btn { display: inline-block; font-weight: 650; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 99px; padding: .5rem 1.1rem; margin-bottom: .45rem; }
+  .confirmar .soon { font-family: var(--mono); font-size: .68rem; letter-spacing: .06em; text-transform: uppercase; }
+
+  .foot-cost { display: flex; align-items: center; justify-content: center; gap: .5rem; padding: 1.25rem; color: var(--ink-faint); font-size: .82rem; }
+  .cost-tag { font-family: var(--mono); font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .05em; font-size: .78rem; }
+
+  .disclaimer {
+    max-width: 26rem; width: 100%; margin-top: 1.1rem; text-align: center;
+    font-family: var(--mono); font-size: .7rem; line-height: 1.6; color: var(--ink-faint);
+  }
+  .disclaimer b { color: var(--ink-soft); font-weight: 600; }
+</style>
+
+<div class="preview-bar">
+  <span class="lbl">Prévia · estado</span>
+  <div class="seg" role="group" aria-label="Alternar estado de prévia">
+    <button data-for="fresco" onclick="setState('fresco')"><span class="d"></span>Não choveu</button>
+    <button data-for="frio" onclick="setState('frio')"><span class="d"></span>Choveu</button>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="appbar">
+    <div class="brand"><span class="mk">🥾</span> BatePerna</div>
+    <span class="back">Agreste · PE</span>
+  </div>
+
+  <div class="hero">
+    <span class="scan">◔ Só sem chuva</span>
+    <h1>Rampa do Pepê</h1>
+    <p class="promessa">A serra pela mata e a vista lá de cima — quando o tempo deixa.</p>
+
+    <div class="semaforo" role="status" aria-live="polite">
+      <div class="light" id="light">✓</div>
+      <div class="verdict" id="verdict">Pode ir</div>
+      <div class="why" id="why"></div>
+    </div>
+
+    <div class="stamp"><span class="pulse"></span> <span id="stamp">lido da chuva agora · janela 48h antes + 48h à frente</span></div>
+  </div>
+
+  <div class="proxy">
+    <span class="ic">⚠</span>
+    <span><b>Chuva medida ≠ barro na entrada.</b> A grade do modelo não vê a rampa. Confirme na entrada.</span>
+  </div>
+
+  <div class="body">
+    <div class="sec premio">
+      <div class="k">O prêmio</div>
+      <p>A vista. E a subida da serra pela mata — a estrada vai subindo por dentro da mata, e é lindo.</p>
+    </div>
+
+    <div class="voz">
+      "O pepê é emoção pura. Mas é barro: molhou, não vá."
+      <span class="who">A voz de quem conhece</span>
+    </div>
+
+    <div class="sec">
+      <div class="k">📍 Trajeto</div>
+      <div class="waypoint">
+        <div class="wp-map" aria-hidden="true"><span class="wp-pin">📍</span></div>
+        <div class="wp-body">
+          <div>
+            <div class="t">Rampa do Pepê</div>
+            <div class="n">A subida da serra pela mata, por dentro da estrada.</div>
+            <div class="coord">-7.907889, -36.019222</div>
+          </div>
+          <a class="maplink" href="https://www.google.com/maps/search/?api=1&query=-7.907889,-36.019222" target="_blank" rel="noopener">Abrir no mapa</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="k">🚗 Acesso</div>
+      <div class="note"><span class="ic">🚗</span><p>Dá pra ir de carro comum — mas só quando não estiver chovendo. Molhado, o risco é atolar.</p></div>
+    </div>
+
+    <div class="sec">
+      <div class="k">⚠ Avisos</div>
+      <div class="note"><span class="ic">⚠</span><p>Só de carro comum em tempo seco: com chuva, risco de atolamento — se choveu, remarque pro próximo dia seco. E a vista rende mais com céu aberto — muita nuvem ou nevoeiro atrapalha o que você foi ver.</p></div>
+    </div>
+  </div>
+
+  <div class="gate">
+    <div class="k">🖐 Na entrada — a última checagem é sua</div>
+    <div class="read">Barro brilhando ou pegajoso na entrada da rampa? <b>Não vá.</b></div>
+    <div class="perm">"Dar meia-volta aqui é sabedoria, não fracasso."</div>
+  </div>
+
+  <div class="confirmar">
+    <div class="btn">✓ Fui</div>
+    <div class="soon">confirmar — chega depois</div>
+  </div>
+
+  <div class="foot-cost">
+    <span class="cost-tag">R$ 5</span> · por pessoa · portão na entrada
+  </div>
+</div>
+
+<p class="disclaimer">
+  Prévia de design da <b>parte do cliente</b> — conteúdo real da Rampa.<br>
+  O semáforo aqui é alternável só pra você ver os dois estados; <b>no app real ele é calculado ao vivo</b> pela chuva (Open-Meteo).<br>
+  Backend (banco, cron) fica pra depois — muda sem mexer nesta tela.
+</p>
+
+<script>
+  var DATA = {
+    fresco: {
+      icon: "✓",
+      verdict: "Pode ir",
+      why: "Sem chuva nas últimas <b>~6h</b> e nada previsto pras próximas <b>~3h</b>. Área alta, a água escorre rápido — a serra firmou. Carro comum sobe.",
+      stamp: "lido da chuva agora · últimas ~6h + próximas ~3h"
+    },
+    frio: {
+      icon: "✕",
+      verdict: "Não vá — de carro comum",
+      why: "Choveu nas últimas <b>~6h</b> (ou vem chuva nas próximas <b>~3h</b>). O barro ainda segura água — risco de atolar. Dá um tempo de sol e volta.",
+      stamp: "lido da chuva agora · últimas ~6h + próximas ~3h"
+    }
+  };
+  function setState(s) {
+    document.documentElement.setAttribute("data-state", s);
+    var d = DATA[s];
+    document.getElementById("light").textContent = d.icon;
+    document.getElementById("verdict").textContent = d.verdict;
+    document.getElementById("why").innerHTML = d.why;
+    document.getElementById("stamp").textContent = d.stamp;
+  }
+  setState("fresco");
+</script>

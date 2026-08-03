@@ -1,0 +1,266 @@
+<title>BatePerna · Rampa do Pepê · Versão D</title>
+<style>
+  :root {
+    --ground: #E7DFD0;
+    --screen: #F8F2E6;
+    --surface-2: #F0E8D8;
+    --ink: #2A2016;
+    --ink-soft: #6A5B47;
+    --ink-faint: #9C8D75;
+    --line: #E2D8C6;
+    --accent: #A5522A;
+    --accent-soft: #EEDDCB;
+    --go: #35774A; --go-ink: #245234; --go-bg: #E2EDE2; --go-line: #B7D3BC;
+    --stop: #BB3B2C; --stop-ink: #8C2A20; --stop-bg: #F4DBD4; --stop-line: #E4B3A9;
+    --rain: #4A6E86; --rain-bg: #E4EDF1;
+    --shadow: 0 1px 2px rgba(42,32,22,.06), 0 14px 40px rgba(42,32,22,.13);
+    --shadow-card: 0 1px 2px rgba(42,32,22,.05);
+    --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+    --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+    --type: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #100D08; --screen: #1B1710; --surface-2: #241E15;
+      --ink: #EFE6D5; --ink-soft: #B0A488; --ink-faint: #7C7157; --line: #2E2719;
+      --accent: #CE7C4B; --accent-soft: #38291B;
+      --go: #5FA877; --go-ink: #8FCBA0; --go-bg: #16271C; --go-line: #2C4735;
+      --stop: #DA6154; --stop-ink: #EBA498; --stop-bg: #2C1712; --stop-line: #57271F;
+      --rain: #79A5BF; --rain-bg: #15242C;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 14px 40px rgba(0,0,0,.55);
+      --shadow-card: 0 1px 2px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#E7DFD0; --screen:#F8F2E6; --surface-2:#F0E8D8; --ink:#2A2016; --ink-soft:#6A5B47; --ink-faint:#9C8D75; --line:#E2D8C6; --accent:#A5522A; --accent-soft:#EEDDCB;
+    --go:#35774A; --go-ink:#245234; --go-bg:#E2EDE2; --go-line:#B7D3BC; --stop:#BB3B2C; --stop-ink:#8C2A20; --stop-bg:#F4DBD4; --stop-line:#E4B3A9; --rain:#4A6E86; --rain-bg:#E4EDF1;
+    --shadow:0 1px 2px rgba(42,32,22,.06),0 14px 40px rgba(42,32,22,.13); --shadow-card:0 1px 2px rgba(42,32,22,.05);
+  }
+  :root[data-theme="dark"] {
+    --ground:#100D08; --screen:#1B1710; --surface-2:#241E15; --ink:#EFE6D5; --ink-soft:#B0A488; --ink-faint:#7C7157; --line:#2E2719; --accent:#CE7C4B; --accent-soft:#38291B;
+    --go:#5FA877; --go-ink:#8FCBA0; --go-bg:#16271C; --go-line:#2C4735; --stop:#DA6154; --stop-ink:#EBA498; --stop-bg:#2C1712; --stop-line:#57271F; --rain:#79A5BF; --rain-bg:#15242C;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 40px rgba(0,0,0,.55); --shadow-card:0 1px 2px rgba(0,0,0,.3);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: radial-gradient(110% 70% at 50% -8%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 58%), var(--ground);
+    color: var(--ink); font-family: var(--sans); line-height: 1.52; -webkit-font-smoothing: antialiased;
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+    padding: clamp(0px, 4vw, 2.5rem) clamp(0px, 3vw, 1rem) 2rem;
+  }
+
+  .preview-bar {
+    width: 100%; max-width: 25.5rem; margin-bottom: 1rem;
+    display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; font-family: var(--type); font-size: .72rem; color: var(--ink-faint);
+  }
+  .preview-bar .lbl { letter-spacing: .06em; text-transform: uppercase; }
+  .seg { display: inline-flex; background: color-mix(in srgb, var(--ink) 7%, transparent); border: 1px solid var(--line); border-radius: 99px; padding: 3px; }
+  .seg button {
+    font-family: var(--type); font-size: .72rem; font-weight: 600; border: 0; background: transparent; color: var(--ink-soft);
+    cursor: pointer; padding: .32rem .7rem; border-radius: 99px; display: inline-flex; align-items: center; gap: .35rem; transition: background .18s, color .18s;
+  }
+  .seg button .d { width: .5rem; height: .5rem; border-radius: 50%; }
+  .seg button[data-for="fresco"] .d { background: var(--go); }
+  .seg button[data-for="frio"] .d { background: var(--stop); }
+  :root[data-state="fresco"] .seg button[data-for="fresco"] { background: var(--screen); color: var(--ink); box-shadow: var(--shadow-card); }
+  :root[data-state="frio"]   .seg button[data-for="frio"]   { background: var(--screen); color: var(--ink); box-shadow: var(--shadow-card); }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .screen { width: 100%; max-width: 25.5rem; background: var(--screen); border: 1px solid var(--line); border-radius: 24px; overflow: hidden; box-shadow: var(--shadow); }
+
+  .appbar { display: flex; align-items: center; justify-content: space-between; padding: .9rem 1.2rem .8rem; border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: .5rem; font-weight: 750; letter-spacing: -.01em; font-size: .98rem; }
+  .brand .mk { width: 1.5rem; height: 1.5rem; border-radius: 7px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: .9rem; }
+  .cost-chip { font-family: var(--type); font-size: .68rem; font-weight: 600; letter-spacing: .03em; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: .28rem .6rem; }
+
+  .hero { padding: 1.35rem 1.2rem 1.3rem; }
+  .scan { display: inline-block; font-family: var(--type); font-size: .7rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: 2rem; line-height: 1.06; letter-spacing: -.01em; margin: .5rem 0 .1rem; text-wrap: balance; }
+  .promessa { color: var(--ink-soft); font-size: 1.03rem; font-style: italic; margin: 0; max-width: 32ch; }
+
+  /* the decision — A's warm card hosting C's stamp */
+  .decision {
+    margin-top: 1.25rem; background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px;
+    padding: 1.2rem 1.1rem 1.05rem; text-align: center;
+  }
+  .stamp {
+    --c: var(--st-ink); display: inline-block; color: var(--c);
+    border: 2.5px double var(--c); border-radius: 9px; padding: .5rem 1.15rem .55rem;
+    background: var(--st-bg); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 22%, transparent);
+    transition: color .25s, border-color .25s, background .25s;
+  }
+  :root[data-state="fresco"] .stamp { --st-ink: var(--go-ink); --st-bg: var(--go-bg); }
+  :root[data-state="frio"]   .stamp { --st-ink: var(--stop-ink); --st-bg: var(--stop-bg); }
+  .stamp .mark { font-family: var(--sans); font-weight: 800; font-size: 1.7rem; line-height: 1; letter-spacing: .01em; text-transform: uppercase; }
+  .stamp .sub { font-family: var(--type); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; margin-top: .32rem; opacity: .85; }
+  .reason { font-size: .98rem; color: var(--ink-soft); max-width: 32ch; margin: .85rem auto 0; }
+  .reason b { color: var(--ink); font-weight: 650; }
+  .live { margin-top: .75rem; display: inline-flex; align-items: center; gap: .45rem; font-family: var(--type); font-size: .66rem; color: var(--ink-faint); }
+  .live .pulse { width: .5rem; height: .5rem; border-radius: 50%; background: var(--rain); }
+  @media (prefers-reduced-motion: no-preference) { .live .pulse { animation: pulse 2.4s ease-out infinite; } }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--rain) 55%,transparent);} 70%{box-shadow:0 0 0 6px transparent;} 100%{box-shadow:0 0 0 0 transparent;} }
+
+  .caveat { margin: .85rem 1.2rem 0; display: flex; gap: .55rem; padding: .7rem .85rem; border-radius: 12px; background: var(--rain-bg); border: 1px solid color-mix(in srgb, var(--rain) 22%, transparent); font-size: .87rem; color: var(--ink-soft); }
+  .caveat .ic { color: var(--rain); flex: none; }
+  .caveat b { color: var(--ink); font-weight: 650; }
+
+  .body { padding: 1.35rem 1.2rem .3rem; display: flex; flex-direction: column; gap: 1.3rem; }
+  .sec .k { font-family: var(--type); font-size: .68rem; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: .38rem; }
+  .sec p { margin: 0; font-size: .98rem; }
+  .sec.premio p { font-size: 1.04rem; }
+
+  .voz { font-family: var(--serif); font-style: italic; font-size: 1.32rem; line-height: 1.4; color: var(--ink); border-left: 3px solid var(--accent); padding-left: 1rem; }
+  .voz .who { display: block; font-family: var(--type); font-style: normal; font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin-top: .5rem; }
+
+  .waypoint { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface-2); }
+  .wp-map { height: 88px; position: relative; background:
+      radial-gradient(60% 90% at 78% 30%, color-mix(in srgb, var(--go) 22%, transparent), transparent 60%),
+      repeating-linear-gradient(115deg, color-mix(in srgb, var(--accent) 8%, transparent) 0 2px, transparent 2px 16px); }
+  .wp-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-100%); font-size: 1.4rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,.25)); }
+  .wp-body { padding: .8rem .9rem; display: flex; align-items: center; justify-content: space-between; gap: .8rem; }
+  .wp-body .t { font-weight: 650; font-size: .95rem; }
+  .wp-body .n { color: var(--ink-soft); font-size: .82rem; font-style: italic; margin-top: .1rem; }
+  .wp-body .coord { font-family: var(--type); font-size: .68rem; color: var(--ink-faint); margin-top: .25rem; }
+  .maplink { flex: none; text-decoration: none; font-weight: 650; font-size: .82rem; color: #fff; background: var(--accent); padding: .5rem .8rem; border-radius: 10px; white-space: nowrap; }
+  .maplink:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  .note { display: flex; gap: .55rem; font-size: .96rem; color: var(--ink-soft); }
+  .note .ic { flex: none; }
+
+  /* gate — C's field-note, kept as the handmade touch */
+  .gate { margin: .3rem 1.2rem 0; padding: .95rem 1.05rem; border-radius: 14px; background: var(--surface-2); border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); }
+  .gate .k { font-family: var(--type); font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: .45rem; }
+  .gate .read { font-weight: 650; font-size: 1rem; }
+  .gate .read b { color: var(--stop); }
+  .gate .perm { margin-top: .5rem; font-family: var(--serif); font-style: italic; font-size: 1rem; color: var(--ink-soft); }
+
+  .ticket { margin: 1.3rem 1.2rem 0; display: flex; align-items: center; gap: .6rem; font-family: var(--type); font-size: .76rem; color: var(--ink-soft); border-top: 1px dashed color-mix(in srgb, var(--ink) 22%, transparent); padding-top: 1rem; }
+  .ticket .price { font-weight: 700; color: var(--accent); font-size: .92rem; }
+
+  .confirmar { margin: 1.3rem 1.2rem 0; padding: .9rem 1rem; border-radius: 14px; border: 1px dashed var(--line); text-align: center; color: var(--ink-faint); }
+  .confirmar .btn { display: inline-block; font-weight: 650; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 99px; padding: .5rem 1.15rem; margin-bottom: .4rem; }
+  .confirmar .soon { font-family: var(--type); font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; }
+
+  .foot { text-align: center; padding: 1.3rem; color: var(--ink-faint); font-size: .8rem; font-family: var(--type); }
+
+  .disclaimer { max-width: 25.5rem; width: 100%; margin-top: 1.1rem; text-align: center; font-family: var(--type); font-size: .7rem; line-height: 1.6; color: var(--ink-faint); }
+  .disclaimer b { color: var(--ink-soft); font-weight: 600; }
+</style>
+
+<div class="preview-bar">
+  <span class="lbl">Prévia · estado</span>
+  <div class="seg" role="group" aria-label="Alternar estado de prévia">
+    <button data-for="fresco" onclick="setState('fresco')"><span class="d"></span>Não choveu</button>
+    <button data-for="frio" onclick="setState('frio')"><span class="d"></span>Choveu</button>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="appbar">
+    <div class="brand"><span class="mk">🥾</span> BatePerna</div>
+    <span class="cost-chip">R$ 5 · portão</span>
+  </div>
+
+  <div class="hero">
+    <span class="scan">Só sem chuva</span>
+    <h1>Rampa do Pepê</h1>
+    <p class="promessa">A serra pela mata e a vista lá de cima — quando o tempo deixa.</p>
+
+    <div class="decision" role="status" aria-live="polite">
+      <div class="stamp">
+        <div class="mark" id="mark">Pode subir</div>
+        <div class="sub" id="sub">seco · carro comum</div>
+      </div>
+      <p class="reason" id="reason"></p>
+      <div class="live"><span class="pulse"></span> <span id="live">lido da chuva agora · 6h atrás + 3h à frente</span></div>
+    </div>
+  </div>
+
+  <div class="caveat">
+    <span class="ic">⚠</span>
+    <span><b>Chuva medida ≠ barro na entrada.</b> A grade do modelo não vê a rampa. A última leitura é sua, no portão.</span>
+  </div>
+
+  <div class="body">
+    <div class="sec premio">
+      <div class="k">O prêmio</div>
+      <p>A vista. E a subida da serra pela mata — a estrada vai subindo por dentro da mata, e é lindo.</p>
+    </div>
+
+    <div class="voz">
+      "O pepê é emoção pura. Mas é barro: molhou, não vá."
+      <span class="who">— a voz de quem conhece</span>
+    </div>
+
+    <div class="sec">
+      <div class="k">📍 Trajeto</div>
+      <div class="waypoint">
+        <div class="wp-map" aria-hidden="true"><span class="wp-pin">📍</span></div>
+        <div class="wp-body">
+          <div>
+            <div class="t">Rampa do Pepê</div>
+            <div class="n">A subida da serra pela mata, por dentro da estrada.</div>
+            <div class="coord">-7.907889, -36.019222</div>
+          </div>
+          <a class="maplink" href="https://www.google.com/maps/search/?api=1&query=-7.907889,-36.019222" target="_blank" rel="noopener">Abrir no mapa</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="k">🚗 Acesso</div>
+      <div class="note"><span class="ic">🚗</span><p>Dá pra ir de carro comum — mas só quando não estiver chovendo. Molhado, o risco é atolar.</p></div>
+    </div>
+
+    <div class="sec">
+      <div class="k">⚠ Avisos</div>
+      <div class="note"><span class="ic">⚠</span><p>Só de carro comum em tempo seco: com chuva, risco de atolamento — se choveu, remarque pro próximo dia seco. E a vista rende mais com céu aberto — muita nuvem ou nevoeiro atrapalha o que você foi ver.</p></div>
+    </div>
+  </div>
+
+  <div class="gate">
+    <div class="k">Na entrada — a checagem é sua</div>
+    <div class="read">Barro brilhando ou pegajoso? <b>Não vá.</b></div>
+    <div class="perm">"Dar meia-volta aqui é sabedoria, não fracasso."</div>
+  </div>
+
+  <div class="ticket"><span class="price">R$ 5</span> por pessoa · cobrado no portão da entrada</div>
+
+  <div class="confirmar">
+    <div class="btn">✓ Fui</div>
+    <div class="soon">confirmar — chega depois</div>
+  </div>
+
+  <div class="foot">BatePerna · Agreste · PE</div>
+</div>
+
+<p class="disclaimer">
+  Versão D — <b>meio-termo A × C</b>: frame limpo, decisão carimbada, voz de quem conhece. Conteúdo real da Rampa.<br>
+  O carimbo é alternável só pra prévia; <b>no app real é calculado ao vivo</b> pela chuva (Open-Meteo).
+</p>
+
+<script>
+  var DATA = {
+    fresco: {
+      mark: "Pode subir", sub: "seco · carro comum",
+      reason: "Sem chuva nas últimas <b>~6h</b> e nada previsto pras próximas <b>~3h</b>. Área alta, escorre rápido — a serra firmou.",
+      live: "lido da chuva agora · 6h atrás + 3h à frente"
+    },
+    frio: {
+      mark: "Não suba", sub: "barro · dá um tempo",
+      reason: "Choveu nas últimas <b>~6h</b> (ou vem chuva nas próximas <b>~3h</b>). O barro segura água — risco de atolar.",
+      live: "lido da chuva agora · 6h atrás + 3h à frente"
+    }
+  };
+  function setState(s) {
+    document.documentElement.setAttribute("data-state", s);
+    var d = DATA[s];
+    document.getElementById("mark").textContent = d.mark;
+    document.getElementById("sub").textContent = d.sub;
+    document.getElementById("reason").innerHTML = d.reason;
+    document.getElementById("live").textContent = d.live;
+  }
+  setState("fresco");
+</script>
