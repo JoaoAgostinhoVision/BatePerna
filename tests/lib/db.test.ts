@@ -6,6 +6,9 @@ import {
   getFreshness,
   insertConfirmacao,
   countConfirmacoes,
+  contarHoje,
+  inicioDoDiaRecife,
+  type TipoRelato,
 } from "@/lib/db";
 
 let client: Client;
@@ -42,10 +45,26 @@ describe("db", () => {
     expect(await getFreshness(client, "nope")).toBeNull();
   });
 
-  it("inserts and counts confirmacoes", async () => {
-    expect(await countConfirmacoes(client, "rampa-do-pepe")).toBe(0);
-    await insertConfirmacao(client, "rampa-do-pepe", 1000);
-    await insertConfirmacao(client, "rampa-do-pepe", 1001);
+  it("inserts confirmacoes com tipo e conta o total", async () => {
+    await insertConfirmacao(client, "rampa-do-pepe", 1000, "seco");
+    await insertConfirmacao(client, "rampa-do-pepe", 1001, "barro");
     expect(await countConfirmacoes(client, "rampa-do-pepe")).toBe(2);
+  });
+
+  it("inicioDoDiaRecife: meia-noite local em UTC-3", () => {
+    // 2026-08-03 12:00Z → local 09:00 → início do dia local = 2026-08-03 03:00Z
+    const agora = Date.UTC(2026, 7, 3, 12, 0, 0) / 1000;
+    expect(inicioDoDiaRecife(agora)).toBe(Date.UTC(2026, 7, 3, 3, 0, 0) / 1000);
+  });
+
+  it("contarHoje: conta só o dia de Recife, separa barro", async () => {
+    const agora = Date.UTC(2026, 7, 3, 12, 0, 0) / 1000; // hoje (Recife)
+    const ontem = Date.UTC(2026, 7, 3, 2, 59, 0) / 1000; // 23:59 de ontem em Recife
+    const hojeCedo = Date.UTC(2026, 7, 3, 3, 1, 0) / 1000; // 00:01 hoje em Recife
+    await insertConfirmacao(client, "rampa-do-pepe", ontem, "barro");
+    await insertConfirmacao(client, "rampa-do-pepe", hojeCedo, "seco");
+    await insertConfirmacao(client, "rampa-do-pepe", agora, "barro");
+    const p = await contarHoje(client, "rampa-do-pepe", agora);
+    expect(p).toEqual({ foram: 2, barro: 1 });
   });
 });
