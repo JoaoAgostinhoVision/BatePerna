@@ -1,12 +1,12 @@
 import type { Client } from "@libsql/client";
-import { insertConfirmacao, countConfirmacoes, type TipoRelato } from "@/lib/db";
+import { insertConfirmacao, contarHoje, type TipoRelato } from "@/lib/db";
 
 export async function registrarConfirmacao(
   client: Client,
   slug: string,
+  tipo: TipoRelato,
   agora: number,
-  tipo: TipoRelato = "seco",
-): Promise<{ count: number }> {
+): Promise<{ foram: number; barro: number }> {
   await insertConfirmacao(client, slug, agora, tipo);
-  return { count: await countConfirmacoes(client, slug) };
+  return contarHoje(client, slug, agora);
 }
