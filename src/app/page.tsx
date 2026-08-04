@@ -2,6 +2,7 @@ import "./ficha.css";
 import { getFicha } from "@/lib/ficha";
 import { fetchPrecip } from "@/lib/weather";
 import { avaliar, type Estado } from "@/lib/motor";
+import ConfirmarFui from "./ConfirmarFui";
 
 // Compute-on-load: nada de cache estático, o estado é a chuva de agora.
 export const dynamic = "force-dynamic";
@@ -154,10 +155,7 @@ export default async function Home({
           </div>
         )}
 
-        <div className="confirmar">
-          <div className="btn">✓ Fui</div>
-          <div className="soon">confirmar — chega depois</div>
-        </div>
+        <ConfirmarFui slug={SLUG} />
 
         <div className="foot">BatePerna · Agreste · PE</div>
       </div>

@@ -117,5 +117,15 @@ html, body { background: var(--ground); }
 .bp .confirmar { margin: 1.3rem 1.2rem 0; padding: .9rem 1rem; border-radius: 14px; border: 1px dashed var(--line); text-align: center; color: var(--ink-faint); }
 .bp .confirmar .btn { display: inline-block; font-weight: 650; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 99px; padding: .5rem 1.15rem; margin-bottom: .4rem; }
 .bp .confirmar .soon { font-family: var(--type); font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; }
+.bp .confirmar .perg .q { font-size: .96rem; color: var(--ink-soft); margin-bottom: .55rem; }
+.bp .confirmar .opts { display: flex; gap: .5rem; justify-content: center; }
+.bp .confirmar .opt { font-weight: 650; border-radius: 99px; padding: .5rem 1rem; border: 1px solid var(--line); cursor: pointer; background: var(--surface-2); color: var(--ink); }
+.bp .confirmar .opt.seco { border-color: var(--go-line); color: var(--go-ink); }
+.bp .confirmar .opt.barro { border-color: var(--stop-line); color: var(--stop-ink); }
+.bp .confirmar .obrigado { font-weight: 650; color: var(--ink); }
+.bp .confirmar .erro { color: var(--stop-ink); display: flex; flex-direction: column; gap: .4rem; align-items: center; }
+.bp .confirmar .placar { margin-top: .55rem; font-family: var(--type); font-size: .72rem; color: var(--ink-faint); }
+.bp .confirmar .placar.vazio { font-style: italic; }
+.bp .confirmar button.btn { cursor: pointer; background: transparent; }
 
 .bp .foot { text-align: center; padding: 1.3rem; color: var(--ink-faint); font-size: .8rem; font-family: var(--type); }
