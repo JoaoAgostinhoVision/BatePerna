@@ -31,6 +31,10 @@ public/fallback-*.js
 # Claude Code local tooling (installed skills + machine-specific settings — regenerable)
 .claude/
 
+# Agent-skill tooling auto-instalado por integrações (ex.: Turso via Vercel Marketplace) — regenerável
+.agents/
+skills-lock.json
+
 # Logs / OS / editor
 *.log
 npm-debug.log*
