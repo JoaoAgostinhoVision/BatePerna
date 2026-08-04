@@ -1,0 +1,121 @@
+/* Versão D portada do preview (planning-artifacts/bateperna-ficha-rampa-preview-d.html).
+   Escopado sob .bp pra não vazar sobre o Tailwind base. Sem barra de prévia / toggle:
+   o estado (fresco|frio) é calculado no servidor e chega como [data-state] no .bp. */
+
+:root {
+  --ground: #E7DFD0;
+  --screen: #F8F2E6;
+  --surface-2: #F0E8D8;
+  --ink: #2A2016;
+  --ink-soft: #6A5B47;
+  --ink-faint: #9C8D75;
+  --line: #E2D8C6;
+  --accent: #A5522A;
+  --accent-soft: #EEDDCB;
+  --go: #35774A; --go-ink: #245234; --go-bg: #E2EDE2; --go-line: #B7D3BC;
+  --stop: #BB3B2C; --stop-ink: #8C2A20; --stop-bg: #F4DBD4; --stop-line: #E4B3A9;
+  --rain: #4A6E86; --rain-bg: #E4EDF1;
+  --shadow: 0 1px 2px rgba(42,32,22,.06), 0 14px 40px rgba(42,32,22,.13);
+  --shadow-card: 0 1px 2px rgba(42,32,22,.05);
+  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  --type: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #100D08; --screen: #1B1710; --surface-2: #241E15;
+    --ink: #EFE6D5; --ink-soft: #B0A488; --ink-faint: #7C7157; --line: #2E2719;
+    --accent: #CE7C4B; --accent-soft: #38291B;
+    --go: #5FA877; --go-ink: #8FCBA0; --go-bg: #16271C; --go-line: #2C4735;
+    --stop: #DA6154; --stop-ink: #EBA498; --stop-bg: #2C1712; --stop-line: #57271F;
+    --rain: #79A5BF; --rain-bg: #15242C;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 14px 40px rgba(0,0,0,.55);
+    --shadow-card: 0 1px 2px rgba(0,0,0,.3);
+  }
+}
+
+html, body { background: var(--ground); }
+.bp, .bp * { box-sizing: border-box; }
+.bp {
+  background: radial-gradient(110% 70% at 50% -8%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 58%), var(--ground);
+  color: var(--ink); font-family: var(--sans); line-height: 1.52; -webkit-font-smoothing: antialiased;
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  padding: clamp(0px, 4vw, 2.5rem) clamp(0px, 3vw, 1rem) 2rem;
+}
+
+.bp .screen { width: 100%; max-width: 25.5rem; background: var(--screen); border: 1px solid var(--line); border-radius: 24px; overflow: hidden; box-shadow: var(--shadow); }
+
+.bp .appbar { display: flex; align-items: center; justify-content: space-between; padding: .9rem 1.2rem .8rem; border-bottom: 1px solid var(--line); }
+.bp .brand { display: flex; align-items: center; gap: .5rem; font-weight: 750; letter-spacing: -.01em; font-size: .98rem; }
+.bp .brand .mk { width: 1.5rem; height: 1.5rem; border-radius: 7px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: .9rem; }
+.bp .cost-chip { font-family: var(--type); font-size: .68rem; font-weight: 600; letter-spacing: .03em; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: .28rem .6rem; }
+
+.bp .hero { padding: 1.35rem 1.2rem 1.3rem; }
+.bp .scan { display: inline-block; font-family: var(--type); font-size: .7rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.bp h1 { font-family: var(--serif); font-weight: 600; font-size: 2rem; line-height: 1.06; letter-spacing: -.01em; margin: .5rem 0 .1rem; text-wrap: balance; }
+.bp .promessa { color: var(--ink-soft); font-size: 1.03rem; font-style: italic; margin: 0; max-width: 32ch; }
+
+/* the decision — A's warm card hosting C's stamp */
+.bp .decision {
+  margin-top: 1.25rem; background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px;
+  padding: 1.2rem 1.1rem 1.05rem; text-align: center;
+}
+.bp .stamp {
+  --c: var(--st-ink); display: inline-block; color: var(--c);
+  border: 2.5px double var(--c); border-radius: 9px; padding: .5rem 1.15rem .55rem;
+  background: var(--st-bg); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 22%, transparent);
+  transition: color .25s, border-color .25s, background .25s;
+}
+.bp[data-state="fresco"] .stamp { --st-ink: var(--go-ink); --st-bg: var(--go-bg); }
+.bp[data-state="frio"]   .stamp { --st-ink: var(--stop-ink); --st-bg: var(--stop-bg); }
+.bp .stamp .mark { font-family: var(--sans); font-weight: 800; font-size: 1.7rem; line-height: 1; letter-spacing: .01em; text-transform: uppercase; }
+.bp .stamp .sub { font-family: var(--type); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; margin-top: .32rem; opacity: .85; }
+.bp .reason { font-size: .98rem; color: var(--ink-soft); max-width: 32ch; margin: .85rem auto 0; }
+.bp .reason b { color: var(--ink); font-weight: 650; }
+.bp .live { margin-top: .75rem; display: inline-flex; align-items: center; gap: .45rem; font-family: var(--type); font-size: .66rem; color: var(--ink-faint); }
+.bp .live .pulse { width: .5rem; height: .5rem; border-radius: 50%; background: var(--rain); }
+@media (prefers-reduced-motion: no-preference) { .bp .live .pulse { animation: bp-pulse 2.4s ease-out infinite; } }
+@keyframes bp-pulse { 0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--rain) 55%,transparent);} 70%{box-shadow:0 0 0 6px transparent;} 100%{box-shadow:0 0 0 0 transparent;} }
+
+.bp .caveat { margin: .85rem 1.2rem 0; display: flex; gap: .55rem; padding: .7rem .85rem; border-radius: 12px; background: var(--rain-bg); border: 1px solid color-mix(in srgb, var(--rain) 22%, transparent); font-size: .87rem; color: var(--ink-soft); }
+.bp .caveat .ic { color: var(--rain); flex: none; }
+.bp .caveat b { color: var(--ink); font-weight: 650; }
+
+.bp .body { padding: 1.35rem 1.2rem .3rem; display: flex; flex-direction: column; gap: 1.3rem; }
+.bp .sec .k { font-family: var(--type); font-size: .68rem; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: .38rem; }
+.bp .sec p { margin: 0; font-size: .98rem; }
+.bp .sec.premio p { font-size: 1.04rem; }
+
+.bp .voz { font-family: var(--serif); font-style: italic; font-size: 1.32rem; line-height: 1.4; color: var(--ink); border-left: 3px solid var(--accent); padding-left: 1rem; }
+.bp .voz .who { display: block; font-family: var(--type); font-style: normal; font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin-top: .5rem; }
+
+.bp .waypoint { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface-2); }
+.bp .wp-map { height: 88px; position: relative; background:
+    radial-gradient(60% 90% at 78% 30%, color-mix(in srgb, var(--go) 22%, transparent), transparent 60%),
+    repeating-linear-gradient(115deg, color-mix(in srgb, var(--accent) 8%, transparent) 0 2px, transparent 2px 16px); }
+.bp .wp-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-100%); font-size: 1.4rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,.25)); }
+.bp .wp-body { padding: .8rem .9rem; display: flex; align-items: center; justify-content: space-between; gap: .8rem; }
+.bp .wp-body .t { font-weight: 650; font-size: .95rem; }
+.bp .wp-body .n { color: var(--ink-soft); font-size: .82rem; font-style: italic; margin-top: .1rem; }
+.bp .wp-body .coord { font-family: var(--type); font-size: .68rem; color: var(--ink-faint); margin-top: .25rem; }
+.bp .maplink { flex: none; text-decoration: none; font-weight: 650; font-size: .82rem; color: #fff; background: var(--accent); padding: .5rem .8rem; border-radius: 10px; white-space: nowrap; }
+.bp .maplink:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.bp .note { display: flex; gap: .55rem; font-size: .96rem; color: var(--ink-soft); }
+.bp .note .ic { flex: none; }
+
+/* gate — C's field-note, kept as the handmade touch */
+.bp .gate { margin: .3rem 1.2rem 0; padding: .95rem 1.05rem; border-radius: 14px; background: var(--surface-2); border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.bp .gate .k { font-family: var(--type); font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: .45rem; }
+.bp .gate .read { font-weight: 650; font-size: 1rem; }
+.bp .gate .read b { color: var(--stop); }
+.bp .gate .perm { margin-top: .5rem; font-family: var(--serif); font-style: italic; font-size: 1rem; color: var(--ink-soft); }
+
+.bp .ticket { margin: 1.3rem 1.2rem 0; display: flex; align-items: center; gap: .6rem; font-family: var(--type); font-size: .76rem; color: var(--ink-soft); border-top: 1px dashed color-mix(in srgb, var(--ink) 22%, transparent); padding-top: 1rem; }
+.bp .ticket .price { font-weight: 700; color: var(--accent); font-size: .92rem; }
+
+.bp .confirmar { margin: 1.3rem 1.2rem 0; padding: .9rem 1rem; border-radius: 14px; border: 1px dashed var(--line); text-align: center; color: var(--ink-faint); }
+.bp .confirmar .btn { display: inline-block; font-weight: 650; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 99px; padding: .5rem 1.15rem; margin-bottom: .4rem; }
+.bp .confirmar .soon { font-family: var(--type); font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; }
+
+.bp .foot { text-align: center; padding: 1.3rem; color: var(--ink-faint); font-size: .8rem; font-family: var(--type); }
