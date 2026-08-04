@@ -29,6 +29,7 @@ export default function ConfirmarFui({ slug }: { slug: string }) {
     try {
       const r = await fetch("/api/confirmar", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug, tipo }),
       });
       if (!r.ok) throw new Error();
@@ -62,13 +63,14 @@ export default function ConfirmarFui({ slug }: { slug: string }) {
           <button className="btn" onClick={() => setFase("perguntando")}>tentar de novo</button>
         </div>
       )}
-      <PlacarLinha placar={placar} />
+      <PlacarLinha placar={placar} fase={fase} />
     </div>
   );
 }
 
-function PlacarLinha({ placar }: { placar: { foram: number; barro: number } | null }) {
+function PlacarLinha({ placar, fase }: { placar: { foram: number; barro: number } | null; fase: Fase }) {
   if (!placar || placar.foram === 0) {
+    if (!placar && fase === "contado") return null;
     return <div className="placar vazio">Ninguém contou ainda hoje — seja o primeiro a dizer como tá.</div>;
   }
   const barroTxt = placar.barro > 0 ? ` · ${placar.barro} achou barro` : "";

@@ -49,4 +49,16 @@ describe("ConfirmarFui", () => {
     fireEvent.click(screen.getByRole("button", { name: /Deu pra subir/ }));
     await screen.findByText(/tenta de novo/i);
   });
+
+  it("já contou hoje (localStorage) + GET do mount falha: mostra Valeu, não mostra placar vazio contraditório", async () => {
+    const OFFSET = -3 * 3600;
+    const diaRecife = Math.floor((Date.now() / 1000 + OFFSET) / 86400);
+    localStorage.setItem(`bp:contou:rampa-do-pepe:${diaRecife}`, "1");
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: false, json: () => Promise.resolve({}) })));
+
+    render(<ConfirmarFui slug="rampa-do-pepe" />);
+
+    await screen.findByText(/anotado/i);
+    expect(screen.queryByText(/Ninguém contou/)).toBe(null);
+  });
 });
