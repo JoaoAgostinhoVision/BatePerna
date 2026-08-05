@@ -90,10 +90,27 @@ html, body { background: var(--ground); }
 .bp .voz .who { display: block; font-family: var(--type); font-style: normal; font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin-top: .5rem; }
 
 .bp .waypoint { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface-2); }
-.bp .wp-map { height: 88px; position: relative; background:
-    radial-gradient(60% 90% at 78% 30%, color-mix(in srgb, var(--go) 22%, transparent), transparent 60%),
-    repeating-linear-gradient(115deg, color-mix(in srgb, var(--accent) 8%, transparent) 0 2px, transparent 2px 16px); }
-.bp .wp-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-100%); font-size: 1.4rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,.25)); }
+/* mapa real: mosaico de tiles do OSM, centrado no waypoint.
+   .wp-mapa é fluido; .wp-tiles tem largura fixa de geração e fica centrado,
+   o que garante o pin no meio do cartão em qualquer largura de tela. */
+.bp .wp-mapa { position: relative; overflow: hidden; background: var(--surface-2); }
+.bp .wp-tiles { position: absolute; top: 0; left: 50%; overflow: hidden; }
+.bp .wp-tiles-in { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+/* max-width: none é obrigatório — o reset do Tailwind põe 100% em img e
+   isso esmagaria cada tile do mosaico. */
+.bp .wp-tiles-in img { position: absolute; display: block; max-width: none; }
+
+/* o pin repete a decisão do carimbo em vez de só ilustrar */
+.bp .wp-pin { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px;
+  margin: -18px 0 0 -9px; background: var(--go); border: 2px solid var(--screen);
+  border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.bp .wp-pin[data-estado="frio"] { background: var(--stop); }
+
+.bp .wp-osm { position: absolute; right: 0; bottom: 0; padding: .12rem .35rem;
+  font-family: var(--type); font-size: .58rem; text-decoration: none;
+  color: var(--ink-soft); background: color-mix(in srgb, var(--screen) 78%, transparent);
+  border-top-left-radius: 6px; }
 .bp .wp-body { padding: .8rem .9rem; display: flex; align-items: center; justify-content: space-between; gap: .8rem; }
 .bp .wp-body .t { font-weight: 650; font-size: .95rem; }
 .bp .wp-body .n { color: var(--ink-soft); font-size: .82rem; font-style: italic; margin-top: .1rem; }
