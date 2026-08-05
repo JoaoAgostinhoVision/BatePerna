@@ -4,6 +4,7 @@ import { fetchPrecip } from "@/lib/weather";
 import { avaliar, type Estado } from "@/lib/motor";
 import ConfirmarFui from "./ConfirmarFui";
 import MapaEstatico from "./MapaEstatico";
+import DistanciaDaqui from "./DistanciaDaqui";
 
 // Compute-on-load: nada de cache estático, o estado é a chuva de agora.
 export const dynamic = "force-dynamic";
@@ -127,6 +128,7 @@ export default async function Home({
                   <div className="t">{wp.nome}</div>
                   {wp.nota && <div className="n">{wp.nota}</div>}
                   <div className="coord">{wp.lat}, {wp.lng}</div>
+                  <DistanciaDaqui lat={wp.lat} lng={wp.lng} />
                 </div>
                 <a className="maplink" href={mapa} target="_blank" rel="noopener">Abrir no mapa</a>
               </div>
