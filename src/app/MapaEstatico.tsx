@@ -2,10 +2,10 @@ import {
   MAPA_ALTURA_PX,
   MAPA_ESCALA,
   MAPA_LARGURA_PX,
-  MAPA_ZOOM,
   TILE_PX,
   tilesParaCaixa,
   urlTile,
+  zoomDeTiles,
 } from "@/lib/mapa";
 import type { Estado } from "@/lib/motor";
 
@@ -24,7 +24,7 @@ export default function MapaEstatico({
   estado: Estado;
 }) {
   // Tiles de um zoom a mais desenhados em 1/MAPA_ESCALA = o dobro da densidade.
-  const zTiles = MAPA_ZOOM + Math.log2(MAPA_ESCALA);
+  const zTiles = zoomDeTiles();
   const largura = MAPA_LARGURA_PX * MAPA_ESCALA;
   const altura = MAPA_ALTURA_PX * MAPA_ESCALA;
   const tiles = tilesParaCaixa({ lat, lng }, zTiles, largura, altura);

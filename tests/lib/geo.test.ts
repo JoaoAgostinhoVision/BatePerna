@@ -52,6 +52,10 @@ describe("formatarDistancia", () => {
     expect(formatarDistancia(124.6)).toBe("~125 km em linha reta daqui");
   });
 
+  it("na lacuna [9,95, 10) arredonda pra 10 inteiro, não '10,0'", () => {
+    expect(formatarDistancia(9.99)).toBe("~10 km em linha reta daqui");
+  });
+
   it('cada ramo diz "em linha reta" — é o que impede o número de mentir', () => {
     for (const km of [0.1, 0.99, 1, 5.5, 9.99, 10, 42, 999]) {
       expect(formatarDistancia(km)).toContain("em linha reta");

@@ -1,7 +1,7 @@
 /** "Onde fica?" — projeção Web Mercator e o mosaico de tiles do OpenStreetMap.
  *  Puro, sem I/O, sem React: o componente só posiciona o que sai daqui. */
 
-import type { Coord } from "./geo";
+import type { Coord } from "@/lib/geo";
 
 export const TILE_PX = 256;
 
@@ -26,12 +26,20 @@ export const MAPA_ESCALA = 2;
 
 export type Tile = { z: number; x: number; y: number; left: number; top: number };
 
+/** Limite da projeção Web Mercator: além disso o polo vira reta infinita
+ *  (ln((1+sen φ)/(1−sen φ)) diverge em φ = ±90°). Todo provedor de tile
+ *  (OSM incluso) para aqui — é o próprio motivo do mapa ser quadrado. */
+export const LIMITE_MERCATOR = 85.05112878;
+
 /** Coordenada → pixel no "mundo" daquele zoom.
  *  Forma equivalente à clássica (1 − ln(tan φ + sec φ)/π)/2, porém em seno,
- *  que é numericamente mais estável perto dos polos. */
+ *  que é numericamente mais estável perto dos polos.
+ *  Latitude é grampeada em ±LIMITE_MERCATOR: sem isso, lat = ±90 vira
+ *  ±Infinity e trava o loop de tilesParaCaixa num render force-dynamic. */
 export function pontoNoMundo(c: Coord, z: number): { x: number; y: number } {
+  const lat = Math.max(-LIMITE_MERCATOR, Math.min(LIMITE_MERCATOR, c.lat));
   const escala = TILE_PX * 2 ** z;
-  const seno = Math.sin((c.lat * Math.PI) / 180);
+  const seno = Math.sin((lat * Math.PI) / 180);
   return {
     x: ((c.lng + 180) / 360) * escala,
     y: (0.5 - Math.log((1 + seno) / (1 - seno)) / (4 * Math.PI)) * escala,
@@ -82,4 +90,13 @@ export function tilesParaCaixa(
 
 export function urlTile(t: { z: number; x: number; y: number }): string {
   return `https://tile.openstreetmap.org/${t.z}/${t.x}/${t.y}.png`;
+}
+
+/** Zoom real dos tiles pedidos: um a mais desenhado em 1/MAPA_ESCALA do
+ *  tamanho = o dobro da densidade. Só dá inteiro se MAPA_ESCALA for potência
+ *  de 2 — fora disso o zoom fica fracionário, toda URL de tile 404 e o mapa
+ *  fica em branco sem erro nenhum. Exportado (em vez de inline no componente)
+ *  pra esse invariante ter teste. */
+export function zoomDeTiles(): number {
+  return MAPA_ZOOM + Math.log2(MAPA_ESCALA);
 }

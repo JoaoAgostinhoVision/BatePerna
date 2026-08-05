@@ -97,18 +97,22 @@ html, body { background: var(--ground); }
 .bp .wp-tiles { position: absolute; top: 0; left: 50%; overflow: hidden; }
 .bp .wp-tiles-in { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
 /* max-width: none é obrigatório — o reset do Tailwind põe 100% em img e
-   isso esmagaria cada tile do mosaico. */
-.bp .wp-tiles-in img { position: absolute; display: block; max-width: none; }
+   isso esmagaria cada tile do mosaico. width/height explícitos pra não
+   depender do preflight do Tailwind combinando com os atributos do <img>. */
+.bp .wp-tiles-in img { position: absolute; display: block; max-width: none; width: 256px; height: 256px; }
 
-/* o pin repete a decisão do carimbo em vez de só ilustrar */
+/* o pin repete a decisão do carimbo em vez de só ilustrar.
+   margin-top: a ponta da gota, depois de rotate(-45deg), fica meia diagonal
+   abaixo do centro do quadrado de 18px: 9 + 9·√2 ≈ 9 + 12,73 ≈ 21,7px —
+   não os 18px do próprio lado. Sem isso a ponta cai ~3,7px acima da coordenada. */
 .bp .wp-pin { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px;
-  margin: -18px 0 0 -9px; background: var(--go); border: 2px solid var(--screen);
+  margin: -21.7px 0 0 -9px; background: var(--go); border: 2px solid var(--screen);
   border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
   box-shadow: 0 2px 6px rgba(0,0,0,.35); }
 .bp .wp-pin[data-estado="frio"] { background: var(--stop); }
 
-.bp .wp-osm { position: absolute; right: 0; bottom: 0; padding: .12rem .35rem;
-  font-family: var(--type); font-size: .58rem; text-decoration: none;
+.bp .wp-osm { position: absolute; right: 0; bottom: 0; padding: .25rem .45rem;
+  font-family: var(--type); font-size: .64rem; text-decoration: none;
   color: var(--ink-soft); background: color-mix(in srgb, var(--screen) 78%, transparent);
   border-top-left-radius: 6px; }
 .bp .wp-body { padding: .8rem .9rem; display: flex; align-items: center; justify-content: space-between; gap: .8rem; }

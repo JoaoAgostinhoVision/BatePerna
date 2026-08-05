@@ -9,6 +9,7 @@ import {
   pontoNoMundo,
   tilesParaCaixa,
   urlTile,
+  zoomDeTiles,
 } from "@/lib/mapa";
 
 const RAMPA = { lat: -7.907889, lng: -36.019222 };
@@ -35,6 +36,13 @@ describe("pontoNoMundo", () => {
     const b = pontoNoMundo(RAMPA, 11);
     expect(b.x).toBeCloseTo(a.x * 2, 6);
     expect(b.y).toBeCloseTo(a.y * 2, 6);
+  });
+
+  it("no polo (lat 90 ou -90) o y continua finito — a projeção é grampeada", () => {
+    const norte = pontoNoMundo({ lat: 90, lng: 0 }, 5);
+    const sul = pontoNoMundo({ lat: -90, lng: 0 }, 5);
+    expect(Number.isFinite(norte.y)).toBe(true);
+    expect(Number.isFinite(sul.y)).toBe(true);
   });
 });
 
@@ -105,6 +113,20 @@ describe("tilesParaCaixa", () => {
   it("descarta tiles fora do mundo em vez de pedir y negativo", () => {
     const tiles = tilesParaCaixa({ lat: 85, lng: 0 }, 1, 256, 512);
     expect(tiles.every((t) => t.y >= 0 && t.y < 2)).toBe(true);
+  });
+
+  it("no polo (lat 90) o loop termina e devolve tiles dentro do mundo", () => {
+    const z = 4;
+    const tiles = tilesParaCaixa({ lat: 90, lng: 0 }, z, 256, 512);
+    const nTiles = 2 ** z;
+    expect(tiles.length).toBeGreaterThan(0);
+    expect(tiles.every((t) => t.y >= 0 && t.y < nTiles)).toBe(true);
+  });
+});
+
+describe("zoomDeTiles", () => {
+  it("com MAPA_ESCALA potência de 2, o zoom de tiles é inteiro", () => {
+    expect(Number.isInteger(zoomDeTiles())).toBe(true);
   });
 });
 
