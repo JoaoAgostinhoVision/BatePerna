@@ -160,3 +160,13 @@ html, body { background: var(--ground); }
 .bp .confirmar button.btn { cursor: pointer; background: transparent; }
 
 .bp .foot { text-align: center; padding: 1.3rem; color: var(--ink-faint); font-size: .8rem; font-family: var(--type); }
+
+/* Lista de trilhas — andaime até a home rica. Reusa os tokens da ficha. */
+.bp .lista { padding: 1.1rem 1.2rem 1.3rem; display: flex; flex-direction: column; gap: .7rem; }
+.bp .lista-k { font-family: var(--type); font-size: .7rem; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-faint); margin-bottom: .2rem; }
+.bp .lista-item { display: flex; flex-direction: column; gap: .15rem; text-decoration: none; color: inherit;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px;
+  padding: .8rem .9rem .9rem; box-shadow: var(--shadow-card); }
+.bp .lista-t { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; line-height: 1.15; }
+.bp .lista-p { color: var(--ink-soft); font-size: .88rem; font-style: italic; }
