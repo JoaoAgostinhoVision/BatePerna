@@ -1,6 +1,7 @@
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import {
+  CacheExpiration,
   CacheFirst,
   CacheableResponsePlugin,
   ExpirationPlugin,
@@ -8,8 +9,16 @@ import {
   NetworkOnly,
   Serwist,
 } from "serwist";
-import { CACHE_ULTIMA_FICHA, CHAVE_ULTIMA, ehTileOsm, nuncaCachear } from "@/lib/cache-rotas";
-import { ehCaminhoDeFicha } from "@/lib/despacho";
+import {
+  CACHE_PAGINAS,
+  CACHE_ULTIMA_FICHA,
+  PRAZO_REDE_MS,
+  comPrazo,
+  ehNavegacaoNossa,
+  ehTileOsm,
+  nuncaCachear,
+  resolverNavegacao,
+} from "@/lib/cache-rotas";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -17,6 +26,8 @@ declare global {
   }
 }
 declare const self: ServiceWorkerGlobalScope;
+
+const MES_EM_S = 60 * 60 * 24 * 30;
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
@@ -43,17 +54,33 @@ const serwist = new Serwist({
           // e o browser cobra ela na cota com um padding gordo. Daí o teto baixo
           // de entradas: um punhado de fichas cabe, um álbum do Brasil não.
           new CacheableResponsePlugin({ statuses: [0, 200] }),
-          new ExpirationPlugin({ maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 30 }),
+          new ExpirationPlugin({ maxEntries: 120, maxAgeSeconds: MES_EM_S }),
         ],
       }),
     },
     {
-      // Páginas: rede primeiro, sempre. O cache é rede de segurança, não atalho.
+      // As outras páginas (hoje só /trilhas): rede primeiro, cache como rede de
+      // segurança. As fichas e a "/" NÃO passam por aqui — quem responde por
+      // elas é o listener lá embaixo, e respondWith para a propagação do evento
+      // antes de o roteador do serwist ver qualquer coisa.
       matcher: ({ request }) => request.mode === "navigate",
-      handler: new NetworkFirst({ cacheName: "bp-paginas", networkTimeoutSeconds: 6 }),
+      handler: new NetworkFirst({
+        cacheName: CACHE_PAGINAS,
+        networkTimeoutSeconds: PRAZO_REDE_MS / 1000,
+        plugins: [new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: MES_EM_S })],
+      }),
     },
     ...defaultCache,
   ],
+});
+
+/** O cache das fichas é escrito à mão (não por estratégia), então o teto vem
+ *  daqui. Sem teto ele cresceria pra sempre e, junto com o padding das
+ *  respostas opacas dos tiles, empurraria o navegador a despejar justamente o
+ *  que faz falta na estrada. */
+const validadeDasFichas = new CacheExpiration(CACHE_ULTIMA_FICHA, {
+  maxEntries: 12,
+  maxAgeSeconds: MES_EM_S,
 });
 
 /** A resposta de rede pra uma navegação. Com navigationPreload o browser já
@@ -67,54 +94,45 @@ async function daRede(evento: FetchEvent): Promise<Response | null> {
   return preload ?? (await fetch(evento.request).catch(() => null));
 }
 
-/** Guarda a ficha aberta e responde com ela quando faltar rede; e quando "/"
- *  abrir offline, responde com a última — o redirect de "/" precisa de
- *  servidor, e offline não há.
- *
- *  Cada ficha fica guardada sob a própria URL: offline, /trilha-a nunca pode
- *  responder com o conteúdo de /trilha-b. Errar de morro é pior que não abrir. */
+function guardar(evento: FetchEvent, chaves: string[], resposta: Response): void {
+  // Clonar agora, síncrono, antes de a página começar a ler o corpo.
+  const copias = chaves.map(() => resposta.clone());
+  evento.waitUntil(
+    (async () => {
+      const cache = await caches.open(CACHE_ULTIMA_FICHA);
+      for (const [i, chave] of chaves.entries()) {
+        await cache.put(chave, copias[i]);
+        await validadeDasFichas.updateTimestamp(chave);
+      }
+      await validadeDasFichas.expireEntries();
+      // Cota cheia (o QuotaExceededError do iPhone) não pode derrubar a
+      // navegação: a página já foi entregue. Ficar sem cópia dói offline,
+      // amanhã — estourar aqui dói agora, e por nada.
+    })().catch(() => undefined),
+  );
+}
+
 self.addEventListener("fetch", (evento) => {
   const req = evento.request;
   if (req.mode !== "navigate") return;
-  const url = new URL(req.url);
+  if (!ehNavegacaoNossa(new URL(req.url).pathname)) return;
 
-  if (ehCaminhoDeFicha(url.pathname)) {
-    evento.respondWith(
-      (async () => {
-        const resposta = await daRede(evento);
-        if (resposta?.ok) {
-          const sobNome = resposta.clone();
-          const sobPonteiro = resposta.clone();
-          // Sem await: a página começa a desenhar enquanto o corpo ainda desce.
-          // waitUntil segura o service worker vivo até a gravação terminar.
-          evento.waitUntil(
-            caches.open(CACHE_ULTIMA_FICHA).then(async (cache) => {
-              await cache.put(req, sobNome);
-              // Ponteiro fixo pra "última": é o que "/" lê quando não há rede.
-              await cache.put(CHAVE_ULTIMA, sobPonteiro);
-            }),
-          );
-          return resposta;
-        }
-        // Rede caiu ou respondeu errado: vale a cópia guardada. Se nem isso,
-        // devolve o erro de verdade — inventar "sem rede" esconde um 404.
-        const guardada = await caches.match(req, { cacheName: CACHE_ULTIMA_FICHA });
-        return guardada ?? resposta ?? Response.error();
-      })(),
-    );
-    return;
-  }
+  evento.respondWith(
+    (async () => {
+      const { resposta, gravarEm } = await resolverNavegacao({
+        url: req.url,
+        // O prazo é o coração disto: offline a rede falha na hora, mas com uma
+        // barra de sinal ela pendura, e sem prazo a ficha já guardada no
+        // celular nunca chega à tela.
+        buscarRede: () => comPrazo(daRede(evento), PRAZO_REDE_MS, null),
+        buscarCache: async ({ chave, cache, ignorarBusca }) =>
+          (await caches.match(chave, { cacheName: cache, ignoreSearch: ignorarBusca })) ?? null,
+      });
 
-  if (url.pathname === "/") {
-    evento.respondWith(
-      (async () => {
-        const resposta = await daRede(evento);
-        if (resposta) return resposta;
-        const cache = await caches.open(CACHE_ULTIMA_FICHA);
-        return (await cache.match(CHAVE_ULTIMA)) ?? (await caches.match("/trilhas")) ?? Response.error();
-      })(),
-    );
-  }
+      if (resposta && gravarEm.length > 0) guardar(evento, gravarEm, resposta);
+      return resposta ?? Response.error();
+    })(),
+  );
 });
 
 serwist.addEventListeners();
