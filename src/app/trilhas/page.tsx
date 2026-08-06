@@ -1,5 +1,6 @@
 import "../ficha.css";
 import { getAllFichas } from "@/lib/ficha";
+import Appbar from "../Appbar";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +12,7 @@ export default function Trilhas() {
   return (
     <main className="bp">
       <div className="screen">
-        <div className="appbar">
-          <div className="brand"><span className="mk">🥾</span> BatePerna</div>
-        </div>
+        <Appbar comSaida={false} />
         <div className="lista">
           <div className="lista-k">Trilhas</div>
           {fichas.map((f) => (

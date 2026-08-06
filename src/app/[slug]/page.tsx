@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import ConfirmarFui from "../ConfirmarFui";
 import MapaEstatico from "../MapaEstatico";
 import DistanciaDaqui from "../DistanciaDaqui";
+import Appbar from "../Appbar";
 
 // Compute-on-load: nada de cache estático, o estado é a chuva de agora.
 export const dynamic = "force-dynamic";
@@ -64,12 +65,7 @@ export default async function Ficha({
   return (
     <main className="bp" data-state={state}>
       <div className="screen">
-        <div className="appbar">
-          <div className="brand"><span className="mk">🥾</span> BatePerna</div>
-          {ficha.custo.tag === "pago" && (
-            <span className="cost-chip">{precoCurto} · portão</span>
-          )}
-        </div>
+        <Appbar chip={ficha.custo.tag === "pago" ? `${precoCurto} · portão` : undefined} />
 
         <div className="hero">
           <span className="scan">{ficha.rotulo_escaneio}</span>
