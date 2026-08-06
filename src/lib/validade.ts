@@ -5,7 +5,7 @@ export const VALIDADE_S = 30 * 60;
 const OFFSET_RECIFE_S = -3 * 3600;
 
 /** Epoch em SEGUNDOS nos dois argumentos.
- *  Relógio adiantado do lado do cliente não vence carimbo — na dúvida, vale. */
+ *  Relógio atrasado do lado do cliente não vence carimbo — na dúvida, vale. */
 export function carimboVenceu(calculadoEm: number, agora: number): boolean {
   return agora - calculadoEm >= VALIDADE_S;
 }

@@ -49,14 +49,14 @@ export default function Carimbo({
         <div className="sub">{sub}</div>
       </div>
       <p className="reason">
-        {venceu ? (
+        {erro ? (
+          <>
+            Não deu pra ler a chuva agora. Na dúvida, <b>não suba</b> — cheque o barro no portão.
+          </>
+        ) : venceu ? (
           <>
             Essa leitura é das <b>{horaCurtaRecife(calculadoEm)}</b> e já passou do prazo. O barro
             muda rápido — na dúvida, <b>não suba</b> sem olhar no portão.
-          </>
-        ) : erro ? (
-          <>
-            Não deu pra ler a chuva agora. Na dúvida, <b>não suba</b> — cheque o barro no portão.
           </>
         ) : estado === "fresco" ? (
           <>
@@ -73,7 +73,8 @@ export default function Carimbo({
       <div className="live">
         <span className="pulse"></span>
         <span>
-          {venceu
+          {/* erro ganha de venceu: sem leitura nenhuma, não tem hora de leitura pra citar. */}
+          {!erro && venceu
             ? `leitura das ${horaCurtaRecife(calculadoEm)} · vencida`
             : `lido da chuva agora · ${pass}h atrás + ${fut}h à frente`}
         </span>

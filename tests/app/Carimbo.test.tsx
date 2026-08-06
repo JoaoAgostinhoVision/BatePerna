@@ -49,4 +49,14 @@ describe("Carimbo", () => {
     const { container } = montar({ estado: "frio", erro: true });
     expect(container.textContent).toContain("Não deu pra ler a chuva agora");
   });
+
+  it("vencida com erro, não inventa que houve leitura", () => {
+    // erro=true: calculadoEm é o instante da tentativa falha, não de uma leitura —
+    // vencido ou não, o motivo e o .live não podem citar uma hora de leitura que não existiu.
+    const { container } = montar({ estado: "frio", erro: true, calculadoEm: AGORA_S - 40 * 60 }); // 08h02
+    expect(container.querySelector(".reason")?.textContent).toContain("Não deu pra ler a chuva agora");
+    expect(container.querySelector(".reason")?.textContent).not.toContain("8h02");
+    expect(container.querySelector(".live")?.textContent).not.toContain("vencida");
+    expect(container.querySelector(".live")?.textContent).not.toContain("8h02");
+  });
 });
