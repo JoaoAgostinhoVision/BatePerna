@@ -1,3 +1,12 @@
+import withSerwistInit from "@serwist/next";
+
+const withSerwist = withSerwistInit({
+  swSrc: "src/app/sw.ts",
+  swDest: "public/sw.js",
+  // Em dev o SW só atrapalha: serve build velho e confunde depuração.
+  disable: process.env.NODE_ENV === "development",
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // A ficha é lida de content/fichas em tempo de request (src/lib/ficha.ts via fs).
@@ -13,4 +22,5 @@ const nextConfig = {
     "/api/cron/motor": ["./content/**/*"],
   },
 };
-export default nextConfig;
+
+export default withSerwist(nextConfig);

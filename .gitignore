@@ -18,11 +18,13 @@ next-env.d.ts
 # Vercel
 .vercel
 
-# PWA generated (next-pwa / Serwist)
+# PWA generated (next-pwa / Serwist) — o serwist reescreve tudo isso a cada build
 public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
+public/swe-worker-*.js.map
 public/workbox-*.js
 public/worker-*.js
-public/sw.js.map
 public/fallback-*.js
 
 # v1 app — separate git repo with its own history; not nested here (migrate deliberately if needed)
