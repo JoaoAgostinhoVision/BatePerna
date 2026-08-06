@@ -4,6 +4,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "BatePerna",
   description: "Aventura pela via segura.",
+  icons: {
+    icon: "/icones/192",
+    apple: "/icones/apple",
+  },
 };
 
 /** --ground do ficha.css nos dois temas: a barra de status do celular passa a
