@@ -44,3 +44,6 @@ Thumbs.db
 .vscode/
 *.tsbuildinfo
 .env*
+
+# Scratch do superpowers (mockups de brainstorm, sessoes). Specs e planos moram em docs/.
+.superpowers/
