@@ -7,25 +7,26 @@ import ConfirmarFui from "../ConfirmarFui";
 import MapaEstatico from "../MapaEstatico";
 import DistanciaDaqui from "../DistanciaDaqui";
 import Appbar from "../Appbar";
+import Carimbo from "../Carimbo";
 
 // Compute-on-load: nada de cache estático, o estado é a chuva de agora.
 export const dynamic = "force-dynamic";
 
-type Render = { state: Estado; erro: boolean };
+type Render = { state: Estado; erro: boolean; calculadoEm: number };
 
 async function resolverEstado(
   ficha: NonNullable<ReturnType<typeof getFicha>>,
   debug: string | undefined,
 ): Promise<Render> {
-  if (debug === "fresco" || debug === "frio") return { state: debug, erro: false };
+  const agora = Math.floor(Date.now() / 1000);
+  if (debug === "fresco" || debug === "frio") return { state: debug, erro: false, calculadoEm: agora };
   try {
     const { coords, regra } = ficha.condicao;
     const { precips } = await fetchPrecip(coords, regra);
-    const agora = Math.floor(Date.now() / 1000);
-    return { state: avaliar(regra, precips, agora), erro: false };
+    return { state: avaliar(regra, precips, agora), erro: false, calculadoEm: agora };
   } catch {
     // Sem leitura de chuva → lado seguro: "não suba", e diz a verdade (não finge verde).
-    return { state: "frio", erro: true };
+    return { state: "frio", erro: true, calculadoEm: agora };
   }
 }
 
@@ -41,7 +42,7 @@ export default async function Ficha({
   if (!ficha) notFound();
 
   const { debug } = await searchParams;
-  const { state, erro } = await resolverEstado(ficha, debug);
+  const { state, erro, calculadoEm } = await resolverEstado(ficha, debug);
 
   const wp = ficha.trajeto.waypoints[0];
   const pass = ficha.condicao.regra.janela_passado_horas;
@@ -55,13 +56,6 @@ export default async function Ficha({
   const [ressalvaLead, ...ressalvaResto] = ficha.condicao.ressalva_proxy.split("—");
   const mapa = `https://www.google.com/maps/search/?api=1&query=${wp.lat},${wp.lng}`;
 
-  const carimbo =
-    state === "fresco"
-      ? { mark: "Pode subir", sub: "seco · carro comum" }
-      : erro
-        ? { mark: "Não suba", sub: "sem leitura · cheque no portão" }
-        : { mark: "Não suba", sub: "barro · dá um tempo" };
-
   return (
     <main className="bp" data-state={state}>
       <div className="screen">
@@ -72,25 +66,7 @@ export default async function Ficha({
           <h1>{wp.nome}</h1>
           <p className="promessa">{ficha.promessa}</p>
 
-          <div className="decision" role="status" aria-live="polite">
-            <div className="stamp">
-              <div className="mark">{carimbo.mark}</div>
-              <div className="sub">{carimbo.sub}</div>
-            </div>
-            <p className="reason">
-              {erro ? (
-                <>Não deu pra ler a chuva agora. Na dúvida, <b>não suba</b> — cheque o barro no portão.</>
-              ) : state === "fresco" ? (
-                <>Sem chuva nas últimas <b>~{pass}h</b> e nada previsto pras próximas <b>~{fut}h</b>. Área alta, escorre rápido — a serra firmou.</>
-              ) : (
-                <>Choveu nas últimas <b>~{pass}h</b> (ou vem chuva nas próximas <b>~{fut}h</b>). O barro segura água — risco de atolar.</>
-              )}
-            </p>
-            <div className="live">
-              <span className="pulse"></span>
-              <span>lido da chuva agora · {pass}h atrás + {fut}h à frente</span>
-            </div>
-          </div>
+          <Carimbo estado={state} erro={erro} calculadoEm={calculadoEm} pass={pass} fut={fut} />
         </div>
 
         <div className="caveat">
