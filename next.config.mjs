@@ -7,6 +7,7 @@ const nextConfig = {
   // ele falha se nascer rota que lê ficha sem declarar aqui.
   outputFileTracingIncludes: {
     "/": ["./content/**/*"],
+    "/[slug]": ["./content/**/*"],
     "/trilhas": ["./content/**/*"],
     "/api/confirmar": ["./content/**/*"],
     "/api/cron/motor": ["./content/**/*"],
