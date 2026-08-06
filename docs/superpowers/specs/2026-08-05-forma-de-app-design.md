@@ -35,7 +35,12 @@ O BatePerna deixa de ser uma página aberta no navegador e passa a ser **um app 
 
 - **O ícone abre na última ficha que você viu.** Escolhido contra a recomendação inicial (que era "sempre a Rampa"), e a escolha se sustenta: no sábado da ida você abre o app cinco vezes seguidas pra mesma trilha. Mas ela **cobra uma saída** — instalado em tela cheia não há barra de URL pra digitar outro slug, então sem `/trilhas` o app te tranca. Seria o mesmo beco de hoje, só que sem porta. Por isso `/trilhas` entra nesta rodada e não na seguinte.
 - **`/` redireciona de verdade, não renderiza a ficha no lugar dela.** Efeito colateral que vale por si: a URL na tela vira `/rampa-do-pepe`, então mandar o link pra alguém leva a pessoa pra ficha certa — e não pra *sua* última ficha.
-- **A memória do "onde você estava" é uma peça só.** Um middleware faz os dois lados: ao servir `/[slug]`, grava o cookie; ao receber `/`, lê e despacha. A alternativa (gravar `document.cookie` num `useEffect`) não serve: server component não pode setar cookie durante o render no Next 15, então sobraria JS no cliente, com flash e sem funcionar junto do redirect.
+- **A memória do "onde você estava" se divide por capacidade, não por gosto.** O desenho original era "um middleware faz os dois lados"; o planejamento derrubou isso. O middleware **não enxerga `content/fichas`** — ele roda fora do runtime que tem `fs`, então não tem como validar se o cookie aponta pra uma ficha que ainda existe. Server component, por outro lado, lê `fs` e lê cookie, mas **não pode gravar** cookie durante o render no Next 15. Então cada metade fica onde ela é possível:
+  - `src/middleware.ts` **grava** o cookie ao servir uma ficha. É só string, não precisa de `fs`.
+  - `src/app/page.tsx` **lê** o cookie, valida contra `getAllFichas()` e redireciona. Precisa de `fs`, e tem.
+
+  Cookie inválido é inofensivo por construção: quem valida é o lado que sabe. E gravar via `document.cookie` num `useEffect` continua descartado — sobraria JS no cliente pra fazer o que o servidor já faz.
+- **O cookie chama `bp_ultima`, com sublinhado.** Dois-pontos é separador na RFC 6265 e não vale em nome de cookie — os `bp:` que existem hoje no código são chaves de `localStorage` (`ConfirmarFui.tsx:15`), onde qualquer string serve.
 - **O carimbo tem validade.** Este é o achado do brainstorm. A ficha é renderizada no servidor **com o carimbo embutido no HTML** (`page.tsx:63`), então cachear a página é cachear o carimbo — e o service worker ingênuo entregaria offline um *"Pode subir"* de três horas atrás com cara de agora. É exatamente a mentira que foi recusada quando "último carimbo com hora" foi oferecido como opção. Ligar o offline sem tratar isso transformaria a opção escolhida na opção rejeitada.
 
   Pior: **o bug já existe hoje, sem offline nenhum.** Aba aberta às 7h, olhada às 11h — o carimbo continua dizendo "Pode subir". Ele nunca teve prazo.
@@ -51,9 +56,12 @@ O BatePerna deixa de ser uma página aberta no navegador e passa a ser **um app 
 Princípio load-bearing, herdado do "Fui" e do mapa: **a decisão nunca depende das peças novas.** O carimbo continua sendo server-rendered no primeiro paint, sem JS, só-clima, sem tocar no banco. Middleware, service worker e validade são camadas por fora — cada uma cai sozinha sem derrubar a ficha.
 
 ```
-/  (middleware)
-   └─ lê cookie bp:ultima → redirect /[slug]
+/  (server component — tem fs, lê cookie, não grava)
+   └─ lê cookie bp_ultima → valida contra getAllFichas() → redirect /[slug]
       cookie ausente ou apontando pra ficha que não existe → /trilhas
+
+middleware (não tem fs, só grava)
+   └─ ao servir /[slug], grava bp_ultima na resposta
 
 /[slug]  (server component, force-dynamic)   ← todo o page.tsx de hoje, sem o SLUG cravado
    └─ carimbo: getFicha → fetchPrecip → avaliar        [SÓ CLIMA, inalterado]
@@ -73,8 +81,9 @@ src/app/sw.ts (serwist)                                [NOVO]
 
 | Peça | Faz | Depende de |
 |---|---|---|
-| `src/lib/despacho.ts` | Função pura: `(cookie, slugsExistentes) → destino`. O middleware só a chama. | nada |
-| `src/middleware.ts` | Lê/grava cookie, redireciona. | `despacho.ts` |
+| `src/lib/despacho.ts` | Puras: `(cookie, slugsExistentes) → destino` e `(pathname) → é ficha?`. | nada |
+| `src/app/page.tsx` | Lê cookie, valida, redireciona. | `despacho.ts`, `getAllFichas` |
+| `src/middleware.ts` | Grava o cookie nas respostas de ficha. | `despacho.ts` |
 | `src/lib/validade.ts` | Função pura: `(calculadoEm, agora) → válido?`. | nada |
 | `src/app/CarimboValidade.tsx` | Client, troca o carimbo quando vence. | `validade.ts` |
 | `src/app/trilhas/page.tsx` | Lista. | `getAllFichas` (já existe) |
@@ -95,7 +104,9 @@ src/app/sw.ts (serwist)                                [NOVO]
 - **`src/app/manifest.ts`** — código tipado, não JSON solto em `public/`. `display: "standalone"`, `scope: "/"`, `start_url: "/"` (o despachante, então o manifest não precisa saber qual é a última ficha), `lang: "pt-BR"`. Sem travar orientação.
 - **`theme-color` em duas variantes** — `#E7DFD0` no claro, `#100D08` no escuro: os dois `--ground` que já existem em `ficha.css:6` e `ficha.css:26`. Sem isso a barra de status fica branca por cima de ficha escura.
 - **Safe areas** — `viewport-fit=cover` e `env(safe-area-inset-*)` no `.bp`. Em tela cheia não existe mais barra do navegador segurando o conteúdo, e no iPhone o topo da ficha vai parar debaixo do relógio. É o detalhe que mais denuncia PWA mal feito.
-- **O ícone vira PNG por código** — `src/app/icon.tsx` e `apple-icon.tsx` com `ImageResponse`, desenhando a pegada em **formas geométricas apenas**. Nada de texto: texto em `ImageResponse` exigiria embutir arquivo de fonte no bundle. A versão maskable ganha margem interna pra sobreviver ao corte em círculo (zona segura de 80%). Fundo `--accent` `#A5522A`, glifo em creme `#F8F2E6` — a mesma lógica do `.brand .mk` de hoje (`ficha.css:50`), que já é quadradinho accent com glifo branco.
+- **O ícone vira PNG por código, em rota estática.** `src/app/icones/[nome]/route.tsx` com `ImageResponse` (`next/og`), `dynamic = "force-static"` + `generateStaticParams` — os PNGs são prerenderizados no build, não gerados por request, e ficam em URLs fixas (`/icones/192`, `/icones/512`, `/icones/maskable`, `/icones/apple`) que o manifest pode citar sem depender de hash. A pegada é desenhada em **formas geométricas apenas**: texto em `ImageResponse` exigiria embutir arquivo de fonte no bundle. A maskable ganha margem interna pra sobreviver ao corte (zona segura de 80%). Fundo `--accent` `#A5522A`, glifo em creme `#F8F2E6` — a mesma lógica do `.brand .mk` de hoje (`ficha.css:50`).
+
+  Descartado gerar os PNGs por script e commitar em `public/`: `next/og` **não está no mapa de `exports`** do `next@15.5.22`, então um script Node só o alcança importando `./node_modules/next/og.js` por caminho — que quebra em qualquer upgrade. Dentro do app o bundler resolve normalmente. (Verificado nos dois sentidos durante o planejamento.)
 - **A saída** — o `🥾 BatePerna` da appbar vira link pra `/trilhas`, com alvo de toque ≥44px e cara de tocável; hoje é texto morto (`page.tsx:74`). Em `/trilhas` ele não leva a lugar nenhum.
 - **`/trilhas`** reusa a casca e os tokens de `ficha.css` — mesma appbar, título, lista de rótulo de escaneio + nome.
 
@@ -112,6 +123,8 @@ Vitest, `tests/` espelhando `src/`, como o resto do projeto.
 ## Riscos aceitos e armadilhas
 
 1. **`outputFileTracingIncludes` mapeia só `"/"`** (`next.config.mjs`). O comentário no arquivo registra que essa exata armadilha já quebrou o deploy uma vez, e ela **só aparece em produção** — o tracer estático do Next não enxerga o `readdirSync` de `ficha.ts`. Com `/[slug]` e `/trilhas` nascendo, a chave tem que crescer junto. Mitigado pelo teste-cadeado; é feio de propósito.
+
+   O planejamento achou que **`/api/confirmar` já lê ficha** (`route.ts:13`, pra validar o slug) e **nunca foi declarado** — e mesmo assim funciona em produção (verificado: `GET /api/confirmar?slug=rampa-do-pepe` devolve `200 {"foram":0,"barro":0}`). O tracer leva `content/` pra lá por conta própria. Isso é sorte, não garantia. Em vez de afrouxar a regra do cadeado pra caber a exceção, as rotas que faltam passam a ser **declaradas** — a invariante fica verdadeira em vez de sortuda, e o custo é alguns KB de JSON no bundle.
 2. **Service worker grudado é veneno.** Uma versão ruim no celular serve conteúdo velho por tempo indeterminado e é chata de desinstalar. Mitigação: assume o controle assim que baixa (`skipWaiting` + `clientsClaim`), e desligado em `dev`.
 3. **A desqualificação do carimbo depende de JS.** Se o JS não rodar, o pior caso é o carimbo velho — exatamente onde já estamos hoje. Nunca é pior que o estado atual, e o caminho normal (carimbo fresco no primeiro paint, sem JS) não muda.
 4. **`/trilhas` é feia.** Lista crua, sem carimbo, sem filtro. É andaime até a home rica; quando o sub-projeto 2 chegar, ela é descartada, não refatorada.
