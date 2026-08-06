@@ -95,6 +95,7 @@ src/app/sw.ts (serwist)                                [NOVO]
 - **`src/app/manifest.ts`** — código tipado, não JSON solto em `public/`. `display: "standalone"`, `scope: "/"`, `start_url: "/"` (o despachante, então o manifest não precisa saber qual é a última ficha), `lang: "pt-BR"`. Sem travar orientação.
 - **`theme-color` em duas variantes** — `#E7DFD0` no claro, `#100D08` no escuro: os dois `--ground` que já existem em `ficha.css:6` e `ficha.css:26`. Sem isso a barra de status fica branca por cima de ficha escura.
 - **Safe areas** — `viewport-fit=cover` e `env(safe-area-inset-*)` no `.bp`. Em tela cheia não existe mais barra do navegador segurando o conteúdo, e no iPhone o topo da ficha vai parar debaixo do relógio. É o detalhe que mais denuncia PWA mal feito.
+- **O ícone vira PNG por código** — `src/app/icon.tsx` e `apple-icon.tsx` com `ImageResponse`, desenhando a pegada em **formas geométricas apenas**. Nada de texto: texto em `ImageResponse` exigiria embutir arquivo de fonte no bundle. A versão maskable ganha margem interna pra sobreviver ao corte em círculo (zona segura de 80%). Fundo `--accent` `#A5522A`, glifo em creme `#F8F2E6` — a mesma lógica do `.brand .mk` de hoje (`ficha.css:50`), que já é quadradinho accent com glifo branco.
 - **A saída** — o `🥾 BatePerna` da appbar vira link pra `/trilhas`, com alvo de toque ≥44px e cara de tocável; hoje é texto morto (`page.tsx:74`). Em `/trilhas` ele não leva a lugar nenhum.
 - **`/trilhas`** reusa a casca e os tokens de `ficha.css` — mesma appbar, título, lista de rótulo de escaneio + nome.
 
