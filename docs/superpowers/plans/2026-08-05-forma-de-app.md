@@ -1269,7 +1269,11 @@ export async function GET(
   return new ImageResponse(
     (
       <div style={{ display: "flex", width: "100%", height: "100%", background: ACCENT }}>
-        <svg width={px} height={px} viewBox={`${-margem} ${-margem} 100 100`}>
+        {/* viewBox fixo em [0,100]: os dois últimos valores são largura e
+            altura, não um segundo canto — deslocar a origem por -margem jogaria
+            o desenho no canto em vez de centralizar. A margem quem dá é o
+            translate abaixo. */}
+        <svg width={px} height={px} viewBox="0 0 100 100">
           <g transform={`translate(${margem} ${margem}) scale(${lado / 100})`}>
             <path d={ANTEPE} fill={CREME} />
             <path d={CALCANHAR} fill={CREME} />
