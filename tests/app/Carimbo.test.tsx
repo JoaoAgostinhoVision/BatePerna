@@ -47,6 +47,38 @@ describe("Carimbo", () => {
     expect(container.querySelector(".mark")?.textContent).toBe("Não suba");
   });
 
+  it("volta do bolso já vencido, sem esperar o intervalo de 60s", () => {
+    // O celular passou 4h no bolso. O relógio andou; o setInterval não — o
+    // navegador estrangula timer de aba escondida. Quem reavalia é o instante
+    // em que a tela volta a ser olhada, que é o instante do portão.
+    const { container } = montar({ calculadoEm: AGORA_S });
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
+    vi.setSystemTime(AGORA_MS + 4 * 60 * 60 * 1000);
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    expect(container.querySelector(".mark")?.textContent).toBe("Não suba");
+    expect(container.textContent).toContain("sem leitura");
+  });
+
+  it("volta do cache do navegador (pageshow) também reavalia", () => {
+    // O service worker tornou "página retomada do cache" o caso normal, e
+    // restauração de bfcache não dispara visibilitychange em todo navegador.
+    const { container } = montar({ calculadoEm: AGORA_S });
+    vi.setSystemTime(AGORA_MS + 4 * 60 * 60 * 1000);
+    act(() => { window.dispatchEvent(new Event("pageshow")); });
+    expect(container.querySelector(".mark")?.textContent).toBe("Não suba");
+  });
+
+  it("desmontado, não deixa ouvinte pra trás", () => {
+    const { unmount } = montar({ calculadoEm: AGORA_S });
+    unmount();
+    vi.setSystemTime(AGORA_MS + 4 * 60 * 60 * 1000);
+    // Sem a limpeza, o setVenceu de um componente morto reclamaria aqui.
+    expect(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+      window.dispatchEvent(new Event("pageshow"));
+    }).not.toThrow();
+  });
+
   it("sem leitura de chuva, é honesto desde o começo", () => {
     const { container } = montar({ estado: "frio", erro: true });
     expect(container.textContent).toContain("Não deu pra ler a chuva agora");

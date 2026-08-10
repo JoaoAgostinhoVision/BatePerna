@@ -30,8 +30,21 @@ export default function Carimbo({
   useEffect(() => {
     const checar = () => setVenceu(carimboVenceu(calculadoEm, Math.floor(Date.now() / 1000)));
     checar();
+
+    // O intervalo é pra tela aberta na mão. Ele não basta: navegador estrangula
+    // timer de aba escondida, e o celular passou as últimas quatro horas no
+    // bolso. O instante que importa é quando a tela volta a ser olhada — que é
+    // o instante do portão. `pageshow` vai junto porque restauração de bfcache
+    // não dispara visibilitychange em todo navegador, e o service worker
+    // tornou "página retomada do cache" o caso normal.
     const id = setInterval(checar, 60_000);
-    return () => clearInterval(id);
+    document.addEventListener("visibilitychange", checar);
+    window.addEventListener("pageshow", checar);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", checar);
+      window.removeEventListener("pageshow", checar);
+    };
   }, [calculadoEm]);
 
   const semLeitura = erro || venceu;
