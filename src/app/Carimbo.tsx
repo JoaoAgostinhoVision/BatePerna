@@ -43,7 +43,13 @@ export default function Carimbo({
       : "barro · dá um tempo";
 
   return (
-    <div className="decision" role="status" aria-live="polite" data-venceu={venceu ? "1" : undefined}>
+    <div
+      className="decision"
+      role="status"
+      aria-live="polite"
+      data-venceu={venceu ? "1" : undefined}
+      data-sem-leitura={semLeitura ? "1" : undefined}
+    >
       <div className="stamp">
         <div className="mark">{marca}</div>
         <div className="sub">{sub}</div>
@@ -73,10 +79,15 @@ export default function Carimbo({
       <div className="live">
         <span className="pulse"></span>
         <span>
-          {/* erro ganha de venceu: sem leitura nenhuma, não tem hora de leitura pra citar. */}
-          {!erro && venceu
-            ? `leitura das ${horaCurtaRecife(calculadoEm)} · vencida`
-            : `lido da chuva agora · ${pass}h atrás + ${fut}h à frente`}
+          {/* erro ganha de venceu: sem leitura nenhuma, não tem hora de leitura
+              pra citar — nem "lido agora" pra alegar. Esta linha é a que diz o
+              quão fresca é a afirmação; quando não houve leitura, ela tem que
+              dizer isso, não contradizer o carimbo logo acima. */}
+          {erro
+            ? "sem leitura da chuva"
+            : venceu
+              ? `leitura das ${horaCurtaRecife(calculadoEm)} · vencida`
+              : `lido da chuva agora · ${pass}h atrás + ${fut}h à frente`}
         </span>
       </div>
     </div>

@@ -163,8 +163,9 @@ html, body { background: var(--ground); }
 /* Carimbo vencido pinta de parada mesmo numa página que abriu fresco:
    a cor tem que dizer a mesma coisa que a palavra. */
 .bp .decision[data-venceu="1"] .stamp { --st-ink: var(--stop-ink); --st-bg: var(--stop-bg); }
-/* Vencido para de piscar: a leitura não é mais "agora". */
-.bp .decision[data-venceu="1"] .live .pulse { animation: none; }
+/* Sem leitura válida — vencida ou nem houve — o pulso para. Ele é o que diz
+   "isto é de agora"; piscando ao lado de "sem leitura" ele desmente o carimbo. */
+.bp .decision[data-sem-leitura="1"] .live .pulse { animation: none; }
 .bp .confirmar .placar { margin-top: .55rem; font-family: var(--type); font-size: .72rem; color: var(--ink-faint); }
 .bp .confirmar .placar.vazio { font-style: italic; }
 .bp .confirmar button.btn { cursor: pointer; background: transparent; }

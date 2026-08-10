@@ -76,6 +76,14 @@ describe("ehNavegacaoNossa", () => {
     expect(ehNavegacaoNossa("/trilhas")).toBe(false);
     expect(ehNavegacaoNossa("/icones/192")).toBe(false);
   });
+
+  it("o ponteiro interno não é rota", () => {
+    // CHAVE_ULTIMA tem cara de slug (um segmento, sem ponto). Sem excluí-la,
+    // /__ultima__ digitado na barra vira "navegação nossa", o 404 da rede não é
+    // ok, e a busca no cache acha o ponteiro — a URL responderia com o corpo da
+    // última ficha aberta. É a mesma classe de defeito que fechamos offline.
+    expect(ehNavegacaoNossa(CHAVE_ULTIMA)).toBe(false);
+  });
 });
 
 describe("chavesDeGravacao", () => {

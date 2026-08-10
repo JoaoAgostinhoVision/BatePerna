@@ -60,6 +60,11 @@ export function nuncaCachear(url: string): boolean {
 /** As navegações que o service worker resolve por conta própria: as fichas e
  *  a "/". O resto (a lista, os ícones) fica com as estratégias do serwist. */
 export function ehNavegacaoNossa(pathname: string): boolean {
+  // CHAVE_ULTIMA é chave de cache, não rota — mas tem cara de slug (um
+  // segmento, sem ponto), então ehCaminhoDeFicha a aprovaria. Sem esta linha,
+  // /__ultima__ na barra vira navegação nossa, o 404 da rede não é ok, a busca
+  // no cache acha o ponteiro, e a URL responde com o corpo da última ficha.
+  if (pathname === CHAVE_ULTIMA) return false;
   return pathname === "/" || ehCaminhoDeFicha(pathname);
 }
 
