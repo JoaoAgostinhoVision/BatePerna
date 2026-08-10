@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   type AlvoCache,
+  AQUECIMENTO,
   CACHE_PAGINAS,
   CACHE_ULTIMA_FICHA,
   CHAVE_ULTIMA,
@@ -9,6 +10,7 @@ import {
   ehNavegacaoNossa,
   ehTileOsm,
   nuncaCachear,
+  planoDaRaiz,
   resolverNavegacao,
 } from "@/lib/cache-rotas";
 
@@ -83,6 +85,19 @@ describe("ehNavegacaoNossa", () => {
     // ok, e a busca no cache acha o ponteiro — a URL responderia com o corpo da
     // última ficha aberta. É a mesma classe de defeito que fechamos offline.
     expect(ehNavegacaoNossa(CHAVE_ULTIMA)).toBe(false);
+  });
+});
+
+describe("AQUECIMENTO", () => {
+  it("o que é aquecido na instalação é exatamente onde a raiz vai procurar", () => {
+    // Aquecer uma entrada e procurar outra seria download jogado fora — e o
+    // beco de abrir o app instalado offline continuaria aberto.
+    expect(planoDaRaiz()).toContain(AQUECIMENTO);
+  });
+
+  it("a raiz procura a última ficha antes da lista", () => {
+    // A ordem é a resposta: você quer o morro onde estava, não o índice.
+    expect(planoDaRaiz()[0].chave).toBe(CHAVE_ULTIMA);
   });
 });
 

@@ -7,10 +7,10 @@ export const dynamic = "force-dynamic";
 
 /** "/" não renderiza nada: despacha pra última ficha que você abriu.
  *
- *  Aqui é o único lugar que pode fazer as duas coisas de uma vez — ler o
- *  cookie e saber quais fichas existem (fs). O middleware grava o cookie mas
- *  não enxerga content/fichas; server component enxerga mas não pode gravar
- *  cookie durante o render. Por isso a validação mora deste lado.
+ *  Aqui é o único lugar que lê o cookie e sabe quais fichas existem (fs) ao
+ *  mesmo tempo — por isso a validação mora deste lado. Quem grava é a própria
+ *  ficha (LembrarUltima), que só roda depois de ela ter renderizado; o valor
+ *  ainda pode envelhecer no celular e apontar pra ficha que saiu do ar.
  *
  *  Efeito de brinde: como é redirect de verdade, a URL na tela vira
  *  /rampa-do-pepe — mandar o link leva a pessoa pra ficha certa, não pra

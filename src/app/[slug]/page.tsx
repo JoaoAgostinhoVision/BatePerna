@@ -8,6 +8,7 @@ import MapaEstatico from "../MapaEstatico";
 import DistanciaDaqui from "../DistanciaDaqui";
 import Appbar from "../Appbar";
 import Carimbo from "../Carimbo";
+import LembrarUltima from "../LembrarUltima";
 
 // Compute-on-load: nada de cache estático, o estado é a chuva de agora.
 export const dynamic = "force-dynamic";
@@ -58,6 +59,7 @@ export default async function Ficha({
 
   return (
     <main className="bp" data-state={state}>
+      <LembrarUltima slug={slug} />
       <div className="screen">
         <Appbar chip={ficha.custo.tag === "pago" ? `${precoCurto} · portão` : undefined} />
 

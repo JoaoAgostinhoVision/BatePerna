@@ -10,6 +10,7 @@ import {
   Serwist,
 } from "serwist";
 import {
+  AQUECIMENTO,
   CACHE_PAGINAS,
   CACHE_ULTIMA_FICHA,
   PRAZO_REDE_MS,
@@ -111,6 +112,20 @@ function guardar(evento: FetchEvent, chaves: string[], resposta: Response): void
     })().catch(() => undefined),
   );
 }
+
+/** Instalar o app e sair de casa sem nunca ter navegado dava tela de erro do
+ *  navegador na serra — em standalone, sem barra de URL, um beco. Uma cópia da
+ *  lista na instalação garante que a porta abre. Falhar aqui não pode impedir
+ *  a instalação: sem rede neste instante, segue-se sem a cópia. */
+self.addEventListener("install", (evento) => {
+  evento.waitUntil(
+    (async () => {
+      const resposta = await fetch(AQUECIMENTO.chave, { cache: "no-store" }).catch(() => null);
+      if (!resposta?.ok) return;
+      await (await caches.open(AQUECIMENTO.cache)).put(AQUECIMENTO.chave, resposta);
+    })().catch(() => undefined),
+  );
+});
 
 self.addEventListener("fetch", (evento) => {
   const req = evento.request;
