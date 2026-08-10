@@ -2,28 +2,32 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado.** Antes ele vivia em `.superpowers/sdd/.../RESUME.md`, que tem `.gitignore` com `*` — era scratch, e um `git clean -fdx` teria apagado justamente o mapa de retomada. Mantenha aqui.
 
-**Última parada:** 2026-08-06. **Estado: a moldura de app está construída e revisada, na branch `forma-de-app`. NÃO mergeada, NÃO deployada.**
+**Última parada:** 2026-08-10. **Estado: a moldura de app está MERGEADA em `main` (`6ef0fdc`) e NO AR em produção. 140/140.**
 
 ## Onde parou exatamente
 
-A branch `forma-de-app` tem **10 commits** (base `f07a1e9`, HEAD **`c02a5e2`**), working tree limpo, **133/133 testes**. As 7 tasks do plano estão implementadas e cada uma passou por revisão própria.
+A rodada fechou inteira: revisão final da branch → leva única de correção (`d5d8987`) → merge `--no-ff` (`6ef0fdc`) → `vercel --prod --yes`. Produção verificada no domínio real: `/` despacha 307, `/__ultima__` volta 404, o carimbo chega no primeiro paint server-rendered, e as quatro metas de iOS saem no HTML.
 
-**A revisão da branch inteira (opus) foi disparada e a sessão acabou antes da resposta chegar.** É por aí que se retoma.
+**O único passo que sobrou é do João: instalar na tela inicial do iPhone.** É o aparelho-alvo e **segue sendo o único ambiente que nenhuma verificação cobriu** — tudo foi provado no Chrome e por curl.
 
-### Os 3 passos que faltam, nesta ordem
+### O que a revisão final achou (e o que virou de cada um)
 
-1. **Rodar a revisão final da branch inteira.** Pacote já gerado em `.superpowers/sdd/2026-08-05-forma-de-app/review-f07a1e9..c02a5e2.diff`. Foco pedido: as 7 tasks **juntas** — ninguém julgou a integração ainda. Em especial, hoje existem **três memórias independentes de "a última ficha"** (o cookie `bp_ultima`, a entrada do service worker, o histórico do navegador) e vale checar se podem discordar de um jeito que engane.
-2. **Uma leva única de correção** com os achados da revisão final **+ este item já decidido pelo João:**
-   > **(a) O "lido da chuva agora" mentiroso.** Quando a leitura de chuva falha e o carimbo ainda é recente (`erro=true`, não vencido — o caso comum de Open-Meteo fora do ar), a ficha diz "Não suba · sem leitura · cheque no portão" e logo abaixo a linha `.live` diz **"lido da chuva agora"** com o pulso piscando. Ela se contradiz. É o mesmo defeito de honestidade já corrigido no ramo vencido, só que no ramo mais provável. **Está no ar hoje**; não veio desta branch.
+Corrigidos em `d5d8987`, antes do merge:
 
-   Depois, **uma** re-revisão escopada só no diff da correção.
-3. **Merge em `main` + deploy + instalar no celular.** João decidiu: `vercel --prod --yes` depois do merge, e ele instala na tela inicial. **O iPhone é o aparelho-alvo e é o único ambiente que nenhuma verificação cobriu** — tudo foi provado no Chrome.
+1. **(a) O "lido da chuva agora" mentiroso** — já era decisão do João. Com `erro=true` e carimbo no prazo (Open-Meteo fora do ar, o ramo mais provável), a ficha dizia "Não suba · sem leitura" e logo abaixo `.live` dizia "lido da chuva agora". **Metade do defeito era CSS:** a regra que para o pulso existia, mas presa a `data-venceu`, e o ramo de erro não tem esse atributo. As duas pontas agora penduram em `data-sem-leitura`, com teste lendo o `ficha.css` pra o par não desemparelhar. Estava no ar; não veio desta branch.
+2. **`/__ultima__` respondia com o corpo da última ficha.** A chave do ponteiro do SW tem cara de slug (um segmento, sem ponto), então `ehCaminhoDeFicha` a aprovava: virava "navegação nossa", o 404 da rede não é `ok`, e a busca no cache achava o ponteiro. **Valia online também.** Mesma classe do defeito que já tínhamos fechado offline.
+3. **Faltava a meta de iOS.** O Next 15 traduz `appleWebApp.capable` pra `mobile-web-app-capable`, a tag padrão — que o **WebKit só lê do iOS 17.4 em diante**. A antiga com prefixo `apple-` vai junto, provada lendo o HTML do build.
 
-### Decisões do João nesta sessão (não reabrir)
+Achados e **não** corrigidos (decisão do João: registrar, não consertar agora):
 
-- **(a) entra antes do merge** (acima).
+4. **Instalar e sair sem nunca ter navegado = ícone morto.** Se o SW não guardou nada e a pessoa abre offline, `planoDaRaiz()` não acha ficha nem `/trilhas` e volta `Response.error()` — a tela de erro do Safari, **em standalone, sem barra de URL**. Fecha aquecendo `/trilhas` no `install` do SW (~5 linhas).
+5. **Deploy no meio → ficha offline sem JS → carimbo que nunca vence.** Sequência estreita: você abre só `/trilhas` online (o SW sobe pra v2 e poda o precache v1), o HTML da ficha em `bp-ultima-ficha` continua v1, e offline ele carrega sem os chunks — **sem hidratação, o carimbo fica congelado afirmando "Pode subir"**. O conserto óbvio (limpar `bp-ultima-ficha` no `activate`) tem regressão própria: troca a mentira por um beco justamente quando você está na serra.
+6. **Middleware grava o cookie mesmo em 404** — link quebrado apaga a memória boa. Degrada pra `/trilhas` e se cura sozinho no próximo acesso real.
+
+### Decisões do João (não reabrir)
+
 - **(b) fica pra rodada própria:** o carimbo só reavalia num `setInterval` de 60s, então aba em segundo plano corrige até um minuto tarde. Celular no bolso desde as 7h, desbloqueado no portão às 11h → carimbo velho por até 60s. `visibilitychange`/`pageshow` resolveria. O service worker tornou "página retomada do cache" o caso normal, então isso ficou **mais provável do que era**.
-- **Merge direto em `main`** (padrão das 3 rodadas anteriores) + deploy em produção.
+- **Merge direto em `main`** (padrão das rodadas anteriores) + deploy em produção. Feito.
 
 ## O que esta branch construiu
 
@@ -73,6 +77,7 @@ Nunca exercitado: **iOS Safari**, o caminho de `QuotaExceededError`, e uma evict
 - **Sub-projeto 2 — a arquitetura:** home rica que responde "o que dá pra fazer hoje" com carimbo por trilha, descoberta, filtro por modo/espécie. Quando chegar, `/` deixa de despachar e vira ela, e `/trilhas` é **descartada, não refatorada**. Isso muda o comportamento do app já instalado — é virada, não acréscimo.
 - **Produzir as fichas.** João tem material pra meia dúzia (Natuba, Monte das Tabocas, Salvador, Praia do Sossego, Recife→Jaboatão). Cada uma precisa de **dado real dele**: coords, custo, regra da condição, a voz. Eu não invento geografia. O app agora comporta várias — hoje ainda só existe `content/fichas/rampa-do-pepe.json`.
 - **(b) `visibilitychange`** no carimbo.
+- **Os achados 4, 5 e 6** da revisão final (acima).
 
 ## Documentos desta rodada
 
@@ -89,6 +94,6 @@ Login nas contas (Vercel, Turso) + consentir/aceitar termos + o celular. Código
 - Rampa ao vivo (Versão D + deploy): merge `7d4bd59`.
 - "Fui" de verdade: merge `4b6d9a7` + chore `80178f9`.
 - Mapa de verdade: merge `a671146` (branch `mapa-de-verdade` preservada).
-- **Forma de app: branch `forma-de-app`, HEAD `c02a5e2`, AINDA NÃO MERGEADA.**
+- Forma de app: merge `6ef0fdc` (branch `forma-de-app` preservada, HEAD `d5d8987`) + deploy em produção.
 - Turso/cron/freshness da Rodada 1 seguem de lado (não usados no MVP live-compute; a rota cron existe mas não roda).
 - `ensureSchema` (`src/lib/db.ts`) ainda declara `confirmacoes.tipo ... DEFAULT 'foi'` — inerte, inconsistente com `{seco,barro}`. Limpar em passada futura.
