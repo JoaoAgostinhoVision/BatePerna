@@ -684,10 +684,6 @@ export default function Carimbo({
   // hidratação. Se já nasceu velho, o efeito corrige no mesmo instante.
   const [venceu, setVenceu] = useState(false);
 
-  // A Task 5 troca estes dois por estado de verdade.
-  const conferindo = false;
-  const falhou = false;
-
   useEffect(() => {
     const checar = () => setVenceu(carimboVenceu(calculadoEm, Math.floor(Date.now() / 1000)));
     checar();
@@ -708,7 +704,9 @@ export default function Carimbo({
     };
   }, [calculadoEm]);
 
-  const situacao = { conferindo, erro, venceu, falhou };
+  // `conferindo` e `falhou` entram como literais: nesta task ainda não existe
+  // busca pra ligá-los. A Task 5 os troca por estado de verdade.
+  const situacao = { conferindo: false, falhou: false, erro, venceu };
   const fase = faseDe(situacao);
   const sintoma = sintomaDe(situacao);
 
