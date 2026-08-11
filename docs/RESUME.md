@@ -4,6 +4,18 @@
 
 **Última parada:** 2026-08-10. **Estado: duas rodadas fechadas, as duas MERGEADAS e NO AR — e o app INSTALADO no iPhone do João, que aprovou.** `main` em `9c3dcf8` (+ docs), 195/195, árvore limpa. **Nada em aberto: a próxima sessão começa numa decisão de produto, não num conserto.**
 
+---
+
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — comece por aqui, sem perguntar nada antes
+
+**O jeito dele de retomar é essa palavra só.** Não devolva um menu de opções nem peça contexto: ele já espera que você tenha lido este arquivo. Faça nesta ordem:
+
+1. **Confira o chão em silêncio** (30 segundos, sem narrar): `git status --short` (tem que estar limpo), `git log --oneline -3`, `npm test --silent`. Se algo divergir do que está escrito aqui, **isso** vira o assunto — alguém mexeu entre as sessões.
+2. **Abra a rodada do sub-projeto 2 — a home rica** — invocando `superpowers:brainstorming`. É a recomendação de fecho desta sessão, e é trabalho que começa por conversa, não por código. Não escreva plano nem toque em código antes do spec.
+3. **A primeira pergunta do brainstorm é esta, e só ela:** produzir a **segunda ficha** antes da home, ou construir a home com uma ficha só? Os dois lados estão na seção "Próxima parada". A home é feita pra escolher entre trilhas, e escolher entre uma trilha não é escolher — mas a ficha nova depende de dado real que só o João tem (coords, custo, regra, a voz), e **eu não invento geografia** ([[nao-inventar-fatos-de-roteiros]]).
+
+Se ele disser "continua" querendo outra coisa, ele corrige na hora — o custo de começar pelo default é zero, e o custo de parar pra perguntar é a sessão inteira travada num menu.
+
 ## Onde parou exatamente
 
 **Rodada A — a moldura de app** (merge `6ef0fdc`): revisão final → leva única de correção (`d5d8987`) → merge → deploy.
