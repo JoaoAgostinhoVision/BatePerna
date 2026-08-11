@@ -2,7 +2,7 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado.** Antes ele vivia em `.superpowers/sdd/.../RESUME.md`, que tem `.gitignore` com `*` — era scratch, e um `git clean -fdx` teria apagado justamente o mapa de retomada. Mantenha aqui.
 
-**Última parada:** 2026-08-10. **Estado: duas rodadas fechadas hoje, as duas MERGEADAS e NO AR. `main` em `9c3dcf8`, 195/195.**
+**Última parada:** 2026-08-10. **Estado: duas rodadas fechadas, as duas MERGEADAS e NO AR — e o app INSTALADO no iPhone do João, que aprovou.** `main` em `9c3dcf8` (+ docs), 195/195, árvore limpa. **Nada em aberto: a próxima sessão começa numa decisão de produto, não num conserto.**
 
 ## Onde parou exatamente
 
@@ -12,7 +12,9 @@
 
 Produção verificada no domínio real depois de cada uma: `/` despacha 307, `/api/carimbo` devolve o trio com `no-store` e 404 pra slug inventado, o carimbo chega no primeiro paint server-rendered **já pintado**, e as quatro metas de iOS saem no HTML.
 
-**O único passo que sobrou é do João: instalar na tela inicial do iPhone.** É o aparelho-alvo e **segue sendo o único ambiente que nenhuma verificação cobriu** — tudo foi provado no Chrome e por curl.
+**O iPhone deixou de ser incógnita.** João instalou pela Tela de Início do Safari e aprovou. Era o único ambiente que nenhuma verificação automatizada cobria — o veículo PWA está provado no aparelho-alvo, e daqui pra frente "instalar e ver" é um passo de rotina, não um risco aberto.
+
+Fica valendo pra próxima vez: **a instalação no iPhone é pelo Safari** (Compartilhar → Adicionar à Tela de Início), não pelo Chrome, e vale abrir a ficha uma vez no wi-fi depois de instalar — é a visita que guarda a cópia offline dela.
 
 ## Rodada B — o que entrou, e o que ela ensinou
 
@@ -87,22 +89,35 @@ E um quarto, de outra natureza: o `networkTimeoutSeconds: 6` que especifiquei **
 
 `.superpowers/sdd/2026-08-05-forma-de-app/progress.md` — **é scratch git-ignorado**, some num `git clean -fdx`. O essencial dele está aqui.
 
-Menores carregáveis: cadeado de tracing só varre `.ts` flat em `src/lib`; rodapé duplicado em `trilhas/page.tsx`; componente chamado `Ficha` sobrecarrega o substantivo do domínio; `resolverEstado` sem teste próprio; slug com barra final entraria torto no cookie; sem teste do `aria-label` da saída; `viewport.test.ts` crava os hex; sem teste HTTP da rota de ícones; `manifest.ts` crava os caminhos dos ícones.
+Menores carregáveis: cadeado de tracing só varre `.ts` flat em `src/lib`; rodapé duplicado em `trilhas/page.tsx`; componente chamado `Ficha` sobrecarrega o substantivo do domínio; slug com barra final entraria torto no cookie; sem teste do `aria-label` da saída; `viewport.test.ts` crava os hex; sem teste HTTP da rota de ícones; `manifest.ts` crava os caminhos dos ícones.
 
-Nunca exercitado: **iOS Safari**, o caminho de `QuotaExceededError`, e uma eviction real do cache.
+Nunca exercitado: o caminho de `QuotaExceededError` e uma eviction real do cache. (**iOS Safari saiu desta lista** — instalado e aprovado em 2026-08-10.)
 
-## Depois desta branch
+## Próxima parada — comece por aqui
 
-- **Sub-projeto 2 — a arquitetura:** home rica que responde "o que dá pra fazer hoje" com carimbo por trilha, descoberta, filtro por modo/espécie. Quando chegar, `/` deixa de despachar e vira ela, e `/trilhas` é **descartada, não refatorada**. Isso muda o comportamento do app já instalado — é virada, não acréscimo.
-- **Produzir as fichas.** João tem material pra meia dúzia (Natuba, Monte das Tabocas, Salvador, Praia do Sossego, Recife→Jaboatão). Cada uma precisa de **dado real dele**: coords, custo, regra da condição, a voz. Eu não invento geografia. O app agora comporta várias — hoje ainda só existe `content/fichas/rampa-do-pepe.json`.
-- **O achado 5** da revisão final da Rodada A (acima): deploy no meio → ficha offline sem os chunks novos → sem JS → carimbo não vence sozinho.
-- **Follow-ups opcionais da Rodada B:** travar por teste que palavra e cor caem no mesmo quadro commitado; cadeado de grep contra `next/link` sem `key={slug}` (`Moldura` e `Carimbo` guardam estado semeado por prop, o que só é correto enquanto a navegação for recarga inteira); a fatia larga demais no teste 1 do `sw.test.ts`.
-- **Pergunta de design, não dívida:** o pin do mapa acompanha o *estado* mas não a *fase* — com "sem informações" ele fica na cor da última leitura enquanto o selo vira parada. É anterior a estas rodadas.
+**A recomendação é o sub-projeto 2, e ele começa por brainstorm, não por plano.** O app hoje é uma ficha excelente com uma lista feia na frente; o próximo salto é a home. Mas ele depende de conteúdo que só o João tem, então talvez valha inverter — decidir isso é a primeira conversa.
 
-## Documentos desta rodada
+1. **Sub-projeto 2 — a arquitetura.** Home rica que responde "o que dá pra fazer hoje" com carimbo por trilha, descoberta, filtro por modo/espécie. Quando chegar, `/` deixa de despachar e vira ela, e `/trilhas` é **descartada, não refatorada**. **Isso muda o comportamento de um app que agora está instalado no celular do João — é virada, não acréscimo.** Merece brainstorm próprio. Complicação técnica conhecida: carimbo por trilha = N chamadas ao Open-Meteo por abertura, e foi exatamente por isso que a lista nasceu crua.
+2. **Produzir as fichas.** João tem material pra meia dúzia (Natuba, Monte das Tabocas, Salvador, Praia do Sossego, Recife→Jaboatão). Cada uma precisa de **dado real dele**: coords, custo, regra da condição, a voz. **Eu não invento geografia.** O app comporta várias desde a rodada da moldura — hoje ainda só existe `content/fichas/rampa-do-pepe.json`. Uma segunda ficha também é o que finalmente exercita `/trilhas`, o cookie e o despacho com mais de um item.
+3. **O achado 5 da Rodada A**, se incomodar: deploy no meio → ficha offline sem os chunks novos → sem JS → carimbo não vence sozinho. Registrado com os dois lados; João decidiu não consertar.
+4. **Follow-ups opcionais da Rodada B:** travar por teste que palavra e cor caem no mesmo quadro commitado; cadeado de grep contra `next/link` sem `key={slug}` (`Moldura` e `Carimbo` guardam estado semeado por prop, o que só é correto enquanto a navegação for recarga inteira); a fatia larga demais no teste 1 do `sw.test.ts`.
+5. **Pergunta de design, não dívida:** o pin do mapa acompanha o *estado* mas não a *fase* — com "sem informações" ele fica na cor da última leitura enquanto o selo vira parada. É anterior a estas rodadas.
 
+## Documentos
+
+Rodada A — forma de app:
 - Spec: `docs/superpowers/specs/2026-08-05-forma-de-app-design.md`
 - Plano: `docs/superpowers/plans/2026-08-05-forma-de-app.md`
+
+Rodada B — carimbo busca leitura nova:
+- Spec: `docs/superpowers/specs/2026-08-10-carimbo-leitura-nova-design.md`
+- Plano: `docs/superpowers/plans/2026-08-10-carimbo-leitura-nova.md`
+
+## Como estas rodadas foram tocadas (o método que funcionou)
+
+Brainstorm → spec → plano → execução. A Rodada B usou **SDD com subagentes** (um implementador novo por task, revisão por task, revisão da branch inteira em opus no fim) — **João autorizou os agentes explicitamente**; a instrução em vigor é não usar sem pedido. As duas rodadas fecharam no mesmo formato: **revisão da branch inteira → UMA leva de correção → uma re-revisão escopada → merge `--no-ff` → `npx vercel --prod --yes` → conferir por `curl` no domínio real**.
+
+Nas duas, a revisão da branch inteira achou defeito que nenhuma revisão de task pegou, porque cada uma via só o próprio pedaço. Não pule essa etapa.
 
 ## Fronteira do João (o que só ele faz)
 
