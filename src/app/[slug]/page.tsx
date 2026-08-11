@@ -1,34 +1,17 @@
 import "../ficha.css";
 import { getFicha } from "@/lib/ficha";
-import { fetchPrecip } from "@/lib/weather";
-import { avaliar, type Estado } from "@/lib/motor";
+import { resolverEstado } from "@/lib/carimbo-estado";
 import { notFound } from "next/navigation";
 import ConfirmarFui from "../ConfirmarFui";
 import MapaEstatico from "../MapaEstatico";
 import DistanciaDaqui from "../DistanciaDaqui";
 import Appbar from "../Appbar";
 import Carimbo from "../Carimbo";
+import LembrarUltima from "../LembrarUltima";
+import Moldura from "../Moldura";
 
 // Compute-on-load: nada de cache estático, o estado é a chuva de agora.
 export const dynamic = "force-dynamic";
-
-type Render = { state: Estado; erro: boolean; calculadoEm: number };
-
-async function resolverEstado(
-  ficha: NonNullable<ReturnType<typeof getFicha>>,
-  debug: string | undefined,
-): Promise<Render> {
-  const agora = Math.floor(Date.now() / 1000);
-  if (debug === "fresco" || debug === "frio") return { state: debug, erro: false, calculadoEm: agora };
-  try {
-    const { coords, regra } = ficha.condicao;
-    const { precips } = await fetchPrecip(coords, regra);
-    return { state: avaliar(regra, precips, agora), erro: false, calculadoEm: agora };
-  } catch {
-    // Sem leitura de chuva → lado seguro: "não suba", e diz a verdade (não finge verde).
-    return { state: "frio", erro: true, calculadoEm: agora };
-  }
-}
 
 export default async function Ficha({
   params,
@@ -42,7 +25,7 @@ export default async function Ficha({
   if (!ficha) notFound();
 
   const { debug } = await searchParams;
-  const { state, erro, calculadoEm } = await resolverEstado(ficha, debug);
+  const { estado, erro, calculadoEm } = await resolverEstado(ficha, debug);
 
   const wp = ficha.trajeto.waypoints[0];
   const pass = ficha.condicao.regra.janela_passado_horas;
@@ -56,8 +39,13 @@ export default async function Ficha({
   const [ressalvaLead, ...ressalvaResto] = ficha.condicao.ressalva_proxy.split("—");
   const mapa = `https://www.google.com/maps/search/?api=1&query=${wp.lat},${wp.lng}`;
 
+  // A Moldura é o <main className="bp" data-state>: o estado começa no que o
+  // servidor leu (primeiro paint pintado, sem JS) e o Carimbo o corrige se
+  // trouxer uma leitura nova do portão. Tudo aqui dentro continua sendo
+  // componente de servidor — children atravessa a fronteira sem virar JS.
   return (
-    <main className="bp" data-state={state}>
+    <Moldura estado={estado}>
+      <LembrarUltima slug={slug} />
       <div className="screen">
         <Appbar chip={ficha.custo.tag === "pago" ? `${precoCurto} · portão` : undefined} />
 
@@ -66,7 +54,7 @@ export default async function Ficha({
           <h1>{wp.nome}</h1>
           <p className="promessa">{ficha.promessa}</p>
 
-          <Carimbo estado={state} erro={erro} calculadoEm={calculadoEm} pass={pass} fut={fut} />
+          <Carimbo estado={estado} erro={erro} calculadoEm={calculadoEm} pass={pass} fut={fut} slug={slug} />
         </div>
 
         <div className="caveat">
@@ -88,7 +76,9 @@ export default async function Ficha({
           <div className="sec">
             <div className="k">📍 Trajeto</div>
             <div className="waypoint">
-              <MapaEstatico lat={wp.lat} lng={wp.lng} nome={wp.nome} estado={state} />
+              {/* Sem prop de estado: a cor do pin vem do data-state da Moldura,
+                  senão ele congelaria na leitura do servidor. */}
+              <MapaEstatico lat={wp.lat} lng={wp.lng} nome={wp.nome} />
               <div className="wp-body">
                 <div>
                   <div className="t">{wp.nome}</div>
@@ -128,6 +118,6 @@ export default async function Ficha({
 
         <div className="foot">BatePerna · Agreste · PE</div>
       </div>
-    </main>
+    </Moldura>
   );
 }

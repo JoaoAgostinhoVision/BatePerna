@@ -7,21 +7,23 @@ import {
   urlTile,
   zoomDeTiles,
 } from "@/lib/mapa";
-import type { Estado } from "@/lib/motor";
 
 /** Mapa de orientação: responde "onde fica", não "como chegar" — navegar é
  *  trabalho do "Abrir no mapa". Server component: só markup derivado de
- *  funções puras, zero JS no cliente. */
+ *  funções puras, zero JS no cliente.
+ *
+ *  O pin continua repetindo a decisão do carimbo, mas a cor NÃO chega mais por
+ *  prop: ela vem do `data-state` da Moldura, por CSS. Prop seria a leitura do
+ *  servidor congelada — quando o carimbo busca leitura nova no portão e o selo
+ *  vira vermelho, o pin ficaria verde ao lado dele. */
 export default function MapaEstatico({
   lat,
   lng,
   nome,
-  estado,
 }: {
   lat: number;
   lng: number;
   nome: string;
-  estado: Estado;
 }) {
   // Tiles de um zoom a mais desenhados em 1/MAPA_ESCALA = o dobro da densidade.
   const zTiles = zoomDeTiles();
@@ -57,7 +59,7 @@ export default function MapaEstatico({
           ))}
         </div>
       </div>
-      <span className="wp-pin" data-estado={estado} aria-hidden="true" />
+      <span className="wp-pin" aria-hidden="true" />
       {/* Atribuição ODbL — obrigação de licença, não enfeite. Não remover. */}
       <a
         className="wp-osm"

@@ -1,6 +1,7 @@
 /* Versão D portada do preview (planning-artifacts/bateperna-ficha-rampa-preview-d.html).
    Escopado sob .bp pra não vazar sobre o Tailwind base. Sem barra de prévia / toggle:
-   o estado (fresco|frio) é calculado no servidor e chega como [data-state] no .bp. */
+   o estado (fresco|frio) é calculado no servidor e chega como [data-state] no .bp
+   — e a Moldura o reescreve se o carimbo trouxer uma leitura nova do portão. */
 
 :root {
   --ground: #E7DFD0;
@@ -113,7 +114,10 @@ html, body { background: var(--ground); }
   margin: -21.7px 0 0 -9px; background: var(--go); border: 2px solid var(--screen);
   border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
   box-shadow: 0 2px 6px rgba(0,0,0,.35); }
-.bp .wp-pin[data-estado="frio"] { background: var(--stop); }
+/* A cor do pin sai do MESMO [data-state] do selo, e não de um atributo próprio
+   no <span>: com atributo próprio ele guardaria a leitura do servidor e ficaria
+   verde ao lado de um selo que já virou vermelho no portão. Uma fonte de cor só. */
+.bp[data-state="frio"] .wp-pin { background: var(--stop); }
 
 .bp .wp-osm { position: absolute; right: 0; bottom: 0; padding: .25rem .45rem;
   font-family: var(--type); font-size: .64rem; text-decoration: none;
@@ -160,12 +164,34 @@ html, body { background: var(--ground); }
 .bp .confirmar .obrigado { font-weight: 650; color: var(--ink); }
 .bp .confirmar .erro { color: var(--stop-ink); display: flex; flex-direction: column; gap: .4rem; align-items: center; }
 
-/* Carimbo vencido pinta de parada mesmo numa página que abriu fresco:
-   a cor tem que dizer a mesma coisa que a palavra. */
-.bp .decision[data-venceu="1"] .stamp { --st-ink: var(--stop-ink); --st-bg: var(--stop-bg); }
-/* Sem leitura válida — vencida ou nem houve — o pulso para. Ele é o que diz
-   "isto é de agora"; piscando ao lado de "sem leitura" ele desmente o carimbo. */
-.bp .decision[data-sem-leitura="1"] .live .pulse { animation: none; }
+/* Sem leitura pinta de parada mesmo numa página que abriu fresca: a cor tem
+   que dizer a mesma coisa que a palavra. */
+.bp .decision[data-fase="sem-informacoes"] .stamp { --st-ink: var(--stop-ink); --st-bg: var(--stop-bg); }
+/* Conferindo é neutro de propósito: enquanto ele não sabe, a cor também não
+   pode afirmar. Verde ou vermelho aqui seria o estado anterior fingindo valer. */
+.bp .decision[data-fase="conferindo"] .stamp { --st-ink: var(--ink-soft); --st-bg: var(--screen); }
+/* Sem leitura, o pulso para: ele é o que diz "isto é de agora". Piscando ao
+   lado de "sem informações" ele desmente o carimbo. Em "conferindo" ele pisca,
+   porque ali a leitura ESTÁ sendo buscada agora. */
+.bp .decision[data-fase="sem-informacoes"] .live .pulse { animation: none; }
+
+/* O carimbo sem informação é o botão de tentar de novo: alvo do tamanho do
+   bloco, que a mão suja acerta. <button> traz estilo de formulário junto —
+   zerar aqui pra ele continuar sendo o carimbo, não um botão.
+   Importante: margin-top, border, padding e text-align NÃO entram aqui — a
+   regra base `.bp .decision` (linha 63) já os declara, e declaração de autor
+   sempre vence a folha do agente de usuário, não importa a especificidade.
+   Repeti-los com valor igual seria peso morto; repeti-los como `inherit`
+   (como estava) é pior — puxa o valor computado do PAI (`.hero`), não o da
+   própria regra base, e foi isso que descentralizou o carimbo sem leitura.
+   Só entram aqui as propriedades que o <button> define nele mesmo, na
+   folha do agente de usuário, sem nenhuma regra de autor concorrente pra
+   vencer — `font` e `color` — mais o que não existe na regra base
+   (`display`, `width`) e o que é só deste elemento ser tocável
+   (`cursor`, `-webkit-tap-highlight-color`). */
+.bp button.decision { display: block; width: 100%; font: inherit; color: inherit;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.bp button.decision:active { opacity: .7; }
 .bp .confirmar .placar { margin-top: .55rem; font-family: var(--type); font-size: .72rem; color: var(--ink-faint); }
 .bp .confirmar .placar.vazio { font-style: italic; }
 .bp .confirmar button.btn { cursor: pointer; background: transparent; }

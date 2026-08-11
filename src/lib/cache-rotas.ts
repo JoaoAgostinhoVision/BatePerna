@@ -95,13 +95,19 @@ export function comPrazo<T>(promessa: Promise<T>, ms: number, aoEstourar: T): Pr
   return Promise.race([promessa, relogio]).finally(() => clearTimeout(id));
 }
 
+/** A cópia que o service worker busca já na instalação.
+ *
+ *  Sem ela, instalar e sair sem nunca ter navegado deixava o app abrindo na
+ *  tela de erro do navegador — e em standalone, sem barra de URL, isso é um
+ *  beco: não dá nem pra digitar outro endereço. A lista é a porta que sempre
+ *  abre. É a mesma entrada que planoDaRaiz procura, de propósito: aquecer uma
+ *  coisa e procurar outra seria trabalho jogado fora. */
+export const AQUECIMENTO: AlvoCache = { chave: "/trilhas", cache: CACHE_PAGINAS };
+
 /** Onde procurar quando "/" abre sem rede: a última ficha e, se nem isso, a
- *  lista que o serwist guardou. */
-function planoDaRaiz(): AlvoCache[] {
-  return [
-    { chave: CHAVE_ULTIMA, cache: CACHE_ULTIMA_FICHA },
-    { chave: "/trilhas", cache: CACHE_PAGINAS },
-  ];
+ *  lista que o serwist guardou (ou que aquecemos na instalação). */
+export function planoDaRaiz(): AlvoCache[] {
+  return [{ chave: CHAVE_ULTIMA, cache: CACHE_ULTIMA_FICHA }, AQUECIMENTO];
 }
 
 /** Onde procurar quando uma ficha abre sem rede: SÓ ela mesma.

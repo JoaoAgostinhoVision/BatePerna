@@ -19,6 +19,7 @@ const nextConfig = {
     "/[slug]": ["./content/**/*"],
     "/trilhas": ["./content/**/*"],
     "/api/confirmar": ["./content/**/*"],
+    "/api/carimbo": ["./content/**/*"],
     "/api/cron/motor": ["./content/**/*"],
   },
 };
