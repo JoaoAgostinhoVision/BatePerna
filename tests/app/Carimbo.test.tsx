@@ -10,11 +10,11 @@ const AGORA_S = AGORA_MS / 1000;
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(AGORA_MS); });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
-type Props = { estado: "fresco" | "frio"; erro: boolean; calculadoEm: number; pass: number; fut: number };
+type Props = { estado: "fresco" | "frio"; erro: boolean; calculadoEm: number; pass: number; fut: number; slug: string };
 
 function montar(props: Partial<Props> = {}) {
   return render(
-    <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} {...props} />,
+    <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" {...props} />,
   );
 }
 
@@ -24,10 +24,10 @@ describe("Carimbo", () => {
     expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
   });
 
-  it("leitura vencida para de afirmar e manda checar no portão", () => {
+  it("leitura vencida para de afirmar e devolve a decisão pra você", () => {
     const { container } = montar({ calculadoEm: AGORA_S - 40 * 60 });
-    expect(container.querySelector(".mark")?.textContent).toBe("Não suba");
-    expect(container.textContent).toContain("sem leitura");
+    expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
+    expect(container.querySelector(".sub")?.textContent).toBe("tome cuidado");
   });
 
   it("vencida, diz de que hora era a leitura", () => {
@@ -35,37 +35,34 @@ describe("Carimbo", () => {
     expect(container.textContent).toContain("8h02");
   });
 
-  it("vencida, marca o bloco pro CSS pintar de parada mesmo com estado fresco", () => {
+  it("vencida, marca a fase pro CSS pintar de parada mesmo com estado fresco", () => {
     const { container } = montar({ calculadoEm: AGORA_S - 40 * 60 });
-    expect(container.querySelector(".decision")?.getAttribute("data-venceu")).toBe("1");
+    expect(container.querySelector(".decision")?.getAttribute("data-fase")).toBe("sem-informacoes");
   });
 
   it("vence sozinho com o app aberto, sem recarregar", () => {
     const { container } = montar({ calculadoEm: AGORA_S });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
     act(() => { vi.advanceTimersByTime(31 * 60 * 1000); });
-    expect(container.querySelector(".mark")?.textContent).toBe("Não suba");
+    // Vencido não manda mais "Não suba" — informa que não sabe.
+    expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
   });
 
   it("volta do bolso já vencido, sem esperar o intervalo de 60s", () => {
     // O celular passou 4h no bolso. O relógio andou; o setInterval não — o
-    // navegador estrangula timer de aba escondida. Quem reavalia é o instante
-    // em que a tela volta a ser olhada, que é o instante do portão.
+    // navegador estrangula timer de aba escondida.
     const { container } = montar({ calculadoEm: AGORA_S });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
     vi.setSystemTime(AGORA_MS + 4 * 60 * 60 * 1000);
     act(() => { document.dispatchEvent(new Event("visibilitychange")); });
-    expect(container.querySelector(".mark")?.textContent).toBe("Não suba");
-    expect(container.textContent).toContain("sem leitura");
+    expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
   });
 
   it("volta do cache do navegador (pageshow) também reavalia", () => {
-    // O service worker tornou "página retomada do cache" o caso normal, e
-    // restauração de bfcache não dispara visibilitychange em todo navegador.
     const { container } = montar({ calculadoEm: AGORA_S });
     vi.setSystemTime(AGORA_MS + 4 * 60 * 60 * 1000);
     act(() => { window.dispatchEvent(new Event("pageshow")); });
-    expect(container.querySelector(".mark")?.textContent).toBe("Não suba");
+    expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
   });
 
   it("desmontado, não deixa ouvinte pra trás", () => {
@@ -90,24 +87,21 @@ describe("Carimbo", () => {
     const { container } = montar({ estado: "frio", erro: true });
     const live = container.querySelector(".live")?.textContent ?? "";
     expect(live).not.toContain("lido da chuva");
-    expect(live).toContain("sem leitura da chuva");
+    expect(live).toContain("toque pra conferir");
   });
 
-  it("sem leitura, marca o bloco pro CSS parar o pulso", () => {
+  it("sem leitura, marca a fase pro CSS parar o pulso", () => {
     const semLeitura = montar({ estado: "frio", erro: true });
-    expect(semLeitura.container.querySelector(".decision")?.getAttribute("data-sem-leitura")).toBe("1");
+    expect(semLeitura.container.querySelector(".decision")?.getAttribute("data-fase")).toBe("sem-informacoes");
     cleanup();
-    const vencida = montar({ calculadoEm: AGORA_S - 40 * 60 });
-    expect(vencida.container.querySelector(".decision")?.getAttribute("data-sem-leitura")).toBe("1");
-    cleanup();
-    expect(montar().container.querySelector(".decision")?.getAttribute("data-sem-leitura")).toBe(null);
+    expect(montar().container.querySelector(".decision")?.getAttribute("data-fase")).toBe("afirmando");
   });
 
   it("o CSS que para o pulso aponta pro atributo que o componente emite", () => {
     // Metade deste defeito era CSS: a regra existia, mas presa a data-venceu, e
     // o ramo de erro não tem esse atributo. Este par não pode desemparelhar.
     const css = readFileSync(path.join(process.cwd(), "src", "app", "ficha.css"), "utf8");
-    expect(css).toMatch(/\[data-sem-leitura="1"\][^{]*\.pulse\s*\{[^}]*animation:\s*none/);
+    expect(css).toMatch(/\[data-fase="sem-informacoes"\][^{]*\.pulse\s*\{[^}]*animation:\s*none/);
   });
 
   it("vencida com erro, não inventa que houve leitura", () => {
@@ -118,5 +112,19 @@ describe("Carimbo", () => {
     expect(container.querySelector(".reason")?.textContent).not.toContain("8h02");
     expect(container.querySelector(".live")?.textContent).not.toContain("vencida");
     expect(container.querySelector(".live")?.textContent).not.toContain("8h02");
+  });
+
+  it("sem informação, o carimbo é botão de verdade", () => {
+    // Alvo do tamanho do bloco, que a mão suja acerta — e <button> em vez de
+    // div com clique dá teclado e leitor de tela sem código extra.
+    const { container } = montar({ estado: "frio", erro: true });
+    const bloco = container.querySelector(".decision");
+    expect(bloco?.tagName).toBe("BUTTON");
+    expect(bloco?.getAttribute("type")).toBe("button");
+  });
+
+  it("com leitura boa não há botão nenhum", () => {
+    // Botão que não serve pra nada é ruído no meio da decisão.
+    expect(montar().container.querySelector(".decision")?.tagName).toBe("DIV");
   });
 });

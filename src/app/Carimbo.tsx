@@ -1,15 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { Estado } from "@/lib/motor";
+import { type Fase, type Sintoma, faseDe, sintomaDe } from "@/lib/carimbo-fase";
 import { carimboVenceu, horaCurtaRecife } from "@/lib/validade";
 
 /** O carimbo é a única coisa da ficha que apodrece. Tudo o mais — trajeto,
  *  coordenada, aviso, o que ler no portão — é verdade parada.
  *
- *  Sem prazo, uma aba aberta às 7h ainda diz "Pode subir" às 11h; e com o
- *  service worker guardando a página, o offline mostraria clima de três horas
- *  atrás com cara de agora. Vencido, cai no mesmo texto honesto que já existe
- *  pro caso de não conseguir ler a chuva. */
+ *  Quando não há leitura, ele não manda: informa que não sabe e devolve a
+ *  decisão. "Não suba" ficou reservado pro barro que o motor MEDIU. */
 export default function Carimbo({
   estado,
   erro,
@@ -22,6 +21,7 @@ export default function Carimbo({
   calculadoEm: number;
   pass: number;
   fut: number;
+  slug: string;
 }) {
   // Começa sempre válido pra o HTML do servidor e o do cliente baterem na
   // hidratação. Se já nasceu velho, o efeito corrige no mesmo instante.
@@ -47,62 +47,102 @@ export default function Carimbo({
     };
   }, [calculadoEm]);
 
-  const semLeitura = erro || venceu;
-  const marca = semLeitura || estado === "frio" ? "Não suba" : "Pode subir";
-  const sub = semLeitura
-    ? "sem leitura · cheque no portão"
-    : estado === "fresco"
-      ? "seco · carro comum"
-      : "barro · dá um tempo";
+  // `conferindo` e `falhou` entram como literais: nesta task ainda não existe
+  // busca pra ligá-los. A Task 5 os troca por estado de verdade.
+  const situacao = { conferindo: false, falhou: false, erro, venceu };
+  const fase = faseDe(situacao);
+  const sintoma = sintomaDe(situacao);
 
-  return (
-    <div
-      className="decision"
-      role="status"
-      aria-live="polite"
-      data-venceu={venceu ? "1" : undefined}
-      data-sem-leitura={semLeitura ? "1" : undefined}
-    >
+  const marca =
+    fase === "conferindo" ? "CONFERINDO…"
+    : fase === "sem-informacoes" ? "SEM INFORMAÇÕES"
+    : estado === "frio" ? "Não suba"
+    : "Pode subir";
+
+  const sub =
+    fase === "conferindo" ? "lendo a chuva agora"
+    : fase === "sem-informacoes" ? "tome cuidado"
+    : estado === "fresco" ? "seco · carro comum"
+    : "barro · dá um tempo";
+
+  const linhaViva =
+    fase === "conferindo" ? "conferindo a chuva agora"
+    : fase === "sem-informacoes" ? "toque pra conferir"
+    : `lido da chuva agora · ${pass}h atrás + ${fut}h à frente`;
+
+  const miolo = (
+    <>
       <div className="stamp">
         <div className="mark">{marca}</div>
         <div className="sub">{sub}</div>
       </div>
-      <p className="reason">
-        {erro ? (
-          <>
-            Não deu pra ler a chuva agora. Na dúvida, <b>não suba</b> — cheque o barro no portão.
-          </>
-        ) : venceu ? (
-          <>
-            Essa leitura é das <b>{horaCurtaRecife(calculadoEm)}</b> e já passou do prazo. O barro
-            muda rápido — na dúvida, <b>não suba</b> sem olhar no portão.
-          </>
-        ) : estado === "fresco" ? (
-          <>
-            Sem chuva nas últimas <b>~{pass}h</b> e nada previsto pras próximas <b>~{fut}h</b>. Área
-            alta, escorre rápido — a serra firmou.
-          </>
-        ) : (
-          <>
-            Choveu nas últimas <b>~{pass}h</b> (ou vem chuva nas próximas <b>~{fut}h</b>). O barro
-            segura água — risco de atolar.
-          </>
-        )}
-      </p>
+      <p className="reason">{motivo(fase, sintoma, estado, calculadoEm, pass, fut)}</p>
       <div className="live">
         <span className="pulse"></span>
-        <span>
-          {/* erro ganha de venceu: sem leitura nenhuma, não tem hora de leitura
-              pra citar — nem "lido agora" pra alegar. Esta linha é a que diz o
-              quão fresca é a afirmação; quando não houve leitura, ela tem que
-              dizer isso, não contradizer o carimbo logo acima. */}
-          {erro
-            ? "sem leitura da chuva"
-            : venceu
-              ? `leitura das ${horaCurtaRecife(calculadoEm)} · vencida`
-              : `lido da chuva agora · ${pass}h atrás + ${fut}h à frente`}
-        </span>
+        <span>{linhaViva}</span>
       </div>
-    </div>
+    </>
+  );
+
+  // Um atributo só. Dois codificando o mesmo fato foi o que deixou o pulso
+  // piscando ao lado de "sem leitura" até hoje de manhã.
+  const atributos = {
+    className: "decision",
+    role: "status" as const,
+    "aria-live": "polite" as const,
+    "data-fase": fase,
+  };
+
+  // Só vira botão quando tocar serve pra alguma coisa. A Task 5 liga o onClick.
+  return fase === "sem-informacoes" ? (
+    <button type="button" {...atributos}>{miolo}</button>
+  ) : (
+    <div {...atributos}>{miolo}</div>
+  );
+}
+
+/** A frase que explica a marca. A hora só aparece quando existiu leitura: sem
+ *  leitura nenhuma, não há hora pra citar. */
+function motivo(
+  fase: Fase,
+  sintoma: Sintoma,
+  estado: Estado,
+  calculadoEm: number,
+  pass: number,
+  fut: number,
+) {
+  if (fase === "conferindo") {
+    return sintoma === "venceu" ? (
+      <>
+        A leitura das <b>{horaCurtaRecife(calculadoEm)}</b> passou do prazo. Buscando a de agora.
+      </>
+    ) : (
+      <>Buscando a leitura de agora.</>
+    );
+  }
+  if (sintoma === "falhou") {
+    return <>Não deu tempo de ler a chuva. Na dúvida, cheque o barro no portão.</>;
+  }
+  if (sintoma === "erro") {
+    return <>Não deu pra ler a chuva agora. Na dúvida, cheque o barro no portão.</>;
+  }
+  if (sintoma === "venceu") {
+    return (
+      <>
+        Essa leitura é das <b>{horaCurtaRecife(calculadoEm)}</b> e já passou do prazo. O barro muda
+        rápido — cheque no portão antes de decidir.
+      </>
+    );
+  }
+  return estado === "fresco" ? (
+    <>
+      Sem chuva nas últimas <b>~{pass}h</b> e nada previsto pras próximas <b>~{fut}h</b>. Área alta,
+      escorre rápido — a serra firmou.
+    </>
+  ) : (
+    <>
+      Choveu nas últimas <b>~{pass}h</b> (ou vem chuva nas próximas <b>~{fut}h</b>). O barro segura
+      água — risco de atolar.
+    </>
   );
 }

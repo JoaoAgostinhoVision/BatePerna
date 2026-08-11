@@ -160,12 +160,24 @@ html, body { background: var(--ground); }
 .bp .confirmar .obrigado { font-weight: 650; color: var(--ink); }
 .bp .confirmar .erro { color: var(--stop-ink); display: flex; flex-direction: column; gap: .4rem; align-items: center; }
 
-/* Carimbo vencido pinta de parada mesmo numa página que abriu fresco:
-   a cor tem que dizer a mesma coisa que a palavra. */
-.bp .decision[data-venceu="1"] .stamp { --st-ink: var(--stop-ink); --st-bg: var(--stop-bg); }
-/* Sem leitura válida — vencida ou nem houve — o pulso para. Ele é o que diz
-   "isto é de agora"; piscando ao lado de "sem leitura" ele desmente o carimbo. */
-.bp .decision[data-sem-leitura="1"] .live .pulse { animation: none; }
+/* Sem leitura pinta de parada mesmo numa página que abriu fresca: a cor tem
+   que dizer a mesma coisa que a palavra. */
+.bp .decision[data-fase="sem-informacoes"] .stamp { --st-ink: var(--stop-ink); --st-bg: var(--stop-bg); }
+/* Conferindo é neutro de propósito: enquanto ele não sabe, a cor também não
+   pode afirmar. Verde ou vermelho aqui seria o estado anterior fingindo valer. */
+.bp .decision[data-fase="conferindo"] .stamp { --st-ink: var(--ink-soft); --st-bg: var(--screen); }
+/* Sem leitura, o pulso para: ele é o que diz "isto é de agora". Piscando ao
+   lado de "sem informações" ele desmente o carimbo. Em "conferindo" ele pisca,
+   porque ali a leitura ESTÁ sendo buscada agora. */
+.bp .decision[data-fase="sem-informacoes"] .live .pulse { animation: none; }
+
+/* O carimbo sem informação é o botão de tentar de novo: alvo do tamanho do
+   bloco, que a mão suja acerta. <button> traz estilo de formulário junto —
+   zerar aqui pra ele continuar sendo o carimbo, não um botão. */
+.bp button.decision { display: block; width: 100%; font: inherit; color: inherit;
+  text-align: inherit; border: 1px solid var(--line); padding: inherit; margin-top: 1.25rem;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.bp button.decision:active { opacity: .7; }
 .bp .confirmar .placar { margin-top: .55rem; font-family: var(--type); font-size: .72rem; color: var(--ink-faint); }
 .bp .confirmar .placar.vazio { font-style: italic; }
 .bp .confirmar button.btn { cursor: pointer; background: transparent; }
