@@ -68,6 +68,12 @@ describe("podeBuscar", () => {
     expect(podeBuscar("carregou", { ...base, erro: true })).toBe(false);
   });
 
+  it("carregou com erro E venceu — busca porque venceu (não retenta erro)", () => {
+    // Mata a variante incorreta `venceu && !erro`: se fosse assim, este teste
+    // falharia; a regra correta é `return venceu`, ignorando o erro.
+    expect(podeBuscar("carregou", { ...base, erro: true, venceu: true })).toBe(true);
+  });
+
   it("voltar à tela retenta o erro — o tempo passou", () => {
     expect(podeBuscar("voltou", { ...base, erro: true })).toBe(true);
     expect(podeBuscar("voltou", { ...base, venceu: true })).toBe(true);
