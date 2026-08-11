@@ -2,13 +2,32 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado.** Antes ele vivia em `.superpowers/sdd/.../RESUME.md`, que tem `.gitignore` com `*` — era scratch, e um `git clean -fdx` teria apagado justamente o mapa de retomada. Mantenha aqui.
 
-**Última parada:** 2026-08-10. **Estado: a moldura de app está MERGEADA em `main` (`6ef0fdc`) e NO AR em produção. 140/140.**
+**Última parada:** 2026-08-10. **Estado: duas rodadas fechadas hoje, as duas MERGEADAS e NO AR. `main` em `9c3dcf8`, 195/195.**
 
 ## Onde parou exatamente
 
-A rodada fechou inteira: revisão final da branch → leva única de correção (`d5d8987`) → merge `--no-ff` (`6ef0fdc`) → `vercel --prod --yes`. Produção verificada no domínio real: `/` despacha 307, `/__ultima__` volta 404, o carimbo chega no primeiro paint server-rendered, e as quatro metas de iOS saem no HTML.
+**Rodada A — a moldura de app** (merge `6ef0fdc`): revisão final → leva única de correção (`d5d8987`) → merge → deploy.
+
+**Rodada B — o carimbo busca leitura nova** (merge `9c3dcf8`): SDD com 5 tasks por subagente + revisão por task, revisão da branch inteira (opus) → leva única de correção (`026bf0a`) → re-revisão que reproduziu as 5 mutações à mão → merge → deploy.
+
+Produção verificada no domínio real depois de cada uma: `/` despacha 307, `/api/carimbo` devolve o trio com `no-store` e 404 pra slug inventado, o carimbo chega no primeiro paint server-rendered **já pintado**, e as quatro metas de iOS saem no HTML.
 
 **O único passo que sobrou é do João: instalar na tela inicial do iPhone.** É o aparelho-alvo e **segue sendo o único ambiente que nenhuma verificação cobriu** — tudo foi provado no Chrome e por curl.
+
+## Rodada B — o que entrou, e o que ela ensinou
+
+No portão do morro, às 11h, o celular sai do bolso com uma leitura das 7h. O app reconhecia honestamente que não sabia — e se calava justamente na hora da decisão. Agora ele busca a resposta de agora.
+
+- **Rota `GET /api/carimbo?slug=`** devolve `{estado, erro, calculadoEm}`, calculado pela **mesma** função que a página usa (`resolverEstado`, extraída pra `src/lib/carimbo-estado.ts`). Duas fontes pro mesmo carimbo seriam a semente de duas respostas pro mesmo morro.
+- **Três fases** no `Carimbo`: afirmando / conferindo / sem informações. A busca dispara em `visibilitychange`, em `pageshow` e no toque, com regras diferentes por gatilho (`src/lib/carimbo-fase.ts`, lib pura e testada sozinha). 3s tiram o "Conferindo…" da tela **sem cancelar a requisição**; piso de 30s entre buscas automáticas, que o toque ignora.
+- **Mudança de postura, decisão do João:** sem leitura, o app não manda mais. Diz `SEM INFORMAÇÕES · tome cuidado` e devolve a decisão. **`Não suba` ficou reservado pro barro que o motor MEDIU** — ordem com dado por trás, em vez de resposta padrão pra ignorância. O carimbo sem informação vira `<button>` de verdade (`toque pra conferir`).
+- Junto, três deferidos da rodada anterior: reavaliação em `visibilitychange`/`pageshow`; o **middleware saiu** e quem grava a última ficha é `LembrarUltima`, dentro da ficha que renderizou; e o service worker **aquece `/trilhas` na instalação**.
+
+**O defeito que a rodada criou, e que só a revisão da branch inteira pegou:** a decisão passou pro cliente e a **cor** ficou no servidor. `data-state` no `<main>` vinha do render e pintava selo e pin. Sair de casa com sol e chegar no portão com chuva mostrava **"Não suba" dentro de um selo verde**. A cor é o que se lê primeiro. Conserto (`026bf0a`): o `<main>` virou `src/app/Moldura.tsx` (client) e a cor viaja por contexto **no mesmo lote** do `setLeitura` — escrever no DOM por efeito teria reintroduzido um quadro contraditório.
+
+**Duas lições de método desta rodada:**
+- **Teste de mutação decide discussão sobre teste.** Um teste "provava" que `setVenceu` era independente da busca; apagar a linha não quebrava nada. A conclusão certa não foi escrever outro teste, foi descobrir que a linha é redundante hoje, mantê-la como cinto (vira load-bearing se `podeBuscar` passar a barrar algum caso vencido), e corrigir o teste que mentia.
+- **`next dev` roda StrictMode e mentia.** `vivo.current` nunca era rearmado, então no segundo mount a tela travava em "CONFERINDO…" pra sempre — só em dev, exatamente onde a gente confere com o olho.
 
 ### O que a revisão final achou (e o que virou de cada um)
 
@@ -76,8 +95,9 @@ Nunca exercitado: **iOS Safari**, o caminho de `QuotaExceededError`, e uma evict
 
 - **Sub-projeto 2 — a arquitetura:** home rica que responde "o que dá pra fazer hoje" com carimbo por trilha, descoberta, filtro por modo/espécie. Quando chegar, `/` deixa de despachar e vira ela, e `/trilhas` é **descartada, não refatorada**. Isso muda o comportamento do app já instalado — é virada, não acréscimo.
 - **Produzir as fichas.** João tem material pra meia dúzia (Natuba, Monte das Tabocas, Salvador, Praia do Sossego, Recife→Jaboatão). Cada uma precisa de **dado real dele**: coords, custo, regra da condição, a voz. Eu não invento geografia. O app agora comporta várias — hoje ainda só existe `content/fichas/rampa-do-pepe.json`.
-- **(b) `visibilitychange`** no carimbo.
-- **Os achados 4, 5 e 6** da revisão final (acima).
+- **O achado 5** da revisão final da Rodada A (acima): deploy no meio → ficha offline sem os chunks novos → sem JS → carimbo não vence sozinho.
+- **Follow-ups opcionais da Rodada B:** travar por teste que palavra e cor caem no mesmo quadro commitado; cadeado de grep contra `next/link` sem `key={slug}` (`Moldura` e `Carimbo` guardam estado semeado por prop, o que só é correto enquanto a navegação for recarga inteira); a fatia larga demais no teste 1 do `sw.test.ts`.
+- **Pergunta de design, não dívida:** o pin do mapa acompanha o *estado* mas não a *fase* — com "sem informações" ele fica na cor da última leitura enquanto o selo vira parada. É anterior a estas rodadas.
 
 ## Documentos desta rodada
 
@@ -95,5 +115,6 @@ Login nas contas (Vercel, Turso) + consentir/aceitar termos + o celular. Código
 - "Fui" de verdade: merge `4b6d9a7` + chore `80178f9`.
 - Mapa de verdade: merge `a671146` (branch `mapa-de-verdade` preservada).
 - Forma de app: merge `6ef0fdc` (branch `forma-de-app` preservada, HEAD `d5d8987`) + deploy em produção.
+- Carimbo busca leitura nova: merge `9c3dcf8` (branch `carimbo-na-retomada` preservada, HEAD `026bf0a`) + deploy em produção. Spec e plano em `docs/superpowers/`.
 - Turso/cron/freshness da Rodada 1 seguem de lado (não usados no MVP live-compute; a rota cron existe mas não roda).
 - `ensureSchema` (`src/lib/db.ts`) ainda declara `confirmacoes.tipo ... DEFAULT 'foi'` — inerte, inconsistente com `{seco,barro}`. Limpar em passada futura.
