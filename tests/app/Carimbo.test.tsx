@@ -255,4 +255,57 @@ describe("Carimbo — a busca", () => {
     act(() => { window.dispatchEvent(new Event("pageshow")); });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("vence e a rede nunca responde — mesmo assim a leitura velha para de valer, e o prazo de tela resolve sozinho", () => {
+    // A garantia que importa: setVenceu roda incondicionalmente em tentar(),
+    // ANTES de saber se a busca vai sair, vencer ou responder. Uma rede que
+    // nunca chama ok() nem falhar() é o jeito mais direto de provar isso sem
+    // depender de nenhum resultado de rede — só do prazo interno de tela.
+    const { fetchMock, pendentes } = redeFalsa();
+    const { container } = montar({ calculadoEm: AGORA_S });
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
+
+    act(() => { vi.advanceTimersByTime(31 * 60 * 1000); });
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    // A busca saiu (o gatilho "voltou" com venceu=true sempre tenta), mas o
+    // que prova a garantia é que a marca já não é mais "Pode subir" — mesmo
+    // que a rede não tenha dito nada ainda.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(container.querySelector(".mark")?.textContent).not.toBe("Pode subir");
+
+    act(() => { vi.advanceTimersByTime(3_001); });
+    // A requisição nunca respondeu — nem ok, nem falhar — e mesmo assim o
+    // carimbo chega em "não sei": o prazo de tela resolve sozinho, não a rede.
+    expect(pendentes).toHaveLength(1);
+    expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
+  });
+
+  it("duas buscas sobrepostas — a resposta da mais velha chega depois e é descartada", async () => {
+    // O prazo de 3s libera a tela sem cancelar a 1ª requisição; um toque nessa
+    // hora dispara uma 2ª. A guarda de geração é o que impede a resposta
+    // atrasada da 1ª de pisar na leitura (ou no "Conferindo…") da 2ª.
+    const { pendentes } = redeFalsa();
+    const { container } = montar({ estado: "frio", erro: true });
+
+    tocar(container); // 1ª busca (geração 1)
+    act(() => { vi.advanceTimersByTime(3_001); }); // prazo de tela libera o toque de novo
+    expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
+
+    tocar(container); // 2ª busca (geração 2) — a 1ª ainda está pendente, sem resposta
+    expect(container.querySelector(".mark")?.textContent).toBe("CONFERINDO…");
+    expect(pendentes).toHaveLength(2);
+
+    // A 1ª (a mais velha) responde agora, com uma leitura fresca — mas geração
+    // velha: tem que ser descartada, sem tirar o "Conferindo…" da 2ª da tela.
+    await act(async () => {
+      pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S - 999 });
+    });
+    expect(container.querySelector(".mark")?.textContent).toBe("CONFERINDO…");
+
+    // A 2ª (a que vale) responde — essa sim repinta.
+    await act(async () => {
+      pendentes[1].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S });
+    });
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
+  });
 });
