@@ -1,20 +1,31 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Estado } from "@/lib/motor";
-import { type Fase, type Sintoma, faseDe, sintomaDe } from "@/lib/carimbo-fase";
+import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+import {
+  PRAZO_CONFERINDO_MS,
+  type Fase,
+  type Gatilho,
+  type Sintoma,
+  faseDe,
+  podeBuscar,
+  sintomaDe,
+} from "@/lib/carimbo-fase";
 import { carimboVenceu, horaCurtaRecife } from "@/lib/validade";
 
 /** O carimbo é a única coisa da ficha que apodrece. Tudo o mais — trajeto,
  *  coordenada, aviso, o que ler no portão — é verdade parada.
  *
- *  Quando não há leitura, ele não manda: informa que não sabe e devolve a
- *  decisão. "Não suba" ficou reservado pro barro que o motor MEDIU. */
+ *  Quando não há leitura, ele não manda: informa que não sabe, devolve a
+ *  decisão, e se oferece pra ir buscar de novo. "Não suba" ficou reservado pro
+ *  barro que o motor MEDIU. */
 export default function Carimbo({
   estado,
   erro,
   calculadoEm,
   pass,
   fut,
+  slug,
 }: {
   estado: Estado;
   erro: boolean;
@@ -23,46 +34,115 @@ export default function Carimbo({
   fut: number;
   slug: string;
 }) {
-  // Começa sempre válido pra o HTML do servidor e o do cliente baterem na
-  // hidratação. Se já nasceu velho, o efeito corrige no mesmo instante.
+  // A leitura do servidor é só o ponto de partida: daqui pra frente o
+  // componente pode trocá-la por uma mais nova. O primeiro render usa
+  // exatamente o que veio no HTML, pra a hidratação bater.
+  const [leitura, setLeitura] = useState<LeituraCarimbo>({ estado, erro, calculadoEm });
   const [venceu, setVenceu] = useState(false);
+  const [conferindo, setConferindo] = useState(false);
+  const [falhou, setFalhou] = useState(false);
+
+  // Refs, e não estado: os ouvintes são registrados uma vez e leriam um estado
+  // congelado no valor daquele render.
+  const leituraRef = useRef(leitura);
+  leituraRef.current = leitura;
+  const naTela = useRef(false);          // há um "Conferindo…" na tela agora
+  const ultimaTentativa = useRef(Number.NEGATIVE_INFINITY);
+  const geracao = useRef(0);
+  const vivo = useRef(true);
+  useEffect(() => () => { vivo.current = false; }, []);
+
+  // O relógio da validade. Serve a tela aberta na mão; quem cobre o celular no
+  // bolso são os gatilhos lá embaixo, porque navegador estrangula timer de aba
+  // escondida.
+  useEffect(() => {
+    const checar = () =>
+      setVenceu(carimboVenceu(leitura.calculadoEm, Math.floor(Date.now() / 1000)));
+    checar();
+    const id = setInterval(checar, 60_000);
+    return () => clearInterval(id);
+  }, [leitura.calculadoEm]);
+
+  const buscar = useCallback(async () => {
+    naTela.current = true;
+    ultimaTentativa.current = Date.now();
+    const minha = ++geracao.current;
+    setConferindo(true);
+    setFalhou(false);
+
+    // O prazo tira o "Conferindo…" da tela, mas NÃO cancela a requisição: se a
+    // resposta chegar aos 7s, ela ainda vale. Libera o toque junto — prender o
+    // botão esperando uma resposta que já saiu da tela seria travar por nada.
+    const relogio = setTimeout(() => {
+      if (geracao.current !== minha || !vivo.current) return;
+      naTela.current = false;
+      setConferindo(false);
+      setFalhou(true);
+    }, PRAZO_CONFERINDO_MS);
+
+    try {
+      const res = await fetch(`/api/carimbo?slug=${encodeURIComponent(slug)}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(String(res.status));
+      const nova = (await res.json()) as LeituraCarimbo;
+      if (geracao.current !== minha || !vivo.current) return;
+      setLeitura(nova);
+      setFalhou(false);
+    } catch {
+      if (geracao.current !== minha || !vivo.current) return;
+      setFalhou(true);
+    } finally {
+      clearTimeout(relogio);
+      if (geracao.current === minha) {
+        naTela.current = false;
+        if (vivo.current) setConferindo(false);
+      }
+    }
+  }, [slug]);
+
+  const tentar = useCallback(
+    (gatilho: Gatilho) => {
+      const jaVenceu = carimboVenceu(leituraRef.current.calculadoEm, Math.floor(Date.now() / 1000));
+      // Primeiro a verdade sobre o que JÁ está na tela. Se venceu, o carimbo
+      // tem que parar de afirmar agora mesmo — a busca a seguir pode nem sair
+      // (piso, sem rede), e sem isto a tela continuaria afirmando leitura velha.
+      setVenceu(jaVenceu);
+      const pode = podeBuscar(gatilho, {
+        erro: leituraRef.current.erro,
+        venceu: jaVenceu,
+        conferindo: naTela.current,
+        desdeUltimaMs: Date.now() - ultimaTentativa.current,
+      });
+      if (pode) void buscar();
+    },
+    [buscar],
+  );
 
   useEffect(() => {
-    const checar = () => setVenceu(carimboVenceu(calculadoEm, Math.floor(Date.now() / 1000)));
-    checar();
-
-    // O intervalo é pra tela aberta na mão. Ele não basta: navegador estrangula
-    // timer de aba escondida, e o celular passou as últimas quatro horas no
-    // bolso. O instante que importa é quando a tela volta a ser olhada — que é
-    // o instante do portão. `pageshow` vai junto porque restauração de bfcache
-    // não dispara visibilitychange em todo navegador, e o service worker
-    // tornou "página retomada do cache" o caso normal.
-    const id = setInterval(checar, 60_000);
-    document.addEventListener("visibilitychange", checar);
-    window.addEventListener("pageshow", checar);
+    const aoVoltar = () => { if (document.visibilityState === "visible") tentar("voltou"); };
+    const aoCarregar = () => tentar("carregou");
+    document.addEventListener("visibilitychange", aoVoltar);
+    window.addEventListener("pageshow", aoCarregar);
     return () => {
-      clearInterval(id);
-      document.removeEventListener("visibilitychange", checar);
-      window.removeEventListener("pageshow", checar);
+      document.removeEventListener("visibilitychange", aoVoltar);
+      window.removeEventListener("pageshow", aoCarregar);
     };
-  }, [calculadoEm]);
+  }, [tentar]);
 
-  // `conferindo` e `falhou` entram como literais: nesta task ainda não existe
-  // busca pra ligá-los. A Task 5 os troca por estado de verdade.
-  const situacao = { conferindo: false, falhou: false, erro, venceu };
+  const { estado: estadoAtual, erro: erroAtual, calculadoEm: calculadoEmAtual } = leitura;
+  const situacao = { conferindo, erro: erroAtual, venceu, falhou };
   const fase = faseDe(situacao);
   const sintoma = sintomaDe(situacao);
 
   const marca =
     fase === "conferindo" ? "CONFERINDO…"
     : fase === "sem-informacoes" ? "SEM INFORMAÇÕES"
-    : estado === "frio" ? "Não suba"
+    : estadoAtual === "frio" ? "Não suba"
     : "Pode subir";
 
   const sub =
     fase === "conferindo" ? "lendo a chuva agora"
     : fase === "sem-informacoes" ? "tome cuidado"
-    : estado === "fresco" ? "seco · carro comum"
+    : estadoAtual === "fresco" ? "seco · carro comum"
     : "barro · dá um tempo";
 
   const linhaViva =
@@ -76,7 +156,7 @@ export default function Carimbo({
         <div className="mark">{marca}</div>
         <div className="sub">{sub}</div>
       </div>
-      <p className="reason">{motivo(fase, sintoma, estado, calculadoEm, pass, fut)}</p>
+      <p className="reason">{motivo(fase, sintoma, estadoAtual, calculadoEmAtual, pass, fut)}</p>
       <div className="live">
         <span className="pulse"></span>
         <span>{linhaViva}</span>
@@ -84,20 +164,22 @@ export default function Carimbo({
     </>
   );
 
-  // Um atributo só. Dois codificando o mesmo fato foi o que deixou o pulso
-  // piscando ao lado de "sem leitura" até hoje de manhã.
-  const atributos = {
-    className: "decision",
-    role: "status" as const,
-    "aria-live": "polite" as const,
-    "data-fase": fase,
-  };
+  // Um atributo só pra fase. Dois codificando o mesmo fato foi o que deixou o
+  // pulso piscando ao lado de "sem leitura" até hoje de manhã.
+  //
+  // role="status"/aria-live só fazem sentido na <div>: é uma região que se
+  // atualiza sozinha, sem que ninguém precise interagir com ela. No <button>
+  // eles sobrescreveriam o papel implícito de botão — um leitor de tela
+  // anunciaria "região de status" em vez de "botão", justamente no elemento
+  // que a pessoa precisa tocar. Por isso os dois ramos abaixo têm atributos
+  // parecidos, mas não idênticos.
+  const comum = { className: "decision", "data-fase": fase } as const;
 
-  // Só vira botão quando tocar serve pra alguma coisa. A Task 5 liga o onClick.
+  // Só vira botão quando tocar serve pra alguma coisa.
   return fase === "sem-informacoes" ? (
-    <button type="button" {...atributos}>{miolo}</button>
+    <button type="button" {...comum} onClick={() => tentar("toque")}>{miolo}</button>
   ) : (
-    <div {...atributos}>{miolo}</div>
+    <div {...comum} role="status" aria-live="polite">{miolo}</div>
   );
 }
 
