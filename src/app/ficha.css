@@ -1,6 +1,7 @@
 /* Versão D portada do preview (planning-artifacts/bateperna-ficha-rampa-preview-d.html).
    Escopado sob .bp pra não vazar sobre o Tailwind base. Sem barra de prévia / toggle:
-   o estado (fresco|frio) é calculado no servidor e chega como [data-state] no .bp. */
+   o estado (fresco|frio) é calculado no servidor e chega como [data-state] no .bp
+   — e a Moldura o reescreve se o carimbo trouxer uma leitura nova do portão. */
 
 :root {
   --ground: #E7DFD0;
@@ -113,7 +114,10 @@ html, body { background: var(--ground); }
   margin: -21.7px 0 0 -9px; background: var(--go); border: 2px solid var(--screen);
   border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
   box-shadow: 0 2px 6px rgba(0,0,0,.35); }
-.bp .wp-pin[data-estado="frio"] { background: var(--stop); }
+/* A cor do pin sai do MESMO [data-state] do selo, e não de um atributo próprio
+   no <span>: com atributo próprio ele guardaria a leitura do servidor e ficaria
+   verde ao lado de um selo que já virou vermelho no portão. Uma fonte de cor só. */
+.bp[data-state="frio"] .wp-pin { background: var(--stop); }
 
 .bp .wp-osm { position: absolute; right: 0; bottom: 0; padding: .25rem .45rem;
   font-family: var(--type); font-size: .64rem; text-decoration: none;

@@ -12,6 +12,7 @@ import {
   sintomaDe,
 } from "@/lib/carimbo-fase";
 import { carimboVenceu, horaCurtaRecife } from "@/lib/validade";
+import { useAvisarEstado } from "./Moldura";
 
 /** O carimbo é a única coisa da ficha que apodrece. Tudo o mais — trajeto,
  *  coordenada, aviso, o que ler no portão — é verdade parada.
@@ -42,6 +43,11 @@ export default function Carimbo({
   const [conferindo, setConferindo] = useState(false);
   const [falhou, setFalhou] = useState(false);
 
+  // A cor mora no <main> (data-state), fora deste componente: ela pinta o selo
+  // E o pin do mapa, que é irmão daqui. Sem avisar a Moldura, uma leitura nova
+  // trocaria a palavra sem trocar a cor — "Não suba" dentro de um selo verde.
+  const avisarEstado = useAvisarEstado();
+
   // Refs, e não estado: os ouvintes são registrados uma vez e leriam um estado
   // congelado no valor daquele render.
   const leituraRef = useRef(leitura);
@@ -50,7 +56,15 @@ export default function Carimbo({
   const ultimaTentativa = useRef(Number.NEGATIVE_INFINITY);
   const geracao = useRef(0);
   const vivo = useRef(true);
-  useEffect(() => () => { vivo.current = false; }, []);
+  // Rearmar na montagem, não só derrubar na limpeza: o StrictMode do `next dev`
+  // monta, limpa e monta de novo. Sem esta linha o segundo mount nasce morto —
+  // toda resposta é descartada e a tela fica em "CONFERINDO…" pra sempre, que é
+  // justamente o estado em que o app não responde à pergunta. Produção não
+  // sofre, mas o ambiente onde a gente confere com o olho passaria a mentir.
+  useEffect(() => {
+    vivo.current = true;
+    return () => { vivo.current = false; };
+  }, []);
 
   // O relógio da validade. Serve a tela aberta na mão; quem cobre o celular no
   // bolso são os gatilhos lá embaixo, porque navegador estrangula timer de aba
@@ -83,9 +97,21 @@ export default function Carimbo({
     try {
       const res = await fetch(`/api/carimbo?slug=${encodeURIComponent(slug)}`, { cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
-      const nova = (await res.json()) as LeituraCarimbo;
+      const nova: unknown = await res.json();
+      // O corpo é conferido, não assumido: é ele que vira a decisão que a
+      // pessoa lê no portão. Um 200 com corpo fora do trio daria `undefined`
+      // nos três campos e carimboVenceu(undefined) é NaN >= 1800 → false: a
+      // tela afirmaria "Pode subir" a partir de nada. Corpo inválido é falha.
+      if (!ehLeitura(nova)) throw new Error("corpo fora do trio");
       if (geracao.current !== minha || !vivo.current) return;
+      // Os quatro num lote só, de propósito. `venceu` é recalculado aqui em vez
+      // de esperar o efeito [leitura.calculadoEm]: efeito passivo roda em tarefa
+      // separada do commit, e no meio o navegador pinta um quadro em que a
+      // leitura que ACABOU de chegar aparece como "já passou do prazo". O efeito
+      // segue dono do relógio contínuo; este é só o instante da chegada.
       setLeitura(nova);
+      setVenceu(carimboVenceu(nova.calculadoEm, Math.floor(Date.now() / 1000)));
+      avisarEstado(nova.estado);
       setFalhou(false);
     } catch {
       if (geracao.current !== minha || !vivo.current) return;
@@ -97,7 +123,7 @@ export default function Carimbo({
         if (vivo.current) setConferindo(false);
       }
     }
-  }, [slug]);
+  }, [slug, avisarEstado]);
 
   const tentar = useCallback(
     (gatilho: Gatilho) => {
@@ -190,6 +216,23 @@ export default function Carimbo({
     <button type="button" {...comum} onClick={() => tentar("toque")}>{miolo}</button>
   ) : (
     <div {...comum} role="status" aria-live="polite">{miolo}</div>
+  );
+}
+
+/** O corpo da rota é o trio, ou não é leitura nenhuma.
+ *
+ *  Mora aqui, e não em `carimbo-estado.ts` junto do tipo, porque aquele módulo
+ *  puxa o motor e o fetch da chuva — importá-lo em runtime daqui arrastaria o
+ *  servidor inteiro pro pacote do cliente. O tipo, sendo só tipo, some na
+ *  compilação e pode continuar vindo de lá. */
+function ehLeitura(x: unknown): x is LeituraCarimbo {
+  if (typeof x !== "object" || x === null) return false;
+  const { estado, erro, calculadoEm } = x as Record<string, unknown>;
+  return (
+    (estado === "fresco" || estado === "frio") &&
+    typeof erro === "boolean" &&
+    typeof calculadoEm === "number" &&
+    Number.isFinite(calculadoEm)
   );
 }
 

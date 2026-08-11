@@ -8,6 +8,7 @@ import DistanciaDaqui from "../DistanciaDaqui";
 import Appbar from "../Appbar";
 import Carimbo from "../Carimbo";
 import LembrarUltima from "../LembrarUltima";
+import Moldura from "../Moldura";
 
 // Compute-on-load: nada de cache estático, o estado é a chuva de agora.
 export const dynamic = "force-dynamic";
@@ -38,8 +39,12 @@ export default async function Ficha({
   const [ressalvaLead, ...ressalvaResto] = ficha.condicao.ressalva_proxy.split("—");
   const mapa = `https://www.google.com/maps/search/?api=1&query=${wp.lat},${wp.lng}`;
 
+  // A Moldura é o <main className="bp" data-state>: o estado começa no que o
+  // servidor leu (primeiro paint pintado, sem JS) e o Carimbo o corrige se
+  // trouxer uma leitura nova do portão. Tudo aqui dentro continua sendo
+  // componente de servidor — children atravessa a fronteira sem virar JS.
   return (
-    <main className="bp" data-state={estado}>
+    <Moldura estado={estado}>
       <LembrarUltima slug={slug} />
       <div className="screen">
         <Appbar chip={ficha.custo.tag === "pago" ? `${precoCurto} · portão` : undefined} />
@@ -71,7 +76,9 @@ export default async function Ficha({
           <div className="sec">
             <div className="k">📍 Trajeto</div>
             <div className="waypoint">
-              <MapaEstatico lat={wp.lat} lng={wp.lng} nome={wp.nome} estado={estado} />
+              {/* Sem prop de estado: a cor do pin vem do data-state da Moldura,
+                  senão ele congelaria na leitura do servidor. */}
+              <MapaEstatico lat={wp.lat} lng={wp.lng} nome={wp.nome} />
               <div className="wp-body">
                 <div>
                   <div className="t">{wp.nome}</div>
@@ -111,6 +118,6 @@ export default async function Ficha({
 
         <div className="foot">BatePerna · Agreste · PE</div>
       </div>
-    </main>
+    </Moldura>
   );
 }

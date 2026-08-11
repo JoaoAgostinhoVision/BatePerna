@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { Profiler, StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, cleanup, act } from "@testing-library/react";
 import Carimbo from "@/app/Carimbo";
+import Moldura from "@/app/Moldura";
 
 const AGORA_MS = Date.UTC(2027, 0, 15, 11, 42); // 08h42 em Recife
 const AGORA_S = AGORA_MS / 1000;
@@ -33,6 +35,17 @@ function redeFalsa() {
   );
   vi.stubGlobal("fetch", fetchMock);
   return { fetchMock, pendentes };
+}
+
+/** O carimbo dentro da moldura de verdade — o `<main className="bp" data-state>`
+ *  que a ficha renderiza. É onde a COR mora. */
+function montarNaMoldura(props: Partial<Props> = {}) {
+  const { estado = "fresco" } = props;
+  return render(
+    <Moldura estado={estado}>
+      <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" {...props} />
+    </Moldura>,
+  );
 }
 
 function tocar(container: HTMLElement) {
@@ -311,5 +324,166 @@ describe("Carimbo — a busca", () => {
       pendentes[1].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S });
     });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
+  });
+
+  it("200 com corpo fora do trio cai no mesmo tratamento de falha", async () => {
+    // Sem conferir o corpo, os três campos viriam `undefined`,
+    // carimboVenceu(undefined) daria NaN >= 1800 → false, e a tela afirmaria
+    // "Pode subir" a partir de nada. A invariante mais protegida do projeto é
+    // justamente essa: nunca afirmar sem leitura.
+    const { pendentes } = redeFalsa();
+    const { container } = montar({ estado: "frio", erro: true });
+
+    tocar(container);
+    await act(async () => { pendentes[0].ok({ tudo: "bem", estado: "molhado" }); });
+
+    expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
+    expect(container.querySelector("button.decision")).not.toBeNull();
+  });
+
+  it("corpo que nem é JSON também", async () => {
+    const fetchMock = vi.fn(async () => new Response("<html>portal cativo do wifi</html>", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { container } = montar({ estado: "frio", erro: true });
+
+    tocar(container);
+    await act(async () => {});
+
+    expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
+  });
+});
+
+describe("Carimbo — a cor acompanha a leitura que está na tela", () => {
+  const QUATRO_H_MS = 4 * 60 * 60 * 1000;
+
+  it("leitura nova troca a palavra E a cor da ficha inteira", async () => {
+    // 9h em casa: o servidor leu fresco, selo verde. 11h no portão: a tela
+    // volta, a leitura venceu, a busca sai e vem "frio". Sem isto a ficha diria
+    // "Não suba" dentro de um selo VERDE, com o pin do mapa verde junto — e a
+    // cor é o que o motorista lê primeiro.
+    const { pendentes } = redeFalsa();
+    const { container } = montarNaMoldura({ estado: "fresco", calculadoEm: AGORA_S });
+    const moldura = container.querySelector("main.bp");
+    expect(moldura?.getAttribute("data-state")).toBe("fresco"); // o que o servidor pintou
+
+    vi.setSystemTime(AGORA_MS + QUATRO_H_MS);
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    await act(async () => {
+      pendentes[0].ok({
+        estado: "frio", erro: false, calculadoEm: Math.floor((AGORA_MS + QUATRO_H_MS) / 1000),
+      });
+    });
+
+    expect(container.querySelector(".mark")?.textContent).toBe("Não suba");
+    expect(moldura?.getAttribute("data-state")).toBe("frio");
+  });
+
+  it("o CSS pinta o selo a partir do mesmo atributo que a moldura escreve", () => {
+    // jsdom não computa cor: o que dá pra travar é o par atributo/seletor.
+    // Se um dos dois mudar de nome sozinho, o selo fica em silêncio.
+    const css = readFileSync(path.join(process.cwd(), "src", "app", "ficha.css"), "utf8");
+    expect(css).toMatch(/\.bp\[data-state="frio"\]\s*\.stamp\s*\{[^}]*--st-ink:\s*var\(--stop-ink\)/);
+  });
+
+  it("a fase continua ganhando da cor do estado: sem informações pinta de parada", () => {
+    // Precedência de especificidade: .bp .decision[data-fase] .stamp (4 classes)
+    // vence .bp[data-state] .stamp (3). Se a regra da fase saísse do ar, uma
+    // leitura vencida de uma página que abriu fresca ficaria verde.
+    const css = readFileSync(path.join(process.cwd(), "src", "app", "ficha.css"), "utf8");
+    const fase = css.indexOf('.decision[data-fase="sem-informacoes"] .stamp');
+    const estado = css.indexOf('.bp[data-state="frio"]   .stamp');
+    expect(fase).toBeGreaterThan(-1);
+    expect(estado).toBeGreaterThan(-1);
+    expect(fase).toBeGreaterThan(estado); // e vem depois, pra ganhar até em empate
+  });
+
+  it("a moldura não mexe na cor enquanto a busca não trouxer nada", async () => {
+    // Busca que falha não é leitura nova: a cor do servidor continua valendo,
+    // e quem avisa que não há informação é a fase (que pinta o selo de parada).
+    const { pendentes } = redeFalsa();
+    const { container } = montarNaMoldura({ estado: "fresco", calculadoEm: AGORA_S });
+
+    vi.setSystemTime(AGORA_MS + QUATRO_H_MS);
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    await act(async () => { pendentes[0].falhar(); });
+
+    expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
+    expect(container.querySelector("main.bp")?.getAttribute("data-state")).toBe("fresco");
+  });
+});
+
+describe("Carimbo — o que os quadros commitados mostram", () => {
+  const QUATRO_H_MS = 4 * 60 * 60 * 1000;
+
+  it("a leitura que acaba de chegar nunca é pintada como vencida, nem por um quadro", async () => {
+    // O Profiler entrega cada COMMIT (depois da mutação do DOM, antes dos
+    // efeitos passivos) — é o único jeito honesto de ver o que o navegador
+    // teria chance de pintar. `act` sozinho drena render + efeito num bloco só
+    // e esconde exatamente o quadro que este teste procura:
+    //   0: CONFERINDO…      1: SEM INFORMAÇÕES (citando a leitura recém-chegada
+    //   como vencida)       2: Pode subir
+    const { pendentes } = redeFalsa();
+    const quadros: string[] = [];
+    const registrar = () => { quadros.push(document.querySelector(".mark")?.textContent ?? ""); };
+
+    render(
+      <Profiler id="carimbo" onRender={registrar}>
+        <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" />
+      </Profiler>,
+    );
+
+    vi.setSystemTime(AGORA_MS + QUATRO_H_MS);
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    expect(document.querySelector(".mark")?.textContent).toBe("CONFERINDO…");
+
+    quadros.length = 0; // só interessam os quadros a partir da resposta
+    await act(async () => {
+      pendentes[0].ok({
+        estado: "fresco", erro: false, calculadoEm: Math.floor((AGORA_MS + QUATRO_H_MS) / 1000),
+      });
+    });
+
+    expect(quadros.length).toBeGreaterThan(0); // o recorder está mesmo gravando
+    expect(quadros).not.toContain("SEM INFORMAÇÕES");
+    expect(quadros.at(-1)).toBe("Pode subir");
+  });
+});
+
+describe("Carimbo — StrictMode e desmontagem", () => {
+  it("sob StrictMode (o modo do next dev) a resposta ainda repinta", async () => {
+    // StrictMode monta, limpa e monta de novo. Enquanto `vivo` só era derrubado
+    // na limpeza e nunca rearmado, o segundo mount nascia morto: a resposta era
+    // descartada, o `finally` não tirava o "Conferindo…" e o prazo de 3s
+    // retornava cedo — a tela ficava em CONFERINDO… pra sempre. Só em dev, que
+    // é justamente onde a gente confere com o olho.
+    const { pendentes } = redeFalsa();
+    const { container } = render(
+      <StrictMode>
+        <Carimbo estado="frio" erro={true} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" />
+      </StrictMode>,
+    );
+
+    tocar(container);
+    expect(container.querySelector(".mark")?.textContent).toBe("CONFERINDO…");
+
+    await act(async () => { pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S }); });
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
+  });
+
+  it("desmontado com a busca em voo, a resposta que chega não é aplicada nem estoura", async () => {
+    // O deferido "desmonte durante busca em voo sem teste direto". O React 18
+    // não avisa mais sobre setState em componente morto, então o que dá pra
+    // afirmar é o observável: nada volta pra tela e nada é jogado.
+    const gritou = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { pendentes } = redeFalsa();
+    const { container, unmount } = montar({ estado: "frio", erro: true });
+
+    tocar(container);
+    unmount();
+    await act(async () => { pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S }); });
+
+    expect(document.querySelector(".mark")).toBeNull();
+    expect(gritou).not.toHaveBeenCalled();
+    gritou.mockRestore();
   });
 });
