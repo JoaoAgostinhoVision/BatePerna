@@ -256,27 +256,31 @@ describe("Carimbo — a busca", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("vence e a rede nunca responde — mesmo assim a leitura velha para de valer, e o prazo de tela resolve sozinho", () => {
-    // A garantia que importa: setVenceu roda incondicionalmente em tentar(),
-    // ANTES de saber se a busca vai sair, vencer ou responder. Uma rede que
-    // nunca chama ok() nem falhar() é o jeito mais direto de provar isso sem
-    // depender de nenhum resultado de rede — só do prazo interno de tela.
+  it("vence e a rede nunca responde — o prazo de tela resolve sozinho, sem depender de resposta nenhuma", () => {
+    // O que este teste prova: quando a leitura vence, a busca automática sai
+    // (podeBuscar já dá "sim" pra jaVenceu=true) e, mesmo que a rede não
+    // devolva NADA — nem ok(), nem falhar() —, o prazo de 3s de buscar()
+    // ainda assim tira a tela de "Conferindo…" e a leva pra "SEM INFORMAÇÕES".
+    // `vi.setSystemTime` (e não `advanceTimersByTime`) evita que o
+    // `setInterval` de 60s da validade dispare de verdade durante o salto.
+    //
+    // O que este teste NÃO prova: que o `setVenceu(jaVenceu)` de `tentar()` é
+    // necessário. Por mutação (apagar a linha, rodar a suíte, restaurar),
+    // confirmamos que hoje ela é redundante — todo caminho automático que a
+    // exercitaria também dispara busca, e é o prazo de `buscar()` quem decide
+    // a tela final. Ver o comentário na própria linha, em Carimbo.tsx, e a
+    // rodada de correção no relatório da task.
     const { fetchMock, pendentes } = redeFalsa();
     const { container } = montar({ calculadoEm: AGORA_S });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
 
-    act(() => { vi.advanceTimersByTime(31 * 60 * 1000); });
+    vi.setSystemTime(AGORA_MS + 31 * 60 * 1000);
     act(() => { document.dispatchEvent(new Event("visibilitychange")); });
-    // A busca saiu (o gatilho "voltou" com venceu=true sempre tenta), mas o
-    // que prova a garantia é que a marca já não é mais "Pode subir" — mesmo
-    // que a rede não tenha dito nada ainda.
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(container.querySelector(".mark")?.textContent).not.toBe("Pode subir");
+    expect(container.querySelector(".mark")?.textContent).toBe("CONFERINDO…");
 
     act(() => { vi.advanceTimersByTime(3_001); });
-    // A requisição nunca respondeu — nem ok, nem falhar — e mesmo assim o
-    // carimbo chega em "não sei": o prazo de tela resolve sozinho, não a rede.
-    expect(pendentes).toHaveLength(1);
+    expect(pendentes).toHaveLength(1); // nunca respondida
     expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
   });
 

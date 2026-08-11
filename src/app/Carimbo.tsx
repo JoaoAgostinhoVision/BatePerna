@@ -102,9 +102,19 @@ export default function Carimbo({
   const tentar = useCallback(
     (gatilho: Gatilho) => {
       const jaVenceu = carimboVenceu(leituraRef.current.calculadoEm, Math.floor(Date.now() / 1000));
-      // Primeiro a verdade sobre o que JÁ está na tela. Se venceu, o carimbo
-      // tem que parar de afirmar agora mesmo — a busca a seguir pode nem sair
-      // (piso, sem rede), e sem isto a tela continuaria afirmando leitura velha.
+      // Hoje esta linha é redundante na prática: todo gatilho automático que
+      // encontra jaVenceu=true também passa em podeBuscar (que olha esta mesma
+      // variável local, não o estado React) e dispara buscar() — e é o prazo
+      // de 3s (ou a resposta) de buscar() que acaba levando a tela pra
+      // "sem-informacoes", com ou sem este setVenceu. Testamos isto por
+      // mutação: apagar a linha não quebra nenhum teste hoje.
+      //
+      // Mesmo assim ela fica, como cinto de segurança: no instante em que
+      // podeBuscar bloquear algum caminho com leitura vencida (o piso é
+      // exatamente essa regra — hoje inalcançável a partir de "afirmando",
+      // porque a primeira busca automática nunca nasce dentro do piso), sem
+      // esta linha a tela ficaria presa afirmando uma leitura que já venceu,
+      // porque a busca nem sairia pra corrigir o estado.
       setVenceu(jaVenceu);
       const pode = podeBuscar(gatilho, {
         erro: leituraRef.current.erro,
