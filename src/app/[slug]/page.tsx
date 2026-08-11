@@ -1,7 +1,6 @@
 import "../ficha.css";
 import { getFicha } from "@/lib/ficha";
-import { fetchPrecip } from "@/lib/weather";
-import { avaliar, type Estado } from "@/lib/motor";
+import { resolverEstado } from "@/lib/carimbo-estado";
 import { notFound } from "next/navigation";
 import ConfirmarFui from "../ConfirmarFui";
 import MapaEstatico from "../MapaEstatico";
@@ -12,24 +11,6 @@ import LembrarUltima from "../LembrarUltima";
 
 // Compute-on-load: nada de cache estático, o estado é a chuva de agora.
 export const dynamic = "force-dynamic";
-
-type Render = { state: Estado; erro: boolean; calculadoEm: number };
-
-async function resolverEstado(
-  ficha: NonNullable<ReturnType<typeof getFicha>>,
-  debug: string | undefined,
-): Promise<Render> {
-  const agora = Math.floor(Date.now() / 1000);
-  if (debug === "fresco" || debug === "frio") return { state: debug, erro: false, calculadoEm: agora };
-  try {
-    const { coords, regra } = ficha.condicao;
-    const { precips } = await fetchPrecip(coords, regra);
-    return { state: avaliar(regra, precips, agora), erro: false, calculadoEm: agora };
-  } catch {
-    // Sem leitura de chuva → lado seguro: "não suba", e diz a verdade (não finge verde).
-    return { state: "frio", erro: true, calculadoEm: agora };
-  }
-}
 
 export default async function Ficha({
   params,
@@ -43,7 +24,7 @@ export default async function Ficha({
   if (!ficha) notFound();
 
   const { debug } = await searchParams;
-  const { state, erro, calculadoEm } = await resolverEstado(ficha, debug);
+  const { estado, erro, calculadoEm } = await resolverEstado(ficha, debug);
 
   const wp = ficha.trajeto.waypoints[0];
   const pass = ficha.condicao.regra.janela_passado_horas;
@@ -58,7 +39,7 @@ export default async function Ficha({
   const mapa = `https://www.google.com/maps/search/?api=1&query=${wp.lat},${wp.lng}`;
 
   return (
-    <main className="bp" data-state={state}>
+    <main className="bp" data-state={estado}>
       <LembrarUltima slug={slug} />
       <div className="screen">
         <Appbar chip={ficha.custo.tag === "pago" ? `${precoCurto} · portão` : undefined} />
@@ -68,7 +49,7 @@ export default async function Ficha({
           <h1>{wp.nome}</h1>
           <p className="promessa">{ficha.promessa}</p>
 
-          <Carimbo estado={state} erro={erro} calculadoEm={calculadoEm} pass={pass} fut={fut} />
+          <Carimbo estado={estado} erro={erro} calculadoEm={calculadoEm} pass={pass} fut={fut} />
         </div>
 
         <div className="caveat">
@@ -90,7 +71,7 @@ export default async function Ficha({
           <div className="sec">
             <div className="k">📍 Trajeto</div>
             <div className="waypoint">
-              <MapaEstatico lat={wp.lat} lng={wp.lng} nome={wp.nome} estado={state} />
+              <MapaEstatico lat={wp.lat} lng={wp.lng} nome={wp.nome} estado={estado} />
               <div className="wp-body">
                 <div>
                   <div className="t">{wp.nome}</div>
