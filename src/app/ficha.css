@@ -173,9 +173,19 @@ html, body { background: var(--ground); }
 
 /* O carimbo sem informação é o botão de tentar de novo: alvo do tamanho do
    bloco, que a mão suja acerta. <button> traz estilo de formulário junto —
-   zerar aqui pra ele continuar sendo o carimbo, não um botão. */
+   zerar aqui pra ele continuar sendo o carimbo, não um botão.
+   Importante: margin-top, border, padding e text-align NÃO entram aqui — a
+   regra base `.bp .decision` (linha 63) já os declara, e declaração de autor
+   sempre vence a folha do agente de usuário, não importa a especificidade.
+   Repeti-los com valor igual seria peso morto; repeti-los como `inherit`
+   (como estava) é pior — puxa o valor computado do PAI (`.hero`), não o da
+   própria regra base, e foi isso que descentralizou o carimbo sem leitura.
+   Só entram aqui as propriedades que o <button> define nele mesmo, na
+   folha do agente de usuário, sem nenhuma regra de autor concorrente pra
+   vencer — `font` e `color` — mais o que não existe na regra base
+   (`display`, `width`) e o que é só deste elemento ser tocável
+   (`cursor`, `-webkit-tap-highlight-color`). */
 .bp button.decision { display: block; width: 100%; font: inherit; color: inherit;
-  text-align: inherit; border: 1px solid var(--line); padding: inherit; margin-top: 1.25rem;
   cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .bp button.decision:active { opacity: .7; }
 .bp .confirmar .placar { margin-top: .55rem; font-family: var(--type); font-size: .72rem; color: var(--ink-faint); }
