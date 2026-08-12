@@ -49,10 +49,11 @@ no topo de cada cartão na home.
 **Pergunta:** qual é a latitude e a longitude desse ponto? (dá pra pegar abrindo o
 lugar no Google Maps e copiando os dois números que aparecem)
 
-**Por que importa:** é o que planta o pin no mapa da ficha e no mapa da home, o que
-abre o "Abrir no mapa" pro Google Maps, e o que a tela usa pra calcular a distância
-em linha reta até onde a pessoa está agora. Errar a coordenada é errar o mapa inteiro
-sem nenhum aviso de que errou.
+**Por que importa:** é o que planta o pin no mapa da ficha, o que abre o "Abrir no
+mapa" pro Google Maps, e o que a tela usa pra calcular a distância em linha reta até
+onde a pessoa está agora. Errar a coordenada é errar o mapa da ficha e a distância
+mostrada, sem nenhum aviso de que errou. (O pin do mapa da home é outra coordenada —
+ver a seção da coordenada da condição, mais abaixo.)
 
 **Exemplo (Rampa):** `lat -7.907889, lng -36.019222`
 
@@ -176,7 +177,12 @@ trecho crítico for outro lugar diferente de onde a trilha começa)
 
 **Por que importa:** é a coordenada que o app manda pro serviço de previsão do tempo
 (Open-Meteo) pra saber se choveu ou vai chover ali. Escolher o ponto errado faz o
-app ler a chuva de um lugar que não é o que decide se dá pra subir.
+app ler a chuva de um lugar que não é o que decide se dá pra subir. **É também esta
+coordenada — não a do trajeto — que planta o pin da trilha no mapa da home**: o mapa
+que enquadra todas as trilhas do dia lê `condicao.coords` de cada ficha pra decidir
+onde pôr cada pin. Se você der um ponto diferente do trajeto pra condição (por
+exemplo, porque o trecho crítico é outro lugar), é este ponto que vai aparecer no
+mapa da home.
 
 **Exemplo (Rampa):** `lat -7.907889, lng -36.019222`
 
@@ -192,6 +198,13 @@ frente" embaixo do carimbo, e nas frases que explicam a marca).
 
 **Exemplo (Rampa):** `janela_passado_horas: 6, janela_previsao_horas: 3,
 limiar_mm: 0.2`
+
+**Nota pra quem monta o JSON:** além desses três números, o arquivo também leva um
+quarto valor, `"tipo": "chuva_binaria"`, sempre igual, em toda ficha — não é uma
+pergunta pro João responder, porque hoje só existe uma espécie de regra (o motor só
+sabe avaliar chuva binária: choveu/não choveu acima de um limiar). Quando existir uma
+segunda espécie de regra, este documento ganha uma pergunta nova; até lá, o valor é
+fixo.
 
 ### O texto da regra
 
