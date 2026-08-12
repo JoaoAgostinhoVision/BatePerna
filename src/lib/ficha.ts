@@ -12,7 +12,13 @@ function loadAll(): Ficha[] {
     .map((f) => {
       const raw = JSON.parse(fs.readFileSync(path.join(FICHAS_DIR, f), "utf8"));
       return fichaSchema.parse(raw); // throws on malformed content — fail loud at build/test
-    });
+    })
+    // Ordem de readdir é estável por acaso, não por contrato: muda com o
+    // sistema de arquivos e com o nome do JSON. O acervo e a home dependem de
+    // uma ordem que a pessoa reconheça, então ela é declarada aqui.
+    .sort((a, b) =>
+      a.trajeto.waypoints[0].nome.localeCompare(b.trajeto.waypoints[0].nome, "pt-BR"),
+    );
 }
 
 export function getAllFichas(): Ficha[] {

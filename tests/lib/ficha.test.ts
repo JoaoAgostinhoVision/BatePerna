@@ -20,4 +20,9 @@ describe("ficha loader", () => {
     expect(getAllFichas().length).toBeGreaterThan(0);
     expect(getFichasComCondicao().every((f) => f.condicao != null)).toBe(true);
   });
+
+  it("as fichas saem ordenadas por nome, não pela ordem do sistema de arquivos", () => {
+    const nomes = getAllFichas().map((f) => f.trajeto.waypoints[0].nome);
+    expect(nomes).toEqual([...nomes].sort((a, b) => a.localeCompare(b, "pt-BR")));
+  });
 });

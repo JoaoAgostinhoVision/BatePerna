@@ -1,0 +1,28 @@
+/* A home "Hoje" e a barra. Escopado sob .bp; os tokens (--ink, --go, --stop…)
+   vêm do ficha.css, que continua sendo a folha-mãe do app. */
+
+/* ---- a barra embaixo ---- */
+/* O padding-bottom soma a área segura do iPhone: sem isso, em tela cheia, a
+   barra nasce debaixo da faixa do gesto e os rótulos ficam intocáveis. */
+.bp .barra {
+  display: flex;
+  border-top: 1px solid var(--line);
+  background: var(--screen);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.bp .barra-item {
+  flex: 1; text-align: center; text-decoration: none;
+  padding: .55rem .3rem .7rem; min-height: 44px;
+  font-family: var(--type); font-size: .66rem; font-weight: 650;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--ink-faint);
+}
+.bp .barra-item .ic { display: block; font-size: 1.05rem; margin-bottom: .1rem; filter: grayscale(1); opacity: .55; }
+.bp .barra-item[aria-current="page"] { color: var(--accent); }
+.bp .barra-item[aria-current="page"] .ic { filter: none; opacity: 1; }
+.bp .barra-item:active { opacity: .6; }
+
+/* ---- o mapa da home ----
+   A altura tem que bater com MAPA_ALTURA_HOME_PX (src/lib/mapa.ts): é dela que
+   sai a conta do "primeiro cartão acima da dobra", e tem teste lendo esta
+   linha. Mexer aqui sem mexer lá quebra o teste de propósito. */
+.bp .mapa-home { position: relative; overflow: hidden; background: var(--surface-2); height: 168px; }

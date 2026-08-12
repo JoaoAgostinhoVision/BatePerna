@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { MAPA_ALTURA_HOME_PX } from "@/lib/mapa";
 import {
@@ -14,6 +16,13 @@ describe("o primeiro cartão nasce acima da dobra", () => {
 
   it("o mapa da home é mais baixo que o da ficha", () => {
     expect(MAPA_ALTURA_HOME_PX).toBeLessThan(200);
+  });
+
+  it("o CSS usa a MESMA altura que a constante — senão a conta da dobra é ficção", () => {
+    const css = readFileSync(path.join(process.cwd(), "src", "app", "home.css"), "utf8");
+    const regra = css.match(/\.mapa-home\s*\{[^}]*\}/s);
+    expect(regra, "faltou a regra .mapa-home no home.css").not.toBeNull();
+    expect(regra![0]).toContain(`height: ${MAPA_ALTURA_HOME_PX}px`);
   });
 
 });
