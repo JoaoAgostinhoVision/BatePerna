@@ -1,32 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COOKIE_ULTIMA, destinoDe, ehCaminhoDeFicha } from "@/lib/despacho";
-
-const EXISTENTES = ["rampa-do-pepe", "monte-das-tabocas"];
-
-describe("destinoDe", () => {
-  it("manda pra última ficha quando ela ainda existe", () => {
-    expect(destinoDe("rampa-do-pepe", EXISTENTES)).toBe("/rampa-do-pepe");
-  });
-
-  it("manda pra lista quando não há cookie", () => {
-    expect(destinoDe(undefined, EXISTENTES)).toBe("/trilhas");
-  });
-
-  it("manda pra lista quando o cookie aponta pra ficha que não existe mais", () => {
-    expect(destinoDe("ficha-apagada", EXISTENTES)).toBe("/trilhas");
-  });
-
-  it("manda pra lista quando não existe ficha nenhuma", () => {
-    expect(destinoDe("rampa-do-pepe", [])).toBe("/trilhas");
-  });
-});
-
-describe("COOKIE_ULTIMA", () => {
-  it("não usa dois-pontos — é separador na RFC 6265 e não vale em nome de cookie", () => {
-    expect(COOKIE_ULTIMA).not.toContain(":");
-    expect(COOKIE_ULTIMA).toMatch(/^[A-Za-z0-9_-]+$/);
-  });
-});
+import { ehCaminhoDeFicha } from "@/lib/despacho";
 
 describe("ehCaminhoDeFicha", () => {
   it("reconhece um slug de um segmento só", () => {
@@ -50,5 +23,17 @@ describe("ehCaminhoDeFicha", () => {
     expect(ehCaminhoDeFicha("/favicon.ico")).toBe(false);
     expect(ehCaminhoDeFicha("/sw.js")).toBe(false);
     expect(ehCaminhoDeFicha("/manifest.webmanifest")).toBe(false);
+  });
+
+  it("ehCaminhoDeFicha sobrevive: é o service worker que depende dela", () => {
+    expect(ehCaminhoDeFicha("/rampa-do-pepe")).toBe(true);
+    expect(ehCaminhoDeFicha("/trilhas")).toBe(false);
+    expect(ehCaminhoDeFicha("/")).toBe(false);
+  });
+
+  it("o cookie da última ficha não existe mais em lugar nenhum do módulo", async () => {
+    const mod = await import("@/lib/despacho");
+    expect("COOKIE_ULTIMA" in mod).toBe(false);
+    expect("destinoDe" in mod).toBe(false);
   });
 });

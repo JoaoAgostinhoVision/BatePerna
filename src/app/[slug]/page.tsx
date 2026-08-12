@@ -7,7 +7,6 @@ import MapaEstatico from "../MapaEstatico";
 import DistanciaDaqui from "../DistanciaDaqui";
 import Appbar from "../Appbar";
 import Carimbo from "../Carimbo";
-import LembrarUltima from "../LembrarUltima";
 import Moldura from "../Moldura";
 
 // Compute-on-load: nada de cache estático, o estado é a chuva de agora.
@@ -45,7 +44,6 @@ export default async function Ficha({
   // componente de servidor — children atravessa a fronteira sem virar JS.
   return (
     <Moldura estado={estado}>
-      <LembrarUltima slug={slug} />
       <div className="screen">
         <Appbar chip={ficha.custo.tag === "pago" ? `${precoCurto} · portão` : undefined} />
 
