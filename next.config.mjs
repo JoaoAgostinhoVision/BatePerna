@@ -20,6 +20,7 @@ const nextConfig = {
     "/trilhas": ["./content/**/*"],
     "/api/confirmar": ["./content/**/*"],
     "/api/carimbo": ["./content/**/*"],
+    "/api/carimbos": ["./content/**/*"],
     "/api/cron/motor": ["./content/**/*"],
   },
 };
