@@ -24,5 +24,4 @@ describe("o primeiro cartão nasce acima da dobra", () => {
     expect(regra, "faltou a regra .mapa-home no home.css").not.toBeNull();
     expect(regra![0]).toContain(`height: ${MAPA_ALTURA_HOME_PX}px`);
   });
-
 });

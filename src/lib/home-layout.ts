@@ -7,7 +7,11 @@
  *  padding da appbar ou o tamanho do cabeçalho de grupo mudarem em home.css /
  *  ficha.css, elas têm que ser medidas de novo — o teste só prova a soma. */
 
-/** `.appbar`: padding .9rem/.8rem + o miolo de 1.5rem. */
+/** `.appbar`: padding .9rem/.8rem + o miolo de 1.5rem (o logo `.mk`, que é o
+ *  item mais alto da linha quando não há chip). Vale pra Appbar SEM chip —
+ *  com `chip`, a pílula de custo (`.cost-chip`) mede ~1,5px a mais que o
+ *  logo e a soma passa a mentir por essa margem. A home usa Appbar sem chip
+ *  hoje; se ganhar chip, esta constante precisa ser remedida. */
 export const ALTURA_APPBAR_PX = 52;
 
 /** `.grupo-k`: o rótulo "Hoje o tempo deixa" mais o respiro dele. */
