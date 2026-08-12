@@ -11,6 +11,15 @@ import {
   urlTile,
   zoomDeTiles,
 } from "@/lib/mapa";
+import {
+  MAPA_ALTURA_HOME_PX,
+  MARGEM_ENQUADRO_PX,
+  ZOOM_MINIMO,
+  enquadrar,
+  latDoMundo,
+  lngDoMundo,
+  posicaoNaCaixa,
+} from "@/lib/mapa";
 
 const RAMPA = { lat: -7.907889, lng: -36.019222 };
 
@@ -135,5 +144,72 @@ describe("urlTile", () => {
     expect(urlTile({ z: 11, x: 793, y: 1064 })).toBe(
       "https://tile.openstreetmap.org/11/793/1064.png",
     );
+  });
+});
+
+const LARGURA = 480;
+const ALTURA = MAPA_ALTURA_HOME_PX;
+
+describe("latDoMundo / lngDoMundo", () => {
+  it("desfazem pontoNoMundo", () => {
+    const z = 9;
+    const p = pontoNoMundo(RAMPA, z);
+    expect(latDoMundo(p.y, z)).toBeCloseTo(RAMPA.lat, 9);
+    expect(lngDoMundo(p.x, z)).toBeCloseTo(RAMPA.lng, 9);
+  });
+
+  it("o topo do mundo é o limite de Mercator, não infinito", () => {
+    expect(latDoMundo(0, 3)).toBeCloseTo(85.05112878, 5);
+  });
+});
+
+describe("enquadrar", () => {
+  it("com uma trilha só, é o mapa da ficha: mesmo centro, mesmo zoom", () => {
+    const { centro, z } = enquadrar([RAMPA], LARGURA, ALTURA);
+    expect(z).toBe(MAPA_ZOOM);
+    expect(centro.lat).toBeCloseTo(RAMPA.lat, 9);
+    expect(centro.lng).toBeCloseTo(RAMPA.lng, 9);
+  });
+
+  it("coordenadas repetidas não viram zoom infinito", () => {
+    const { z } = enquadrar([RAMPA, RAMPA, RAMPA], LARGURA, ALTURA);
+    expect(Number.isInteger(z)).toBe(true);
+    expect(z).toBe(MAPA_ZOOM);
+  });
+
+  it("duas trilhas distantes cabem as duas dentro da caixa, com margem", () => {
+    const recife = { lat: -8.05, lng: -34.9 };
+    const distante = { lat: -7.9, lng: -36.02 };
+    const { centro, z } = enquadrar([recife, distante], LARGURA, ALTURA);
+    for (const c of [recife, distante]) {
+      const { left, top } = posicaoNaCaixa(c, centro, z, LARGURA, ALTURA);
+      expect(left).toBeGreaterThanOrEqual(MARGEM_ENQUADRO_PX);
+      expect(left).toBeLessThanOrEqual(LARGURA - MARGEM_ENQUADRO_PX);
+      expect(top).toBeGreaterThanOrEqual(MARGEM_ENQUADRO_PX);
+      expect(top).toBeLessThanOrEqual(ALTURA - MARGEM_ENQUADRO_PX);
+    }
+  });
+
+  it("nunca aproxima mais que o mapa da ficha", () => {
+    const a = { lat: -7.9078, lng: -36.0192 };
+    const b = { lat: -7.9079, lng: -36.0193 };
+    expect(enquadrar([a, b], LARGURA, ALTURA).z).toBe(MAPA_ZOOM);
+  });
+
+  it("trilhas em lados opostos do mundo param no piso de zoom", () => {
+    const { z } = enquadrar([{ lat: -60, lng: -170 }, { lat: 60, lng: 170 }], LARGURA, ALTURA);
+    expect(z).toBe(ZOOM_MINIMO);
+  });
+
+  it("sem coordenada nenhuma é erro de programação, não mapa vazio", () => {
+    expect(() => enquadrar([], LARGURA, ALTURA)).toThrow();
+  });
+});
+
+describe("posicaoNaCaixa", () => {
+  it("o centro do enquadramento cai no meio da caixa", () => {
+    const { left, top } = posicaoNaCaixa(RAMPA, RAMPA, 10, LARGURA, ALTURA);
+    expect(left).toBeCloseTo(LARGURA / 2, 6);
+    expect(top).toBeCloseTo(ALTURA / 2, 6);
   });
 });

@@ -100,3 +100,93 @@ export function urlTile(t: { z: number; x: number; y: number }): string {
 export function zoomDeTiles(): number {
   return MAPA_ZOOM + Math.log2(MAPA_ESCALA);
 }
+
+/** Altura do mapa na home. Mais baixo que o da ficha (200px) porque aqui ele
+ *  divide a tela com a decisão: o carimbo do primeiro cartão tem que nascer
+ *  acima da dobra. Ver src/lib/home-layout.ts — a conta tem teste. */
+export const MAPA_ALTURA_HOME_PX = 168;
+
+/** Folga de cada lado no enquadramento. O pin tem 18px e a ponta cai abaixo do
+ *  centro do quadrado; sem folga, a trilha da borda nasce com a ponta cortada. */
+export const MARGEM_ENQUADRO_PX = 28;
+
+/** Abaixo disto o mundo inteiro cabe na caixa e começa a se repetir — mosaico
+ *  duplicado não orienta ninguém. */
+export const ZOOM_MINIMO = 2;
+
+/** Inversa de pontoNoMundo no eixo y.
+ *  De y = (0.5 − ln((1+s)/(1−s))/4π)·escala tira-se s = tanh((0.5 − y/escala)·2π),
+ *  e φ = asin(s). Em tanh, e não em exponencial crua, pra não estourar longe do
+ *  equador. */
+export function latDoMundo(y: number, z: number): number {
+  const escala = TILE_PX * 2 ** z;
+  return (Math.asin(Math.tanh((0.5 - y / escala) * 2 * Math.PI)) * 180) / Math.PI;
+}
+
+export function lngDoMundo(x: number, z: number): number {
+  const escala = TILE_PX * 2 ** z;
+  return (x / escala) * 360 - 180;
+}
+
+/** Centro e zoom que fazem TODAS as coordenadas caberem na caixa.
+ *
+ *  Nunca aproxima mais que MAPA_ZOOM: uma home com duas trilhas vizinhas viraria
+ *  foto de porteira, e o mapa deste app responde "onde fica", não "onde é a
+ *  entrada". E nunca afasta além de ZOOM_MINIMO.
+ *
+ *  Não trata longitude que cruza o antimeridiano: as trilhas são todas do mesmo
+ *  lado do mundo, e fingir que trata seria complexidade sem caso de uso. */
+export function enquadrar(
+  coords: Coord[],
+  larguraPx: number,
+  alturaPx: number,
+): { centro: Coord; z: number } {
+  if (coords.length === 0) {
+    throw new Error("enquadrar: sem coordenada nenhuma — quem chama decide não desenhar mapa");
+  }
+
+  // Tudo medido no zoom 0 (mundo de 256px) e depois escalado: o span dobra a
+  // cada zoom, então o zoom que serve sai de uma divisão só.
+  const pontos = coords.map((c) => pontoNoMundo(c, 0));
+  const minX = Math.min(...pontos.map((p) => p.x));
+  const maxX = Math.max(...pontos.map((p) => p.x));
+  const minY = Math.min(...pontos.map((p) => p.y));
+  const maxY = Math.max(...pontos.map((p) => p.y));
+
+  const centro: Coord = {
+    lat: latDoMundo((minY + maxY) / 2, 0),
+    lng: lngDoMundo((minX + maxX) / 2, 0),
+  };
+
+  const dispX = Math.max(1, larguraPx - 2 * MARGEM_ENQUADRO_PX);
+  const dispY = Math.max(1, alturaPx - 2 * MARGEM_ENQUADRO_PX);
+  const spanX = maxX - minX;
+  const spanY = maxY - minY;
+
+  // Ponto único (ou pontos coincidentes): não há span pra caber, o zoom é o da
+  // ficha. Sem este ramo a divisão por zero viraria Infinity.
+  const zCabe =
+    spanX === 0 && spanY === 0
+      ? MAPA_ZOOM
+      : Math.floor(
+          Math.min(
+            spanX === 0 ? Infinity : Math.log2(dispX / spanX),
+            spanY === 0 ? Infinity : Math.log2(dispY / spanY),
+          ),
+        );
+
+  return { centro, z: Math.max(ZOOM_MINIMO, Math.min(MAPA_ZOOM, zCabe)) };
+}
+
+/** Onde uma coordenada cai dentro da caixa desenhada, em pixels de CSS. */
+export function posicaoNaCaixa(
+  c: Coord,
+  centro: Coord,
+  z: number,
+  larguraPx: number,
+  alturaPx: number,
+): { left: number; top: number } {
+  const p = pontoNoMundo(c, z);
+  const o = pontoNoMundo(centro, z);
+  return { left: larguraPx / 2 + (p.x - o.x), top: alturaPx / 2 + (p.y - o.y) };
+}
