@@ -1,22 +1,52 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { getAllFichas } from "@/lib/ficha";
-import { COOKIE_ULTIMA, destinoDe } from "@/lib/despacho";
+import "./ficha.css";
+import "./home.css";
+import { getFichasComCondicao } from "@/lib/ficha";
+import { resolverEstados } from "@/lib/carimbo-estado";
+import Appbar from "./Appbar";
+import BarraNavegacao from "./BarraNavegacao";
+import CartaoTrilha from "./CartaoTrilha";
 
+// Compute-on-load: o veredito é a chuva de agora. Página estática congelaria
+// `calculadoEm` no build e TODO visitante receberia carimbo já vencido.
 export const dynamic = "force-dynamic";
 
-/** "/" não renderiza nada: despacha pra última ficha que você abriu.
+/** A home: "o que dá pra fazer hoje".
  *
- *  Aqui é o único lugar que lê o cookie e sabe quais fichas existem (fs) ao
- *  mesmo tempo — por isso a validação mora deste lado. Quem grava é a própria
- *  ficha (LembrarUltima), que só roda depois de ela ter renderizado; o valor
- *  ainda pode envelhecer no celular e apontar pra ficha que saiu do ar.
+ *  Antes daqui saía um redirect pra última ficha aberta. Virou tela porque um
+ *  app de uma trilha não precisa escolher, e um app de trilhas precisa.
  *
- *  Efeito de brinde: como é redirect de verdade, a URL na tela vira
- *  /rampa-do-pepe — mandar o link leva a pessoa pra ficha certa, não pra
- *  "a última ficha de quem abrir". */
-export default async function Raiz() {
-  const ultima = (await cookies()).get(COOKIE_ULTIMA)?.value;
-  const slugs = getAllFichas().map((f) => f.slug);
-  redirect(destinoDe(ultima, slugs));
+ *  Os dois grupos não são o acervo voltando pra tela: são a MESMA pergunta com
+ *  as duas respostas. Sem o segundo, o primeiro sábado de chuva devolveria uma
+ *  home em branco — que é a tela que menos ajuda a decidir. */
+export default async function Home() {
+  const fichas = getFichasComCondicao();
+  const leituras = await resolverEstados(fichas);
+
+  const podem = fichas.filter((f) => leituras.get(f.slug)?.estado === "fresco");
+  const naoPodem = fichas.filter((f) => leituras.get(f.slug)?.estado !== "fresco");
+
+  const grupo = (titulo: string, lista: typeof fichas) =>
+    lista.length === 0 ? null : (
+      <>
+        <div className="grupo-k">{titulo}</div>
+        <div className="cartoes">
+          {lista.map((f) => (
+            <CartaoTrilha key={f.slug} ficha={f} leitura={leituras.get(f.slug)!} />
+          ))}
+        </div>
+      </>
+    );
+
+  return (
+    <main className="bp">
+      <div className="screen">
+        <Appbar comSaida={false} />
+        <div className="folha">
+          {grupo("Hoje o tempo deixa", podem)}
+          {grupo("Hoje não", naoPodem)}
+        </div>
+        <BarraNavegacao aqui="hoje" />
+      </div>
+    </main>
+  );
 }
