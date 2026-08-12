@@ -22,6 +22,7 @@ describe("GET /api/carimbos", () => {
     const corpo = await res.json();
 
     expect(res.status).toBe(200);
+    expect(resolverEstados).toHaveBeenCalledWith(getFichasComCondicao());
     for (const s of slugs) {
       expect(corpo[s]).toEqual({ estado: "fresco", erro: false, calculadoEm: 42 });
     }
