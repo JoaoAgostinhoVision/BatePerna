@@ -1,7 +1,8 @@
 import "./ficha.css";
 import "./home.css";
 import { getFichasComCondicao } from "@/lib/ficha";
-import { resolverEstados } from "@/lib/carimbo-estado";
+import { resolverEstados, type LeituraCarimbo } from "@/lib/carimbo-estado";
+import type { Ficha } from "@/types/ficha";
 import Appbar from "./Appbar";
 import BarraNavegacao from "./BarraNavegacao";
 import CartaoTrilha from "./CartaoTrilha";
@@ -22,16 +23,26 @@ export default async function Home() {
   const fichas = getFichasComCondicao();
   const leituras = await resolverEstados(fichas);
 
-  const podem = fichas.filter((f) => leituras.get(f.slug)?.estado === "fresco");
-  const naoPodem = fichas.filter((f) => leituras.get(f.slug)?.estado !== "fresco");
+  // O par ficha+leitura só existe se a leitura existir: `resolverEstados`
+  // devolve uma entrada por ficha hoje, mas fazer o TIPO provar isso — em vez
+  // de um `.get(...)!` afirmando o que o filtro logo abaixo não garante — é o
+  // que impede um `undefined` de estourar no portão se um dia essa premissa
+  // parar de valer.
+  const comLeitura: { ficha: Ficha; leitura: LeituraCarimbo }[] = fichas.flatMap((f) => {
+    const leitura = leituras.get(f.slug);
+    return leitura ? [{ ficha: f, leitura }] : [];
+  });
 
-  const grupo = (titulo: string, lista: typeof fichas) =>
+  const podem = comLeitura.filter((x) => x.leitura.estado === "fresco");
+  const naoPodem = comLeitura.filter((x) => x.leitura.estado !== "fresco");
+
+  const grupo = (titulo: string, lista: typeof comLeitura) =>
     lista.length === 0 ? null : (
       <>
         <div className="grupo-k">{titulo}</div>
         <div className="cartoes">
-          {lista.map((f) => (
-            <CartaoTrilha key={f.slug} ficha={f} leitura={leituras.get(f.slug)!} />
+          {lista.map((x) => (
+            <CartaoTrilha key={x.ficha.slug} ficha={x.ficha} inicial={x.leitura} />
           ))}
         </div>
       </>
