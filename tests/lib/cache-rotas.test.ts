@@ -95,9 +95,27 @@ describe("AQUECIMENTO", () => {
     expect(planoDaRaiz()).toContain(AQUECIMENTO);
   });
 
-  it("a raiz procura a última ficha antes da lista", () => {
-    // A ordem é a resposta: você quer o morro onde estava, não o índice.
-    expect(planoDaRaiz()[0].chave).toBe(CHAVE_ULTIMA);
+  it("a raiz procura o acervo antes da última ficha", () => {
+    // A ordem é a resposta: "/" é a home agora, não despachante — o acervo é
+    // a versão honesta dela quando não há clima pra ler.
+    expect(planoDaRaiz()[0].chave).toBe(AQUECIMENTO.chave);
+  });
+});
+
+describe("planoDaRaiz: ordem invertida (home antes de despachante)", () => {
+  it("offline, '/' procura o acervo ANTES da última ficha", () => {
+    const [primeiro, segundo] = planoDaRaiz();
+    expect(primeiro).toEqual(AQUECIMENTO);
+    expect(segundo.chave).toBe(CHAVE_ULTIMA);
+  });
+
+  it("a home nunca é gravada, mesmo respondendo 200 — veredito guardado é veredito velho", async () => {
+    const { gravarEm } = await resolverNavegacao({
+      url: "https://bateperna.vercel.app/",
+      buscarRede: async () => new Response("<html>a home</html>", { status: 200 }),
+      buscarCache: async () => null,
+    });
+    expect(gravarEm).toEqual([]);
   });
 });
 
@@ -210,22 +228,23 @@ describe("resolverNavegacao: raiz", () => {
     expect(r.gravarEm).toEqual([]);
   });
 
-  it("sem rede cai na última ficha", async () => {
+  it("sem acervo guardado, cai na última ficha", async () => {
     const ultima = resposta();
     const cache = cacheFalso({ [CHAVE_ULTIMA]: ultima });
     const r = await resolverNavegacao({ url: RAIZ, buscarRede: semRede, buscarCache: cache.buscar });
 
     expect(r.resposta).toBe(ultima);
-    expect(cache.perguntas[0]).toMatchObject({ chave: CHAVE_ULTIMA, cache: CACHE_ULTIMA_FICHA });
+    expect(cache.perguntas[0]).toMatchObject({ chave: AQUECIMENTO.chave, cache: CACHE_PAGINAS });
+    expect(cache.perguntas[1]).toMatchObject({ chave: CHAVE_ULTIMA, cache: CACHE_ULTIMA_FICHA });
   });
 
-  it("sem última ficha, cai na lista guardada pelo serwist", async () => {
+  it("sem rede, cai direto no acervo guardado pelo serwist", async () => {
     const lista = resposta();
     const cache = cacheFalso({ "/trilhas": lista });
     const r = await resolverNavegacao({ url: RAIZ, buscarRede: semRede, buscarCache: cache.buscar });
 
     expect(r.resposta).toBe(lista);
-    expect(cache.perguntas[1]).toMatchObject({ chave: "/trilhas", cache: CACHE_PAGINAS });
+    expect(cache.perguntas[0]).toMatchObject({ chave: "/trilhas", cache: CACHE_PAGINAS });
   });
 
   it("sem nada guardado, não inventa resposta", async () => {

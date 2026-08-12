@@ -104,10 +104,17 @@ export function comPrazo<T>(promessa: Promise<T>, ms: number, aoEstourar: T): Pr
  *  coisa e procurar outra seria trabalho jogado fora. */
 export const AQUECIMENTO: AlvoCache = { chave: "/trilhas", cache: CACHE_PAGINAS };
 
-/** Onde procurar quando "/" abre sem rede: a última ficha e, se nem isso, a
- *  lista que o serwist guardou (ou que aquecemos na instalação). */
+/** Onde procurar quando "/" abre sem rede.
+ *
+ *  O acervo primeiro, a última ficha depois — invertido de propósito quando "/"
+ *  deixou de ser despachante e virou a home. Você toca no ícone esperando a
+ *  tela de casa; cair dentro de uma trilha específica, que pode nem ser a que
+ *  você queria, confunde mais do que ajuda. O acervo é a versão honesta da home
+ *  quando não há clima pra ler: mostra o que existe e não finge veredito.
+ *
+ *  A última ficha continua guardada e continua abrindo pela URL dela. */
 export function planoDaRaiz(): AlvoCache[] {
-  return [{ chave: CHAVE_ULTIMA, cache: CACHE_ULTIMA_FICHA }, AQUECIMENTO];
+  return [AQUECIMENTO, { chave: CHAVE_ULTIMA, cache: CACHE_ULTIMA_FICHA }];
 }
 
 /** Onde procurar quando uma ficha abre sem rede: SÓ ela mesma.
@@ -143,8 +150,9 @@ export async function resolverNavegacao({
   const daRede = await buscarRede();
 
   if (new URL(url).pathname === "/") {
-    // "/" é redirect de servidor: qualquer resposta serve, inclusive o 307.
-    // Não se grava — o que vale guardar é a ficha pra onde ele aponta.
+    // A home é veredito do momento: guardada, viraria "pode subir" de três
+    // horas atrás com cara de agora. Nunca se grava — nem quando responde 200.
+    // (Antes daqui saía um 307; a regra não mudou, o motivo ficou mais forte.)
     if (daRede) return { resposta: daRede, gravarEm: [] };
     return { resposta: await primeiroQueTiver(buscarCache, planoDaRaiz()), gravarEm: [] };
   }
