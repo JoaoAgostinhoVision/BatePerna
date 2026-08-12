@@ -6,6 +6,7 @@ import type { Ficha } from "@/types/ficha";
 import Appbar from "./Appbar";
 import BarraNavegacao from "./BarraNavegacao";
 import CartaoTrilha from "./CartaoTrilha";
+import MapaHome from "./MapaHome";
 
 // Compute-on-load: o veredito é a chuva de agora. Página estática congelaria
 // `calculadoEm` no build e TODO visitante receberia carimbo já vencido.
@@ -52,6 +53,7 @@ export default async function Home() {
     <main className="bp">
       <div className="screen">
         <Appbar comSaida={false} />
+        <MapaHome fichas={fichas} leituras={leituras} />
         <div className="folha">
           {grupo("Hoje o tempo deixa", podem)}
           {grupo("Hoje não", naoPodem)}

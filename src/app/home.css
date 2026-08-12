@@ -26,6 +26,33 @@
    sai a conta do "primeiro cartão acima da dobra", e tem teste lendo esta
    linha. Mexer aqui sem mexer lá quebra o teste de propósito. */
 .bp .mapa-home { position: relative; overflow: hidden; background: var(--surface-2); height: 168px; }
+.bp .mapa-home-tiles { position: absolute; top: 0; left: 50%; overflow: hidden; }
+.bp .mapa-home-in { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+/* max-width: none é obrigatório — o reset do Tailwind põe 100% em img e
+   esmagaria cada tile do mosaico. */
+.bp .mapa-home-in img { position: absolute; display: block; max-width: none; width: 256px; height: 256px; }
+
+/* O pin é alvo de toque, então tem área maior que o desenho: os 18px do
+   losango ficam no ::before, e o <a> carrega os 44px que a mão acerta.
+   A margem negativa põe a PONTA da gota na coordenada: depois do rotate(-45deg)
+   ela cai meia diagonal abaixo do centro — 9 + 9·√2 ≈ 21,7px, não os 18 do lado. */
+.bp .pin-home {
+  position: absolute; width: 44px; height: 44px; margin: -33px 0 0 -22px;
+  display: grid; place-items: center; -webkit-tap-highlight-color: transparent;
+}
+.bp .pin-home::before {
+  content: ""; width: 18px; height: 18px; margin-top: -3.7px;
+  background: var(--ink-soft); border: 2px solid var(--screen);
+  border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .35);
+}
+.bp .pin-home[data-state="fresco"]::before { background: var(--go); }
+.bp .pin-home[data-state="frio"]::before { background: var(--stop); }
+/* Sem leitura, o pin para de afirmar cor de veredito — igual ao selo. Carrega
+   [data-state] junto pela mesma razão que o selo: sem isso a regra de fase tem
+   especificidade menor e o pin fica verde ao lado de um selo que já parou. */
+.bp .pin-home[data-state][data-fase="sem-informacoes"]::before { background: var(--stop); }
+.bp .pin-home:active { opacity: .6; }
 
 /* ---- a folha e os cartões ---- */
 .bp .folha { padding: .2rem .9rem 1rem; }
