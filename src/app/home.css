@@ -36,18 +36,31 @@
    losango ficam no ::before, e o <a> carrega os 44px que a mão acerta.
    O <a> fica CENTRADO na coordenada — margin de -22px nos dois eixos, metade
    de 44 — porque é o alvo de toque que precisa estar embaixo do dedo, não só
-   o desenho. Dentro dele, o place-items:center nasce o ::before centrado
-   nesse mesmo ponto; o margin-top de -12,73px (−9·√2, a meia diagonal do
-   quadrado de 18px) empurra esse centro pra cima ANTES da rotação, porque
-   depois do rotate(-45deg) — que transforma o quadrado numa gota — a PONTA
-   cai meia diagonal ABAIXO do centro dela. Uma compensação cancela a outra e
-   a ponta pousa exatamente na coordenada. */
+   o desenho.
+
+   O ::before é filho de grid com place-items:center, e AÍ mora a pegadinha:
+   esse modo de centralizar posiciona a CAIXA DE MARGEM como bloco — não a
+   borda visível. Com margin-bottom:0 e margin-top:m, a caixa de margem cresce
+   (ou encolhe) só por cima, então o centro da borda visível sai deslocado em
+   m/2 (METADE do valor), não em m inteiro. É diferente de fluxo normal, onde
+   um margin-top desloca a borda pelo valor cheio.
+
+   E depois da rotação tem outro deslocamento: rotate(-45deg) transforma o
+   quadrado numa gota (border-radius 50% 50% 50% 0), e a PONTA cai uma meia
+   diagonal — 9·√2 ≈ 12,73px — ABAIXO do centro da borda visível.
+
+   Os dois juntos: tip = centro_da_borda + 12,73 = (coordY + m/2) + 12,73.
+   Pra tip = coordY, m tem que ser o DOBRO da meia diagonal, não a meia
+   diagonal — daí -18·√2 ≈ -25,4558px, não -9·√2. (Um -9·√2 aqui foi o erro
+   desta mesma correção numa rodada anterior: assumiu implicitamente que o
+   margin desloca o valor cheio, que é a regra de fluxo normal, não a de
+   grid-alignment.) */
 .bp .pin-home {
   position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px;
   display: grid; place-items: center; -webkit-tap-highlight-color: transparent;
 }
 .bp .pin-home::before {
-  content: ""; width: 18px; height: 18px; margin-top: -12.73px;
+  content: ""; width: 18px; height: 18px; margin-top: -25.4558px;
   background: var(--ink-soft); border: 2px solid var(--screen);
   border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
   box-shadow: 0 2px 6px rgba(0, 0, 0, .35);
