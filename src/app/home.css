@@ -34,14 +34,20 @@
 
 /* O pin é alvo de toque, então tem área maior que o desenho: os 18px do
    losango ficam no ::before, e o <a> carrega os 44px que a mão acerta.
-   A margem negativa põe a PONTA da gota na coordenada: depois do rotate(-45deg)
-   ela cai meia diagonal abaixo do centro — 9 + 9·√2 ≈ 21,7px, não os 18 do lado. */
+   O <a> fica CENTRADO na coordenada — margin de -22px nos dois eixos, metade
+   de 44 — porque é o alvo de toque que precisa estar embaixo do dedo, não só
+   o desenho. Dentro dele, o place-items:center nasce o ::before centrado
+   nesse mesmo ponto; o margin-top de -12,73px (−9·√2, a meia diagonal do
+   quadrado de 18px) empurra esse centro pra cima ANTES da rotação, porque
+   depois do rotate(-45deg) — que transforma o quadrado numa gota — a PONTA
+   cai meia diagonal ABAIXO do centro dela. Uma compensação cancela a outra e
+   a ponta pousa exatamente na coordenada. */
 .bp .pin-home {
-  position: absolute; width: 44px; height: 44px; margin: -33px 0 0 -22px;
+  position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px;
   display: grid; place-items: center; -webkit-tap-highlight-color: transparent;
 }
 .bp .pin-home::before {
-  content: ""; width: 18px; height: 18px; margin-top: -3.7px;
+  content: ""; width: 18px; height: 18px; margin-top: -12.73px;
   background: var(--ink-soft); border: 2px solid var(--screen);
   border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
   box-shadow: 0 2px 6px rgba(0, 0, 0, .35);

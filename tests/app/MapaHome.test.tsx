@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import MapaHome from "@/app/MapaHome";
@@ -79,5 +81,21 @@ describe("MapaHome", () => {
       .toBe("frio");
     expect(container.querySelector(".cartao")?.getAttribute("data-state")).toBe("frio");
     expect(container.textContent).toContain("Não suba");
+  });
+
+  // Mesmo padrão do guarda do .selo em tests/app/home.test.tsx — essa classe
+  // exata de bug (a regra de fase perdendo a cascata pra cor do estado) já
+  // vazou pra produção uma vez. Aqui a disputa é (0,4,1) contra (0,3,1):
+  // .bp .pin-home[data-state][data-fase="sem-informacoes"]::before tem um
+  // seletor a mais que .bp .pin-home[data-state="fresco"]::before — vitória
+  // direta de especificidade, não empate resolvido por ordem no arquivo.
+  // jsdom não resolve cascata, então o guarda lê a folha — seletor E corpo
+  // juntos — pra não passar só porque o texto apareceu num comentário, nem
+  // porque a regra ganhou a cascata mas pintou a cor errada.
+  it("a regra de fase do pin ganha da cor do estado — mesma disputa de especificidade do selo", () => {
+    const css = readFileSync(path.join(process.cwd(), "src", "app", "home.css"), "utf8");
+    expect(css).toMatch(
+      /\.bp \.pin-home\[data-state\]\[data-fase="sem-informacoes"\]::before\s*\{[^}]*background:\s*var\(--stop\)/,
+    );
   });
 });

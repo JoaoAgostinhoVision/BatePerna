@@ -28,9 +28,21 @@ export default function MapaHome({
   fichas: Ficha[];
   leituras: Map<string, LeituraCarimbo>;
 }) {
-  if (fichas.length === 0) return null;
+  // Mesma disciplina do page.tsx: o par ficha+leitura só existe se a leitura
+  // existir. Fazer o TIPO provar isso — em vez de um `leituras.get(...)!`
+  // afirmando o que este filtro é quem garante — impede um `undefined` de
+  // estourar dentro do PinTrilha se um dia essa premissa parar de valer. E a
+  // consequência de deixar passar seria pior aqui do que lá: lá uma ficha
+  // some da lista; aqui derrubaria o MapaHome inteiro, e o mapa sumiria da
+  // porta do app.
+  const comLeitura: { ficha: Ficha; leitura: LeituraCarimbo }[] = fichas.flatMap((f) => {
+    const leitura = leituras.get(f.slug);
+    return leitura ? [{ ficha: f, leitura }] : [];
+  });
 
-  const coords = fichas.map((f) => f.condicao.coords);
+  if (comLeitura.length === 0) return null;
+
+  const coords = comLeitura.map((x) => x.ficha.condicao.coords);
   const { centro, z } = enquadrar(coords, MAPA_LARGURA_PX, MAPA_ALTURA_HOME_PX);
 
   // Tiles de um zoom a mais desenhados em 1/MAPA_ESCALA: o dobro da densidade,
@@ -64,7 +76,7 @@ export default function MapaHome({
             />
           ))}
         </div>
-        {fichas.map((f) => {
+        {comLeitura.map(({ ficha: f, leitura }) => {
           const { left, top } = posicaoNaCaixa(
             f.condicao.coords, centro, z, MAPA_LARGURA_PX, MAPA_ALTURA_HOME_PX,
           );
@@ -75,7 +87,7 @@ export default function MapaHome({
               nome={f.trajeto.waypoints[0].nome}
               left={left}
               top={top}
-              inicial={leituras.get(f.slug)!}
+              inicial={leitura}
             />
           );
         })}
