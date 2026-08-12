@@ -19,4 +19,14 @@ export function useLeitura(slug: string): LeituraCarimbo | undefined {
   return useContext(Leituras)?.get(slug);
 }
 
+/** O mapa inteiro, não uma trilha. Existe pra quem precisa de uma pergunta
+ *  AGREGADA sobre várias trilhas de uma vez — hoje, só a `FolhaTrilhas`
+ *  decidindo se agrupa — sem cair na armadilha de chamar `useLeitura` dentro
+ *  de um loop (número de hooks variável entre renders, se a lista de fichas
+ *  um dia deixar de ser estática). `null` fora de um provedor, mesma regra do
+ *  `useLeitura`. */
+export function useLeiturasMapa(): Map<string, LeituraCarimbo> | null {
+  return useContext(Leituras);
+}
+
 export const LeiturasProvider = Leituras.Provider;

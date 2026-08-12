@@ -5,7 +5,7 @@ import { resolverEstados, type LeituraCarimbo } from "@/lib/carimbo-estado";
 import type { Ficha } from "@/types/ficha";
 import Appbar from "./Appbar";
 import BarraNavegacao from "./BarraNavegacao";
-import CartaoTrilha from "./CartaoTrilha";
+import FolhaTrilhas from "./FolhaTrilhas";
 import HomeViva from "./HomeViva";
 import MapaHome from "./MapaHome";
 
@@ -35,20 +35,14 @@ export default async function Home() {
     return leitura ? [{ ficha: f, leitura }] : [];
   });
 
-  const podem = comLeitura.filter((x) => x.leitura.estado === "fresco");
-  const naoPodem = comLeitura.filter((x) => x.leitura.estado !== "fresco");
-
-  const grupo = (titulo: string, lista: typeof comLeitura) =>
-    lista.length === 0 ? null : (
-      <>
-        <div className="grupo-k">{titulo}</div>
-        <div className="cartoes">
-          {lista.map((x) => (
-            <CartaoTrilha key={x.ficha.slug} ficha={x.ficha} inicial={x.leitura} />
-          ))}
-        </div>
-      </>
-    );
+  // Ordem FIXA da folha: fresco primeiro, decidida uma vez pela classificação
+  // com que a página nasceu no servidor. A `FolhaTrilhas` (client) é quem
+  // decide, a cada leitura nova, SE agrupa — mas não reordena: ver o
+  // comentário lá sobre por que um cartão não pode pular de lugar na tela.
+  const pares = [
+    ...comLeitura.filter((x) => x.leitura.estado === "fresco"),
+    ...comLeitura.filter((x) => x.leitura.estado !== "fresco"),
+  ];
 
   return (
     <main className="bp">
@@ -57,8 +51,7 @@ export default async function Home() {
           <Appbar comSaida={false} />
           <MapaHome fichas={fichas} leituras={leituras} />
           <div className="folha">
-            {grupo("Hoje o tempo deixa", podem)}
-            {grupo("Hoje não", naoPodem)}
+            <FolhaTrilhas pares={pares} />
           </div>
           <BarraNavegacao aqui="hoje" />
         </div>
