@@ -11,6 +11,7 @@ import {
   type JanelaMax,
   type OpenMeteoResponse,
 } from "@/lib/weather";
+import type { Coord } from "@/lib/geo";
 import type { Regra } from "@/types/ficha";
 import sample from "../../fixtures/open-meteo-sample.json";
 import multi from "../../fixtures/open-meteo-multi.json";
@@ -42,8 +43,30 @@ describe("weather", () => {
   });
 });
 
+// Buraco 2: hora sem chuva não pode virar hora seca por acidente de índice.
+// 0mm é o lado que diz "pode subir" — um array mais curto não pode produzir
+// isso de graça.
+describe("parsePrecip — comprimento de precipitation tem que bater com time", () => {
+  it("precipitation mais curta que time é erro, não hora com 0mm de brinde", () => {
+    const curto = {
+      hourly: { time: ["2026-08-01T00:00", "2026-08-01T01:00", "2026-08-01T02:00"], precipitation: [0.4] },
+    };
+    expect(() => parsePrecip(curto as OpenMeteoResponse)).toThrow(/3.*1|1.*3/);
+  });
+
+  it("precipitation mais longa que time também é erro", () => {
+    const longo = {
+      hourly: { time: ["2026-08-01T00:00"], precipitation: [0.4, 0.1] },
+    };
+    expect(() => parsePrecip(longo as OpenMeteoResponse)).toThrow();
+  });
+});
+
 const JANELA: JanelaMax = { passadoHoras: 6, previsaoHoras: 30 };
-const COORDS = [
+// Os mesmos pares que o fixture real usa — a Open-Meteo devolve
+// -7.9086113,-36.01535 e -8.049209,-34.923065 pra estes dois pedidos
+// (arredondamento pra grade do modelo).
+const COORDS: Coord[] = [
   { lat: -7.907889, lng: -36.019222 },
   { lat: -8.05, lng: -34.9 },
 ];
@@ -65,32 +88,60 @@ describe("buildUrlMulti", () => {
 
 describe("parsePrecipLista", () => {
   it("uma série por coordenada, na ordem pedida", () => {
-    const series = parsePrecipLista(multi, 2);
+    const series = parsePrecipLista(multi, COORDS);
     expect(series).toHaveLength(2);
     expect(series[0].length).toBeGreaterThan(0);
   });
 
+  // Este é o teste que impede o conserto de virar um app que nunca afirma
+  // nada: o arredondamento NORMAL da grade (os mesmos números do fixture
+  // real) tem que passar, sem drama.
+  it("arredondamento normal da grade não reprova a leitura", () => {
+    expect(() => parsePrecipLista(multi, COORDS)).not.toThrow();
+  });
+
   it("resposta de coordenada única (objeto, não lista) também serve", () => {
-    const uma = { hourly: { time: ["2026-08-01T00:00"], precipitation: [0.4] } };
-    expect(parsePrecipLista(uma, 1)[0][0].mm).toBe(0.4);
+    const coord: Coord = { lat: -7.9, lng: -36 };
+    const uma = {
+      latitude: -7.9086113,
+      longitude: -36.01535,
+      hourly: { time: ["2026-08-01T00:00"], precipitation: [0.4] },
+    };
+    expect(parsePrecipLista(uma, [coord])[0][0].mm).toBe(0.4);
   });
 
   // ESTE é o teste que impede o pior defeito da rodada: veredito de uma trilha
   // aparecendo no cartão de outra.
   it("lista mais curta que o pedido é erro — ninguém recebe carimbo pela metade", () => {
-    expect(() => parsePrecipLista(multi, 3)).toThrow(/3/);
+    const coords3: Coord[] = [...COORDS, { lat: 0, lng: 0 }];
+    expect(() => parsePrecipLista(multi, coords3)).toThrow(/3/);
   });
 
   it("lista mais longa que o pedido também é erro", () => {
-    expect(() => parsePrecipLista(multi, 1)).toThrow();
+    expect(() => parsePrecipLista(multi, [COORDS[0]])).toThrow();
   });
 
   it("entrada sem hourly é erro, não série vazia", () => {
-    expect(() => parsePrecipLista([{ latitude: -7.9 }], 1)).toThrow();
+    expect(() => parsePrecipLista([{ latitude: -7.9 }], [COORDS[0]])).toThrow();
   });
 
   it("resposta vazia é erro", () => {
-    expect(() => parsePrecipLista([], 2)).toThrow();
+    expect(() => parsePrecipLista([], COORDS)).toThrow();
+  });
+
+  // Buraco 1: a ordem é a única coisa que hoje liga série a trilha. Fora de
+  // ordem, sem conferir a coordenada devolvida, o veredito de um morro cai no
+  // cartão de outro — e ninguém percebe, porque as duas leituras são plausíveis.
+  it("série fora de ordem: coordenada não bate com o que foi pedido naquela posição — ninguém recebe carimbo", () => {
+    const foraDeOrdem = [multi[1], multi[0]];
+    expect(() => parsePrecipLista(foraDeOrdem, COORDS)).toThrow();
+  });
+
+  it("série de outra coordenada de verdade (não é arredondamento de grade) — ninguém recebe carimbo", () => {
+    // Rio de Janeiro no lugar da série da primeira trilha: bem além de qualquer
+    // arredondamento de grade.
+    const deOutroLugar = [{ ...multi[0], latitude: -22.9068, longitude: -43.1729 }, multi[1]];
+    expect(() => parsePrecipLista(deOutroLugar, COORDS)).toThrow();
   });
 });
 
@@ -131,5 +182,11 @@ describe("fetchPrecipMulti", () => {
   it("HTTP ruim vira erro, não série vazia", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 503 })));
     await expect(fetchPrecipMulti(COORDS, JANELA)).rejects.toThrow(/503/);
+  });
+
+  it("resposta fora de ordem também vira erro por aqui — o caminho real, não só a função interna", async () => {
+    const foraDeOrdem = [multi[1], multi[0]];
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(foraDeOrdem))));
+    await expect(fetchPrecipMulti(COORDS, JANELA)).rejects.toThrow();
   });
 });
