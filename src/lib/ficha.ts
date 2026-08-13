@@ -15,17 +15,38 @@ export function ordenarPorNome(fichas: Ficha[]): Ficha[] {
   );
 }
 
-function loadAll(): Ficha[] {
-  if (!fs.existsSync(FICHAS_DIR)) return [];
-  return ordenarPorNome(
-    fs
-      .readdirSync(FICHAS_DIR)
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => {
-        const raw = JSON.parse(fs.readFileSync(path.join(FICHAS_DIR, f), "utf8"));
-        return fichaSchema.parse(raw); // throws on malformed content — fail loud at build/test
-      }),
-  );
+/** Carrega e valida todo `.json` de `dir` (default: content/fichas real).
+ *  O parâmetro existe só pra teste poder apontar pra um diretório sintético
+ *  sem tocar em content/fichas — que é conteúdo do dono do projeto, não
+ *  fixture de teste; em produção roda sempre com o default.
+ *
+ *  Estoura em slug repetido. Sem isto, dois JSONs com o mesmo slug fariam a
+ *  home (que agrupa num Map, onde o ÚLTIMO arquivo lido vence) e /{slug} (que
+ *  usa find, onde o PRIMEIRO vence) discordarem sobre qual morro é qual — a
+ *  mesma classe de defeito que a leitura de clima acabou de ser blindada
+ *  contra, entrando pelo conteúdo. Mesmo tom do fichaSchema.parse logo
+ *  abaixo: falha alta, em build e em teste, nunca em silêncio no portão. */
+export function loadAll(dir: string = FICHAS_DIR): Ficha[] {
+  if (!fs.existsSync(dir)) return [];
+  const arquivoDoSlug = new Map<string, string>();
+  const fichas = fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith(".json"))
+    .map((f) => {
+      const raw = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"));
+      const ficha = fichaSchema.parse(raw); // throws on malformed content — fail loud at build/test
+      const arquivoAnterior = arquivoDoSlug.get(ficha.slug);
+      if (arquivoAnterior) {
+        throw new Error(
+          `Slug duplicado "${ficha.slug}": ${arquivoAnterior} e ${f} declaram o mesmo slug. ` +
+            `A home e a ficha da trilha divergiriam sobre qual veredito é de qual morro — ` +
+            `renomeie o slug de um dos dois arquivos.`,
+        );
+      }
+      arquivoDoSlug.set(ficha.slug, f);
+      return ficha;
+    });
+  return ordenarPorNome(fichas);
 }
 
 export function getAllFichas(): Ficha[] {
