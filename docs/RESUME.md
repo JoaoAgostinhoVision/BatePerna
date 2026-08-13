@@ -4,155 +4,163 @@
 > `.superpowers/sdd/2026-08-11-home-hoje/progress.md`, que é **scratch git-ignorado** — um
 > `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-11. **Estado: rodada da home "Hoje" em andamento, 7 de 11 tasks
-entregues.** Branch **`home-hoje`** em `3f1ce6a`, **250/250**, árvore limpa, `tsc` limpo,
-**14 commits à frente de `main` e NÃO mergeada.** `main` segue em `501ed45`, no ar e intocado.
+**Última parada:** 2026-08-12. **Estado: a home "Hoje" está NO AR.** Rodada fechada, mergeada
+em `main` (`645ebe1`, merge `--no-ff`) e deployada em produção. **278/278**, `tsc` e `build`
+limpos, árvore limpa. A branch `home-hoje` já cumpriu o papel.
+
+**Nada em aberto no código.** O que falta é do João: **abrir no iPhone** e **responder o
+questionário**.
 
 ---
 
 ## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — comece por aqui, sem perguntar nada antes
 
-**O jeito dele de retomar é essa palavra só.** Não devolva menu nem peça contexto. Faça nesta ordem:
+**O jeito dele de retomar é essa palavra só.** Não devolva menu nem peça contexto.
 
-1. **Confira o chão em silêncio** (sem narrar): `git status --short` (limpo), `git branch --show-current`
-   (tem que ser `home-hoje`), `git log --oneline -1` (`3f1ce6a`), `npm test --silent` (250/250).
-   Se algo divergir, **isso** vira o assunto.
-2. **Retome a execução por subagentes na Task 8.** João autorizou os agentes explicitamente
-   nesta sessão, e pediu a branch `home-hoje` — as duas coisas seguem valendo.
-3. **Não refaça as Tasks 1–7.** Elas estão commitadas e revisadas. A lista do que cada uma
-   entregou está abaixo.
+1. **Confira o chão em silêncio** (sem narrar): `git status --short` (limpo),
+   `git branch --show-current` (`main`), `git log --oneline -1` (`645ebe1`),
+   `npm test --silent` (278/278). Se algo divergir, **isso** vira o assunto.
+2. **Pergunte as duas coisas que dependem só dele**, nesta ordem, porque a segunda destrava o
+   resto do projeto:
+   - **Ele já abriu a home nova no iPhone?** Se abriu, o que achou — e principalmente: **os
+     pins estão dentro do mapa, com folga?** (Ver "O que só o iPhone decide", abaixo.)
+   - **Ele quer responder o `docs/questionario-ficha.md` agora?** A segunda ficha é
+     **dependência** das próximas duas fatias, não preferência.
+3. Se ele quiser tocar código em vez disso, a fatia 2 está descrita abaixo — mas ela é
+   **invisível com uma trilha só**. Diga isso antes de começar.
 
-O ciclo por task é sempre o mesmo (detalhado em "Como tocar cada task").
+## O que está no ar agora
 
-## Onde exatamente parou
+- **`/` é a home "Hoje"**: mapa em cima enquadrando as trilhas, folha com os cartões, barra
+  embaixo. Carimbo server-rendered no primeiro paint, sem JS.
+- **Os cartões se agrupam em "Hoje o tempo deixa" / "Hoje não"** — **mas só enquanto todas as
+  trilhas têm leitura confiável.** Bastando uma sem leitura (clima fora do ar, ou leitura
+  vencida com a tela aberta), **os cabeçalhos somem e a folha vira lista**. Decisão do João:
+  a tela para de agrupar em vez de agrupar errado. A ordem dos cartões **não muda** quando
+  isso acontece.
+- **`/trilhas` é o acervo** — tudo, sem carimbo, ordenado por nome.
+- **A home se renova** quando o app volta pra frente (`HomeViva` → `/api/carimbos`, uma
+  chamada pra todas as trilhas).
+- **Sem rede, `/` abre o acervo** (não cai mais dentro da última ficha). A home **nunca** é
+  gravada em cache, nem quando responde 200.
+- **O cookie `bp_ultima` morreu.** O ponteiro do service worker (`CHAVE_ULTIMA`/`/__ultima__`)
+  é outro bicho e continua vivo.
 
-| Task | O que entrega | Estado |
-|---|---|---|
-| 1 | `enquadrar`/`posicaoNaCaixa` em `mapa.ts` + `home-layout.ts` | ✅ `d15839d` |
-| 2 | `fetchPrecipMulti` — uma chamada de clima pra N coordenadas | ✅ `f289808` |
-| 3 | `resolverEstados` — veredito de N trilhas, tudo ou nada | ✅ `3165acc` |
-| 4 | `GET /api/carimbos` | ✅ `6e35069` |
-| 5 | Barra de navegação + `/trilhas` promovida a acervo | ✅ `50f5929` |
-| 6 | A home server-rendered: cartões agrupados por veredito | ✅ `41e9a59` |
-| 7 | O mapa da home, pin ancorado no cartão | ✅ `3f1ce6a` |
-| **8** | **`HomeViva` — a home busca leituras novas ao voltar pra frente** | ⬅ **PRÓXIMA** |
-| 9 | Offline: `/` passa a abrir o acervo | pendente |
-| 10 | O cookie `bp_ultima` morre | pendente |
-| 11 | `docs/questionario-ficha.md` | pendente |
+## O que só o iPhone decide (a única coisa que ninguém verificou)
 
-Depois da 11: **revisão da branch inteira** (modelo mais capaz) → **uma** leva de correção →
-uma re-revisão escopada → merge `--no-ff` → `npx vercel --prod --yes` → conferir por `curl` →
-**abrir no iPhone**.
+Tudo foi medido em Chrome headless emulando iPhone. **Duas coisas dependem do aparelho:**
+
+1. **`MAPA_JANELA_VISIVEL_HOME_PX = 350,5px`** (`src/lib/mapa.ts`) é derivada do
+   `clamp(0px, 3vw, 1rem)` do CSS e foi medida no Chrome. O WebKit pode arredondar `vw`
+   diferente, e as safe areas do modo standalone entram na conta. **É a constante em que o
+   enquadramento inteiro se apoia.** Pergunta pro João: os pins estão dentro do mapa, com
+   folga?
+2. **A barra embaixo está em fluxo normal, não fixa** (`src/app/home.css`). Com uma ficha o
+   documento cabe na tela; com 6 ou 8 cartões o "Hoje · Trilhas" fica abaixo da dobra.
+   Registrado como Minor pela revisão; **o olho dele no aparelho decide** se incomoda.
+
+Instalar é **pelo Safari** (Compartilhar → Adicionar à Tela de Início), não pelo Chrome.
+
+## O que vem depois, e em que ordem
+
+**A segunda ficha é a próxima parada, e ela destrava tudo.** As fatias 2 e 3 são invisíveis
+com uma trilha só na tela — foi o achado do brainstorm que originou o questionário.
+
+1. **João responde `docs/questionario-ficha.md`.** Uma pergunta por campo, em linguagem de
+   gente. As respostas viram um JSON em `content/fichas/` e a ficha aparece sozinha na home e
+   no acervo. **Eu não invento geografia; as respostas são dele.**
+2. **Fatia 2 — memória:** "Fui" no aparelho + "já conheço" + aba Minhas na barra.
+3. **Fatia 3 — filtros:** chips, campos novos na ficha, km com GPS, saída manual por cidade.
 
 ## Documentos desta rodada
 
-- **Spec:** `docs/superpowers/specs/2026-08-11-home-hoje-design.md`
-- **Plano:** `docs/superpowers/plans/2026-08-11-home-hoje.md` — **já corrigido três vezes**
-  (`8643453`, `5e2c5e1`); o texto atual é o que vale.
-- Ledger (git-ignorado): `.superpowers/sdd/2026-08-11-home-hoje/progress.md`
-- Mockups do brainstorm (git-ignorados): `.superpowers/brainstorm/754-1786493110/content/`
-
-## Como tocar cada task (o ciclo que está funcionando)
-
-1. `git rev-parse HEAD` → guarde como BASE.
-2. `bash <skills>/subagent-driven-development/scripts/task-brief docs/superpowers/plans/2026-08-11-home-hoje.md N`
-3. Despache **um** implementador (sonnet basta; haiku pra transcrição pura). No prompt: onde a
-   task se encaixa, o caminho do brief como fonte única de requisitos, as interfaces que ele
-   consome, as cicatrizes que não pode reabrir, e o caminho do arquivo de relatório.
-4. `scripts/review-package <plano> BASE HEAD` → despache o revisor com o caminho impresso.
-   **Exija dois veredictos: conformidade com o spec E qualidade.**
-5. Achado Important/Critical → mande de volta pro **mesmo** implementador (`SendMessage`), que
-   ainda tem o contexto. Depois `review-package FIX_BASE HEAD` + re-revisão **escopada**.
-6. Minors vão pro ledger, não pro laço.
-
-**Não pule a revisão da branch inteira no fim.** Nas duas rodadas anteriores ela achou defeito
-que nenhuma revisão de task pegou.
-
-## O que a home é hoje (para não redesenhar por engano)
-
-Decidido com o João por brainstorm, com mockups no navegador:
-
-- **`/` é a home "Hoje"**: mapa em cima enquadrando as trilhas, folha com os cartões agrupados
-  em "Hoje o tempo deixa" / "Hoje não", barra embaixo. Layout **A** dos mockups.
-- **`/trilhas` é o acervo** — tudo, sem carimbo, ordenado por nome.
-- **Barra embaixo com dois destinos**, Hoje e Trilhas. "Minhas" só nasce com a memória (fatia 2).
-- **O pin é âncora** (`<a href="#slug">`) — toca e rola até o cartão **sem JavaScript**.
-- **Uma trilha, uma fonte de cor:** `CartaoTrilha` é client component e lê o contexto **uma vez**,
-  alimentando o `data-state` do cartão E a prop do selo. `SeloTrilha` é apresentacional.
-
-**A rodada foi cortada em três fatias. Esta é a fatia 1.** Fatia 2 = memória ("Fui" no aparelho
-+ "já conheço" + aba Minhas). Fatia 3 = filtros por chip, campos novos na ficha, km com GPS e
-saída manual por cidade. **Nada disso entra agora.**
-
-**Achado que o brainstorm produziu:** as fatias 2 e 3 são invisíveis com uma trilha só. A
-segunda ficha deixou de ser preferência e virou dependência delas — por isso a Task 11 entrega
-o questionário. **Eu não invento geografia; as respostas são do João.**
+- Spec: `docs/superpowers/specs/2026-08-11-home-hoje-design.md`
+- Plano: `docs/superpowers/plans/2026-08-11-home-hoje.md`
+- Questionário (o entregável que espera o João): `docs/questionario-ficha.md`
+- Ledger git-ignorado: `.superpowers/sdd/2026-08-11-home-hoje/progress.md` + os
+  `task-N-report.md` e `fix-*-report.md`
 
 ## Invariantes que não podem ser quebradas
 
-- **O carimbo chega no primeiro paint, server-rendered, sem JS.** Depende de `force-dynamic` na
-  home e na ficha. Página estática congela `calculadoEm` no build e todo visitante recebe
+- **O carimbo chega no primeiro paint, server-rendered, sem JS.** Depende de `force-dynamic`
+  na home e na ficha. Página estática congela `calculadoEm` no build e todo visitante recebe
   carimbo vencido.
 - **`useVenceu` devolve `false` no primeiro render, sempre.** A home também chega do cache do
   service worker com HTML velho; calcular `Date.now()` no render quebra a hidratação no
-  elemento que carrega a decisão.
+  elemento que carrega a decisão. **O agrupamento da folha agora depende disso também.**
+- **Uma trilha, uma fonte.** Cartão, selo, pin **e o cabeçalho do grupo** leem o mesmo
+  contexto. Foram quatro portas até aqui; a quinta nasce com o mesmo risco.
 - **A regra de CSS da fase carrega `[data-state]` junto**, senão perde de especificidade e
-  "SEM INFORMAÇÕES" sai em selo verde. Vale pro `.selo` e pro `.pin-home`; os dois têm guarda.
+  "SEM INFORMAÇÕES" sai em selo verde. Vale pro `.selo` e pro `.pin-home`.
 - **Sem leitura o app INFORMA, não manda:** `SEM INFORMAÇÕES · tome cuidado`. `Não suba` é só
   pro barro que o motor MEDIU.
-- **`avaliar` (`motor.ts`) é o único lugar que decide se dá pra subir.** Home, ficha e as duas
-  rotas de carimbo não podem divergir sobre o mesmo morro.
-- **Tudo ou nada no clima:** falha na busca → nenhuma trilha recebe carimbo. Meia home
-  preenchida parece defeito e a pessoa não sabe em quais confiar.
+- **`avaliar` (`motor.ts`) é o único lugar que decide se dá pra subir.**
+- **Tudo ou nada no clima:** falha na busca → nenhuma trilha recebe carimbo.
+- **A série de clima prova de que coordenada veio** (tolerância 0,1°, contra o arredondamento
+  real de grade de 0,023°). **Slug repetido estoura no carregamento.** Os dois fecham a mesma
+  coisa: o veredito de um morro no cartão de outro.
 - **Nenhuma URL de trilha responde com o corpo de outra**, online ou offline.
 - **Sem `next/link`.** Âncora pura. **Atribuição `© OpenStreetMap`** em todo mapa (ODbL).
 
-## Deferidos desta rodada (a revisão final tem que triar)
+## Deferidos vivos (registrados, nenhum bloqueia)
 
-- **ENDURECIMENTO, o mais valioso:** a ordem da resposta multi-coordenada da Open-Meteo é hoje
-  confiança validada empiricamente, não verificada em runtime. Mas a resposta **carrega
-  `latitude`/`longitude` por série** — conferir que batem com o pedido (com tolerância de
-  arredondamento) fecharia em runtime o pior defeito possível deste app: veredito de um morro
-  no cartão de outro.
-- `ehResposta` não confere se `hourly.time` e `hourly.precipitation` têm o mesmo comprimento.
-- Duas fichas com o mesmo `slug` fariam a última sobrescrever a primeira, em silêncio.
-- `useVenceu` duplica palavra por palavra o relógio do `Carimbo.tsx` (follow-up de 3 linhas).
-- `home.css` não tem a regra neutra de `data-fase="conferindo"` que o `ficha.css` tem.
-- `MARGEM_ENQUADRO_PX` (28px) foi dimensionada pro losango de 18px, não pro alvo de toque de
-  44px — com mais de uma trilha, um pin na borda pode ter o alvo cortado.
-- `MapaHome` refaz o `flatMap` de pares ficha+leitura que o `page.tsx` já monta.
-- `enquadrar` tem um ramo redundante; o comentário sugere necessidade que não existe.
+- `useVenceu` duplica o relógio do `Carimbo.tsx` (follow-up de 3 linhas).
+- `home.css` não tem a regra neutra de `data-fase="conferindo"` que o `ficha.css` tem —
+  inerte hoje, **bloqueia a fatia 2** se o selo da home chegar nessa fase.
+- `HomeViva` usa `!== "hidden"` e `Carimbo` usa `=== "visible"`; nenhum teste cobre o ramo da
+  aba oculta em nenhum dos dois.
+- `MapaHome` refaz o `flatMap` que o `page.tsx` já monta.
+- Cookie `bp_ultima` órfão até 1 ano nos celulares que já usavam o app (uma linha resolve).
+- `ensureSchema` (`src/lib/db.ts`) declara `confirmacoes.tipo ... DEFAULT 'foi'` — inerte,
+  inconsistente com `{seco,barro}`.
+- `TOLERANCIA_GRAU` calibrada de um fixture (validada ao vivo contra a API, margem de 25x).
+- Deploy no meio com a página aberta: chunks somem, o JS morre, a tela congela no veredito do
+  primeiro paint. Mesma classe de antes, **raio maior** agora que `/` é a porta do app.
+- A home não tem `<h1>`; sem `:focus-visible` em `.cartao`, `.pin-home`, `.barra-item`; os
+  pins ficam dentro de um `role="img"`, que poda a subárvore pro leitor de tela (o padrão
+  certo já existe no `MapaEstatico`).
+- A folha não sobrepõe a base do mapa como a spec §5.3 pede (encosta, sem raio).
 
-## Lições desta rodada (valem além dela)
+## Como esta rodada foi tocada (o método que está funcionando)
 
-1. **Três defeitos do plano foram pegos ANTES de qualquer código**, numa varredura de conflito
-   pré-execução. Dois deles eram reincidência exata de bugs que a rodada anterior shipou.
-   Essa varredura paga.
-2. **Os dois primeiros achados Important foram defeitos MEUS, do plano** — testes que afirmam
-   sobre o dado real (hoje uma ficha só) em vez de afirmar sobre a função. Teste de ordenação
-   que passa com o `.sort()` apagado; teste de rota que não prova a fiação.
-3. **Teste de mutação decide discussão sobre teste.** Virou exigência: apague a linha, veja o
-   teste falhar, devolva — e cole a saída no relatório. Promessa não conta.
-4. **Nenhum teste desta suíte mede geometria renderizada.** Um pin 6px fora do lugar passou por
-   250 testes verdes e `tsc` limpo. Só apareceu quando o revisor abriu um Chrome headless e
-   mediu. Se um número de pixel importa, medir é a única prova.
-5. **Eu errei uma conta e o implementador "confirmou" refazendo — partindo da minha premissa
-   errada.** Duas conferências que compartilham a suposição não são duas conferências. Quando
-   mandar um número, mande a derivação e peça que discordem em vez de aplicar.
+**SDD com subagentes**, 11 tasks: brief por task → um implementador → revisão por task
+exigindo **dois veredictos** (conformidade E qualidade) → achado Important/Critical volta pro
+**mesmo** implementador → re-revisão escopada. Minors vão pro ledger, não pro laço.
+
+**Não pule a revisão da branch inteira no fim.** Nas **três** rodadas ela achou defeito que
+nenhuma revisão de task pegou — desta vez um Critical.
+
+## Lições que valem além desta rodada
+
+1. **Teste de mutação decide qualquer discussão sobre teste.** Apague a linha, veja falhar,
+   devolva, cole a saída. Esta suíte já produziu **oito** testes que passavam com o código
+   apagado — três descobertos nesta rodada, dois deles **auto-referentes** (a asserção
+   comparava contra a própria constante que deveria validar).
+2. **Aponte o teste pro PONTO DE USO**, não pro arquivo de nome parecido. O conserto do mapa
+   passou na revisão com zero proteção: revertendo uma linha do `MapaHome`, o bug inteiro
+   voltava e a suíte dava 275/275.
+3. **Para artefato que vira entrada de outra coisa, a prova é USÁ-LO.** Os dois defeitos do
+   questionário não seriam pegos pelo teste que varre os campos — quem os pegou foi responder
+   o documento e rodar o JSON resultante contra o schema.
+4. **Nenhum teste desta suíte mede geometria renderizada.** Se um número de pixel importa,
+   medir em navegador é a única prova. "Parece certo" não é resposta; "não medi" é.
+5. **Duas conferências que compartilham a suposição não são duas conferências.** Quando mandar
+   um número pro implementador, mande a derivação e peça que discordem em vez de aplicar.
+6. **Defeito de junção não aparece na revisão de task.** O Critical desta rodada nasceu entre
+   a Task 6 (agrupa no servidor) e a Task 8 (repinta no cliente); as duas revisões estavam
+   certas sobre o próprio pedaço.
 
 ## Fronteira do João (o que só ele faz)
 
-Login nas contas (Vercel, Turso) + consentir/aceitar termos + o celular. Código, deploy e
-verificação eu toco. **Agentes: ele autorizou nesta sessão**; a instrução em vigor é não usar
-sem pedido, então em sessão nova pergunte antes se não estiver retomando esta rodada.
+Login nas contas (Vercel, Turso) + consentir/aceitar termos + **o celular** + **os fatos de
+roteiro**. Código, deploy e verificação eu toco. **Agentes: ele autorizou nesta rodada**; a
+instrução em vigor é não usar sem pedido, então em sessão nova pergunte antes.
 
 ## Registro histórico (não refazer)
 
 - Rodada 1 (esqueleto): merge `a179e46`. Rampa ao vivo (Versão D): `7d4bd59`. "Fui": `4b6d9a7`.
   Mapa de verdade: `a671146`. Forma de app: `6ef0fdc`. Carimbo busca leitura nova: `9c3dcf8`.
-- **iPhone provado em 2026-08-10** — João instalou pelo Safari (Compartilhar → Adicionar à Tela
-  de Início) e aprovou. Instalar é pelo Safari, não pelo Chrome, e vale abrir a ficha uma vez
-  no wi-fi depois de instalar: é a visita que guarda a cópia offline dela.
+  **Home "Hoje": `645ebe1`.**
+- **iPhone provado em 2026-08-10** com a versão anterior — João instalou pelo Safari e
+  aprovou. A home nova ainda **não** passou por esse teste.
 - Turso/cron/freshness da Rodada 1 seguem de lado (não usados no MVP live-compute).
-- `ensureSchema` (`src/lib/db.ts`) ainda declara `confirmacoes.tipo ... DEFAULT 'foi'` — inerte,
-  inconsistente com `{seco,barro}`. Limpar em passada futura.
