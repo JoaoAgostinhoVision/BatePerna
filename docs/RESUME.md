@@ -8,8 +8,8 @@
 em `main` (`645ebe1`, merge `--no-ff`) e deployada em produção. **278/278**, `tsc` e `build`
 limpos, árvore limpa. A branch `home-hoje` já cumpriu o papel.
 
-**Nada em aberto no código.** O que falta é do João: **abrir no iPhone** e **responder o
-questionário**.
+**Nada em aberto no código.** O que falta é do João — e tem uma pendência dele que **ainda
+não foi dita**: ver o item 1 do bloco abaixo.
 
 ---
 
@@ -18,16 +18,32 @@ questionário**.
 **O jeito dele de retomar é essa palavra só.** Não devolva menu nem peça contexto.
 
 1. **Confira o chão em silêncio** (sem narrar): `git status --short` (limpo),
-   `git branch --show-current` (`main`), `git log --oneline -1` (`645ebe1`),
-   `npm test --silent` (278/278). Se algo divergir, **isso** vira o assunto.
-2. **Pergunte as duas coisas que dependem só dele**, nesta ordem, porque a segunda destrava o
-   resto do projeto:
-   - **Ele já abriu a home nova no iPhone?** Se abriu, o que achou — e principalmente: **os
-     pins estão dentro do mapa, com folga?** (Ver "O que só o iPhone decide", abaixo.)
-   - **Ele quer responder o `docs/questionario-ficha.md` agora?** A segunda ficha é
-     **dependência** das próximas duas fatias, não preferência.
-3. Se ele quiser tocar código em vez disso, a fatia 2 está descrita abaixo — mas ela é
-   **invisível com uma trilha só**. Diga isso antes de começar.
+   `git branch --show-current` (`main`), `git log --oneline -1` (deve ser o commit de docs em
+   cima do merge `645ebe1`), `npm test --silent` (278/278). Se algo divergir, **isso** vira o
+   assunto.
+
+2. **A PRIMEIRA PERGUNTA É ESTA, e ela tem precedência sobre todo o resto:**
+
+   > No fim da sessão de 2026-08-12, quando entreguei a home no ar, o João respondeu:
+   > **"ficou legal, mas ainda faltou mais coisa, mas só vou ver isso outra sessão."**
+   > Ele **não disse o que faltou**, e eu **não sei se ele chegou a abrir no celular**.
+
+   Então abra perguntando **o que faltou** — de forma aberta, sem sugerir uma lista e sem
+   tentar adivinhar. O que ele disser é a pauta da sessão. **Não presuma que é algum dos
+   deferidos registrados aqui**; a frase dele veio depois de ver o resultado, e provavelmente
+   é sobre a tela, não sobre a lista técnica.
+
+   Se a resposta dele for sobre a home no aparelho, aproveite pra fechar as duas incógnitas
+   de "O que só o iPhone decide" (abaixo) — principalmente: **os pins estão dentro do mapa,
+   com folga?**
+
+3. **Depois, e só depois**, ofereça a coisa que destrava o resto do projeto: **responder o
+   `docs/questionario-ficha.md`**. A segunda ficha é **dependência** das fatias 2 e 3, não
+   preferência — elas são invisíveis com uma trilha só. Diga isso se ele quiser pular direto
+   pra elas.
+
+4. **Não recomece nada da rodada da home.** Ela está fechada, mergeada e no ar. A lista de
+   deferidos vivos está abaixo, e nenhum bloqueia.
 
 ## O que está no ar agora
 
@@ -162,5 +178,7 @@ instrução em vigor é não usar sem pedido, então em sessão nova pergunte an
   Mapa de verdade: `a671146`. Forma de app: `6ef0fdc`. Carimbo busca leitura nova: `9c3dcf8`.
   **Home "Hoje": `645ebe1`.**
 - **iPhone provado em 2026-08-10** com a versão anterior — João instalou pelo Safari e
-  aprovou. A home nova ainda **não** passou por esse teste.
+  aprovou. A home nova ainda **não** passou por esse teste, **até onde eu sei**: em
+  2026-08-12 ele disse "ficou legal, mas ainda faltou mais coisa" sem dizer se tinha aberto
+  no aparelho. Não registre como provado enquanto ele não confirmar.
 - Turso/cron/freshness da Rodada 1 seguem de lado (não usados no MVP live-compute).
