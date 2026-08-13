@@ -98,6 +98,37 @@ describe("a home", () => {
     expect(container.querySelector('.cartao[data-state="frio"]')?.id).toBe("molhada");
   });
 
+  // A folha AGRUPADA reordena sozinha (podem/naoPodem em FolhaTrilhas.tsx),
+  // então o teste acima passa mesmo se page.tsx entregasse `comLeitura` cru
+  // em vez de `pares` — nada expõe a ordem que a PÁGINA calcula. Só o
+  // caminho SEM cabeçalho expõe: ali a folha não filtra nem reordena de
+  // novo (decisão do dono do produto — um cartão não pode pular de lugar no
+  // portão), então a ordem em tela é exatamente a que `pares` entregou.
+  it("sem cabeçalhos (leitura não confiável), a ordem continua fresco-primeiro — vem pronta de `pares`, ninguém reordena depois", async () => {
+    // Ordem de ORIGEM de propósito não-fresco-primeiro: se page.tsx trocar
+    // `pares` por `comLeitura` cru, a ordem em tela vira a de origem
+    // (molhada, seca, instavel) em vez de fresco-primeiro.
+    const molhada = fichaFake("molhada");
+    const seca = fichaFake("seca");
+    const instavel = fichaFake("instavel");
+    vi.mocked(getFichasComCondicao).mockReturnValueOnce([molhada, seca, instavel]);
+    vi.mocked(resolverEstados).mockResolvedValue(
+      new Map([
+        ["molhada", { estado: "frio" as const, erro: false, calculadoEm: AGORA_S }],
+        ["seca", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S }],
+        // erro:true em qualquer par derruba `confia` (ver FolhaTrilhas.tsx) —
+        // é o que tira os cabeçalhos e força o caminho que não reordena.
+        ["instavel", { estado: "frio" as const, erro: true, calculadoEm: AGORA_S }],
+      ]),
+    );
+
+    const { container } = render(await Home());
+
+    expect(container.querySelectorAll(".grupo-k")).toHaveLength(0); // confirma: caiu no caminho sem cabeçalho
+    const ids = Array.from(container.querySelectorAll(".cartao")).map((el) => el.id);
+    expect(ids).toEqual(["seca", "molhada", "instavel"]);
+  });
+
   it("barro medido diz 'Não suba' — a regra tem dois lados, e este é o outro", async () => {
     // Par do teste "sem leitura informa": aquele prova que frio+erro NÃO diz
     // "Não suba". Este prova que frio+leitura confiável DIZ. Sem os dois,

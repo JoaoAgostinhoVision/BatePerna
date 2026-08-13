@@ -7,6 +7,13 @@ import CartaoTrilha from "@/app/CartaoTrilha";
 import { LeiturasProvider } from "@/app/leituras";
 import { getFichasComCondicao } from "@/lib/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+import type { Ficha } from "@/types/ficha";
+import {
+  MAPA_ALTURA_HOME_PX,
+  MAPA_JANELA_VISIVEL_HOME_PX,
+  MAPA_LARGURA_PX,
+  RAIO_ALVO_TOQUE_PX,
+} from "@/lib/mapa";
 
 afterEach(() => { cleanup(); });
 
@@ -97,5 +104,80 @@ describe("MapaHome", () => {
     expect(css).toMatch(
       /\.bp \.pin-home\[data-state\]\[data-fase="sem-informacoes"\]::before\s*\{[^}]*background:\s*var\(--stop\)/,
     );
+  });
+});
+
+// Task 10 desta rodada corrigiu MapaHome pra enquadrar contra
+// MAPA_JANELA_VISIVEL_HOME_PX (a fatia que `.mapa-home` realmente mostra),
+// não contra MAPA_LARGURA_PX (a caixa de geração de 480px, maior — que era o
+// bug: pin fora da tela). Os quatro testes de geometria em
+// tests/lib/mapa.test.ts chamam `enquadrar()` DIRETO, com a constante certa
+// passada à mão — nenhum deles prova que MapaHome é quem passa essa
+// constante. Revertendo a chamada em MapaHome.tsx pra usar MAPA_LARGURA_PX
+// de novo, aquela suíte continua toda verde; só um teste no PONTO DE USO
+// (renderizando MapaHome de verdade) pega isso.
+describe("MapaHome: o enquadramento usa a janela que a tela mostra, não a caixa de geração", () => {
+  const RAMPA = { lat: -7.907889, lng: -36.019222 };
+
+  /** Desloca uma coordenada por uma distância em metros (plano local —
+   *  mesmo helper de tests/lib/mapa.test.ts, duplicado aqui de propósito:
+   *  este teste não deve depender de nada exportado por mapa.ts além do que
+   *  MapaHome também usa). */
+  function deslocaMetros(base: { lat: number; lng: number }, dxM: number, dyM: number) {
+    const metroPorGrauLat = 111320;
+    const metroPorGrauLng = 111320 * Math.cos((base.lat * Math.PI) / 180);
+    return { lat: base.lat + dyM / metroPorGrauLat, lng: base.lng + dxM / metroPorGrauLng };
+  }
+
+  // Ficha sintética mínima — mesmo padrão de fichaFake em tests/app/home.test.tsx.
+  function fichaEm(slug: string, coords: { lat: number; lng: number }): Ficha {
+    return {
+      slug,
+      modos: [],
+      rotulo_escaneio: "",
+      promessa: "",
+      voz: "",
+      premio: "",
+      trajeto: { waypoints: [{ nome: slug, lat: coords.lat, lng: coords.lng }] },
+      acesso: "",
+      avisos: "",
+      condicao: {
+        coords,
+        regra: { tipo: "chuva_binaria", janela_previsao_horas: 0, janela_passado_horas: 0, limiar_mm: 0 },
+        regra_texto: "",
+        ressalva_proxy: "",
+      },
+      discriminador: { formato: "", como_ler: "", permissao_abortar: "" },
+      custo: { tag: "gratis" },
+    };
+  }
+
+  it("duas trilhas a ~60km entre si (leste-oeste): os dois pins caem dentro da janela visível, com o alvo de toque inteiro", () => {
+    const fichas = [
+      fichaEm("leste", deslocaMetros(RAMPA, 30_000, 0)),
+      fichaEm("oeste", deslocaMetros(RAMPA, -30_000, 0)),
+    ];
+    const leituras = new Map<string, LeituraCarimbo>(
+      fichas.map((f) => [f.slug, { estado: "fresco", erro: false, calculadoEm: 1_800_000_000 }]),
+    );
+
+    const { container } = render(<MapaHome fichas={fichas} leituras={leituras} />);
+    const pins = Array.from(container.querySelectorAll(".pin-home")) as HTMLElement[];
+    expect(pins).toHaveLength(2);
+
+    // Mesmos limites do teste de geometria em tests/lib/mapa.test.ts, mas
+    // aqui contra o DOM que MapaHome realmente produz — não contra uma
+    // chamada direta de enquadrar().
+    const janelaMin = (MAPA_LARGURA_PX - MAPA_JANELA_VISIVEL_HOME_PX) / 2;
+    const janelaMax = (MAPA_LARGURA_PX + MAPA_JANELA_VISIVEL_HOME_PX) / 2;
+
+    for (const pin of pins) {
+      const left = parseFloat(pin.style.left);
+      const top = parseFloat(pin.style.top);
+      expect(left).toBeGreaterThanOrEqual(janelaMin + RAIO_ALVO_TOQUE_PX);
+      expect(left).toBeLessThanOrEqual(janelaMax - RAIO_ALVO_TOQUE_PX);
+      expect(top).toBeGreaterThanOrEqual(RAIO_ALVO_TOQUE_PX);
+      expect(top).toBeLessThanOrEqual(MAPA_ALTURA_HOME_PX - RAIO_ALVO_TOQUE_PX);
+    }
   });
 });

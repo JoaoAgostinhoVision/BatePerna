@@ -313,3 +313,27 @@ describe("MAPA_JANELA_VISIVEL_HOME_PX bate com o CSS de onde ela foi derivada", 
     expect(visivel).toBeCloseTo(MAPA_JANELA_VISIVEL_HOME_PX, 6);
   });
 });
+
+// Mesmo padrão do bloco acima: RAIO_ALVO_TOQUE_PX era um literal solto, sem
+// nada amarrando ele ao requisito real. Os testes de geometria em
+// "enquadrar" conferem contra `janelaMin + RAIO_ALVO_TOQUE_PX`, e o teste de
+// MARGEM_ENQUADRO_PX confere contra `RAIO_ALVO_TOQUE_PX` — os dois são
+// relativos à PRÓPRIA constante: provam consistência interna, não que 22
+// corresponde a alguma coisa real. Trocar 22 por 0 deixava as duas suítes
+// verdes. Este teste lê o home.css — de onde o comentário da constante diz
+// que ela vem — e prova que RAIO_ALVO_TOQUE_PX é metade do alvo de toque
+// real do `.pin-home` (44px, `width`/`height` da regra).
+describe("RAIO_ALVO_TOQUE_PX bate com o alvo de toque do .pin-home no CSS", () => {
+  it("o home.css ainda dá 44px de alvo de toque ao .pin-home, e o raio é metade disso", () => {
+    const css = readFileSync(path.join(process.cwd(), "src", "app", "home.css"), "utf8");
+    const regra = css.match(/\.bp \.pin-home\s*\{[^}]*\}/s);
+    expect(regra, "faltou a regra .bp .pin-home no home.css").not.toBeNull();
+
+    const largura = regra![0].match(/width:\s*(\d+(?:\.\d+)?)px/);
+    expect(largura, "a regra .bp .pin-home não tem mais um width: Npx").not.toBeNull();
+
+    const alvoToquePx = Number(largura![1]);
+    expect(alvoToquePx).toBe(44); // documentado no comentário da constante em src/lib/mapa.ts
+    expect(RAIO_ALVO_TOQUE_PX).toBe(alvoToquePx / 2);
+  });
+});
