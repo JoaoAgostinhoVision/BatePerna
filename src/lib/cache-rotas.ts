@@ -8,9 +8,10 @@ export const CACHE_ULTIMA_FICHA = "bp-ultima-ficha";
 /** Onde o serwist guarda as outras páginas (hoje só /trilhas). */
 export const CACHE_PAGINAS = "bp-paginas";
 
-/** O espelho offline do cookie bp_ultima: o service worker não lê cookie,
- *  então guarda a última ficha também sob esta chave fixa — e é ela que
- *  responde quando "/" abre sem rede, já que o redirect precisa de servidor. */
+/** O ponteiro do service worker pra última ficha aberta: ele não lê cookie
+ *  nenhum (isto não é o espelho de nada) — guarda a ficha também sob esta
+ *  chave fixa, e é ela que responde quando "/" abre sem rede e sem acervo
+ *  guardado. */
 export const CHAVE_ULTIMA = "/__ultima__";
 
 /** Quanto esperar a rede antes de servir a cópia guardada.
@@ -151,10 +152,16 @@ export async function resolverNavegacao({
 
   if (new URL(url).pathname === "/") {
     // A home é veredito do momento: guardada, viraria "pode subir" de três
-    // horas atrás com cara de agora. Nunca se grava — nem quando responde 200.
-    // (Antes daqui saía um 307; a regra não mudou, o motivo ficou mais forte.)
-    if (daRede) return { resposta: daRede, gravarEm: [] };
-    return { resposta: await primeiroQueTiver(buscarCache, planoDaRaiz()), gravarEm: [] };
+    // horas atrás com cara de agora. Nunca se grava — em nenhum ramo abaixo,
+    // nem quando a resposta é boa.
+    //
+    // Só a resposta OK passa direto. Um 5xx transitório não pode aparecer cru
+    // com o acervo guardado bem ali do lado — "/" é a porta do app agora, não
+    // um redirect de servidor. Sem cópia guardada nenhuma, a resposta de rede
+    // (o erro de verdade) ainda é melhor que inventar um null.
+    if (daRede?.ok) return { resposta: daRede, gravarEm: [] };
+    const guardada = await primeiroQueTiver(buscarCache, planoDaRaiz());
+    return { resposta: guardada ?? daRede, gravarEm: [] };
   }
 
   if (daRede?.ok) return { resposta: daRede, gravarEm: chavesDeGravacao(url) };
