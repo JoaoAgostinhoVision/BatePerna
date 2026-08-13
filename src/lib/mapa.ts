@@ -17,7 +17,15 @@ export const MAPA_ALTURA_PX = 200;
 
 /** Largura de GERAÇÃO, não de exibição: o cartão é fluido e o mosaico precisa
  *  de um número. Geramos 480px (~36 km) e o cartão corta a sobra. Celular
- *  largo não fica com faixa vazia; estreito só vê menos mapa — nunca menos pin. */
+ *  largo não fica com faixa vazia.
+ *
+ *  "Estreito só vê menos mapa — nunca menos pin" só valia na FICHA, onde o
+ *  pin é único e fica travado no centro (left: 50%, ver ficha.css .wp-pin):
+ *  cortar sobra de um mosaico centrado nunca corta o centro. Na HOME os pins
+ *  se espalham pela caixa inteira — um pin perto da borda da caixa de 480px
+ *  pode cair fora da fatia que um celular estreito realmente exibe dentro do
+ *  overflow:hidden. Por isso `enquadrar()` na home usa MAPA_JANELA_VISIVEL_HOME_PX
+ *  (abaixo), não esta constante, pra decidir o zoom. */
 export const MAPA_LARGURA_PX = 480;
 
 /** Densidade: 2 = puxa tiles de um zoom a mais e desenha em metade do tamanho,
@@ -106,8 +114,40 @@ export function zoomDeTiles(): number {
  *  acima da dobra. Ver src/lib/home-layout.ts — a conta tem teste. */
 export const MAPA_ALTURA_HOME_PX = 168;
 
-/** Folga de cada lado no enquadramento. O pin tem 18px e a ponta cai abaixo do
- *  centro do quadrado; sem folga, a trilha da borda nasce com a ponta cortada. */
+/** Janela VISÍVEL garantida na home, no aparelho mais estreito que o app
+ *  atende — não a largura de geração (MAPA_LARGURA_PX). É contra ISTO, e não
+ *  contra a caixa de 480px, que `enquadrar()` tem que caber as trilhas na
+ *  home: `.mapa-home-tiles` (a caixa de geração) fica centrada dentro de
+ *  `.mapa-home` com `overflow: hidden` (home.css), e `.mapa-home` é fluida —
+ *  só mostra uma fatia central da caixa de 480px, cuja largura depende do
+ *  viewport.
+ *
+ *  Aparelho mais estreito considerado: 375px CSS (iPhone SE / iPhone 12 e 13
+ *  mini) — não há iPhone à venda mais estreito que isso, e este app não tem
+ *  Android como alvo declarado. É também o viewport que a revisão da branch
+ *  usou pra medir o defeito, então a constante reproduz a medição, não uma
+ *  suposição nova.
+ *
+ *  Derivação (ver ficha.css `.bp` — o padding — e `.bp .screen` — a borda;
+ *  a ligação entre este número e aquele CSS tem teste em tests/lib/mapa.test.ts):
+ *    padding da .bp   = clamp(0px, 3vw, 1rem)  → em 375px, 3vw = 11,25px (< 16px, não bate no teto)
+ *    borda da .screen = 1px de cada lado (box-sizing: border-box)
+ *    visível = 375 − 2×11,25 − 2×1 = 350,5px */
+export const MAPA_JANELA_VISIVEL_HOME_PX = 350.5;
+
+/** Metade do alvo de toque do `.pin-home` (44px — ver home.css): o <a> fica
+ *  CENTRADO na coordenada, então pra o alvo inteiro caber dentro da janela
+ *  visível o PONTO não pode chegar mais perto da borda do que isto. */
+export const RAIO_ALVO_TOQUE_PX = 22;
+
+/** Folga de cada lado no enquadramento. Tem que cobrir as DUAS coisas que
+ *  ficam centradas na coordenada: o losango de 18px (a ponta cai abaixo do
+ *  centro do quadrado; sem folga, a trilha da borda nasce com a ponta
+ *  cortada) e o alvo de toque de 44px — na home eles não são o mesmo
+ *  número, o alvo é maior. 28 ≥ RAIO_ALVO_TOQUE_PX (22): a folga de hoje já
+ *  cobre o alvo, mas é o teste de invariante em tests/lib/mapa.test.ts, não
+ *  a leitura deste comentário, que impede alguém de encolhê-la sem
+ *  perceber. */
 export const MARGEM_ENQUADRO_PX = 28;
 
 /** Abaixo disto o mundo inteiro cabe na caixa e começa a se repetir — mosaico

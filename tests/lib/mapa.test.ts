@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   MAPA_ALTURA_PX,
@@ -13,7 +15,9 @@ import {
 } from "@/lib/mapa";
 import {
   MAPA_ALTURA_HOME_PX,
+  MAPA_JANELA_VISIVEL_HOME_PX,
   MARGEM_ENQUADRO_PX,
+  RAIO_ALVO_TOQUE_PX,
   ZOOM_MINIMO,
   enquadrar,
   latDoMundo,
@@ -211,5 +215,101 @@ describe("posicaoNaCaixa", () => {
     const { left, top } = posicaoNaCaixa(RAMPA, RAMPA, 10, LARGURA, ALTURA);
     expect(left).toBeCloseTo(LARGURA / 2, 6);
     expect(top).toBeCloseTo(ALTURA / 2, 6);
+  });
+});
+
+// Defeito Important achado na revisão da branch inteira: MAPA_LARGURA_PX
+// (480px) é largura de GERAÇÃO, não de exibição. `.mapa-home` (home.css) é
+// fluida e corta o mosaico com overflow:hidden — no aparelho mais estreito
+// que o app atende, medido a 375px de viewport, só 350,5px da caixa de 480
+// ficam visíveis (janela [64,75 , 415,25] dentro da caixa). `enquadrar()`
+// cabia contra os 480px inteiros: com uma segunda ficha mais distante, o
+// mapa conseguia mostrar o VAZIO entre as duas trilhas e nenhum pin.
+//
+// Estas quatro contas replicam a tabela da revisão. Não são coordenadas de
+// trilhas reais (só existe uma ficha real hoje, a Rampa do Pepe) — são
+// pontos sintéticos escolhidos pra cair nos mesmos regimes (seguro / que
+// estoura) que a revisão mediu; os números batem em ordem de grandeza, não
+// casa decimal, porque a revisão partiu de coordenadas que este repo não
+// tem.
+describe("home: o enquadramento cabe contra a janela que a tela mostra, não a caixa de geração", () => {
+  // GROUND TRUTH independente de MAPA_JANELA_VISIVEL_HOME_PX — de propósito.
+  // Se este teste usasse a própria constante pra calcular a janela contra a
+  // qual ele confere, um MAPA_JANELA_VISIVEL_HOME_PX errado (por exemplo
+  // voltando a valer 480, o bug original) faria a "janela" virar a caixa de
+  // geração inteira e o teste passaria sempre — vácuo. Este número vem
+  // direto da medição em navegador (375px de viewport; ver o bloco
+  // "MAPA_JANELA_VISIVEL_HOME_PX bate com o CSS..." logo abaixo, que é quem
+  // amarra ele à fórmula do CSS) — não da constante em produção.
+  const JANELA_VISIVEL_MEDIDA_PX = 350.5;
+  const janelaMin = (MAPA_LARGURA_PX - JANELA_VISIVEL_MEDIDA_PX) / 2;
+  const janelaMax = (MAPA_LARGURA_PX + JANELA_VISIVEL_MEDIDA_PX) / 2;
+
+  /** Desloca uma coordenada por uma distância em metros (plano local —
+   *  suficiente pra gerar pontos de teste, não pra navegação real). */
+  function deslocaMetros(base: { lat: number; lng: number }, dxM: number, dyM: number) {
+    const metroPorGrauLat = 111320;
+    const metroPorGrauLng = 111320 * Math.cos((base.lat * Math.PI) / 180);
+    return { lat: base.lat + dyM / metroPorGrauLat, lng: base.lng + dxM / metroPorGrauLng };
+  }
+
+  /** Afirma que o PONTO, não só a caixa de 480px, cai dentro da janela
+   *  visível com os 44px do alvo de toque inteiros — nem meio alvo cortado
+   *  pelo overflow:hidden de `.mapa-home`. */
+  function afirmaAlvoInteiroVisivel(coords: { lat: number; lng: number }[]) {
+    const { centro, z } = enquadrar(coords, MAPA_JANELA_VISIVEL_HOME_PX, MAPA_ALTURA_HOME_PX);
+    for (const c of coords) {
+      const { left, top } = posicaoNaCaixa(c, centro, z, MAPA_LARGURA_PX, MAPA_ALTURA_HOME_PX);
+      expect(left).toBeGreaterThanOrEqual(janelaMin + RAIO_ALVO_TOQUE_PX);
+      expect(left).toBeLessThanOrEqual(janelaMax - RAIO_ALVO_TOQUE_PX);
+      expect(top).toBeGreaterThanOrEqual(RAIO_ALVO_TOQUE_PX);
+      expect(top).toBeLessThanOrEqual(MAPA_ALTURA_HOME_PX - RAIO_ALVO_TOQUE_PX);
+    }
+  }
+
+  it("a Rampa sozinha: pin no centro, sempre visível", () => {
+    afirmaAlvoInteiroVisivel([RAMPA]);
+  });
+
+  it("Rampa + uma trilha a ~35km (leste-oeste): as duas visíveis", () => {
+    afirmaAlvoInteiroVisivel([RAMPA, deslocaMetros(RAMPA, 35_000, 3_000)]);
+  });
+
+  it("Rampa + uma trilha a ~200km (leste-oeste): as duas visíveis", () => {
+    afirmaAlvoInteiroVisivel([RAMPA, deslocaMetros(RAMPA, 200_000, -20_000)]);
+  });
+
+  it("duas trilhas a ~60km entre si no eixo leste-oeste: as duas visíveis", () => {
+    afirmaAlvoInteiroVisivel([deslocaMetros(RAMPA, -30_000, 0), deslocaMetros(RAMPA, 30_000, 0)]);
+  });
+});
+
+describe("MARGEM_ENQUADRO_PX cobre o alvo de toque, não só o losango", () => {
+  it("a folga do enquadramento é maior ou igual ao raio do alvo de toque de 44px", () => {
+    // Sem este teste, alguém pode encolher MARGEM_ENQUADRO_PX pensando só no
+    // losango de 18px (a razão histórica do número) e voltar a cortar o
+    // alvo de toque de 44px — o deferido que este conserto fechou.
+    expect(MARGEM_ENQUADRO_PX).toBeGreaterThanOrEqual(RAIO_ALVO_TOQUE_PX);
+  });
+});
+
+describe("MAPA_JANELA_VISIVEL_HOME_PX bate com o CSS de onde ela foi derivada", () => {
+  it("o ficha.css ainda usa o padding e a borda que o comentário da constante descreve", () => {
+    const css = readFileSync(path.join(process.cwd(), "src", "app", "ficha.css"), "utf8");
+    const bp = css.match(/\n\.bp\s*\{[^}]*\}/s);
+    expect(bp, "faltou a regra .bp no ficha.css").not.toBeNull();
+    expect(bp![0]).toContain("clamp(0px, 3vw, 1rem)");
+
+    const screen = css.match(/\.bp \.screen\s*\{[^}]*\}/);
+    expect(screen, "faltou a regra .bp .screen no ficha.css").not.toBeNull();
+    expect(screen![0]).toContain("border: 1px solid");
+  });
+
+  it("no viewport de 375px (iPhone mais estreito considerado), a fórmula dá o mesmo número da constante", () => {
+    const viewport = 375;
+    const padding = Math.min(0.03 * viewport, 16); // clamp(0px, 3vw, 1rem) — 1rem = 16px
+    const bordaScreen = 1;
+    const visivel = viewport - 2 * padding - 2 * bordaScreen;
+    expect(visivel).toBeCloseTo(MAPA_JANELA_VISIVEL_HOME_PX, 6);
   });
 });

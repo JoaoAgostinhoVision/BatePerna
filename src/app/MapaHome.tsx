@@ -1,6 +1,7 @@
 import {
   MAPA_ALTURA_HOME_PX,
   MAPA_ESCALA,
+  MAPA_JANELA_VISIVEL_HOME_PX,
   MAPA_LARGURA_PX,
   TILE_PX,
   enquadrar,
@@ -42,8 +43,12 @@ export default function MapaHome({
 
   if (comLeitura.length === 0) return null;
 
+  // O ENQUADRAMENTO cabe contra a janela que a tela realmente mostra
+  // (MAPA_JANELA_VISIVEL_HOME_PX), não contra a caixa de geração dos tiles
+  // (MAPA_LARGURA_PX, usada abaixo só pra desenhar o mosaico e posicionar
+  // dentro dele) — ver o comentário da constante em src/lib/mapa.ts.
   const coords = comLeitura.map((x) => x.ficha.condicao.coords);
-  const { centro, z } = enquadrar(coords, MAPA_LARGURA_PX, MAPA_ALTURA_HOME_PX);
+  const { centro, z } = enquadrar(coords, MAPA_JANELA_VISIVEL_HOME_PX, MAPA_ALTURA_HOME_PX);
 
   // Tiles de um zoom a mais desenhados em 1/MAPA_ESCALA: o dobro da densidade,
   // igual à ficha. zoomDeTiles() não serve aqui — ela crava MAPA_ZOOM, e o
