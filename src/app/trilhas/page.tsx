@@ -1,12 +1,16 @@
 import "../ficha.css";
+import "../home.css";
 import { getAllFichas } from "@/lib/ficha";
 import Appbar from "../Appbar";
+import BarraNavegacao from "../BarraNavegacao";
 
 export const dynamic = "force-dynamic";
 
-/** A lista é crua de propósito: sem carimbo, sem filtro. Carimbo aqui seria
- *  uma chamada ao Open-Meteo por trilha a cada abertura — isso é a home rica,
- *  sub-projeto 2. Esta tela é andaime, feita pra ser descartada, não refatorada. */
+/** O acervo: TUDO o que existe, sem carimbo, feito pra navegar e descobrir.
+ *
+ *  Não é a home com outro nome — são perguntas diferentes. A home responde "o
+ *  que dá pra fazer hoje" e só mostra o que tem veredito de clima; aqui a
+ *  pergunta é "o que existe", e a resposta não muda com a chuva. */
 export default function Trilhas() {
   const fichas = getAllFichas();
   return (
@@ -14,7 +18,7 @@ export default function Trilhas() {
       <div className="screen">
         <Appbar comSaida={false} />
         <div className="lista">
-          <div className="lista-k">Trilhas</div>
+          <div className="lista-k">Todas as trilhas</div>
           {fichas.map((f) => (
             <a key={f.slug} className="lista-item" href={`/${f.slug}`}>
               <span className="scan">{f.rotulo_escaneio}</span>
@@ -23,7 +27,7 @@ export default function Trilhas() {
             </a>
           ))}
         </div>
-        <div className="foot">BatePerna · Agreste · PE</div>
+        <BarraNavegacao aqui="trilhas" />
       </div>
     </main>
   );

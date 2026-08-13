@@ -1,0 +1,111 @@
+/* A home "Hoje" e a barra. Escopado sob .bp; os tokens (--ink, --go, --stop…)
+   vêm do ficha.css, que continua sendo a folha-mãe do app. */
+
+/* ---- a barra embaixo ---- */
+/* O padding-bottom soma a área segura do iPhone: sem isso, em tela cheia, a
+   barra nasce debaixo da faixa do gesto e os rótulos ficam intocáveis. */
+.bp .barra {
+  display: flex;
+  border-top: 1px solid var(--line);
+  background: var(--screen);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.bp .barra-item {
+  flex: 1; text-align: center; text-decoration: none;
+  padding: .55rem .3rem .7rem; min-height: 44px;
+  font-family: var(--type); font-size: .66rem; font-weight: 650;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--ink-faint);
+}
+.bp .barra-item .ic { display: block; font-size: 1.05rem; margin-bottom: .1rem; filter: grayscale(1); opacity: .55; }
+.bp .barra-item[aria-current="page"] { color: var(--accent); }
+.bp .barra-item[aria-current="page"] .ic { filter: none; opacity: 1; }
+.bp .barra-item:active { opacity: .6; }
+
+/* ---- o mapa da home ----
+   A altura tem que bater com MAPA_ALTURA_HOME_PX (src/lib/mapa.ts): é dela que
+   sai a conta do "primeiro cartão acima da dobra", e tem teste lendo esta
+   linha. Mexer aqui sem mexer lá quebra o teste de propósito. */
+.bp .mapa-home { position: relative; overflow: hidden; background: var(--surface-2); height: 168px; }
+.bp .mapa-home-tiles { position: absolute; top: 0; left: 50%; overflow: hidden; }
+.bp .mapa-home-in { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+/* max-width: none é obrigatório — o reset do Tailwind põe 100% em img e
+   esmagaria cada tile do mosaico. */
+.bp .mapa-home-in img { position: absolute; display: block; max-width: none; width: 256px; height: 256px; }
+
+/* O pin é alvo de toque, então tem área maior que o desenho: os 18px do
+   losango ficam no ::before, e o <a> carrega os 44px que a mão acerta.
+   O <a> fica CENTRADO na coordenada — margin de -22px nos dois eixos, metade
+   de 44 — porque é o alvo de toque que precisa estar embaixo do dedo, não só
+   o desenho.
+
+   O ::before é filho de grid com place-items:center, e AÍ mora a pegadinha:
+   esse modo de centralizar posiciona a CAIXA DE MARGEM como bloco — não a
+   borda visível. Com margin-bottom:0 e margin-top:m, a caixa de margem cresce
+   (ou encolhe) só por cima, então o centro da borda visível sai deslocado em
+   m/2 (METADE do valor), não em m inteiro. É diferente de fluxo normal, onde
+   um margin-top desloca a borda pelo valor cheio.
+
+   E depois da rotação tem outro deslocamento: rotate(-45deg) transforma o
+   quadrado numa gota (border-radius 50% 50% 50% 0), e a PONTA cai uma meia
+   diagonal — 9·√2 ≈ 12,73px — ABAIXO do centro da borda visível.
+
+   Os dois juntos: tip = centro_da_borda + 12,73 = (coordY + m/2) + 12,73.
+   Pra tip = coordY, m tem que ser o DOBRO da meia diagonal, não a meia
+   diagonal — daí -18·√2 ≈ -25,4558px, não -9·√2. (Um -9·√2 aqui foi o erro
+   desta mesma correção numa rodada anterior: assumiu implicitamente que o
+   margin desloca o valor cheio, que é a regra de fluxo normal, não a de
+   grid-alignment.) */
+.bp .pin-home {
+  position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px;
+  display: grid; place-items: center; -webkit-tap-highlight-color: transparent;
+}
+.bp .pin-home::before {
+  content: ""; width: 18px; height: 18px; margin-top: -25.4558px;
+  background: var(--ink-soft); border: 2px solid var(--screen);
+  border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .35);
+}
+.bp .pin-home[data-state="fresco"]::before { background: var(--go); }
+.bp .pin-home[data-state="frio"]::before { background: var(--stop); }
+/* Sem leitura, o pin para de afirmar cor de veredito — igual ao selo. Carrega
+   [data-state] junto pela mesma razão que o selo: sem isso a regra de fase tem
+   especificidade menor e o pin fica verde ao lado de um selo que já parou. */
+.bp .pin-home[data-state][data-fase="sem-informacoes"]::before { background: var(--stop); }
+.bp .pin-home:active { opacity: .6; }
+
+/* ---- a folha e os cartões ---- */
+.bp .folha { padding: .2rem .9rem 1rem; }
+.bp .grupo-k {
+  font-family: var(--type); font-size: .66rem; font-weight: 700; letter-spacing: .11em;
+  text-transform: uppercase; color: var(--ink-faint); padding: .8rem .1rem .35rem;
+}
+.bp .cartoes { display: flex; flex-direction: column; gap: .5rem; }
+
+.bp .cartao {
+  display: flex; flex-direction: column; gap: .2rem; text-decoration: none; color: inherit;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px;
+  padding: .75rem .8rem .8rem; box-shadow: var(--shadow-card);
+}
+.bp .cartao:active { opacity: .7; }
+.bp .cartao-topo { display: flex; align-items: center; justify-content: space-between; gap: .55rem; }
+.bp .cartao-nome { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; line-height: 1.15; }
+.bp .cartao-prom { color: var(--ink-soft); font-size: .85rem; font-style: italic; }
+
+/* O selo repete o vocabulário do carimbo da ficha: mesma borda dupla, mesmas
+   cores. A cor sai do [data-state] do cartão — a mesma fonte que pinta o pin —,
+   e a fase ganha dela quando não há leitura, igual ao ficha.css. */
+.bp .selo {
+  --c: var(--ink-soft); flex: none; display: inline-flex; flex-direction: column; align-items: center;
+  color: var(--c); border: 2px double var(--c); border-radius: 7px;
+  padding: .3rem .55rem .34rem; background: var(--st-bg, var(--screen));
+  transition: color .25s, border-color .25s, background .25s;
+}
+.bp .cartao[data-state="fresco"] .selo { --c: var(--go-ink); --st-bg: var(--go-bg); }
+.bp .cartao[data-state="frio"] .selo { --c: var(--stop-ink); --st-bg: var(--stop-bg); }
+/* A fase TEM que ganhar da cor do estado, como no ficha.css — senão "SEM
+   INFORMAÇÕES" sai dentro de um selo verde, que foi o defeito que a rodada do
+   carimbo teve que consertar. Por isso o seletor carrega [data-state] junto:
+   sem ele a regra de fase tem especificidade MENOR que a de cima e perde. */
+.bp .cartao[data-state] .selo[data-fase="sem-informacoes"] { --c: var(--stop-ink); --st-bg: var(--stop-bg); }
+.bp .selo .w { font-weight: 800; font-size: .8rem; text-transform: uppercase; line-height: 1; }
+.bp .selo .s { font-family: var(--type); font-size: .5rem; letter-spacing: .1em; text-transform: uppercase; margin-top: .18rem; opacity: .85; }

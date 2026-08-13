@@ -1,147 +1,158 @@
 # RESUME — BatePerna (retomar aqui)
 
-> **Este arquivo mora em `docs/RESUME.md` e é versionado.** Antes ele vivia em `.superpowers/sdd/.../RESUME.md`, que tem `.gitignore` com `*` — era scratch, e um `git clean -fdx` teria apagado justamente o mapa de retomada. Mantenha aqui.
+> **Este arquivo mora em `docs/RESUME.md` e é versionado.** O ledger da execução vive em
+> `.superpowers/sdd/2026-08-11-home-hoje/progress.md`, que é **scratch git-ignorado** — um
+> `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-10. **Estado: duas rodadas fechadas, as duas MERGEADAS e NO AR — e o app INSTALADO no iPhone do João, que aprovou.** `main` em `9c3dcf8` (+ docs), 195/195, árvore limpa. **Nada em aberto: a próxima sessão começa numa decisão de produto, não num conserto.**
+**Última parada:** 2026-08-11. **Estado: rodada da home "Hoje" em andamento, 7 de 11 tasks
+entregues.** Branch **`home-hoje`** em `3f1ce6a`, **250/250**, árvore limpa, `tsc` limpo,
+**14 commits à frente de `main` e NÃO mergeada.** `main` segue em `501ed45`, no ar e intocado.
 
 ---
 
 ## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — comece por aqui, sem perguntar nada antes
 
-**O jeito dele de retomar é essa palavra só.** Não devolva um menu de opções nem peça contexto: ele já espera que você tenha lido este arquivo. Faça nesta ordem:
+**O jeito dele de retomar é essa palavra só.** Não devolva menu nem peça contexto. Faça nesta ordem:
 
-1. **Confira o chão em silêncio** (30 segundos, sem narrar): `git status --short` (tem que estar limpo), `git log --oneline -3`, `npm test --silent`. Se algo divergir do que está escrito aqui, **isso** vira o assunto — alguém mexeu entre as sessões.
-2. **Abra a rodada do sub-projeto 2 — a home rica** — invocando `superpowers:brainstorming`. É a recomendação de fecho desta sessão, e é trabalho que começa por conversa, não por código. Não escreva plano nem toque em código antes do spec.
-3. **A primeira pergunta do brainstorm é esta, e só ela:** produzir a **segunda ficha** antes da home, ou construir a home com uma ficha só? Os dois lados estão na seção "Próxima parada". A home é feita pra escolher entre trilhas, e escolher entre uma trilha não é escolher — mas a ficha nova depende de dado real que só o João tem (coords, custo, regra, a voz), e **eu não invento geografia** ([[nao-inventar-fatos-de-roteiros]]).
+1. **Confira o chão em silêncio** (sem narrar): `git status --short` (limpo), `git branch --show-current`
+   (tem que ser `home-hoje`), `git log --oneline -1` (`3f1ce6a`), `npm test --silent` (250/250).
+   Se algo divergir, **isso** vira o assunto.
+2. **Retome a execução por subagentes na Task 8.** João autorizou os agentes explicitamente
+   nesta sessão, e pediu a branch `home-hoje` — as duas coisas seguem valendo.
+3. **Não refaça as Tasks 1–7.** Elas estão commitadas e revisadas. A lista do que cada uma
+   entregou está abaixo.
 
-Se ele disser "continua" querendo outra coisa, ele corrige na hora — o custo de começar pelo default é zero, e o custo de parar pra perguntar é a sessão inteira travada num menu.
+O ciclo por task é sempre o mesmo (detalhado em "Como tocar cada task").
 
-## Onde parou exatamente
+## Onde exatamente parou
 
-**Rodada A — a moldura de app** (merge `6ef0fdc`): revisão final → leva única de correção (`d5d8987`) → merge → deploy.
-
-**Rodada B — o carimbo busca leitura nova** (merge `9c3dcf8`): SDD com 5 tasks por subagente + revisão por task, revisão da branch inteira (opus) → leva única de correção (`026bf0a`) → re-revisão que reproduziu as 5 mutações à mão → merge → deploy.
-
-Produção verificada no domínio real depois de cada uma: `/` despacha 307, `/api/carimbo` devolve o trio com `no-store` e 404 pra slug inventado, o carimbo chega no primeiro paint server-rendered **já pintado**, e as quatro metas de iOS saem no HTML.
-
-**O iPhone deixou de ser incógnita.** João instalou pela Tela de Início do Safari e aprovou. Era o único ambiente que nenhuma verificação automatizada cobria — o veículo PWA está provado no aparelho-alvo, e daqui pra frente "instalar e ver" é um passo de rotina, não um risco aberto.
-
-Fica valendo pra próxima vez: **a instalação no iPhone é pelo Safari** (Compartilhar → Adicionar à Tela de Início), não pelo Chrome, e vale abrir a ficha uma vez no wi-fi depois de instalar — é a visita que guarda a cópia offline dela.
-
-## Rodada B — o que entrou, e o que ela ensinou
-
-No portão do morro, às 11h, o celular sai do bolso com uma leitura das 7h. O app reconhecia honestamente que não sabia — e se calava justamente na hora da decisão. Agora ele busca a resposta de agora.
-
-- **Rota `GET /api/carimbo?slug=`** devolve `{estado, erro, calculadoEm}`, calculado pela **mesma** função que a página usa (`resolverEstado`, extraída pra `src/lib/carimbo-estado.ts`). Duas fontes pro mesmo carimbo seriam a semente de duas respostas pro mesmo morro.
-- **Três fases** no `Carimbo`: afirmando / conferindo / sem informações. A busca dispara em `visibilitychange`, em `pageshow` e no toque, com regras diferentes por gatilho (`src/lib/carimbo-fase.ts`, lib pura e testada sozinha). 3s tiram o "Conferindo…" da tela **sem cancelar a requisição**; piso de 30s entre buscas automáticas, que o toque ignora.
-- **Mudança de postura, decisão do João:** sem leitura, o app não manda mais. Diz `SEM INFORMAÇÕES · tome cuidado` e devolve a decisão. **`Não suba` ficou reservado pro barro que o motor MEDIU** — ordem com dado por trás, em vez de resposta padrão pra ignorância. O carimbo sem informação vira `<button>` de verdade (`toque pra conferir`).
-- Junto, três deferidos da rodada anterior: reavaliação em `visibilitychange`/`pageshow`; o **middleware saiu** e quem grava a última ficha é `LembrarUltima`, dentro da ficha que renderizou; e o service worker **aquece `/trilhas` na instalação**.
-
-**O defeito que a rodada criou, e que só a revisão da branch inteira pegou:** a decisão passou pro cliente e a **cor** ficou no servidor. `data-state` no `<main>` vinha do render e pintava selo e pin. Sair de casa com sol e chegar no portão com chuva mostrava **"Não suba" dentro de um selo verde**. A cor é o que se lê primeiro. Conserto (`026bf0a`): o `<main>` virou `src/app/Moldura.tsx` (client) e a cor viaja por contexto **no mesmo lote** do `setLeitura` — escrever no DOM por efeito teria reintroduzido um quadro contraditório.
-
-**Duas lições de método desta rodada:**
-- **Teste de mutação decide discussão sobre teste.** Um teste "provava" que `setVenceu` era independente da busca; apagar a linha não quebrava nada. A conclusão certa não foi escrever outro teste, foi descobrir que a linha é redundante hoje, mantê-la como cinto (vira load-bearing se `podeBuscar` passar a barrar algum caso vencido), e corrigir o teste que mentia.
-- **`next dev` roda StrictMode e mentia.** `vivo.current` nunca era rearmado, então no segundo mount a tela travava em "CONFERINDO…" pra sempre — só em dev, exatamente onde a gente confere com o olho.
-
-### O que a revisão final achou (e o que virou de cada um)
-
-Corrigidos em `d5d8987`, antes do merge:
-
-1. **(a) O "lido da chuva agora" mentiroso** — já era decisão do João. Com `erro=true` e carimbo no prazo (Open-Meteo fora do ar, o ramo mais provável), a ficha dizia "Não suba · sem leitura" e logo abaixo `.live` dizia "lido da chuva agora". **Metade do defeito era CSS:** a regra que para o pulso existia, mas presa a `data-venceu`, e o ramo de erro não tem esse atributo. As duas pontas agora penduram em `data-sem-leitura`, com teste lendo o `ficha.css` pra o par não desemparelhar. Estava no ar; não veio desta branch.
-2. **`/__ultima__` respondia com o corpo da última ficha.** A chave do ponteiro do SW tem cara de slug (um segmento, sem ponto), então `ehCaminhoDeFicha` a aprovava: virava "navegação nossa", o 404 da rede não é `ok`, e a busca no cache achava o ponteiro. **Valia online também.** Mesma classe do defeito que já tínhamos fechado offline.
-3. **Faltava a meta de iOS.** O Next 15 traduz `appleWebApp.capable` pra `mobile-web-app-capable`, a tag padrão — que o **WebKit só lê do iOS 17.4 em diante**. A antiga com prefixo `apple-` vai junto, provada lendo o HTML do build.
-
-Achados e **não** corrigidos (decisão do João: registrar, não consertar agora):
-
-4. **Instalar e sair sem nunca ter navegado = ícone morto.** Se o SW não guardou nada e a pessoa abre offline, `planoDaRaiz()` não acha ficha nem `/trilhas` e volta `Response.error()` — a tela de erro do Safari, **em standalone, sem barra de URL**. Fecha aquecendo `/trilhas` no `install` do SW (~5 linhas).
-5. **Deploy no meio → ficha offline sem JS → carimbo que nunca vence.** Sequência estreita: você abre só `/trilhas` online (o SW sobe pra v2 e poda o precache v1), o HTML da ficha em `bp-ultima-ficha` continua v1, e offline ele carrega sem os chunks — **sem hidratação, o carimbo fica congelado afirmando "Pode subir"**. O conserto óbvio (limpar `bp-ultima-ficha` no `activate`) tem regressão própria: troca a mentira por um beco justamente quando você está na serra.
-6. **Middleware grava o cookie mesmo em 404** — link quebrado apaga a memória boa. Degrada pra `/trilhas` e se cura sozinho no próximo acesso real.
-
-### Decisões do João (não reabrir)
-
-- **(b) fica pra rodada própria:** o carimbo só reavalia num `setInterval` de 60s, então aba em segundo plano corrige até um minuto tarde. Celular no bolso desde as 7h, desbloqueado no portão às 11h → carimbo velho por até 60s. `visibilitychange`/`pageshow` resolveria. O service worker tornou "página retomada do cache" o caso normal, então isso ficou **mais provável do que era**.
-- **Merge direto em `main`** (padrão das rodadas anteriores) + deploy em produção. Feito.
-
-## O que esta branch construiu
-
-Pedido original do João no celular: "menu / forma de app". O brainstorm separou em duas camadas e ele cravou a ordem — **moldura agora, arquitetura depois**.
-
-| # | Task | O que entrou |
+| Task | O que entrega | Estado |
 |---|---|---|
-| 1 | `/trilhas` + cadeado | Lista crua das fichas (a **saída**) + teste que trava o `outputFileTracingIncludes` |
-| 2 | `/[slug]` | `SLUG` cravado morreu; `/` virou despachante |
-| 3 | Middleware | Grava o cookie `bp_ultima`; `/` lê e valida |
-| 4 | Casca | Safe areas, `theme-color` nos 2 temas, a marca virou porta pra `/trilhas` |
-| 5 | **Carimbo com prazo** | Vence em 30 min e cai em "sem leitura · cheque no portão" |
-| 6 | Manifest + ícone | Pegada de bota, PNGs prerenderizados no build |
-| 7 | Service worker | Offline honesto; `/api/*` nunca cacheado; tiles do OSM cacheados |
+| 1 | `enquadrar`/`posicaoNaCaixa` em `mapa.ts` + `home-layout.ts` | ✅ `d15839d` |
+| 2 | `fetchPrecipMulti` — uma chamada de clima pra N coordenadas | ✅ `f289808` |
+| 3 | `resolverEstados` — veredito de N trilhas, tudo ou nada | ✅ `3165acc` |
+| 4 | `GET /api/carimbos` | ✅ `6e35069` |
+| 5 | Barra de navegação + `/trilhas` promovida a acervo | ✅ `50f5929` |
+| 6 | A home server-rendered: cartões agrupados por veredito | ✅ `41e9a59` |
+| 7 | O mapa da home, pin ancorado no cartão | ✅ `3f1ce6a` |
+| **8** | **`HomeViva` — a home busca leituras novas ao voltar pra frente** | ⬅ **PRÓXIMA** |
+| 9 | Offline: `/` passa a abrir o acervo | pendente |
+| 10 | O cookie `bp_ultima` morre | pendente |
+| 11 | `docs/questionario-ficha.md` | pendente |
 
-**A ordem tinha uma dependência de segurança:** a Task 5 (prazo) **precede** a Task 7 (SW). Invertida, o service worker viraria uma máquina de servir "Pode subir" de três horas atrás com cara de agora.
+Depois da 11: **revisão da branch inteira** (modelo mais capaz) → **uma** leva de correção →
+uma re-revisão escopada → merge `--no-ff` → `npx vercel --prod --yes` → conferir por `curl` →
+**abrir no iPhone**.
 
-### Invariantes que não podem ser quebradas
+## Documentos desta rodada
 
-- **O carimbo chega no primeiro paint, server-rendered, sem JS.** `Carimbo.tsx` é client component, mas client components são SSR-ados; o JS só **remove** a afirmação quando ela envelhece. `useState(false)` inicial é deliberado — faz o HTML do servidor e o primeiro render do cliente concordarem.
-- **Isso depende de `force-dynamic` sobreviver** em `src/app/[slug]/page.tsx`. Se a página virar estática, `calculadoEm` congela no build e **todo visitante recebe carimbo já vencido**.
-- **O carimbo é só-clima e não toca o banco.** O placar do "Fui" é client-fetched. Banco cai → botão degrada, decisão nunca quebra.
-- **Nenhuma URL de ficha pode ser respondida com o corpo de outra ficha.** Foi o bug mais grave que o plano continha; está fechado e tem teste-guarda não-vazio.
-- **Geolocalização só depois de um toque**; **"em linha reta" em todo ramo**; **atribuição `© OpenStreetMap`** (obrigação ODbL). Todos com teste.
-- **Sem `next/link`** em lugar nenhum — âncora pura. Não existe navegação soft neste app.
+- **Spec:** `docs/superpowers/specs/2026-08-11-home-hoje-design.md`
+- **Plano:** `docs/superpowers/plans/2026-08-11-home-hoje.md` — **já corrigido três vezes**
+  (`8643453`, `5e2c5e1`); o texto atual é o que vale.
+- Ledger (git-ignorado): `.superpowers/sdd/2026-08-11-home-hoje/progress.md`
+- Mockups do brainstorm (git-ignorados): `.superpowers/brainstorm/754-1786493110/content/`
 
-## Três bugs que o meu próprio plano continha (e as revisões pegaram)
+## Como tocar cada task (o ciclo que está funcionando)
 
-Vale lembrar porque calibra o quanto revisar: **o plano estava errado em três lugares**, todos pegos por revisão ou pelo implementador parando em vez de improvisar.
+1. `git rev-parse HEAD` → guarde como BASE.
+2. `bash <skills>/subagent-driven-development/scripts/task-brief docs/superpowers/plans/2026-08-11-home-hoje.md N`
+3. Despache **um** implementador (sonnet basta; haiku pra transcrição pura). No prompt: onde a
+   task se encaixa, o caminho do brief como fonte única de requisitos, as interfaces que ele
+   consome, as cicatrizes que não pode reabrir, e o caminho do arquivo de relatório.
+4. `scripts/review-package <plano> BASE HEAD` → despache o revisor com o caminho impresso.
+   **Exija dois veredictos: conformidade com o spec E qualidade.**
+5. Achado Important/Critical → mande de volta pro **mesmo** implementador (`SendMessage`), que
+   ainda tem o contexto. Depois `review-package FIX_BASE HEAD` + re-revisão **escopada**.
+6. Minors vão pro ledger, não pro laço.
 
-1. **`viewBox` do ícone** — `"-12 -12 100 100"` jogava a pegada no canto inferior direito nos tamanhos com margem. Os dois últimos valores são largura e altura, não o segundo canto. Os ícones 192/512 (margem 0) mascaravam.
-2. **Cache de tiles era no-op silencioso** — tiles do OSM são opacos (status 0) e o `CacheFirst` do serwist os recusa por padrão. O mapa teria sumido offline, que era metade do ganho.
-3. **Fallback offline serviria a ficha errada** — trilha A na URL da trilha B. Montanha errada, carimbo errado. O pior defeito possível neste produto.
+**Não pule a revisão da branch inteira no fim.** Nas duas rodadas anteriores ela achou defeito
+que nenhuma revisão de task pegou.
 
-E um quarto, de outra natureza: o `networkTimeoutSeconds: 6` que especifiquei **nunca se aplicava às fichas** — `respondWith` para a propagação antes do roteador do serwist rodar. Modo avião falha rápido e funcionava; **uma barrinha de sinal na serra travaria num spinner**. Provado com servidor TCP que aceita e nunca responde: ficha em 6023 ms depois do conserto.
+## O que a home é hoje (para não redesenhar por engano)
 
-## Deferidos (o ledger tem a lista completa)
+Decidido com o João por brainstorm, com mockups no navegador:
 
-`.superpowers/sdd/2026-08-05-forma-de-app/progress.md` — **é scratch git-ignorado**, some num `git clean -fdx`. O essencial dele está aqui.
+- **`/` é a home "Hoje"**: mapa em cima enquadrando as trilhas, folha com os cartões agrupados
+  em "Hoje o tempo deixa" / "Hoje não", barra embaixo. Layout **A** dos mockups.
+- **`/trilhas` é o acervo** — tudo, sem carimbo, ordenado por nome.
+- **Barra embaixo com dois destinos**, Hoje e Trilhas. "Minhas" só nasce com a memória (fatia 2).
+- **O pin é âncora** (`<a href="#slug">`) — toca e rola até o cartão **sem JavaScript**.
+- **Uma trilha, uma fonte de cor:** `CartaoTrilha` é client component e lê o contexto **uma vez**,
+  alimentando o `data-state` do cartão E a prop do selo. `SeloTrilha` é apresentacional.
 
-Menores carregáveis: cadeado de tracing só varre `.ts` flat em `src/lib`; rodapé duplicado em `trilhas/page.tsx`; componente chamado `Ficha` sobrecarrega o substantivo do domínio; slug com barra final entraria torto no cookie; sem teste do `aria-label` da saída; `viewport.test.ts` crava os hex; sem teste HTTP da rota de ícones; `manifest.ts` crava os caminhos dos ícones.
+**A rodada foi cortada em três fatias. Esta é a fatia 1.** Fatia 2 = memória ("Fui" no aparelho
++ "já conheço" + aba Minhas). Fatia 3 = filtros por chip, campos novos na ficha, km com GPS e
+saída manual por cidade. **Nada disso entra agora.**
 
-Nunca exercitado: o caminho de `QuotaExceededError` e uma eviction real do cache. (**iOS Safari saiu desta lista** — instalado e aprovado em 2026-08-10.)
+**Achado que o brainstorm produziu:** as fatias 2 e 3 são invisíveis com uma trilha só. A
+segunda ficha deixou de ser preferência e virou dependência delas — por isso a Task 11 entrega
+o questionário. **Eu não invento geografia; as respostas são do João.**
 
-## Próxima parada — comece por aqui
+## Invariantes que não podem ser quebradas
 
-**A recomendação é o sub-projeto 2, e ele começa por brainstorm, não por plano.** O app hoje é uma ficha excelente com uma lista feia na frente; o próximo salto é a home. Mas ele depende de conteúdo que só o João tem, então talvez valha inverter — decidir isso é a primeira conversa.
+- **O carimbo chega no primeiro paint, server-rendered, sem JS.** Depende de `force-dynamic` na
+  home e na ficha. Página estática congela `calculadoEm` no build e todo visitante recebe
+  carimbo vencido.
+- **`useVenceu` devolve `false` no primeiro render, sempre.** A home também chega do cache do
+  service worker com HTML velho; calcular `Date.now()` no render quebra a hidratação no
+  elemento que carrega a decisão.
+- **A regra de CSS da fase carrega `[data-state]` junto**, senão perde de especificidade e
+  "SEM INFORMAÇÕES" sai em selo verde. Vale pro `.selo` e pro `.pin-home`; os dois têm guarda.
+- **Sem leitura o app INFORMA, não manda:** `SEM INFORMAÇÕES · tome cuidado`. `Não suba` é só
+  pro barro que o motor MEDIU.
+- **`avaliar` (`motor.ts`) é o único lugar que decide se dá pra subir.** Home, ficha e as duas
+  rotas de carimbo não podem divergir sobre o mesmo morro.
+- **Tudo ou nada no clima:** falha na busca → nenhuma trilha recebe carimbo. Meia home
+  preenchida parece defeito e a pessoa não sabe em quais confiar.
+- **Nenhuma URL de trilha responde com o corpo de outra**, online ou offline.
+- **Sem `next/link`.** Âncora pura. **Atribuição `© OpenStreetMap`** em todo mapa (ODbL).
 
-1. **Sub-projeto 2 — a arquitetura.** Home rica que responde "o que dá pra fazer hoje" com carimbo por trilha, descoberta, filtro por modo/espécie. Quando chegar, `/` deixa de despachar e vira ela, e `/trilhas` é **descartada, não refatorada**. **Isso muda o comportamento de um app que agora está instalado no celular do João — é virada, não acréscimo.** Merece brainstorm próprio. Complicação técnica conhecida: carimbo por trilha = N chamadas ao Open-Meteo por abertura, e foi exatamente por isso que a lista nasceu crua.
-2. **Produzir as fichas.** João tem material pra meia dúzia (Natuba, Monte das Tabocas, Salvador, Praia do Sossego, Recife→Jaboatão). Cada uma precisa de **dado real dele**: coords, custo, regra da condição, a voz. **Eu não invento geografia.** O app comporta várias desde a rodada da moldura — hoje ainda só existe `content/fichas/rampa-do-pepe.json`. Uma segunda ficha também é o que finalmente exercita `/trilhas`, o cookie e o despacho com mais de um item.
-3. **O achado 5 da Rodada A**, se incomodar: deploy no meio → ficha offline sem os chunks novos → sem JS → carimbo não vence sozinho. Registrado com os dois lados; João decidiu não consertar.
-4. **Follow-ups opcionais da Rodada B:** travar por teste que palavra e cor caem no mesmo quadro commitado; cadeado de grep contra `next/link` sem `key={slug}` (`Moldura` e `Carimbo` guardam estado semeado por prop, o que só é correto enquanto a navegação for recarga inteira); a fatia larga demais no teste 1 do `sw.test.ts`.
-5. **Pergunta de design, não dívida:** o pin do mapa acompanha o *estado* mas não a *fase* — com "sem informações" ele fica na cor da última leitura enquanto o selo vira parada. É anterior a estas rodadas.
+## Deferidos desta rodada (a revisão final tem que triar)
 
-## Documentos
+- **ENDURECIMENTO, o mais valioso:** a ordem da resposta multi-coordenada da Open-Meteo é hoje
+  confiança validada empiricamente, não verificada em runtime. Mas a resposta **carrega
+  `latitude`/`longitude` por série** — conferir que batem com o pedido (com tolerância de
+  arredondamento) fecharia em runtime o pior defeito possível deste app: veredito de um morro
+  no cartão de outro.
+- `ehResposta` não confere se `hourly.time` e `hourly.precipitation` têm o mesmo comprimento.
+- Duas fichas com o mesmo `slug` fariam a última sobrescrever a primeira, em silêncio.
+- `useVenceu` duplica palavra por palavra o relógio do `Carimbo.tsx` (follow-up de 3 linhas).
+- `home.css` não tem a regra neutra de `data-fase="conferindo"` que o `ficha.css` tem.
+- `MARGEM_ENQUADRO_PX` (28px) foi dimensionada pro losango de 18px, não pro alvo de toque de
+  44px — com mais de uma trilha, um pin na borda pode ter o alvo cortado.
+- `MapaHome` refaz o `flatMap` de pares ficha+leitura que o `page.tsx` já monta.
+- `enquadrar` tem um ramo redundante; o comentário sugere necessidade que não existe.
 
-Rodada A — forma de app:
-- Spec: `docs/superpowers/specs/2026-08-05-forma-de-app-design.md`
-- Plano: `docs/superpowers/plans/2026-08-05-forma-de-app.md`
+## Lições desta rodada (valem além dela)
 
-Rodada B — carimbo busca leitura nova:
-- Spec: `docs/superpowers/specs/2026-08-10-carimbo-leitura-nova-design.md`
-- Plano: `docs/superpowers/plans/2026-08-10-carimbo-leitura-nova.md`
-
-## Como estas rodadas foram tocadas (o método que funcionou)
-
-Brainstorm → spec → plano → execução. A Rodada B usou **SDD com subagentes** (um implementador novo por task, revisão por task, revisão da branch inteira em opus no fim) — **João autorizou os agentes explicitamente**; a instrução em vigor é não usar sem pedido. As duas rodadas fecharam no mesmo formato: **revisão da branch inteira → UMA leva de correção → uma re-revisão escopada → merge `--no-ff` → `npx vercel --prod --yes` → conferir por `curl` no domínio real**.
-
-Nas duas, a revisão da branch inteira achou defeito que nenhuma revisão de task pegou, porque cada uma via só o próprio pedaço. Não pule essa etapa.
+1. **Três defeitos do plano foram pegos ANTES de qualquer código**, numa varredura de conflito
+   pré-execução. Dois deles eram reincidência exata de bugs que a rodada anterior shipou.
+   Essa varredura paga.
+2. **Os dois primeiros achados Important foram defeitos MEUS, do plano** — testes que afirmam
+   sobre o dado real (hoje uma ficha só) em vez de afirmar sobre a função. Teste de ordenação
+   que passa com o `.sort()` apagado; teste de rota que não prova a fiação.
+3. **Teste de mutação decide discussão sobre teste.** Virou exigência: apague a linha, veja o
+   teste falhar, devolva — e cole a saída no relatório. Promessa não conta.
+4. **Nenhum teste desta suíte mede geometria renderizada.** Um pin 6px fora do lugar passou por
+   250 testes verdes e `tsc` limpo. Só apareceu quando o revisor abriu um Chrome headless e
+   mediu. Se um número de pixel importa, medir é a única prova.
+5. **Eu errei uma conta e o implementador "confirmou" refazendo — partindo da minha premissa
+   errada.** Duas conferências que compartilham a suposição não são duas conferências. Quando
+   mandar um número, mande a derivação e peça que discordem em vez de aplicar.
 
 ## Fronteira do João (o que só ele faz)
 
-Login nas contas (Vercel, Turso) + consentir/aceitar termos + o celular. Código, deploy e verificação eu toco.
+Login nas contas (Vercel, Turso) + consentir/aceitar termos + o celular. Código, deploy e
+verificação eu toco. **Agentes: ele autorizou nesta sessão**; a instrução em vigor é não usar
+sem pedido, então em sessão nova pergunte antes se não estiver retomando esta rodada.
 
 ## Registro histórico (não refazer)
 
-- Rodada 1 (esqueleto: ficha Zod, motor, weather, Turso data-access, cron, confirmar): merge `a179e46`.
-- Rampa ao vivo (Versão D + deploy): merge `7d4bd59`.
-- "Fui" de verdade: merge `4b6d9a7` + chore `80178f9`.
-- Mapa de verdade: merge `a671146` (branch `mapa-de-verdade` preservada).
-- Forma de app: merge `6ef0fdc` (branch `forma-de-app` preservada, HEAD `d5d8987`) + deploy em produção.
-- Carimbo busca leitura nova: merge `9c3dcf8` (branch `carimbo-na-retomada` preservada, HEAD `026bf0a`) + deploy em produção. Spec e plano em `docs/superpowers/`.
-- Turso/cron/freshness da Rodada 1 seguem de lado (não usados no MVP live-compute; a rota cron existe mas não roda).
-- `ensureSchema` (`src/lib/db.ts`) ainda declara `confirmacoes.tipo ... DEFAULT 'foi'` — inerte, inconsistente com `{seco,barro}`. Limpar em passada futura.
+- Rodada 1 (esqueleto): merge `a179e46`. Rampa ao vivo (Versão D): `7d4bd59`. "Fui": `4b6d9a7`.
+  Mapa de verdade: `a671146`. Forma de app: `6ef0fdc`. Carimbo busca leitura nova: `9c3dcf8`.
+- **iPhone provado em 2026-08-10** — João instalou pelo Safari (Compartilhar → Adicionar à Tela
+  de Início) e aprovou. Instalar é pelo Safari, não pelo Chrome, e vale abrir a ficha uma vez
+  no wi-fi depois de instalar: é a visita que guarda a cópia offline dela.
+- Turso/cron/freshness da Rodada 1 seguem de lado (não usados no MVP live-compute).
+- `ensureSchema` (`src/lib/db.ts`) ainda declara `confirmacoes.tipo ... DEFAULT 'foi'` — inerte,
+  inconsistente com `{seco,barro}`. Limpar em passada futura.

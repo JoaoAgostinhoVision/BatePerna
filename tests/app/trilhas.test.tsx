@@ -21,4 +21,10 @@ describe("/trilhas", () => {
       expect(container.textContent).toContain(f.rotulo_escaneio);
     }
   });
+
+  it("o acervo tem a barra, marcando que você está nele", () => {
+    const { container } = render(<Trilhas />);
+    expect(container.querySelector('.barra [aria-current="page"]')?.getAttribute("href"))
+      .toBe("/trilhas");
+  });
 });

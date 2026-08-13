@@ -8,9 +8,10 @@ export const CACHE_ULTIMA_FICHA = "bp-ultima-ficha";
 /** Onde o serwist guarda as outras páginas (hoje só /trilhas). */
 export const CACHE_PAGINAS = "bp-paginas";
 
-/** O espelho offline do cookie bp_ultima: o service worker não lê cookie,
- *  então guarda a última ficha também sob esta chave fixa — e é ela que
- *  responde quando "/" abre sem rede, já que o redirect precisa de servidor. */
+/** O ponteiro do service worker pra última ficha aberta: ele não lê cookie
+ *  nenhum (isto não é o espelho de nada) — guarda a ficha também sob esta
+ *  chave fixa, e é ela que responde quando "/" abre sem rede e sem acervo
+ *  guardado. */
 export const CHAVE_ULTIMA = "/__ultima__";
 
 /** Quanto esperar a rede antes de servir a cópia guardada.
@@ -104,10 +105,17 @@ export function comPrazo<T>(promessa: Promise<T>, ms: number, aoEstourar: T): Pr
  *  coisa e procurar outra seria trabalho jogado fora. */
 export const AQUECIMENTO: AlvoCache = { chave: "/trilhas", cache: CACHE_PAGINAS };
 
-/** Onde procurar quando "/" abre sem rede: a última ficha e, se nem isso, a
- *  lista que o serwist guardou (ou que aquecemos na instalação). */
+/** Onde procurar quando "/" abre sem rede.
+ *
+ *  O acervo primeiro, a última ficha depois — invertido de propósito quando "/"
+ *  deixou de ser despachante e virou a home. Você toca no ícone esperando a
+ *  tela de casa; cair dentro de uma trilha específica, que pode nem ser a que
+ *  você queria, confunde mais do que ajuda. O acervo é a versão honesta da home
+ *  quando não há clima pra ler: mostra o que existe e não finge veredito.
+ *
+ *  A última ficha continua guardada e continua abrindo pela URL dela. */
 export function planoDaRaiz(): AlvoCache[] {
-  return [{ chave: CHAVE_ULTIMA, cache: CACHE_ULTIMA_FICHA }, AQUECIMENTO];
+  return [AQUECIMENTO, { chave: CHAVE_ULTIMA, cache: CACHE_ULTIMA_FICHA }];
 }
 
 /** Onde procurar quando uma ficha abre sem rede: SÓ ela mesma.
@@ -143,10 +151,17 @@ export async function resolverNavegacao({
   const daRede = await buscarRede();
 
   if (new URL(url).pathname === "/") {
-    // "/" é redirect de servidor: qualquer resposta serve, inclusive o 307.
-    // Não se grava — o que vale guardar é a ficha pra onde ele aponta.
-    if (daRede) return { resposta: daRede, gravarEm: [] };
-    return { resposta: await primeiroQueTiver(buscarCache, planoDaRaiz()), gravarEm: [] };
+    // A home é veredito do momento: guardada, viraria "pode subir" de três
+    // horas atrás com cara de agora. Nunca se grava — em nenhum ramo abaixo,
+    // nem quando a resposta é boa.
+    //
+    // Só a resposta OK passa direto. Um 5xx transitório não pode aparecer cru
+    // com o acervo guardado bem ali do lado — "/" é a porta do app agora, não
+    // um redirect de servidor. Sem cópia guardada nenhuma, a resposta de rede
+    // (o erro de verdade) ainda é melhor que inventar um null.
+    if (daRede?.ok) return { resposta: daRede, gravarEm: [] };
+    const guardada = await primeiroQueTiver(buscarCache, planoDaRaiz());
+    return { resposta: guardada ?? daRede, gravarEm: [] };
   }
 
   if (daRede?.ok) return { resposta: daRede, gravarEm: chavesDeGravacao(url) };

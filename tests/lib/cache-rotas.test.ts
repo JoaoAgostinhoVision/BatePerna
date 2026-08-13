@@ -95,9 +95,27 @@ describe("AQUECIMENTO", () => {
     expect(planoDaRaiz()).toContain(AQUECIMENTO);
   });
 
-  it("a raiz procura a última ficha antes da lista", () => {
-    // A ordem é a resposta: você quer o morro onde estava, não o índice.
-    expect(planoDaRaiz()[0].chave).toBe(CHAVE_ULTIMA);
+  it("a raiz procura o acervo antes da última ficha", () => {
+    // A ordem é a resposta: "/" é a home agora, não despachante — o acervo é
+    // a versão honesta dela quando não há clima pra ler.
+    expect(planoDaRaiz()[0].chave).toBe(AQUECIMENTO.chave);
+  });
+});
+
+describe("planoDaRaiz: ordem invertida (home antes de despachante)", () => {
+  it("offline, '/' procura o acervo ANTES da última ficha", () => {
+    const [primeiro, segundo] = planoDaRaiz();
+    expect(primeiro).toEqual(AQUECIMENTO);
+    expect(segundo.chave).toBe(CHAVE_ULTIMA);
+  });
+
+  it("a home nunca é gravada, mesmo respondendo 200 — veredito guardado é veredito velho", async () => {
+    const { gravarEm } = await resolverNavegacao({
+      url: "https://bateperna.vercel.app/",
+      buscarRede: async () => new Response("<html>a home</html>", { status: 200 }),
+      buscarCache: async () => null,
+    });
+    expect(gravarEm).toEqual([]);
   });
 });
 
@@ -197,35 +215,37 @@ describe("resolverNavegacao: ficha", () => {
 });
 
 describe("resolverNavegacao: raiz", () => {
-  it("com rede devolve o que veio, mesmo sendo o redirect, e não grava", async () => {
-    const redirect = new Response(null, { status: 307 });
+  it("com rede boa (200) devolve o que veio, e não grava", async () => {
+    const ok = resposta(200);
     const cache = cacheFalso();
     const r = await resolverNavegacao({
       url: RAIZ,
-      buscarRede: async () => redirect,
+      buscarRede: async () => ok,
       buscarCache: cache.buscar,
     });
 
-    expect(r.resposta).toBe(redirect);
+    expect(r.resposta).toBe(ok);
     expect(r.gravarEm).toEqual([]);
+    expect(cache.chavesPerguntadas()).toEqual([]);
   });
 
-  it("sem rede cai na última ficha", async () => {
+  it("sem acervo guardado, cai na última ficha", async () => {
     const ultima = resposta();
     const cache = cacheFalso({ [CHAVE_ULTIMA]: ultima });
     const r = await resolverNavegacao({ url: RAIZ, buscarRede: semRede, buscarCache: cache.buscar });
 
     expect(r.resposta).toBe(ultima);
-    expect(cache.perguntas[0]).toMatchObject({ chave: CHAVE_ULTIMA, cache: CACHE_ULTIMA_FICHA });
+    expect(cache.perguntas[0]).toMatchObject({ chave: AQUECIMENTO.chave, cache: CACHE_PAGINAS });
+    expect(cache.perguntas[1]).toMatchObject({ chave: CHAVE_ULTIMA, cache: CACHE_ULTIMA_FICHA });
   });
 
-  it("sem última ficha, cai na lista guardada pelo serwist", async () => {
+  it("sem rede, cai direto no acervo guardado pelo serwist", async () => {
     const lista = resposta();
     const cache = cacheFalso({ "/trilhas": lista });
     const r = await resolverNavegacao({ url: RAIZ, buscarRede: semRede, buscarCache: cache.buscar });
 
     expect(r.resposta).toBe(lista);
-    expect(cache.perguntas[1]).toMatchObject({ chave: "/trilhas", cache: CACHE_PAGINAS });
+    expect(cache.perguntas[0]).toMatchObject({ chave: "/trilhas", cache: CACHE_PAGINAS });
   });
 
   it("sem nada guardado, não inventa resposta", async () => {
@@ -233,5 +253,42 @@ describe("resolverNavegacao: raiz", () => {
     const r = await resolverNavegacao({ url: RAIZ, buscarRede: semRede, buscarCache: cache.buscar });
 
     expect(r.resposta).toBeNull();
+  });
+
+  it("os dois caches presentes ao mesmo tempo: o acervo vence, não a última ficha", async () => {
+    // O estado mais realista de quem já navegou antes e teve o acervo
+    // aquecido na instalação — os dois estão guardados, e é exatamente aí que
+    // a inversão desta rodada precisa se provar: "/" é a home agora, não
+    // despachante pra última trilha aberta.
+    const lista = resposta();
+    const ultima = resposta();
+    const cache = cacheFalso({ "/trilhas": lista, [CHAVE_ULTIMA]: ultima });
+    const r = await resolverNavegacao({ url: RAIZ, buscarRede: semRede, buscarCache: cache.buscar });
+
+    expect(r.resposta).toBe(lista);
+    expect(r.resposta).not.toBe(ultima);
+  });
+
+  it("5xx com acervo guardado ao lado cai no acervo, não mostra o erro cru", async () => {
+    // "/" deixou de ser um redirect de servidor — hoje é a porta do app. Um
+    // 500 transitório com o celular online não pode aparecer cru quando o
+    // acervo está guardado bem ali do lado.
+    const erro = resposta(500);
+    const lista = resposta();
+    const cache = cacheFalso({ "/trilhas": lista, [CHAVE_ULTIMA]: resposta() });
+    const r = await resolverNavegacao({ url: RAIZ, buscarRede: async () => erro, buscarCache: cache.buscar });
+
+    expect(r.resposta).toBe(lista);
+    expect(r.resposta).not.toBe(erro);
+    expect(r.gravarEm).toEqual([]);
+  });
+
+  it("5xx sem nada guardado devolve a resposta de rede — o erro real, melhor que nada", async () => {
+    const erro = resposta(500);
+    const cache = cacheFalso();
+    const r = await resolverNavegacao({ url: RAIZ, buscarRede: async () => erro, buscarCache: cache.buscar });
+
+    expect(r.resposta).toBe(erro);
+    expect(r.gravarEm).toEqual([]);
   });
 });
