@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, cleanup, act } from "@testing-library/react";
 import LocalVivo, { useGps, useLocal, useMexerLocal } from "@/app/local";
 import { CHAVE_GPS, CHAVE_LOCAL, type Local } from "@/lib/local";
@@ -7,6 +7,10 @@ afterEach(() => {
   cleanup();
   localStorage.clear();
   vi.unstubAllGlobals();
+  // Restaura qualquer espião em Storage.prototype (setItem/getItem forçados a
+  // estourar) — um espião vazado envenenaria localStorage pros arquivos de
+  // teste seguintes, que nem sabem que ele existe.
+  vi.restoreAllMocks();
 });
 
 const GRAVATA: Local = {
@@ -56,6 +60,18 @@ describe("LocalVivo", () => {
     expect(await screen.findByText("nao-sei|nunca")).toBeTruthy();
   });
 
+  // Aba anônima com armazenamento bloqueado, ou navegador que recusa leitura:
+  // o `try/catch` do efeito de montagem existe pra isto. Sem ele a montagem
+  // inteira estoura, e a home cairia na tela de erro por causa da localização.
+  it("localStorage.getItem falhando não derruba a montagem: fica 'não sei'", async () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("leitura bloqueada");
+    });
+    render(<LocalVivo><Espia /></LocalVivo>);
+    await act(async () => {});
+    expect(screen.getByTestId("espia").textContent).toBe("nao-sei|nunca");
+  });
+
   it("escolher grava no aparelho e aparece na tela", async () => {
     function Botao() {
       const { escolher } = useMexerLocal();
@@ -65,6 +81,29 @@ describe("LocalVivo", () => {
     await act(async () => { screen.getByText("escolher").click(); });
     expect(screen.getByTestId("espia").textContent).toBe("escolhido|nunca");
     expect(localStorage.getItem(CHAVE_LOCAL)).toContain("Gravatá");
+  });
+
+  // Armazenamento cheio ou aba anônima recusando escrita: a escolha ainda
+  // precisa valer NESTA sessão — é a promessa do comentário em `escolher`.
+  // Sem o `try/catch`, um `setItem` que estoura derrubaria a escolha inteira.
+  //
+  // Chama `escolher` direto (não via clique de botão): um clique passa pelo
+  // despacho sintético de evento do React, que no jsdom reporta exceções de
+  // handler como erro global em vez de propagar pro chamador — mascarando a
+  // mutação em vez de provar o guarda. Chamando a função diretamente dentro
+  // de `act`, a exceção (se o guarda for removido) estoura na cara do teste.
+  it("localStorage.setItem falhando não impede a escolha em memória", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("armazenamento cheio");
+    });
+    let escolherCaptado: ((l: Local) => void) | null = null;
+    function Capta() {
+      escolherCaptado = useMexerLocal().escolher;
+      return null;
+    }
+    render(<LocalVivo><Espia /><Capta /></LocalVivo>);
+    act(() => { escolherCaptado!(GRAVATA); });
+    expect(screen.getByTestId("espia").textContent).toBe("escolhido|nunca");
   });
 });
 
