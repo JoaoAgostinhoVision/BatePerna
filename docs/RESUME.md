@@ -5,8 +5,8 @@
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
 **Última parada:** 2026-08-14. **Estado: RODADA EM ANDAMENTO.**
-Branch **`daqui-e-filtros`**, saindo de `main` em `8c88415`. **Tasks 1–4 de 12 fechadas**,
-todas com revisão. Suíte em **344/344**.
+Branch **`daqui-e-filtros`**, saindo de `main` em `8c88415`. **Tasks 1–5 de 12 fechadas**,
+todas com revisão. Suíte em **367/367**.
 
 ---
 
@@ -21,13 +21,13 @@ foi respondida (é o §1 da spec).
      trocar; a branch existe e tem os commits.
    - `git status --short` → **limpo**.
    - `git log --oneline 8c88415..HEAD` → os commits da rodada.
-   - `npm test` → **344/344** (conferido no fim da sessão).
+   - `npm test` → **367/367** (conferido no fim da sessão).
 
 2. **Leia o ledger:** `.superpowers/sdd/2026-08-13-daqui-e-filtros/progress.md`. Ele é a memória
    da execução — tem a varredura de pré-voo, o ruling da ordem, e o estado de cada task. **Se ele
    tiver sumido** (`git clean`), reconstrua pelo `git log` e por este arquivo.
 
-3. **Tasks 1 a 4 estão FECHADAS. Não as reabra.** A Task 2 custou dois fix rounds, os dois
+3. **Tasks 1 a 5 estão FECHADAS. Não as reabra.** A Task 2 custou dois fix rounds, os dois
    pela mesma causa (guard sem prova de mutação), e a segunda re-revisão devolveu ADDRESSED
    depois de rodar a mutação ela mesma. Fica o precedente, porque ele decide discussões
    futuras: o implementador argumentou que um guard não precisava de teste próprio porque
@@ -42,7 +42,7 @@ foi respondida (é o §1 da spec).
    provar na camada pura**. O achado foi transferido pra Task 4, onde virou teste que morde.
    **Quando transferir um achado assim, registre o ruling** em vez de deixá-lo sumir.
 
-4. **Retome a execução em `docs/superpowers/plans/2026-08-13-daqui-e-filtros.md`**, da Task 5 em
+4. **Retome a execução em `docs/superpowers/plans/2026-08-13-daqui-e-filtros.md`**, da Task 6 em
    diante. **A ordem de execução tem um ruling e NÃO é a numeração:**
 
    > **1, 2, 3, 4, 5, 6, 8, 7, 9, 10, 11, 12**
@@ -87,6 +87,20 @@ foi respondida (é o §1 da spec).
    `page.tsx` também deixa tudo verde, porque os testes embrulham na mão. Nos dois casos a
    prova é asserção de fonte / render do ponto de uso real.
 
+   **Quarta forma, do pré-voo da Task 6: o que só aparece com o RELÓGIO.** A espera de
+   digitação (`ESPERA_MS`) e o guarda da corrida (`meu === pedido.current`) tinham comentário
+   justificando e zero teste. Os outros testes usam `findByText`, que espera até 1000ms — por
+   isso não percebem se a busca dispara a cada tecla; e nenhum deles tinha **duas requisições
+   em voo**, que é a única situação em que o guarda faz algo. Sem ele, a resposta de "Gravatá"
+   chegando depois da de "Recife" repinta a lista com o lugar errado, e a pessoa toca no que
+   está na tela achando que é o que pediu. **Guarda de concorrência exige relógio falso e duas
+   respostas fora de ordem; não há atalho.**
+
+   **E um erro meu que quase virou teste inútil, pego relendo o que eu tinha acabado de
+   escrever:** a asserção do teste de corrida olhava `/Pernambuco/` — mas Recife e Gravatá são
+   **as duas** de Pernambuco, então ela passaria com qualquer uma na tela. **Num teste que
+   distingue A de B, asserte no que os diferencia**, não num campo que os dois compartilham.
+
 ## O que esta rodada faz (a pauta do João, dita por ele)
 
 Ao ver a home no ar, ele disse **"ficou legal, mas ainda faltou mais coisa"**. Na sessão seguinte
@@ -123,11 +137,12 @@ disse que não incomoda**. É consequência inevitável da regra do primeiro ren
 | 2 — contexto (`src/app/local.tsx`) | **completa**, 2 fix rounds, re-revisão limpa | `e4dbae2`, `ee28635`, `86e9658` |
 | 3 — enquadrar com você (`src/lib/mapa.ts`) | **completa**, revisão Approved with comments | `6ae990a` |
 | 4 — o mapa da home usa a localização | **completa**, 1 fix round, revisão **Approved** | `34f74bb`, `2feae91` |
-| 5 a 12 | não começadas | — |
+| 5 — busca de cidade (lib + rota) | **completa**, 1 fix round, re-revisão limpa | `c1257ed`, `c1f01d4` |
+| 6 a 12 | não começadas | — |
 
-Suíte: **344/344** (a base da rodada era 278).
+Suíte: **367/367** (a base da rodada era 278).
 
-**Briefs das Tasks 3, 4 e 5 já emendados pelo pré-voo** (ver item 6 acima). Eles vivem em
+**Briefs das Tasks 3, 4, 5 e 6 já emendados pelo pré-voo** (ver item 6 acima). Eles vivem em
 `.superpowers/sdd/2026-08-13-daqui-e-filtros/task-N-brief.md`, que é **scratch git-ignorado**
 — um `git clean -fdx` apaga as emendas junto. Se isso acontecer, o essencial de cada uma está
 no item 6; reextrair pelo `scripts/task-brief` devolve o brief ORIGINAL, com os furos.
@@ -171,6 +186,10 @@ Desta rodada (estão no ledger, o revisor final vai triar):
 - `src/app/page.tsx` — `Object.fromEntries(leituras)` computado duas vezes (desperdício; nenhum
   consumidor depende de identidade referencial).
 - `.voce-pin` sem `aria-hidden` explícito (vive dentro do `role="img"` que já existia).
+- `src/app/api/lugares/route.ts` — o comentário afirma que `PRAZO_MS` é menor que
+  `PRAZO_CLIMA_MS` e **essa relação não tem teste**, embora o padrão já exista na suíte
+  (`tests/lib/weather.test.ts:168-171` testa `PRAZO_CLIMA_MS < PRAZO_REDE_MS` pelo mesmo
+  motivo). Barato e idiomático — achado da re-revisão da Task 5, fora do escopo dela.
 - **DECISÃO DE PRODUTO pendente, não é só limpeza:** `enquadrarComVoce([], voce, ...)` devolve
   zoom 11 (~26 km), enquanto uma trilha só, longe demais, cai no piso de zoom 8 (~212 km) —
   zero trilhas fica **mais apertado** que uma trilha distante. Assimetria herdada de reusar o
