@@ -15,6 +15,7 @@ import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { coordDe } from "@/lib/local";
 import { useLocal } from "./local";
+import BuscaLugar from "./BuscaLugar";
 import PinTrilha from "./PinTrilha";
 
 /** O mapa da home: onde ficam as trilhas de hoje.
@@ -120,6 +121,7 @@ export default function MapaHome({
       <a className="wp-osm" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">
         © OpenStreetMap
       </a>
+      <BuscaLugar />
     </div>
   );
 }

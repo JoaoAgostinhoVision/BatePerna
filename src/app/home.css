@@ -123,3 +123,47 @@
   font-family: var(--type); font-size: .6rem; font-weight: 650;
   background: rgba(0, 0, 0, .62); color: #e6e0d4; padding: .25rem .4rem; border-radius: 6px;
 }
+
+/* ---- a pílula e a busca de cidade ----
+   O único lugar de onde a localização se mexe. A pílula fica no canto
+   inferior ESQUERDO do mapa (o crédito do OpenStreetMap já ocupa o direito),
+   escura pra ler sobre qualquer tile. */
+.bp .mapa-pilula {
+  position: absolute; left: 6px; bottom: 6px; z-index: 2; min-height: 32px;
+  font-family: var(--type); font-size: .68rem; font-weight: 650;
+  background: rgba(0, 0, 0, .62); color: #e6e0d4; border: none; border-radius: 20px;
+  padding: .4rem .8rem;
+}
+.bp .mapa-pilula:active { opacity: .75; }
+
+/* O painel de busca cobre o mapa inteiro (mesma caixa), pra abrir sem
+   empurrar a folha que vem embaixo. */
+.bp .busca {
+  position: absolute; inset: 0; z-index: 3; overflow-y: auto;
+  background: var(--screen); padding: .6rem .7rem .8rem;
+  display: flex; flex-direction: column; gap: .4rem;
+}
+/* 16px, não menos: abaixo disso o Safari do iPhone dá zoom sozinho ao focar
+   o campo e a tela salta. Tem teste lendo esta regra — não baixar. */
+.bp .busca-campo {
+  font-family: var(--type); font-size: 16px; min-height: 44px;
+  border: 1px solid var(--line); border-radius: 10px; padding: .5rem .7rem;
+  background: var(--surface-2); color: var(--ink);
+}
+.bp .busca-item {
+  display: block; width: 100%; text-align: left; min-height: 44px;
+  border: 1px solid var(--line); border-radius: 10px; padding: .45rem .7rem;
+  background: var(--surface-2); color: inherit;
+}
+.bp .busca-item:active { opacity: .7; }
+.bp .busca-nome { display: block; font-family: var(--serif); font-size: 1rem; font-weight: 600; }
+.bp .busca-reg { display: block; color: var(--ink-soft); font-size: .78rem; }
+.bp .busca-aviso { color: var(--ink-soft); font-size: .85rem; padding: .3rem .1rem; }
+/* Crédito do GeoNames — obrigação de licença (CC-BY), não enfeite. Mesmo
+   tamanho e contraste do `.wp-osm` (© OpenStreetMap): discreto não pode
+   virar ilegível. */
+.bp .busca-fonte {
+  font-family: var(--type); font-size: .64rem; color: var(--ink-soft);
+  margin-top: auto; padding-top: .2rem;
+}
+.bp .busca-fonte a { color: inherit; }
