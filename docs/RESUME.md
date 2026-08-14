@@ -4,9 +4,9 @@
 > `.superpowers/sdd/2026-08-13-daqui-e-filtros/progress.md`, que é **scratch git-ignorado** —
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-13. **Estado: RODADA EM ANDAMENTO, parada no meio a pedido do João.**
-Branch **`daqui-e-filtros`**, saindo de `main` em `8c88415`. **Task 1 de 12 fechada**; a Task 2
-estava com um conserto em voo quando a sessão acabou.
+**Última parada:** 2026-08-14. **Estado: RODADA EM ANDAMENTO.**
+Branch **`daqui-e-filtros`**, saindo de `main` em `8c88415`. **Tasks 1 e 2 de 12 fechadas**,
+as duas com revisão limpa. Suíte em **318/318**.
 
 ---
 
@@ -21,34 +21,19 @@ foi respondida (é o §1 da spec).
      trocar; a branch existe e tem os commits.
    - `git status --short` → **limpo**.
    - `git log --oneline 8c88415..HEAD` → os commits da rodada.
-   - `npm test` → **317/317** (conferido no fim da sessão).
+   - `npm test` → **318/318** (conferido no fim da sessão).
 
 2. **Leia o ledger:** `.superpowers/sdd/2026-08-13-daqui-e-filtros/progress.md`. Ele é a memória
    da execução — tem a varredura de pré-voo, o ruling da ordem, e o estado de cada task. **Se ele
    tiver sumido** (`git clean`), reconstrua pelo `git log` e por este arquivo.
 
-3. **Feche a Task 2 antes de qualquer coisa: falta UMA coisa nela — a re-revisão escopada.**
-
-   O conserto do fix round 1/5 **foi entregue e commitado** (`ee28635`, 317/317). O achado era:
-   > Os três `try/catch` de `localStorage` em `src/app/local.tsx` (em `escolher`, no ramo de erro
-   > do `buscarGps`, e no efeito de montagem) não tinham teste nenhum — apagar os três não
-   > derrubava nada.
-
-   O implementador acrescentou dois testes (`setItem` estourando e `getItem` estourando), provou
-   cada um por mutação de um guard por vez, e diz que o `local.tsx` ficou **byte-idêntico** ao
-   `e4dbae2`.
-
-   **Ele levantou uma ressalva que a re-revisão precisa julgar** (não decida por conta própria):
-   ele cobriu **2 dos 3 lugares** que o revisor nomeou — deixou de fora o guard de escrita no ramo
-   de erro do `buscarGps`, argumentando que é o mesmo padrão `setItem`-estoura já provado pelo
-   teste do `escolher`, e que duplicar seria repetição. **Pode ser razoável, mas quem decide é a
-   re-revisão**, não ele e não você de cabeça — é exatamente o tipo de "eu me dou nota" que o
-   processo não aceita.
-
-   **O que fazer:** gerar o pacote (`review-package` do plano, de `e4dbae2` até HEAD) e despachar
-   a re-revisão escopada com os quatro achados originais + essa ressalva, pedindo veredicto
-   explícito sobre o terceiro guard. Se vier ADDRESSED, a Task 2 fecha; se vier NOT ADDRESSED, é
-   um fix round 2/5 de um teste só.
+3. **Tasks 1 e 2 estão FECHADAS. Não as reabra.** A Task 2 custou dois fix rounds, os dois
+   pela mesma causa (guard sem prova de mutação), e a segunda re-revisão devolveu ADDRESSED
+   depois de rodar a mutação ela mesma. Fica o precedente, porque ele decide discussões
+   futuras: o implementador argumentou que um guard não precisava de teste próprio porque
+   "é o mesmo padrão já provado em outro caminho"; **a re-revisão removeu o guard, viu a
+   suíte ficar 12/12 verde, e o argumento caiu.** A régua deste projeto é literal — *apagar
+   a linha faz um teste falhar* — e não "existe prova parecida em outro lugar".
 
 4. **Retome a execução em `docs/superpowers/plans/2026-08-13-daqui-e-filtros.md`**, da Task 3 em
    diante. **A ordem de execução tem um ruling e NÃO é a numeração:**
@@ -70,6 +55,30 @@ foi respondida (é o §1 da spec).
    família: um guard ou uma regra sem teste que o prove. **Antes de despachar cada task, releia a
    lista de testes do brief perguntando "que linha do código eu posso apagar sem isto falhar?"** e
    mande o complemento junto no despacho.
+
+   **Isso virou rotina em 2026-08-14 e paga sozinho.** Os briefs das Tasks 3, 4 e 5 já foram
+   emendados no disco (`.superpowers/sdd/.../task-N-brief.md`) antes de qualquer despacho, e o
+   pré-voo achou **onze furos meus**. A forma que mais se repete: **um `if` que é um OU de
+   várias sub-cláusulas, com um teste só — e num OU a cláusula que dispara primeiro esconde
+   todas as outras.** Aconteceu duas vezes:
+   - `foraDaJanela` (Task 3): as trilhas "longe" dos meus testes caíam a oeste **e** ao sul, e
+     3 das 4 bordas podiam ser apagadas com a suíte verde.
+   - `lerLugares` (Task 5): o meu item de teste vinha sem latitude **e** sem longitude, e 4 das
+     5 cláusulas de descarte ficavam sem prova. Pior: `typeof NaN === "number"`, então os dois
+     `Number.isFinite` eram os únicos capazes de pegar NaN — o caso que o comentário da
+     implementação promete tratar.
+
+   **O achado mais grave do pré-voo até agora** (Task 5): a rota `/api/lugares` devolveria
+   **200 com lista vazia** quando o serviço respondesse 429 ou 500 com corpo JSON — meu único
+   teste de falha cobria o `fetch` *rejeitando*, não o serviço *respondendo mal*. A tela diria
+   "não achei essa cidade" quando a verdade é "estourei a cota", e a pessoa reescreveria o nome
+   dez vezes achando que digitou errado. O geocoding da Open-Meteo tem cota; não é hipótese.
+
+   **Duas outras formas que o pré-voo pega e a revisão de task não pega**, porque o jsdom não
+   as enxerga (Task 4): apagar o `"use client"` do `MapaHome` deixa a suíte inteira verde e o
+   mapa parado no celular — o jsdom renderiza tudo como cliente; e esquecer o `<LocalVivo>` no
+   `page.tsx` também deixa tudo verde, porque os testes embrulham na mão. Nos dois casos a
+   prova é asserção de fonte / render do ponto de uso real.
 
 ## O que esta rodada faz (a pauta do João, dita por ele)
 
@@ -104,10 +113,15 @@ disse que não incomoda**. É consequência inevitável da regra do primeiro ren
 | Task | Estado | Commits |
 |---|---|---|
 | 1 — localização pura (`src/lib/local.ts`) | **completa, revisão limpa** | `f07da0c`, `ecc0fc9` |
-| 2 — contexto (`src/app/local.tsx`) | conserto feito, **falta só a re-revisão** | `e4dbae2`, `ee28635` |
+| 2 — contexto (`src/app/local.tsx`) | **completa**, 2 fix rounds, re-revisão limpa | `e4dbae2`, `ee28635`, `86e9658` |
 | 3 a 12 | não começadas | — |
 
-Suíte: **317/317** (a base da rodada era 278). Árvore limpa em `164774e`.
+Suíte: **318/318** (a base da rodada era 278).
+
+**Briefs das Tasks 3, 4 e 5 já emendados pelo pré-voo** (ver item 6 acima). Eles vivem em
+`.superpowers/sdd/2026-08-13-daqui-e-filtros/task-N-brief.md`, que é **scratch git-ignorado**
+— um `git clean -fdx` apaga as emendas junto. Se isso acontecer, o essencial de cada uma está
+no item 6; reextrair pelo `scripts/task-brief` devolve o brief ORIGINAL, com os furos.
 
 ## Invariantes que não podem ser quebradas
 
@@ -143,9 +157,10 @@ Novas desta rodada:
 Desta rodada (estão no ledger, o revisor final vai triar):
 
 - `src/lib/local.ts:53-54` — limites 90/180 sem comentário de derivação.
-- `tests/app/local.test.tsx` — `beforeEach` importado e nunca usado (entrou no fix round da Task 2).
 - `src/app/local.tsx` — os dois `Provider` recebem objeto literal novo a cada render.
 - Sem de-dupe de `pedirGps()` em toque duplo.
+
+(O `beforeEach` morto em `tests/app/local.test.tsx` saiu no fix round 1/5 da Task 2.)
 
 Herdados:
 
@@ -161,10 +176,15 @@ Herdados:
 ## Lições que valem além desta rodada
 
 1. **Teste de mutação decide qualquer discussão sobre teste.** Apague a linha, veja falhar,
-   devolva, cole a saída. Esta suíte já produziu **oito** testes que passavam com o código
-   apagado — e as revisões desta rodada já pegaram mais cinco lacunas do mesmo tipo.
+   devolva, cole a saída. Esta suíte já produziu **nove** testes que passavam com o código
+   apagado — e as revisões desta rodada já pegaram mais seis lacunas do mesmo tipo.
+   **Corolário fechado em 2026-08-14:** "existe um teste parecido em outro caminho de código"
+   **não é prova**. O implementador da Task 2 usou esse argumento pra pular um guard; a
+   re-revisão apagou o guard, viu 12/12 verde, e o argumento morreu. A régua é literal.
 2. **Mutação sub-cláusula a sub-cláusula, não a linha inteira.** Apagar a linha toda "provou" um
-   `ehCoord` e deixou passar um `em` sem teste nenhum.
+   `ehCoord` e deixou passar um `em` sem teste nenhum. **E cuidado especial com `if` que é um
+   OU:** a cláusula que dispara primeiro esconde todas as outras, então o caso de teste tem
+   que falhar em UMA coisa só. Dois briefs meus desta rodada caíram nisso.
 3. **Aponte o teste pro PONTO DE USO**, não pro arquivo de nome parecido.
 4. **Para artefato que vira entrada de outra coisa, a prova é USÁ-LO** (o questionário: responder
    e rodar o JSON contra o schema).
