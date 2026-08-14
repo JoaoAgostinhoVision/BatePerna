@@ -19,11 +19,15 @@ import {
   MARGEM_ENQUADRO_PX,
   RAIO_ALVO_TOQUE_PX,
   ZOOM_MINIMO,
+  ZOOM_MINIMO_HOME_COM_VOCE,
   enquadrar,
+  enquadrarComVoce,
+  foraDaJanela,
   latDoMundo,
   lngDoMundo,
   posicaoNaCaixa,
 } from "@/lib/mapa";
+import type { Coord } from "@/lib/geo";
 
 const RAMPA = { lat: -7.907889, lng: -36.019222 };
 
@@ -335,5 +339,128 @@ describe("RAIO_ALVO_TOQUE_PX bate com o alvo de toque do .pin-home no CSS", () =
     const alvoToquePx = Number(largura![1]);
     expect(alvoToquePx).toBe(44); // documentado no comentário da constante em src/lib/mapa.ts
     expect(RAIO_ALVO_TOQUE_PX).toBe(alvoToquePx / 2);
+  });
+});
+
+describe("enquadrarComVoce", () => {
+  const RAMPA = { lat: -7.907889, lng: -36.019222 };
+  const L = MAPA_JANELA_VISIVEL_HOME_PX;
+  const A = MAPA_ALTURA_HOME_PX;
+
+  it("sem localização, é exatamente o enquadramento de hoje", () => {
+    const so = enquadrar([RAMPA], L, A);
+    expect(enquadrarComVoce([RAMPA], null, L, A)).toEqual(so);
+  });
+
+  it("com localização, você entra na conta: o centro se desloca na sua direção", () => {
+    const voce = { lat: -8.2, lng: -35.56 };
+    const semVoce = enquadrarComVoce([RAMPA], null, L, A);
+    const comVoce = enquadrarComVoce([RAMPA], voce, L, A);
+    expect(comVoce.centro.lat).not.toBeCloseTo(semVoce.centro.lat, 4);
+    // O centro fica ENTRE os dois pontos, não em cima de nenhum.
+    expect(comVoce.centro.lat).toBeLessThan(Math.max(RAMPA.lat, voce.lat));
+    expect(comVoce.centro.lat).toBeGreaterThan(Math.min(RAMPA.lat, voce.lat));
+  });
+
+  // O piso: abaixo do zoom 8 o mosaico do OSM vira mancha sem nome de cidade.
+  // Aí o mapa para de tentar caber tudo e vira "onde eu estou".
+  it("trilha longe demais: para no piso e centra em VOCÊ, não no meio do caminho", () => {
+    const voce = { lat: -8.2, lng: -35.56 };
+    const longe = { lat: -15.8, lng: -47.9 }; // ~1400 km
+    const { centro, z } = enquadrarComVoce([longe], voce, L, A);
+    expect(z).toBe(ZOOM_MINIMO_HOME_COM_VOCE);
+    expect(centro.lat).toBeCloseTo(voce.lat, 6);
+    expect(centro.lng).toBeCloseTo(voce.lng, 6);
+  });
+
+  it("sem localização o piso NÃO vale — o mapa de hoje não muda de comportamento", () => {
+    const a = { lat: -8.2, lng: -35.56 };
+    const b = { lat: -15.8, lng: -47.9 };
+    expect(enquadrarComVoce([a, b], null, L, A).z).toBeLessThan(ZOOM_MINIMO_HOME_COM_VOCE);
+  });
+
+  it("nunca aproxima mais que o zoom da ficha", () => {
+    const voce = { lat: RAMPA.lat + 0.0001, lng: RAMPA.lng };
+    expect(enquadrarComVoce([RAMPA], voce, L, A).z).toBeLessThanOrEqual(MAPA_ZOOM);
+  });
+
+  // A derivação do 8, conferida em vez de afirmada: ~605 m/px nesta latitude,
+  // que na janela de 350,5px dá ~212 km de largura. Se alguém trocar o 8 por
+  // 6, esta conta denuncia — o mapa passaria de 212 pra 850 km de largura.
+  it("o piso corresponde a uma largura de mapa entre 150 e 300 km", () => {
+    const kmDeLargura = (metrosPorPixel(-8, ZOOM_MINIMO_HOME_COM_VOCE) * L) / 1000;
+    expect(kmDeLargura).toBeGreaterThan(150);
+    expect(kmDeLargura).toBeLessThan(300);
+  });
+});
+
+describe("foraDaJanela: quantas trilhas o mapa não mostra", () => {
+  const L = MAPA_JANELA_VISIVEL_HOME_PX;
+  const A = MAPA_ALTURA_HOME_PX;
+
+  it("tudo dentro: zero", () => {
+    const a = { lat: -8.2, lng: -35.56 };
+    const b = { lat: -8.25, lng: -35.6 };
+    const { centro, z } = enquadrarComVoce([a, b], null, L, A);
+    expect(foraDaJanela([a, b], centro, z, L, A)).toBe(0);
+  });
+
+  it("no piso, a trilha distante conta como fora", () => {
+    const voce = { lat: -8.2, lng: -35.56 };
+    const longe = { lat: -15.8, lng: -47.9 };
+    const { centro, z } = enquadrarComVoce([longe], voce, L, A);
+    expect(foraDaJanela([longe], centro, z, L, A)).toBe(1);
+  });
+
+  it("conta cada trilha uma vez, e só as que estão fora", () => {
+    const voce = { lat: -8.2, lng: -35.56 };
+    const perto = { lat: -8.21, lng: -35.57 };
+    const longe1 = { lat: -15.8, lng: -47.9 };
+    const longe2 = { lat: -23.5, lng: -46.6 };
+    const { centro, z } = enquadrarComVoce([perto, longe1, longe2], voce, L, A);
+    expect(foraDaJanela([perto, longe1, longe2], centro, z, L, A)).toBe(2);
+  });
+
+  // O alvo de toque é de 44px centrado na coordenada: um pin cujo CENTRO está
+  // dentro mas cuja metade sai da janela não é tocável inteiro. Contar como
+  // dentro faria o texto "1 trilha fora" mentir pra menos.
+  //
+  // UMA BORDA POR TESTE, e de propósito. `foraDaJanela` é um OU de quatro
+  // sub-cláusulas, e num OU a cláusula que dispara primeiro esconde as outras:
+  // as trilhas "longe" dos testes acima caem a oeste E ao sul, então `esq` e
+  // `base` são verdadeiras juntas e apagar qualquer uma das duas mantém a
+  // contagem igual. Conferido antes de escrever: com só o teste da borda
+  // esquerda, `dir`, `topo` e `base` podiam ser apagadas com a suíte verde.
+  // Cada coordenada abaixo fica a 12px da sua borda — CENTRO ainda dentro da
+  // caixa, alvo de toque cortado — então é a única sub-cláusula verdadeira, e
+  // ela prova a margem de RAIO_ALVO_TOQUE_PX, não um trivial "saiu da caixa".
+  describe("cada borda tem que contar sozinha", () => {
+    const centro = { lat: -8.2, lng: -35.56 };
+    const z = 11;
+    const grauLng = (metrosPorPixel(centro.lat, z) * (L / 2 - 12)) / 111320;
+    const grauLat = (metrosPorPixel(centro.lat, z) * (A / 2 - 12)) / 111320;
+
+    const bordas: [string, Coord][] = [
+      ["esquerda", { lat: centro.lat, lng: centro.lng - grauLng }],
+      ["direita", { lat: centro.lat, lng: centro.lng + grauLng }],
+      ["topo", { lat: centro.lat + grauLat, lng: centro.lng }],
+      ["base", { lat: centro.lat - grauLat, lng: centro.lng }],
+    ];
+
+    for (const [nome, pino] of bordas) {
+      it(`pin colado na borda ${nome} conta como fora — o alvo de toque não cabe`, () => {
+        expect(foraDaJanela([pino], centro, z, L, A)).toBe(1);
+      });
+
+      // A outra metade da prova: sem ela, um `foraDaJanela` que devolvesse
+      // sempre `coords.length` passaria nos quatro testes acima.
+      it(`o mesmo pin, afastado da borda ${nome}, conta como dentro`, () => {
+        const dentro: Coord = {
+          lat: centro.lat + (pino.lat - centro.lat) * 0.5,
+          lng: centro.lng + (pino.lng - centro.lng) * 0.5,
+        };
+        expect(foraDaJanela([dentro], centro, z, L, A)).toBe(0);
+      });
+    }
   });
 });
