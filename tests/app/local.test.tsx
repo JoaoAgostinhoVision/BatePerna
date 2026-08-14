@@ -150,6 +150,31 @@ describe("o GPS", () => {
     expect(localStorage.getItem(CHAVE_GPS)).toBe("negado");
   });
 
+  // O ramo de erro do buscarGps também grava no aparelho — chave diferente
+  // (CHAVE_GPS, não CHAVE_LOCAL) e vida diferente (dentro do callback de erro
+  // assíncrono do geolocation, não de um handler de clique). Sem o `try/catch`
+  // ali, um `setItem` que estoura derrubaria o próprio reconhecimento do
+  // "negado" — a tela ficaria travada tentando de novo em vez de desistir.
+  //
+  // Chama `pedirGps` direto (capturado do hook), não via clique de botão,
+  // pela mesma razão do teste de `escolher` acima: um clique passa pelo
+  // despacho sintético de evento do React, que no jsdom mascara a exceção do
+  // handler em vez de propagá-la pro `act()`.
+  it("localStorage.setItem falhando no ramo de erro não impede o gps virar 'negado'", async () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("armazenamento cheio");
+    });
+    aparelhoComGps((_ok, erro) => erro({ code: 1 } as GeolocationPositionError));
+    let pedirGpsCaptado: (() => void) | null = null;
+    function Capta() {
+      pedirGpsCaptado = useMexerLocal().pedirGps;
+      return null;
+    }
+    render(<LocalVivo><Espia /><Capta /></LocalVivo>);
+    act(() => { pedirGpsCaptado!(); });
+    expect(screen.getByTestId("espia").textContent).toBe("nao-sei|negado");
+  });
+
   // Estourou o prazo com uma posição guardada em mãos: a guardada continua.
   // Trocar por "não sei" apagaria da tela um km que estava certo.
   it("gps que falha não apaga a localização que já existia", async () => {
