@@ -7,6 +7,7 @@ import Appbar from "./Appbar";
 import BarraNavegacao from "./BarraNavegacao";
 import FolhaTrilhas from "./FolhaTrilhas";
 import HomeViva from "./HomeViva";
+import LocalVivo from "./local";
 import MapaHome from "./MapaHome";
 
 // Compute-on-load: o veredito é a chuva de agora. Página estática congelaria
@@ -46,16 +47,18 @@ export default async function Home() {
 
   return (
     <main className="bp">
-      <HomeViva inicial={Object.fromEntries(leituras)}>
-        <div className="screen">
-          <Appbar comSaida={false} />
-          <MapaHome fichas={fichas} leituras={leituras} />
-          <div className="folha">
-            <FolhaTrilhas pares={pares} />
+      <LocalVivo>
+        <HomeViva inicial={Object.fromEntries(leituras)}>
+          <div className="screen">
+            <Appbar comSaida={false} />
+            <MapaHome fichas={fichas} leituras={Object.fromEntries(leituras)} />
+            <div className="folha">
+              <FolhaTrilhas pares={pares} />
+            </div>
+            <BarraNavegacao aqui="hoje" />
           </div>
-          <BarraNavegacao aqui="hoje" />
-        </div>
-      </HomeViva>
+        </HomeViva>
+      </LocalVivo>
     </main>
   );
 }
