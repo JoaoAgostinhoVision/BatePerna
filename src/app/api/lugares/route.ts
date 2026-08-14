@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 /** Quanto se espera o serviço antes de desistir. Menor que o PRAZO_CLIMA_MS
  *  (4s): aqui a pessoa está digitando e olhando pra tela, não abrindo o app. */
-const PRAZO_MS = 3_000;
+export const PRAZO_MS = 3_000;
 
 /** A busca de cidade passa por aqui, e não direto do celular pro serviço:
  *  mesma disciplina de toda chamada externa deste app, e é o que deixa testar

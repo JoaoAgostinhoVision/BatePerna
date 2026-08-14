@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { GET } from "@/app/api/lugares/route";
+import { GET, PRAZO_MS } from "@/app/api/lugares/route";
 
 afterEach(() => { vi.restoreAllMocks(); });
 
@@ -73,12 +73,19 @@ describe("GET /api/lugares", () => {
   // dois tinha teste — asserção sobre os argumentos, que é o que dá pra provar
   // aqui sem inventar relógio.
   it("chama o serviço com prazo e sem cache", async () => {
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
     const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ results: [] }));
     await GET(pedido("Recife"));
     const [url, opcoes] = spy.mock.calls[0];
     expect(String(url)).toContain("geocoding-api.open-meteo.com");
     expect(opcoes?.cache).toBe("no-store");
     expect(opcoes?.signal).toBeInstanceOf(AbortSignal);
+    // A instância sozinha não prova prazo: `new AbortController().signal`
+    // também é um AbortSignal e nunca aborta. Provar que o signal veio de
+    // `AbortSignal.timeout(PRAZO_MS)` — não só "algum AbortSignal" — é o que
+    // pega a troca por um controller que nunca desiste.
+    expect(timeoutSpy).toHaveBeenCalledWith(PRAZO_MS);
+    expect(opcoes?.signal).toBe(timeoutSpy.mock.results[0]?.value);
   });
 
   // O 503 também não pode ser guardado: um erro em cache é um erro que não
