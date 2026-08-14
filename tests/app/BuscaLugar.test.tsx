@@ -180,6 +180,29 @@ describe("a busca", () => {
     }
   });
 
+  // Task 6, fix round: a mutação `encodeURIComponent(q)` → `q` não mordia
+  // nenhum teste existente — todos buscam nomes sem caractere especial. Sem
+  // encode, "&" na query string ABRE UM PARÂMETRO NOVO em vez de fazer parte
+  // do valor: `q=A&B` vira `q=A` pro servidor, o resto ("B") some sem erro
+  // nenhum na tela. Por isso o caractere do teste é "&", não um acento — a
+  // Task 5 mostrou que fetch/jsdom pode normalizar acento e "provar" nada.
+  it("o texto digitado chega inteiro na URL — '&' não abre um parâmetro novo", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([]));
+      await abrir();
+      const campo = screen.getByRole("textbox");
+      fireEvent.change(campo, { target: { value: "A&B" } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(ESPERA_MS + 50); });
+      expect(spy).toHaveBeenCalledTimes(1);
+      // Codificado, "&" vira %26 e sobrevive dentro do valor de "q". Sem
+      // encode, a URL teria "q=A&B" — dois parâmetros, "B" perdido.
+      expect(String(spy.mock.calls[0][0])).toContain("q=A%26B");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("busca sem resultado diz que não achou", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([]));
     await abrir();
