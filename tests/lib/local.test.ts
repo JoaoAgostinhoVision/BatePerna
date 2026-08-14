@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CHAVE_GPS,
   CHAVE_LOCAL,
   NAO_SEI,
   coordDe,
@@ -46,6 +47,36 @@ describe("lerLocal: nada guardado, ou guardado torto, é 'não sei'", () => {
 
   it("coordenada fora do mundo é recusada", () => {
     expect(lerLocal(JSON.stringify({ tipo: "gps", coord: { lat: 99, lng: -35 }, em: 1 }))).toEqual(NAO_SEI);
+  });
+
+  it("escolhido sem regiao não vira escolhido — regiao é obrigatória como nome", () => {
+    expect(
+      lerLocal(JSON.stringify({ tipo: "escolhido", coord: { lat: -8, lng: -35 }, em: 1, nome: "Gravatá" })),
+    ).toEqual(NAO_SEI);
+  });
+
+  it("escolhido com regiao não-string não vira escolhido", () => {
+    expect(
+      lerLocal(
+        JSON.stringify({ tipo: "escolhido", coord: { lat: -8, lng: -35 }, em: 1, nome: "Gravatá", regiao: 123 }),
+      ),
+    ).toEqual(NAO_SEI);
+  });
+
+  it("gps sem 'em' não vira gps — timestamp é obrigatório", () => {
+    expect(lerLocal(JSON.stringify({ tipo: "gps", coord: { lat: -8, lng: -35 } }))).toEqual(NAO_SEI);
+  });
+
+  it("gps com 'em' não-numérico não vira gps", () => {
+    expect(lerLocal(JSON.stringify({ tipo: "gps", coord: { lat: -8, lng: -35 }, em: "agora" }))).toEqual(NAO_SEI);
+  });
+
+  it("gps com 'em' = NaN não vira gps", () => {
+    expect(lerLocal(JSON.stringify({ tipo: "gps", coord: { lat: -8, lng: -35 }, em: NaN }))).toEqual(NAO_SEI);
+  });
+
+  it("gps com 'em' = Infinity não vira gps", () => {
+    expect(lerLocal(JSON.stringify({ tipo: "gps", coord: { lat: -8, lng: -35 }, em: Infinity }))).toEqual(NAO_SEI);
   });
 
   it("ida e volta preserva o gps", () => {
@@ -109,5 +140,13 @@ describe("lerEstadoGps", () => {
 describe("a chave de armazenamento", () => {
   it("tem prefixo do app — o localStorage é compartilhado com todo o domínio", () => {
     expect(CHAVE_LOCAL.startsWith("bp.")).toBe(true);
+  });
+
+  it("CHAVE_LOCAL tem valor exato — contrato com Tasks 2, 6 e 10", () => {
+    expect(CHAVE_LOCAL).toBe("bp.local");
+  });
+
+  it("CHAVE_GPS tem valor exato — contrato com Tasks 2, 6 e 10", () => {
+    expect(CHAVE_GPS).toBe("bp.gps");
   });
 });
