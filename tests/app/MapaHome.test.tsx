@@ -331,34 +331,52 @@ describe("MapaHome com a localização da pessoa", () => {
   // de quem ficou fora — a fatia central que um iPhone de 375px realmente
   // mostra dentro do overflow:hidden.
   //
-  // A geometria abaixo foi calculada pra separar as duas: com a janela visível
-  // dá **1 fora** (a trilha B cai em left=539,3, muito além do limite de
-  // 328,5); com a caixa de geração dá **0** (left=422,0, dentro do limite de
-  // 458) e o aviso SOME da tela. Os dois casos ficam a ~36px das bordas de
-  // arredondamento, então não é um teste de gume de faca.
+  // A GEOMETRIA, e por que ela é de TRÊS trilhas e não de duas.
   //
-  // Nota honesta sobre o alcance: neste cenário o piso do zoom entra nas duas
-  // larguras (z=8 em ambas, centro em VOCÊ), então o que este teste prende é a
-  // largura passada ao `foraDaJanela`. A largura do `enquadrarComVoce` fica
-  // presa por tabela — se alguém passar 480 lá, o `centro`/`z` mudam nos casos
-  // sem piso e os outros testes deste describe acusam.
+  // Enquanto o enquadramento COUBER, ninguém fica fora por construção: o
+  // `enquadrar` encaixa tudo dentro de `larguraPx - 2×MARGEM_ENQUADRO_PX`, e
+  // como a margem (28) é maior que o raio do alvo de toque (22), nenhuma
+  // trilha chega perto da borda. Ou seja: só existe "trilha fora" quando o
+  // PISO do zoom entra — e aí o centro do mapa é VOCÊ.
+  //
+  // Com o centro em você e o zoom em 8, uma trilha a `dx` pixels de você fica
+  // fora da janela visível se `dx > 153,25`, e fora da caixa de geração só se
+  // `dx > 218`. A faixa entre os dois é onde as duas larguras discordam — e é
+  // preciso uma trilha DENTRO dessa faixa mais uma outra bem longe pra acionar
+  // o piso, porque a própria trilha que aciona o piso já sai da faixa.
+  //
+  //   você  = {-8.2, -35.56}
+  //   perto = {-8.2, -35.56}   em cima de você       → dx = 0      dentro nas duas
+  //   meio  = {-8.2, -34.56}   +1,0° a leste          → dx = 182,0 FORA na visível, dentro na de geração
+  //   longe = {-8.2, -41.56}   −6,0° a oeste          → dx = −1092 fora nas duas (e é quem aciona o piso)
+  //
+  // Conferido: com a janela visível → **2 fora**; trocando só a chamada de
+  // `foraDaJanela` pra caixa de geração → **1 fora**. O `dx` do "meio" tem
+  // 28,8px de folga do limite de baixo e 36,0px do de cima — não é gume de
+  // faca. E é robusto ainda que alguém troque AS DUAS ocorrências da
+  // constante: o piso entra igual, o centro continua em você, e a conta cai
+  // pra 1 do mesmo jeito.
   it("a conta de quem ficou fora usa a janela VISÍVEL, não a caixa de geração", async () => {
     const perto = fichaFake("perto");
     perto.condicao.coords = { lat: -8.2, lng: -35.56 };
+    const meio = fichaFake("meio");
+    meio.condicao.coords = { lat: -8.2, lng: -34.56 };
     const longe = fichaFake("longe");
-    longe.condicao.coords = { lat: -8.2, lng: -33.56 };
+    longe.condicao.coords = { lat: -8.2, lng: -41.56 };
+    const tres = [perto, meio, longe];
     localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
       tipo: "gps", coord: { lat: -8.2, lng: -35.56 }, em: 1_800_000_000,
     }));
-    const duas = Object.fromEntries(
-      [perto, longe].map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
+    const leiturasTres = Object.fromEntries(
+      tres.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
     );
     const { container, findByTestId } = render(
-      <LocalVivo><MapaHome fichas={[perto, longe]} leituras={duas} /></LocalVivo>,
+      <LocalVivo><MapaHome fichas={tres} leituras={leiturasTres} /></LocalVivo>,
     );
     await findByTestId("voce");
-    // Com MAPA_LARGURA_PX no lugar da janela visível, este elemento nem existe.
-    expect(container.querySelector(".mapa-fora")?.textContent).toBe("1 trilha fora do mapa");
+    // Com MAPA_LARGURA_PX no lugar da janela visível, a trilha "meio" passa a
+    // contar como dentro e este texto vira "1 trilha fora do mapa".
+    expect(container.querySelector(".mapa-fora")?.textContent).toBe("2 trilhas fora do mapa");
   });
 
   // O `"use client"` é o coração da ATENÇÃO desta task, e o jsdom NÃO o prova:
