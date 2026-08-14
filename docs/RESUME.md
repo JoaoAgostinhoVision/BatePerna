@@ -19,29 +19,36 @@ foi respondida (é o §1 da spec).
 1. **Confira o chão em silêncio** (sem narrar):
    - `git branch --show-current` → deve ser **`daqui-e-filtros`**. Se estiver em `main`, é só
      trocar; a branch existe e tem os commits.
-   - `git status --short` → **provavelmente vai ter `tests/app/local.test.tsx` modificado sem
-     commit.** É o conserto da Task 2 que não terminou. Veja o passo 3.
+   - `git status --short` → **limpo**.
    - `git log --oneline 8c88415..HEAD` → os commits da rodada.
-   - `npm test` → a base era **315/315** com o último commit (`e4dbae2`).
+   - `npm test` → **317/317** (conferido no fim da sessão).
 
 2. **Leia o ledger:** `.superpowers/sdd/2026-08-13-daqui-e-filtros/progress.md`. Ele é a memória
    da execução — tem a varredura de pré-voo, o ruling da ordem, e o estado de cada task. **Se ele
    tiver sumido** (`git clean`), reconstrua pelo `git log` e por este arquivo.
 
-3. **Resolva a Task 2 antes de qualquer coisa.** Ela estava no **fix round 1/5**, com um achado
-   Important em aberto:
-   > Os três `try/catch` de `localStorage` em `src/app/local.tsx` (em `escolher`, no ramo de erro
-   > do `buscarGps`, e no efeito de montagem) **não têm teste nenhum**. Apagar os três não derruba
-   > nenhum dos 315 testes. Precisa de: um teste com `setItem` estourando (o `escolher` ainda tem
-   > que atualizar o estado em memória) e um com `getItem` estourando (montar não pode quebrar;
-   > fica `nao-sei`), cada um provado por mutação **de um guard por vez**. Restaurar os stubs no
-   > `afterEach`, senão vazam pro resto da suíte.
-   > Junto: tirar o `beforeEach` importado e nunca usado em `tests/app/local.test.tsx`.
+3. **Feche a Task 2 antes de qualquer coisa: falta UMA coisa nela — a re-revisão escopada.**
 
-   - Se o arquivo estiver modificado, **veja o que já está lá** — pode estar quase pronto. Rode
-     `npx vitest run tests/app/local.test.tsx`, complete o que faltar, e faça o commit.
-   - Depois, **re-revisão escopada** do diff do conserto (`review-package` de `e4dbae2` até HEAD)
-     e siga o laço normal.
+   O conserto do fix round 1/5 **foi entregue e commitado** (`ee28635`, 317/317). O achado era:
+   > Os três `try/catch` de `localStorage` em `src/app/local.tsx` (em `escolher`, no ramo de erro
+   > do `buscarGps`, e no efeito de montagem) não tinham teste nenhum — apagar os três não
+   > derrubava nada.
+
+   O implementador acrescentou dois testes (`setItem` estourando e `getItem` estourando), provou
+   cada um por mutação de um guard por vez, e diz que o `local.tsx` ficou **byte-idêntico** ao
+   `e4dbae2`.
+
+   **Ele levantou uma ressalva que a re-revisão precisa julgar** (não decida por conta própria):
+   ele cobriu **2 dos 3 lugares** que o revisor nomeou — deixou de fora o guard de escrita no ramo
+   de erro do `buscarGps`, argumentando que é o mesmo padrão `setItem`-estoura já provado pelo
+   teste do `escolher`, e que duplicar seria repetição. **Pode ser razoável, mas quem decide é a
+   re-revisão**, não ele e não você de cabeça — é exatamente o tipo de "eu me dou nota" que o
+   processo não aceita.
+
+   **O que fazer:** gerar o pacote (`review-package` do plano, de `e4dbae2` até HEAD) e despachar
+   a re-revisão escopada com os quatro achados originais + essa ressalva, pedindo veredicto
+   explícito sobre o terceiro guard. Se vier ADDRESSED, a Task 2 fecha; se vier NOT ADDRESSED, é
+   um fix round 2/5 de um teste só.
 
 4. **Retome a execução em `docs/superpowers/plans/2026-08-13-daqui-e-filtros.md`**, da Task 3 em
    diante. **A ordem de execução tem um ruling e NÃO é a numeração:**
@@ -97,10 +104,10 @@ disse que não incomoda**. É consequência inevitável da regra do primeiro ren
 | Task | Estado | Commits |
 |---|---|---|
 | 1 — localização pura (`src/lib/local.ts`) | **completa, revisão limpa** | `f07da0c`, `ecc0fc9` |
-| 2 — contexto (`src/app/local.tsx`) | **conserto em voo** (fix round 1/5) | `e4dbae2` + o que faltou |
+| 2 — contexto (`src/app/local.tsx`) | conserto feito, **falta só a re-revisão** | `e4dbae2`, `ee28635` |
 | 3 a 12 | não começadas | — |
 
-Suíte: **315/315** no `e4dbae2` (a base da rodada era 278).
+Suíte: **317/317** (a base da rodada era 278). Árvore limpa em `164774e`.
 
 ## Invariantes que não podem ser quebradas
 
