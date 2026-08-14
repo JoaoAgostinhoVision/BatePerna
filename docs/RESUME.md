@@ -5,8 +5,8 @@
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
 **Última parada:** 2026-08-14. **Estado: RODADA EM ANDAMENTO.**
-Branch **`daqui-e-filtros`**, saindo de `main` em `8c88415`. **Tasks 1 e 2 de 12 fechadas**,
-as duas com revisão limpa. Suíte em **318/318**.
+Branch **`daqui-e-filtros`**, saindo de `main` em `8c88415`. **Tasks 1–4 de 12 fechadas**,
+todas com revisão. Suíte em **344/344**.
 
 ---
 
@@ -21,13 +21,13 @@ foi respondida (é o §1 da spec).
      trocar; a branch existe e tem os commits.
    - `git status --short` → **limpo**.
    - `git log --oneline 8c88415..HEAD` → os commits da rodada.
-   - `npm test` → **318/318** (conferido no fim da sessão).
+   - `npm test` → **344/344** (conferido no fim da sessão).
 
 2. **Leia o ledger:** `.superpowers/sdd/2026-08-13-daqui-e-filtros/progress.md`. Ele é a memória
    da execução — tem a varredura de pré-voo, o ruling da ordem, e o estado de cada task. **Se ele
    tiver sumido** (`git clean`), reconstrua pelo `git log` e por este arquivo.
 
-3. **Tasks 1 e 2 estão FECHADAS. Não as reabra.** A Task 2 custou dois fix rounds, os dois
+3. **Tasks 1 a 4 estão FECHADAS. Não as reabra.** A Task 2 custou dois fix rounds, os dois
    pela mesma causa (guard sem prova de mutação), e a segunda re-revisão devolveu ADDRESSED
    depois de rodar a mutação ela mesma. Fica o precedente, porque ele decide discussões
    futuras: o implementador argumentou que um guard não precisava de teste próprio porque
@@ -35,7 +35,14 @@ foi respondida (é o §1 da spec).
    suíte ficar 12/12 verde, e o argumento caiu.** A régua deste projeto é literal — *apagar
    a linha faz um teste falhar* — e não "existe prova parecida em outro lugar".
 
-4. **Retome a execução em `docs/superpowers/plans/2026-08-13-daqui-e-filtros.md`**, da Task 3 em
+   **Precedente irmão, da Task 3:** um Important pode ser real e mesmo assim **não abrir fix
+   round**, quando não há linha a consertar naquela camada. A revisão da Task 3 mostrou que
+   nada em `tests/lib/mapa.test.ts` distingue a janela visível (350,5) da caixa de geração
+   (480) — mas as funções recebem a largura como argumento, então isso é **improvável de
+   provar na camada pura**. O achado foi transferido pra Task 4, onde virou teste que morde.
+   **Quando transferir um achado assim, registre o ruling** em vez de deixá-lo sumir.
+
+4. **Retome a execução em `docs/superpowers/plans/2026-08-13-daqui-e-filtros.md`**, da Task 5 em
    diante. **A ordem de execução tem um ruling e NÃO é a numeração:**
 
    > **1, 2, 3, 4, 5, 6, 8, 7, 9, 10, 11, 12**
@@ -114,9 +121,11 @@ disse que não incomoda**. É consequência inevitável da regra do primeiro ren
 |---|---|---|
 | 1 — localização pura (`src/lib/local.ts`) | **completa, revisão limpa** | `f07da0c`, `ecc0fc9` |
 | 2 — contexto (`src/app/local.tsx`) | **completa**, 2 fix rounds, re-revisão limpa | `e4dbae2`, `ee28635`, `86e9658` |
-| 3 a 12 | não começadas | — |
+| 3 — enquadrar com você (`src/lib/mapa.ts`) | **completa**, revisão Approved with comments | `6ae990a` |
+| 4 — o mapa da home usa a localização | **completa**, 1 fix round, revisão **Approved** | `34f74bb`, `2feae91` |
+| 5 a 12 | não começadas | — |
 
-Suíte: **318/318** (a base da rodada era 278).
+Suíte: **344/344** (a base da rodada era 278).
 
 **Briefs das Tasks 3, 4 e 5 já emendados pelo pré-voo** (ver item 6 acima). Eles vivem em
 `.superpowers/sdd/2026-08-13-daqui-e-filtros/task-N-brief.md`, que é **scratch git-ignorado**
@@ -159,6 +168,16 @@ Desta rodada (estão no ledger, o revisor final vai triar):
 - `src/lib/local.ts:53-54` — limites 90/180 sem comentário de derivação.
 - `src/app/local.tsx` — os dois `Provider` recebem objeto literal novo a cada render.
 - Sem de-dupe de `pedirGps()` em toque duplo.
+- `src/app/page.tsx` — `Object.fromEntries(leituras)` computado duas vezes (desperdício; nenhum
+  consumidor depende de identidade referencial).
+- `.voce-pin` sem `aria-hidden` explícito (vive dentro do `role="img"` que já existia).
+- **DECISÃO DE PRODUTO pendente, não é só limpeza:** `enquadrarComVoce([], voce, ...)` devolve
+  zoom 11 (~26 km), enquanto uma trilha só, longe demais, cai no piso de zoom 8 (~212 km) —
+  zero trilhas fica **mais apertado** que uma trilha distante. Assimetria herdada de reusar o
+  `enquadrar`, que ninguém decidiu. Hoje é inalcançável, **mas as tasks de filtro desta mesma
+  rodada podem zerar a lista.** Decidir de propósito ao pré-voar a task de filtro; se for
+  pergunta pro João, é curta: *"filtrou e não sobrou nada — o mapa mostra a sua vizinhança ou
+  a região toda?"*
 
 (O `beforeEach` morto em `tests/app/local.test.tsx` saiu no fix round 1/5 da Task 2.)
 
@@ -190,9 +209,23 @@ Herdados:
    e rodar o JSON contra o schema).
 5. **Nenhum teste desta suíte mede geometria renderizada.** Se um número de pixel importa, medir
    em navegador é a única prova. "Parece certo" não é resposta; "não medi" é.
-6. **Defeito de junção não aparece na revisão de task** — por isso a revisão da branch inteira é
+   **Corolário provado em 2026-08-14: o jsdom também não enxerga server vs client.** Apagar o
+   `"use client"` do `MapaHome` deixa **26 dos 27** testes verdes — inclusive os que exercitam
+   a localização de ponta a ponta — porque o jsdom renderiza tudo como cliente. Só a asserção
+   de FONTE (ler o arquivo e conferir a primeira linha) acusa. Mesma coisa com o `<LocalVivo>`
+   do `page.tsx`: tirá-lo deixa os 16 testes do `MapaHome.test.tsx` verdes, porque eles
+   embrulham o provedor na mão. **Para o que o jsdom não vê, a prova é asserção de fonte ou
+   render do ponto de uso real** — e esses testes "feios" são os que separam "passou" de
+   "funciona no celular".
+6. **Mandar o implementador PARAR quando a mutação não morde funciona — e duas vezes nesta
+   rodada o erro era meu, não dele.** Na Task 4 ele provou com teste-sonda que uma mutação do
+   meu brief não derrubava nada, e parou em vez de afrouxar a asserção; refiz a conta e ele
+   estava certo. Duas outras vezes a instrução "se a contagem não bater, não ajuste o
+   relatório, descubra por quê" pegou erros de aritmética meus. **Escreva as duas instruções
+   em todo despacho.**
+7. **Defeito de junção não aparece na revisão de task** — por isso a revisão da branch inteira é
    obrigatória. Em três rodadas seguidas ela achou o que nenhuma revisão de task pegou.
-7. **O plano é o elo fraco.** Quando o revisor rotula um achado "plan-mandated", quase sempre quer
+8. **O plano é o elo fraco.** Quando o revisor rotula um achado "plan-mandated", quase sempre quer
    dizer que a lista de testes do plano tinha buraco — não que o revisor esteja errado.
 
 ## Fronteira do João (o que só ele faz)
