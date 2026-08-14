@@ -216,4 +216,30 @@ describe("a busca", () => {
     expect(regra, "faltou a regra .busca-campo").not.toBeNull();
     expect(regra![0]).toMatch(/font-size:\s*16px/);
   });
+
+  // O segundo toque na pílula é o ÚNICO jeito de fechar a busca sem escolher
+  // um resultado. Sem essa prova, o ternário `soGps ? pedirGps() :
+  // setFase(fase === "aberto" ? "fechado" : "aberto")` pode virar
+  // `setFase("aberto")` fixo em silêncio, e a pessoa fica presa na tela de
+  // busca até escolher alguma cidade — inclusive uma errada, só pra sair
+  // dali. O rótulo da pílula não muda com `fase` (rotuloPilula só olha
+  // `local`/`gps`), então o mesmo seletor de `abrir()` continua valendo.
+  it("o segundo toque na pílula fecha a busca sem escolher nada", async () => {
+    await abrir();
+    expect(screen.getByRole("textbox")).toBeTruthy();
+    const pilula = await screen.findByRole("button", { name: /escolher onde estou/ });
+    await act(async () => { pilula.click(); });
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
+  // O `"use client"` é o que faz `getCurrentPosition`/`fetch` disparar a
+  // partir de clique de verdade no aparelho. jsdom não distingue server de
+  // client component — apagar a diretiva deixa a suíte inteira verde e o
+  // recurso morto em produção. Mesmo padrão de asserção de fonte do
+  // `MapaHome.tsx` em tests/app/MapaHome.test.tsx (Task 4: apagar a diretiva
+  // lá deixou 26 de 27 testes verdes — só essa asserção acusou).
+  it("BuscaLugar é client component — sem isso o GPS e a busca não disparam em produção", () => {
+    const fonte = readFileSync(path.join(process.cwd(), "src", "app", "BuscaLugar.tsx"), "utf8");
+    expect(fonte.trimStart().startsWith('"use client"')).toBe(true);
+  });
 });
