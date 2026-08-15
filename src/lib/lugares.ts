@@ -4,6 +4,16 @@
  *  Puro, sem fetch: quem busca é a rota. Aqui mora o que precisa de teste —
  *  a forma da URL e o que se aceita como um lugar de verdade. */
 
+/** Quanto a rota espera o serviço de geocoding antes de desistir. Menor que o
+ *  PRAZO_CLIMA_MS (4s): aqui a pessoa está digitando e olhando pra tela, não
+ *  abrindo o app.
+ *
+ *  Mora AQUI, e não no `route.ts` que a usa, porque o Next restringe o que um
+ *  route handler pode exportar: qualquer export além de GET/POST/dynamic/etc
+ *  quebra o `next build` com "Type '3000' is not assignable to type 'never'".
+ *  A suíte de testes não pega isso — o vitest não roda o build. */
+export const PRAZO_BUSCA_MS = 3_000;
+
 export type Lugar = { nome: string; regiao: string; pais: string; lat: number; lng: number };
 
 /** Quantos resultados. Cinco cabem na tela sem rolar e já bastam pra

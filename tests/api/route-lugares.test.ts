@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { GET, PRAZO_MS } from "@/app/api/lugares/route";
+import { GET } from "@/app/api/lugares/route";
+import { PRAZO_BUSCA_MS } from "@/lib/lugares";
 
 afterEach(() => { vi.restoreAllMocks(); });
 
@@ -82,9 +83,9 @@ describe("GET /api/lugares", () => {
     expect(opcoes?.signal).toBeInstanceOf(AbortSignal);
     // A instância sozinha não prova prazo: `new AbortController().signal`
     // também é um AbortSignal e nunca aborta. Provar que o signal veio de
-    // `AbortSignal.timeout(PRAZO_MS)` — não só "algum AbortSignal" — é o que
+    // `AbortSignal.timeout(PRAZO_BUSCA_MS)` — não só "algum AbortSignal" — é o que
     // pega a troca por um controller que nunca desiste.
-    expect(timeoutSpy).toHaveBeenCalledWith(PRAZO_MS);
+    expect(timeoutSpy).toHaveBeenCalledWith(PRAZO_BUSCA_MS);
     expect(opcoes?.signal).toBe(timeoutSpy.mock.results[0]?.value);
   });
 

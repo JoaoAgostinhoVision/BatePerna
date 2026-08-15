@@ -1,10 +1,6 @@
-import { lerLugares, urlBusca } from "@/lib/lugares";
+import { PRAZO_BUSCA_MS, lerLugares, urlBusca } from "@/lib/lugares";
 
 export const dynamic = "force-dynamic";
-
-/** Quanto se espera o serviço antes de desistir. Menor que o PRAZO_CLIMA_MS
- *  (4s): aqui a pessoa está digitando e olhando pra tela, não abrindo o app. */
-export const PRAZO_MS = 3_000;
 
 /** A busca de cidade passa por aqui, e não direto do celular pro serviço:
  *  mesma disciplina de toda chamada externa deste app, e é o que deixa testar
@@ -18,7 +14,7 @@ export async function GET(req: Request): Promise<Response> {
   try {
     const res = await fetch(urlBusca(q), {
       cache: "no-store",
-      signal: AbortSignal.timeout(PRAZO_MS),
+      signal: AbortSignal.timeout(PRAZO_BUSCA_MS),
     });
     if (!res.ok) throw new Error(String(res.status));
     return Response.json(lerLugares(await res.json()), { headers: cabecalho });
