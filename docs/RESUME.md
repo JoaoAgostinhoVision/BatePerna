@@ -4,9 +4,13 @@
 > `.superpowers/sdd/2026-08-13-daqui-e-filtros/progress.md`, que é **scratch git-ignorado** —
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-14. **Estado: RODADA EM ANDAMENTO.**
-Branch **`daqui-e-filtros`**, saindo de `main` em `8c88415`. **Tasks 1–8 de 12 fechadas**,
-todas com revisão. Suíte em **426/426**, e o `npm run build` passa.
+**Última parada:** 2026-08-14, **encerrada a pedido dele** ("bora deixar para depois").
+**Estado: RODADA EM ANDAMENTO, parada num ponto limpo.**
+Branch **`daqui-e-filtros`** em **`d231eb0`**, saindo de `main` em `8c88415`.
+**Tasks 1–8 de 12 fechadas**, todas com revisão (e re-revisão onde houve fix round).
+Suíte em **426/426**, **`npm run build` passa**, árvore limpa.
+**Nada em voo:** nenhum agente rodando, nenhum fix round aberto, nenhuma decisão pendurada.
+**Faltam as Tasks 9, 10, 11 e 12** — os filtros e a barra fixa.
 
 ---
 
@@ -57,6 +61,28 @@ foi respondida (é o §1 da spec).
 5. **Método: SDD com subagentes, e o João já autorizou nesta rodada** (ele escolheu a opção 1
    quando ofereci). Implementador → revisão por task com dois veredictos → conserto pelo mesmo
    implementador → re-revisão escopada → **revisão da branch inteira no fim, sem exceção.**
+
+   **A Task 9 já tem meio pré-voo feito.** O brief no disco
+   (`.superpowers/sdd/.../task-9-brief.md`, **scratch git-ignorado**) já recebeu:
+   - **A BORDA — era furo de ESPECIFICAÇÃO, não de teste.** "até 2h" com uma trilha de
+     exatamente 120min: passa ou não? Eu só tinha dado 90 e 300, e dois implementadores
+     razoáveis decidiriam diferente. **CRAVADO: o teto é INCLUSIVO nos dois recortes**
+     (duração e distância) — é como se lê em português, e o contrário esconde justamente o
+     caso que a pessoa tinha em mente. Testes de 120/121 já escritos.
+   - O degrau de 240 (só o 120 era exercitado) e as três palavras de esforço uma a uma.
+
+   **O que FALTA pré-voar na Task 9** (varrido, ainda NÃO escrito no brief):
+   1. **`contarLigados` conta 5 recortes e o teste só prova 3** — apagar `esforco` e
+      `duracaoMax` do array continua devolvendo 3. Falta o caso com os cinco ligados.
+   2. **`lerFiltros` valida 5 campos, e o teste prova em bloco, não campo a campo** — mesma
+      família do OU. `lerFiltros({soGratis: "sim"})` deve virar `false` e nada prova isso.
+   3. **A borda da DISTÂNCIA** (o teste novo cobre a da duração; falta o par exato de 30 km).
+   4. Conferir se `confia: false` deixa os OUTROS recortes funcionando — hoje só se prova que
+      ele torna o `daHoje` inerte.
+
+   **Se o brief tiver sumido** (`git clean -fdx` apaga o `.superpowers/`), reextraia com
+   `scripts/task-brief` e reaplique os quatro itens acima **mais os três já feitos** — a
+   reextração devolve o brief ORIGINAL, com os furos.
 
 6. **A lição que as duas primeiras tasks já ensinaram, e que muda os briefs seguintes:** os
    implementadores estão **acertando o código e errando onde o meu plano deixou o teste fraco**.
@@ -191,6 +217,12 @@ Desta rodada (estão no ledger, o revisor final vai triar):
 - `src/app/page.tsx` — `Object.fromEntries(leituras)` computado duas vezes (desperdício; nenhum
   consumidor depende de identidade referencial).
 - `.voce-pin` sem `aria-hidden` explícito (vive dentro do `role="img"` que já existia).
+- Falta um `it("sem localização, a ficha mostra o BOTÃO")` renderizando `[slug]/page.tsx` de
+  verdade. Hoje o caso oposto é coberto indiretamente (estrutura do componente + duas
+  mutações), mas não por asserção explícita no ponto de uso.
+- O comentário do `route.ts` afirma que o prazo da busca é menor que o `PRAZO_CLIMA_MS` e
+  **essa relação não tem teste**, embora o padrão exista (`weather.test.ts` testa
+  `PRAZO_CLIMA_MS < PRAZO_REDE_MS`). A constante virou `PRAZO_BUSCA_MS` em `src/lib/lugares.ts`.
 - `src/app/api/lugares/route.ts` — o comentário afirma que `PRAZO_MS` é menor que
   `PRAZO_CLIMA_MS` e **essa relação não tem teste**, embora o padrão já exista na suíte
   (`tests/lib/weather.test.ts:168-171` testa `PRAZO_CLIMA_MS < PRAZO_REDE_MS` pelo mesmo
