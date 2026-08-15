@@ -43,7 +43,14 @@ export default function CartaoTrilha({
     voce ? formatarDistanciaCurta(distanciaKm(voce, ficha.condicao.coords)) : null,
     ficha.duracao ? formatarDuracao(ficha.duracao) : null,
     ficha.esforco ?? null,
-    ficha.custo.tag === "pago" && ficha.custo.valor ? ficha.custo.valor.split(" — ")[0] : null,
+    // `custo.valor` é texto livre (schema não garante separador nenhum). O
+    // JSON real da Rampa usa " · ", não " — " como um teste antigo supunha —
+    // por isso o corte aceita os dois. Sem separador algum, o split não acha
+    // nada e devolve a string inteira (index [0]), que é o comportamento
+    // certo pra um custo curto como "R$ 10".
+    ficha.custo.tag === "pago" && ficha.custo.valor
+      ? ficha.custo.valor.split(/\s[—·]\s/)[0]
+      : null,
   ].filter(Boolean);
 
   return (

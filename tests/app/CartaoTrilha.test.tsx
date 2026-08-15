@@ -42,6 +42,32 @@ describe("a linha de metadados do cartão", () => {
     expect(meta).not.toContain("cobrado no portão");
   });
 
+  // Este é o teste que teria pego o defeito real: o de cima usa ficha
+  // SINTÉTICA com "—" (suposição errada de um brief antigo); o JSON de
+  // verdade da Rampa usa "·". Ficha sintética só prova a função; só a ficha
+  // real prova que ela funciona com o conteúdo que existe. `ficha` aqui é
+  // getFichasComCondicao()[0] sem override nenhum — é a Rampa de verdade.
+  // Se a Rampa um dia mudar de custo, este teste QUEBRA — é esperado: o
+  // conteúdo mudou, alguém tem que olhar a tela de novo, não é bug.
+  it("com a ficha real da Rampa, mostra só a parte curta do custo (separador '·')", () => {
+    expect(ficha.custo.tag).toBe("pago");
+    expect(ficha.custo.valor).toContain(" · ");
+    const { container } = render(<CartaoTrilha ficha={ficha} inicial={leitura} />);
+    const meta = container.querySelector(".cartao-meta")?.textContent ?? "";
+    expect(meta).toContain("R$ 5 por pessoa");
+    expect(meta).not.toContain("cobrado no portão");
+  });
+
+  // custo.valor é texto livre; nada no schema garante separador nenhum. Um
+  // custo curto sem "—" nem "·" tem que continuar aparecendo inteiro, não
+  // sumir nem virar string vazia.
+  it("custo sem separador continua aparecendo inteiro", () => {
+    const semSeparador = { ...ficha, custo: { tag: "pago" as const, valor: "R$ 10" } };
+    const { container } = render(<CartaoTrilha ficha={semSeparador} inicial={leitura} />);
+    const meta = container.querySelector(".cartao-meta")?.textContent ?? "";
+    expect(meta).toContain("R$ 10");
+  });
+
   it("ficha gratuita não ganha linha de custo", () => {
     const gratis = { ...ficha, custo: { tag: "gratis" as const } };
     const { container } = render(<CartaoTrilha ficha={gratis} inicial={leitura} />);
