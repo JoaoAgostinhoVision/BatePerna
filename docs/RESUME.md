@@ -6,7 +6,7 @@
 
 **Última parada:** 2026-08-14, **encerrada a pedido dele** ("bora deixar para depois").
 **Estado: RODADA EM ANDAMENTO, parada num ponto limpo.**
-Branch **`daqui-e-filtros`** em **`d231eb0`**, saindo de `main` em `8c88415`.
+Branch **`daqui-e-filtros`**, saindo de `main` em `8c88415`.
 **Tasks 1–8 de 12 fechadas**, todas com revisão (e re-revisão onde houve fix round).
 Suíte em **426/426**, **`npm run build` passa**, árvore limpa.
 **Nada em voo:** nenhum agente rodando, nenhum fix round aberto, nenhuma decisão pendurada.
@@ -33,6 +33,10 @@ foi respondida (é o §1 da spec).
    da execução — tem a varredura de pré-voo, o ruling da ordem, e o estado de cada task. **Se ele
    tiver sumido** (`git clean`), reconstrua pelo `git log` e por este arquivo.
 
+   **Os briefs das tasks que faltam NÃO dependem dele.** Estão versionados em
+   `docs/superpowers/briefs/` (com um `README.md` explicando o estado do pré-voo de cada uma),
+   justamente porque as emendas do pré-voo são trabalho real e sumiriam com um `git clean`.
+
 3. **Tasks 1 a 8 estão FECHADAS. Não as reabra.** A Task 2 custou dois fix rounds, os dois
    pela mesma causa (guard sem prova de mutação), e a segunda re-revisão devolveu ADDRESSED
    depois de rodar a mutação ela mesma. Fica o precedente, porque ele decide discussões
@@ -53,17 +57,20 @@ foi respondida (é o §1 da spec).
 
    > **1, 2, 3, 4, 5, 6, 8, 7, 9, 10, 11, 12**
 
-   A Task 7 (km no cartão) escreve `ficha.esforco` e `ficha.duracao`, que só nascem no schema na
-   Task 8; na ordem escrita o `tsc` quebra. **Os 12 briefs já estão extraídos** em
-   `.superpowers/sdd/2026-08-13-daqui-e-filtros/task-N-brief.md` — se sumiram, o script é
-   `scripts/task-brief` da skill `subagent-driven-development`.
+   O ruling existia porque a Task 7 escreve `ficha.esforco`/`ficha.duracao`, que só nascem no
+   schema na Task 8 — na ordem escrita o `tsc` quebrava. **Isso já passou:** de 9 a 12 a ordem
+   é a numérica.
+
+   **Os briefs de 9 a 12 estão em `docs/superpowers/briefs/`** (versionados). O
+   `README.md` de lá diz, task a task, o que o pré-voo já emendou e o que falta — comece por
+   ele. A cópia em `.superpowers/sdd/.../task-N-brief.md` é a mesma coisa, mas é scratch.
 
 5. **Método: SDD com subagentes, e o João já autorizou nesta rodada** (ele escolheu a opção 1
    quando ofereci). Implementador → revisão por task com dois veredictos → conserto pelo mesmo
    implementador → re-revisão escopada → **revisão da branch inteira no fim, sem exceção.**
 
-   **A Task 9 já tem meio pré-voo feito.** O brief no disco
-   (`.superpowers/sdd/.../task-9-brief.md`, **scratch git-ignorado**) já recebeu:
+   **A Task 9 já tem meio pré-voo feito** — o detalhe completo está em
+   `docs/superpowers/briefs/README.md`. Em resumo, o brief já recebeu:
    - **A BORDA — era furo de ESPECIFICAÇÃO, não de teste.** "até 2h" com uma trilha de
      exatamente 120min: passa ou não? Eu só tinha dado 90 e 300, e dois implementadores
      razoáveis decidiriam diferente. **CRAVADO: o teto é INCLUSIVO nos dois recortes**
@@ -80,9 +87,8 @@ foi respondida (é o §1 da spec).
    4. Conferir se `confia: false` deixa os OUTROS recortes funcionando — hoje só se prova que
       ele torna o `daHoje` inerte.
 
-   **Se o brief tiver sumido** (`git clean -fdx` apaga o `.superpowers/`), reextraia com
-   `scripts/task-brief` e reaplique os quatro itens acima **mais os três já feitos** — a
-   reextração devolve o brief ORIGINAL, com os furos.
+   (Nada disso se perde num `git clean`: o brief emendado está versionado em
+   `docs/superpowers/briefs/task-9-filtros-puros.md`.)
 
 6. **A lição que as duas primeiras tasks já ensinaram, e que muda os briefs seguintes:** os
    implementadores estão **acertando o código e errando onde o meu plano deixou o teste fraco**.
