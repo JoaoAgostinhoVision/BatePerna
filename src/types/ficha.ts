@@ -27,6 +27,11 @@ export const discriminadorSchema = z.object({
   permissao_abortar: z.string(),
 });
 
+/** Quanto o corpo sofre. Três degraus e só: mais que isso e ninguém sabe a
+ *  diferença entre o segundo e o terceiro. */
+export const esforcoSchema = z.enum(["leve", "media", "puxada"]);
+export type Esforco = z.infer<typeof esforcoSchema>;
+
 export const fichaSchema = z.object({
   slug: z.string(),
   modos: z.array(z.string()),
@@ -40,6 +45,13 @@ export const fichaSchema = z.object({
   condicao: condicaoSchema,
   discriminador: discriminadorSchema,
   custo: z.object({ tag: z.enum(["gratis", "pago"]), valor: z.string().optional() }),
+  // Opcionais porque são FATO DE ROTEIRO — quem responde é quem conhece o
+  // lugar, não quem escreve o código. A ficha que existe hoje não os tem, e
+  // obrigatórios eles derrubariam o carregamento dela.
+  esforco: esforcoSchema.optional(),
+  // Minutos, não texto: é o filtro que compara. `duracao: "1h30"` obrigaria a
+  // interpretar português na hora de decidir se cabe numa manhã.
+  duracao: z.number().int().positive().optional(),
 });
 
 export type Waypoint = z.infer<typeof waypointSchema>;

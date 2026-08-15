@@ -1,8 +1,9 @@
-import fs from "node:fs";
+import fs, { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { getFicha, getAllFichas, getFichasComCondicao, loadAll, ordenarPorNome } from "@/lib/ficha";
+import { fichaSchema } from "@/types/ficha";
 import type { Ficha } from "@/types/ficha";
 
 // Ficha mínima e sintética — só o que ordenarPorNome lê (o nome do primeiro
@@ -103,6 +104,56 @@ function dirSintetico(arquivos: Record<string, unknown>): string {
   }
   return dir;
 }
+
+describe("esforço e duração", () => {
+  const base = JSON.parse(readFileSync(
+    path.join(process.cwd(), "content", "fichas", "rampa-do-pepe.json"), "utf8"));
+
+  it("são opcionais — a ficha que existe hoje não os tem e tem que carregar", () => {
+    expect(() => fichaSchema.parse(base)).not.toThrow();
+  });
+
+  it("aceita os três esforços", () => {
+    for (const e of ["leve", "media", "puxada"]) {
+      expect(() => fichaSchema.parse({ ...base, esforco: e })).not.toThrow();
+    }
+  });
+
+  it("recusa esforço inventado — o filtro compara contra estes três e mais nenhum", () => {
+    expect(() => fichaSchema.parse({ ...base, esforco: "moderada" })).toThrow();
+  });
+
+  // Minutos, não texto: o filtro compara número. "1h30" obrigaria a
+  // interpretar português na hora de filtrar.
+  it("duração é número de minutos, positivo", () => {
+    expect(() => fichaSchema.parse({ ...base, duracao: 90 })).not.toThrow();
+    expect(() => fichaSchema.parse({ ...base, duracao: "1h30" })).toThrow();
+    expect(() => fichaSchema.parse({ ...base, duracao: 0 })).toThrow();
+    expect(() => fichaSchema.parse({ ...base, duracao: -30 })).toThrow();
+  });
+
+  // ——— os dois abaixo vieram do pré-voo desta task.
+
+  // O `.int()` não tinha prova: 90, "1h30", 0 e -30 são pegos por `z.number()`
+  // e `.positive()`, então apagar `.int()` deixava a suíte verde. E meia hora
+  // vira 30 na tela, mas 90,5 minutos viraria "90,5 min" — número quebrado
+  // numa linha que a pessoa lê de relance no portão.
+  it("duração fracionada é recusada — minuto quebrado não existe pra quem lê", () => {
+    expect(() => fichaSchema.parse({ ...base, duracao: 90.5 })).toThrow();
+  });
+
+  // TODOS os testes acima usam `not.toThrow()` / `toThrow()`, e NENHUM olha o
+  // que sai do parse. Isso importa porque o Zod, por padrão, DESCARTA chave
+  // desconhecida em silêncio em vez de reclamar: se alguém escrever o campo
+  // errado no schema (ou esquecê-lo), `parse({...base, esforco: "leve"})`
+  // continua não estourando — só devolve um objeto sem `esforco`. E é o valor
+  // que sai daqui que a Task 7 vai ler pra desenhar a linha do cartão.
+  it("os dois campos SOBREVIVEM ao parse — não basta não estourar", () => {
+    const lido = fichaSchema.parse({ ...base, esforco: "puxada", duracao: 90 });
+    expect(lido.esforco).toBe("puxada");
+    expect(lido.duracao).toBe(90);
+  });
+});
 
 describe("loadAll: slug repetido não pode divergir entre telas", () => {
   it("dois JSONs com o mesmo slug estouram, citando o slug e os dois arquivos", () => {

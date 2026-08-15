@@ -150,6 +150,45 @@ Molhado, o risco é atolar.`
 
 ---
 
+## Quão puxada é — `esforco`
+
+**Pergunta:** pensando no corpo de quem for, essa trilha é **leve**, **media** ou
+**puxada**? Três degraus, e só estes três — responda com uma dessas três palavras
+exatamente, sem sinônimo (nem "moderada", nem "média" com acento):
+
+- **leve** — dá pra levar criança ou alguém sem preparo nenhum, sem sofrer.
+- **media** — exige um preparo físico normal, mas não é sofrimento.
+- **puxada** — cansa de verdade, exige preparo físico de quem caminha com
+  frequência.
+
+**Por que importa:** é um dos filtros da tela inicial — quem não topa uma puxada
+pode esconder essas trilhas da lista.
+
+**Pular é permitido:** sem resposta, a trilha simplesmente nunca é escondida por
+esse filtro — ela aparece pra qualquer nível de esforço que a pessoa escolher.
+
+**Exemplo:** `media`
+
+---
+
+## Quanto tempo leva — `duracao`
+
+**Pergunta:** quanto tempo dura o trajeto em si — só o percurso, não contando
+parada, foto, banho de cachoeira no fim? Responda **em minutos**, não em texto
+("1h30" não serve; escreva `90`).
+
+**Exemplos de conversão:** `30 minutos → 30` · `1h → 60` · `1h30 → 90` · `2h → 120`.
+
+**Por que importa:** é o outro filtro numérico da tela inicial — quem só tem uma
+manhã livre pode esconder trajetos mais longos que isso.
+
+**Pular é permitido:** sem resposta, a trilha simplesmente nunca é escondida por
+esse filtro — ela aparece pra qualquer duração que a pessoa escolher.
+
+**Exemplo:** `90`
+
+---
+
 ## Os avisos — `avisos`
 
 **Pergunta:** o que pode dar errado, e o que a pessoa devia saber antes de decidir
@@ -298,3 +337,8 @@ por trilha, do jeito que `rampa-do-pepe.json` já existe). O arquivo é validado
 recusa carregar em vez de mostrar algo quebrado. Depois de validado, a ficha nova
 aparece sozinha na home (agrupada por "hoje dá" ou "hoje não dá", junto com o pin no
 mapa) e no acervo em `/trilhas` — sem precisar mexer em mais nada.
+
+`esforco` e `duracao` são os dois únicos campos opcionais deste questionário: se você
+pulou uma das duas perguntas acima, a ficha carrega igual, só que essa trilha nunca
+fica escondida pelo filtro correspondente (esforço ou duração) na tela inicial — ela
+aparece pra qualquer valor que a pessoa escolher no filtro.
