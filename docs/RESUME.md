@@ -5,8 +5,8 @@
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
 **Última parada:** 2026-08-14. **Estado: RODADA EM ANDAMENTO.**
-Branch **`daqui-e-filtros`**, saindo de `main` em `8c88415`. **Tasks 1–6 e 8 de 12 fechadas**,
-todas com revisão. Suíte em **392/392**.
+Branch **`daqui-e-filtros`**, saindo de `main` em `8c88415`. **Tasks 1–8 de 12 fechadas**,
+todas com revisão. Suíte em **426/426**, e o `npm run build` passa.
 
 ---
 
@@ -21,13 +21,15 @@ foi respondida (é o §1 da spec).
      trocar; a branch existe e tem os commits.
    - `git status --short` → **limpo**.
    - `git log --oneline 8c88415..HEAD` → os commits da rodada.
-   - `npm test` → **392/392** (conferido no fim da sessão).
+   - `npm test` → **426/426** e **`npm run build` → passa** (os dois conferidos no fim da sessão).
+     **Rode os DOIS.** Ver a lição 9 — o build já esteve quebrado por quatro commits com a
+     suíte inteira verde.
 
 2. **Leia o ledger:** `.superpowers/sdd/2026-08-13-daqui-e-filtros/progress.md`. Ele é a memória
    da execução — tem a varredura de pré-voo, o ruling da ordem, e o estado de cada task. **Se ele
    tiver sumido** (`git clean`), reconstrua pelo `git log` e por este arquivo.
 
-3. **Tasks 1 a 6 e a 8 estão FECHADAS. Não as reabra.** A Task 2 custou dois fix rounds, os dois
+3. **Tasks 1 a 8 estão FECHADAS. Não as reabra.** A Task 2 custou dois fix rounds, os dois
    pela mesma causa (guard sem prova de mutação), e a segunda re-revisão devolveu ADDRESSED
    depois de rodar a mutação ela mesma. Fica o precedente, porque ele decide discussões
    futuras: o implementador argumentou que um guard não precisava de teste próprio porque
@@ -42,8 +44,8 @@ foi respondida (é o §1 da spec).
    provar na camada pura**. O achado foi transferido pra Task 4, onde virou teste que morde.
    **Quando transferir um achado assim, registre o ruling** em vez de deixá-lo sumir.
 
-4. **Retome a execução em `docs/superpowers/plans/2026-08-13-daqui-e-filtros.md`**, da Task 7 em
-   diante (a 8 já saiu — o ruling mandava 8 antes de 7). **A ordem de execução tem um ruling e NÃO é a numeração:**
+4. **Retome a execução em `docs/superpowers/plans/2026-08-13-daqui-e-filtros.md`**, da **Task 9**
+   em diante. As 7 e 8 já saíram (o ruling mandava 8 antes de 7). Faltam **9, 10, 11 e 12**. **A ordem de execução tem um ruling e NÃO é a numeração:**
 
    > **1, 2, 3, 4, 5, 6, 8, 7, 9, 10, 11, 12**
 
@@ -140,11 +142,12 @@ disse que não incomoda**. É consequência inevitável da regra do primeiro ren
 | 5 — busca de cidade (lib + rota) | **completa**, 1 fix round, re-revisão limpa | `c1257ed`, `c1f01d4` |
 | 6 — a pílula e a busca de cidade | **completa**, 2 fix rounds, re-revisão limpa | `2d48df0`, `280683e`, `fcb5875` |
 | 8 — `esforco`/`duracao` no schema + questionário | **completa**, revisão limpa, zero fix rounds | `5d2f817` |
-| 7, 9 a 12 | não começadas | — |
+| 7 — km/duração/esforço/custo no cartão + invariante da ficha | **completa**, 2 fix rounds, re-revisão limpa | `ed4b38e`, `318231e`, `b7cb153`, `ff217df` |
+| 9 a 12 | não começadas | — |
 
-Suíte: **392/392** (a base da rodada era 278).
+Suíte: **426/426** (a base da rodada era 278). **`npm run build` passa.**
 
-**Briefs das Tasks 3–8 já emendados pelo pré-voo** (ver item 6 acima). Eles vivem em
+**Briefs das Tasks 3–8 já emendados pelo pré-voo** (as 9–12 ainda NÃO) (ver item 6 acima). Eles vivem em
 `.superpowers/sdd/2026-08-13-daqui-e-filtros/task-N-brief.md`, que é **scratch git-ignorado**
 — um `git clean -fdx` apaga as emendas junto. Se isso acontecer, o essencial de cada uma está
 no item 6; reextrair pelo `scripts/task-brief` devolve o brief ORIGINAL, com os furos.
@@ -248,6 +251,50 @@ Herdados:
    obrigatória. Em três rodadas seguidas ela achou o que nenhuma revisão de task pegou.
 8. **O plano é o elo fraco.** Quando o revisor rotula um achado "plan-mandated", quase sempre quer
    dizer que a lista de testes do plano tinha buraco — não que o revisor esteja errado.
+9. 🔴 **`npm test` VERDE NÃO PROVA QUE O APP CONSTRÓI.** O vitest roda por esbuild e nunca
+   invoca o `next build`. Em 2026-08-14 o build ficou **quebrado por quatro commits** com a
+   suíte inteira verde, e **três revisões e uma re-revisão passaram por cima** — a re-revisão
+   inclusive aprovou por escrito a linha que o quebrava. Ninguém errou: a régua da rodada era
+   `npm test` + `tsc`, e ninguém tinha motivo pra rodar o build. Quem achou foi um
+   implementador, por acidente, investigando outra coisa. **O deploy teria falhado.**
+   **`npm run build` entra na verificação de toda task e de toda revisão.**
+
+   A causa foi um fix round que exportou uma constante de um `route.ts`, citando o precedente
+   do `zoomDeTiles`. **O precedente é de módulo de LIB; route handler do Next tem superfície
+   de export restrita** — qualquer nome fora da lista quebra com `Type 'X' is not assignable
+   to type 'never'`. Consertado (`318231e`): a constante virou `PRAZO_BUSCA_MS` em
+   `src/lib/lugares.ts`. **Guarda criado:** `tests/deploy/exports-de-rota.test.ts`.
+
+   **E o guarda nasceu com ponto cego** — eu provei UMA forma (`export const X`) e presumi as
+   outras; `const X; export { X }` passava verde com o build quebrado. Consertado em
+   `ff217df`, com cada forma provada **pelas duas ferramentas**. A lista `PERMITIDOS` foi
+   conferida contra o arquivo de tipos que o **próprio Next gera** (`.next/types/.../route.ts`),
+   não contra documentação. **Moral dupla: escrever a rede de segurança não basta — a rede
+   também precisa de prova de mutação, forma a forma.**
+
+10. **Ficha sintética prova a FUNÇÃO; só a ficha REAL prova a integração com o conteúdo.**
+    Meu brief afirmou que o custo da Rampa usa `—` como separador. Usa `·`. Os testes eram
+    sintéticos, com o separador que eu SUPUS, e passavam — com a ficha real o cartão mostraria
+    "R$ 5 por pessoa · cobrado no portão da entrada" inteiro, e como o cartão junta seus campos
+    com `" · "`, a logística se disfarçaria de mais um metadado. A prova de mutação é a
+    demonstração: restaurando o corte errado, **só o teste da ficha real falha**.
+
+11. **`git checkout -- <arquivo>` durante prova de mutação só é seguro se o arquivo estiver
+    COMMITADO.** Com trabalho não-commitado dentro, ele reverte tudo. Mordeu um implementador
+    (Task 8) e **mordeu a mim** no mesmo dia, uma hora depois de eu escrever a lição.
+    **Restaure com edição pontual.** E a conferência que fecha a dúvida sobre perda silenciosa
+    é `git diff <base-da-task> HEAD -- <arquivo>`, não `git diff HEAD`.
+
+12. **Mandar o implementador PARAR quando a mutação não morde funciona.** Nesta rodada isso
+    aconteceu três vezes e **nas três o erro era do plano, não dele**. Some a isso "se a
+    contagem não bater, não ajuste o relatório — descubra por quê", que pegou **cinco** erros
+    de aritmética meus. **As duas instruções entram em todo despacho.**
+
+13. **"A mutação não mordeu" tem TRÊS respostas, não duas.** Além de "falta teste" e "a linha
+    é redundante mesmo", existe **"a linha é provada por OUTRA ferramenta"**. Duas linhas que
+    o vitest dizia mortas eram carregadoras de peso pro `tsc` (`Number.isFinite` não é type
+    guard; quem estreita `unknown` pra `number` é o `typeof`). **Rode `tsc --noEmit` antes de
+    declarar uma linha morta.**
 
 ## Fronteira do João (o que só ele faz)
 
