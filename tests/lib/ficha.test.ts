@@ -2,7 +2,14 @@ import fs, { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { getFicha, getAllFichas, getFichasComCondicao, loadAll, ordenarPorNome } from "@/lib/ficha";
+import {
+  formatarDuracao,
+  getFicha,
+  getAllFichas,
+  getFichasComCondicao,
+  loadAll,
+  ordenarPorNome,
+} from "@/lib/ficha";
 import { fichaSchema } from "@/types/ficha";
 import type { Ficha } from "@/types/ficha";
 
@@ -152,6 +159,23 @@ describe("esforço e duração", () => {
     const lido = fichaSchema.parse({ ...base, esforco: "puxada", duracao: 90 });
     expect(lido.esforco).toBe("puxada");
     expect(lido.duracao).toBe(90);
+  });
+});
+
+describe("formatarDuracao: a linha do cartão", () => {
+  it("abaixo de uma hora, em minutos", () => {
+    expect(formatarDuracao(45)).toBe("~45min");
+  });
+  it("hora cheia não mostra minuto zero", () => {
+    expect(formatarDuracao(60)).toBe("~1h");
+    expect(formatarDuracao(120)).toBe("~2h");
+  });
+  it("hora e minuto", () => {
+    expect(formatarDuracao(90)).toBe("~1h30");
+  });
+  // Duas casas: "~2h5" se lê como 2h5min ou 2h50? O zero à esquerda desfaz.
+  it("minuto de um dígito ganha zero à esquerda", () => {
+    expect(formatarDuracao(125)).toBe("~2h05");
   });
 });
 

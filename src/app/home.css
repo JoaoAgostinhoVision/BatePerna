@@ -90,6 +90,7 @@
 .bp .cartao-topo { display: flex; align-items: center; justify-content: space-between; gap: .55rem; }
 .bp .cartao-nome { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; line-height: 1.15; }
 .bp .cartao-prom { color: var(--ink-soft); font-size: .85rem; font-style: italic; }
+.bp .cartao-meta { font-family: var(--type); font-size: .68rem; font-weight: 650; color: var(--ink-faint); margin-top: .35rem; }
 
 /* O selo repete o vocabulário do carimbo da ficha: mesma borda dupla, mesmas
    cores. A cor sai do [data-state] do cartão — a mesma fonte que pinta o pin —,

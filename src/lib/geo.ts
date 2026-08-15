@@ -29,3 +29,10 @@ export function formatarDistancia(km: number): string {
   const n = arred < 10 ? arred.toFixed(1).replace(".", ",") : String(Math.round(arred));
   return `~${n} km em linha reta daqui`;
 }
+
+/** A distância como o CARTÃO a mostra: sem o "daqui", porque a pílula do mapa
+ *  logo acima já diz de onde se está medindo. O "em linha reta" fica — ele é
+ *  a parte honesta do texto, não enfeite. */
+export function formatarDistanciaCurta(km: number): string {
+  return formatarDistancia(km).replace(" daqui", "");
+}

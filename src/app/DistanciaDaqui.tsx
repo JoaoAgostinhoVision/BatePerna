@@ -1,42 +1,37 @@
 "use client";
-import { useState } from "react";
 import { distanciaKm, formatarDistancia } from "@/lib/geo";
-
-type Fase = "idle" | "medindo" | "ok" | "negado";
+import { coordDe } from "@/lib/local";
+import { useGps, useLocal, useMexerLocal } from "./local";
 
 /** A distância fica ATRÁS DE UM TOQUE de propósito: prompt de GPS não
  *  solicitado é o jeito mais rápido de ser negado pra sempre — e negado uma
- *  vez, o navegador não pergunta de novo. */
+ *  vez, o navegador não pergunta de novo.
+ *
+ *  "Uma pessoa, uma fonte": lê a MESMA localização que o mapa e o cartão da
+ *  home — não pede a posição ao aparelho por conta própria. O toque só
+ *  avisa o contexto (`pedirGps`, de `local.tsx`); é o contexto quem sabe
+ *  pedir a posição ao aparelho e quem já sabe se foi negado antes. Duas
+ *  verdades sobre a mesma pergunta em duas telas do mesmo app — o mapa
+ *  dizendo que você está em Gravatá e a ficha medindo de outro lugar — é
+ *  exatamente o que essa invariante proíbe. */
 export default function DistanciaDaqui({ lat, lng }: { lat: number; lng: number }) {
-  const [fase, setFase] = useState<Fase>("idle");
-  const [texto, setTexto] = useState("");
+  const voce = coordDe(useLocal());
+  const gps = useGps();
+  const { pedirGps } = useMexerLocal();
 
-  function medir() {
-    const geo = typeof navigator !== "undefined" ? navigator.geolocation : undefined;
-    if (!geo) {
-      setFase("negado");
-      return;
-    }
-    setFase("medindo");
-    geo.getCurrentPosition(
-      (pos) => {
-        const daqui = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setTexto(formatarDistancia(distanciaKm(daqui, { lat, lng })));
-        setFase("ok");
-      },
-      // Negado, estourou o tempo, indisponível: pro cliente dá tudo no mesmo.
-      () => setFase("negado"),
-      { timeout: 10_000, maximumAge: 300_000 },
-    );
+  if (voce) {
+    return <div className="dist">{formatarDistancia(distanciaKm(voce, { lat, lng }))}</div>;
   }
 
-  if (fase === "ok") return <div className="dist">{texto}</div>;
-  if (fase === "negado") {
+  // Negado uma vez, o navegador não pergunta de novo: continuar oferecendo o
+  // botão seria um toque que não faz nada.
+  if (gps === "negado") {
     return <div className="dist sem">sem localização — use o “Abrir no mapa”</div>;
   }
+
   return (
-    <button className="dist-btn" onClick={medir} disabled={fase === "medindo"}>
-      {fase === "medindo" ? "vendo…" : "A que distância estou?"}
+    <button className="dist-btn" onClick={pedirGps}>
+      A que distância estou?
     </button>
   );
 }

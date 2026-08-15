@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { distanciaKm, formatarDistancia } from "@/lib/geo";
+import { distanciaKm, formatarDistancia, formatarDistanciaCurta } from "@/lib/geo";
 
 // Âncoras derivadas da própria geometria da esfera, não de geografia real:
 // um grau no equador = 2·π·6371/360 = 111,195 km.
@@ -60,5 +60,23 @@ describe("formatarDistancia", () => {
     for (const km of [0.1, 0.99, 1, 5.5, 9.99, 10, 42, 999]) {
       expect(formatarDistancia(km)).toContain("em linha reta");
     }
+  });
+});
+
+describe("formatarDistanciaCurta: a linha do cartão", () => {
+  // "em linha reta" é load-bearing: no agreste, 40km em reta podem ser 1h30
+  // de serra. Sem o rótulo, o número mente pra baixo. Só o "daqui" sai — a
+  // pílula do mapa já diz de onde se está medindo.
+  it("mantém o 'em linha reta'", () => {
+    expect(formatarDistanciaCurta(41)).toBe("~41 km em linha reta");
+  });
+  it("não repete o 'daqui' que a pílula já diz", () => {
+    expect(formatarDistanciaCurta(41)).not.toContain("daqui");
+  });
+  it("abaixo de 1 km", () => {
+    expect(formatarDistanciaCurta(0.4)).toBe("menos de 1 km em linha reta");
+  });
+  it("uma casa decimal abaixo de 10, com vírgula", () => {
+    expect(formatarDistanciaCurta(4.25)).toBe("~4,3 km em linha reta");
   });
 });
