@@ -5,8 +5,8 @@
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
 **Última parada:** 2026-08-14. **Estado: RODADA EM ANDAMENTO.**
-Branch **`daqui-e-filtros`**, saindo de `main` em `8c88415`. **Tasks 1–6 de 12 fechadas**,
-todas com revisão. Suíte em **383/383**.
+Branch **`daqui-e-filtros`**, saindo de `main` em `8c88415`. **Tasks 1–6 e 8 de 12 fechadas**,
+todas com revisão. Suíte em **392/392**.
 
 ---
 
@@ -21,13 +21,13 @@ foi respondida (é o §1 da spec).
      trocar; a branch existe e tem os commits.
    - `git status --short` → **limpo**.
    - `git log --oneline 8c88415..HEAD` → os commits da rodada.
-   - `npm test` → **383/383** (conferido no fim da sessão).
+   - `npm test` → **392/392** (conferido no fim da sessão).
 
 2. **Leia o ledger:** `.superpowers/sdd/2026-08-13-daqui-e-filtros/progress.md`. Ele é a memória
    da execução — tem a varredura de pré-voo, o ruling da ordem, e o estado de cada task. **Se ele
    tiver sumido** (`git clean`), reconstrua pelo `git log` e por este arquivo.
 
-3. **Tasks 1 a 6 estão FECHADAS. Não as reabra.** A Task 2 custou dois fix rounds, os dois
+3. **Tasks 1 a 6 e a 8 estão FECHADAS. Não as reabra.** A Task 2 custou dois fix rounds, os dois
    pela mesma causa (guard sem prova de mutação), e a segunda re-revisão devolveu ADDRESSED
    depois de rodar a mutação ela mesma. Fica o precedente, porque ele decide discussões
    futuras: o implementador argumentou que um guard não precisava de teste próprio porque
@@ -42,8 +42,8 @@ foi respondida (é o §1 da spec).
    provar na camada pura**. O achado foi transferido pra Task 4, onde virou teste que morde.
    **Quando transferir um achado assim, registre o ruling** em vez de deixá-lo sumir.
 
-4. **Retome a execução em `docs/superpowers/plans/2026-08-13-daqui-e-filtros.md`**, da Task 8 em
-   diante (o ruling manda 8 antes de 7). **A ordem de execução tem um ruling e NÃO é a numeração:**
+4. **Retome a execução em `docs/superpowers/plans/2026-08-13-daqui-e-filtros.md`**, da Task 7 em
+   diante (a 8 já saiu — o ruling mandava 8 antes de 7). **A ordem de execução tem um ruling e NÃO é a numeração:**
 
    > **1, 2, 3, 4, 5, 6, 8, 7, 9, 10, 11, 12**
 
@@ -139,11 +139,12 @@ disse que não incomoda**. É consequência inevitável da regra do primeiro ren
 | 4 — o mapa da home usa a localização | **completa**, 1 fix round, revisão **Approved** | `34f74bb`, `2feae91` |
 | 5 — busca de cidade (lib + rota) | **completa**, 1 fix round, re-revisão limpa | `c1257ed`, `c1f01d4` |
 | 6 — a pílula e a busca de cidade | **completa**, 2 fix rounds, re-revisão limpa | `2d48df0`, `280683e`, `fcb5875` |
-| 7 a 12 | não começadas | — |
+| 8 — `esforco`/`duracao` no schema + questionário | **completa**, revisão limpa, zero fix rounds | `5d2f817` |
+| 7, 9 a 12 | não começadas | — |
 
-Suíte: **383/383** (a base da rodada era 278).
+Suíte: **392/392** (a base da rodada era 278).
 
-**Briefs das Tasks 3–6 e 8 já emendados pelo pré-voo** (ver item 6 acima). Eles vivem em
+**Briefs das Tasks 3–8 já emendados pelo pré-voo** (ver item 6 acima). Eles vivem em
 `.superpowers/sdd/2026-08-13-daqui-e-filtros/task-N-brief.md`, que é **scratch git-ignorado**
 — um `git clean -fdx` apaga as emendas junto. Se isso acontecer, o essencial de cada uma está
 no item 6; reextrair pelo `scripts/task-brief` devolve o brief ORIGINAL, com os furos.
