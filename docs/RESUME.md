@@ -341,6 +341,26 @@ Herdados:
     contagem não bater, não ajuste o relatório — descubra por quê", que pegou **cinco** erros
     de aritmética meus. **As duas instruções entram em todo despacho.**
 
+15. 🔴 **SUÍTE VERMELHA NÃO É O MESMO QUE ASSERÇÃO CAINDO.** Em 2026-08-16 o meu brief da Task
+    10 prescreveu uma prova de mutação que **aprovava o mutante**: apagando o `try/catch` da
+    escrita em `filtros.tsx`, o teste que eu nomeei passava (`1 passed | 19 skipped`) e a suíte
+    só ficava vermelha por `Errors 1` — **erro global, nenhuma asserção caindo**. Duas causas
+    somadas: o `setFiltros` roda **antes** do `setItem`, então tudo o que eu mandava asseverar
+    acontece com ou sem o guarda; e a exceção, vinda de um CLIQUE, é engolida pelo despacho
+    sintético do React e vira `Unhandled Error` do jsdom. **Isso já estava documentado neste
+    repositório** (`tests/app/local.test.tsx:88-94`), que resolve chamando o setter DIRETO em
+    vez de clicar — e o meu brief mandou espelhar aquele arquivo e copiou justamente a forma que
+    ele rejeita. **Ao validar uma mutação, diga qual das duas coisas aconteceu.** "Ficou
+    vermelho" não é prova; "caiu a asserção X" é.
+
+16. **O `next build` só protege o que está NA ÁRVORE, e isso muda o valor da asserção de fonte.**
+    Medido nas duas direções na Task 10: apagando o `"use client"` do `filtros.tsx` (já
+    importado pelo `page.tsx`) o **build falha** (`You're importing a component that needs
+    useState`); apagando o do `PainelFiltros.tsx` (que só entra na árvore na Task 11) o **build
+    passa**. O mecanismo é alcançabilidade a partir da página, não o hook. **Para componente
+    ainda não montado na página, a asserção de fonte é a ÚNICA proteção** — nem vitest nem
+    build pegam.
+
 14. 🔴 **Com subagente em voo, `git add -A` não é meu direito.** Em 2026-08-16 commitei uma
     mudança de DOCUMENTAÇÃO com `git add -A` enquanto um implementador trabalhava na mesma
     árvore, e o `-A` varreu o conserto dele pra dentro de um commit com mensagem de docs. Saiu
