@@ -328,6 +328,15 @@ Herdados:
     contagem não bater, não ajuste o relatório — descubra por quê", que pegou **cinco** erros
     de aritmética meus. **As duas instruções entram em todo despacho.**
 
+14. 🔴 **Com subagente em voo, `git add -A` não é meu direito.** Em 2026-08-16 commitei uma
+    mudança de DOCUMENTAÇÃO com `git add -A` enquanto um implementador trabalhava na mesma
+    árvore, e o `-A` varreu o conserto dele pra dentro de um commit com mensagem de docs. Saiu
+    coerente **por sorte**: conferi depois e o arquivo estava num estado completo. Se eu tivesse
+    pego no meio de uma prova de mutação, teria commitado **código mutado**, e a mensagem do
+    commit não daria pista nenhuma disso pra quem lesse o `git log` depois. **Irmã da lição 11:
+    a árvore não é minha sozinho enquanto há agente rodando. `git add <caminho explícito>`,
+    sempre.**
+
 13. **"A mutação não mordeu" tem TRÊS respostas, não duas.** Além de "falta teste" e "a linha
     é redundante mesmo", existe **"a linha é provada por OUTRA ferramenta"**. Duas linhas que
     o vitest dizia mortas eram carregadoras de peso pro `tsc` (`Number.isFinite` não é type
