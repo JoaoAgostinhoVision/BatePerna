@@ -7,7 +7,7 @@
 **Última parada:** 2026-08-16.
 ## ✅ RODADA "DE ONDE EU ESTOU" FECHADA E MERGEADA — 12/12
 
-**`main` em `ce40307`** (merge `--no-ff` de `daqui-e-filtros`, que ficou em `a6f2f45`).
+**`main` em `6f37bbb`** (a rodada em `ce40307`, mais o fecho do débito da régua) (merge `--no-ff` de `daqui-e-filtros`, que ficou em `a6f2f45`).
 **523 testes em 46 arquivos**, `npx tsc --noEmit` limpo, `npm run build` passa — os três
 conferidos **em `main` depois do merge**, não só na branch. Árvore limpa.
 **Nada em voo:** nenhum agente rodando, nenhum fix round aberto.
@@ -358,8 +358,19 @@ Desta rodada (estão no ledger, o revisor final vai triar):
   (`afterEach(() => vi.mocked(distanciaKm).mockImplementation(real))`, com o real vindo de
   `vi.importActual`), e isso é máquina demais pra um risco que hoje não morde. **Deferido de
   propósito, com a medição registrada** — o revisor final decide.
-- 🔴 **DÉBITO REGISTRADO NA VARREDURA FINAL, com exemplo medido e preço** — a *terceira* família
-  de asserção frouxa em CSS. **`regraDe` usa `match` sem `/g` e devolve a PRIMEIRA regra; o
+- ✅ **FECHADO em 2026-08-16** (`da408e9`, mergeado em `6f37bbb`) — era o débito abaixo, a
+  *terceira* família. **Reproduzido antes de mexer** (523/523 verde com o defeito no arquivo),
+  morto depois com **duas** asserções nomeadas. O `regraDe` passou a juntar TODAS as regras do
+  seletor na ordem do arquivo e o `valorDe` a ler a **ÚLTIMA** declaração — que é a cascata de
+  verdade: uma segunda regra sobrescreve **as propriedades que declara**, não a regra inteira.
+  **Lição 20 aplicada: as nove provas que a régua carrega foram RE-RODADAS uma a uma** (decoy de
+  prefixo, decoy de propriedade customizada, lado do shorthand, `.bp` anulando goteira de outro
+  arquivo, área segura, cor do pin, alvo de toque). Nenhuma esvaziou. **E o comentário que estava
+  no `regraDe` afirmava o CONTRÁRIO** — que uma segunda regra deixaria o teste vermelho, "o que é
+  o certo". Terceiro comentário mentiroso desta rodada; o padrão está na lição 23.
+  <details><summary>o débito, como estava registrado</summary>
+
+  **`regraDe` usa `match` sem `/g` e devolve a PRIMEIRA regra; o
   navegador usa a ÚLTIMA.** Anexando ao fim do `home.css` `\.bp .folha { padding: 0 }` e
   `.bp .mapa-home { height: 40px }`, a suíte fecha **523/523 verde** — e no navegador o último
   cartão volta pra trás da barra fixa e o mapa da home colapsa pra 40px, com
@@ -370,6 +381,7 @@ Desta rodada (estão no ledger, o revisor final vai triar):
   a rodada parou aqui por critério de parada explícito.** Junto disso foi corrigido um comentário
   do `BarraNavegacao.test.tsx` que afirmava o CONTRÁRIO (que uma segunda regra deixaria o teste
   vermelho) — comentário errado é pior que a fresta, porque o próximo leitor confia nele.
+  </details>
 - 🟠 **PERGUNTA CURTA PRO JOÃO — filtro que não tem como filtrar.** Medido na home real: ligar
   "leve" e "até 2h" leva a linha a dizer **"1 trilha · 2 filtros ligados"** com a lista
   **idêntica** e nenhuma palavra na tela explicando. Está **correto** pela regra de honestidade 2
