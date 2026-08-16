@@ -5,6 +5,7 @@ import { resolverEstados, type LeituraCarimbo } from "@/lib/carimbo-estado";
 import type { Ficha } from "@/types/ficha";
 import Appbar from "./Appbar";
 import BarraNavegacao from "./BarraNavegacao";
+import FiltrosVivos from "./filtros";
 import FolhaTrilhas from "./FolhaTrilhas";
 import HomeViva from "./HomeViva";
 import LocalVivo from "./local";
@@ -48,16 +49,20 @@ export default async function Home() {
   return (
     <main className="bp">
       <LocalVivo>
-        <HomeViva inicial={Object.fromEntries(leituras)}>
-          <div className="screen">
-            <Appbar comSaida={false} />
-            <MapaHome fichas={fichas} leituras={Object.fromEntries(leituras)} />
-            <div className="folha">
-              <FolhaTrilhas pares={pares} />
+        {/* Os recortes envolvem a tela inteira porque quem RESUME (a linha de
+            filtro) e quem APLICA (a folha) são elementos distantes no DOM. */}
+        <FiltrosVivos>
+          <HomeViva inicial={Object.fromEntries(leituras)}>
+            <div className="screen">
+              <Appbar comSaida={false} />
+              <MapaHome fichas={fichas} leituras={Object.fromEntries(leituras)} />
+              <div className="folha">
+                <FolhaTrilhas pares={pares} />
+              </div>
+              <BarraNavegacao aqui="hoje" />
             </div>
-            <BarraNavegacao aqui="hoje" />
-          </div>
-        </HomeViva>
+          </HomeViva>
+        </FiltrosVivos>
       </LocalVivo>
     </main>
   );

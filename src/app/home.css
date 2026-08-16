@@ -73,6 +73,55 @@
 .bp .pin-home[data-state][data-fase="sem-informacoes"]::before { background: var(--stop); }
 .bp .pin-home:active { opacity: .6; }
 
+/* ---- a linha de filtro e o painel sanfona ----
+   A `min-height` tem que bater com ALTURA_LINHA_FILTRO_PX (src/lib/home-layout.ts):
+   esta linha entra entre o mapa e a folha e come da mesma folga que garante o
+   primeiro cartão acima da dobra. Tem teste lendo esta regra. */
+.bp .filtro-linha {
+  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  min-height: 36px; padding: .2rem .9rem; border-bottom: 1px solid var(--line);
+}
+.bp .filtro-conta {
+  font-family: var(--type); font-size: .66rem; font-weight: 650;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--ink-faint);
+}
+.bp .filtro-abrir {
+  flex: none; min-height: 32px; padding: .3rem .55rem; border: none; border-radius: 16px;
+  background: transparent; color: var(--accent);
+  font-family: var(--type); font-size: .66rem; font-weight: 700;
+  letter-spacing: .07em;
+}
+.bp .filtro-abrir:active { opacity: .6; }
+
+/* Em FLUXO NORMAL, nunca `position: absolute`: o painel empurra a folha pra
+   baixo (sanfona). Flutuando, ele viraria cortina por cima do mapa — e aí
+   precisaria de fechar-tocando-fora, foco preso e Esc, que este app não tem. */
+.bp .filtro-painel {
+  background: var(--surface-2); border-bottom: 1px solid var(--line);
+  padding: .5rem .9rem .7rem; display: flex; flex-direction: column; gap: .45rem;
+}
+/* Fieldset sem cara de fieldset: a borda padrão do navegador brigaria com o
+   vocabulário de caixas do app. */
+.bp .filtro-grupo {
+  border: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; align-items: center; gap: .35rem;
+}
+.bp .filtro-grupo legend {
+  float: left; width: 100%; padding: 0 0 .2rem;
+  font-family: var(--type); font-size: .6rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint);
+}
+/* 36px de alvo: menor que isso o dedo erra o chip vizinho. */
+.bp .chip {
+  min-height: 36px; padding: .35rem .8rem; border-radius: 20px;
+  border: 1px solid var(--line); background: var(--screen); color: var(--ink-soft);
+  font-family: var(--type); font-size: .72rem; font-weight: 650;
+}
+.bp .chip[aria-pressed="true"] {
+  background: var(--ink); border-color: var(--ink); color: var(--screen);
+}
+.bp .chip:active { opacity: .7; }
+
 /* ---- a folha e os cartões ---- */
 .bp .folha { padding: .2rem .9rem 1rem; }
 .bp .grupo-k {

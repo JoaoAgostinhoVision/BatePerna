@@ -17,6 +17,14 @@ export const ALTURA_APPBAR_PX = 52;
 /** `.grupo-k`: o rótulo "Hoje o tempo deixa" mais o respiro dele. */
 export const ALTURA_CABECALHO_GRUPO_PX = 34;
 
+/** `.filtro-linha`: a linha de resumo dos filtros, entre o mapa e a folha.
+ *  MEDIDA do CSS, não desejo — ver o teste que lê a folha.
+ *
+ *  36px é o que cabe: com os 52 da appbar, os 168 do mapa e os 34 do
+ *  cabeçalho de grupo, a soma dá 290 contra o teto de 320. Uma faixa de chips
+ *  permanentes custaria 44 e deixaria o primeiro cartão colado no teto. */
+export const ALTURA_LINHA_FILTRO_PX = 36;
+
 /** O que pode existir acima do primeiro cartão. 667px é a viewport do menor
  *  iPhone ainda em uso; 320 deixa o cartão inteiro visível com folga. */
 export const TETO_ANTES_DO_CARTAO_PX = 320;
