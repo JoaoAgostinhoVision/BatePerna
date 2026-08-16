@@ -11,8 +11,8 @@ emendadas até onde o pré-voo chegou.
 | Arquivo | Task | Estado do pré-voo |
 |---|---|---|
 | `task-9-filtros-puros.md` | 9 — os filtros puros (`src/lib/filtros.ts`) | **COMPLETO** (2026-08-16) |
-| `task-10.md` | 10 | não pré-voado |
-| `task-11.md` | 11 | não pré-voado |
+| `task-10.md` | 10 — a linha e o painel na tela | **COMPLETO** (2026-08-16) |
+| `task-11.md` | 11 | não pré-voado (**já recebeu um achado transferido da 10**) |
 | `task-12.md` | 12 | não pré-voado |
 
 ## Task 9 — o que já entrou no brief
@@ -84,6 +84,46 @@ O que sobra dali é outra coisa, e vai pra revisão da branch inteira, não pra 
 ligado, o mapa mostra pin de trilha que a lista escondeu.** Não quebra "uma trilha, uma fonte"
 (que é sobre veredito e km, não sobre visibilidade), e é defensável — o mapa é a geografia do
 acervo. Mas é junção entre tasks certas, que é exatamente a família que só a revisão final pega.
+
+## Task 10 — pré-voo FECHADO em 2026-08-16
+
+Dez furos, e **três deles são da família que custou os dois fix rounds da Task 2**. O brief agora
+traz uma tabela de **11 mutações**.
+
+O que o jsdom não vê (a lição 5 do `docs/RESUME.md`, e a task cria DOIS client components):
+
+1. **`"use client"` no `PainelFiltros.tsx`** e 2. **no `filtros.tsx`** — sem asserção de fonte,
+   apagar a diretiva deixa a suíte inteira verde e o painel morto no celular. A mutação pede
+   pra conferir **quantos outros testes caem** (esperado: zero — é o número que prova a lição).
+3. **`<FiltrosVivos>` no `page.tsx`** — todos os testes embrulham o provedor na mão. Prova de
+   fonte aqui, **prova forte transferida pra Task 11** (ver o ruling abaixo).
+
+Os guardas do armazenamento (a família da Task 2):
+
+4. **`try/catch` da LEITURA** e 5. **da ESCRITA** no `filtros.tsx`. Em aba anônima do Safari o
+   `localStorage` **estoura**, e sem eles a home inteira cai na tela de erro por causa de um
+   filtro. O brief manda espelhar o `local.tsx` — e o espelho herdaria a falta de prova junto.
+6. **Fora de provedor**: `useContext(Ctx)!` estoura no servidor, e nenhum teste percebia porque
+   todos montam dentro do provedor.
+
+Os de comportamento, que só aparecem no segundo toque:
+
+7. **`trocar` com `{...SEM_FILTRO, ...p}`** passa em tudo, porque todo teste ligava um recorte
+   só. Na tela: liga "só grátis", toca "leve", e o "só grátis" se apaga sozinho.
+8. **O segundo toque no chip de esforço é a ÚNICA saída dele** — distância e duração têm chip
+   "qualquer", esforço não tem. Sem o toggle, quem tocou por engano fica preso.
+9. **Singular de "1 filtro ligado"** — o par do "1 trilha", que já existia.
+10. **`aria-expanded`** e **`aria-pressed`** — os únicos sinais que sobram quando não se vê cor;
+    apagá-los não derrubava nada.
+
+### Ruling do provedor no `page.tsx` — prova fraca agora, forte na 11
+
+Na Task 10 **nada consome** o `<FiltrosVivos>` ainda: o `<PainelFiltros>` só entra no fluxo da
+home na Task 11. Não há render real pra observar, então ali a prova é de fonte, e o brief diz
+isso com todas as letras em vez de fingir. **A prova forte já está escrita no `task-11.md`**:
+renderizar o `page.tsx` de verdade, com filtro guardado, e ver a Rampa sumir. Precedente da
+Task 3 — achado real sem linha pra consertar naquela camada vira ruling registrado e teste na
+camada onde morde.
 
 ## E antes de despachar qualquer uma delas
 

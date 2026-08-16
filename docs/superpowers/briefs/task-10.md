@@ -31,10 +31,12 @@ it("o CSS usa a MESMA altura da constante da linha", () => {
 
 ```tsx
 // tests/app/PainelFiltros.test.tsx
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { render, screen, cleanup, act } from "@testing-library/react";
 import PainelFiltros from "@/app/PainelFiltros";
-import FiltrosVivos from "@/app/filtros";
+import FiltrosVivos, { useFiltros } from "@/app/filtros";
 import LocalVivo from "@/app/local";
 import { CHAVE_FILTROS, SEM_FILTRO } from "@/lib/filtros";
 import { CHAVE_LOCAL } from "@/lib/local";
@@ -65,6 +67,15 @@ describe("a linha de resumo", () => {
     monta();
     expect(await screen.findByText(/2 filtros ligados/)).toBeTruthy();
   });
+
+  // ——— pré-voo: o singular do FILTRO, irmão do singular da trilha logo acima.
+  // O `\b` do teste de "1 trilha" é load-bearing (sem ele, "1 trilhas" casaria
+  // e o ternário poderia sumir); o plural dos filtros não tinha o par.
+  it("um filtro só também fala no singular", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, daHoje: true }));
+    monta();
+    expect(await screen.findByText(/1 filtro ligado\b/)).toBeTruthy();
+  });
 });
 
 describe("o painel", () => {
@@ -76,8 +87,13 @@ describe("o painel", () => {
   it("abre no toque e fecha no toque de novo", async () => {
     monta();
     const b = screen.getByRole("button", { name: /filtrar/i });
+    expect(b.getAttribute("aria-expanded")).toBe("false");
     await act(async () => { b.click(); });
     expect(screen.getByRole("group", { name: /esforço/i })).toBeTruthy();
+    // O `aria-expanded` é o ÚNICO sinal que quem usa leitor de tela recebe de
+    // que aquele toque abriu alguma coisa — a sanfona é puramente visual.
+    // Apagá-lo não derruba nenhuma outra asserção deste arquivo.
+    expect(b.getAttribute("aria-expanded")).toBe("true");
     await act(async () => { b.click(); });
     expect(screen.queryByRole("group", { name: /esforço/i })).toBeNull();
   });
@@ -101,8 +117,45 @@ describe("o painel", () => {
   it("ligar um recorte grava no aparelho", async () => {
     monta();
     await act(async () => { screen.getByRole("button", { name: /filtrar/i }).click(); });
-    await act(async () => { screen.getByRole("button", { name: /^leve$/i }).click(); });
+    const leve = screen.getByRole("button", { name: /^leve$/i });
+    await act(async () => { leve.click(); });
     expect(localStorage.getItem(CHAVE_FILTROS)).toContain("leve");
+    // O `aria-pressed` é o estado do chip. Sem ele o chip só muda de cor, e
+    // quem não vê cor não sabe o que está ligado.
+    expect(leve.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  // ——— pré-voo: ligar um recorte não pode DESLIGAR os outros.
+  //
+  // O `trocar` espalha `{...filtros, ...p}`. Trocado por `{...SEM_FILTRO, ...p}`
+  // — que é como alguém escreveria "reinicia e aplica" — nenhum teste acima
+  // cai, porque todos ligam um recorte só. Na tela: a pessoa liga "só grátis",
+  // depois toca "leve", e o "só grátis" se apaga sozinho enquanto ela olha.
+  it("ligar um recorte preserva os que já estavam ligados", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    monta();
+    await act(async () => { screen.getByRole("button", { name: /filtrar/i }).click(); });
+    await act(async () => { screen.getByRole("button", { name: /^leve$/i }).click(); });
+    const guardado = JSON.parse(localStorage.getItem(CHAVE_FILTROS)!);
+    expect(guardado).toMatchObject({ soGratis: true, esforco: "leve" });
+  });
+
+  // ——— pré-voo: o segundo toque no chip de esforço é o ÚNICO jeito de
+  // desligar aquele recorte.
+  //
+  // Distância e duração têm chip "qualquer"; **esforço não tem**. Se o
+  // `filtros.esforco === e ? null : e` virar só `e`, a pessoa que tocou "leve"
+  // por engano fica presa nele — e nenhum outro teste percebe, porque nenhum
+  // toca duas vezes no mesmo chip. É o mesmo raciocínio do "fecha no toque de
+  // novo" da pílula de busca, que já mordeu nesta rodada.
+  it("tocar o mesmo esforço de novo desliga — é a única saída dele", async () => {
+    monta();
+    await act(async () => { screen.getByRole("button", { name: /filtrar/i }).click(); });
+    const leve = screen.getByRole("button", { name: /^leve$/i });
+    await act(async () => { leve.click(); });
+    await act(async () => { leve.click(); });
+    expect(leve.getAttribute("aria-pressed")).toBe("false");
+    expect(JSON.parse(localStorage.getItem(CHAVE_FILTROS)!).esforco).toBeNull();
   });
 
   // Mesma regra da localização: o HTML do servidor não tem filtro nenhum.
@@ -118,9 +171,95 @@ describe("o painel", () => {
     expect(primeiro).toBe("false");
   });
 });
-```
 
-(o teste acima importa `useFiltros` de `@/app/filtros`)
+// ——————— pré-voo: o que o jsdom NÃO enxerga ———————
+//
+// Estes testes são feios e são os que separam "passou" de "funciona no
+// celular". Ver a lição 5 do docs/RESUME.md: apagar o `"use client"` do
+// MapaHome deixou 26 de 27 testes verdes e o mapa parado no aparelho.
+describe("o que o jsdom não vê", () => {
+  const fonte = (arq: string) =>
+    readFileSync(path.join(process.cwd(), "src", "app", arq), "utf8");
+
+  // Sem a diretiva, `useState`/`onClick`/`localStorage` não existem em
+  // produção: o painel nasce fechado e nunca abre. O jsdom renderiza tudo
+  // como cliente e não acusa nada.
+  it("PainelFiltros é client component", () => {
+    expect(fonte("PainelFiltros.tsx").trimStart().startsWith('"use client"')).toBe(true);
+  });
+  it("filtros.tsx é client component", () => {
+    expect(fonte("filtros.tsx").trimStart().startsWith('"use client"')).toBe(true);
+  });
+
+  // Todos os testes acima embrulham `<FiltrosVivos>` na mão. Se o page.tsx
+  // esquecer o provedor, eles continuam TODOS verdes e a home real não tem
+  // filtro nenhum — foi exatamente assim com o `<LocalVivo>` na Task 4.
+  //
+  // Aqui a prova é de FONTE, e ela é fraca de propósito: nesta task nada
+  // consome o provedor ainda (o `<PainelFiltros>` só entra no fluxo da home na
+  // Task 11), então não há render real pra observar. **A prova forte está
+  // transferida pra Task 11**, que renderiza o page.tsx de verdade com um
+  // filtro guardado. Precedente da Task 3: achado real que não tem linha pra
+  // consertar naquela camada vira ruling registrado, não teste de mentirinha.
+  it("o page.tsx da home embrulha tudo no FiltrosVivos", () => {
+    expect(fonte("page.tsx")).toContain("<FiltrosVivos>");
+  });
+});
+
+// ——————— pré-voo: os guardas do armazenamento ———————
+//
+// Esta é a família que custou DOIS fix rounds na Task 2, pela mesma causa nas
+// duas vezes: guarda de localStorage sem prova de mutação. O `filtros.tsx` é
+// espelho do `local.tsx` e herda os dois try/catch — e herdaria também a
+// ausência de prova se este bloco não existisse.
+//
+// Em aba anônima do Safari (e com armazenamento cheio) `localStorage` ESTOURA.
+// Sem os guardas, a home inteira cai na tela de erro por causa de um filtro.
+describe("armazenamento que estoura não derruba a home", () => {
+  it("leitura que estoura na montagem: segue sem filtro, sem quebrar", async () => {
+    const orig = Storage.prototype.getItem;
+    Storage.prototype.getItem = () => { throw new Error("SecurityError"); };
+    try {
+      monta();
+      expect(await screen.findByText(/4 trilhas/)).toBeTruthy();
+    } finally {
+      Storage.prototype.getItem = orig;
+    }
+  });
+
+  it("escrita que estoura ao ligar um recorte: o filtro vale nesta sessão", async () => {
+    monta();
+    await act(async () => { screen.getByRole("button", { name: /filtrar/i }).click(); });
+    const orig = Storage.prototype.setItem;
+    Storage.prototype.setItem = () => { throw new Error("QuotaExceededError"); };
+    try {
+      const leve = screen.getByRole("button", { name: /^leve$/i });
+      await act(async () => { leve.click(); });
+      // Não gravou, mas a tela obedeceu: o recorte vale enquanto o app estiver
+      // aberto. Perder a preferência é aceitável; travar a home não é.
+      expect(leve.getAttribute("aria-pressed")).toBe("true");
+      expect(await screen.findByText(/1 filtro ligado/)).toBeTruthy();
+    } finally {
+      Storage.prototype.setItem = orig;
+    }
+  });
+});
+
+// ——————— pré-voo: fora de provedor ———————
+//
+// É o que o SERVIDOR renderiza. O `local.tsx` devolve NAO_SEI e um objeto
+// inerte fora de provedor, de propósito; se o `useFiltros` fizer
+// `useContext(Ctx)!`, a home estoura no servidor — e nenhum teste acima
+// percebe, porque todos montam dentro do provedor.
+describe("fora de provedor", () => {
+  it("useFiltros devolve SEM_FILTRO e não estoura", () => {
+    let visto: unknown = null;
+    function Espia() { visto = useFiltros(); return null; }
+    expect(() => render(<Espia />)).not.toThrow();
+    expect(visto).toEqual(SEM_FILTRO);
+  });
+});
+```
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -129,7 +268,13 @@ Expected: FAIL
 
 - [ ] **Step 3: Implement**
 
-`src/app/filtros.tsx` — espelho exato do `local.tsx`: `useState(SEM_FILTRO)` (nunca `useState(() => lerFiltros(...))`), efeito que lê `localStorage` na montagem, setter que grava. Exporta `FiltrosVivos` (default), `useFiltros`, `useMexerFiltros`.
+`src/app/filtros.tsx` — **espelho exato do `local.tsx`; abra-o e copie a estrutura**, não a reinvente: `"use client"` na primeira linha, `useState(SEM_FILTRO)` (nunca `useState(() => lerFiltros(...))`), efeito que lê `localStorage` na montagem, setter que grava. Exporta `FiltrosVivos` (default), `useFiltros`, `useMexerFiltros`.
+
+Três detalhes do espelho que **não são enfeite**, e cada um tem teste no Step 1:
+
+- **Os dois `try/catch` em volta do `localStorage`** (ler na montagem, gravar no setter). Em aba anônima do Safari o acesso **estoura**, e sem eles a home inteira cai na tela de erro por causa de um filtro. Foi a ausência desses guardas — e da prova deles — que custou os dois fix rounds da Task 2.
+- **Fora de provedor, `useFiltros` devolve `SEM_FILTRO`** e `useMexerFiltros` devolve um objeto inerte (como o `INERTE` do `local.tsx`). Nada de `useContext(Ctx)!`: é o servidor que renderiza esse caso.
+- **Dois contextos separados** (estado e mexer), como lá — quem só mexe não repinta a cada mudança de estado.
 
 `src/app/PainelFiltros.tsx` — a linha e o painel:
 
@@ -234,17 +379,39 @@ Em `src/app/page.tsx`: envolva com `<FiltrosVivos>` por dentro do `<LocalVivo>`.
 Run: `npx vitest run tests/app/PainelFiltros.test.tsx tests/lib/home-layout.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Prova de mutação**
+- [ ] **Step 5: Prova de mutação, sub-cláusula a sub-cláusula**
 
-Troque `useState(SEM_FILTRO)` por `useState(() => lerFiltros(localStorage.getItem(CHAVE_FILTROS)))` em `filtros.tsx` → "o PRIMEIRO render ignora o que está guardado" tem que falhar. Devolva. Cole a saída.
+A régua deste projeto é literal: *apagar a linha faz um teste falhar*. "Existe um teste parecido em outro caminho de código" **não é prova** — o argumento já foi derrubado nesta rodada apagando o guard e vendo a suíte verde.
+
+| # | Mutação | Teste que TEM que falhar |
+|---|---|---|
+| 1 | `useState(SEM_FILTRO)` → `useState(() => lerFiltros(localStorage.getItem(CHAVE_FILTROS)))` | "o PRIMEIRO render ignora o que está guardado" |
+| 2 | apagar o `"use client"` do `PainelFiltros.tsx` | "PainelFiltros é client component" — **e mais nenhum** |
+| 3 | apagar o `"use client"` do `filtros.tsx` | "filtros.tsx é client component" |
+| 4 | tirar o `<FiltrosVivos>` do `page.tsx` | "o page.tsx da home embrulha tudo no FiltrosVivos" |
+| 5 | apagar o `try/catch` da LEITURA em `filtros.tsx` | "leitura que estoura na montagem" |
+| 6 | apagar o `try/catch` da ESCRITA em `filtros.tsx` | "escrita que estoura ao ligar um recorte" |
+| 7 | `useContext(Ctx) ?? SEM_FILTRO` → `useContext(Ctx)!` | "useFiltros devolve SEM_FILTRO e não estoura" |
+| 8 | `{...filtros, ...p}` → `{...SEM_FILTRO, ...p}` no `trocar` | "ligar um recorte preserva os que já estavam ligados" |
+| 9 | `filtros.esforco === e ? null : e` → `e` | "tocar o mesmo esforço de novo desliga" |
+| 10 | apagar o `aria-expanded` do botão FILTRAR | "abre no toque e fecha no toque de novo" |
+| 11 | trocar `min-height: 36px` do `.filtro-linha` no CSS | "o CSS usa a MESMA altura da constante da linha" |
+
+**Na #2 e na #3, confira também quantos OUTROS testes caem.** A resposta esperada é zero — é isso que torna a asserção de fonte necessária, e é o número que prova a lição.
+
+🔴 **Se alguma mutação NÃO morder, PARE e relate.** Não afrouxe a asserção. Antes de declarar uma linha morta, rode `npx tsc --noEmit`: duas linhas que o vitest deu como mortas nesta suíte eram carregadoras de peso pro `tsc`. Três vezes nesta rodada, quando a mutação não mordeu, o erro estava no plano — e quem parou e mostrou a conta estava certo nas três.
 
 - [ ] **Step 6: Rodar a suíte e commitar**
 
 ```bash
 npm test
+npx tsc --noEmit
+npm run build
 git add src/app/filtros.tsx src/app/PainelFiltros.tsx src/app/home.css src/app/page.tsx src/lib/home-layout.ts tests/app/PainelFiltros.test.tsx tests/lib/home-layout.test.ts
 git commit -m "feat(filtros): a linha de resumo e o painel sanfona na home"
 ```
+
+🔴 **`npm run build` entra na verificação, não é opcional.** `npm test` verde não prova que o app constrói: o vitest roda por esbuild e nunca chama o `next build`. Nesta mesma rodada o build ficou quebrado por quatro commits com a suíte inteira verde, e três revisões passaram por cima.
 
 ---
 

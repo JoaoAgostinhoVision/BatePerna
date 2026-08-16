@@ -74,6 +74,29 @@ describe("filtro e agrupamento juntos", () => {
     expect(container.textContent).not.toContain("Hoje o tempo deixa");
   });
 
+  // ——— TRANSFERIDO DO PRÉ-VOO DA TASK 10 (precedente da Task 3: achado real
+  // sem linha pra consertar naquela camada vira ruling registrado, e o teste
+  // nasce onde ele morde).
+  //
+  // Lá o `<FiltrosVivos>` entrou no page.tsx com prova só de FONTE, porque
+  // nada consumia o provedor ainda. Aqui já consome — então a prova forte é
+  // possível e é obrigatória: **renderizar o page.tsx DE VERDADE**, sem
+  // embrulhar nada à mão, com um filtro guardado no aparelho.
+  //
+  // Todos os outros testes deste arquivo embrulham `<FiltrosVivos>` na mão.
+  // Se o page.tsx esquecer o provedor, eles continuam TODOS verdes e a home
+  // real não filtra nada. Foi exatamente assim com o `<LocalVivo>` na Task 4:
+  // tirá-lo deixou os 16 testes do MapaHome.test.tsx verdes.
+  //
+  // Espelhe o teste que já existe em tests/app/home.test.tsx:190 ("a home de
+  // verdade embrulha tudo no LocalVivo") — mesmo formato, mesmo arquivo de
+  // página.
+  it("a home de verdade embrulha tudo no FiltrosVivos: o filtro guardado recorta sem ninguém embrulhar na mão", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    // ... renderiza page.tsx de verdade e confere que a Rampa (paga) sumiu
+    // e que o aviso "Nenhuma trilha com esses filtros" apareceu.
+  });
+
   // A contagem da linha e a lista na tela SÃO a mesma conta. Se saírem de
   // dois lugares, a linha diz "4 trilhas" com 2 na tela — a mesma família do
   // cabeçalho verde sobre cartão vermelho.
