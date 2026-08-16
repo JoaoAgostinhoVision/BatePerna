@@ -370,6 +370,18 @@ Herdados:
     ele rejeita. **Ao validar uma mutação, diga qual das duas coisas aconteceu.** "Ficou
     vermelho" não é prova; "caiu a asserção X" é.
 
+20. 🔴 **REFACTOR PODE ESVAZIAR UM TESTE VIZINHO SEM TOCAR NELE, E A SUÍTE FICA VERDE.** No fix
+    round da Task 12, mover a fórmula da goteira do `padding:` do `.bp` pra declarações
+    `--goteira-*` **esvaziou** a asserção de `tests/lib/mapa.test.ts:301-310`, que provava que
+    `MAPA_JANELA_VISIVEL_HOME_PX` ainda bate com o CSS de onde foi derivada: ela casava
+    `clamp(0px, 3vw, 1rem)` **na regra `.bp` inteira**, então passou a casar as variáveis novas em
+    vez do padding. Provado zerando o padding lateral — o `mapa.test.ts` **passa verde** com a
+    constante do mapa invalidada. **Ao mover uma expressão de lugar dentro de um arquivo, procure
+    quem a casava por texto** — asserção que lê "a regra inteira" muda de significado sem uma
+    linha de diff no teste. Irmã disto: **dois testes deste repo dependem de "o primeiro `.bp {`
+    do `ficha.css` é o de verdade"** (`mapa.test.ts` e o da barra), o que faz uma regra `.bp`
+    inserida antes deles mascarar os dois.
+
 18. 🔴 **MEDIR NÃO BASTA SE A COMPARAÇÃO NÃO ESTIVER ESCRITA COMO PERGUNTA.** Na Task 12 o
     implementador mediu, na MESMA sondagem e no mesmo objeto JSON, `.barra` com 375,20 de
     largura e `.screen` com 352,70 — e **não comparou os dois**. Os números estavam na frente
