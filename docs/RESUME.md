@@ -353,6 +353,16 @@ Herdados:
     ele rejeita. **Ao validar uma mutação, diga qual das duas coisas aconteceu.** "Ficou
     vermelho" não é prova; "caiu a asserção X" é.
 
+17. **"E mais nenhum teste cai" é afirmação sobre a suíte INTEIRA.** Na Task 10 o revisor mediu
+    quatro mutações com `npx vitest run tests/app/ tests/lib/` — subconjunto por caminho, 36 de
+    45 arquivos — e relatou os números como se fossem do todo. O implementador pegou a
+    discrepância (447 contra 487) e **não ajustou: perguntou por quê**, que é a régua desta
+    rodada aplicada de baixo pra cima. A causa importava: as afirmações do tipo "e mais nenhum
+    cai" são justamente sobre o que NÃO cai, e dois dos arquivos de fora (`tests/deploy/*`) leem
+    fontes de `src/app/`, inclusive um alvo de mutação. Remedido na árvore inteira, nenhuma
+    conclusão mudou. **"O teste nomeado morre" um arquivo prova; "e mais nenhum" exige
+    `npm test`.**
+
 16. **O `next build` só protege o que está NA ÁRVORE, e isso muda o valor da asserção de fonte.**
     Medido nas duas direções na Task 10: apagando o `"use client"` do `filtros.tsx` (já
     importado pelo `page.tsx`) o **build falha** (`You're importing a component that needs
