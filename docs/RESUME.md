@@ -233,6 +233,19 @@ Desta rodada (estão no ledger, o revisor final vai triar):
   `PRAZO_CLIMA_MS` e **essa relação não tem teste**, embora o padrão já exista na suíte
   (`tests/lib/weather.test.ts:168-171` testa `PRAZO_CLIMA_MS < PRAZO_REDE_MS` pelo mesmo
   motivo). Barato e idiomático — achado da re-revisão da Task 5, fora do escopo dela.
+- **Higiene de mock em `tests/lib/filtros.test.ts`** (achado da re-revisão da Task 9, Minor). O
+  arquivo tem um espião de módulo (`vi.mock("@/lib/geo")` delegando pro real) e a config não tem
+  cinto: `vitest.config.ts` está com `setupFiles: []` e sem `clearMocks`. Provado pelo revisor:
+  um futuro `mockReturnValue` **sem** `Once` vaza em silêncio pros testes seguintes do arquivo e
+  **nada** cai — hoje não morde porque o `Once` é consumido e a 2ª asserção do teste é rede.
+  🔴 **Os DOIS remédios óbvios estão errados, e eu medi os dois** (arquivos de scratch, apagados):
+  `clearMocks: true` **não cura** — `mockClear` não remove implementação, que é o mesmo motivo
+  pelo qual o revisor o achou seguro; e `mockReset()` **quebra a delegação** — neste vitest
+  (2.1.9) ele reseta pra função vazia, não pra impl passada em `vi.fn(impl)` (`expected undefined
+  to be 2`). O remédio certo é restaurar explicitamente
+  (`afterEach(() => vi.mocked(distanciaKm).mockImplementation(real))`, com o real vindo de
+  `vi.importActual`), e isso é máquina demais pra um risco que hoje não morde. **Deferido de
+  propósito, com a medição registrada** — o revisor final decide.
 - **DECISÃO DE PRODUTO pendente, não é só limpeza:** `enquadrarComVoce([], voce, ...)` devolve
   zoom 11 (~26 km), enquanto uma trilha só, longe demais, cai no piso de zoom 8 (~212 km) —
   zero trilhas fica **mais apertado** que uma trilha distante. Assimetria herdada de reusar o
