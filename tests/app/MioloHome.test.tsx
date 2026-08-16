@@ -1,0 +1,521 @@
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import path from "node:path";
+import { Profiler } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, cleanup, act, screen, waitFor } from "@testing-library/react";
+import MioloHome from "@/app/MioloHome";
+import type { ParFolha } from "@/app/FolhaTrilhas";
+import FiltrosVivos from "@/app/filtros";
+import { LeiturasProvider } from "@/app/leituras";
+import LocalVivo from "@/app/local";
+import { CHAVE_FILTROS, SEM_FILTRO } from "@/lib/filtros";
+import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+import type { Ficha } from "@/types/ficha";
+
+const AGORA_S = Math.floor(Date.UTC(2027, 0, 15, 11, 0) / 1000);
+
+// Mesmo padrão sintético dos outros arquivos de teste da home (fichaFake): só
+// os campos que o miolo, o mapa e o cartão leem. `content/fichas/` tem UMA
+// ficha hoje, e não dá pra provar "três desenham a mesma lista" com uma.
+function fichaFake(slug: string): Ficha {
+  return {
+    slug,
+    modos: [],
+    rotulo_escaneio: "",
+    promessa: `promessa de ${slug}`,
+    voz: "",
+    premio: "",
+    trajeto: { waypoints: [{ nome: slug, lat: 0, lng: 0 }] },
+    acesso: "",
+    avisos: "",
+    condicao: {
+      coords: { lat: 0, lng: 0 },
+      regra: { tipo: "chuva_binaria", janela_previsao_horas: 0, janela_passado_horas: 0, limiar_mm: 0 },
+      regra_texto: "",
+      ressalva_proxy: "",
+    },
+    discriminador: { formato: "", como_ler: "", permissao_abortar: "" },
+    custo: { tag: "gratis" },
+  };
+}
+
+const PAGO = { custo: { tag: "pago" as const, valor: "R$ 5" } };
+
+const agoraSeg = () => Math.floor(Date.now() / 1000);
+
+const par = (slug: string, estado: "fresco" | "frio", over: Partial<Ficha> = {}): ParFolha => ({
+  ficha: { ...fichaFake(slug), ...over },
+  leitura: { estado, erro: false, calculadoEm: agoraSeg() },
+});
+
+/** A home inteira menos a moldura: é assim que o `page.tsx` monta o miolo.
+ *  `vivas` é a leitura que chega DEPOIS do primeiro paint (o contexto), como
+ *  o `HomeViva` publica em produção. */
+function Tela({ pares, vivas }: { pares: ParFolha[]; vivas?: Map<string, LeituraCarimbo> }) {
+  return (
+    <LocalVivo>
+      <FiltrosVivos>
+        <LeiturasProvider value={vivas ?? null}>
+          <MioloHome pares={pares} />
+        </LeiturasProvider>
+      </FiltrosVivos>
+    </LocalVivo>
+  );
+}
+
+// ——— os três leitores da MESMA lista, lidos do DOM que foi realmente
+// desenhado. Nenhum deles é um número escrito neste arquivo: a prova é a
+// comparação entre eles.
+const pinsNaTela = (c: HTMLElement) =>
+  Array.from(c.querySelectorAll(".pin-home")).map((a) => a.getAttribute("href")!.slice(1));
+
+const cartoesNaTela = (c: HTMLElement) =>
+  Array.from(c.querySelectorAll(".cartao")).map((el) => el.id);
+
+/** O número que a linha de resumo ESCREVEU, lido de volta do texto dela. */
+const contaDaLinha = (c: HTMLElement) => {
+  const texto = c.querySelector(".filtro-conta")?.textContent ?? "";
+  const m = texto.match(/^(\d+)\s+trilhas?/);
+  return m ? Number(m[1]) : NaN;
+};
+
+afterEach(() => { cleanup(); localStorage.clear(); });
+
+// ——————— a JUNÇÃO: os três desenham da mesma lista ———————
+//
+// É o teste que esta task existe pra ter. O defeito medido pela revisão da
+// branch anterior: 3 pins, 1 cartão, "1 trilha" na linha e "2 trilhas fora do
+// mapa" logo acima dela — três contas diferentes na mesma tela.
+describe("MioloHome: pins, contagem e cartões saem de UMA lista só", () => {
+  it("com filtro ligado, pins, contagem e cartões são a MESMA lista", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    const todas = [par("zebra", "fresco"), par("caro", "fresco", PAGO), par("morro", "frio")];
+
+    const { container } = render(<Tela pares={todas} />);
+
+    // O recorte precisa ter MORDIDO — senão as igualdades abaixo são triviais
+    // (com tudo visível, três contas erradas iguais também passariam).
+    await waitFor(() => {
+      expect(cartoesNaTela(container).length).toBeLessThan(todas.length);
+    });
+    const cartoes = cartoesNaTela(container);
+    expect(cartoes.length).toBeGreaterThan(0);
+
+    // 🔴 A asserção é ENTRE os três, não contra um número que eu escrevi: um
+    // número meu provaria a mesma suposição minha três vezes.
+    expect([...pinsNaTela(container)].sort()).toEqual([...cartoes].sort());
+    expect(contaDaLinha(container)).toBe(cartoes.length);
+  });
+
+  // O quadro que o Critical de duas rodadas atrás produziu: uma leitura nova
+  // chega pelo contexto DEPOIS do primeiro paint, e algo repinta e algo não.
+  //
+  // Este é o teste que separa "o mapa RECEBE a lista" de "o mapa REFAZ a
+  // conta": refazendo, o mapa filtraria pela leitura que ele tem à mão (a
+  // semente do servidor, que diz fresco), enquanto a folha filtra pela leitura
+  // de agora. Com um recorte que não depende de leitura (custo) as duas contas
+  // dariam o mesmo resultado e a divergência ficaria invisível.
+  it("leitura nova chegando com filtro ligado: os três continuam concordando", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, daHoje: true }));
+    const todas = [par("zebra", "fresco"), par("abelha", "fresco"), par("morro", "fresco")];
+    const semente = new Map(todas.map((p) => [p.ficha.slug, p.leitura]));
+
+    const { container, rerender } = render(<Tela pares={todas} vivas={semente} />);
+    // Todas frescas: "só as que dá hoje" ainda não esconde ninguém.
+    await waitFor(() => expect(cartoesNaTela(container)).toHaveLength(todas.length));
+
+    // A leitura de AGORA chega e derruba uma delas.
+    const nova = new Map(semente);
+    nova.set("abelha", { estado: "frio", erro: false, calculadoEm: agoraSeg() });
+    rerender(<Tela pares={todas} vivas={nova} />);
+
+    const cartoes = cartoesNaTela(container);
+    expect(cartoes).not.toContain("abelha"); // a leitura nova mordeu
+    expect([...pinsNaTela(container)].sort()).toEqual([...cartoes].sort());
+    expect(contaDaLinha(container)).toBe(cartoes.length);
+  });
+
+  // A invariante herdada, que subir a conta pode quebrar sem ninguém ver: o
+  // HTML do servidor não conhece filtro nenhum, e a home chega do cache do
+  // service worker. Ler o aparelho durante o render quebraria a hidratação bem
+  // nos elementos que carregam a decisão — agora são DOIS (os pins e os
+  // cartões), e o mapa é o que não tinha prova.
+  //
+  // Mesma técnica dos outros testes de primeiro quadro do projeto: o Profiler
+  // entrega o COMMIT antes dos efeitos passivos. `render()` sozinho já drena o
+  // efeito que lê o aparelho, e perguntar ao DOM depois dele responde com a
+  // lista JÁ recortada — escondendo justamente o quadro que importa.
+  it("o PRIMEIRO render mostra TODOS os pins, mesmo com filtro guardado", () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    const todas = [par("caro", "fresco", PAGO), par("gratis", "fresco")];
+    const quadros: number[] = [];
+    const registrar = () => { quadros.push(document.querySelectorAll(".pin-home").length); };
+
+    render(
+      <LocalVivo>
+        <FiltrosVivos>
+          <Profiler id="miolo" onRender={registrar}>
+            <MioloHome pares={todas} />
+          </Profiler>
+        </FiltrosVivos>
+      </LocalVivo>,
+    );
+
+    expect(quadros[0]).toBe(todas.length); // primeiro commit: o recorte guardado ainda não vale
+    // depois do efeito, o mesmo DOM já obedece ao que estava no aparelho
+    expect(document.querySelectorAll(".pin-home")).toHaveLength(todas.length - 1);
+  });
+
+  // `confia` sai de `pares`, não de `visiveis` — decisão registrada (spec §5),
+  // não otimizável: `passaNoFiltro` RECEBE `confia`, `useAlgumVenceu` precisa
+  // de array de tamanho estável, e a leitura vem numa busca só pro lote
+  // inteiro ("tudo ou nada no clima"). A consequência é visível e alguém vai
+  // querer "consertar": uma trilha que o filtro escondeu, com leitura
+  // estragada, derruba os cabeçalhos das que ficaram na tela.
+  it("trilha escondida pelo filtro ainda derruba o agrupamento", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    const todas: ParFolha[] = [
+      // Esta some da tela (é paga) — mas a leitura dela está com erro.
+      {
+        ficha: { ...fichaFake("caro"), ...PAGO },
+        leitura: { estado: "frio", erro: true, calculadoEm: agoraSeg() },
+      },
+      par("gratis", "fresco"),
+    ];
+
+    const { container } = render(<Tela pares={todas} />);
+
+    await waitFor(() => expect(cartoesNaTela(container)).toHaveLength(1));
+    expect(container.querySelectorAll(".grupo-k")).toHaveLength(0);
+    expect(container.textContent).not.toContain("Hoje o tempo deixa");
+  });
+
+  // O `"use client"` é o que o jsdom NÃO enxerga: ele renderiza tudo como
+  // cliente, então apagar a diretiva deixa a suíte verde e a home parada no
+  // aparelho do João — sem filtro, sem leitura nova, sem localização. Lição 5
+  // do docs/RESUME.md: com o `MapaHome`, isso deixou 26 de 27 testes verdes.
+  // E aqui o dano seria maior: este é o componente que ESTADO nenhum sobrevive
+  // sem, e é ele quem embrulha o mapa e a folha.
+  it("MioloHome é client component — é ele quem segura os hooks da tela inteira", () => {
+    const fonte = readFileSync(path.join(process.cwd(), "src", "app", "MioloHome.tsx"), "utf8");
+    expect(fonte.trimStart().startsWith('"use client"')).toBe(true);
+  });
+});
+
+// ——————— filtro e agrupamento: a MESMA passada ———————
+//
+// Bloco herdado de tests/app/FolhaTrilhas.test.tsx: quando a conta subiu pra
+// cá, estes testes vieram junto — quem RECORTA agora é o `MioloHome`, e um
+// teste que monta só a folha deixaria de exercitar o recorte.
+//
+// O Critical da rodada passada nasceu de agrupar num lugar e repintar em
+// outro. Aqui o risco é o mesmo com outra roupa: recortar num lugar e rotular
+// em outro. Todos os testes abaixo olham a tela DEPOIS do filtro — cabeçalho,
+// cartões e contagem juntos, no mesmo DOM.
+describe("filtro e agrupamento juntos", () => {
+  // Timers de verdade neste bloco: `waitFor`/`findBy` do testing-library não
+  // reconhecem o relógio falso do vitest (o guarda deles procura o global
+  // `jest`, que não existe aqui) e ficariam esperando um `setInterval` que
+  // ninguém adianta. Mesmo precedente do teste do LocalVivo em
+  // tests/app/home.test.tsx. Nada aqui depende de tempo congelado: as leituras
+  // ou são de agora, ou são de 99.999s atrás.
+  const monta = (pares: ParFolha[]) => render(<Tela pares={pares} />);
+
+  it("sem filtro, a folha é a de hoje: agrupada e completa", () => {
+    const { container } = monta([par("a", "fresco"), par("b", "frio")]);
+    expect(container.textContent).toContain("Hoje o tempo deixa");
+    expect(container.textContent).toContain("Hoje não");
+    expect(container.querySelectorAll(".cartao")).toHaveLength(2);
+  });
+
+  it('"dá hoje" tira as que não dão', async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, daHoje: true }));
+    const { container } = monta([par("a", "fresco"), par("b", "frio")]);
+    await waitFor(() => expect(container.querySelectorAll(".cartao")).toHaveLength(1));
+  });
+
+  // O cabeçalho é uma AFIRMAÇÃO sobre o que está embaixo dele. Sobrando nada
+  // embaixo, ele mente. Primo direto do Critical da rodada passada.
+  it("grupo esvaziado pelo filtro perde o cabeçalho", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, daHoje: true }));
+    const { container } = monta([par("a", "fresco"), par("b", "frio")]);
+    await waitFor(() => expect(container.textContent).not.toContain("Hoje não"));
+    expect(container.textContent).toContain("Hoje o tempo deixa");
+  });
+
+  it("filtro que zera a lista mostra o aviso e o jeito de limpar", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    const { container } = monta([par("a", "fresco", PAGO)]);
+    await waitFor(() => expect(container.textContent).toContain("Nenhuma trilha com esses filtros"));
+    expect(screen.getByRole("button", { name: /limpar/i })).toBeTruthy();
+  });
+
+  it("limpar traz tudo de volta", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    const { container } = monta([par("a", "fresco", PAGO)]);
+    const b = await screen.findByRole("button", { name: /limpar/i });
+    await act(async () => { b.click(); });
+    expect(container.querySelectorAll(".cartao")).toHaveLength(1);
+  });
+
+  // A regra que já existe e não pode ser quebrada por esta task.
+  it("sem leitura confiável, continua sem cabeçalho — e o filtro 'dá hoje' fica inerte", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, daHoje: true }));
+    const vencido = { estado: "frio" as const, erro: false, calculadoEm: agoraSeg() - 99_999 };
+    const { container } = monta([
+      { ficha: fichaFake("a"), leitura: vencido },
+      par("b", "fresco"),
+    ]);
+    await waitFor(() => expect(container.querySelectorAll(".cartao")).toHaveLength(2));
+    expect(container.textContent).not.toContain("Hoje o tempo deixa");
+  });
+
+  // O ramo `!confia` desliga o AGRUPAMENTO, não o filtro. Quem ligou "só
+  // grátis" continua querendo só as grátis, com ou sem carimbo confiável.
+  //
+  // Sem ESTE teste a prova de mutação "o ramo !confia volta a usar `pares`"
+  // não morde: o único recorte exercitado no ramo `!confia` pelo teste acima é
+  // o `daHoje`, que ali é inerte de propósito — então `pares` e `visiveis` são
+  // a MESMA lista e a mutação passaria despercebida.
+  it("sem leitura confiável, os OUTROS recortes continuam recortando", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    const vencido = { estado: "frio" as const, erro: false, calculadoEm: agoraSeg() - 99_999 };
+    const { container } = monta([
+      { ficha: fichaFake("a"), leitura: vencido },
+      par("b", "fresco", PAGO),
+    ]);
+    await waitFor(() => expect(container.querySelectorAll(".cartao")).toHaveLength(1));
+    expect(container.textContent).not.toContain("Hoje o tempo deixa");
+  });
+
+  // A folha vazia tem que valer NOS DOIS ramos.
+  //
+  // Com o `if (visiveis.length === 0)` escrito depois do `if (!confia)`, o caso
+  // "sem carimbo confiável + filtro que zera" cai no ramo de cima e desenha uma
+  // `.cartoes` VAZIA: folha em branco, sem aviso e sem o botão de limpar — que
+  // é exatamente o que a §7.4 da spec proíbe. E o ramo `!confia` é o mais
+  // provável de estar na tela num dia ruim, que é justamente quando a pessoa
+  // filtra mais.
+  it("filtro que zera a lista avisa TAMBÉM quando não dá pra confiar no carimbo", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    const vencido = { estado: "frio" as const, erro: false, calculadoEm: agoraSeg() - 99_999 };
+    const { container } = monta([
+      { ficha: { ...fichaFake("a"), ...PAGO }, leitura: vencido },
+    ]);
+    await waitFor(() => expect(container.textContent).toContain("Nenhuma trilha com esses filtros"));
+    expect(screen.getByRole("button", { name: /limpar/i })).toBeTruthy();
+  });
+
+  // A contagem da linha e a lista na tela SÃO a mesma conta. Se saírem de
+  // dois lugares, a linha diz "4 trilhas" com 2 na tela — a mesma família do
+  // cabeçalho verde sobre cartão vermelho.
+  it("a contagem da linha bate com os cartões desenhados", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, daHoje: true }));
+    const { container } = monta([par("a", "fresco"), par("b", "frio"), par("c", "frio")]);
+    await waitFor(() => {
+      const n = container.querySelectorAll(".cartao").length;
+      expect(n).toBe(1); // o recorte precisa ter mordido — senão a igualdade abaixo é trivial
+      expect(contaDaLinha(container)).toBe(n);
+    });
+  });
+
+  // ——— a invariante "filtrar não reordena".
+  //
+  // Hoje ela é ESTRUTURAL (`.filter` preserva a ordem de `pares`, e o
+  // particionamento podem/naoPodem também), e é por isso mesmo que ela some
+  // em silêncio: um `.sort()` que alguém acrescente no futuro — por km, por
+  // nome — não derruba nada. E na tela é uma SEGUNDA coisa acontecendo
+  // enquanto a pessoa decide no portão: ela tocou um chip e o cartão que ela
+  // estava lendo mudou de lugar.
+  //
+  // Os DOIS ramos precisam de teste porque são dois caminhos diferentes: o
+  // liso (`!confia`) desenha `visiveis` direto; o agrupado desenha duas
+  // partições. Um `.sort()` num não é pego pelo teste do outro.
+  //
+  // Os slugs são não-alfabéticos de propósito: com "a", "b", "c" um sort por
+  // nome devolveria a mesma sequência e a prova de mutação não morderia.
+  it("filtrar não reordena: ramo AGRUPADO mantém a ordem de `pares`", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    // Ordem de `pares` como o servidor entrega: fresco primeiro, depois o resto.
+    const { container } = monta([
+      par("zebra", "fresco"),
+      par("abelha", "fresco"),
+      par("caro", "fresco", PAGO), // sai no filtro
+      par("morro", "frio"),
+      par("beira", "frio"),
+    ]);
+    await waitFor(() => {
+      expect(container.querySelectorAll(".grupo-k")).toHaveLength(2); // confirma: ramo agrupado
+      expect(cartoesNaTela(container)).toEqual(["zebra", "abelha", "morro", "beira"]);
+    });
+  });
+
+  it("filtrar não reordena: ramo LISO (sem carimbo confiável) mantém a ordem de `pares`", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    const { container } = monta([
+      par("zebra", "fresco"),
+      par("abelha", "fresco"),
+      par("caro", "fresco", PAGO), // sai no filtro
+      // leitura vencida: derruba `confia` e joga tudo no ramo liso
+      { ficha: fichaFake("morro"), leitura: { estado: "frio", erro: false, calculadoEm: agoraSeg() - 99_999 } },
+    ]);
+    await waitFor(() => {
+      expect(container.querySelectorAll(".grupo-k")).toHaveLength(0); // confirma: ramo liso
+      expect(cartoesNaTela(container)).toEqual(["zebra", "abelha", "morro"]);
+    });
+  });
+
+  // ——— "primeiro render sem filtro, SEMPRE", visto nos CARTÕES.
+  //
+  // O teste irmão dos PINS está no primeiro bloco deste arquivo, e o do valor
+  // do provedor em tests/app/PainelFiltros.test.tsx. A invariante existe por
+  // causa da HIDRATAÇÃO DA LISTA: a home chega do cache do service worker com
+  // HTML velho, e é aqui — nos cartões, o elemento que carrega a decisão — que
+  // o mismatch apareceria.
+  it("o PRIMEIRO quadro da folha ignora o filtro guardado — é o HTML do servidor que a hidratação encontra", () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    const pares = [par("caro", "fresco", PAGO), par("gratis", "fresco")];
+    const quadros: number[] = [];
+    const registrar = () => { quadros.push(document.querySelectorAll(".cartao").length); };
+
+    render(
+      <LocalVivo>
+        <FiltrosVivos>
+          <Profiler id="miolo-filtrado" onRender={registrar}>
+            <MioloHome pares={pares} />
+          </Profiler>
+        </FiltrosVivos>
+      </LocalVivo>,
+    );
+
+    expect(quadros[0]).toBe(2); // primeiro commit: o recorte guardado ainda não vale
+    // depois do efeito, o mesmo DOM já obedece ao que estava no aparelho
+    expect(document.querySelectorAll(".cartao")).toHaveLength(1);
+  });
+});
+
+// ——————— o que NENHUM teste de comportamento pode ver ———————
+//
+// 🔴 ESTE GUARDA NASCEU DE UMA PROVA DE MUTAÇÃO QUE NÃO MORDEU, e o achado é
+// o motivo dele existir. A mutação era "o mapa refaz o `filter` por conta
+// própria, com a mesma expressão, num segundo array". Escrita ao pé da letra —
+// um segundo `pares.filter(<expressão idêntica>)` no MESMO escopo do
+// `MioloHome` — a suíte inteira ficou VERDE, e está certo que tenha ficado:
+// `passaNoFiltro` é pura e `.filter` é determinístico, então as duas listas
+// têm conteúdo idêntico por construção. Nenhuma asserção de comportamento, em
+// framework nenhum, consegue distingui-las: o que muda é uma alocação.
+//
+// O perigo, porém, é real e é de MANUTENÇÃO: duas expressões que hoje dizem a
+// mesma coisa são duas expressões que alguém edita separadamente amanhã — é
+// literalmente a forma do Critical de duas rodadas atrás (agrupar num lugar,
+// repintar em outro). Por isso a spec (§5) não pede um comportamento, pede uma
+// ESTRUTURA: "um array só, num escopo léxico só". Invariante estrutural se
+// prova na fonte, como o `"use client"` e o `<FiltrosVivos>` do page.tsx já se
+// provam neste projeto.
+//
+// A mutação escrita no lugar realista — o `filter` DENTRO do `MapaHome`, com
+// as fontes que ele tem à mão — morde por comportamento (teste "leitura nova
+// chegando com filtro ligado"), e morde aqui também: são dois arquivos.
+describe("um recorte só, num escopo léxico só", () => {
+  const APP = path.join(process.cwd(), "src", "app");
+
+  /** Fonte sem comentários: o guarda conta CHAMADAS, e um comentário que cite
+   *  o nome (há um, logo acima da conta, explicando por que `confia` sai de
+   *  `pares`) não é uma chamada. O `[^:]` antes do `//` poupa o `https://` dos
+   *  links. */
+  const semComentarios = (fonte: string) =>
+    fonte.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+
+  const arquivosDoApp = (dir: string): string[] =>
+    readdirSync(dir).flatMap((e) => {
+      const p = path.join(dir, e);
+      if (statSync(p).isDirectory()) return arquivosDoApp(p);
+      return /\.tsx?$/.test(e) ? [p] : [];
+    });
+
+  // 🔴 A conta é de MENÇÕES ao identificador, não de chamadas — e isso foi
+  // MEDIDO, não escolhido por gosto. A primeira versão contava `passaNoFiltro(`
+  // e ficou VERDE contra a mutação escrita com `import { passaNoFiltro as pf }`
+  // + `pf(...)` dentro do `MapaHome`: o apelido some do call site e a regex não
+  // vê mais nada. É o mesmo ponto cego que o guarda de exports de rota já
+  // documenta (`export { X as Y }` escapando da regex antiga). Quem NÃO some no
+  // apelido é o nome importado — quem quiser usar a função tem que escrevê-lo
+  // ao menos uma vez, no `import`.
+  it("o app inteiro conhece `passaNoFiltro` num arquivo só, e o chama uma vez só", () => {
+    const mencoes: Record<string, number> = {};
+    const chamadas: Record<string, number> = {};
+    for (const arquivo of arquivosDoApp(APP)) {
+      const fonte = semComentarios(readFileSync(arquivo, "utf8"));
+      const curto = path.relative(APP, arquivo).replace(/\\/g, "/");
+      const m = (fonte.match(/\bpassaNoFiltro\b/g) ?? []).length;
+      const c = (fonte.match(/\bpassaNoFiltro\s*\(/g) ?? []).length;
+      if (m > 0) mencoes[curto] = m;
+      if (c > 0) chamadas[curto] = c;
+    }
+    // Um segundo arquivo aqui é a lista nascendo em dois escopos — inclusive
+    // por apelido, que é como a mutação passou despercebida da primeira vez.
+    expect(Object.keys(mencoes)).toEqual(["MioloHome.tsx"]);
+    // Duas menções e uma só: o `import` e a chamada. Uma terceira menção é um
+    // segundo uso, com ou sem parêntese à vista.
+    expect(mencoes["MioloHome.tsx"]).toBe(2);
+    expect(chamadas).toEqual({ "MioloHome.tsx": 1 });
+  });
+});
+
+// ——————— o relógio da validade decide se a folha agrupa ———————
+//
+// Bloco herdado de tests/app/FolhaTrilhas.test.tsx: `useAlgumVenceu` e
+// `algumErro` subiram pro `MioloHome` junto com a conta, e é aqui que a
+// derivação de `confia` passa a ter ponto de uso.
+describe("MioloHome: de onde `confia` sai", () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(AGORA_S * 1000); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it("a leitura vence sozinha, sem nenhuma requisição — e os cabeçalhos somem", () => {
+    const pares = [{ ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S } }];
+
+    const { container } = render(<MioloHome pares={pares} />);
+    expect(container.querySelector(".grupo-k")?.textContent).toBe("Hoje o tempo deixa");
+
+    act(() => { vi.advanceTimersByTime(31 * 60 * 1000); });
+
+    expect(container.querySelector(".grupo-k")).toBeNull();
+    expect(container.querySelector(".selo")?.textContent).toContain("SEM INFORMAÇÕES");
+  });
+
+  it("clima fora do ar — erro em qualquer uma — e nenhuma frase de veredito aparece", () => {
+    const pares = [
+      { ficha: fichaFake("seca"), leitura: { estado: "frio" as const, erro: true, calculadoEm: AGORA_S } },
+      { ficha: fichaFake("molhada"), leitura: { estado: "frio" as const, erro: true, calculadoEm: AGORA_S } },
+    ];
+
+    const { container } = render(<MioloHome pares={pares} />);
+
+    expect(container.querySelectorAll(".grupo-k")).toHaveLength(0);
+    expect(container.textContent).not.toContain("Hoje o tempo deixa");
+    expect(container.textContent).not.toContain("Hoje não");
+  });
+
+  it("o primeiro quadro mostra cabeçalho — igual ao HTML do servidor mostraria — mesmo com a leitura já vencida no relógio", () => {
+    // Mesma técnica dos outros testes de primeiro quadro: o Profiler entrega o
+    // COMMIT antes dos efeitos passivos, que é o único jeito honesto de ver o
+    // que o HTML do servidor (e o primeiro paint do cliente) mostrariam.
+    const pares = [
+      { ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S - 40 * 60 } },
+    ];
+    const quadros: string[] = [];
+    const registrar = () => {
+      quadros.push(document.querySelector(".grupo-k")?.textContent ?? "sem cabeçalho");
+    };
+
+    render(
+      <Profiler id="miolo-relogio" onRender={registrar}>
+        <MioloHome pares={pares} />
+      </Profiler>,
+    );
+
+    expect(quadros[0]).toBe("Hoje o tempo deixa"); // primeiro commit: useAlgumVenceu ainda não rodou
+    // depois do efeito, o mesmo DOM já sabe que a leitura venceu
+    expect(document.querySelector(".grupo-k")).toBeNull();
+  });
+});

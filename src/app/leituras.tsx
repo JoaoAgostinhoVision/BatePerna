@@ -20,8 +20,8 @@ export function useLeitura(slug: string): LeituraCarimbo | undefined {
 }
 
 /** O mapa inteiro, não uma trilha. Existe pra quem precisa de uma pergunta
- *  AGREGADA sobre várias trilhas de uma vez — hoje, só a `FolhaTrilhas`
- *  decidindo se agrupa — sem cair na armadilha de chamar `useLeitura` dentro
+ *  AGREGADA sobre várias trilhas de uma vez — hoje, o `MioloHome` recortando
+ *  e decidindo se a folha agrupa — sem cair na armadilha de chamar `useLeitura` dentro
  *  de um loop (número de hooks variável entre renders, se a lista de fichas
  *  um dia deixar de ser estática). `null` fora de um provedor, mesma regra do
  *  `useLeitura`. */

@@ -77,8 +77,8 @@ describe('"dá hoje"', () => {
   // O nome deste teste dizia "leitura com erro não é escondida", e prometia uma
   // proteção que não existe: quem torna o recorte inerte aqui é o `confia`, não
   // o `erro`. `passaNoFiltro` NUNCA lê `leitura.erro` — de propósito. A decisão
-  // "dá pra confiar nestas leituras?" nasce inteira na `FolhaTrilhas`
-  // (`src/app/FolhaTrilhas.tsx:42-43`, `algumErro` → `faseDe` → `confia`) e
+  // "dá pra confiar nestas leituras?" nasce inteira no `MioloHome`
+  // (`src/app/MioloHome.tsx`, `algumErro` → `faseDe` → `confia`) e
   // chega aqui pronta; uma segunda regra nesta lib seria a segunda fonte que já
   // custou dois Criticals a este app. Então este caso é o irmão do de cima —
   // mesma cláusula, entrada mais parecida com a real (frio E com erro) — e o

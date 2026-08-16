@@ -26,7 +26,18 @@ import PinTrilha from "./PinTrilha";
  *
  *  Mais baixo que o da ficha porque aqui ele divide a tela com a decisão: o
  *  primeiro cartão tem que nascer acima da dobra. Ver src/lib/mapa.ts
- *  (MAPA_ALTURA_HOME_PX). */
+ *  (MAPA_ALTURA_HOME_PX).
+ *
+ *  🔴 `fichas` são as trilhas VISÍVEIS, não o acervo. Quem recorta é o
+ *  `MioloHome`, uma vez só, e entrega a MESMA lista pro mapa, pra linha de
+ *  resumo e pra folha. **Este componente não filtra e não pode passar a
+ *  filtrar** — foi exatamente a segunda conta que pôs 3 pins sobre 1 cartão,
+ *  com dois pins virando âncora morta e o aviso "2 trilhas fora do mapa" a
+ *  40px de uma linha que dizia "1 trilha". Refazer o recorte aqui, ainda que
+ *  com a mesma expressão, usaria a leitura que ESTE componente tem à mão (a
+ *  semente do servidor) em vez da leitura de agora, e as duas listas voltariam
+ *  a divergir na primeira leitura nova. Teste: "leitura nova chegando com
+ *  filtro ligado: os três continuam concordando". */
 export default function MapaHome({
   fichas,
   leituras,

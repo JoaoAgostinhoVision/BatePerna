@@ -25,7 +25,7 @@ export function useVenceu(calculadoEm: number): boolean {
 }
 
 /** O mesmo relógio, agregado: `true` assim que QUALQUER uma das leituras
- *  vencer. Existe pra `FolhaTrilhas`, que precisa de uma pergunta só —"tem
+ *  vencer. Existe pro `MioloHome`, que precisa de uma pergunta só —"tem
  *  alguma trilha sem leitura confiável na tela?"— sem chamar `useVenceu` uma
  *  vez por cartão dentro de um `.map()` (número de hooks variando com o
  *  tamanho da lista é a partida que o React não deixa jogar).
