@@ -387,6 +387,29 @@ Herdados:
     pílula pede o GPS em vez de abrir a busca. **Moral de método: relato de agente não é
     medição.** Eu tratei um como o outro e publiquei uma causa falsa.
 
+23. 🔴 **A FAMÍLIA DA ASSERÇÃO FROUXA EM CSS — e ela era MUITO maior do que a primeira varredura
+    sugeriu.** Forma: `toContain`/`toMatch` de um pedaço de declaração sobre um **bloco** de CSS.
+    Dois decoys a conhecer, os dois provados neste repo:
+    - **prefixo**: `"height: 168px"` é substring de `"max-height: 168px"`; `left:` casa em
+      `margin-left:`; `bottom: 0` casa em `padding-bottom: 0`; `width:` casa dentro de
+      `max-width:` (e `match` sem `/g` devolve a **primeira** ocorrência).
+    - **propriedade customizada**: `--font-size: 16px` satisfaz `/font-size:\s*16px/` e é
+      **inerte**. (`max-min-height` não existe; `--min-height` existe — o decoy certo.)
+
+    O que a rodada achou, em ondas: **1** (o refactor que esvaziou o `mapa.test.ts`), depois
+    **3** na varredura da revisão da branch, depois **+2** na re-revisão, depois **+1 viva e
+    provada +5 suspeitas +2 constantes sem corrente** na varredura do implementador. **Cada
+    varredura achou mais.** A pior: `/left:\s*var\(--goteira-esq\)/` casando em `margin-left`,
+    que deixava voltar o defeito da Task 12 inteiro (barra desamarrada da moldura) — **celular
+    errado, monitor certo, que foi como o defeito passou da primeira vez.**
+
+    **Remédio, e ele é estrutural:** uma régua central (`tests/css.ts`: `semComentarios`,
+    `regraDe`, `valorDe`, `fatiar`, `paddingLado`, `px`) lida por todos os arquivos de teste, com
+    a âncora `(?:^|[{;])` e `toBe` no lugar de `toContain`. **Cada cópia solta do helper é uma
+    chance de UMA delas perder a âncora e enfraquecer só o arquivo dela.** Onde a asserção existe
+    pra travar uma MEDIDA, leia a medida — ou pelo menos a declaração inteira ancorada no nome da
+    propriedade.
+
 22. **NÚMERO MEDIDO NO MEU MONITOR NÃO VIRA CONSTANTE DO APARELHO ALVO.** Eu mandei "corrija a
     constante pro valor medido" (39,2px). O implementador parou: **39,2 é artefato de `dpr`
     1,25** (o Chrome reporta 0,8px pra uma borda de 1px); num iPhone, `dpr` 2 ou 3, a mesma
