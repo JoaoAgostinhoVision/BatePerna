@@ -44,21 +44,25 @@ export function lerFiltros(bruto: string | null): Filtros {
   // pra `string` antes do `JSON.parse`. Não apague pela prova de mutação do
   // vitest sozinha (lição 13 do RESUME).
   if (!bruto) return SEM_FILTRO;
-  let x: Record<string, unknown>;
+  // O `| null` do cast não é enfeite: `JSON.parse("null")` devolve `null` de
+  // verdade, e um cast que escondesse isso estaria afirmando pro `tsc` o que o
+  // runtime desmente — e ainda desarmaria o guarda logo abaixo, deixando só o
+  // vitest de pé. Mesmo formato do `lerLocal` em `src/lib/local.ts`.
+  let x: Record<string, unknown> | null;
   try {
-    x = JSON.parse(bruto) as Record<string, unknown>;
+    x = JSON.parse(bruto) as Record<string, unknown> | null;
   } catch {
     return SEM_FILTRO;
   }
-  // `JSON.parse("null")` devolve `null`, e o cast logo acima mente sobre isso:
-  // sem este guarda, `x.distanciaKm` ESTOURA e a home não abre.
+  // Sem este guarda, `x.distanciaKm` ESTOURA no "null" guardado e a home não
+  // abre — e ele agora é carregador das DUAS ferramentas: apagá-lo derruba o
+  // teste no vitest E não compila no `tsc`.
   //
-  // O `typeof x !== "object" ||` que acompanhava este guarda no plano SAIU: ele
-  // não é provável por NENHUMA das duas ferramentas. Pro texto "5", o cast já
-  // convenceu o `tsc` de que `x` é objeto (não sobra `unknown` pra estreitar), e
-  // no vitest ler campo de um número devolve `undefined` — o resultado é o mesmo
-  // SEM_FILTRO, por outro caminho. Um teste dele continua logo abaixo, travando
-  // o COMPORTAMENTO ("número não estoura, vira SEM_FILTRO") em vez da linha.
+  // O `typeof x !== "object" ||` que o acompanhava no plano SAIU: ele não era
+  // provável por nenhuma das duas. Pro texto "5", ler campo de um número devolve
+  // `undefined` no vitest — o resultado é o mesmo SEM_FILTRO, por outro caminho.
+  // Um teste dele continua logo abaixo, travando o COMPORTAMENTO ("número não
+  // estoura, vira SEM_FILTRO") em vez da linha.
   if (x === null) return SEM_FILTRO;
   // Cada recorte cai pro próprio padrão se vier fora do conjunto. Um valor
   // estranho que passasse viraria um filtro escondendo tudo pra sempre, sem a

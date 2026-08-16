@@ -379,6 +379,8 @@ Em `src/app/page.tsx`: envolva com `<FiltrosVivos>` por dentro do `<LocalVivo>`.
 Run: `npx vitest run tests/app/PainelFiltros.test.tsx tests/lib/home-layout.test.ts`
 Expected: PASS
 
+**Uma coisa que a revisão da Task 9 levantou e que NÃO se resolve nesta task — não tente:** com `confia === false` o recorte "dá hoje" fica inerte (regra de honestidade 1), mas o `contarLigados` continua contando ele. A linha diria "1 filtro ligado" com nada sendo filtrado. É real, e a metade visível daquela regra — avisar que o recorte não está valendo — não tem invariante em lugar nenhum ainda. **Mas o `confia` não existe nesta camada** (nasce na `FolhaTrilhas`, Task 11), e a resposta certa é decisão de produto, não de implementação: contar mesmo assim é literalmente verdade ("ligado" é ligado). **Deixe como está, não invente aviso nem mude a contagem.** Está registrado como deferido; vira pergunta curta pro João no fim da rodada.
+
 - [ ] **Step 5: Prova de mutação, sub-cláusula a sub-cláusula**
 
 A régua deste projeto é literal: *apagar a linha faz um teste falhar*. "Existe um teste parecido em outro caminho de código" **não é prova** — o argumento já foi derrubado nesta rodada apagando o guard e vendo a suíte verde.
