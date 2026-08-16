@@ -42,6 +42,48 @@ const regraDe = (fonte: string, seletor: string) => {
   return fonte.match(re);
 };
 
+/** Fatia uma lista de valores CSS respeitando parênteses: `calc(a + b) 1rem`
+ *  são DOIS valores, não cinco. Sem isto não dá pra saber qual lado do
+ *  shorthand um `calc(...)` ocupa. */
+const fatiar = (valores: string): string[] => {
+  const fora: string[] = [];
+  let atual = "";
+  let fundo = 0;
+  for (const c of valores.trim()) {
+    if (c === "(") fundo++;
+    if (c === ")") fundo--;
+    if (/\s/.test(c) && fundo === 0) {
+      if (atual) fora.push(atual);
+      atual = "";
+    } else {
+      atual += c;
+    }
+  }
+  if (atual) fora.push(atual);
+  return fora;
+};
+
+/** 🔴 O padding DE BAIXO — o único lado que reserva espaço pra barra fixa.
+ *
+ *  `/padding:[^;]*var\(--barra-h\)/` só dizia "o shorthand cita a variável em
+ *  algum lugar". Mutação: mover o `calc(var(--barra-h) …)` do FIM do shorthand
+ *  pro COMEÇO. Suíte verde — e, medido no navegador, o último cartão passa a
+ *  nascer 27,9px ATRÁS da barra, que é exatamente o defeito que a Task 12
+ *  existe pra matar.
+ *
+ *  No shorthand de 1 a 4 valores, o de baixo é o 3º; com menos de três, ele
+ *  herda do 1º (topo). Um `padding-bottom` explícito ganha, porque vem depois
+ *  na cascata e é o que o navegador usa. */
+const paddingDeBaixo = (regra: string): string | null => {
+  const explicito = regra.match(/(?:^|[{;])\s*padding-bottom\s*:\s*([^;}]+)/s);
+  if (explicito) return explicito[1].trim();
+  const curto = regra.match(/(?:^|[{;])\s*padding\s*:\s*([^;}]+)/s);
+  if (!curto) return null;
+  const lados = fatiar(curto[1]);
+  return lados[2] ?? lados[0] ?? null;
+};
+
+
 describe("BarraNavegacao", () => {
   it("leva pra home e pro acervo, com âncora pura", () => {
     const { container } = render(<BarraNavegacao aqui="hoje" />);
@@ -130,6 +172,19 @@ describe("a barra fica presa no rodapé", () => {
       .toHaveLength(2);
     expect(home().match(goteira) ?? [], "a fórmula da goteira foi copiada pro home.css")
       .toHaveLength(0);
+
+    // 🔴 O contador acima procura uma CÓPIA da fórmula. Ele é cego pra uma
+    // ANULAÇÃO — e existe uma porta aberta pra ela: o home.css ganhou um `.bp`
+    // próprio (o `--barra-h`), e ele vem DEPOIS do ficha.css no import de toda
+    // página. Medido: um `padding-left: 0; padding-right: 0` nesse `.bp` leva a
+    // moldura de borda a borda e a barra volta a desalinhar — com a suíte
+    // inteira verde, porque tudo o que este teste lia morava no OUTRO arquivo.
+    const bpHome = regraDe(home(), ".bp");
+    expect(bpHome, "faltou a regra .bp no home.css").not.toBeNull();
+    expect(bpHome![0], "o .bp do home.css mexeu no padding e anulou a goteira do ficha.css")
+      .not.toMatch(/(?:^|[{;])\s*padding(-[a-z]+)?\s*:/s);
+    expect(bpHome![0], "o .bp do home.css redeclarou a goteira — duas fontes pra mesma medida")
+      .not.toMatch(/--goteira-/);
   });
 
   // Barra fixa flutua sobre o conteúdo: sem respiro, o último cartão nasce
@@ -142,7 +197,8 @@ describe("a barra fica presa no rodapé", () => {
   it("a folha reserva o espaço da barra embaixo", () => {
     const regra = regraDe(home(), ".bp .folha");
     expect(regra, "faltou a regra .bp .folha").not.toBeNull();
-    expect(regra![0]).toMatch(/padding-bottom:[^;]*var\(--barra-h\)|padding:[^;]*var\(--barra-h\)/);
+    expect(paddingDeBaixo(regra![0]), "o lado de BAIXO da folha parou de reservar a barra")
+      .toContain("var(--barra-h)");
   });
 
   // O acervo tem a MESMA barra por cima, e a regra dele mora no ficha.css —
@@ -151,7 +207,8 @@ describe("a barra fica presa no rodapé", () => {
   it("a lista do acervo reserva o mesmo espaço", () => {
     const regra = regraDe(ficha(), ".bp .lista");
     expect(regra, "faltou a regra .bp .lista").not.toBeNull();
-    expect(regra![0]).toMatch(/padding-bottom:[^;]*var\(--barra-h\)|padding:[^;]*var\(--barra-h\)/);
+    expect(paddingDeBaixo(regra![0]), "o lado de BAIXO da lista parou de reservar a barra")
+      .toContain("var(--barra-h)");
   });
 
   // A altura reservada não pode ser MENOR que a barra, senão o último cartão

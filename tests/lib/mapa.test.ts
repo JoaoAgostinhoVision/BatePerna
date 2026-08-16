@@ -330,6 +330,20 @@ describe("MAPA_JANELA_VISIVEL_HOME_PX bate com o CSS de onde ela foi derivada", 
     const screen = css.match(/\.bp \.screen\s*\{[^}]*\}/);
     expect(screen, "faltou a regra .bp .screen no ficha.css").not.toBeNull();
     expect(screen![0]).toContain("border: 1px solid");
+
+    // 🔴 A corrente conferida acima mora INTEIRA no ficha.css — e desde a Task
+    // 12 o home.css tem um `.bp` PRÓPRIO (o `--barra-h`) que é importado
+    // DEPOIS dele em toda página. Um `padding-left: 0; padding-right: 0` ali
+    // anula a goteira sem tocar em uma linha do ficha.css: medido, a moldura
+    // vai de borda a borda e o visível real vira 373,6px contra os 350,5 que
+    // esta constante afirma — com a suíte inteira VERDE. Ler só o arquivo de
+    // origem não basta quando outro arquivo pode sobrescrevê-lo por cascata.
+    const homeCss = readFileSync(path.join(process.cwd(), "src", "app", "home.css"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    const bpHome = homeCss.match(/(?:^|\n)\.bp\s*\{[^}]*\}/s);
+    expect(bpHome, "faltou a regra .bp no home.css").not.toBeNull();
+    expect(bpHome![0], "o .bp do home.css passou a declarar padding e anula a goteira do ficha.css")
+      .not.toMatch(/(?:^|[{;])\s*padding(-[a-z]+)?\s*:/s);
   });
 
   it("no viewport de 375px (iPhone mais estreito considerado), a fórmula dá o mesmo número da constante", () => {
