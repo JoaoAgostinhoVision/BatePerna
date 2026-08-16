@@ -297,4 +297,89 @@ describe("filtro e agrupamento juntos", () => {
       expect(container.textContent).toContain(n === 1 ? "1 trilha" : `${n} trilhas`);
     });
   });
+
+  // ——— revisão: a invariante "filtrar não reordena" não tinha teste.
+  //
+  // Hoje ela é ESTRUTURAL (`.filter` preserva a ordem de `pares`, e o
+  // particionamento podem/naoPodem também), e é por isso mesmo que ela some
+  // em silêncio: um `.sort()` que alguém acrescente no futuro — por km, por
+  // nome — não derruba nada. E na tela é uma SEGUNDA coisa acontecendo
+  // enquanto a pessoa decide no portão: ela tocou um chip e o cartão que ela
+  // estava lendo mudou de lugar.
+  //
+  // Os DOIS ramos precisam de teste porque são dois caminhos diferentes: o
+  // liso (`!confia`) desenha `visiveis` direto; o agrupado desenha duas
+  // partições. Um `.sort()` num não é pego pelo teste do outro.
+  //
+  // Os slugs são não-alfabéticos de propósito: com "a", "b", "c" um sort por
+  // nome devolveria a mesma sequência e a prova de mutação não morderia.
+  it("filtrar não reordena: ramo AGRUPADO mantém a ordem de `pares`", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    // Ordem de `pares` como o servidor entrega: fresco primeiro, depois o resto.
+    const { container } = monta([
+      par("zebra", "fresco"),
+      par("abelha", "fresco"),
+      par("caro", "fresco", { custo: { tag: "pago", valor: "R$ 5" } }), // sai no filtro
+      par("morro", "frio"),
+      par("beira", "frio"),
+    ]);
+    await waitFor(() => {
+      expect(container.querySelectorAll(".grupo-k")).toHaveLength(2); // confirma: ramo agrupado
+      const ids = Array.from(container.querySelectorAll(".cartao")).map((el) => el.id);
+      expect(ids).toEqual(["zebra", "abelha", "morro", "beira"]);
+    });
+  });
+
+  it("filtrar não reordena: ramo LISO (sem carimbo confiável) mantém a ordem de `pares`", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    const { container } = monta([
+      par("zebra", "fresco"),
+      par("abelha", "fresco"),
+      par("caro", "fresco", { custo: { tag: "pago", valor: "R$ 5" } }), // sai no filtro
+      // leitura vencida: derruba `confia` e joga tudo no ramo liso
+      { ficha: fichaFake("morro"), leitura: { estado: "frio", erro: false, calculadoEm: agoraSeg() - 99_999 } },
+    ]);
+    await waitFor(() => {
+      expect(container.querySelectorAll(".grupo-k")).toHaveLength(0); // confirma: ramo liso
+      const ids = Array.from(container.querySelectorAll(".cartao")).map((el) => el.id);
+      expect(ids).toEqual(["zebra", "abelha", "morro"]);
+    });
+  });
+
+  // ——— revisão: "primeiro render sem filtro, SEMPRE" só tinha prova no PAINEL.
+  //
+  // O teste irmão vive em tests/app/PainelFiltros.test.tsx ("o PRIMEIRO render
+  // ignora o que está guardado") e olha o valor do provedor. Mas a invariante
+  // existe por causa da HIDRATAÇÃO DA LISTA: a home chega do cache do service
+  // worker com HTML velho, e é aqui — nos cartões, o elemento que carrega a
+  // decisão — que o mismatch apareceria. A prova morava no mais fraco dos dois
+  // lugares.
+  //
+  // Mesma técnica dos outros testes de primeiro quadro deste arquivo: o
+  // Profiler entrega o COMMIT antes dos efeitos passivos. `render()` sozinho já
+  // drena o efeito que lê o aparelho, e perguntar ao DOM depois dele responde
+  // com a lista JÁ recortada — escondendo justamente o quadro que importa.
+  it("o PRIMEIRO quadro da folha ignora o filtro guardado — é o HTML do servidor que a hidratação encontra", () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    const pares = [
+      par("caro", "fresco", { custo: { tag: "pago", valor: "R$ 5" } }),
+      par("gratis", "fresco"),
+    ];
+    const quadros: number[] = [];
+    const registrar = () => { quadros.push(document.querySelectorAll(".cartao").length); };
+
+    render(
+      <LocalVivo>
+        <FiltrosVivos>
+          <Profiler id="folha-filtrada" onRender={registrar}>
+            <FolhaTrilhas pares={pares} />
+          </Profiler>
+        </FiltrosVivos>
+      </LocalVivo>,
+    );
+
+    expect(quadros[0]).toBe(2); // primeiro commit: o recorte guardado ainda não vale
+    // depois do efeito, o mesmo DOM já obedece ao que estava no aparelho
+    expect(document.querySelectorAll(".cartao")).toHaveLength(1);
+  });
 });

@@ -95,6 +95,19 @@ export default function FolhaTrilhas({ pares }: { pares: ParFolha[] }) {
     // dia ruim, que é justamente quando a pessoa filtra mais. Tem teste
     // próprio: "filtro que zera a lista avisa TAMBÉM quando não dá pra confiar
     // no carimbo".
+    //
+    // ⚠️ A frase abaixo NÃO é verdade universal — ela assume que algum recorte
+    // está ligado. Com `pares` vazio e nenhum filtro ligado, a tela se
+    // contradiz: a linha diz "0 trilhas" SEM o sufixo "· 1 filtro ligado", e
+    // logo abaixo o aviso culpa filtros que não existem.
+    //
+    // Hoje o ramo é INALCANÇÁVEL nesse formato — `pares` vem do acervo local,
+    // que nunca é vazio. Ele passa a ser alcançável se (a) o acervo virar dado
+    // remoto/paginado, ou (b) entrar um recorte que zere por outra razão que
+    // não um filtro ligado. Aí a saída barata é distinguir os dois casos por
+    // `visiveis.length === 0 && contarLigados(filtros) > 0` e escrever a outra
+    // frase pro caso sem filtro. **Deixado de propósito: é decisão de produto,
+    // não conserto de implementação.**
     if (visiveis.length === 0) {
       return (
         <div className="folha-vazia">
