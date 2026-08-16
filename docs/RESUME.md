@@ -370,15 +370,22 @@ Herdados:
     ele rejeita. **Ao validar uma mutação, diga qual das duas coisas aconteceu.** "Ficou
     vermelho" não é prova; "caiu a asserção X" é.
 
-21. **`npm run dev` NÃO SERVE PRA MEDIR GEOMETRIA NESTE PROJETO.** Achado do fix round final:
-    `/_next/static/css/app/layout.css` responde **404** no `next dev`, então dentro de um iframe
-    todo o CSS falta e a página sai **sem estilo** — as medidas parecem "o iframe não funcionou"
-    quando o que falta é a folha. **Meça com `npm run build` + `next start`.** Dois detalhes que
-    custaram tempo: o `document.body` da página hospedeira computa `display: none` sob a
+21. **MEÇA GEOMETRIA NO BUILD DE PRODUÇÃO — e nunca rode `next dev` e `next start` no mesmo
+    `.next/`.** ⚠️ *Esta lição nasceu errada e foi corrigida no mesmo dia; o erro é instrutivo.*
+    Um implementador relatou que `/_next/static/css/app/layout.css` dava **404** no `next dev` e
+    que por isso o iframe media uma página sem estilo. **Eu escrevi isso como lição sem
+    verificar.** O revisor mediu os dois servidores lado a lado: o dev **serve** o CSS (200,
+    11712 bytes, com as regras dentro). A causa real do sintoma é que **`next dev` e `next start`
+    compartilham o `.next/`** — rodando os dois juntos, o `start` passa a dar 500 com
+    `ENOENT: .next/required-server-files.json`, porque o dev reescreve o diretório debaixo dele.
+    Produz exatamente o "faltou tudo" que ele viu. **A recomendação sobrevive, por outro motivo,
+    mais forte: meça no `next build` + `next start` porque é o artefato que vai pro ar.** Dois
+    detalhes práticos: o `document.body` da página hospedeira computa `display: none` sob a
     extensão, então o iframe tem que ser pendurado no `documentElement`; e um iframe "de 375px"
     vira 360 quando o documento rola — compense em laço até `contentWindow.innerWidth === 375`.
     Pra medir o painel de busca, `localStorage['bp.gps'] = 'negado'` antes, senão o toque na
-    pílula pede o GPS em vez de abrir a busca.
+    pílula pede o GPS em vez de abrir a busca. **Moral de método: relato de agente não é
+    medição.** Eu tratei um como o outro e publiquei uma causa falsa.
 
 22. **NÚMERO MEDIDO NO MEU MONITOR NÃO VIRA CONSTANTE DO APARELHO ALVO.** Eu mandei "corrija a
     constante pro valor medido" (39,2px). O implementador parou: **39,2 é artefato de `dpr`
