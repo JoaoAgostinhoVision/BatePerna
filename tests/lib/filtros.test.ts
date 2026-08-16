@@ -1,9 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { SEM_FILTRO, contarLigados, lerFiltros, passaNoFiltro, type Filtros } from "@/lib/filtros";
 import { getFichasComCondicao } from "@/lib/ficha";
 import { distanciaKm } from "@/lib/geo";
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+
+// O haversine PULA os 30 km exatos (ver o comentário no bloco "distância"), e
+// sem o valor exato o `>` e o `>=` são indistinguíveis. Este espião existe pra
+// UM teste: ele DELEGA pro `distanciaKm` de verdade em todos os outros — a
+// aritmética real continua sendo exercitada, inclusive pela auto-conferência do
+// `aoNorte` — e só naquele um caso devolve 30 cravado, uma vez.
+vi.mock("@/lib/geo", async (original) => {
+  const real = await original<typeof import("@/lib/geo")>();
+  return { ...real, distanciaKm: vi.fn(real.distanciaKm) };
+});
 
 const base = getFichasComCondicao()[0];
 const RAMPA = base.condicao.coords;
@@ -64,7 +74,16 @@ describe('"dá hoje"', () => {
   it("sem leitura confiável, não esconde nada", () => {
     expect(passa({ daHoje: true }, {}, { leitura: FRIO, confia: false })).toBe(true);
   });
-  it("leitura com erro não é escondida", () => {
+  // O nome deste teste dizia "leitura com erro não é escondida", e prometia uma
+  // proteção que não existe: quem torna o recorte inerte aqui é o `confia`, não
+  // o `erro`. `passaNoFiltro` NUNCA lê `leitura.erro` — de propósito. A decisão
+  // "dá pra confiar nestas leituras?" nasce inteira na `FolhaTrilhas`
+  // (`src/app/FolhaTrilhas.tsx:42-43`, `algumErro` → `faseDe` → `confia`) e
+  // chega aqui pronta; uma segunda regra nesta lib seria a segunda fonte que já
+  // custou dois Criticals a este app. Então este caso é o irmão do de cima —
+  // mesma cláusula, entrada mais parecida com a real (frio E com erro) — e o
+  // nome agora diz isso.
+  it("o inerte vale também quando a leitura veio com erro — pelo `confia`, não pelo `erro`", () => {
     expect(passa({ daHoje: true }, {}, { leitura: { ...FRIO, erro: true }, confia: false })).toBe(true);
   });
 
@@ -142,6 +161,18 @@ describe("distância", () => {
     expect(passa({ distanciaKm: 30 }, {}, { voce: aoNorte(30.001) })).toBe(false);
     expect(passa({ distanciaKm: 60 }, {}, { voce: aoNorte(59.999) })).toBe(true);
     expect(passa({ distanciaKm: 60 }, {}, { voce: aoNorte(60.001) })).toBe(false);
+  });
+
+  // ——— fix round: o teto inclusivo na DISTÂNCIA, o único pedaço da regra
+  // cravada que a aritmética real não deixa provar. Com o espião devolvendo 30
+  // cravado uma única vez, `>` passa (inclusivo, certo) e `>=` esconde a trilha
+  // que a pessoa tinha em mente. É o mesmo ruling já provado na duração.
+  it("o teto de distância é inclusivo — 'até 30 km' inclui os 30 km cravados", () => {
+    vi.mocked(distanciaKm).mockReturnValueOnce(30);
+    expect(passa({ distanciaKm: 30 }, {}, { voce: perto })).toBe(true);
+    // O espião volta a delegar pro real na chamada seguinte: se o `mockReturnValueOnce`
+    // vazasse, este 30 cravado continuaria valendo e o `longe` passaria também.
+    expect(passa({ distanciaKm: 30 }, {}, { voce: longe })).toBe(false);
   });
 });
 
