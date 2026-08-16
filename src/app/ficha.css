@@ -199,7 +199,17 @@ html, body { background: var(--ground); }
 .bp .foot { text-align: center; padding: 1.3rem; color: var(--ink-faint); font-size: .8rem; font-family: var(--type); }
 
 /* Lista de trilhas — andaime até a home rica. Reusa os tokens da ficha. */
-.bp .lista { padding: 1.1rem 1.2rem 1.3rem; display: flex; flex-direction: column; gap: .7rem; }
+/* O respiro embaixo é o mesmo da folha da home: a barra é FIXA e flutua sobre
+   o conteúdo, então sem isto o último item do acervo nasce atrás dela.
+   `--barra-h` é declarado num lugar só, no `.bp` do home.css — e o /trilhas
+   importa os dois arquivos (`trilhas/page.tsx:1-2`). A regra mora aqui, e não
+   lá, porque duplicá-la no home.css criaria duas fontes pro mesmo seletor.
+   Só use `.lista` em página que importe o home.css: sem a variável, o calc é
+   inválido e o padding INTEIRO cai pra zero, não só o de baixo. */
+.bp .lista {
+  padding: 1.1rem 1.2rem calc(var(--barra-h) + env(safe-area-inset-bottom) + 1rem);
+  display: flex; flex-direction: column; gap: .7rem;
+}
 .bp .lista-k { font-family: var(--type); font-size: .7rem; font-weight: 600; letter-spacing: .1em;
   text-transform: uppercase; color: var(--ink-faint); margin-bottom: .2rem; }
 .bp .lista-item { display: flex; flex-direction: column; gap: .15rem; text-decoration: none; color: inherit;

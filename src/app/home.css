@@ -2,9 +2,34 @@
    vêm do ficha.css, que continua sendo a folha-mãe do app. */
 
 /* ---- a barra embaixo ---- */
-/* O padding-bottom soma a área segura do iPhone: sem isso, em tela cheia, a
-   barra nasce debaixo da faixa do gesto e os rótulos ficam intocáveis. */
+/* A altura da barra em um lugar só: quem reserva o espaço dela embaixo (a
+   folha da home, a lista do acervo) lê daqui. Dois números soltos discordariam
+   no dia em que um mudasse — e o sintoma seria o último cartão nascendo atrás
+   da barra, que é justamente o que este bloco existe pra impedir.
+   64px é MEDIDO no navegador — `.barra` renderizada em 375×667 dá 63,98px —,
+   não calculado no papel: a conta a partir do CSS dá ~56px porque esquece que
+   as duas linhas do `.barra-item` (o ícone em bloco e o rótulo) herdam o
+   `line-height: 1.52` do `.bp`, e não a altura da fonte. Errar pra menos aqui
+   não deixa rastro no teste — só deixa o último cartão sete pixels atrás da
+   barra, que é o defeito que este bloco existe pra tirar. Se o padding, a
+   fonte ou o line-height do `.barra-item` mudarem, REMEÇA. */
+.bp { --barra-h: 64px; }
+
+/* Fixa no rodapé, não em fluxo. Em fluxo ela só PARECE estar no fim quando o
+   documento cabe na tela — com seis cartões ela desce junto com a lista, que
+   foi o que o João viu e apontou.
+   O padding-bottom soma a área segura do iPhone: sem isso, em tela cheia, a
+   barra nasce debaixo da faixa do gesto e os rótulos ficam intocáveis.
+   `left: 50%` + `translateX(-50%)` e não `left: 0; right: 0`: elemento fixo se
+   posiciona pela JANELA, e o app vive dentro de `.bp .screen`, uma moldura de
+   25.5rem com borda arredondada e nenhum ancestral com transform/filter. De
+   ponta a ponta, a barra atravessaria um monitor inteiro por fora da moldura —
+   no celular passa despercebido, porque lá a janela É a moldura. O max-width é
+   o MESMO do `.screen` (ficha.css) e tem teste conferindo que os dois números
+   não se separam. */
 .bp .barra {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 5;
+  width: 100%; max-width: 25.5rem;
   display: flex;
   border-top: 1px solid var(--line);
   background: var(--screen);
@@ -123,7 +148,11 @@
 .bp .chip:active { opacity: .7; }
 
 /* ---- a folha e os cartões ---- */
-.bp .folha { padding: .2rem .9rem 1rem; }
+/* Barra fixa flutua sobre o conteúdo: sem este respiro o último cartão nasce
+   atrás dela e a pessoa nunca vê a última trilha da lista. Soma a área segura
+   pelo mesmo motivo da barra — o `--barra-h` é a caixa dela, o inset é o que
+   o iPhone acrescenta por baixo. */
+.bp .folha { padding: .2rem .9rem calc(var(--barra-h) + env(safe-area-inset-bottom) + 1rem); }
 .bp .grupo-k {
   font-family: var(--type); font-size: .66rem; font-weight: 700; letter-spacing: .11em;
   text-transform: uppercase; color: var(--ink-faint); padding: .8rem .1rem .35rem;
