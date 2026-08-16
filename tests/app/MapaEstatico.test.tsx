@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { render, cleanup } from "@testing-library/react";
+import { regraDe, semComentarios, valorDe } from "../css";
 import MapaEstatico from "@/app/MapaEstatico";
 
 afterEach(() => { cleanup(); });
@@ -31,8 +32,17 @@ describe("MapaEstatico", () => {
     // Par que não pode desemparelhar: se o seletor voltar a olhar um atributo
     // do próprio pin, ele sai do ar sem nenhum teste reclamar — jsdom não
     // computa cor.
-    const css = readFileSync(path.join(process.cwd(), "src", "app", "ficha.css"), "utf8");
-    expect(css).toMatch(/\.bp\[data-state="frio"\]\s+\.wp-pin\s*\{[^}]*background:\s*var\(--stop\)/);
+    //
+    // 🔴 A cor é lida pelo VALOR da declaração. `[^}]*background:\s*var\(--stop\)`
+    // dentro do bloco casava em `--background: var(--stop); background:
+    // var(--go)`: MEDIDO, 523/523 VERDE com o pin da ficha PINTADO DE VERDE ao
+    // lado de um carimbo que diz frio. "Cor de um lado, palavra do outro" já
+    // custou dois Criticals a este app; esta era a terceira porta.
+    const css = semComentarios("ficha.css");
+    const regra = regraDe(css, '.bp[data-state="frio"] .wp-pin');
+    expect(regra, "faltou a regra que pinta o pin de frio no ficha.css").not.toBeNull();
+    expect(valorDe(regra![0], "background"), "o pin da ficha parou de pintar frio com a cor de frio")
+      .toBe("var(--stop)");
     expect(css).not.toMatch(/\.wp-pin\[data-estado/);
   });
 

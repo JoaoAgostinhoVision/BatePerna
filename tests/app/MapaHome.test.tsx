@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { render, cleanup } from "@testing-library/react";
+import { regraDe, semComentarios, valorDe } from "../css";
 import MapaHome from "@/app/MapaHome";
 import CartaoTrilha from "@/app/CartaoTrilha";
 import LocalVivo from "@/app/local";
@@ -128,11 +129,17 @@ describe("MapaHome", () => {
   // jsdom não resolve cascata, então o guarda lê a folha — seletor E corpo
   // juntos — pra não passar só porque o texto apareceu num comentário, nem
   // porque a regra ganhou a cascata mas pintou a cor errada.
+  // 🔴 O corpo é lido pelo VALOR da declaração, não por `[^}]*background:` dentro
+  // do bloco: aquilo casava em `--background: var(--stop); background:
+  // var(--go)`. MEDIDO, 523/523 VERDE com o pin da home VERDE embaixo de um
+  // selo que diz "SEM INFORMAÇÕES" — a regra ganhava a cascata e pintava a cor
+  // errada, que é literalmente o que o comentário acima diz estar coberto.
   it("a regra de fase do pin ganha da cor do estado — mesma disputa de especificidade do selo", () => {
-    const css = readFileSync(path.join(process.cwd(), "src", "app", "home.css"), "utf8");
-    expect(css).toMatch(
-      /\.bp \.pin-home\[data-state\]\[data-fase="sem-informacoes"\]::before\s*\{[^}]*background:\s*var\(--stop\)/,
-    );
+    const seletor = '.bp .pin-home[data-state][data-fase="sem-informacoes"]::before';
+    const regra = regraDe(semComentarios("home.css"), seletor);
+    expect(regra, `faltou a regra ${seletor} no home.css`).not.toBeNull();
+    expect(valorDe(regra![0], "background"), "o pin da home parou de parar de afirmar cor de veredito")
+      .toBe("var(--stop)");
   });
 });
 

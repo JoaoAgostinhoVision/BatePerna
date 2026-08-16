@@ -215,6 +215,50 @@ Novas desta rodada:
 
 ## Deferidos vivos (registrados, nenhum bloqueia)
 
+### 🔴 A TERCEIRA FAMÍLIA DA ASSERÇÃO FROUXA EM CSS — "duplicata por cascata"
+
+**Débito escrito de propósito, com decisão: a rodada foi mergeada sabendo dele.** As duas
+primeiras famílias (o decoy `--`/`max-` na camada de LAYOUT, e o valor-solto-no-bloco na de
+PINTURA) foram fechadas — 13 frestas, todas medidas vivas antes do conserto. Esta é a terceira,
+e ela é de outra forma.
+
+**A forma:** todo leitor de CSS da suíte passa por `regraDe` (`tests/css.ts`), que usa `match`
+**sem `/g`** e devolve a **PRIMEIRA** regra que casa o seletor. O navegador usa a **ÚLTIMA**.
+Uma regra duplicada mais abaixo no arquivo vence a cascata e a suíte inteira não vê.
+
+**Exemplo MEDIDO** (2026-08-16): acrescentando ao fim do `home.css`
+
+```css
+.bp .folha { padding: 0; }
+.bp .mapa-home { height: 40px; }
+```
+
+a suíte fecha **523/523 VERDE**. No navegador: o último cartão volta pra trás da barra fixa (o
+defeito que a Task 12 existe pra matar) e o mapa da home colapsa pra 40px, com
+`MAPA_ALTURA_HOME_PX = 168` e todo o orçamento da dobra virando ficção.
+
+⚠️ **E há um comentário HOJE ERRADO no repo por causa disto**, já corrigido em
+`tests/app/BarraNavegacao.test.tsx`: ele afirmava que uma segunda regra `.bp .folha` mais abaixo
+"deixaria este teste vermelho, o que é o certo". Não deixa. Foi medido.
+
+**Custo estimado de fechar:** pequeno em código, médio em verificação. É **uma função** —
+`regraDe` passa a varrer com `/g`, devolver a ÚLTIMA e/ou falhar quando houver mais de uma regra
+com o seletor EXATO (cuidado: `.bp .cartao` e `.bp .cartao:active` são seletores diferentes e
+ambos legítimos; o alvo é a duplicata exata). Como todas as asserções de CSS passam por ela, a
+lição 20 obriga a **re-rodar as ~15 provas de mutação** que ela carrega hoje.
+
+**Por que não foi fechada agora:** a camada de layout e a de pintura protegem defeitos que este
+app **já teve de verdade**; esta protege um que ele nunca teve. Não valia segurar uma rodada de
+12 tasks e 523 testes. Mas débito registrado é decisão, e débito esquecido é acidente.
+
+**Padrão que fica:** cada varredura desta rodada achou mais que a anterior (3 → 8 → 5 → 1 de
+outra forma). Não é varredura ruim: **a régua só encontra o que ela sabe perguntar**, e cada
+âncora nova revela a fresta seguinte. Isso não converge sozinho — por isso o critério de parada
+passou a ser explícito ("feche o que protege defeito real, registre o resto"), e não "varra até
+não achar mais".
+
+---
+
 Desta rodada (estão no ledger, o revisor final vai triar):
 
 - `src/lib/local.ts:53-54` — limites 90/180 sem comentário de derivação.

@@ -48,10 +48,21 @@ describe("BarraNavegacao", () => {
     expect(container.textContent).not.toContain("Minhas");
   });
 
+  // 🔴 Isto NÃO é asserção de cor nem de enfeite: é layout de iPhone disfarçado
+  // de valor, e é a única coisa entre a barra e a faixa do gesto num aparelho
+  // em tela cheia — o ambiente que nenhuma verificação daqui alcança.
+  // `toContain("env(safe-area-inset-bottom)")` sobre o bloco só dizia "esse
+  // texto existe em algum lugar da regra": MEDIDO, `--safe:
+  // env(safe-area-inset-bottom); padding-bottom: 0` deixava 523/523 VERDE com
+  // os rótulos intocáveis debaixo da faixa. A pergunta certa é qual LADO
+  // reserva o inset.
   it("respeita a área segura do iPhone — sem isso a barra some atrás do gesto", () => {
     const regra = regraDe(home(), ".barra");
     expect(regra, "faltou a regra .barra").not.toBeNull();
-    expect(regra![0]).toContain("env(safe-area-inset-bottom)");
+    expect(
+      paddingLado(regra![0], "bottom"),
+      "a barra parou de somar a área segura embaixo — no iPhone em tela cheia ela nasce debaixo da faixa do gesto",
+    ).toContain("env(safe-area-inset-bottom)");
   });
 });
 
@@ -105,12 +116,21 @@ describe("a barra fica presa no rodapé", () => {
   it("a barra e a moldura se prendem na MESMA goteira", () => {
     const bp = regraDe(ficha(), ".bp");
     expect(bp, "faltou a regra .bp no ficha.css").not.toBeNull();
-    expect(bp![0], "a goteira esquerda deixou de ser variável").toMatch(/--goteira-esq:\s*calc\(/);
-    expect(bp![0], "a goteira direita deixou de ser variável").toMatch(/--goteira-dir:\s*calc\(/);
+    // Lidas como VALOR das duas variáveis, não como texto solto no bloco: um
+    // `--eco: env(safe-area-inset-left)` qualquer satisfazia o `toContain`
+    // antigo enquanto a goteira somava `0px` — MEDIDO, 523/523 verde, e o notch
+    // em landscape volta a cortar a moldura. Foi a goteira lateral que produziu
+    // o Important da Task 12.
+    const esq = valorDe(bp![0], "--goteira-esq");
+    const dir = valorDe(bp![0], "--goteira-dir");
+    expect(esq, "a goteira esquerda deixou de ser variável").toMatch(/^calc\(/);
+    expect(dir, "a goteira direita deixou de ser variável").toMatch(/^calc\(/);
     // Esquerda e direita separadas: em landscape com notch os dois insets
     // diferem, e uma variável só centraria errado justamente ali.
-    expect(bp![0]).toContain("env(safe-area-inset-left)");
-    expect(bp![0]).toContain("env(safe-area-inset-right)");
+    expect(esq, "a goteira esquerda parou de somar o inset do notch")
+      .toContain("env(safe-area-inset-left)");
+    expect(dir, "a goteira direita parou de somar o inset do notch")
+      .toContain("env(safe-area-inset-right)");
     // O padding do `.bp` LÊ as variáveis em vez de repetir a fórmula: é ele
     // que define onde a moldura começa e termina.
     //
@@ -164,10 +184,16 @@ describe("a barra fica presa no rodapé", () => {
   // Barra fixa flutua sobre o conteúdo: sem respiro, o último cartão nasce
   // atrás dela e a pessoa nunca vê a última trilha da lista.
   //
-  // `match` sem /g devolve a PRIMEIRA ocorrência — de propósito. Acrescentar
-  // uma segunda regra `.bp .folha` mais abaixo no arquivo funcionaria pela
-  // cascata e deixaria este teste vermelho, o que é o certo: a medida tem que
-  // entrar na regra que já existe. **Não "conserte" a regex.**
+  // ⚠️ ESTE COMENTÁRIO ESTAVA ERRADO, e o conserto dele é registro, não teste.
+  // Ele afirmava que acrescentar uma segunda regra `.bp .folha` mais abaixo no
+  // arquivo "deixaria este teste vermelho, o que é o certo". NÃO deixa: MEDIDO
+  // em 2026-08-16, `.bp .folha { padding: 0 }` no fim do home.css fecha a suíte
+  // em 523/523 VERDE, porque o `regraDe` usa `match` sem /g e devolve a
+  // PRIMEIRA regra enquanto o navegador usa a ÚLTIMA. É a terceira família da
+  // asserção frouxa — "duplicata por cascata" —, está registrada como deferido
+  // vivo no docs/RESUME.md com o exemplo medido e o custo, e a rodada foi
+  // mergeada sabendo dela. Quem for fechá-la mexe no `regraDe` e re-roda as
+  // provas de mutação que ele carrega (lição 20).
   it("a folha reserva o espaço da barra embaixo", () => {
     const regra = regraDe(home(), ".bp .folha");
     expect(regra, "faltou a regra .bp .folha").not.toBeNull();

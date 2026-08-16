@@ -30,7 +30,11 @@ export const semComentarios = (arq: string): string =>
  *  cascata e ninguém saberia qual das duas está valendo — o teste tem que
  *  ficar vermelho nesse dia, não "consertar" a regex. */
 export const regraDe = (fonte: string, seletor: string): RegExpMatchArray | null => {
-  const re = new RegExp(`${seletor.replace(/[.\-]/g, "\\$&")}\\s*\\{[^}]*\\}`, "s");
+  // Escapa TODO metacaractere, não só `.` e `-`: seletor de atributo
+  // (`.bp[data-state="frio"] .wp-pin`) tem colchetes, e sem escapar eles viram
+  // classe de caractere — a regra some e o teste fica vermelho por regex, não
+  // por defeito.
+  const re = new RegExp(`${seletor.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&")}\\s*\\{[^}]*\\}`, "s");
   return fonte.match(re);
 };
 
