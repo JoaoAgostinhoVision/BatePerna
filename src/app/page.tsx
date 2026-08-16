@@ -56,9 +56,11 @@ export default async function Home() {
             <div className="screen">
               <Appbar comSaida={false} />
               <MapaHome fichas={fichas} leituras={Object.fromEntries(leituras)} />
-              <div className="folha">
-                <FolhaTrilhas pares={pares} />
-              </div>
+              {/* A linha de filtro e a folha saem os dois daqui: a `FolhaTrilhas`
+                  recorta uma vez e usa o MESMO `visiveis` pra desenhar os
+                  cartões e pra dizer quantos são. Renderizá-los como irmãos
+                  aqui obrigaria a contagem a sair de uma segunda conta. */}
+              <FolhaTrilhas pares={pares} />
               <BarraNavegacao aqui="hoje" />
             </div>
           </HomeViva>
