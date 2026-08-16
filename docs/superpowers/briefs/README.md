@@ -12,7 +12,7 @@ emendadas até onde o pré-voo chegou.
 |---|---|---|
 | `task-9-filtros-puros.md` | 9 — os filtros puros (`src/lib/filtros.ts`) | **COMPLETO** (2026-08-16) |
 | `task-10.md` | 10 — a linha e o painel na tela | **COMPLETO** (2026-08-16) |
-| `task-11.md` | 11 | não pré-voado (**já recebeu um achado transferido da 10**) |
+| `task-11.md` | 11 — filtro e agrupamento na mesma passada | **COMPLETO** (2026-08-16) |
 | `task-12.md` | 12 | não pré-voado |
 
 ## Task 9 — o que já entrou no brief
@@ -124,6 +124,33 @@ isso com todas as letras em vez de fingir. **A prova forte já está escrita no 
 renderizar o `page.tsx` de verdade, com filtro guardado, e ver a Rampa sumir. Precedente da
 Task 3 — achado real sem linha pra consertar naquela camada vira ruling registrado e teste na
 camada onde morde.
+
+## Task 11 — pré-voo FECHADO em 2026-08-16
+
+É a task de maior risco da rodada, e o achado mais importante foi **contra o próprio brief**.
+
+1. 🔴 **A prova de mutação que o brief prescrevia NÃO MORDIA.** O Step 5 mandava o ramo
+   `!confia` voltar a usar `pares` e "confirmar que algum teste falha". Nenhum falharia: o único
+   filtro exercitado naquele ramo era o `daHoje`, que ali é **inerte de propósito**, então
+   `pares` e `visiveis` eram a mesma lista. O brief até dizia "se nenhum falhar, o teste está
+   fraco" — e estava. Entrou o teste que faz a mutação morder: no ramo `!confia`, "só grátis"
+   continua recortando. O ramo desliga o AGRUPAMENTO, não o filtro.
+2. **A folha vazia tem que valer nos DOIS ramos.** Com o `if (visiveis.length === 0)` escrito
+   depois do `if (!confia)`, o caso "carimbo não confiável + filtro que zera" desenha uma
+   `.cartoes` vazia: folha em branco, sem aviso e sem botão de limpar — o que a §7.4 proíbe. E é
+   o ramo mais provável num dia ruim, que é quando a pessoa mais filtra. Virou ordem explícita
+   no Step 3 e teste no Step 1.
+3. **`confia` é sobre TODAS as trilhas, não as visíveis — e isso é decisão, não detalhe.** Não
+   dá pra ser diferente (`passaNoFiltro` *recebe* `confia`; calcular de `visiveis` seria
+   circular, e `useAlgumVenceu` receberia um array de tamanho variável). Mas a consequência é
+   visível e alguém vai querer "consertar": uma trilha escondida pelo filtro, com leitura
+   estragada, derruba os cabeçalhos das que ficaram. **Está certo** — invariante "tudo ou nada
+   no clima": a leitura vem numa busca só, pro lote inteiro, e leitura estragada é notícia sobre
+   a BUSCA, não sobre aquele morro. Ficou com teste e com o "não conserte" escrito.
+4. Recebeu a **prova forte transferida da Task 10**: renderizar o `page.tsx` de verdade, com
+   filtro guardado, e ver a Rampa sumir.
+
+A tabela do Step 5 foi de uma mutação solta pra **seis**.
 
 ## E antes de despachar qualquer uma delas
 

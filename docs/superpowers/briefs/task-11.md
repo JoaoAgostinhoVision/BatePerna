@@ -74,6 +74,70 @@ describe("filtro e agrupamento juntos", () => {
     expect(container.textContent).not.toContain("Hoje o tempo deixa");
   });
 
+  // ——— pré-voo: SEM ESTE TESTE A PROVA DE MUTAÇÃO DO STEP 5 NÃO MORDE.
+  //
+  // O Step 5 manda o ramo `!confia` voltar a usar `pares` e ver algum teste
+  // cair. Com o que estava escrito acima, NENHUM cai: o único filtro exercitado
+  // no ramo `!confia` é o `daHoje`, que ali é inerte de propósito — então
+  // `pares` e `visiveis` são a MESMA lista e a mutação passa despercebida.
+  //
+  // O ramo `!confia` desliga o AGRUPAMENTO, não o filtro. Quem ligou "só
+  // grátis" continua querendo só as grátis, com ou sem carimbo confiável.
+  it("sem leitura confiável, os OUTROS recortes continuam recortando", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    const vencido = { estado: "frio" as const, erro: false, calculadoEm: agoraSeg() - 99_999 };
+    const { container } = monta([
+      { ficha: fichaFake("a"), leitura: vencido },
+      par("b", "fresco", { custo: { tag: "pago", valor: "R$ 5" } }),
+    ]);
+    await waitFor(() => expect(container.querySelectorAll(".cartao")).toHaveLength(1));
+    expect(container.textContent).not.toContain("Hoje o tempo deixa");
+  });
+
+  // ——— pré-voo: a folha vazia tem que valer NOS DOIS ramos.
+  //
+  // Se o `if (visiveis.length === 0)` for escrito depois do `if (!confia)`, o
+  // caso "sem carimbo confiável + filtro que zera" cai no ramo de cima e
+  // desenha uma `<div className="cartoes">` VAZIA: folha em branco, sem aviso e
+  // sem o botão de limpar — que é exatamente o que a §7.4 da spec proíbe
+  // ("nunca uma folha em branco"). O ramo `!confia` é o mais provável de estar
+  // na tela num dia ruim, que é justamente quando a pessoa filtra mais.
+  it("filtro que zera a lista avisa TAMBÉM quando não dá pra confiar no carimbo", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    const vencido = { estado: "frio" as const, erro: false, calculadoEm: agoraSeg() - 99_999 };
+    const { container } = monta([
+      { ficha: { ...fichaFake("a"), custo: { tag: "pago", valor: "R$ 5" } }, leitura: vencido },
+    ]);
+    await waitFor(() => expect(container.textContent).toContain("Nenhuma trilha com esses filtros"));
+    expect(screen.getByRole("button", { name: /limpar/i })).toBeTruthy();
+  });
+
+  // ——— pré-voo: `confia` é a pergunta sobre TODAS as trilhas, não só as
+  // visíveis — e isso é decisão, não detalhe.
+  //
+  // Não dá pra ser diferente: `passaNoFiltro` RECEBE `confia`, então calcular
+  // `confia` a partir de `visiveis` seria circular. Mas a consequência é
+  // visível e alguém vai querer "consertar": uma trilha que o filtro escondeu,
+  // com leitura estragada, derruba os cabeçalhos das que ficaram na tela.
+  //
+  // Está CERTO assim, e a razão é a invariante "tudo ou nada no clima": a
+  // leitura vem numa busca só, pro lote inteiro. Uma leitura estragada não é
+  // notícia sobre aquele morro, é notícia sobre a busca — e ela vale pra todos.
+  // Fingir confiança nos que sobraram seria o app afirmando o que não sabe.
+  it("trilha escondida pelo filtro ainda derruba o agrupamento se a leitura dela não presta", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    const { container } = monta([
+      // Esta some da tela (é paga) — mas a leitura dela está com erro.
+      {
+        ficha: { ...fichaFake("a"), custo: { tag: "pago", valor: "R$ 5" } },
+        leitura: { estado: "frio", erro: true, calculadoEm: agoraSeg() },
+      },
+      par("b", "fresco"),
+    ]);
+    await waitFor(() => expect(container.querySelectorAll(".cartao")).toHaveLength(1));
+    expect(container.textContent).not.toContain("Hoje o tempo deixa");
+  });
+
   // ——— TRANSFERIDO DO PRÉ-VOO DA TASK 10 (precedente da Task 3: achado real
   // sem linha pra consertar naquela camada vira ruling registrado, e o teste
   // nasce onde ele morde).
@@ -136,7 +200,15 @@ const visiveis = pares.filter((p) =>
 );
 ```
 
-Daí pra frente, **toda** a montagem usa `visiveis` no lugar de `pares` — inclusive o ramo `!confia`. E acrescente, antes dos grupos:
+🔴 **`confia`, `algumErro` e `useAlgumVenceu` continuam sendo calculados sobre `pares` — TODAS as trilhas, não as visíveis.** Não é descuido e não é "otimizável":
+
+1. `passaNoFiltro` **recebe** `confia`. Calcular `confia` a partir de `visiveis` seria circular.
+2. `useAlgumVenceu(pares.map(...))` é um hook que recebe um array; alimentá-lo com uma lista que muda de tamanho a cada toque no filtro é convite pra defeito de hook.
+3. E é o CERTO pelo produto: a invariante **"tudo ou nada no clima"** diz que a leitura vem numa busca só, pro lote inteiro. Leitura estragada não é notícia sobre aquele morro, é notícia sobre a busca — vale pra todos, inclusive pros que o filtro escondeu.
+
+A consequência é visível e tem teste próprio no Step 1 ("trilha escondida pelo filtro ainda derruba o agrupamento"): **não a 'conserte'.**
+
+Daí pra frente, **toda** a montagem usa `visiveis` no lugar de `pares` — inclusive o ramo `!confia`. E acrescente **antes de tudo, inclusive antes do `if (!confia)`**:
 
 ```tsx
 if (visiveis.length === 0) {
@@ -149,7 +221,9 @@ if (visiveis.length === 0) {
 }
 ```
 
-A função `grupo()` já devolve `null` pra lista vazia — é o que faz o cabeçalho sumir junto com o grupo esvaziado. **Confirme isso no código em vez de assumir**, e deixe um comentário apontando o teste que prova.
+**A ordem dos dois `if` importa.** Com o vazio depois do `!confia`, o caso "carimbo não confiável + filtro que zera" cai no ramo de cima e desenha uma `.cartoes` VAZIA — folha em branco, sem aviso e sem o botão de limpar, que é o que a §7.4 da spec proíbe. E é o ramo mais provável de estar na tela num dia ruim, que é justamente quando a pessoa filtra mais. Tem teste próprio no Step 1.
+
+A função `grupo()` já devolve `null` pra lista vazia (`src/app/FolhaTrilhas.tsx:73`) — é o que faz o cabeçalho sumir junto com o grupo esvaziado. **Confirme no código em vez de assumir**, e deixe um comentário apontando o teste que prova.
 
 Em `src/app/page.tsx`: mova o `<PainelFiltros />` pra dentro do fluxo entre o mapa e a folha, e faça a `FolhaTrilhas` renderizá-lo com a contagem — ou eleve o cálculo pra um componente único que renderiza os dois. **O que não pode é a contagem sair de outra conta.** Registre no relatório qual das duas formas você escolheu e por quê.
 
@@ -162,15 +236,30 @@ Expected: PASS
 
 - [ ] **Step 5: Prova de mutação**
 
-Faça o ramo `!confia` voltar a usar `pares` em vez de `visiveis` e confirme que algum teste falha. Se **nenhum** falhar, o teste está fraco — escreva o que falta antes de seguir. Cole a saída.
+| # | Mutação | Teste que TEM que falhar |
+|---|---|---|
+| 1 | o ramo `!confia` volta a usar `pares` | "sem leitura confiável, os OUTROS recortes continuam recortando" |
+| 2 | mover o `if (visiveis.length === 0)` pra depois do `if (!confia)` | "filtro que zera a lista avisa TAMBÉM quando não dá pra confiar" |
+| 3 | `confia`/`algumErro` calculados sobre `visiveis` em vez de `pares` | "trilha escondida pelo filtro ainda derruba o agrupamento" |
+| 4 | `grupo()` devolvendo o cabeçalho com lista vazia | "grupo esvaziado pelo filtro perde o cabeçalho" |
+| 5 | a contagem do painel virar `pares.length` | "a contagem da linha bate com os cartões desenhados" |
+| 6 | tirar o `<FiltrosVivos>` do `page.tsx` | "a home de verdade embrulha tudo no FiltrosVivos" |
+
+**A #1 é a razão do teste novo.** O brief original prescrevia essa mutação e o pré-voo descobriu que ela **não mordia**: o único filtro exercitado no ramo `!confia` era o `daHoje`, inerte ali de propósito, então `pares` e `visiveis` eram a mesma lista.
+
+🔴 **Se alguma mutação NÃO morder, PARE e relate** — não afrouxe a asserção nem "conserte" o teste. Três vezes nesta rodada o erro estava no plano, e quem parou e mostrou a conta estava certo nas três. Rode `npx tsc --noEmit` antes de declarar qualquer linha morta.
 
 - [ ] **Step 6: Rodar a suíte e commitar**
 
 ```bash
 npm test
+npx tsc --noEmit
+npm run build
 git add src/app/FolhaTrilhas.tsx src/app/page.tsx src/app/home.css tests/app/FolhaTrilhas.test.tsx
 git commit -m "feat(folha): filtro e agrupamento na mesma passada, com estado vazio"
 ```
+
+🔴 **`npm run build` entra na verificação.** `npm test` verde não prova que o app constrói — o vitest roda por esbuild e nunca chama o `next build`. Nesta rodada o build ficou quebrado por quatro commits com a suíte inteira verde.
 
 ---
 
