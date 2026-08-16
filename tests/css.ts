@@ -88,10 +88,12 @@ export const fatiar = (valores: string): string[] => {
  *  No shorthand de 1 a 4 valores: topo é o 1º; direita o 2º (ou o 1º); baixo o
  *  3º (ou o 1º); esquerda o 4º (ou o 2º, ou o 1º). Uma declaração explícita
  *  (`padding-bottom:`) ganha, porque é o que o navegador usa. */
-export const paddingLado = (regra: string, lado: "top" | "right" | "bottom" | "left"): string | null => {
-  const explicito = valorDe(regra, `padding-${lado}`);
+export type Lado = "top" | "right" | "bottom" | "left";
+
+export const ladoDe = (regra: string, prop: "padding" | "margin", lado: Lado): string | null => {
+  const explicito = valorDe(regra, `${prop}-${lado}`);
   if (explicito) return explicito;
-  const curto = valorDe(regra, "padding");
+  const curto = valorDe(regra, prop);
   if (!curto) return null;
   const v = fatiar(curto);
   if (v.length === 0) return null;
@@ -102,6 +104,12 @@ export const paddingLado = (regra: string, lado: "top" | "right" | "bottom" | "l
   }
   return v[0] ?? null;
 };
+
+export const paddingLado = (regra: string, lado: Lado): string | null =>
+  ladoDe(regra, "padding", lado);
+
+export const margemLado = (regra: string, lado: Lado): string | null =>
+  ladoDe(regra, "margin", lado);
 
 /** rem → px. Nenhum arquivo do app declara `font-size` na raiz — e existe um
  *  teste em tests/lib/home-layout.test.ts provando que ninguém declarou, sem o

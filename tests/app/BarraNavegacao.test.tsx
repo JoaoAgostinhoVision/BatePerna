@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import BarraNavegacao from "@/app/BarraNavegacao";
-import { paddingLado, regraDe, semComentarios } from "../css";
+import { paddingLado, regraDe, semComentarios, valorDe } from "../css";
 
 afterEach(() => { cleanup(); });
 
@@ -56,11 +56,19 @@ describe("BarraNavegacao", () => {
 });
 
 describe("a barra fica presa no rodapé", () => {
+  // 🔴 Tudo aqui passa pelo `valorDe`, nunca por `toMatch` sobre o bloco. As
+  // duas frestas desta regra foram MEDIDAS (suíte 521/521 verde com os decoys):
+  //   • `/position:\s*fixed/` casa dentro de `--position: fixed`, e aí a barra
+  //     podia virar `static` e voltar a descer junto com a lista — o defeito
+  //     que o João viu e apontou;
+  //   • `/bottom:\s*0/` casa dentro de `--bottom: 0` (e de `margin-bottom: 0`,
+  //     e de `padding-bottom: 0`), e sem `bottom` um elemento `fixed` fica onde
+  //     a posição estática o deixar.
   it("é fixa, não rola junto com a lista", () => {
     const regra = regraDe(home(), ".bp .barra");
     expect(regra, "faltou a regra .bp .barra").not.toBeNull();
-    expect(regra![0]).toMatch(/position:\s*fixed/);
-    expect(regra![0]).toMatch(/bottom:\s*0/);
+    expect(valorDe(regra![0], "position"), "a barra deixou de ser fixed").toBe("fixed");
+    expect(valorDe(regra![0], "bottom"), "a barra deixou de se prender no rodapé").toBe("0");
   });
 
   // ——— elemento fixo se posiciona pela JANELA, não pela moldura. O app inteiro
@@ -73,12 +81,17 @@ describe("a barra fica presa no rodapé", () => {
     expect(barra, "faltou a regra .bp .barra").not.toBeNull();
     const screen = regraDe(ficha(), ".bp .screen");
     expect(screen, "faltou a regra .bp .screen").not.toBeNull();
-    const largura = screen![0].match(/max-width:\s*([^;]+);/);
+    // As DUAS pontas ancoradas: um `--max-width` no `.screen` faria a régua
+    // medir a coisa errada, e um `--max-width` na barra faria a asserção passar
+    // com a barra atravessando o monitor inteiro. Medido: verde nos dois casos.
+    const largura = valorDe(screen![0], "max-width");
     expect(largura, "o .screen perdeu o max-width").not.toBeNull();
-    expect(barra![0]).toContain(`max-width: ${largura![1].trim()}`);
+    expect(valorDe(barra![0], "max-width"), "a barra perdeu a largura da moldura")
+      .toBe(largura);
     // O max-width sozinho não centra nada: com ele e sem isto, a barra encosta
     // na esquerda da caixa em vez de acompanhar o `.screen`.
-    expect(barra![0]).toMatch(/margin:\s*0 auto/);
+    expect(valorDe(barra![0], "margin"), "a barra parou de se centrar na moldura")
+      .toBe("0 auto");
   });
 
   // 🔴 O max-width acima trava o NÚMERO e não prova ALINHAMENTO — foi por essa
@@ -100,13 +113,29 @@ describe("a barra fica presa no rodapé", () => {
     expect(bp![0]).toContain("env(safe-area-inset-right)");
     // O padding do `.bp` LÊ as variáveis em vez de repetir a fórmula: é ele
     // que define onde a moldura começa e termina.
-    expect(bp![0], "o padding do .bp voltou a escrever a fórmula à mão")
-      .toMatch(/padding:[^;]*var\(--goteira-dir\)[^;]*var\(--goteira-esq\)/s);
+    //
+    // 🔴 Pelo LADO, e não por `/padding:[^;]*var\(--goteira-…\)/` sobre o
+    // bloco: aquele regex casava dentro de `--padding:`, e MEDIDO ele deixava
+    // passar `--padding: <a fórmula toda>; padding: 0` — a moldura ia de borda
+    // a borda com a suíte 521/521 verde. E era a mesma fresta nos dois
+    // arquivos: o guarda do `.bp` do home.css não pega isto, porque aqui a
+    // anulação acontece dentro do PRÓPRIO ficha.css.
+    expect(paddingLado(bp![0], "right"), "o padding direito do .bp parou de sair da goteira")
+      .toBe("var(--goteira-dir)");
+    expect(paddingLado(bp![0], "left"), "o padding esquerdo do .bp parou de sair da goteira")
+      .toBe("var(--goteira-esq)");
 
     const barra = regraDe(home(), ".bp .barra");
     expect(barra, "faltou a regra .bp .barra").not.toBeNull();
-    expect(barra![0], "a barra não se prende na goteira esquerda").toMatch(/left:\s*var\(--goteira-esq\)/);
-    expect(barra![0], "a barra não se prende na goteira direita").toMatch(/right:\s*var\(--goteira-dir\)/);
+    // MEDIDO vivo: `/left:\s*var\(--goteira-esq\)/` casa dentro de
+    // `margin-left`, e com `margin: 0 auto` na linha seguinte os margins ainda
+    // são sobrescritos — a barra perde a amarração inteira e volta a resolver
+    // contra a JANELA. É o defeito "celular errado, monitor certo" de novo, com
+    // a suíte verde: foi assim que ele passou da primeira vez.
+    expect(valorDe(barra![0], "left"), "a barra não se prende na goteira esquerda")
+      .toBe("var(--goteira-esq)");
+    expect(valorDe(barra![0], "right"), "a barra não se prende na goteira direita")
+      .toBe("var(--goteira-dir)");
 
     // Uma fórmula só no app: as duas declarações do `.bp` e mais nenhuma.
     // Copiada pra dentro da barra, ela concordaria hoje e discordaria no dia

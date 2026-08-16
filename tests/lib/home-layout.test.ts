@@ -95,6 +95,47 @@ describe("o primeiro cartão nasce acima da dobra", () => {
     ).toBeGreaterThanOrEqual(empurrado);
   });
 
+  // A quarta e última altura deste arquivo a ganhar régua — era a única que
+  // ainda só aparecia na SOMA. A appbar também não tem `min-height`: quem manda
+  // é o logo (o item mais alto da linha quando não há chip) mais os dois
+  // paddings mais a borda de baixo — e era a borda que estava fora da conta.
+  it("ALTURA_APPBAR_PX cobre o que a .appbar realmente empurra (sem chip)", () => {
+    const css = fichaCss();
+    const appbar = regraDe(css, ".bp .appbar");
+    const marca = regraDe(css, ".bp .brand .mk");
+    const brand = regraDe(css, ".bp .brand");
+    const bp = regraDe(css, ".bp");
+    expect(appbar, "faltou a regra .bp .appbar").not.toBeNull();
+    expect(marca, "faltou a regra .bp .brand .mk").not.toBeNull();
+    expect(brand, "faltou a regra .bp .brand").not.toBeNull();
+    expect(bp, "faltou a regra .bp").not.toBeNull();
+
+    expect(valorDe(appbar![0], "min-height"), "a .appbar ganhou min-height: refaça esta conta")
+      .toBeNull();
+
+    const entrelinha = Number(valorDe(bp![0], "line-height"));
+    expect(entrelinha, "o .bp perdeu o line-height").toBeGreaterThan(0);
+
+    // O item mais alto da linha: o quadrado do logo, ou o texto da marca ao
+    // lado dele — o que for maior. `.cost-chip` fica de fora de propósito: a
+    // home usa Appbar SEM chip, e é isso que esta constante descreve.
+    const miolo = Math.max(
+      px(valorDe(marca![0], "height")),
+      px(valorDe(brand![0], "font-size")) * entrelinha,
+    );
+    const empurrado =
+      miolo +
+      px(paddingLado(appbar![0], "top")) +
+      px(paddingLado(appbar![0], "bottom")) +
+      px(valorDe(appbar![0], "border-bottom")?.split(/\s+/)[0]);
+
+    expect(Number.isFinite(empurrado), "não deu pra ler a corrente inteira da .appbar").toBe(true);
+    expect(
+      ALTURA_APPBAR_PX,
+      `a .appbar empurra ${empurrado.toFixed(4)}px e a constante diz ${ALTURA_APPBAR_PX}px`,
+    ).toBeGreaterThanOrEqual(empurrado);
+  });
+
   // O cabeçalho de grupo é a MESMA família da linha de filtro — a constante
   // dizia 34 e a régua diz 34,45 —, mas com uma diferença que muda o conserto:
   // o `.grupo-k` não tem `min-height` nenhum, e inventar um só pra a constante

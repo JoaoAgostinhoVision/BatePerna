@@ -140,10 +140,16 @@ describe("a busca", () => {
     const rolo = regraDe(css, ".busca-rolo");
     expect(painel, "faltou a regra .busca").not.toBeNull();
     expect(rolo, "faltou a regra .busca-rolo — não existe caixa de rolagem separada").not.toBeNull();
-    expect(rolo![0], "a .busca-rolo parou de rolar — os resultados de baixo ficam inalcançáveis")
-      .toMatch(/overflow-y:\s*auto/);
-    expect(painel![0], "a rolagem voltou pro painel inteiro — o crédito rola junto")
-      .not.toMatch(/overflow(-y)?:\s*(auto|scroll)/);
+    // Ancorado: `/overflow-y:\s*auto/` casava dentro de `--overflow-y: auto`, e
+    // MEDIDO deixava a suíte verde com a lista inteira inalcançável.
+    expect(valorDe(rolo![0], "overflow-y"), "a .busca-rolo parou de rolar — os resultados de baixo ficam inalcançáveis")
+      .toBe("auto");
+    // Pelo VALOR, não por uma negação sobre o bloco: negação casa em comentário
+    // e em custom property e dá alarme falso. O painel corta, nunca rola.
+    expect(valorDe(painel![0], "overflow"), "o painel de busca parou de cortar")
+      .toBe("hidden");
+    expect(valorDe(painel![0], "overflow-y"), "a rolagem voltou pro painel inteiro — o crédito rola junto")
+      .toBeNull();
     // 🔴 NÃO tem asserção sobre o `min-height: 0` do `.busca-rolo`. Ele estava
     // no plano deste conserto e a mutação NÃO MORDEU: medido em 375×667, tirar
     // só ele deixa a caixa em 70,05px e o crédito visível do mesmo jeito —

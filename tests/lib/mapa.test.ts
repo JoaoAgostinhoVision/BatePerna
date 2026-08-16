@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { px, regraDe, semComentarios, valorDe } from "../css";
+import { margemLado, paddingLado, px, regraDe, semComentarios, valorDe } from "../css";
 import {
   MAPA_ALTURA_PX,
   MAPA_ESCALA,
@@ -317,20 +317,28 @@ describe("MAPA_JANELA_VISIVEL_HOME_PX bate com o CSS de onde ela foi derivada", 
     // Por isso a corrente é conferida INTEIRA, e nesta ordem: o padding lê as
     // variáveis, e as variáveis carregam a fórmula. Quebrar qualquer um dos
     // dois elos derruba a constante — e agora derruba este teste.
-    const padding = bp![0].match(/padding:[^;]*;/);
-    expect(padding, "faltou o padding na regra .bp").not.toBeNull();
-    expect(padding![0], "o padding lateral do .bp parou de sair da goteira")
-      .toContain("var(--goteira-dir)");
-    expect(padding![0], "o padding lateral do .bp parou de sair da goteira")
-      .toContain("var(--goteira-esq)");
+    //
+    // 🔴 E pelo LADO, não por `bp![0].match(/padding:[^;]*;/)`: aquilo casava
+    // dentro de `--padding:`, e MEDIDO deixava passar `--padding: <a fórmula
+    // toda>; padding: 0` com a suíte 521/521 verde — a moldura ia de borda a
+    // borda, que é exatamente o que esta constante afirma não acontecer.
+    expect(paddingLado(bp![0], "right"), "o padding direito do .bp parou de sair da goteira")
+      .toBe("var(--goteira-dir)");
+    expect(paddingLado(bp![0], "left"), "o padding esquerdo do .bp parou de sair da goteira")
+      .toBe("var(--goteira-esq)");
     expect(bp![0], "a goteira esquerda perdeu a fórmula de onde a constante saiu")
       .toMatch(/--goteira-esq:[^;]*clamp\(0px, 3vw, 1rem\)/);
     expect(bp![0], "a goteira direita perdeu a fórmula de onde a constante saiu")
       .toMatch(/--goteira-dir:[^;]*clamp\(0px, 3vw, 1rem\)/);
 
-    const screen = css.match(/\.bp \.screen\s*\{[^}]*\}/);
+    const screen = regraDe(css, ".bp .screen");
     expect(screen, "faltou a regra .bp .screen no ficha.css").not.toBeNull();
-    expect(screen![0]).toContain("border: 1px solid");
+    // A borda entra na derivação da constante (visível = viewport − 2×goteira −
+    // 2×borda). `toContain("border: 1px solid")` casava dentro de `--border`,
+    // e MEDIDO deixava passar `--border: 1px solid …; border: 0` com a suíte
+    // verde — a conta perdia 2px sem nada acusar.
+    expect(valorDe(screen![0], "border"), "o .screen perdeu a borda de onde a constante saiu")
+      .toMatch(/^1px solid/);
 
     // 🔴 A corrente conferida acima mora INTEIRA no ficha.css — e desde a Task
     // 12 o home.css tem um `.bp` PRÓPRIO (o `--barra-h`) que é importado
@@ -386,6 +394,25 @@ describe("RAIO_ALVO_TOQUE_PX bate com o alvo de toque do .pin-home no CSS", () =
 
     expect(largura).toBe(44); // documentado no comentário da constante em src/lib/mapa.ts
     expect(RAIO_ALVO_TOQUE_PX).toBe(largura / 2);
+  });
+
+  // O tamanho do alvo não basta: ele tem que estar CENTRADO na coordenada. O
+  // `<a>` é posicionado com `left`/`top` na coordenada e puxado de volta por
+  // uma margem negativa de METADE do alvo — é isso que põe o dedo em cima do
+  // ponto, e é isso que o `foraDaJanela` assume ao usar RAIO_ALVO_TOQUE_PX como
+  // margem dos quatro lados. Sem esta prova, `margin: -10px 0 0 -10px` com
+  // `width: 44px` passava: o alvo continuava com 44, deslocado 12px pra baixo e
+  // pra direita do morro, e a conta de "trilhas fora do mapa" mentia junto.
+  it("o alvo de toque fica CENTRADO na coordenada — a margem é metade dele", () => {
+    const regra = regraDe(semComentarios("home.css"), ".bp .pin-home");
+    expect(regra, "faltou a regra .bp .pin-home no home.css").not.toBeNull();
+
+    const cima = px(margemLado(regra![0], "top"));
+    const esquerda = px(margemLado(regra![0], "left"));
+    expect(cima, "a margem de cima do .pin-home não é mais um px legível")
+      .toBe(-RAIO_ALVO_TOQUE_PX);
+    expect(esquerda, "a margem da esquerda do .pin-home não centra o alvo")
+      .toBe(-RAIO_ALVO_TOQUE_PX);
   });
 });
 

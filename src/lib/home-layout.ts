@@ -3,19 +3,34 @@
  *  empurra o primeiro veredito pra baixo da dobra está grande demais — quem
  *  cede é o mapa.
  *
- *  Toda altura abaixo é MEDIDA do CSS, não desejo — e duas delas já mentiram
- *  (o cabeçalho de grupo e a linha de filtro), sempre pra menos, sempre
- *  deixando o orçamento mais folgado no papel do que na tela. Por isso as duas
- *  ganharam teste que LÊ A CORRENTE no CSS em vez de só repetir o número:
- *  somar a constante nunca é medir. O `ALTURA_APPBAR_PX` ainda é o único sem
- *  esse teste. */
+ *  Toda altura abaixo é MEDIDA do CSS, não desejo — e TRÊS das quatro já
+ *  mentiram (a appbar, o cabeçalho de grupo e a linha de filtro), sempre pra
+ *  menos, sempre deixando o orçamento mais folgado no papel do que na tela.
+ *  Somar a constante nunca é medir: por isso as quatro têm hoje um teste que LÊ
+ *  A CORRENTE no CSS — o item mais alto da caixa, mais os paddings, mais a
+ *  borda — em vez de só repetir o número. */
 
-/** `.appbar`: padding .9rem/.8rem + o miolo de 1.5rem (o logo `.mk`, que é o
- *  item mais alto da linha quando não há chip). Vale pra Appbar SEM chip —
- *  com `chip`, a pílula de custo (`.cost-chip`) mede ~1,5px a mais que o
- *  logo e a soma passa a mentir por essa margem. A home usa Appbar sem chip
- *  hoje; se ganhar chip, esta constante precisa ser remedida. */
-export const ALTURA_APPBAR_PX = 52;
+/** `.appbar`, SEM chip — que é como a home a usa.
+ *
+ *  ⚠️ Era 52 e a corrente dá 52,2: a terceira das quatro alturas deste arquivo
+ *  a medir pra menos. A borda de baixo tinha ficado de fora da conta.
+ *
+ *      logo `.mk` 1.5rem (o item mais alto da linha)   24,0
+ *    + padding de cima  .9rem                          14,4
+ *    + padding de baixo .8rem                          12,8
+ *    + border-bottom                                    1,0
+ *    ─────────────────────────────────────────────────────
+ *                                                      52,2   → medido 52,00
+ *
+ *  (Os 52,00 medidos são de um monitor dpr 1,25, onde o Chrome encaixa a borda
+ *  de 1px em 0,8. Num iPhone a borda fecha em 1,0 e a soma é 52,2 — o pior
+ *  caso, e é o aparelho alvo. Mesma armadilha do ALTURA_LINHA_FILTRO_PX.)
+ *
+ *  Com `chip`, a pílula de custo (`.cost-chip`) mede ~1,5px a mais que o logo
+ *  e esta soma passa a mentir por essa margem. A home usa Appbar sem chip hoje;
+ *  se ganhar chip, remeça. O teste lê a corrente no CSS e exige que esta
+ *  constante cubra o que a appbar empurra. */
+export const ALTURA_APPBAR_PX = 53;
 
 /** `.grupo-k`: o rótulo "Hoje o tempo deixa" mais o respiro dele.
  *
@@ -66,8 +81,8 @@ export const ALTURA_CABECALHO_GRUPO_PX = 35;
  *  39,4. A conta acima usa o 1,0 de propósito: é o pior caso, e é o aparelho
  *  alvo. Com o min-height em 40 os dois casos medem 40 e a diferença some.
  *
- *  Orçamento: 52 (appbar) + 168 (mapa) + 40 (esta linha) + 35 (cabeçalho de
- *  grupo) = 295, contra o teto de 320. */
+ *  Orçamento: 53 (appbar) + 168 (mapa) + 40 (esta linha) + 35 (cabeçalho de
+ *  grupo) = 296, contra o teto de 320. */
 export const ALTURA_LINHA_FILTRO_PX = 40;
 
 /** O que pode existir acima do primeiro cartão. 667px é a viewport do menor
