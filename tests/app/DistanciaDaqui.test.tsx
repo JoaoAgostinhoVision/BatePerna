@@ -4,9 +4,23 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import DistanciaDaqui from "@/app/DistanciaDaqui";
 import LocalVivo from "@/app/local";
+import { getFichasComCondicao } from "@/lib/ficha";
 import { CHAVE_GPS, CHAVE_LOCAL } from "@/lib/local";
 
 const RAMPA = { lat: -7.907889, lng: -36.019222 };
+
+// O componente recebe a FICHA e pergunta a `coordDaDistancia` qual coordenada
+// vale — não um par lat/lng escolhido por quem renderiza. A ficha real da
+// Rampa entra aqui de propósito; a asserção logo abaixo é o que mantém o
+// "~111 km" destes testes ancorado num fato, e não numa lembrança.
+const ficha = getFichasComCondicao()[0];
+
+describe("a ficha usada nestes testes", () => {
+  it("começa na coordenada que as contas de ~111 km assumem", () => {
+    expect(ficha.trajeto.waypoints[0].lat).toBe(RAMPA.lat);
+    expect(ficha.trajeto.waypoints[0].lng).toBe(RAMPA.lng);
+  });
+});
 
 /** jsdom não traz navigator.geolocation; a gente planta (ou remove) na mão. */
 function plantarGeo(valor: unknown) {
@@ -26,7 +40,7 @@ afterEach(() => {
 describe("DistanciaDaqui", () => {
   it("sem localização e sem GPS negado, mostra o botão", () => {
     plantarGeo(undefined);
-    render(<LocalVivo><DistanciaDaqui lat={RAMPA.lat} lng={RAMPA.lng} /></LocalVivo>);
+    render(<LocalVivo><DistanciaDaqui ficha={ficha} /></LocalVivo>);
     expect(screen.getByRole("button", { name: /dist[âa]ncia/i })).toBeTruthy();
   });
 
@@ -38,14 +52,14 @@ describe("DistanciaDaqui", () => {
       nome: "Lugar Fictício",
       regiao: "Pernambuco",
     }));
-    render(<LocalVivo><DistanciaDaqui lat={RAMPA.lat} lng={RAMPA.lng} /></LocalVivo>);
+    render(<LocalVivo><DistanciaDaqui ficha={ficha} /></LocalVivo>);
     expect(await screen.findByText(/~111 km em linha reta daqui/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /dist[âa]ncia/i })).toBe(null);
   });
 
   it("GPS já negado antes, mostra o aviso — sem botão que não faz nada", () => {
     localStorage.setItem(CHAVE_GPS, "negado");
-    render(<LocalVivo><DistanciaDaqui lat={RAMPA.lat} lng={RAMPA.lng} /></LocalVivo>);
+    render(<LocalVivo><DistanciaDaqui ficha={ficha} /></LocalVivo>);
     expect(screen.getByText(/sem localiza[çc][ãa]o/i)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /dist[âa]ncia/i })).toBe(null);
   });
@@ -57,7 +71,7 @@ describe("DistanciaDaqui", () => {
         ok({ coords: { latitude: RAMPA.lat + 1, longitude: RAMPA.lng } } as GeolocationPosition),
     });
 
-    render(<LocalVivo><DistanciaDaqui lat={RAMPA.lat} lng={RAMPA.lng} /></LocalVivo>);
+    render(<LocalVivo><DistanciaDaqui ficha={ficha} /></LocalVivo>);
     fireEvent.click(screen.getByRole("button", { name: /dist[âa]ncia/i }));
 
     expect(await screen.findByText(/~111 km em linha reta daqui/)).toBeTruthy();
@@ -67,7 +81,7 @@ describe("DistanciaDaqui", () => {
     const espiao = vi.fn();
     plantarGeo({ getCurrentPosition: espiao });
 
-    render(<LocalVivo><DistanciaDaqui lat={RAMPA.lat} lng={RAMPA.lng} /></LocalVivo>);
+    render(<LocalVivo><DistanciaDaqui ficha={ficha} /></LocalVivo>);
     expect(espiao).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: /dist[âa]ncia/i }));

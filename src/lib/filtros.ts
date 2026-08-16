@@ -3,7 +3,7 @@
  *  Puro, sem React: a folha aplica, a tela desenha, e as duas REGRAS DE
  *  HONESTIDADE abaixo vivem aqui, onde podem ser provadas. */
 
-import { distanciaKm, type Coord } from "@/lib/geo";
+import { coordDaDistancia, distanciaKm, type Coord } from "@/lib/geo";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import type { Esforco, Ficha } from "@/types/ficha";
 
@@ -103,8 +103,13 @@ export function passaNoFiltro({
 
   // Sem localização o recorte de distância nem aparece na tela. Se chegar
   // ligado (guardado de outra sessão), não esconde nada.
+  //
+  // A coordenada sai de `coordDaDistancia` — a MESMA que o cartão mostra e a
+  // ficha mostra. Enquanto isto aqui media até `condicao.coords`, o "até 60 km"
+  // escondia trilha cujo cartão anunciava 40. Filtro que esconde por um número
+  // que a tela não mostra é a pior versão do defeito: some sem explicação.
   if (filtros.distanciaKm !== null && voce) {
-    if (distanciaKm(voce, ficha.condicao.coords) > filtros.distanciaKm) return false;
+    if (distanciaKm(voce, coordDaDistancia(ficha)) > filtros.distanciaKm) return false;
   }
 
   if (filtros.soGratis && ficha.custo.tag !== "gratis") return false;

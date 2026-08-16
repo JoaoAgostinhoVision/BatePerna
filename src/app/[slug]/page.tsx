@@ -88,7 +88,7 @@ export default async function Ficha({
                       consumidor da localização nesta página hoje. Mesma fonte
                       que o mapa da home: "uma pessoa, uma fonte". */}
                   <LocalVivo>
-                    <DistanciaDaqui lat={wp.lat} lng={wp.lng} />
+                    <DistanciaDaqui ficha={ficha} />
                   </LocalVivo>
                 </div>
                 <a className="maplink" href={mapa} target="_blank" rel="noopener">Abrir no mapa</a>

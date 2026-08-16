@@ -1,7 +1,7 @@
 "use client";
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
-import { distanciaKm, formatarDistanciaCurta } from "@/lib/geo";
+import { coordDaDistancia, distanciaKm, formatarDistanciaCurta } from "@/lib/geo";
 // Direto de duracao.ts, NÃO de "@/lib/ficha": aquele módulo carrega
 // node:fs/node:path (o loader de content/fichas) e quebraria o bundle do
 // cliente. Ver o comentário em src/lib/duracao.ts.
@@ -40,7 +40,9 @@ export default function CartaoTrilha({
   // cartão não chama navigator.geolocation por conta própria, lê o contexto.
   const voce = coordDe(useLocal());
   const partes = [
-    voce ? formatarDistanciaCurta(distanciaKm(voce, ficha.condicao.coords)) : null,
+    // `coordDaDistancia`, nunca `ficha.condicao.coords`: o km do cartão e o km
+    // da ficha são a MESMA pergunta, e quem responde é uma função só.
+    voce ? formatarDistanciaCurta(distanciaKm(voce, coordDaDistancia(ficha))) : null,
     ficha.duracao ? formatarDuracao(ficha.duracao) : null,
     ficha.esforco ?? null,
     // `custo.valor` é texto livre (schema não garante separador nenhum). O

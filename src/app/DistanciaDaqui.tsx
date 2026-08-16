@@ -1,6 +1,7 @@
 "use client";
-import { distanciaKm, formatarDistancia } from "@/lib/geo";
+import { coordDaDistancia, distanciaKm, formatarDistancia } from "@/lib/geo";
 import { coordDe } from "@/lib/local";
+import type { Ficha } from "@/types/ficha";
 import { useGps, useLocal, useMexerLocal } from "./local";
 
 /** A distância fica ATRÁS DE UM TOQUE de propósito: prompt de GPS não
@@ -13,14 +14,20 @@ import { useGps, useLocal, useMexerLocal } from "./local";
  *  pedir a posição ao aparelho e quem já sabe se foi negado antes. Duas
  *  verdades sobre a mesma pergunta em duas telas do mesmo app — o mapa
  *  dizendo que você está em Gravatá e a ficha medindo de outro lugar — é
- *  exatamente o que essa invariante proíbe. */
-export default function DistanciaDaqui({ lat, lng }: { lat: number; lng: number }) {
+ *  exatamente o que essa invariante proíbe.
+ *
+ *  Recebe a FICHA, não um par lat/lng: quem escolhe QUAL das duas coordenadas
+ *  da ficha vale pra distância é `coordDaDistancia` (src/lib/geo.ts), uma vez
+ *  só pro app inteiro. Com lat/lng na prop, a página podia (e podia de novo)
+ *  passar `condicao.coords` e voltar a ter dois km pra mesma trilha. */
+export default function DistanciaDaqui({ ficha }: { ficha: Ficha }) {
   const voce = coordDe(useLocal());
   const gps = useGps();
   const { pedirGps } = useMexerLocal();
 
   if (voce) {
-    return <div className="dist">{formatarDistancia(distanciaKm(voce, { lat, lng }))}</div>;
+    const km = distanciaKm(voce, coordDaDistancia(ficha));
+    return <div className="dist">{formatarDistancia(km)}</div>;
   }
 
   // Negado uma vez, o navegador não pergunta de novo: continuar oferecendo o

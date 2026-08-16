@@ -50,10 +50,13 @@ no topo de cada cartão na home.
 lugar no Google Maps e copiando os dois números que aparecem)
 
 **Por que importa:** é o que planta o pin no mapa da ficha, o que abre o "Abrir no
-mapa" pro Google Maps, e o que a tela usa pra calcular a distância em linha reta até
-onde a pessoa está agora. Errar a coordenada é errar o mapa da ficha e a distância
-mostrada, sem nenhum aviso de que errou. (O pin do mapa da home é outra coordenada —
-ver a seção da coordenada da condição, mais abaixo.)
+mapa" pro Google Maps, e é a ÚNICA coordenada de onde sai a distância em linha reta
+até onde a pessoa está agora — o km do cartão na home, o km na ficha e o filtro
+"até 30/60 km" medem todos até este ponto. É de propósito que seja o mesmo ponto do
+"Abrir no mapa": um app que diz "40 km" e depois manda a pessoa pra outro lugar está
+mentindo em uma das duas telas. Errar a coordenada é errar o mapa da ficha e todo km
+que o app mostra, sem nenhum aviso de que errou. (O pin do mapa da home é outra
+coordenada — ver a seção da coordenada da condição, mais abaixo.)
 
 **Exemplo (Rampa):** `lat -7.907889, lng -36.019222`
 
@@ -221,7 +224,10 @@ coordenada — não a do trajeto — que planta o pin da trilha no mapa da home*
 que enquadra todas as trilhas do dia lê `condicao.coords` de cada ficha pra decidir
 onde pôr cada pin. Se você der um ponto diferente do trajeto pra condição (por
 exemplo, porque o trecho crítico é outro lugar), é este ponto que vai aparecer no
-mapa da home.
+mapa da home. O que esta coordenada NÃO faz é distância: nenhum km da tela sai
+daqui — todos saem da coordenada do trajeto. Então dar dois pontos bem distantes um
+do outro é permitido e não deixa nenhum número errado: o pin da home marca a chuva,
+o km marca o portão.
 
 **Exemplo (Rampa):** `lat -7.907889, lng -36.019222`
 
