@@ -71,6 +71,21 @@ parecido (km trocado por metro, degrau errado, constante errada), com o par por 
 degraus. **Registrado aqui em vez de contorcido:** "não dá pra provar, e por isto" é resposta;
 teste que finge provar não é.
 
+> 🔴 **CORREÇÃO, no fix round da Task 9 (mesmo dia):** o ruling acima está certo sobre a
+> aritmética e **errado sobre a conclusão que eu tirei dela**. Coordenada nenhuma devolve 30
+> cravado — mas daí eu concluí que não havia o que provar, e **a linha de código continuava
+> mutável**: com `>` trocado por `>=` a suíte ficava **verde**, e o recorte "até 30 km" passaria
+> a esconder a trilha de 30 km sem nada reclamar.
+>
+> Fechado com um `vi.mock("@/lib/geo")` que **delega pro real** (`vi.fn(real.distanciaKm)`) e só
+> num teste aplica `mockReturnValueOnce(30)`. O caminho real segue exercitado em todos os outros
+> — inclusive pela auto-conferência do `aoNorte`, que é o que prova que a delegação existe.
+>
+> **A lição, e ela é nova:** "o valor exato é inalcançável pelo dado real" **não é** o mesmo que
+> "a linha não precisa de prova". Quando a aritmética não alcança a borda, a borda ainda é
+> alcançável **pela costura** — um espião que delega e mente uma vez só. O ruling honesto sobre
+> a medição não me dispensava de perguntar se a LINHA morria.
+
 ### Ruling do deferido do mapa vazio — não vira pergunta pro João
 
 O `docs/RESUME.md` deixou pendente decidir, ao pré-voar os filtros, o que o mapa faz quando o
