@@ -246,6 +246,23 @@ Desta rodada (estão no ledger, o revisor final vai triar):
   (`afterEach(() => vi.mocked(distanciaKm).mockImplementation(real))`, com o real vindo de
   `vi.importActual`), e isso é máquina demais pra um risco que hoje não morde. **Deferido de
   propósito, com a medição registrada** — o revisor final decide.
+- 🟠 **PERGUNTA CURTA PRO JOÃO, e é comportamento NOVO da Task 11** (achado da revisão dela,
+  Important, plan-mandated). **Com um filtro ligado, o pin de uma trilha escondida vira âncora
+  morta.** O `PinTrilha` é `<a href="#slug">` (`src/app/PinTrilha.tsx:38`) apontando pro
+  `id={ficha.slug}` do cartão (`CartaoTrilha.tsx:57`), e o `MapaHome` recebe `fichas={fichas}` —
+  **o acervo inteiro, sem filtro** (`page.tsx:58`) — enquanto a folha agora desenha só
+  `visiveis`. Tocar o pin não faz nada; no extremo, a folha diz "Nenhuma trilha com esses
+  filtros" com o mapa cheio de pins, todos mortos. Antes da Task 11 nada era escondido, então
+  todo pin tinha alvo. **Não é a família do Critical antigo** (não há afirmação falsa sobre
+  segurança), mas é a mesma FORMA: recortar num lugar e mostrar em outro. A §6 da spec diz que o
+  mapa enquadra "você e **todas** as trilhas" — o conflito é com uma decisão dele, por isso não
+  decido sozinho. *"Com um filtro ligado, o mapa esconde os pins junto, apaga o toque deles, ou
+  deixa como está?"* **Nenhuma task da rodada cobre isto.**
+- **Estado vazio com acervo vazio e nenhum filtro ligado** (Minor da mesma revisão): a folha
+  diria "Nenhuma trilha com esses filtros" **sem filtro nenhum**, e a linha acima diria "0
+  trilhas" SEM o sufixo "· 1 filtro ligado" — a tela se contradiz. Hoje **inalcançável** (sempre
+  há ≥1 ficha). Deferido de propósito, com comentário no código apontando a condição que o torna
+  alcançável. Saída barata, se um dia: `visiveis.length === 0 && contarLigados(filtros) > 0`.
 - **DECISÃO DE PRODUTO pendente, não é só limpeza:** `enquadrarComVoce([], voce, ...)` devolve
   zoom 11 (~26 km), enquanto uma trilha só, longe demais, cai no piso de zoom 8 (~212 km) —
   zero trilhas fica **mais apertado** que uma trilha distante. Assimetria herdada de reusar o
