@@ -1,0 +1,303 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen, cleanup, act, fireEvent } from "@testing-library/react";
+import BuscaLugar, { ESPERA_MS } from "@/app/BuscaLugar";
+import LocalVivo from "@/app/local";
+import { CHAVE_GPS, CHAVE_LOCAL } from "@/lib/local";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { regraDe, semComentarios, valorDe } from "../css";
+
+// `ESPERA_MS` sai EXPORTADO de BuscaLugar.tsx (o Step 3 abaixo já traz o
+// `export`). Mesmo precedente do `zoomDeTiles()` em src/lib/mapa.ts —
+// "exportado (em vez de inline no componente) pra esse invariante ter teste".
+// Assim os testes de relógio avançam o tempo pelo valor REAL: mudar a espera
+// não faz um teste mentir, e não trava o valor a um número escrito à mão.
+
+afterEach(() => { cleanup(); localStorage.clear(); vi.restoreAllMocks(); });
+
+const GRAVATA = { nome: "Gravatá", regiao: "Pernambuco", pais: "Brasil", lat: -8.2, lng: -35.56 };
+// Segunda cidade, pros dois testes de relógio falso lá embaixo. Nome diferente
+// de propósito — a REGIÃO das duas é a mesma (Pernambuco), então asserção por
+// região não distinguiria uma da outra.
+const RECIFE = { nome: "Recife", regiao: "Pernambuco", pais: "Brasil", lat: -8.05, lng: -34.9 };
+
+function comLocalVivo() {
+  return render(<LocalVivo><BuscaLugar /></LocalVivo>);
+}
+
+describe("a pílula", () => {
+  it("sem localização e sem gps negado, convida", () => {
+    comLocalVivo();
+    expect(screen.getByRole("button", { name: /Ver daqui/ })).toBeTruthy();
+  });
+
+  it("com gps negado, oferece o caminho manual", async () => {
+    localStorage.setItem(CHAVE_GPS, "negado");
+    comLocalVivo();
+    expect(await screen.findByRole("button", { name: /escolher onde estou/ })).toBeTruthy();
+  });
+
+  it("com lugar escolhido, diz o nome dele", async () => {
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+      tipo: "escolhido", coord: { lat: -8.2, lng: -35.56 },
+      em: 1_800_000_000, nome: "Gravatá", regiao: "Pernambuco",
+    }));
+    comLocalVivo();
+    expect(await screen.findByRole("button", { name: /de Gravatá/ })).toBeTruthy();
+  });
+
+  // "Ver daqui" é o toque que pede o GPS — a promessa do "um toque na vida".
+  it("'Ver daqui' pede o GPS, não abre a busca", async () => {
+    const pediu = vi.fn();
+    vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: pediu } });
+    comLocalVivo();
+    await act(async () => { screen.getByRole("button", { name: /Ver daqui/ }).click(); });
+    expect(pediu).toHaveBeenCalled();
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
+  it("com gps negado, o toque abre a busca em vez de pedir de novo", async () => {
+    localStorage.setItem(CHAVE_GPS, "negado");
+    const pediu = vi.fn();
+    vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: pediu } });
+    comLocalVivo();
+    const b = await screen.findByRole("button", { name: /escolher onde estou/ });
+    await act(async () => { b.click(); });
+    expect(pediu).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox")).toBeTruthy();
+  });
+});
+
+describe("a busca", () => {
+  async function abrir() {
+    localStorage.setItem(CHAVE_GPS, "negado");
+    comLocalVivo();
+    const b = await screen.findByRole("button", { name: /escolher onde estou/ });
+    await act(async () => { b.click(); });
+  }
+
+  it("mostra a região de cada resultado — sem ela o dedo acerta o lugar errado", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([GRAVATA]));
+    await abrir();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Gravatá" } });
+    expect(await screen.findByText(/Pernambuco/)).toBeTruthy();
+  });
+
+  it("escolher um resultado guarda a localização e fecha a busca", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([GRAVATA]));
+    await abrir();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Gravatá" } });
+    const item = await screen.findByText(/Pernambuco/);
+    await act(async () => { (item.closest("button") as HTMLButtonElement).click(); });
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(localStorage.getItem(CHAVE_LOCAL)).toContain("Gravatá");
+  });
+
+  it("serviço fora do ar: diz que não conseguiu buscar, não 'nada encontrado'", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("", { status: 503 }));
+    await abrir();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Recife" } });
+    expect(await screen.findByText(/não consegui buscar/i)).toBeTruthy();
+  });
+
+  // Crédito do GeoNames: CC-BY exige atribuição visível E com link. O
+  // `© OpenStreetMap` do mapa já tem teste próprio pelo mesmo motivo — este
+  // app trata atribuição como obrigação, e obrigação sem teste é obrigação que
+  // some no primeiro refactor de layout.
+  it("credita o GeoNames com link, como a licença CC-BY exige", async () => {
+    await abrir();
+    const link = screen.getByRole("link", { name: /GeoNames/i });
+    expect(link.getAttribute("href")).toContain("geonames.org");
+  });
+
+  // 🔴 "Existe no DOM" não é "visível". MEDIDO em 375×667 com cinco
+  // resultados: o painel mostrava 168px de 344px de conteúdo e o crédito
+  // nascia 144px ABAIXO do fim visível — dentro de uma caixa que rola sem
+  // nenhuma dica de que rola. CC-BY pede atribuição VISÍVEL; o teste acima
+  // passava com o crédito escondido.
+  //
+  // jsdom não mede pixel, então a prova é ESTRUTURAL, nos dois elos: o crédito
+  // não é descendente da caixa que rola (DOM), e a caixa que rola é o
+  // `.busca-rolo`, não o painel inteiro (CSS). Cada elo sozinho passa com o
+  // defeito de volta.
+  it("o crédito do GeoNames fica FORA da caixa que rola — atribuição escondida não é atribuição", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json([GRAVATA, RECIFE, GRAVATA, RECIFE, GRAVATA]),
+    );
+    await abrir();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Gravatá" } });
+    await screen.findAllByText(/Pernambuco/);
+
+    const credito = screen.getByRole("link", { name: /GeoNames/i }).closest(".busca-fonte");
+    expect(credito, "o crédito perdeu a classe .busca-fonte").not.toBeNull();
+    expect(
+      credito!.closest(".busca-rolo"),
+      "o crédito voltou pra dentro da caixa que rola — ele sai da tela com a lista cheia",
+    ).toBeNull();
+
+    const css = semComentarios("home.css");
+    const painel = regraDe(css, ".busca");
+    const rolo = regraDe(css, ".busca-rolo");
+    expect(painel, "faltou a regra .busca").not.toBeNull();
+    expect(rolo, "faltou a regra .busca-rolo — não existe caixa de rolagem separada").not.toBeNull();
+    // Ancorado: `/overflow-y:\s*auto/` casava dentro de `--overflow-y: auto`, e
+    // MEDIDO deixava a suíte verde com a lista inteira inalcançável.
+    expect(valorDe(rolo![0], "overflow-y"), "a .busca-rolo parou de rolar — os resultados de baixo ficam inalcançáveis")
+      .toBe("auto");
+    // Pelo VALOR, não por uma negação sobre o bloco: negação casa em comentário
+    // e em custom property e dá alarme falso. O painel corta, nunca rola.
+    expect(valorDe(painel![0], "overflow"), "o painel de busca parou de cortar")
+      .toBe("hidden");
+    expect(valorDe(painel![0], "overflow-y"), "a rolagem voltou pro painel inteiro — o crédito rola junto")
+      .toBeNull();
+    // 🔴 NÃO tem asserção sobre o `min-height: 0` do `.busca-rolo`. Ele estava
+    // no plano deste conserto e a mutação NÃO MORDEU: medido em 375×667, tirar
+    // só ele deixa a caixa em 70,05px e o crédito visível do mesmo jeito —
+    // flexbox zera o mínimo automático de quem é container de rolagem, então
+    // enquanto o `overflow-y: auto` estiver lá ele é redundante. A linha fica
+    // como cinto (comentada como tal no home.css); a asserção sairia mentindo
+    // que ela carrega alguma coisa, que é a família de teste que este fix round
+    // inteiro existe pra tirar.
+  });
+
+  // ——— OS DOIS ABAIXO VIERAM DO PRÉ-VOO, e são os mais importantes do arquivo.
+  //
+  // O `ESPERA_MS` e o guarda `meu === pedido.current` são as duas linhas desta
+  // task com comentário que as justifica e ZERO teste — a família exata que já
+  // custou cinco fix rounds nesta rodada. Apagar as duas deixava tudo verde:
+  // os outros testes usam `findByText`, que espera até 1000ms e portanto não
+  // percebe se a busca dispara a cada tecla; e nenhum deles tem duas
+  // requisições em voo, que é a única situação em que o guarda faz algo.
+  //
+  // Os dois precisam de relógio falso. **Isso é chato e pode brigar com o
+  // `act`** — se brigar, PARE e relate o que observou em vez de enfraquecer a
+  // asserção. Use `vi.useFakeTimers({ shouldAdvanceTime: true })` e devolva com
+  // `vi.useRealTimers()` no fim de cada um, pra não vazar pros vizinhos que
+  // rodam com relógio de verdade.
+
+  it("espera a digitação parar: três letras, uma requisição só", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([GRAVATA]));
+      await abrir();
+      const campo = screen.getByRole("textbox");
+      fireEvent.change(campo, { target: { value: "G" } });
+      fireEvent.change(campo, { target: { value: "Gr" } });
+      fireEvent.change(campo, { target: { value: "Gra" } });
+      // Antes da espera vencer, nada saiu do aparelho.
+      expect(spy).not.toHaveBeenCalled();
+      await act(async () => { await vi.advanceTimersByTimeAsync(ESPERA_MS + 50); });
+      // Uma requisição só, e com a ÚLTIMA letra — não três, nem a primeira.
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(String(spy.mock.calls[0][0])).toContain("q=Gra");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // O guarda da corrida. Sem ele, a resposta de "Gravatá" chegando DEPOIS da
+  // de "Recife" repinta a lista com o lugar errado — e a pessoa toca no que
+  // está na tela achando que é o que ela pediu. Some da tela a cidade certa e
+  // entra a errada, sem erro nenhum. Esta é a única forma de reproduzir: duas
+  // requisições em voo, resolvidas fora de ordem.
+  it("resposta velha chegando depois não sobrescreve a busca nova", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      let soltarVelha!: (r: Response) => void;
+      const velha = new Promise<Response>((r) => { soltarVelha = r; });
+      vi.spyOn(globalThis, "fetch")
+        .mockImplementationOnce(() => velha)
+        .mockImplementationOnce(async () => Response.json([RECIFE]));
+
+      await abrir();
+      const campo = screen.getByRole("textbox");
+      fireEvent.change(campo, { target: { value: "Gravatá" } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(ESPERA_MS + 50); });
+      fireEvent.change(campo, { target: { value: "Recife" } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(ESPERA_MS + 50); });
+
+      // A nova já pintou. Agora a VELHA responde, atrasada.
+      // Asserção pelo NOME, não pela região: Recife e Gravatá são as duas de
+      // Pernambuco, e um teste que olhasse "Pernambuco" passaria com qualquer
+      // uma das duas na tela — provando nada.
+      expect(await screen.findByText("Recife")).toBeTruthy();
+      await act(async () => { soltarVelha(Response.json([GRAVATA])); await vi.advanceTimersByTimeAsync(10); });
+
+      // Recife continua na tela; Gravatá não entrou.
+      expect(screen.getByText("Recife")).toBeTruthy();
+      expect(screen.queryByText("Gravatá")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Task 6, fix round: a mutação `encodeURIComponent(q)` → `q` não mordia
+  // nenhum teste existente — todos buscam nomes sem caractere especial. Sem
+  // encode, "&" na query string ABRE UM PARÂMETRO NOVO em vez de fazer parte
+  // do valor: `q=A&B` vira `q=A` pro servidor, o resto ("B") some sem erro
+  // nenhum na tela. Por isso o caractere do teste é "&", não um acento — a
+  // Task 5 mostrou que fetch/jsdom pode normalizar acento e "provar" nada.
+  it("o texto digitado chega inteiro na URL — '&' não abre um parâmetro novo", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([]));
+      await abrir();
+      const campo = screen.getByRole("textbox");
+      fireEvent.change(campo, { target: { value: "A&B" } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(ESPERA_MS + 50); });
+      expect(spy).toHaveBeenCalledTimes(1);
+      // Codificado, "&" vira %26 e sobrevive dentro do valor de "q". Sem
+      // encode, a URL teria "q=A&B" — dois parâmetros, "B" perdido.
+      expect(String(spy.mock.calls[0][0])).toContain("q=A%26B");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("busca sem resultado diz que não achou", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([]));
+    await abrir();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Xyzabc" } });
+    expect(await screen.findByText(/não achei/i)).toBeTruthy();
+  });
+
+  // 🔴 A QUARTA IRMÃ do decoy `--`, e é a que guarda o iPhone do dono do
+  // projeto. `toMatch(/font-size:\s*16px/)` sobre o bloco inteiro casa dentro
+  // de `--font-size: 16px; font-size: 13px` — mutação provada, suíte VERDE, e
+  // o que esse 16 segura está em maiúsculas no próprio CSS: abaixo de 16px o
+  // Safari do iPhone dá ZOOM sozinho ao focar o campo e a tela salta. Ancorado
+  // no `valorDe` (tests/css.ts), que exige a propriedade começando a
+  // declaração e compara o VALOR.
+  it("o campo tem 16px — abaixo disso o Safari dá zoom sozinho ao focar e a tela salta", () => {
+    const regra = regraDe(semComentarios("home.css"), ".busca-campo");
+    expect(regra, "faltou a regra .busca-campo").not.toBeNull();
+    expect(valorDe(regra![0], "font-size"), "o campo desceu de 16px — o Safari vai dar zoom")
+      .toBe("16px");
+  });
+
+  // O segundo toque na pílula é o ÚNICO jeito de fechar a busca sem escolher
+  // um resultado. Sem essa prova, o ternário `soGps ? pedirGps() :
+  // setFase(fase === "aberto" ? "fechado" : "aberto")` pode virar
+  // `setFase("aberto")` fixo em silêncio, e a pessoa fica presa na tela de
+  // busca até escolher alguma cidade — inclusive uma errada, só pra sair
+  // dali. O rótulo da pílula não muda com `fase` (rotuloPilula só olha
+  // `local`/`gps`), então o mesmo seletor de `abrir()` continua valendo.
+  it("o segundo toque na pílula fecha a busca sem escolher nada", async () => {
+    await abrir();
+    expect(screen.getByRole("textbox")).toBeTruthy();
+    const pilula = await screen.findByRole("button", { name: /escolher onde estou/ });
+    await act(async () => { pilula.click(); });
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
+  // O `"use client"` é o que faz `getCurrentPosition`/`fetch` disparar a
+  // partir de clique de verdade no aparelho. jsdom não distingue server de
+  // client component — apagar a diretiva deixa a suíte inteira verde e o
+  // recurso morto em produção. Mesmo padrão de asserção de fonte do
+  // `MapaHome.tsx` em tests/app/MapaHome.test.tsx (Task 4: apagar a diretiva
+  // lá deixou 26 de 27 testes verdes — só essa asserção acusou).
+  it("BuscaLugar é client component — sem isso o GPS e a busca não disparam em produção", () => {
+    const fonte = readFileSync(path.join(process.cwd(), "src", "app", "BuscaLugar.tsx"), "utf8");
+    expect(fonte.trimStart().startsWith('"use client"')).toBe(true);
+  });
+});

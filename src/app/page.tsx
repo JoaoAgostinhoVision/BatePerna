@@ -5,8 +5,10 @@ import { resolverEstados, type LeituraCarimbo } from "@/lib/carimbo-estado";
 import type { Ficha } from "@/types/ficha";
 import Appbar from "./Appbar";
 import BarraNavegacao from "./BarraNavegacao";
+import FiltrosVivos from "./filtros";
 import FolhaTrilhas from "./FolhaTrilhas";
 import HomeViva from "./HomeViva";
+import LocalVivo from "./local";
 import MapaHome from "./MapaHome";
 
 // Compute-on-load: o veredito é a chuva de agora. Página estática congelaria
@@ -46,16 +48,24 @@ export default async function Home() {
 
   return (
     <main className="bp">
-      <HomeViva inicial={Object.fromEntries(leituras)}>
-        <div className="screen">
-          <Appbar comSaida={false} />
-          <MapaHome fichas={fichas} leituras={leituras} />
-          <div className="folha">
-            <FolhaTrilhas pares={pares} />
-          </div>
-          <BarraNavegacao aqui="hoje" />
-        </div>
-      </HomeViva>
+      <LocalVivo>
+        {/* Os recortes envolvem a tela inteira porque quem RESUME (a linha de
+            filtro) e quem APLICA (a folha) são elementos distantes no DOM. */}
+        <FiltrosVivos>
+          <HomeViva inicial={Object.fromEntries(leituras)}>
+            <div className="screen">
+              <Appbar comSaida={false} />
+              <MapaHome fichas={fichas} leituras={Object.fromEntries(leituras)} />
+              {/* A linha de filtro e a folha saem os dois daqui: a `FolhaTrilhas`
+                  recorta uma vez e usa o MESMO `visiveis` pra desenhar os
+                  cartões e pra dizer quantos são. Renderizá-los como irmãos
+                  aqui obrigaria a contagem a sair de uma segunda conta. */}
+              <FolhaTrilhas pares={pares} />
+              <BarraNavegacao aqui="hoje" />
+            </div>
+          </HomeViva>
+        </FiltrosVivos>
+      </LocalVivo>
     </main>
   );
 }

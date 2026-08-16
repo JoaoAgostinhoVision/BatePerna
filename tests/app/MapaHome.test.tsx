@@ -2,24 +2,54 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { render, cleanup } from "@testing-library/react";
+import { regraDe, semComentarios, valorDe } from "../css";
 import MapaHome from "@/app/MapaHome";
 import CartaoTrilha from "@/app/CartaoTrilha";
+import LocalVivo from "@/app/local";
 import { LeiturasProvider } from "@/app/leituras";
 import { getFichasComCondicao } from "@/lib/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+import { CHAVE_LOCAL } from "@/lib/local";
 import type { Ficha } from "@/types/ficha";
 import {
   MAPA_ALTURA_HOME_PX,
   MAPA_JANELA_VISIVEL_HOME_PX,
   MAPA_LARGURA_PX,
   RAIO_ALVO_TOQUE_PX,
+  ZOOM_MINIMO_HOME_COM_VOCE,
 } from "@/lib/mapa";
 
 afterEach(() => { cleanup(); });
 
+// Ficha mínima e sintética — mesmo padrão de tests/app/home.test.tsx
+// (fichaFake): só os campos que o mapa lê. Não exporta o de lá nem move:
+// duplicar sete linhas de fixture custa menos que acoplar dois arquivos de
+// teste.
+function fichaFake(slug: string): Ficha {
+  return {
+    slug,
+    modos: [],
+    rotulo_escaneio: "",
+    promessa: `promessa de ${slug}`,
+    voz: "",
+    premio: "",
+    trajeto: { waypoints: [{ nome: slug, lat: 0, lng: 0 }] },
+    acesso: "",
+    avisos: "",
+    condicao: {
+      coords: { lat: 0, lng: 0 },
+      regra: { tipo: "chuva_binaria", janela_previsao_horas: 0, janela_passado_horas: 0, limiar_mm: 0 },
+      regra_texto: "",
+      ressalva_proxy: "",
+    },
+    discriminador: { formato: "", como_ler: "", permissao_abortar: "" },
+    custo: { tag: "gratis" },
+  };
+}
+
 const fichas = getFichasComCondicao();
-const leituras = new Map<string, LeituraCarimbo>(
-  fichas.map((f) => [f.slug, { estado: "fresco", erro: false, calculadoEm: 1_800_000_000 }]),
+const leituras: Record<string, LeituraCarimbo> = Object.fromEntries(
+  fichas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
 );
 
 describe("MapaHome", () => {
@@ -40,10 +70,10 @@ describe("MapaHome", () => {
   });
 
   it("a cor do pin é a leitura daquela trilha, não a de outra", () => {
-    const mistas = new Map<string, LeituraCarimbo>(
+    const mistas: Record<string, LeituraCarimbo> = Object.fromEntries(
       fichas.map((f, i) => [
         f.slug,
-        { estado: i === 0 ? "frio" : "fresco", erro: false, calculadoEm: 1_800_000_000 },
+        { estado: i === 0 ? ("frio" as const) : ("fresco" as const), erro: false, calculadoEm: 1_800_000_000 },
       ]),
     );
     const { container } = render(<MapaHome fichas={fichas} leituras={mistas} />);
@@ -78,7 +108,7 @@ describe("MapaHome", () => {
     const { container } = render(
       <LeiturasProvider value={nova}>
         <MapaHome fichas={fichas} leituras={leituras} />
-        <CartaoTrilha ficha={fichas[0]} inicial={leituras.get(slug)!} />
+        <CartaoTrilha ficha={fichas[0]} inicial={leituras[slug]} />
       </LeiturasProvider>,
     );
     // As props (`leituras`, `inicial`) dizem "fresco" — é a semente do servidor.
@@ -99,11 +129,17 @@ describe("MapaHome", () => {
   // jsdom não resolve cascata, então o guarda lê a folha — seletor E corpo
   // juntos — pra não passar só porque o texto apareceu num comentário, nem
   // porque a regra ganhou a cascata mas pintou a cor errada.
+  // 🔴 O corpo é lido pelo VALOR da declaração, não por `[^}]*background:` dentro
+  // do bloco: aquilo casava em `--background: var(--stop); background:
+  // var(--go)`. MEDIDO, 523/523 VERDE com o pin da home VERDE embaixo de um
+  // selo que diz "SEM INFORMAÇÕES" — a regra ganhava a cascata e pintava a cor
+  // errada, que é literalmente o que o comentário acima diz estar coberto.
   it("a regra de fase do pin ganha da cor do estado — mesma disputa de especificidade do selo", () => {
-    const css = readFileSync(path.join(process.cwd(), "src", "app", "home.css"), "utf8");
-    expect(css).toMatch(
-      /\.bp \.pin-home\[data-state\]\[data-fase="sem-informacoes"\]::before\s*\{[^}]*background:\s*var\(--stop\)/,
-    );
+    const seletor = '.bp .pin-home[data-state][data-fase="sem-informacoes"]::before';
+    const regra = regraDe(semComentarios("home.css"), seletor);
+    expect(regra, `faltou a regra ${seletor} no home.css`).not.toBeNull();
+    expect(valorDe(regra![0], "background"), "o pin da home parou de parar de afirmar cor de veredito")
+      .toBe("var(--stop)");
   });
 });
 
@@ -157,8 +193,8 @@ describe("MapaHome: o enquadramento usa a janela que a tela mostra, não a caixa
       fichaEm("leste", deslocaMetros(RAMPA, 30_000, 0)),
       fichaEm("oeste", deslocaMetros(RAMPA, -30_000, 0)),
     ];
-    const leituras = new Map<string, LeituraCarimbo>(
-      fichas.map((f) => [f.slug, { estado: "fresco", erro: false, calculadoEm: 1_800_000_000 }]),
+    const leituras: Record<string, LeituraCarimbo> = Object.fromEntries(
+      fichas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
     );
 
     const { container } = render(<MapaHome fichas={fichas} leituras={leituras} />);
@@ -179,5 +215,183 @@ describe("MapaHome: o enquadramento usa a janela que a tela mostra, não a caixa
       expect(top).toBeGreaterThanOrEqual(RAIO_ALVO_TOQUE_PX);
       expect(top).toBeLessThanOrEqual(MAPA_ALTURA_HOME_PX - RAIO_ALVO_TOQUE_PX);
     }
+  });
+});
+
+describe("MapaHome com a localização da pessoa", () => {
+  afterEach(() => { localStorage.clear(); });
+
+  const leiturasObj = Object.fromEntries(
+    fichas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
+  );
+
+  it("sem localização, não desenha o ponto 'você' — e o mapa é o de hoje", () => {
+    const { container } = render(<MapaHome fichas={fichas} leituras={leiturasObj} />);
+    expect(container.querySelector(".voce-pin")).toBeNull();
+  });
+
+  // O ponto de uso: não basta enquadrarComVoce existir e ter teste — é
+  // MapaHome quem tem que passar a coordenada da pessoa pra ela. Revertendo
+  // essa ligação, a suíte de tests/lib/mapa.test.ts fica toda verde.
+  it("com localização, aparece o ponto 'você' e os tiles mudam de lugar", async () => {
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+      tipo: "escolhido", coord: { lat: -8.20111, lng: -35.56472 },
+      em: 1_800_000_000, nome: "Gravatá", regiao: "Pernambuco",
+    }));
+    const semLocal = render(<MapaHome fichas={fichas} leituras={leiturasObj} />);
+    const tilesAntes = Array.from(semLocal.container.querySelectorAll("img"))
+      .map((i) => i.getAttribute("src")).join("|");
+    cleanup();
+
+    const { container, findByTestId } = render(
+      <LocalVivo><MapaHome fichas={fichas} leituras={leiturasObj} /></LocalVivo>,
+    );
+    await findByTestId("voce");
+    const tilesDepois = Array.from(container.querySelectorAll("img"))
+      .map((i) => i.getAttribute("src")).join("|");
+    expect(tilesDepois).not.toBe(tilesAntes);
+  });
+
+  it("trilha longe demais: avisa quantas ficaram fora do mapa", async () => {
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+      tipo: "escolhido", coord: { lat: -23.5, lng: -46.6 },
+      em: 1_800_000_000, nome: "São Paulo", regiao: "São Paulo",
+    }));
+    const { container, findByTestId } = render(
+      <LocalVivo><MapaHome fichas={fichas} leituras={leiturasObj} /></LocalVivo>,
+    );
+    await findByTestId("voce");
+    expect(container.querySelector(".mapa-fora")?.textContent).toBe("1 trilha fora do mapa");
+  });
+
+  it("continua creditando o OpenStreetMap com a localização ligada", async () => {
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+      tipo: "gps", coord: { lat: -8.2, lng: -35.56 }, em: 1_800_000_000,
+    }));
+    const { container, findByTestId } = render(
+      <LocalVivo><MapaHome fichas={fichas} leituras={leiturasObj} /></LocalVivo>,
+    );
+    await findByTestId("voce");
+    expect(container.textContent).toContain("OpenStreetMap");
+  });
+
+  // ——— os quatro abaixo entraram no pré-voo desta task: sem eles, quatro
+  // linhas desta implementação podiam ser apagadas com a suíte inteira verde.
+
+  // content/fichas/ tem UMA ficha hoje, então o ramo plural do aviso nunca é
+  // exercido pelo fixture real — e é o ramo que sai errado ("2 trilha fora").
+  // Sintéticas, mesmo padrão do fichaFake de tests/app/home.test.tsx.
+  it("duas trilhas fora: o aviso vai pro plural", async () => {
+    const longe: Ficha[] = [fichaFake("uma"), fichaFake("outra")];
+    const dobradas = Object.fromEntries(
+      longe.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
+    );
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+      tipo: "escolhido", coord: { lat: -23.5, lng: -46.6 },
+      em: 1_800_000_000, nome: "São Paulo", regiao: "São Paulo",
+    }));
+    const { container, findByTestId } = render(
+      <LocalVivo><MapaHome fichas={longe} leituras={dobradas} /></LocalVivo>,
+    );
+    await findByTestId("voce");
+    expect(container.querySelector(".mapa-fora")?.textContent).toBe("2 trilhas fora do mapa");
+  });
+
+  // O `.voce-pin` mora na CAIXA DE GERAÇÃO (MAPA_LARGURA_PX, 480), igual aos
+  // pins de trilha — enquanto o ENQUADRAMENTO decide contra a janela visível
+  // (350,5). Trocar uma largura pela outra no `.voce-pin` desloca a pessoa
+  // 64,75px do lugar dela e nenhum teste acima acusa. Esta prova não recalcula
+  // `posicaoNaCaixa` (isso seria auto-referente): põe VOCÊ exatamente em cima
+  // da trilha e exige que os dois pins caiam no MESMO ponto — o que só é
+  // verdade se as duas chamadas usarem a mesma largura.
+  it("você em cima da trilha: o ponto 'você' cai exatamente sobre o pin dela", async () => {
+    const mesma = fichaFake("mesma");
+    mesma.condicao.coords = { lat: -8.2, lng: -35.56 };
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+      tipo: "gps", coord: { lat: -8.2, lng: -35.56 }, em: 1_800_000_000,
+    }));
+    const { container, findByTestId } = render(
+      <LocalVivo>
+        <MapaHome
+          fichas={[mesma]}
+          leituras={{ mesma: { estado: "fresco", erro: false, calculadoEm: 1_800_000_000 } }}
+        />
+      </LocalVivo>,
+    );
+    await findByTestId("voce");
+    const voce = container.querySelector<HTMLElement>(".voce-pin")!;
+    const pin = container.querySelector<HTMLElement>(".pin-home")!;
+    expect(voce.style.left).toBe(pin.style.left);
+    expect(voce.style.top).toBe(pin.style.top);
+  });
+
+  // ——— ESTE veio da revisão da Task 3, e é obrigatório: é o único lugar do
+  // repositório onde a largura CERTA pode ser travada.
+  //
+  // `enquadrarComVoce` e `foraDaJanela` são puras e recebem `larguraPx` como
+  // argumento, então NENHUM teste em tests/lib/mapa.test.ts pode dizer qual
+  // largura o app deve passar — a revisão da Task 3 provou isso trocando a
+  // constante nos testes de lá e vendo 50/50 continuar verde. Quem decide é
+  // ESTE componente, e o erro é fácil de cometer porque o mesmo arquivo usa as
+  // duas: MAPA_LARGURA_PX (480) pra DESENHAR o mosaico e posicionar pins, e
+  // MAPA_JANELA_VISIVEL_HOME_PX (350,5) pra DECIDIR o enquadramento e a conta
+  // de quem ficou fora — a fatia central que um iPhone de 375px realmente
+  // mostra dentro do overflow:hidden.
+  //
+  // A GEOMETRIA, e por que ela é de TRÊS trilhas e não de duas.
+  //
+  // Enquanto o enquadramento COUBER, ninguém fica fora por construção: o
+  // `enquadrar` encaixa tudo dentro de `larguraPx - 2×MARGEM_ENQUADRO_PX`, e
+  // como a margem (28) é maior que o raio do alvo de toque (22), nenhuma
+  // trilha chega perto da borda. Ou seja: só existe "trilha fora" quando o
+  // PISO do zoom entra — e aí o centro do mapa é VOCÊ.
+  //
+  // Com o centro em você e o zoom em 8, uma trilha a `dx` pixels de você fica
+  // fora da janela visível se `dx > 153,25`, e fora da caixa de geração só se
+  // `dx > 218`. A faixa entre os dois é onde as duas larguras discordam — e é
+  // preciso uma trilha DENTRO dessa faixa mais uma outra bem longe pra acionar
+  // o piso, porque a própria trilha que aciona o piso já sai da faixa.
+  //
+  //   você  = {-8.2, -35.56}
+  //   perto = {-8.2, -35.56}   em cima de você       → dx = 0      dentro nas duas
+  //   meio  = {-8.2, -34.56}   +1,0° a leste          → dx = 182,0 FORA na visível, dentro na de geração
+  //   longe = {-8.2, -41.56}   −6,0° a oeste          → dx = −1092 fora nas duas (e é quem aciona o piso)
+  //
+  // Conferido: com a janela visível → **2 fora**; trocando só a chamada de
+  // `foraDaJanela` pra caixa de geração → **1 fora**. O `dx` do "meio" tem
+  // 28,8px de folga do limite de baixo e 36,0px do de cima — não é gume de
+  // faca. E é robusto ainda que alguém troque AS DUAS ocorrências da
+  // constante: o piso entra igual, o centro continua em você, e a conta cai
+  // pra 1 do mesmo jeito.
+  it("a conta de quem ficou fora usa a janela VISÍVEL, não a caixa de geração", async () => {
+    const perto = fichaFake("perto");
+    perto.condicao.coords = { lat: -8.2, lng: -35.56 };
+    const meio = fichaFake("meio");
+    meio.condicao.coords = { lat: -8.2, lng: -34.56 };
+    const longe = fichaFake("longe");
+    longe.condicao.coords = { lat: -8.2, lng: -41.56 };
+    const tres = [perto, meio, longe];
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+      tipo: "gps", coord: { lat: -8.2, lng: -35.56 }, em: 1_800_000_000,
+    }));
+    const leiturasTres = Object.fromEntries(
+      tres.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
+    );
+    const { container, findByTestId } = render(
+      <LocalVivo><MapaHome fichas={tres} leituras={leiturasTres} /></LocalVivo>,
+    );
+    await findByTestId("voce");
+    // Com MAPA_LARGURA_PX no lugar da janela visível, a trilha "meio" passa a
+    // contar como dentro e este texto vira "1 trilha fora do mapa".
+    expect(container.querySelector(".mapa-fora")?.textContent).toBe("2 trilhas fora do mapa");
+  });
+
+  // O `"use client"` é o coração da ATENÇÃO desta task, e o jsdom NÃO o prova:
+  // ele renderiza tudo como cliente, então apagar a diretiva deixa a suíte
+  // inteira verde e o mapa parado no aparelho do João. Mesmo padrão de
+  // asserção de fonte que tests/app/home.test.tsx já usa pro CSS.
+  it("MapaHome é client component — sem isso a localização não move o mapa em produção", () => {
+    const fonte = readFileSync(path.join(process.cwd(), "src", "app", "MapaHome.tsx"), "utf8");
+    expect(fonte.trimStart().startsWith('"use client"')).toBe(true);
   });
 });

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { margemLado, paddingLado, px, regraDe, semComentarios, valorDe } from "../css";
 import {
   MAPA_ALTURA_PX,
   MAPA_ESCALA,
@@ -19,11 +20,15 @@ import {
   MARGEM_ENQUADRO_PX,
   RAIO_ALVO_TOQUE_PX,
   ZOOM_MINIMO,
+  ZOOM_MINIMO_HOME_COM_VOCE,
   enquadrar,
+  enquadrarComVoce,
+  foraDaJanela,
   latDoMundo,
   lngDoMundo,
   posicaoNaCaixa,
 } from "@/lib/mapa";
+import type { Coord } from "@/lib/geo";
 
 const RAMPA = { lat: -7.907889, lng: -36.019222 };
 
@@ -298,11 +303,56 @@ describe("MAPA_JANELA_VISIVEL_HOME_PX bate com o CSS de onde ela foi derivada", 
     const css = readFileSync(path.join(process.cwd(), "src", "app", "ficha.css"), "utf8");
     const bp = css.match(/\n\.bp\s*\{[^}]*\}/s);
     expect(bp, "faltou a regra .bp no ficha.css").not.toBeNull();
-    expect(bp![0]).toContain("clamp(0px, 3vw, 1rem)");
 
-    const screen = css.match(/\.bp \.screen\s*\{[^}]*\}/);
+    // 🔴 A fórmula da goteira NÃO mora mais dentro do `padding:`. Desde o
+    // conserto da barra fixa ela vive nas variáveis `--goteira-esq`/`-dir`,
+    // porque a `.bp .barra` (home.css) precisa se prender na MESMA medida pra
+    // ficar alinhada com a moldura. Um `toContain("clamp(0px, 3vw, 1rem)")`
+    // sobre a regra `.bp` inteira parava de provar o que existe pra provar:
+    // com o padding lateral zerado — que invalida esta constante de verdade —
+    // a fórmula continuava no arquivo, dentro das variáveis, e a asserção
+    // passava. A garantia tinha migrado, sem registro, pro teste da BARRA,
+    // noutro arquivo e sobre outro assunto.
+    //
+    // Por isso a corrente é conferida INTEIRA, e nesta ordem: o padding lê as
+    // variáveis, e as variáveis carregam a fórmula. Quebrar qualquer um dos
+    // dois elos derruba a constante — e agora derruba este teste.
+    //
+    // 🔴 E pelo LADO, não por `bp![0].match(/padding:[^;]*;/)`: aquilo casava
+    // dentro de `--padding:`, e MEDIDO deixava passar `--padding: <a fórmula
+    // toda>; padding: 0` com a suíte 521/521 verde — a moldura ia de borda a
+    // borda, que é exatamente o que esta constante afirma não acontecer.
+    expect(paddingLado(bp![0], "right"), "o padding direito do .bp parou de sair da goteira")
+      .toBe("var(--goteira-dir)");
+    expect(paddingLado(bp![0], "left"), "o padding esquerdo do .bp parou de sair da goteira")
+      .toBe("var(--goteira-esq)");
+    expect(bp![0], "a goteira esquerda perdeu a fórmula de onde a constante saiu")
+      .toMatch(/--goteira-esq:[^;]*clamp\(0px, 3vw, 1rem\)/);
+    expect(bp![0], "a goteira direita perdeu a fórmula de onde a constante saiu")
+      .toMatch(/--goteira-dir:[^;]*clamp\(0px, 3vw, 1rem\)/);
+
+    const screen = regraDe(css, ".bp .screen");
     expect(screen, "faltou a regra .bp .screen no ficha.css").not.toBeNull();
-    expect(screen![0]).toContain("border: 1px solid");
+    // A borda entra na derivação da constante (visível = viewport − 2×goteira −
+    // 2×borda). `toContain("border: 1px solid")` casava dentro de `--border`,
+    // e MEDIDO deixava passar `--border: 1px solid …; border: 0` com a suíte
+    // verde — a conta perdia 2px sem nada acusar.
+    expect(valorDe(screen![0], "border"), "o .screen perdeu a borda de onde a constante saiu")
+      .toMatch(/^1px solid/);
+
+    // 🔴 A corrente conferida acima mora INTEIRA no ficha.css — e desde a Task
+    // 12 o home.css tem um `.bp` PRÓPRIO (o `--barra-h`) que é importado
+    // DEPOIS dele em toda página. Um `padding-left: 0; padding-right: 0` ali
+    // anula a goteira sem tocar em uma linha do ficha.css: medido, a moldura
+    // vai de borda a borda e o visível real vira 373,6px contra os 350,5 que
+    // esta constante afirma — com a suíte inteira VERDE. Ler só o arquivo de
+    // origem não basta quando outro arquivo pode sobrescrevê-lo por cascata.
+    const homeCss = readFileSync(path.join(process.cwd(), "src", "app", "home.css"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    const bpHome = homeCss.match(/(?:^|\n)\.bp\s*\{[^}]*\}/s);
+    expect(bpHome, "faltou a regra .bp no home.css").not.toBeNull();
+    expect(bpHome![0], "o .bp do home.css passou a declarar padding e anula a goteira do ficha.css")
+      .not.toMatch(/(?:^|[{;])\s*padding(-[a-z]+)?\s*:/s);
   });
 
   it("no viewport de 375px (iPhone mais estreito considerado), a fórmula dá o mesmo número da constante", () => {
@@ -324,16 +374,167 @@ describe("MAPA_JANELA_VISIVEL_HOME_PX bate com o CSS de onde ela foi derivada", 
 // que ela vem — e prova que RAIO_ALVO_TOQUE_PX é metade do alvo de toque
 // real do `.pin-home` (44px, `width`/`height` da regra).
 describe("RAIO_ALVO_TOQUE_PX bate com o alvo de toque do .pin-home no CSS", () => {
+  // 🔴 A QUINTA IRMÃ do decoy: `/width:\s*(\d+)px/` casa DENTRO de
+  // `max-width:`/`min-width:`, e `match` sem /g devolve a primeira ocorrência.
+  // Mutação provada: `max-width: 44px; width: 28px; height: 28px` deixava a
+  // suíte VERDE com este teste ainda afirmando `alvoToquePx === 44` enquanto o
+  // alvo real virava 28 — o que torna RAIO_ALVO_TOQUE_PX = 22 falso (seria
+  // 14) e, por tabela, derruba o invariante MARGEM_ENQUADRO_PX >=
+  // RAIO_ALVO_TOQUE_PX e a conta do `foraDaJanela`. Ancorado no `valorDe`
+  // (tests/css.ts), e agora lendo os DOIS eixos: o alvo é quadrado, e um
+  // `height` menor corta o toque na vertical do mesmo jeito.
   it("o home.css ainda dá 44px de alvo de toque ao .pin-home, e o raio é metade disso", () => {
-    const css = readFileSync(path.join(process.cwd(), "src", "app", "home.css"), "utf8");
-    const regra = css.match(/\.bp \.pin-home\s*\{[^}]*\}/s);
+    const regra = regraDe(semComentarios("home.css"), ".bp .pin-home");
     expect(regra, "faltou a regra .bp .pin-home no home.css").not.toBeNull();
 
-    const largura = regra![0].match(/width:\s*(\d+(?:\.\d+)?)px/);
-    expect(largura, "a regra .bp .pin-home não tem mais um width: Npx").not.toBeNull();
+    const largura = px(valorDe(regra![0], "width"));
+    const altura = px(valorDe(regra![0], "height"));
+    expect(Number.isFinite(largura), "a regra .bp .pin-home não tem mais um width: Npx").toBe(true);
+    expect(altura, "o alvo de toque deixou de ser quadrado").toBe(largura);
 
-    const alvoToquePx = Number(largura![1]);
-    expect(alvoToquePx).toBe(44); // documentado no comentário da constante em src/lib/mapa.ts
-    expect(RAIO_ALVO_TOQUE_PX).toBe(alvoToquePx / 2);
+    expect(largura).toBe(44); // documentado no comentário da constante em src/lib/mapa.ts
+    expect(RAIO_ALVO_TOQUE_PX).toBe(largura / 2);
+  });
+
+  // O tamanho do alvo não basta: ele tem que estar CENTRADO na coordenada. O
+  // `<a>` é posicionado com `left`/`top` na coordenada e puxado de volta por
+  // uma margem negativa de METADE do alvo — é isso que põe o dedo em cima do
+  // ponto, e é isso que o `foraDaJanela` assume ao usar RAIO_ALVO_TOQUE_PX como
+  // margem dos quatro lados. Sem esta prova, `margin: -10px 0 0 -10px` com
+  // `width: 44px` passava: o alvo continuava com 44, deslocado 12px pra baixo e
+  // pra direita do morro, e a conta de "trilhas fora do mapa" mentia junto.
+  it("o alvo de toque fica CENTRADO na coordenada — a margem é metade dele", () => {
+    const regra = regraDe(semComentarios("home.css"), ".bp .pin-home");
+    expect(regra, "faltou a regra .bp .pin-home no home.css").not.toBeNull();
+
+    const cima = px(margemLado(regra![0], "top"));
+    const esquerda = px(margemLado(regra![0], "left"));
+    expect(cima, "a margem de cima do .pin-home não é mais um px legível")
+      .toBe(-RAIO_ALVO_TOQUE_PX);
+    expect(esquerda, "a margem da esquerda do .pin-home não centra o alvo")
+      .toBe(-RAIO_ALVO_TOQUE_PX);
+  });
+});
+
+describe("enquadrarComVoce", () => {
+  const RAMPA = { lat: -7.907889, lng: -36.019222 };
+  const L = MAPA_JANELA_VISIVEL_HOME_PX;
+  const A = MAPA_ALTURA_HOME_PX;
+
+  it("sem localização, é exatamente o enquadramento de hoje", () => {
+    const so = enquadrar([RAMPA], L, A);
+    expect(enquadrarComVoce([RAMPA], null, L, A)).toEqual(so);
+  });
+
+  it("com localização, você entra na conta: o centro se desloca na sua direção", () => {
+    const voce = { lat: -8.2, lng: -35.56 };
+    const semVoce = enquadrarComVoce([RAMPA], null, L, A);
+    const comVoce = enquadrarComVoce([RAMPA], voce, L, A);
+    expect(comVoce.centro.lat).not.toBeCloseTo(semVoce.centro.lat, 4);
+    // O centro fica ENTRE os dois pontos, não em cima de nenhum.
+    expect(comVoce.centro.lat).toBeLessThan(Math.max(RAMPA.lat, voce.lat));
+    expect(comVoce.centro.lat).toBeGreaterThan(Math.min(RAMPA.lat, voce.lat));
+  });
+
+  // O piso: abaixo do zoom 8 o mosaico do OSM vira mancha sem nome de cidade.
+  // Aí o mapa para de tentar caber tudo e vira "onde eu estou".
+  it("trilha longe demais: para no piso e centra em VOCÊ, não no meio do caminho", () => {
+    const voce = { lat: -8.2, lng: -35.56 };
+    const longe = { lat: -15.8, lng: -47.9 }; // ~1400 km
+    const { centro, z } = enquadrarComVoce([longe], voce, L, A);
+    expect(z).toBe(ZOOM_MINIMO_HOME_COM_VOCE);
+    expect(centro.lat).toBeCloseTo(voce.lat, 6);
+    expect(centro.lng).toBeCloseTo(voce.lng, 6);
+  });
+
+  it("sem localização o piso NÃO vale — o mapa de hoje não muda de comportamento", () => {
+    const a = { lat: -8.2, lng: -35.56 };
+    const b = { lat: -15.8, lng: -47.9 };
+    expect(enquadrarComVoce([a, b], null, L, A).z).toBeLessThan(ZOOM_MINIMO_HOME_COM_VOCE);
+  });
+
+  it("nunca aproxima mais que o zoom da ficha", () => {
+    const voce = { lat: RAMPA.lat + 0.0001, lng: RAMPA.lng };
+    expect(enquadrarComVoce([RAMPA], voce, L, A).z).toBeLessThanOrEqual(MAPA_ZOOM);
+  });
+
+  // A derivação do 8, conferida em vez de afirmada: ~605 m/px nesta latitude,
+  // que na janela de 350,5px dá ~212 km de largura. Se alguém trocar o 8 por
+  // 6, esta conta denuncia — o mapa passaria de 212 pra 850 km de largura.
+  it("o piso corresponde a uma largura de mapa entre 150 e 300 km", () => {
+    const kmDeLargura = (metrosPorPixel(-8, ZOOM_MINIMO_HOME_COM_VOCE) * L) / 1000;
+    expect(kmDeLargura).toBeGreaterThan(150);
+    expect(kmDeLargura).toBeLessThan(300);
+  });
+});
+
+describe("foraDaJanela: quantas trilhas o mapa não mostra", () => {
+  const L = MAPA_JANELA_VISIVEL_HOME_PX;
+  const A = MAPA_ALTURA_HOME_PX;
+
+  it("tudo dentro: zero", () => {
+    const a = { lat: -8.2, lng: -35.56 };
+    const b = { lat: -8.25, lng: -35.6 };
+    const { centro, z } = enquadrarComVoce([a, b], null, L, A);
+    expect(foraDaJanela([a, b], centro, z, L, A)).toBe(0);
+  });
+
+  it("no piso, a trilha distante conta como fora", () => {
+    const voce = { lat: -8.2, lng: -35.56 };
+    const longe = { lat: -15.8, lng: -47.9 };
+    const { centro, z } = enquadrarComVoce([longe], voce, L, A);
+    expect(foraDaJanela([longe], centro, z, L, A)).toBe(1);
+  });
+
+  it("conta cada trilha uma vez, e só as que estão fora", () => {
+    const voce = { lat: -8.2, lng: -35.56 };
+    const perto = { lat: -8.21, lng: -35.57 };
+    const longe1 = { lat: -15.8, lng: -47.9 };
+    const longe2 = { lat: -23.5, lng: -46.6 };
+    const { centro, z } = enquadrarComVoce([perto, longe1, longe2], voce, L, A);
+    expect(foraDaJanela([perto, longe1, longe2], centro, z, L, A)).toBe(2);
+  });
+
+  // O alvo de toque é de 44px centrado na coordenada: um pin cujo CENTRO está
+  // dentro mas cuja metade sai da janela não é tocável inteiro. Contar como
+  // dentro faria o texto "1 trilha fora" mentir pra menos.
+  //
+  // UMA BORDA POR TESTE, e de propósito. `foraDaJanela` é um OU de quatro
+  // sub-cláusulas, e num OU a cláusula que dispara primeiro esconde as outras:
+  // as trilhas "longe" dos testes acima caem a oeste E ao sul, então `esq` e
+  // `base` são verdadeiras juntas e apagar qualquer uma das duas mantém a
+  // contagem igual. Conferido antes de escrever: com só o teste da borda
+  // esquerda, `dir`, `topo` e `base` podiam ser apagadas com a suíte verde.
+  // Cada coordenada abaixo fica a 12px da sua borda — CENTRO ainda dentro da
+  // caixa, alvo de toque cortado — então é a única sub-cláusula verdadeira, e
+  // ela prova a margem de RAIO_ALVO_TOQUE_PX, não um trivial "saiu da caixa".
+  describe("cada borda tem que contar sozinha", () => {
+    const centro = { lat: -8.2, lng: -35.56 };
+    const z = 11;
+    const grauLng = (metrosPorPixel(centro.lat, z) * (L / 2 - 12)) / 111320;
+    const grauLat = (metrosPorPixel(centro.lat, z) * (A / 2 - 12)) / 111320;
+
+    const bordas: [string, Coord][] = [
+      ["esquerda", { lat: centro.lat, lng: centro.lng - grauLng }],
+      ["direita", { lat: centro.lat, lng: centro.lng + grauLng }],
+      ["topo", { lat: centro.lat + grauLat, lng: centro.lng }],
+      ["base", { lat: centro.lat - grauLat, lng: centro.lng }],
+    ];
+
+    for (const [nome, pino] of bordas) {
+      it(`pin colado na borda ${nome} conta como fora — o alvo de toque não cabe`, () => {
+        expect(foraDaJanela([pino], centro, z, L, A)).toBe(1);
+      });
+
+      // A outra metade da prova: sem ela, um `foraDaJanela` que devolvesse
+      // sempre `coords.length` passaria nos quatro testes acima.
+      it(`o mesmo pin, afastado da borda ${nome}, conta como dentro`, () => {
+        const dentro: Coord = {
+          lat: centro.lat + (pino.lat - centro.lat) * 0.5,
+          lng: centro.lng + (pino.lng - centro.lng) * 0.5,
+        };
+        expect(foraDaJanela([dentro], centro, z, L, A)).toBe(0);
+      });
+    }
   });
 });

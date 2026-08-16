@@ -3,6 +3,7 @@ import path from "node:path";
 import { Profiler, StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, cleanup, act } from "@testing-library/react";
+import { regraDe, semComentarios, valorDe } from "../css";
 import Carimbo from "@/app/Carimbo";
 import Moldura from "@/app/Moldura";
 
@@ -144,8 +145,17 @@ describe("Carimbo", () => {
   it("o CSS que para o pulso aponta pro atributo que o componente emite", () => {
     // Metade deste defeito era CSS: a regra existia, mas presa a data-venceu, e
     // o ramo de erro não tem esse atributo. Este par não pode desemparelhar.
-    const css = readFileSync(path.join(process.cwd(), "src", "app", "ficha.css"), "utf8");
-    expect(css).toMatch(/\[data-fase="sem-informacoes"\][^{]*\.pulse\s*\{[^}]*animation:\s*none/);
+    //
+    // 🔴 Lido pelo VALOR: `[^}]*animation:\s*none` dentro do bloco casava em
+    // `--animation: none` sem nenhuma `animation` de verdade — MEDIDO, 523/523
+    // VERDE com o pulso "lendo a chuva agora" continuando a pulsar embaixo de
+    // um "SEM INFORMAÇÕES". É a mesma família do pin verde ao lado do carimbo
+    // frio, só que em movimento em vez de cor.
+    const seletor = '.bp .decision[data-fase="sem-informacoes"] .live .pulse';
+    const regra = regraDe(semComentarios("ficha.css"), seletor);
+    expect(regra, `faltou a regra ${seletor} no ficha.css`).not.toBeNull();
+    expect(valorDe(regra![0], "animation"), "o pulso voltou a pulsar sem leitura nenhuma")
+      .toBe("none");
   });
 
   it("vencida com erro, não inventa que houve leitura", () => {

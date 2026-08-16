@@ -2,8 +2,10 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { Profiler } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { render, cleanup, waitFor } from "@testing-library/react";
 import { getFichasComCondicao } from "@/lib/ficha";
+import { CHAVE_FILTROS, SEM_FILTRO } from "@/lib/filtros";
+import { CHAVE_LOCAL } from "@/lib/local";
 import type { Ficha } from "@/types/ficha";
 
 vi.mock("@/lib/carimbo-estado", async (real) => ({
@@ -57,7 +59,12 @@ function fichaFake(slug: string): Ficha {
 }
 
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(AGORA_S * 1000); });
-afterEach(() => { vi.useRealTimers(); cleanup(); vi.mocked(resolverEstados).mockReset(); });
+afterEach(() => {
+  vi.useRealTimers();
+  cleanup();
+  vi.mocked(resolverEstados).mockReset();
+  localStorage.clear();
+});
 
 describe("a home", () => {
   it("dá um link pra cada trilha com condição", async () => {
@@ -173,6 +180,49 @@ describe("a home", () => {
     expect(css).toMatch(
       /\.bp \.cartao\[data-state\] \.selo\[data-fase="sem-informacoes"\]\s*\{[^}]*--c:\s*var\(--stop-ink\)/,
     );
+  });
+
+  // Os testes de tests/app/MapaHome.test.tsx embrulham <MapaHome> num
+  // <LocalVivo> na mão. Se o page.tsx esquecer o <LocalVivo>, todos eles
+  // continuam passando e o recurso está morto em produção — é a forma exata
+  // do defeito que a rodada passada deixou escapar ("o conserto do mapa
+  // passou na revisão com zero proteção"). Este é o ponto de uso de verdade:
+  // renderiza a home de verdade (page.tsx), sem embrulhar nada à mão.
+  it("a home de verdade embrulha tudo no LocalVivo: o ponto 'você' aparece sem ninguém embrulhar na mão", async () => {
+    vi.useRealTimers();
+    vi.mocked(resolverEstados).mockResolvedValue(leituras("fresco"));
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+      tipo: "gps", coord: { lat: -8.2, lng: -35.56 }, em: 1_800_000_000,
+    }));
+    const { container, findByTestId } = render(await Home());
+    await findByTestId("voce");
+    expect(container.querySelector(".voce-pin")).not.toBeNull();
+  });
+
+  // Irmão exato do teste acima, e pela mesma razão: todos os testes de
+  // tests/app/FolhaTrilhas.test.tsx e tests/app/PainelFiltros.test.tsx
+  // embrulham `<FiltrosVivos>` na mão. Se o page.tsx esquecer o provedor, eles
+  // continuam TODOS verdes e a home real não filtra nada.
+  //
+  // A Task 10 deixou aqui só uma prova de FONTE (`expect(fonte).toContain(
+  // "<FiltrosVivos>")`), fraca de propósito: naquela hora nada consumia o
+  // provedor ainda. Agora a folha consome, então a prova forte é possível — e
+  // ela mora neste arquivo porque é aqui que a home de verdade é renderizada,
+  // com o loader de ficha e o `resolverEstados` já no lugar.
+  //
+  // A única ficha real do projeto é PAGA (R$ 5 no portão da Rampa), então "só
+  // grátis" zera a home de verdade: se o filtro chegar, a folha vira o aviso.
+  it("a home de verdade embrulha tudo no FiltrosVivos: o filtro guardado recorta sem ninguém embrulhar na mão", async () => {
+    vi.useRealTimers();
+    vi.mocked(resolverEstados).mockResolvedValue(leituras("fresco"));
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+    const { container } = render(await Home());
+    // `waitFor` com `expect` dentro, não `findByText`: o que cai quando o
+    // provedor some é uma ASSERÇÃO nomeada, não um erro de query — a lição 15
+    // do RESUME ("suíte vermelha não é o mesmo que asserção caindo") pede que a
+    // prova de mutação seja legível como asserção.
+    await waitFor(() => expect(container.textContent).toContain("Nenhuma trilha com esses filtros"));
+    expect(container.querySelectorAll(".cartao")).toHaveLength(0);
   });
 });
 

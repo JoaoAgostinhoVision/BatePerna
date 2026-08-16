@@ -1,16 +1,21 @@
+"use client";
 import {
   MAPA_ALTURA_HOME_PX,
   MAPA_ESCALA,
   MAPA_JANELA_VISIVEL_HOME_PX,
   MAPA_LARGURA_PX,
   TILE_PX,
-  enquadrar,
+  enquadrarComVoce,
+  foraDaJanela,
   posicaoNaCaixa,
   tilesParaCaixa,
   urlTile,
 } from "@/lib/mapa";
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+import { coordDe } from "@/lib/local";
+import { useLocal } from "./local";
+import BuscaLugar from "./BuscaLugar";
 import PinTrilha from "./PinTrilha";
 
 /** O mapa da home: onde ficam as trilhas de hoje.
@@ -27,7 +32,7 @@ export default function MapaHome({
   leituras,
 }: {
   fichas: Ficha[];
-  leituras: Map<string, LeituraCarimbo>;
+  leituras: Record<string, LeituraCarimbo>;
 }) {
   // Mesma disciplina do page.tsx: o par ficha+leitura só existe se a leitura
   // existir. Fazer o TIPO provar isso — em vez de um `leituras.get(...)!`
@@ -36,8 +41,13 @@ export default function MapaHome({
   // consequência de deixar passar seria pior aqui do que lá: lá uma ficha
   // some da lista; aqui derrubaria o MapaHome inteiro, e o mapa sumiria da
   // porta do app.
+  // useLocal() vem antes do return condicional abaixo: hook não pode ser
+  // chamado condicionalmente, e comLeitura.length pode ser 0.
+  const local = useLocal();
+  const voce = coordDe(local);
+
   const comLeitura: { ficha: Ficha; leitura: LeituraCarimbo }[] = fichas.flatMap((f) => {
-    const leitura = leituras.get(f.slug);
+    const leitura = leituras[f.slug];
     return leitura ? [{ ficha: f, leitura }] : [];
   });
 
@@ -48,7 +58,8 @@ export default function MapaHome({
   // (MAPA_LARGURA_PX, usada abaixo só pra desenhar o mosaico e posicionar
   // dentro dele) — ver o comentário da constante em src/lib/mapa.ts.
   const coords = comLeitura.map((x) => x.ficha.condicao.coords);
-  const { centro, z } = enquadrar(coords, MAPA_JANELA_VISIVEL_HOME_PX, MAPA_ALTURA_HOME_PX);
+  const { centro, z } = enquadrarComVoce(coords, voce, MAPA_JANELA_VISIVEL_HOME_PX, MAPA_ALTURA_HOME_PX);
+  const fora = foraDaJanela(coords, centro, z, MAPA_JANELA_VISIVEL_HOME_PX, MAPA_ALTURA_HOME_PX);
 
   // Tiles de um zoom a mais desenhados em 1/MAPA_ESCALA: o dobro da densidade,
   // igual à ficha. zoomDeTiles() não serve aqui — ela crava MAPA_ZOOM, e o
@@ -96,11 +107,21 @@ export default function MapaHome({
             />
           );
         })}
+        {voce && (() => {
+          const p = posicaoNaCaixa(voce, centro, z, MAPA_LARGURA_PX, MAPA_ALTURA_HOME_PX);
+          return <span className="voce-pin" data-testid="voce" style={{ left: p.left, top: p.top }} />;
+        })()}
       </div>
+      {fora > 0 && (
+        <span className="mapa-fora">
+          {fora === 1 ? "1 trilha fora do mapa" : `${fora} trilhas fora do mapa`}
+        </span>
+      )}
       {/* Atribuição ODbL — obrigação de licença, não enfeite. Não remover. */}
       <a className="wp-osm" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">
         © OpenStreetMap
       </a>
+      <BuscaLugar />
     </div>
   );
 }

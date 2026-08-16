@@ -1,8 +1,15 @@
 "use client";
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+import { coordDaDistancia, distanciaKm, formatarDistanciaCurta } from "@/lib/geo";
+// Direto de duracao.ts, NÃO de "@/lib/ficha": aquele módulo carrega
+// node:fs/node:path (o loader de content/fichas) e quebraria o bundle do
+// cliente. Ver o comentário em src/lib/duracao.ts.
+import { formatarDuracao } from "@/lib/duracao";
+import { coordDe } from "@/lib/local";
 import SeloTrilha from "./SeloTrilha";
 import { useLeitura } from "./leituras";
+import { useLocal } from "./local";
 
 /** Um cartão da folha. O cartão inteiro é o alvo de toque — mão suja de barro
  *  não acerta link de texto.
@@ -29,6 +36,25 @@ export default function CartaoTrilha({
 }) {
   const leitura = useLeitura(ficha.slug) ?? inicial;
 
+  // A mesma fonte que o mapa: "uma pessoa, uma fonte" também vale aqui — o
+  // cartão não chama navigator.geolocation por conta própria, lê o contexto.
+  const voce = coordDe(useLocal());
+  const partes = [
+    // `coordDaDistancia`, nunca `ficha.condicao.coords`: o km do cartão e o km
+    // da ficha são a MESMA pergunta, e quem responde é uma função só.
+    voce ? formatarDistanciaCurta(distanciaKm(voce, coordDaDistancia(ficha))) : null,
+    ficha.duracao ? formatarDuracao(ficha.duracao) : null,
+    ficha.esforco ?? null,
+    // `custo.valor` é texto livre (schema não garante separador nenhum). O
+    // JSON real da Rampa usa " · ", não " — " como um teste antigo supunha —
+    // por isso o corte aceita os dois. Sem separador algum, o split não acha
+    // nada e devolve a string inteira (index [0]), que é o comportamento
+    // certo pra um custo curto como "R$ 10".
+    ficha.custo.tag === "pago" && ficha.custo.valor
+      ? ficha.custo.valor.split(/\s[—·]\s/)[0]
+      : null,
+  ].filter(Boolean);
+
   return (
     <a id={ficha.slug} className="cartao" data-state={leitura.estado} href={`/${ficha.slug}`}>
       <span className="cartao-topo">
@@ -36,6 +62,7 @@ export default function CartaoTrilha({
         <SeloTrilha leitura={leitura} />
       </span>
       <span className="cartao-prom">{ficha.promessa}</span>
+      {partes.length > 0 && <span className="cartao-meta">{partes.join(" · ")}</span>}
     </a>
   );
 }

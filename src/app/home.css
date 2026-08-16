@@ -2,9 +2,46 @@
    vêm do ficha.css, que continua sendo a folha-mãe do app. */
 
 /* ---- a barra embaixo ---- */
-/* O padding-bottom soma a área segura do iPhone: sem isso, em tela cheia, a
-   barra nasce debaixo da faixa do gesto e os rótulos ficam intocáveis. */
+/* A altura da barra em um lugar só: quem reserva o espaço dela embaixo (a
+   folha da home, a lista do acervo) lê daqui. Dois números soltos discordariam
+   no dia em que um mudasse — e o sintoma seria o último cartão nascendo atrás
+   da barra, que é justamente o que este bloco existe pra impedir.
+   64px é MEDIDO no navegador — `.barra` renderizada em 375×667 dá 63,98px —,
+   não calculado no papel: a conta a partir do CSS dá ~56px porque esquece que
+   as duas linhas do `.barra-item` (o ícone em bloco e o rótulo) herdam o
+   `line-height: 1.52` do `.bp`, e não a altura da fonte. Errar pra menos aqui
+   não deixa rastro no teste — só deixa o último cartão sete pixels atrás da
+   barra, que é o defeito que este bloco existe pra tirar. Se o padding, a
+   fonte ou o line-height do `.barra-item` mudarem, REMEÇA. */
+.bp { --barra-h: 64px; }
+
+/* Fixa no rodapé, não em fluxo. Em fluxo ela só PARECE estar no fim quando o
+   documento cabe na tela — com seis cartões ela desce junto com a lista, que
+   foi o que o João viu e apontou.
+   O padding-bottom soma a área segura do iPhone: sem isso, em tela cheia, a
+   barra nasce debaixo da faixa do gesto e os rótulos ficam intocáveis.
+   Elemento fixo se posiciona pela JANELA, não pela moldura — nenhum ancestral
+   tem transform/filter/perspective. Por isso ela se prende explicitamente na
+   caixa do `.screen`, por DUAS vias que precisam existir juntas:
+     • `left`/`right` nas MESMAS variáveis de goteira que dão o padding lateral
+       do `.bp` (ficha.css) — sem elas o `width: 100%` resolvia contra a janela
+       e a barra saía 22,5px mais larga que a moldura em 375, cobrindo os
+       cantos arredondados de baixo. Só aparecia no celular: acima de ~440px o
+       max-width morde nos dois e o defeito some;
+     • `max-width` igual ao do `.screen`, com `margin: 0 auto` centrando dentro
+       da goteira. Sem ele, num monitor a barra atravessaria a tela inteira.
+   As duas têm teste: uma trava o NÚMERO, a outra o ALINHAMENTO — e o número
+   sozinho não prova alinhamento, foi assim que o defeito passou.
+   ⚠️ Os dois arquivos agora dependem UM DO OUTRO, e nos dois sentidos: este
+   lê `--goteira-*` do ficha.css, e o ficha.css (`.bp .lista`) lê `--barra-h`
+   daqui. Página que importe só um deles quebra do lado que faltar — sem o
+   ficha.css, o `left`/`right` daqui fica inválido e cai pro `auto`, e a barra
+   encolhe num canto. Nenhuma página faz isso hoje (a home e o /trilhas
+   importam os dois); qualquer tela nova tem que importar os dois também. */
 .bp .barra {
+  position: fixed; bottom: 0; z-index: 5;
+  left: var(--goteira-esq); right: var(--goteira-dir);
+  margin: 0 auto; max-width: 25.5rem;
   display: flex;
   border-top: 1px solid var(--line);
   background: var(--screen);
@@ -73,13 +110,87 @@
 .bp .pin-home[data-state][data-fase="sem-informacoes"]::before { background: var(--stop); }
 .bp .pin-home:active { opacity: .6; }
 
+/* ---- a linha de filtro e o painel sanfona ----
+   A `min-height` tem que bater com ALTURA_LINHA_FILTRO_PX (src/lib/home-layout.ts):
+   esta linha entra entre o mapa e a folha e come da mesma folga que garante o
+   primeiro cartão acima da dobra. Tem teste lendo esta regra.
+   ⚠️ 40px, e não 36: com 36 este `min-height` NÃO MORDIA — o miolo empurrava a
+   linha pra 39,4px (o `min-height: 32px` do `.filtro-abrir` + os .2rem de
+   padding daqui, dos dois lados, + a borda de baixo) e a constante lá do
+   home-layout.ts descrevia uma linha que não existia. Quem sobe a altura do
+   `.filtro-abrir` faz este número parar de mandar de novo — e o teste em
+   tests/lib/home-layout.test.ts cai, de propósito: ele confere que este
+   `min-height` é MAIOR OU IGUAL ao que o miolo consegue empurrar. */
+.bp .filtro-linha {
+  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  min-height: 40px; padding: .2rem .9rem; border-bottom: 1px solid var(--line);
+}
+.bp .filtro-conta {
+  font-family: var(--type); font-size: .66rem; font-weight: 650;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--ink-faint);
+}
+.bp .filtro-abrir {
+  flex: none; min-height: 32px; padding: .3rem .55rem; border: none; border-radius: 16px;
+  background: transparent; color: var(--accent);
+  font-family: var(--type); font-size: .66rem; font-weight: 700;
+  letter-spacing: .07em;
+}
+.bp .filtro-abrir:active { opacity: .6; }
+
+/* Em FLUXO NORMAL, nunca `position: absolute`: o painel empurra a folha pra
+   baixo (sanfona). Flutuando, ele viraria cortina por cima do mapa — e aí
+   precisaria de fechar-tocando-fora, foco preso e Esc, que este app não tem. */
+.bp .filtro-painel {
+  background: var(--surface-2); border-bottom: 1px solid var(--line);
+  padding: .5rem .9rem .7rem; display: flex; flex-direction: column; gap: .45rem;
+}
+/* Fieldset sem cara de fieldset: a borda padrão do navegador brigaria com o
+   vocabulário de caixas do app. */
+.bp .filtro-grupo {
+  border: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; align-items: center; gap: .35rem;
+}
+.bp .filtro-grupo legend {
+  float: left; width: 100%; padding: 0 0 .2rem;
+  font-family: var(--type); font-size: .6rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint);
+}
+/* 36px de alvo: menor que isso o dedo erra o chip vizinho. */
+.bp .chip {
+  min-height: 36px; padding: .35rem .8rem; border-radius: 20px;
+  border: 1px solid var(--line); background: var(--screen); color: var(--ink-soft);
+  font-family: var(--type); font-size: .72rem; font-weight: 650;
+}
+.bp .chip[aria-pressed="true"] {
+  background: var(--ink); border-color: var(--ink); color: var(--screen);
+}
+.bp .chip:active { opacity: .7; }
+
 /* ---- a folha e os cartões ---- */
-.bp .folha { padding: .2rem .9rem 1rem; }
+/* Barra fixa flutua sobre o conteúdo: sem este respiro o último cartão nasce
+   atrás dela e a pessoa nunca vê a última trilha da lista. Soma a área segura
+   pelo mesmo motivo da barra — o `--barra-h` é a caixa dela, o inset é o que
+   o iPhone acrescenta por baixo.
+   ⚠️ O `+ 1rem` NÃO é a folga que se vê: medido, o último cartão para 48,9px
+   acima da barra, porque abaixo da `.folha` ainda vêm 1px de borda do
+   `.screen` e os 32px de `padding-bottom` do `.bp` (ficha.css). E no iPhone o
+   `env(safe-area-inset-bottom)` entra DUAS vezes, porque o `.bp` já o soma.
+   Os dois sobram, nunca faltam, então nada some — mas quem for "afinar" este
+   1rem vai descobrir que não é ele que separa o cartão da barra. */
+.bp .folha { padding: .2rem .9rem calc(var(--barra-h) + env(safe-area-inset-bottom) + 1rem); }
 .bp .grupo-k {
   font-family: var(--type); font-size: .66rem; font-weight: 700; letter-spacing: .11em;
   text-transform: uppercase; color: var(--ink-faint); padding: .8rem .1rem .35rem;
 }
 .bp .cartoes { display: flex; flex-direction: column; gap: .5rem; }
+
+/* Filtro que não sobrou nada NUNCA vira folha em branco: a §7.4 da spec pede o
+   aviso e a saída juntos, porque quem filtrou até zerar precisa é de um jeito
+   de voltar, não de uma tela muda. */
+.bp .folha-vazia {
+  display: flex; flex-direction: column; align-items: center; gap: .7rem;
+  padding: 2.2rem .5rem 2.4rem; text-align: center; color: var(--ink-faint);
+}
 
 .bp .cartao {
   display: flex; flex-direction: column; gap: .2rem; text-decoration: none; color: inherit;
@@ -90,6 +201,7 @@
 .bp .cartao-topo { display: flex; align-items: center; justify-content: space-between; gap: .55rem; }
 .bp .cartao-nome { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; line-height: 1.15; }
 .bp .cartao-prom { color: var(--ink-soft); font-size: .85rem; font-style: italic; }
+.bp .cartao-meta { font-family: var(--type); font-size: .68rem; font-weight: 650; color: var(--ink-faint); margin-top: .35rem; }
 
 /* O selo repete o vocabulário do carimbo da ficha: mesma borda dupla, mesmas
    cores. A cor sai do [data-state] do cartão — a mesma fonte que pinta o pin —,
@@ -109,3 +221,82 @@
 .bp .cartao[data-state] .selo[data-fase="sem-informacoes"] { --c: var(--stop-ink); --st-bg: var(--stop-bg); }
 .bp .selo .w { font-weight: 800; font-size: .8rem; text-transform: uppercase; line-height: 1; }
 .bp .selo .s { font-family: var(--type); font-size: .5rem; letter-spacing: .1em; text-transform: uppercase; margin-top: .18rem; opacity: .85; }
+
+/* O ponto "você": círculo, nunca losango. O losango é vocabulário de TRILHA
+   neste app (pin do mapa, ficha, home) — usar a mesma forma pra pessoa faria
+   você virar mais uma trilha na tela. */
+.bp .voce-pin {
+  position: absolute; width: 13px; height: 13px; margin: -6px 0 0 -6px;
+  border-radius: 50%; background: var(--voce, #4a8fd6); border: 3px solid var(--screen);
+  box-shadow: 0 0 0 6px rgba(74, 143, 214, .22);
+}
+.bp .mapa-fora {
+  position: absolute; right: 6px; top: 6px; z-index: 2;
+  font-family: var(--type); font-size: .6rem; font-weight: 650;
+  background: rgba(0, 0, 0, .62); color: #e6e0d4; padding: .25rem .4rem; border-radius: 6px;
+}
+
+/* ---- a pílula e a busca de cidade ----
+   O único lugar de onde a localização se mexe. A pílula fica no canto
+   inferior ESQUERDO do mapa (o crédito do OpenStreetMap já ocupa o direito),
+   escura pra ler sobre qualquer tile. */
+.bp .mapa-pilula {
+  position: absolute; left: 6px; bottom: 6px; z-index: 2; min-height: 32px;
+  font-family: var(--type); font-size: .68rem; font-weight: 650;
+  background: rgba(0, 0, 0, .62); color: #e6e0d4; border: none; border-radius: 20px;
+  padding: .4rem .8rem;
+}
+.bp .mapa-pilula:active { opacity: .75; }
+
+/* O painel de busca cobre o mapa inteiro (mesma caixa), pra abrir sem
+   empurrar a folha que vem embaixo.
+   ⚠️ Quem ROLA é o `.busca-rolo`, não este. Enquanto a rolagem morava aqui, o
+   campo e o crédito do GeoNames rolavam junto com a lista — e o crédito, que é
+   OBRIGAÇÃO DE LICENÇA (CC-BY), nascia 144px abaixo do fim visível numa caixa
+   sem dica nenhuma de que rola (medido em 375×667: 168px visíveis, 344px de
+   conteúdo). Não devolva o `overflow-y: auto` pra cá. */
+.bp .busca {
+  position: absolute; inset: 0; z-index: 3; overflow: hidden;
+  background: var(--screen); padding: .6rem .7rem .8rem;
+  display: flex; flex-direction: column; gap: .4rem;
+}
+/* O `overflow-y: auto` é o que segura a caixa: com ele, os cinco resultados
+   cabem em ~70px de altura e os quatro de baixo continuam ALCANÇÁVEIS. Sem
+   ele, MEDIDO: a caixa fica do mesmo tamanho (o `min-height: 0` também a
+   segura) mas o conteúdo sai por baixo e é cortado pelo `overflow: hidden` do
+   painel — o crédito continua visível e a lista é que morre.
+   ⚠️ O `min-height: 0` é CINTO, não a fivela. Item de flex column tem
+   `min-height: auto`, que proibiria encolher abaixo do conteúdo — mas a regra
+   de flexbox zera o mínimo automático pra quem é container de rolagem, então
+   enquanto o `overflow-y: auto` estiver aqui ele é redundante. MEDIDO: tirar só
+   ele não muda um pixel (caixa 70,05px, crédito visível nos dois casos). Fica
+   porque custa nada e cobre o dia em que alguém tirar o overflow — e por isso
+   NÃO tem asserção fingindo que ele carrega alguma coisa. */
+.bp .busca-rolo {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: .4rem;
+}
+/* 16px, não menos: abaixo disso o Safari do iPhone dá zoom sozinho ao focar
+   o campo e a tela salta. Tem teste lendo esta regra — não baixar. */
+.bp .busca-campo {
+  font-family: var(--type); font-size: 16px; min-height: 44px;
+  border: 1px solid var(--line); border-radius: 10px; padding: .5rem .7rem;
+  background: var(--surface-2); color: var(--ink);
+}
+.bp .busca-item {
+  display: block; width: 100%; text-align: left; min-height: 44px;
+  border: 1px solid var(--line); border-radius: 10px; padding: .45rem .7rem;
+  background: var(--surface-2); color: inherit;
+}
+.bp .busca-item:active { opacity: .7; }
+.bp .busca-nome { display: block; font-family: var(--serif); font-size: 1rem; font-weight: 600; }
+.bp .busca-reg { display: block; color: var(--ink-soft); font-size: .78rem; }
+.bp .busca-aviso { color: var(--ink-soft); font-size: .85rem; padding: .3rem .1rem; }
+/* Crédito do GeoNames — obrigação de licença (CC-BY), não enfeite. Mesmo
+   tamanho e contraste do `.wp-osm` (© OpenStreetMap): discreto não pode
+   virar ilegível. */
+.bp .busca-fonte {
+  flex: none; font-family: var(--type); font-size: .64rem; color: var(--ink-soft);
+  padding-top: .2rem;
+}
+.bp .busca-fonte a { color: inherit; }

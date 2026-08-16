@@ -230,3 +230,67 @@ export function posicaoNaCaixa(
   const o = pontoNoMundo(centro, z);
   return { left: larguraPx / 2 + (p.x - o.x), top: alturaPx / 2 + (p.y - o.y) };
 }
+
+/** O zoom abaixo do qual o mapa da home para de afastar quando VOCÊ está na
+ *  conta.
+ *
+ *  Sem este piso, uma trilha em outro estado faria `enquadrar()` cair até o
+ *  ZOOM_MINIMO (2) pra caber os dois pontos — e um mosaico do OSM nesse zoom
+ *  é mancha sem nome de cidade nem estrada. Mapa que não orienta é pior que
+ *  mapa nenhum, e este app não tem como aproximar com o dedo.
+ *
+ *  Derivação: metrosPorPixel(−8°, 8) ≈ 605 m/px; na janela visível de
+ *  350,5px isso dá ~212 km de largura de mapa — ainda com cidade nomeada.
+ *  O teste em tests/lib/mapa.test.ts confere essa largura, não o número: é
+ *  ela que importa, e é ela que denuncia quem trocar o 8 sem refazer a conta.
+ *
+ *  É um JULGAMENTO, não uma medida de aparelho. Primeiro candidato a mudar
+ *  depois de ver no iPhone. */
+export const ZOOM_MINIMO_HOME_COM_VOCE = 8;
+
+/** O enquadramento da home quando existe uma pessoa na tela.
+ *
+ *  `voce = null` devolve exatamente `enquadrar(trilhas, ...)` — o mapa que já
+ *  está no ar e aprovado, piso incluído: sem alguém na conta, não há "centrar
+ *  em você", e forçar o piso mudaria um comportamento que ninguém pediu pra
+ *  mudar. */
+export function enquadrarComVoce(
+  trilhas: Coord[],
+  voce: Coord | null,
+  larguraPx: number,
+  alturaPx: number,
+): { centro: Coord; z: number } {
+  if (!voce) return enquadrar(trilhas, larguraPx, alturaPx);
+
+  const cabe = enquadrar([...trilhas, voce], larguraPx, alturaPx);
+  if (cabe.z >= ZOOM_MINIMO_HOME_COM_VOCE) return cabe;
+
+  // Não cabe legível: o mapa vira "onde eu estou". Centrado em VOCÊ, não no
+  // meio do caminho — o meio do caminho entre você e um morro a 1400 km é um
+  // lugar que não interessa a ninguém.
+  return { centro: voce, z: ZOOM_MINIMO_HOME_COM_VOCE };
+}
+
+/** Quantas das coordenadas caem fora da janela que a tela realmente mostra.
+ *
+ *  Vira o texto "2 trilhas fora do mapa", então precisa estar certo: um
+ *  número mentindo aqui é pior que não ter o aviso. Usa a MARGEM DO ALVO DE
+ *  TOQUE porque um pin cujo centro está dentro mas cuja metade sai da janela
+ *  não é tocável inteiro — pra quem olha, ele não está no mapa. */
+export function foraDaJanela(
+  coords: Coord[],
+  centro: Coord,
+  z: number,
+  larguraPx: number,
+  alturaPx: number,
+): number {
+  return coords.filter((c) => {
+    const { left, top } = posicaoNaCaixa(c, centro, z, larguraPx, alturaPx);
+    return (
+      left < RAIO_ALVO_TOQUE_PX ||
+      left > larguraPx - RAIO_ALVO_TOQUE_PX ||
+      top < RAIO_ALVO_TOQUE_PX ||
+      top > alturaPx - RAIO_ALVO_TOQUE_PX
+    );
+  }).length;
+}

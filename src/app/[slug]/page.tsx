@@ -7,6 +7,7 @@ import MapaEstatico from "../MapaEstatico";
 import DistanciaDaqui from "../DistanciaDaqui";
 import Appbar from "../Appbar";
 import Carimbo from "../Carimbo";
+import LocalVivo from "../local";
 import Moldura from "../Moldura";
 
 // Compute-on-load: nada de cache estático, o estado é a chuva de agora.
@@ -82,7 +83,13 @@ export default async function Ficha({
                   <div className="t">{wp.nome}</div>
                   {wp.nota && <div className="n">{wp.nota}</div>}
                   <div className="coord">{wp.lat}, {wp.lng}</div>
-                  <DistanciaDaqui lat={wp.lat} lng={wp.lng} />
+                  {/* LocalVivo não desenha nenhum elemento (só Context.Provider
+                      por baixo) — envolve só a distância porque é o único
+                      consumidor da localização nesta página hoje. Mesma fonte
+                      que o mapa da home: "uma pessoa, uma fonte". */}
+                  <LocalVivo>
+                    <DistanciaDaqui ficha={ficha} />
+                  </LocalVivo>
                 </div>
                 <a className="maplink" href={mapa} target="_blank" rel="noopener">Abrir no mapa</a>
               </div>
