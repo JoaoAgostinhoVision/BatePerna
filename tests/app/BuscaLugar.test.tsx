@@ -109,6 +109,51 @@ describe("a busca", () => {
     expect(link.getAttribute("href")).toContain("geonames.org");
   });
 
+  // 🔴 "Existe no DOM" não é "visível". MEDIDO em 375×667 com cinco
+  // resultados: o painel mostrava 168px de 344px de conteúdo e o crédito
+  // nascia 144px ABAIXO do fim visível — dentro de uma caixa que rola sem
+  // nenhuma dica de que rola. CC-BY pede atribuição VISÍVEL; o teste acima
+  // passava com o crédito escondido.
+  //
+  // jsdom não mede pixel, então a prova é ESTRUTURAL, nos dois elos: o crédito
+  // não é descendente da caixa que rola (DOM), e a caixa que rola é o
+  // `.busca-rolo`, não o painel inteiro (CSS). Cada elo sozinho passa com o
+  // defeito de volta.
+  it("o crédito do GeoNames fica FORA da caixa que rola — atribuição escondida não é atribuição", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json([GRAVATA, RECIFE, GRAVATA, RECIFE, GRAVATA]),
+    );
+    await abrir();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Gravatá" } });
+    await screen.findAllByText(/Pernambuco/);
+
+    const credito = screen.getByRole("link", { name: /GeoNames/i }).closest(".busca-fonte");
+    expect(credito, "o crédito perdeu a classe .busca-fonte").not.toBeNull();
+    expect(
+      credito!.closest(".busca-rolo"),
+      "o crédito voltou pra dentro da caixa que rola — ele sai da tela com a lista cheia",
+    ).toBeNull();
+
+    const css = readFileSync(path.join(process.cwd(), "src", "app", "home.css"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    const painel = css.match(/\.busca\s*\{[^}]*\}/s);
+    const rolo = css.match(/\.busca-rolo\s*\{[^}]*\}/s);
+    expect(painel, "faltou a regra .busca").not.toBeNull();
+    expect(rolo, "faltou a regra .busca-rolo — não existe caixa de rolagem separada").not.toBeNull();
+    expect(rolo![0], "a .busca-rolo parou de rolar — os resultados de baixo ficam inalcançáveis")
+      .toMatch(/overflow-y:\s*auto/);
+    expect(painel![0], "a rolagem voltou pro painel inteiro — o crédito rola junto")
+      .not.toMatch(/overflow(-y)?:\s*(auto|scroll)/);
+    // 🔴 NÃO tem asserção sobre o `min-height: 0` do `.busca-rolo`. Ele estava
+    // no plano deste conserto e a mutação NÃO MORDEU: medido em 375×667, tirar
+    // só ele deixa a caixa em 70,05px e o crédito visível do mesmo jeito —
+    // flexbox zera o mínimo automático de quem é container de rolagem, então
+    // enquanto o `overflow-y: auto` estiver lá ele é redundante. A linha fica
+    // como cinto (comentada como tal no home.css); a asserção sairia mentindo
+    // que ela carrega alguma coisa, que é a família de teste que este fix round
+    // inteiro existe pra tirar.
+  });
+
   // ——— OS DOIS ABAIXO VIERAM DO PRÉ-VOO, e são os mais importantes do arquivo.
   //
   // O `ESPERA_MS` e o guarda `meu === pedido.current` são as duas linhas desta

@@ -249,10 +249,31 @@
 .bp .mapa-pilula:active { opacity: .75; }
 
 /* O painel de busca cobre o mapa inteiro (mesma caixa), pra abrir sem
-   empurrar a folha que vem embaixo. */
+   empurrar a folha que vem embaixo.
+   ⚠️ Quem ROLA é o `.busca-rolo`, não este. Enquanto a rolagem morava aqui, o
+   campo e o crédito do GeoNames rolavam junto com a lista — e o crédito, que é
+   OBRIGAÇÃO DE LICENÇA (CC-BY), nascia 144px abaixo do fim visível numa caixa
+   sem dica nenhuma de que rola (medido em 375×667: 168px visíveis, 344px de
+   conteúdo). Não devolva o `overflow-y: auto` pra cá. */
 .bp .busca {
-  position: absolute; inset: 0; z-index: 3; overflow-y: auto;
+  position: absolute; inset: 0; z-index: 3; overflow: hidden;
   background: var(--screen); padding: .6rem .7rem .8rem;
+  display: flex; flex-direction: column; gap: .4rem;
+}
+/* O `overflow-y: auto` é o que segura a caixa: com ele, os cinco resultados
+   cabem em ~70px de altura e os quatro de baixo continuam ALCANÇÁVEIS. Sem
+   ele, MEDIDO: a caixa fica do mesmo tamanho (o `min-height: 0` também a
+   segura) mas o conteúdo sai por baixo e é cortado pelo `overflow: hidden` do
+   painel — o crédito continua visível e a lista é que morre.
+   ⚠️ O `min-height: 0` é CINTO, não a fivela. Item de flex column tem
+   `min-height: auto`, que proibiria encolher abaixo do conteúdo — mas a regra
+   de flexbox zera o mínimo automático pra quem é container de rolagem, então
+   enquanto o `overflow-y: auto` estiver aqui ele é redundante. MEDIDO: tirar só
+   ele não muda um pixel (caixa 70,05px, crédito visível nos dois casos). Fica
+   porque custa nada e cobre o dia em que alguém tirar o overflow — e por isso
+   NÃO tem asserção fingindo que ele carrega alguma coisa. */
+.bp .busca-rolo {
+  flex: 1; min-height: 0; overflow-y: auto;
   display: flex; flex-direction: column; gap: .4rem;
 }
 /* 16px, não menos: abaixo disso o Safari do iPhone dá zoom sozinho ao focar
@@ -275,7 +296,7 @@
    tamanho e contraste do `.wp-osm` (© OpenStreetMap): discreto não pode
    virar ilegível. */
 .bp .busca-fonte {
-  font-family: var(--type); font-size: .64rem; color: var(--ink-soft);
-  margin-top: auto; padding-top: .2rem;
+  flex: none; font-family: var(--type); font-size: .64rem; color: var(--ink-soft);
+  padding-top: .2rem;
 }
 .bp .busca-fonte a { color: inherit; }

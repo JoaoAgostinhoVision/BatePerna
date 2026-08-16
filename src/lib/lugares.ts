@@ -16,8 +16,20 @@ export const PRAZO_BUSCA_MS = 3_000;
 
 export type Lugar = { nome: string; regiao: string; pais: string; lat: number; lng: number };
 
-/** Quantos resultados. Cinco cabem na tela sem rolar e já bastam pra
- *  desambiguar homônimos (Gravatá/PE vs Gravatal/SC). */
+/** Quantos resultados.
+ *
+ *  ⚠️ Este comentário já disse "cinco cabem na tela sem rolar", e era FALSO
+ *  pela régua: o painel de busca cobre o mapa (168px de altura), e depois do
+ *  campo, do crédito e dos respiros sobram ~70px pra lista — um resultado
+ *  inteiro e um pedaço do segundo, com cada `.busca-item` medindo 44px mais
+ *  6,4 de gap (medido em 375×667).
+ *
+ *  O número FICA em 5, e o comentário é que estava errado. Cinco é o que
+ *  desambigua homônimo (Gravatá/PE vs Gravatal/SC vs Gravatá/BA): cortar pra 2
+ *  faria a cidade certa simplesmente não aparecer, que é pior do que rolar. A
+ *  lista rola de propósito — o que NÃO pode rolar pra fora da tela é o crédito
+ *  do GeoNames, e por isso ele mora fora da caixa que rola (ver o `.busca-rolo`
+ *  em home.css). */
 const QUANTOS = 5;
 
 export function urlBusca(q: string): string {

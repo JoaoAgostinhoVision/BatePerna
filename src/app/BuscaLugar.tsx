@@ -71,36 +71,48 @@ export default function BuscaLugar() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-          {res.tipo === "falhou" && <p className="busca-aviso">não consegui buscar agora</p>}
-          {res.tipo === "lista" && res.lugares.length === 0 && (
-            <p className="busca-aviso">não achei esse lugar</p>
-          )}
-          {res.tipo === "lista" &&
-            res.lugares.map((l) => (
-              <button
-                key={`${l.nome}-${l.lat}-${l.lng}`}
-                className="busca-item"
-                onClick={() => {
-                  escolher({
-                    tipo: "escolhido",
-                    coord: { lat: l.lat, lng: l.lng },
-                    em: Math.floor(Date.now() / 1000),
-                    nome: l.nome,
-                    regiao: l.regiao,
-                  });
-                  setFase("fechado");
-                  setQ("");
-                }}
-              >
-                <span className="busca-nome">{l.nome}</span>
-                <span className="busca-reg">{[l.regiao, l.pais].filter(Boolean).join(" · ")}</span>
-              </button>
-            ))}
+          {/* 🔴 O que ROLA é só esta caixa. O campo fica em cima dela e o
+              crédito embaixo, os dois FORA da área de rolagem — ver o
+              comentário do crédito logo abaixo. */}
+          <div className="busca-rolo">
+            {res.tipo === "falhou" && <p className="busca-aviso">não consegui buscar agora</p>}
+            {res.tipo === "lista" && res.lugares.length === 0 && (
+              <p className="busca-aviso">não achei esse lugar</p>
+            )}
+            {res.tipo === "lista" &&
+              res.lugares.map((l) => (
+                <button
+                  key={`${l.nome}-${l.lat}-${l.lng}`}
+                  className="busca-item"
+                  onClick={() => {
+                    escolher({
+                      tipo: "escolhido",
+                      coord: { lat: l.lat, lng: l.lng },
+                      em: Math.floor(Date.now() / 1000),
+                      nome: l.nome,
+                      regiao: l.regiao,
+                    });
+                    setFase("fechado");
+                    setQ("");
+                  }}
+                >
+                  <span className="busca-nome">{l.nome}</span>
+                  <span className="busca-reg">{[l.regiao, l.pais].filter(Boolean).join(" · ")}</span>
+                </button>
+              ))}
+          </div>
           {/* OBRIGAÇÃO DE LICENÇA, não enfeite — descoberta no Step 6 da Task 5.
               Os dados de lugar vêm do GeoNames via Open-Meteo, sob CC-BY, que
               exige atribuição VISÍVEL e com link. Mesma disciplina do
               `© OpenStreetMap` que todo mapa deste app já carrega por ODbL.
-              Fica dentro do painel de busca, que é onde os dados aparecem. */}
+
+              🔴 FORA do `.busca-rolo` de propósito. Enquanto ele era o último
+              filho da caixa que rola, MEDIDO em 375×667: o painel mostrava
+              168px de 344px de conteúdo e o crédito nascia 144px ABAIXO do fim
+              visível — só aparecia pra quem rolasse dentro de uma caixa sem
+              nenhuma dica de que rola. Atribuição que exige descoberta não é
+              atribuição visível. O `© OpenStreetMap` do mapa está sempre na
+              tela pelo mesmo motivo. */}
           <p className="busca-fonte">
             dados de <a href="https://www.geonames.org/">GeoNames</a>
           </p>
