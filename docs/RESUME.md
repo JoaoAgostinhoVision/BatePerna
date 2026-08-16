@@ -370,6 +370,25 @@ Herdados:
     ele rejeita. **Ao validar uma mutação, diga qual das duas coisas aconteceu.** "Ficou
     vermelho" não é prova; "caiu a asserção X" é.
 
+21. **`npm run dev` NÃO SERVE PRA MEDIR GEOMETRIA NESTE PROJETO.** Achado do fix round final:
+    `/_next/static/css/app/layout.css` responde **404** no `next dev`, então dentro de um iframe
+    todo o CSS falta e a página sai **sem estilo** — as medidas parecem "o iframe não funcionou"
+    quando o que falta é a folha. **Meça com `npm run build` + `next start`.** Dois detalhes que
+    custaram tempo: o `document.body` da página hospedeira computa `display: none` sob a
+    extensão, então o iframe tem que ser pendurado no `documentElement`; e um iframe "de 375px"
+    vira 360 quando o documento rola — compense em laço até `contentWindow.innerWidth === 375`.
+    Pra medir o painel de busca, `localStorage['bp.gps'] = 'negado'` antes, senão o toque na
+    pílula pede o GPS em vez de abrir a busca.
+
+22. **NÚMERO MEDIDO NO MEU MONITOR NÃO VIRA CONSTANTE DO APARELHO ALVO.** Eu mandei "corrija a
+    constante pro valor medido" (39,2px). O implementador parou: **39,2 é artefato de `dpr`
+    1,25** (o Chrome reporta 0,8px pra uma borda de 1px); num iPhone, `dpr` 2 ou 3, a mesma
+    linha dá **39,4**. Gravar 39,2 seria uma constante que mente no único aparelho que importa.
+    A saída dele é melhor que a minha: em vez de a constante descrever uma **soma** que qualquer
+    filho invalida em silêncio, subiu o `min-height` pra **40px** pra que ele **morda** — a
+    constante passou a descrever uma **declaração que o navegador usa**, e mede 40 em qualquer
+    `dpr`. **Constante de layout tem que apontar pra uma declaração, não pra uma soma medida.**
+
 20. 🔴 **REFACTOR PODE ESVAZIAR UM TESTE VIZINHO SEM TOCAR NELE, E A SUÍTE FICA VERDE.** No fix
     round da Task 12, mover a fórmula da goteira do `padding:` do `.bp` pra declarações
     `--goteira-*` **esvaziou** a asserção de `tests/lib/mapa.test.ts:301-310`, que provava que
