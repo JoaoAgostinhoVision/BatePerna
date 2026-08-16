@@ -5,6 +5,7 @@ import LocalVivo from "@/app/local";
 import { CHAVE_GPS, CHAVE_LOCAL } from "@/lib/local";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { regraDe, semComentarios, valorDe } from "../css";
 
 // `ESPERA_MS` sai EXPORTADO de BuscaLugar.tsx (o Step 3 abaixo já traz o
 // `export`). Mesmo precedente do `zoomDeTiles()` em src/lib/mapa.ts —
@@ -134,10 +135,9 @@ describe("a busca", () => {
       "o crédito voltou pra dentro da caixa que rola — ele sai da tela com a lista cheia",
     ).toBeNull();
 
-    const css = readFileSync(path.join(process.cwd(), "src", "app", "home.css"), "utf8")
-      .replace(/\/\*[\s\S]*?\*\//g, "");
-    const painel = css.match(/\.busca\s*\{[^}]*\}/s);
-    const rolo = css.match(/\.busca-rolo\s*\{[^}]*\}/s);
+    const css = semComentarios("home.css");
+    const painel = regraDe(css, ".busca");
+    const rolo = regraDe(css, ".busca-rolo");
     expect(painel, "faltou a regra .busca").not.toBeNull();
     expect(rolo, "faltou a regra .busca-rolo — não existe caixa de rolagem separada").not.toBeNull();
     expect(rolo![0], "a .busca-rolo parou de rolar — os resultados de baixo ficam inalcançáveis")
@@ -255,11 +255,18 @@ describe("a busca", () => {
     expect(await screen.findByText(/não achei/i)).toBeTruthy();
   });
 
+  // 🔴 A QUARTA IRMÃ do decoy `--`, e é a que guarda o iPhone do dono do
+  // projeto. `toMatch(/font-size:\s*16px/)` sobre o bloco inteiro casa dentro
+  // de `--font-size: 16px; font-size: 13px` — mutação provada, suíte VERDE, e
+  // o que esse 16 segura está em maiúsculas no próprio CSS: abaixo de 16px o
+  // Safari do iPhone dá ZOOM sozinho ao focar o campo e a tela salta. Ancorado
+  // no `valorDe` (tests/css.ts), que exige a propriedade começando a
+  // declaração e compara o VALOR.
   it("o campo tem 16px — abaixo disso o Safari dá zoom sozinho ao focar e a tela salta", () => {
-    const css = readFileSync(path.join(process.cwd(), "src", "app", "home.css"), "utf8");
-    const regra = css.match(/\.busca-campo\s*\{[^}]*\}/s);
+    const regra = regraDe(semComentarios("home.css"), ".busca-campo");
     expect(regra, "faltou a regra .busca-campo").not.toBeNull();
-    expect(regra![0]).toMatch(/font-size:\s*16px/);
+    expect(valorDe(regra![0], "font-size"), "o campo desceu de 16px — o Safari vai dar zoom")
+      .toBe("16px");
   });
 
   // O segundo toque na pílula é o ÚNICO jeito de fechar a busca sem escolher

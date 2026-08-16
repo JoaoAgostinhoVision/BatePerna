@@ -1,8 +1,7 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import BarraNavegacao from "@/app/BarraNavegacao";
+import { paddingLado, regraDe, semComentarios } from "../css";
 
 afterEach(() => { cleanup(); });
 
@@ -12,7 +11,8 @@ afterEach(() => { cleanup(); });
  *  criaria duas fontes pro mesmo seletor — a família de defeito que este app
  *  persegue desde a rodada do carimbo.
  *
- *  Os comentários do CSS saem antes de qualquer conta. Este arquivo CONTA
+ *  🔴 A leitura passa TODA pelo `semComentarios` de tests/css.ts, e por isso
+ *  não sobrou nenhum `readFileSync` cru neste arquivo. Este arquivo CONTA
  *  ocorrências (`--barra-h`, a fórmula da goteira) pra provar "num lugar só",
  *  e comentário que fala SOBRE a constante é a coisa mais natural do mundo de
  *  se escrever — um `--barra-h: 64px` citado dentro de um comentário viraria
@@ -20,68 +20,13 @@ afterEach(() => { cleanup(); });
  *  não descreve nada. Some o benefício de tabela: sem comentário, o `[^}]*` do
  *  `regraDe` não pode ser interrompido por uma chave escrita em prosa.
  *
- *  🔴 Este helper fica ANTES do primeiro `describe` de propósito: TODO leitor
- *  de CSS deste arquivo passa por ele. Um `readFileSync` cru convivendo com o
- *  helper deixa metade do arquivo sem a limpeza — e aí um `.barra { … }`
- *  escrito em PROSA num comentário do `home.css` casa antes da regra de
- *  verdade e a suíte fica vermelha com uma mensagem que não descreve defeito
- *  nenhum. Alarme falso, não passe falso — mas é exatamente o que o parágrafo
- *  acima diz estar resolvido. */
-const css = (arq: string) =>
-  readFileSync(path.join(process.cwd(), "src", "app", arq), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-const home = () => css("home.css");
-const ficha = () => css("ficha.css");
-
-/** `match` sem /g devolve a PRIMEIRA ocorrência. Os nulos viram asserção
- *  (`not.toBeNull()`) antes de qualquer `!` que INDEXE (`regra![0]`,
- *  `largura![1]`): o `!` some no runtime, então `expect(null)` ainda cai como
- *  asserção, mas `null[0]` estoura TypeError e deixa a suíte vermelha sem
- *  nenhuma asserção cair — que não é prova de nada. */
-const regraDe = (fonte: string, seletor: string) => {
-  const re = new RegExp(`${seletor.replace(/[.\-]/g, "\\$&")}\\s*\\{[^}]*\\}`, "s");
-  return fonte.match(re);
-};
-
-/** Fatia uma lista de valores CSS respeitando parênteses: `calc(a + b) 1rem`
- *  são DOIS valores, não cinco. Sem isto não dá pra saber qual lado do
- *  shorthand um `calc(...)` ocupa. */
-const fatiar = (valores: string): string[] => {
-  const fora: string[] = [];
-  let atual = "";
-  let fundo = 0;
-  for (const c of valores.trim()) {
-    if (c === "(") fundo++;
-    if (c === ")") fundo--;
-    if (/\s/.test(c) && fundo === 0) {
-      if (atual) fora.push(atual);
-      atual = "";
-    } else {
-      atual += c;
-    }
-  }
-  if (atual) fora.push(atual);
-  return fora;
-};
-
-/** 🔴 O padding DE BAIXO — o único lado que reserva espaço pra barra fixa.
- *
- *  `/padding:[^;]*var\(--barra-h\)/` só dizia "o shorthand cita a variável em
- *  algum lugar". Mutação: mover o `calc(var(--barra-h) …)` do FIM do shorthand
- *  pro COMEÇO. Suíte verde — e, medido no navegador, o último cartão passa a
- *  nascer 27,9px ATRÁS da barra, que é exatamente o defeito que a Task 12
- *  existe pra matar.
- *
- *  No shorthand de 1 a 4 valores, o de baixo é o 3º; com menos de três, ele
- *  herda do 1º (topo). Um `padding-bottom` explícito ganha, porque vem depois
- *  na cascata e é o que o navegador usa. */
-const paddingDeBaixo = (regra: string): string | null => {
-  const explicito = regra.match(/(?:^|[{;])\s*padding-bottom\s*:\s*([^;}]+)/s);
-  if (explicito) return explicito[1].trim();
-  const curto = regra.match(/(?:^|[{;])\s*padding\s*:\s*([^;}]+)/s);
-  if (!curto) return null;
-  const lados = fatiar(curto[1]);
-  return lados[2] ?? lados[0] ?? null;
-};
+ *  E os nulos viram asserção (`not.toBeNull()`) antes de qualquer `!` que
+ *  INDEXE (`regra![0]`, `largura![1]`): o `!` some no runtime, então
+ *  `expect(null)` ainda cai como asserção, mas `null[0]` estoura TypeError e
+ *  deixa a suíte vermelha sem nenhuma asserção cair — que não é prova de
+ *  nada. */
+const home = () => semComentarios("home.css");
+const ficha = () => semComentarios("ficha.css");
 
 
 describe("BarraNavegacao", () => {
@@ -197,7 +142,7 @@ describe("a barra fica presa no rodapé", () => {
   it("a folha reserva o espaço da barra embaixo", () => {
     const regra = regraDe(home(), ".bp .folha");
     expect(regra, "faltou a regra .bp .folha").not.toBeNull();
-    expect(paddingDeBaixo(regra![0]), "o lado de BAIXO da folha parou de reservar a barra")
+    expect(paddingLado(regra![0], "bottom"), "o lado de BAIXO da folha parou de reservar a barra")
       .toContain("var(--barra-h)");
   });
 
@@ -207,7 +152,7 @@ describe("a barra fica presa no rodapé", () => {
   it("a lista do acervo reserva o mesmo espaço", () => {
     const regra = regraDe(ficha(), ".bp .lista");
     expect(regra, "faltou a regra .bp .lista").not.toBeNull();
-    expect(paddingDeBaixo(regra![0]), "o lado de BAIXO da lista parou de reservar a barra")
+    expect(paddingLado(regra![0], "bottom"), "o lado de BAIXO da lista parou de reservar a barra")
       .toContain("var(--barra-h)");
   });
 

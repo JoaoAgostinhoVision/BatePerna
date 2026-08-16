@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { px, regraDe, semComentarios, valorDe } from "../css";
 import {
   MAPA_ALTURA_PX,
   MAPA_ESCALA,
@@ -365,17 +366,26 @@ describe("MAPA_JANELA_VISIVEL_HOME_PX bate com o CSS de onde ela foi derivada", 
 // que ela vem — e prova que RAIO_ALVO_TOQUE_PX é metade do alvo de toque
 // real do `.pin-home` (44px, `width`/`height` da regra).
 describe("RAIO_ALVO_TOQUE_PX bate com o alvo de toque do .pin-home no CSS", () => {
+  // 🔴 A QUINTA IRMÃ do decoy: `/width:\s*(\d+)px/` casa DENTRO de
+  // `max-width:`/`min-width:`, e `match` sem /g devolve a primeira ocorrência.
+  // Mutação provada: `max-width: 44px; width: 28px; height: 28px` deixava a
+  // suíte VERDE com este teste ainda afirmando `alvoToquePx === 44` enquanto o
+  // alvo real virava 28 — o que torna RAIO_ALVO_TOQUE_PX = 22 falso (seria
+  // 14) e, por tabela, derruba o invariante MARGEM_ENQUADRO_PX >=
+  // RAIO_ALVO_TOQUE_PX e a conta do `foraDaJanela`. Ancorado no `valorDe`
+  // (tests/css.ts), e agora lendo os DOIS eixos: o alvo é quadrado, e um
+  // `height` menor corta o toque na vertical do mesmo jeito.
   it("o home.css ainda dá 44px de alvo de toque ao .pin-home, e o raio é metade disso", () => {
-    const css = readFileSync(path.join(process.cwd(), "src", "app", "home.css"), "utf8");
-    const regra = css.match(/\.bp \.pin-home\s*\{[^}]*\}/s);
+    const regra = regraDe(semComentarios("home.css"), ".bp .pin-home");
     expect(regra, "faltou a regra .bp .pin-home no home.css").not.toBeNull();
 
-    const largura = regra![0].match(/width:\s*(\d+(?:\.\d+)?)px/);
-    expect(largura, "a regra .bp .pin-home não tem mais um width: Npx").not.toBeNull();
+    const largura = px(valorDe(regra![0], "width"));
+    const altura = px(valorDe(regra![0], "height"));
+    expect(Number.isFinite(largura), "a regra .bp .pin-home não tem mais um width: Npx").toBe(true);
+    expect(altura, "o alvo de toque deixou de ser quadrado").toBe(largura);
 
-    const alvoToquePx = Number(largura![1]);
-    expect(alvoToquePx).toBe(44); // documentado no comentário da constante em src/lib/mapa.ts
-    expect(RAIO_ALVO_TOQUE_PX).toBe(alvoToquePx / 2);
+    expect(largura).toBe(44); // documentado no comentário da constante em src/lib/mapa.ts
+    expect(RAIO_ALVO_TOQUE_PX).toBe(largura / 2);
   });
 });
 

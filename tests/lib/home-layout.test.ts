@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { MAPA_ALTURA_HOME_PX } from "@/lib/mapa";
 import {
@@ -8,51 +6,13 @@ import {
   ALTURA_LINHA_FILTRO_PX,
   TETO_ANTES_DO_CARTAO_PX,
 } from "@/lib/home-layout";
+// A régua de CSS mora em tests/css.ts — uma só pro app inteiro. Ver o cabeçalho
+// de lá: cada cópia solta do `valorDe` é uma chance de UMA delas perder a
+// âncora e enfraquecer só o arquivo dela, em silêncio.
+import { paddingLado, px, regraDe, semComentarios, valorDe } from "../css";
 
-/** O home.css sem os comentários. Mesmo motivo do helper gêmeo em
- *  tests/app/BarraNavegacao.test.tsx: um `.mapa-home { … }` escrito em PROSA
- *  dentro de um comentário casaria antes da regra de verdade, e a suíte ficaria
- *  vermelha (ou verde) por um texto. */
-const semComentarios = (arq: string) =>
-  readFileSync(path.join(process.cwd(), "src", "app", arq), "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "");
 const home = () => semComentarios("home.css");
 const fichaCss = () => semComentarios("ficha.css");
-
-const regraDe = (fonte: string, seletor: string) => {
-  const re = new RegExp(`${seletor.replace(/[.\-]/g, "\\$&")}\\s*\\{[^}]*\\}`, "s");
-  return fonte.match(re);
-};
-
-/** 🔴 O VALOR DA DECLARAÇÃO, não "existe em algum lugar deste bloco".
- *
- *  `toContain("height: 168px")` sobre o bloco inteiro é substring de
- *  `max-height: 168px`: a mutação `height:` → `max-height:` deixava a suíte
- *  VERDE e o mapa sumia inteiro da home — os tiles são `position: absolute`,
- *  então sem altura própria a caixa colapsa e os pins ficam boiando. A mesma
- *  fresta vale pro `min-height`, onde o decoy é um `--min-height: 36px`
- *  (propriedade customizada, inerte, e substring perfeita).
- *
- *  A âncora `(?:^|[{;])` obriga a propriedade a COMEÇAR uma declaração: o `-`
- *  de `max-` e o `-` de `--min` não são `{` nem `;` nem início de string. E o
- *  valor volta inteiro, pra ser comparado com `toBe` — bloco cresce, declaração
- *  não. */
-const valorDe = (regra: string, prop: string): string | null => {
-  const m = regra.match(new RegExp(`(?:^|[{;])\\s*${prop}\\s*:\\s*([^;}]+)`, "s"));
-  return m ? m[1].trim() : null;
-};
-
-/** Os valores de um shorthand, separados por espaço fora de parênteses. */
-const fatiar = (valores: string): string[] => valores.trim().split(/\s+/);
-
-/** rem → px. Nenhum arquivo do app declara `font-size` na raiz (o teste logo
- *  abaixo prova), então vale o padrão do navegador: 16px. */
-const REM_PX = 16;
-const px = (valor: string | null | undefined): number => {
-  const m = valor?.trim().match(/^(-?[\d.]*\d)(px|rem)$/);
-  if (!m) return NaN;
-  return parseFloat(m[1]) * (m[2] === "rem" ? REM_PX : 1);
-};
 
 describe("o primeiro cartão nasce acima da dobra", () => {
   it("appbar + mapa + cabeçalho do grupo cabem no teto", () => {
@@ -112,10 +72,9 @@ describe("o primeiro cartão nasce acima da dobra", () => {
     expect(declarado, "o min-height da linha não é mais um px/rem legível")
       .toBe(ALTURA_LINHA_FILTRO_PX);
 
-    // O primeiro valor do shorthand é o padding de CIMA; sem um terceiro, o de
-    // baixo é igual a ele.
-    const padVertical = px(fatiar(valorDe(linha![0], "padding") ?? "")[0]);
-    const borda = px(fatiar(valorDe(linha![0], "border-bottom") ?? "")[0]);
+    const padTopo = px(paddingLado(linha![0], "top"));
+    const padBase = px(paddingLado(linha![0], "bottom"));
+    const borda = px(valorDe(linha![0], "border-bottom")?.split(/\s+/)[0]);
     const entrelinha = Number(valorDe(bp![0], "line-height"));
     expect(entrelinha, "o .bp perdeu o line-height de onde a altura do texto sai")
       .toBeGreaterThan(0);
@@ -126,13 +85,47 @@ describe("o primeiro cartão nasce acima da dobra", () => {
       px(valorDe(botao![0], "min-height")),
       px(valorDe(conta![0], "font-size")) * entrelinha,
     );
-    const empurrado = miolo + 2 * padVertical + borda;
+    const empurrado = miolo + padTopo + padBase + borda;
 
     expect(Number.isFinite(empurrado), "não deu pra ler a corrente inteira do CSS").toBe(true);
     expect(
       declarado,
       `o miolo empurra a linha pra ${empurrado.toFixed(2)}px e o min-height declarado ` +
         `é ${declarado}px — ele parou de morder, e a constante virou ficção`,
+    ).toBeGreaterThanOrEqual(empurrado);
+  });
+
+  // O cabeçalho de grupo é a MESMA família da linha de filtro — a constante
+  // dizia 34 e a régua diz 34,45 —, mas com uma diferença que muda o conserto:
+  // o `.grupo-k` não tem `min-height` nenhum, e inventar um só pra a constante
+  // "morder" seria CSS escrito pra satisfazer teste. Aqui quem lê a corrente é
+  // o teste: texto (fonte × entrelinha) mais os dois paddings.
+  it("ALTURA_CABECALHO_GRUPO_PX cobre o que o .grupo-k realmente empurra", () => {
+    const grupo = regraDe(home(), ".grupo-k");
+    const bp = regraDe(fichaCss(), ".bp");
+    expect(grupo, "faltou a regra .grupo-k no home.css").not.toBeNull();
+    expect(bp, "faltou a regra .bp no ficha.css").not.toBeNull();
+
+    // Se um dia ganhar `min-height`, quem manda passa a ser outro e esta conta
+    // deixa de valer — melhor cair aqui do que mentir em silêncio.
+    expect(valorDe(grupo![0], "min-height"), "o .grupo-k ganhou min-height: refaça esta conta")
+      .toBeNull();
+
+    const entrelinha = Number(valorDe(bp![0], "line-height"));
+    expect(entrelinha, "o .bp perdeu o line-height de onde a altura do texto sai")
+      .toBeGreaterThan(0);
+
+    const empurrado =
+      px(valorDe(grupo![0], "font-size")) * entrelinha +
+      px(paddingLado(grupo![0], "top")) +
+      px(paddingLado(grupo![0], "bottom"));
+
+    expect(Number.isFinite(empurrado), "não deu pra ler a corrente inteira do .grupo-k").toBe(true);
+    expect(
+      ALTURA_CABECALHO_GRUPO_PX,
+      `o .grupo-k empurra ${empurrado.toFixed(4)}px e a constante diz ` +
+        `${ALTURA_CABECALHO_GRUPO_PX}px — ela mede pra menos, e o orçamento da ` +
+        `dobra fica mais folgado no papel do que na tela`,
     ).toBeGreaterThanOrEqual(empurrado);
   });
 
