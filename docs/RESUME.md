@@ -4,13 +4,53 @@
 > `.superpowers/sdd/2026-08-13-daqui-e-filtros/progress.md`, que é **scratch git-ignorado** —
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-14, **encerrada a pedido dele** ("bora deixar para depois").
-**Estado: RODADA EM ANDAMENTO, parada num ponto limpo.**
-Branch **`daqui-e-filtros`**, saindo de `main` em `8c88415`.
-**Tasks 1–8 de 12 fechadas**, todas com revisão (e re-revisão onde houve fix round).
-Suíte em **426/426**, **`npm run build` passa**, árvore limpa.
-**Nada em voo:** nenhum agente rodando, nenhum fix round aberto, nenhuma decisão pendurada.
-**Faltam as Tasks 9, 10, 11 e 12** — os filtros e a barra fixa.
+**Última parada:** 2026-08-16.
+## ✅ RODADA "DE ONDE EU ESTOU" FECHADA E MERGEADA — 12/12
+
+**`main` em `ce40307`** (merge `--no-ff` de `daqui-e-filtros`, que ficou em `a6f2f45`).
+**523 testes em 46 arquivos**, `npx tsc --noEmit` limpo, `npm run build` passa — os três
+conferidos **em `main` depois do merge**, não só na branch. Árvore limpa.
+**Nada em voo:** nenhum agente rodando, nenhum fix round aberto.
+
+**12 tasks SDD**, cada uma com implementador → revisão com dois veredictos → fix round →
+re-revisão escopada, mais **revisão da branch inteira** e **quatro fix rounds** depois dela.
+A suíte foi de **278 → 523**.
+
+### 🔴 O QUE NÃO FOI FEITO, E É A PRIMEIRA COISA DA PRÓXIMA SESSÃO
+
+**A rodada NÃO foi deployada. Não dá pra deployar deste ambiente hoje:**
+- **`git remote -v` está VAZIO** — o repositório é só local. Não há pra onde empurrar.
+- **A CLI da Vercel não está instalada** (`npm i -g vercel`).
+
+As rodadas anteriores foram pro ar (`https://bateperna.vercel.app`), então **ou o remote sumiu,
+ou o deploy sempre saiu por outro caminho** (dashboard/CLI numa máquina com login). **Isto é do
+João** — cai na fronteira dele (login nas contas). Perguntar: *"como o deploy sai daqui? tem um
+remote que sumiu, ou é pelo painel da Vercel?"*
+
+**Consequência prática: o app no celular dele continua na versão ANTERIOR.** Tudo desta rodada
+está commitado e verificado, e **nada disso está no aparelho**.
+
+---
+
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" (estado novo, 2026-08-16)
+
+A rodada acabou. **Não há task pendente.** As três coisas na mesa, em ordem:
+
+1. **Descobrir como deployar** (acima) — sem isso, nada do que foi feito chega no celular.
+2. **As duas perguntas que só ele responde**, ambas detalhadas na seção "Deferidos vivos":
+   - **o mapa com filtro ligado** (pin morto + `.mapa-fora` afirmando número falso);
+   - **filtro que não tem como filtrar** — a linha diz "2 filtros ligados" e nada muda, porque
+     nenhuma ficha tem esforço/duração. É **100% do app** enquanto o questionário não voltar.
+3. **O iPhone**, que continua sem nenhuma medição possível daqui (§15 da spec, 4 perguntas).
+
+E as pendências antigas dele seguem: **responder `docs/questionario-ficha.md`** (a 2ª ficha
+destrava as fatias 2 e 3 — e **dois** achados desta rodada são invisíveis com uma ficha só) e
+**esforço/duração da Rampa**.
+
+---
+
+<details>
+<summary>O bloco de retomada da rodada anterior (histórico — a rodada fechou)</summary>
 
 ---
 
@@ -135,7 +175,9 @@ foi respondida (é o §1 da spec).
    **as duas** de Pernambuco, então ela passaria com qualquer uma na tela. **Num teste que
    distingue A de B, asserte no que os diferencia**, não num campo que os dois compartilham.
 
-## O que esta rodada faz (a pauta do João, dita por ele)
+</details>
+
+## O que esta rodada fez (a pauta do João, dita por ele) — TUDO ENTREGUE
 
 Ao ver a home no ar, ele disse **"ficou legal, mas ainda faltou mais coisa"**. Na sessão seguinte
 disse o quê — três coisas:
@@ -175,14 +217,40 @@ disse que não incomoda**. É consequência inevitável da regra do primeiro ren
 | 6 — a pílula e a busca de cidade | **completa**, 2 fix rounds, re-revisão limpa | `2d48df0`, `280683e`, `fcb5875` |
 | 8 — `esforco`/`duracao` no schema + questionário | **completa**, revisão limpa, zero fix rounds | `5d2f817` |
 | 7 — km/duração/esforço/custo no cartão + invariante da ficha | **completa**, 2 fix rounds, re-revisão limpa | `ed4b38e`, `318231e`, `b7cb153`, `ff217df` |
-| 9 a 12 | não começadas | — |
+| 9 — filtros puros (`src/lib/filtros.ts`) | **completa**, 1 fix round, re-revisão ADDRESSED | `5cf567e`, `481a57f` |
+| 10 — a linha e o painel sanfona | **completa**, 1 fix round, re-revisão ADDRESSED | `9a4e0f5`, `ab6ce1c` |
+| 11 — filtro e agrupamento na mesma passada | **completa**, 1 fix round, re-revisão ADDRESSED | `97c228d`, `dea695d` |
+| 12 — a barra fixa no rodapé | **completa**, 2 fix rounds, re-revisão ADDRESSED | `d5a8a76`, `e4c6ad4`, `a674bc4` |
+| **revisão da BRANCH INTEIRA** | **4 fix rounds depois dela** | `60d8e9e`, `9ec60b2`, `8be3c50`, `490095f`, `22d7347`, `a6d15d9`, `a6f2f45` |
 
-Suíte: **426/426** (a base da rodada era 278). **`npm run build` passa.**
+Suíte: **523/523 em 46 arquivos** (a base da rodada era 278). `tsc` limpo, **`npm run build`
+passa**. Merge em `main`: **`ce40307`** (`--no-ff`).
 
-**Briefs das Tasks 3–8 já emendados pelo pré-voo** (as 9–12 ainda NÃO) (ver item 6 acima). Eles vivem em
-`.superpowers/sdd/2026-08-13-daqui-e-filtros/task-N-brief.md`, que é **scratch git-ignorado**
-— um `git clean -fdx` apaga as emendas junto. Se isso acontecer, o essencial de cada uma está
-no item 6; reextrair pelo `scripts/task-brief` devolve o brief ORIGINAL, com os furos.
+**Os briefs das Tasks 9–12, já pré-voados, estão versionados** em `docs/superpowers/briefs/`
+(com um `README.md` que registra, task a task, o que o pré-voo achou e os rulings). Não se
+perdem num `git clean`.
+
+## O que a revisão da branch inteira pegou (5ª rodada seguida que ela paga)
+
+Todas as 12 tasks tinham sido revisadas individualmente, com prova de mutação, e todas passaram.
+
+**Important 1 — a mesma trilha tinha DOIS km.** `CartaoTrilha` e `filtros.ts` mediam até
+`ficha.condicao.coords` (o ponto do clima, onde o pin é plantado); a ficha media até
+`trajeto.waypoints[0]`. Reproduzido: **cartão anunciando ~89 km e a ficha da mesma trilha ~40
+km**, e "até 60 km" escondendo uma trilha cujo portão está a 40. **Invisível só porque a única
+ficha real tem os dois pontos iguais — chega junto com a segunda ficha.**
+**Conserto:** `coordDaDistancia(ficha)` em `src/lib/geo.ts`, uma função só, chamada pelos três.
+**O waypoint venceu porque é o que o botão "Abrir no mapa" abre** — medir por outro faria o app
+dizer "40 km" e mandar a pessoa pra outro lugar. E o `DistanciaDaqui` passou a receber a **ficha**
+em vez de `lat`/`lng`, pra a fonte ser única por **estrutura**, não por convenção. O pin do mapa
+continua em `condicao.coords` (é o ponto do clima; o questionário documenta as duas).
+
+**Important 2 — o mapa (não filtrado) contradiz a folha (filtrada).** Virou pergunta pro João,
+detalhada nos deferidos.
+
+**E a família de asserção frouxa em CSS: TREZE frestas fechadas, treze medidas VIVAS antes do
+conserto** (nenhuma consertada por "parecer frouxa"), mais **uma registrada como débito**. Ver a
+lição 23.
 
 ## Invariantes que não podem ser quebradas
 
@@ -290,6 +358,26 @@ Desta rodada (estão no ledger, o revisor final vai triar):
   (`afterEach(() => vi.mocked(distanciaKm).mockImplementation(real))`, com o real vindo de
   `vi.importActual`), e isso é máquina demais pra um risco que hoje não morde. **Deferido de
   propósito, com a medição registrada** — o revisor final decide.
+- 🔴 **DÉBITO REGISTRADO NA VARREDURA FINAL, com exemplo medido e preço** — a *terceira* família
+  de asserção frouxa em CSS. **`regraDe` usa `match` sem `/g` e devolve a PRIMEIRA regra; o
+  navegador usa a ÚLTIMA.** Anexando ao fim do `home.css` `\.bp .folha { padding: 0 }` e
+  `.bp .mapa-home { height: 40px }`, a suíte fecha **523/523 verde** — e no navegador o último
+  cartão volta pra trás da barra fixa e o mapa da home colapsa pra 40px, com
+  `MAPA_ALTURA_HOME_PX = 168` e o orçamento da dobra inteiro virando ficção. **Custo de fechar:**
+  pequeno em código (varrer com `/g`, devolver a última e/ou falhar em duplicata de seletor
+  exato, sem confundir `.bp .cartao` com `.bp .cartao:active`), **médio em verificação** — a
+  lição 20 obriga re-rodar as ~15 provas que o `regraDe` carrega. **Não consertado de propósito:
+  a rodada parou aqui por critério de parada explícito.** Junto disso foi corrigido um comentário
+  do `BarraNavegacao.test.tsx` que afirmava o CONTRÁRIO (que uma segunda regra deixaria o teste
+  vermelho) — comentário errado é pior que a fresta, porque o próximo leitor confia nele.
+- 🟠 **PERGUNTA CURTA PRO JOÃO — filtro que não tem como filtrar.** Medido na home real: ligar
+  "leve" e "até 2h" leva a linha a dizer **"1 trilha · 2 filtros ligados"** com a lista
+  **idêntica** e nenhuma palavra na tela explicando. Está **correto** pela regra de honestidade 2
+  (nenhuma ficha tem esforço/duração, nenhuma pode ser escondida), mas é **100% do app** enquanto
+  o questionário não voltar respondido. *"Filtro que não tem como filtrar — a linha diz alguma
+  coisa, ou fica calada?"* Irmão hoje inalcançável: o `contarLigados` conta `distanciaKm` mesmo
+  quando o painel esconde o grupo Distância por falta de localização — a pessoa veria "1 filtro
+  ligado" sem nenhum controle pra desligar.
 - 🟠 **PERGUNTA CURTA PRO JOÃO, e é comportamento NOVO da Task 11** (achado da revisão dela,
   Important, plan-mandated). **Com um filtro ligado, o pin de uma trilha escondida vira âncora
   morta.** O `PinTrilha` é `<a href="#slug">` (`src/app/PinTrilha.tsx:38`) apontando pro
@@ -546,7 +634,8 @@ roteiro**. Código, deploy e verificação eu toco. **Agentes: autorizados nesta
 
 - Rodada 1 (esqueleto): merge `a179e46`. Rampa ao vivo (Versão D): `7d4bd59`. "Fui": `4b6d9a7`.
   Mapa de verdade: `a671146`. Forma de app: `6ef0fdc`. Carimbo busca leitura nova: `9c3dcf8`.
-  Home "Hoje": `645ebe1`.
+  Home "Hoje": `645ebe1`. **"De onde eu estou" (localização + filtros + barra fixa): `ce40307`
+  — mergeada em 2026-08-16 e NÃO deployada (ver o topo).**
 - **iPhone provado em 2026-08-10** com a versão anterior à home. Da home pra cá, não.
 - Turso/cron/freshness da Rodada 1 seguem de lado (não usados no MVP live-compute).
 - Os mockups do brainstorm desta rodada estão em `.superpowers/brainstorm/2019-1786672214/content/`
