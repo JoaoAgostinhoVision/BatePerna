@@ -20,6 +20,7 @@
 import { describe, expect, it } from "vitest";
 import { SEM_FILTRO, contarLigados, lerFiltros, passaNoFiltro, type Filtros } from "@/lib/filtros";
 import { getFichasComCondicao } from "@/lib/ficha";
+import { distanciaKm } from "@/lib/geo";
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 
@@ -48,6 +49,24 @@ describe("sem filtro, tudo passa", () => {
   it("contarLigados é zero", () => {
     expect(contarLigados(SEM_FILTRO)).toBe(0);
   });
+
+  // ——— pré-voo 2: o "sem filtro, tudo passa" acima é CEGO pros três guardas
+  // `!== null`, porque a ficha base é a Rampa — paga, e sem esforço nem duração
+  // preenchidos. Cada `if` daqui é um E de duas sub-cláusulas, e a que dispara
+  // primeiro esconde a outra:
+  //
+  //   `filtros.esforco !== null && ficha.esforco && ...`
+  //
+  // Apagando o `filtros.esforco !== null`, a ficha base salva o teste sozinha
+  // (`ficha.esforco` é undefined, curto-circuito, passa). Só uma ficha COM o
+  // campo preenchido e NENHUM filtro ligado faz o guarda ser o único a segurar.
+  // Isso vira caso real no dia em que o João responder o questionário.
+  it("ficha COM esforço preenchido não some quando o filtro está desligado", () => {
+    expect(passa({}, { esforco: "puxada" })).toBe(true);
+  });
+  it("ficha COM duração preenchida não some quando o filtro está desligado", () => {
+    expect(passa({}, { duracao: 90 })).toBe(true);
+  });
 });
 
 describe('"dá hoje"', () => {
@@ -67,6 +86,19 @@ describe('"dá hoje"', () => {
   it("leitura com erro não é escondida", () => {
     expect(passa({ daHoje: true }, {}, { leitura: { ...FRIO, erro: true }, confia: false })).toBe(true);
   });
+
+  // ——— pré-voo 2: honestidade ao contrário. Hoje só se prova que `confia:
+  // false` torna o `daHoje` INERTE. Um `if (!confia) return true` no topo
+  // passaria em todos os testes acima e desligaria o app inteiro: a pessoa
+  // filtraria por distância, por custo, e nada aconteceria — sem nenhum aviso
+  // de que o filtro não está valendo. `confia` é sobre o CARIMBO, e não pode
+  // vazar pros recortes que não dependem dele.
+  it("sem leitura confiável, os OUTROS recortes continuam valendo", () => {
+    expect(
+      passa({ soGratis: true }, { custo: { tag: "pago", valor: "R$ 5" } }, { confia: false }),
+    ).toBe(false);
+    expect(passa({ esforco: "leve" }, { esforco: "puxada" }, { confia: false })).toBe(false);
+  });
 });
 
 describe("distância", () => {
@@ -83,6 +115,52 @@ describe("distância", () => {
   // (estado guardado de outra sessão), não pode esconder nada.
   it("sem localização, não filtra", () => {
     expect(passa({ distanciaKm: 30 }, {}, { voce: null })).toBe(true);
+  });
+
+  // ——— pré-voo 2. Todos os testes de "tudo passa" acima rodam com `voce:
+  // null`, então o E do `if` de distância nunca foi exercitado com a
+  // localização presente e o recorte desligado — que é o estado NORMAL de
+  // quem tocou "Ver daqui" e não abriu o painel.
+  //
+  // Honestidade sobre a prova: quem mata a mutação aqui é o `tsc`, não o
+  // vitest — sem o `!== null`, `filtros.distanciaKm` continua `30 | 60 | null`
+  // dentro do `if` e a comparação não compila (lição 13 do RESUME: rodar
+  // `tsc --noEmit` antes de declarar uma linha morta). O teste vale pelo
+  // CASO, que hoje não existe na suíte, não por ser a única rede.
+  it("com localização e o recorte desligado, nada some", () => {
+    expect(passa({}, {}, { voce: perto })).toBe(true);
+    expect(passa({}, {}, { voce: longe })).toBe(true);
+  });
+
+  // ——— pré-voo 2: A BORDA DA DISTÂNCIA, e o que dela é honestamente provável.
+  //
+  // A regra cravada diz que o teto é inclusivo nos DOIS recortes. Na duração
+  // isso é observável e está provado abaixo (120 é inteiro e a pessoa acerta
+  // ele). Na distância, NÃO É: medi antes de escrever este teste, e o
+  // haversine com estas coordenadas pula o valor exato — o passo de saída
+  // perto de 30 km é ~1e-13, e os vizinhos são 29.999999999999968 e
+  // 30.000000000000068. Não existe coordenada que devolva 30 cravado, então
+  // `>` e `>=` são indistinguíveis aqui, na suíte e na vida.
+  //
+  // O que É provável, e é o que este teste faz: que o corte acontece NO
+  // limite pedido, e não num número parecido (km trocado por metro, degrau
+  // trocado, constante errada).
+  const aoNorte = (km: number) => ({
+    lat: RAMPA.lat + (km / 6371) * (180 / Math.PI),
+    lng: RAMPA.lng,
+  });
+
+  it("o corte acontece no limite pedido, por um triz dos dois lados", () => {
+    // A construção é conferida antes de valer como prova: com dLng = 0 o
+    // haversine vira R·Δφ. Se `geo.ts` mudar de fórmula, esta linha falha
+    // alto em vez de o teste abaixo virar vazio.
+    expect(distanciaKm(aoNorte(29.999), RAMPA)).toBeCloseTo(29.999, 6);
+    expect(distanciaKm(aoNorte(30.001), RAMPA)).toBeCloseTo(30.001, 6);
+
+    expect(passa({ distanciaKm: 30 }, {}, { voce: aoNorte(29.999) })).toBe(true);
+    expect(passa({ distanciaKm: 30 }, {}, { voce: aoNorte(30.001) })).toBe(false);
+    expect(passa({ distanciaKm: 60 }, {}, { voce: aoNorte(59.999) })).toBe(true);
+    expect(passa({ distanciaKm: 60 }, {}, { voce: aoNorte(60.001) })).toBe(false);
   });
 });
 
@@ -154,6 +232,23 @@ describe("filtros combinados", () => {
   it("contarLigados conta cada recorte ligado uma vez", () => {
     expect(contarLigados({ ...SEM_FILTRO, daHoje: true, soGratis: true, distanciaKm: 30 })).toBe(3);
   });
+
+  // ——— pré-voo 2: o teste acima liga 3 dos 5 recortes, então `esforco` e
+  // `duracaoMax` podem ser APAGADOS do array e ele continua devolvendo 3. A
+  // linha de resumo diria "3 filtros ligados" com cinco ligados, e a pessoa
+  // que não achasse mais nada na tela procuraria dois filtros que a contagem
+  // jura não existirem. Com os cinco ligados, apagar qualquer um dá 4.
+  it("contarLigados conta os CINCO recortes, não só os três primeiros", () => {
+    expect(
+      contarLigados({
+        distanciaKm: 30,
+        daHoje: true,
+        soGratis: true,
+        esforco: "leve",
+        duracaoMax: 120,
+      }),
+    ).toBe(5);
+  });
 });
 
 describe("lerFiltros: o que estiver guardado é conferido", () => {
@@ -171,6 +266,57 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
   it("preserva o que é válido", () => {
     expect(lerFiltros(JSON.stringify({ ...SEM_FILTRO, daHoje: true, distanciaKm: 60 })))
       .toEqual({ ...SEM_FILTRO, daHoje: true, distanciaKm: 60 });
+  });
+
+  // ——— pré-voo 2, quatro furos neste bloco.
+  //
+  // (a) O "preserva o que é válido" acima só exercita DOIS dos cinco campos.
+  // Trocar a linha do `esforco` por `esforco: null` fixo passa em tudo o que
+  // existe hoje — o filtro nunca mais voltaria depois de fechar o app, e a
+  // pessoa reclamaria que "ele esquece".
+  it("preserva os CINCO campos válidos, não só dois", () => {
+    const cheio: Filtros = {
+      distanciaKm: 60,
+      daHoje: true,
+      soGratis: true,
+      esforco: "media",
+      duracaoMax: 240,
+    };
+    expect(lerFiltros(JSON.stringify(cheio))).toEqual(cheio);
+  });
+
+  // (b) A validação também é campo a campo, e o teste era em bloco. Um caso
+  // por campo: assim a falha DIZ qual validação caiu, em vez de um objeto
+  // inteiro diferente. `soGratis: "sim"` é o caso realista — JSON de uma
+  // versão futura, ou mexido na mão pelo inspetor do navegador.
+  it.each([
+    ["distanciaKm", { distanciaKm: 45 }],
+    ["daHoje", { daHoje: "sim" }],
+    ["soGratis", { soGratis: "sim" }],
+    ["esforco", { esforco: "brutal" }],
+    ["duracaoMax", { duracaoMax: 999 }],
+  ])("campo %s fora do conjunto cai pro padrão DELE, sozinho", (_campo, torto) => {
+    expect(lerFiltros(JSON.stringify(torto))).toEqual(SEM_FILTRO);
+  });
+
+  // (c) e (d) O guarda `typeof x !== "object" || x === null` é um OU de duas
+  // sub-cláusulas, e elas NÃO fazem a mesma coisa — a família que já mordeu
+  // duas vezes nesta rodada. Um caso pra cada, falhando por uma razão só:
+  //
+  //   "null"  → JSON.parse devolve null; `typeof null === "object"`, então
+  //             quem segura é o `x === null`. Sem ele, `x.distanciaKm`
+  //             ESTOURA e a home não abre.
+  //   "5"     → JSON.parse devolve número; quem segura é o `typeof`. Sem ele
+  //             não estoura (as leituras dão undefined), então esta metade
+  //             pode parecer morta no vitest — **rode `tsc --noEmit` antes de
+  //             declarar isso**, porque é ela que estreita `unknown` pra
+  //             objeto (lição 13).
+  it("JSON válido que não é objeto: null vira SEM_FILTRO em vez de estourar", () => {
+    expect(() => lerFiltros("null")).not.toThrow();
+    expect(lerFiltros("null")).toEqual(SEM_FILTRO);
+  });
+  it("JSON válido que não é objeto: número vira SEM_FILTRO", () => {
+    expect(lerFiltros("5")).toEqual(SEM_FILTRO);
   });
 });
 ```
@@ -218,6 +364,11 @@ export function contarLigados(f: Filtros): number {
 }
 
 export function lerFiltros(bruto: string | null): Filtros {
+  // Este guarda parece redundante pro vitest — sem ele, `JSON.parse("")`
+  // estoura e o `catch` logo abaixo devolve SEM_FILTRO do mesmo jeito. Ele
+  // fica porque quem o precisa é o `tsc`: é ele que estreita `string | null`
+  // pra `string` antes do `JSON.parse`. Não apague pela prova de mutação do
+  // vitest sozinha (lição 13 do RESUME).
   if (!bruto) return SEM_FILTRO;
   let x: Record<string, unknown>;
   try {
@@ -286,22 +437,57 @@ export function passaNoFiltro({
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/lib/filtros.test.ts`
-Expected: PASS (22 tests)
+Expected: PASS — **38 testes** (o `it.each` do `lerFiltros` conta 5).
 
-- [ ] **Step 5: Prova de mutação das duas regras**
+**Se a contagem não bater, não ajuste o relatório: descubra por quê.** Numa rodada
+só, essa instrução pegou cinco erros de aritmética meus.
 
-1. Tire o `&& confia` da primeira regra → "sem leitura confiável, não esconde nada" tem que falhar.
-2. Troque `ficha.esforco &&` por `true &&` → "ficha sem esforço nunca é escondida" tem que falhar.
+- [ ] **Step 5: Prova de mutação, sub-cláusula a sub-cláusula**
 
-Devolva as duas e cole as saídas.
+A régua deste projeto é literal — *apagar a linha faz um teste falhar*. "Existe um
+teste parecido em outro caminho" **não é prova**: um implementador já usou esse
+argumento nesta rodada e a re-revisão o derrubou apagando o guard e vendo a suíte
+verde. E onde o `if` é um E ou um OU, **mute a sub-cláusula, não a linha inteira** —
+a que dispara primeiro esconde todas as outras.
+
+| # | Mutação | Teste que TEM que falhar |
+|---|---|---|
+| 1 | tirar o `&& confia` da regra de honestidade 1 | "sem leitura confiável, não esconde nada" |
+| 2 | `ficha.esforco &&` → `true &&` | "ficha sem esforço nunca é escondida" |
+| 3 | `ficha.duracao &&` → `true &&` | "ficha sem duração nunca é escondida" |
+| 4 | apagar `filtros.esforco !== null &&` | "ficha COM esforço preenchido não some quando o filtro está desligado" |
+| 5 | apagar `filtros.duracaoMax !== null &&` | "ficha COM duração preenchida não some…" |
+| 6 | `> filtros.duracaoMax` → `>=` | "o teto de duração é inclusivo" |
+| 7 | apagar `esforco` do array do `contarLigados` | "contarLigados conta os CINCO recortes" |
+| 8 | `esforco: ... : null` → `esforco: null` fixo no `lerFiltros` | "preserva os CINCO campos válidos" |
+| 9 | apagar `x === null` do guarda do `lerFiltros` | "…null vira SEM_FILTRO em vez de estourar" |
+| 10 | apagar o `typeof x !== "object"` do mesmo guarda | ver a nota abaixo |
+
+**Sobre a #10 e a #4/#5:** se a mutação **não morder no vitest**, o passo seguinte é
+`npx tsc --noEmit` — não afrouxar o teste. Duas linhas desta suíte já foram dadas
+como mortas pelo vitest sendo carregadoras de peso pro `tsc`. Relate qual das duas
+ferramentas mata cada uma.
+
+**E se alguma mutação não morder em NENHUMA das duas, PARE e relate.** Três vezes
+nesta rodada o erro estava no meu plano, não em quem implementou; quem parou e
+mostrou a conta estava certo nas três.
+
+Devolva todas as mutações e cole as saídas.
 
 - [ ] **Step 6: Rodar a suíte e commitar**
 
 ```bash
 npm test
+npx tsc --noEmit
+npm run build
 git add src/lib/filtros.ts tests/lib/filtros.test.ts
 git commit -m "feat(filtros): os recortes da home, com as duas regras de honestidade"
 ```
+
+🔴 **`npm run build` entra na verificação, não é opcional.** `npm test` verde não
+prova que o app constrói: o vitest roda por esbuild e nunca chama o `next build`.
+Nesta mesma rodada o build ficou quebrado por quatro commits com a suíte inteira
+verde, e três revisões passaram por cima. Base da suíte antes desta task: **426**.
 
 ---
 
