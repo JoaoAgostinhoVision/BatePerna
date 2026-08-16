@@ -18,12 +18,37 @@ export const ALTURA_APPBAR_PX = 52;
 export const ALTURA_CABECALHO_GRUPO_PX = 34;
 
 /** `.filtro-linha`: a linha de resumo dos filtros, entre o mapa e a folha.
- *  MEDIDA do CSS, não desejo — ver o teste que lê a folha.
+ *  MEDIDA no navegador, não desejo.
  *
- *  36px é o que cabe: com os 52 da appbar, os 168 do mapa e os 34 do
- *  cabeçalho de grupo, a soma dá 290 contra o teto de 320. Uma faixa de chips
- *  permanentes custaria 44 e deixaria o primeiro cartão colado no teto. */
-export const ALTURA_LINHA_FILTRO_PX = 36;
+ *  ⚠️ Isto aqui já mentiu: era 36, e a linha media 39,2px. O `min-height: 36px`
+ *  do `.filtro-linha` NUNCA mordia — quem mandava era o miolo:
+ *
+ *      .filtro-abrir min-height   32,0
+ *    + padding .2rem × 2 da linha  6,4
+ *    + border-bottom da linha      1,0   (0,8 medido, ver abaixo)
+ *    ────────────────────────────────
+ *                                 39,4
+ *
+ *  E o teste de orçamento somava a CONSTANTE, nunca a régua: com o botão em
+ *  `min-height: 64px` a suíte ficava verde e o primeiro cartão nascia em
+ *  y=344,65, acima do teto de 320 que o teste diz defender.
+ *
+ *  O conserto não foi só trocar o número: o `min-height` da linha subiu pra 40
+ *  pra que ele MORDA (40 > 39,4) e volte a ser quem manda. Assim a constante
+ *  descreve uma declaração que o navegador realmente usa, e não uma soma
+ *  frágil. O teste em tests/lib/home-layout.test.ts confere a corrente inteira:
+ *  o declarado é esta constante, E é maior ou igual ao que o miolo consegue
+ *  empurrar. Quem crescer o botão derruba o teste.
+ *
+ *  Sobre o 1,0 da borda: medido em 375×667 num monitor de dpr 1,25, o Chrome
+ *  reporta 0,8px pra uma borda de 1px (encaixe em pixel de dispositivo), e a
+ *  linha dá 39,2. Num iPhone (dpr 2 ou 3) a borda fecha em 1,0 e a linha daria
+ *  39,4. A conta acima usa o 1,0 de propósito: é o pior caso, e é o aparelho
+ *  alvo. Com o min-height em 40 os dois casos medem 40 e a diferença some.
+ *
+ *  Orçamento: 52 (appbar) + 168 (mapa) + 40 (esta linha) + 34 (cabeçalho de
+ *  grupo) = 294, contra o teto de 320. */
+export const ALTURA_LINHA_FILTRO_PX = 40;
 
 /** O que pode existir acima do primeiro cartão. 667px é a viewport do menor
  *  iPhone ainda em uso; 320 deixa o cartão inteiro visível com folga. */

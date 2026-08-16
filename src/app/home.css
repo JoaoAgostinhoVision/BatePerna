@@ -113,10 +113,17 @@
 /* ---- a linha de filtro e o painel sanfona ----
    A `min-height` tem que bater com ALTURA_LINHA_FILTRO_PX (src/lib/home-layout.ts):
    esta linha entra entre o mapa e a folha e come da mesma folga que garante o
-   primeiro cartão acima da dobra. Tem teste lendo esta regra. */
+   primeiro cartão acima da dobra. Tem teste lendo esta regra.
+   ⚠️ 40px, e não 36: com 36 este `min-height` NÃO MORDIA — o miolo empurrava a
+   linha pra 39,4px (o `min-height: 32px` do `.filtro-abrir` + os .2rem de
+   padding daqui, dos dois lados, + a borda de baixo) e a constante lá do
+   home-layout.ts descrevia uma linha que não existia. Quem sobe a altura do
+   `.filtro-abrir` faz este número parar de mandar de novo — e o teste em
+   tests/lib/home-layout.test.ts cai, de propósito: ele confere que este
+   `min-height` é MAIOR OU IGUAL ao que o miolo consegue empurrar. */
 .bp .filtro-linha {
   display: flex; align-items: center; justify-content: space-between; gap: .5rem;
-  min-height: 36px; padding: .2rem .9rem; border-bottom: 1px solid var(--line);
+  min-height: 40px; padding: .2rem .9rem; border-bottom: 1px solid var(--line);
 }
 .bp .filtro-conta {
   font-family: var(--type); font-size: .66rem; font-weight: 650;
