@@ -25,17 +25,42 @@ export const semComentarios = (arq: string): string =>
   readFileSync(path.join(process.cwd(), "src", "app", arq), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "");
 
-/** A PRIMEIRA regra que casa o seletor. `match` sem /g de propósito: uma
- *  segunda regra pro mesmo seletor mais abaixo no arquivo venceria pela
- *  cascata e ninguém saberia qual das duas está valendo — o teste tem que
- *  ficar vermelho nesse dia, não "consertar" a regex. */
-export const regraDe = (fonte: string, seletor: string): RegExpMatchArray | null => {
+/** 🔴 TODAS as regras que casam o seletor, na ordem do arquivo — porque é
+ *  assim que o navegador lê.
+ *
+ *  Isto já foi `match` sem /g, devolvendo só a PRIMEIRA, e o comentário que
+ *  estava aqui AFIRMAVA que uma segunda regra "deixaria o teste vermelho, o
+ *  que é o certo". **Era falso, e foi medido:** anexando ao fim do `home.css`
+ *
+ *      .bp .folha    { padding: 0; }
+ *      .bp .mapa-home { height: 40px; }
+ *
+ *  a suíte fechava **523/523 verde** — e no navegador o último cartão voltava
+ *  pra trás da barra fixa e o mapa da home colapsava pra 40px, com
+ *  `MAPA_ALTURA_HOME_PX = 168` e o orçamento da dobra inteiro virando ficção.
+ *  A régua lia a primeira regra, que continuava certa; a tela obedecia à
+ *  última. **Comentário errado é pior que a fresta: o próximo leitor confia
+ *  nele.**
+ *
+ *  Devolver a concatenação (e não só a última regra) é o que casa com a
+ *  cascata de verdade: uma segunda regra sobrescreve **as propriedades que
+ *  declara**, não a regra inteira. Quem resolve o empate é o `valorDe`, lendo
+ *  a ÚLTIMA declaração.
+ *
+ *  O `\s*\{` continua sendo o que impede `.bp .cartao` de casar dentro de
+ *  `.bp .cartao:active {` ou de `.bp .cartao, .bp .outro {` — `:` e `,` não
+ *  são espaço nem chave.
+ *
+ *  Índice 0 = as regras juntas, pra os ~31 pontos de uso continuarem fazendo
+ *  `regra![0]` sem saber de nada disto. */
+export const regraDe = (fonte: string, seletor: string): string[] | null => {
   // Escapa TODO metacaractere, não só `.` e `-`: seletor de atributo
   // (`.bp[data-state="frio"] .wp-pin`) tem colchetes, e sem escapar eles viram
   // classe de caractere — a regra some e o teste fica vermelho por regex, não
   // por defeito.
-  const re = new RegExp(`${seletor.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&")}\\s*\\{[^}]*\\}`, "s");
-  return fonte.match(re);
+  const re = new RegExp(`${seletor.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&")}\\s*\\{[^}]*\\}`, "gs");
+  const todas = fonte.match(re);
+  return todas ? [todas.join("\n")] : null;
 };
 
 /** 🔴 O VALOR DA DECLARAÇÃO, nunca "existe em algum lugar deste bloco".
@@ -55,10 +80,17 @@ export const regraDe = (fonte: string, seletor: string): RegExpMatchArray | null
  *  de `max-` e o `-` de `--font` não são `{`, nem `;`, nem início de string.
  *  Devolve o valor inteiro, pra ser comparado com `toBe` — bloco cresce,
  *  declaração não. `null` quando a declaração não existe (que também é uma
- *  resposta: ver o teste do `.grupo-k`, que EXIGE `min-height` ausente). */
+ *  resposta: ver o teste do `.grupo-k`, que EXIGE `min-height` ausente).
+ *
+ *  🔴 A ÚLTIMA declaração, não a primeira — é a que o navegador usa, tanto
+ *  quando a propriedade se repete dentro de um bloco quanto quando o
+ *  `regraDe` juntou duas regras do mesmo seletor. Ler a primeira era a outra
+ *  metade da fresta descrita no `regraDe`. */
 export const valorDe = (regra: string, prop: string): string | null => {
-  const m = regra.match(new RegExp(`(?:^|[{;])\\s*${prop}\\s*:\\s*([^;}]+)`, "s"));
-  return m ? m[1].trim() : null;
+  const re = new RegExp(`(?:^|[{;])\\s*${prop}\\s*:\\s*([^;}]+)`, "gs");
+  const todas = [...regra.matchAll(re)];
+  const ultima = todas[todas.length - 1];
+  return ultima ? ultima[1].trim() : null;
 };
 
 /** Os valores de um shorthand, respeitando parênteses: `calc(a + b) 1rem` são
