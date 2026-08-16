@@ -302,7 +302,30 @@ describe("MAPA_JANELA_VISIVEL_HOME_PX bate com o CSS de onde ela foi derivada", 
     const css = readFileSync(path.join(process.cwd(), "src", "app", "ficha.css"), "utf8");
     const bp = css.match(/\n\.bp\s*\{[^}]*\}/s);
     expect(bp, "faltou a regra .bp no ficha.css").not.toBeNull();
-    expect(bp![0]).toContain("clamp(0px, 3vw, 1rem)");
+
+    // 🔴 A fórmula da goteira NÃO mora mais dentro do `padding:`. Desde o
+    // conserto da barra fixa ela vive nas variáveis `--goteira-esq`/`-dir`,
+    // porque a `.bp .barra` (home.css) precisa se prender na MESMA medida pra
+    // ficar alinhada com a moldura. Um `toContain("clamp(0px, 3vw, 1rem)")`
+    // sobre a regra `.bp` inteira parava de provar o que existe pra provar:
+    // com o padding lateral zerado — que invalida esta constante de verdade —
+    // a fórmula continuava no arquivo, dentro das variáveis, e a asserção
+    // passava. A garantia tinha migrado, sem registro, pro teste da BARRA,
+    // noutro arquivo e sobre outro assunto.
+    //
+    // Por isso a corrente é conferida INTEIRA, e nesta ordem: o padding lê as
+    // variáveis, e as variáveis carregam a fórmula. Quebrar qualquer um dos
+    // dois elos derruba a constante — e agora derruba este teste.
+    const padding = bp![0].match(/padding:[^;]*;/);
+    expect(padding, "faltou o padding na regra .bp").not.toBeNull();
+    expect(padding![0], "o padding lateral do .bp parou de sair da goteira")
+      .toContain("var(--goteira-dir)");
+    expect(padding![0], "o padding lateral do .bp parou de sair da goteira")
+      .toContain("var(--goteira-esq)");
+    expect(bp![0], "a goteira esquerda perdeu a fórmula de onde a constante saiu")
+      .toMatch(/--goteira-esq:[^;]*clamp\(0px, 3vw, 1rem\)/);
+    expect(bp![0], "a goteira direita perdeu a fórmula de onde a constante saiu")
+      .toMatch(/--goteira-dir:[^;]*clamp\(0px, 3vw, 1rem\)/);
 
     const screen = css.match(/\.bp \.screen\s*\{[^}]*\}/);
     expect(screen, "faltou a regra .bp .screen no ficha.css").not.toBeNull();

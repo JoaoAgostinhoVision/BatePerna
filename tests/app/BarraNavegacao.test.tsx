@@ -6,6 +6,42 @@ import BarraNavegacao from "@/app/BarraNavegacao";
 
 afterEach(() => { cleanup(); });
 
+/** Cada regra é lida NO ARQUIVO ONDE ELA VIVE: `.bp .barra` e `.bp .folha` no
+ *  `home.css`, `.bp .screen` e `.bp .lista` no `ficha.css`. As duas telas
+ *  importam os dois arquivos. Duplicar uma regra pro teste ficar mais curto
+ *  criaria duas fontes pro mesmo seletor — a família de defeito que este app
+ *  persegue desde a rodada do carimbo.
+ *
+ *  Os comentários do CSS saem antes de qualquer conta. Este arquivo CONTA
+ *  ocorrências (`--barra-h`, a fórmula da goteira) pra provar "num lugar só",
+ *  e comentário que fala SOBRE a constante é a coisa mais natural do mundo de
+ *  se escrever — um `--barra-h: 64px` citado dentro de um comentário viraria
+ *  uma segunda "declaração" e deixaria a suíte vermelha com uma mensagem que
+ *  não descreve nada. Some o benefício de tabela: sem comentário, o `[^}]*` do
+ *  `regraDe` não pode ser interrompido por uma chave escrita em prosa.
+ *
+ *  🔴 Este helper fica ANTES do primeiro `describe` de propósito: TODO leitor
+ *  de CSS deste arquivo passa por ele. Um `readFileSync` cru convivendo com o
+ *  helper deixa metade do arquivo sem a limpeza — e aí um `.barra { … }`
+ *  escrito em PROSA num comentário do `home.css` casa antes da regra de
+ *  verdade e a suíte fica vermelha com uma mensagem que não descreve defeito
+ *  nenhum. Alarme falso, não passe falso — mas é exatamente o que o parágrafo
+ *  acima diz estar resolvido. */
+const css = (arq: string) =>
+  readFileSync(path.join(process.cwd(), "src", "app", arq), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+const home = () => css("home.css");
+const ficha = () => css("ficha.css");
+
+/** `match` sem /g devolve a PRIMEIRA ocorrência. Os nulos viram asserção
+ *  (`not.toBeNull()`) antes de qualquer `!` que INDEXE (`regra![0]`,
+ *  `largura![1]`): o `!` some no runtime, então `expect(null)` ainda cai como
+ *  asserção, mas `null[0]` estoura TypeError e deixa a suíte vermelha sem
+ *  nenhuma asserção cair — que não é prova de nada. */
+const regraDe = (fonte: string, seletor: string) => {
+  const re = new RegExp(`${seletor.replace(/[.\-]/g, "\\$&")}\\s*\\{[^}]*\\}`, "s");
+  return fonte.match(re);
+};
+
 describe("BarraNavegacao", () => {
   it("leva pra home e pro acervo, com âncora pura", () => {
     const { container } = render(<BarraNavegacao aqui="hoje" />);
@@ -26,39 +62,11 @@ describe("BarraNavegacao", () => {
   });
 
   it("respeita a área segura do iPhone — sem isso a barra some atrás do gesto", () => {
-    const css = readFileSync(path.join(process.cwd(), "src", "app", "home.css"), "utf8");
-    const regra = css.match(/\.barra\s*\{[^}]*\}/s);
+    const regra = regraDe(home(), ".barra");
     expect(regra, "faltou a regra .barra").not.toBeNull();
     expect(regra![0]).toContain("env(safe-area-inset-bottom)");
   });
 });
-
-/** Cada regra é lida NO ARQUIVO ONDE ELA VIVE: `.bp .barra` e `.bp .folha` no
- *  `home.css`, `.bp .screen` e `.bp .lista` no `ficha.css`. As duas telas
- *  importam os dois arquivos. Duplicar uma regra pro teste ficar mais curto
- *  criaria duas fontes pro mesmo seletor — a família de defeito que este app
- *  persegue desde a rodada do carimbo. */
-/*  Os comentários do CSS saem antes de qualquer conta. Este arquivo CONTA
- *  ocorrências (`--barra-h`, a fórmula da goteira) pra provar "num lugar só",
- *  e comentário que fala SOBRE a constante é a coisa mais natural do mundo de
- *  se escrever — um `--barra-h: 64px` citado dentro de um comentário viraria
- *  uma segunda "declaração" e deixaria a suíte vermelha com uma mensagem que
- *  não descreve nada. Some o benefício de tabela: sem comentário, o `[^}]*` do
- *  `regraDe` não pode ser interrompido por uma chave escrita em prosa. */
-const css = (arq: string) =>
-  readFileSync(path.join(process.cwd(), "src", "app", arq), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-const home = () => css("home.css");
-const ficha = () => css("ficha.css");
-
-/** `match` sem /g devolve a PRIMEIRA ocorrência. Os nulos viram asserção
- *  (`not.toBeNull()`) antes de qualquer `!` que INDEXE (`regra![0]`,
- *  `largura![1]`): o `!` some no runtime, então `expect(null)` ainda cai como
- *  asserção, mas `null[0]` estoura TypeError e deixa a suíte vermelha sem
- *  nenhuma asserção cair — que não é prova de nada. */
-const regraDe = (fonte: string, seletor: string) => {
-  const re = new RegExp(`${seletor.replace(/[.\-]/g, "\\$&")}\\s*\\{[^}]*\\}`, "s");
-  return fonte.match(re);
-};
 
 describe("a barra fica presa no rodapé", () => {
   it("é fixa, não rola junto com a lista", () => {

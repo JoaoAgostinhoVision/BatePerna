@@ -49,7 +49,13 @@ html, body { background: var(--ground); }
      "alinhado" e o celular mostrava "vazando", com o mesmo CSS.
      Esquerda e direita SEPARADAS porque em landscape com notch o
      `safe-area-inset-left` e o `-right` são diferentes; uma variável só
-     centraria errado justamente ali. */
+     centraria errado justamente ali.
+     ⚠️ Estas duas linhas têm DOIS donos, e o segundo não é óbvio: além da
+     barra, é daqui que sai `MAPA_JANELA_VISIVEL_HOME_PX` (src/lib/mapa.ts) —
+     largura visível = viewport − 2×goteira − 2×borda do `.screen`. O
+     `tests/lib/mapa.test.ts` confere a corrente inteira (o `padding` lê as
+     variáveis, as variáveis carregam a fórmula); antes de mover a fórmula
+     daqui, leia o comentário de lá. */
   --goteira-esq: calc(clamp(0px, 3vw, 1rem) + env(safe-area-inset-left));
   --goteira-dir: calc(clamp(0px, 3vw, 1rem) + env(safe-area-inset-right));
   background: radial-gradient(110% 70% at 50% -8%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 58%), var(--ground);

@@ -31,7 +31,13 @@
      • `max-width` igual ao do `.screen`, com `margin: 0 auto` centrando dentro
        da goteira. Sem ele, num monitor a barra atravessaria a tela inteira.
    As duas têm teste: uma trava o NÚMERO, a outra o ALINHAMENTO — e o número
-   sozinho não prova alinhamento, foi assim que o defeito passou. */
+   sozinho não prova alinhamento, foi assim que o defeito passou.
+   ⚠️ Os dois arquivos agora dependem UM DO OUTRO, e nos dois sentidos: este
+   lê `--goteira-*` do ficha.css, e o ficha.css (`.bp .lista`) lê `--barra-h`
+   daqui. Página que importe só um deles quebra do lado que faltar — sem o
+   ficha.css, o `left`/`right` daqui fica inválido e cai pro `auto`, e a barra
+   encolhe num canto. Nenhuma página faz isso hoje (a home e o /trilhas
+   importam os dois); qualquer tela nova tem que importar os dois também. */
 .bp .barra {
   position: fixed; bottom: 0; z-index: 5;
   left: var(--goteira-esq); right: var(--goteira-dir);
