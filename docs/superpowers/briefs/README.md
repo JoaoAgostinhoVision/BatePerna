@@ -13,7 +13,7 @@ emendadas até onde o pré-voo chegou.
 | `task-9-filtros-puros.md` | 9 — os filtros puros (`src/lib/filtros.ts`) | **COMPLETO** (2026-08-16) |
 | `task-10.md` | 10 — a linha e o painel na tela | **COMPLETO** (2026-08-16) |
 | `task-11.md` | 11 — filtro e agrupamento na mesma passada | **COMPLETO** (2026-08-16) |
-| `task-12.md` | 12 | não pré-voado |
+| `task-12.md` | 12 — a barra fixa no rodapé | **COMPLETO** (2026-08-16) |
 
 ## Task 9 — o que já entrou no brief
 
@@ -151,6 +151,31 @@ camada onde morde.
    filtro guardado, e ver a Rampa sumir.
 
 A tabela do Step 5 foi de uma mutação solta pra **seis**.
+
+## Task 12 — pré-voo FECHADO em 2026-08-16
+
+Quatro achados, e **dois deles fariam o teste falhar por erro meu**, não de quem implementa.
+
+1. 🔴 **`.bp .lista` não mora no `home.css`** — mora em `src/app/ficha.css:202`, e o `/trilhas`
+   importa os dois arquivos. Meu teste lia o arquivo errado e falharia com "faltou a regra"; o
+   conserto natural (duplicar a regra no `home.css`) criaria **duas fontes pro mesmo seletor**.
+   Corrigido: cada regra é lida no arquivo onde vive.
+2. 🔴 **`position: fixed` escapa da moldura.** O app inteiro vive dentro de `.bp .screen`
+   (`max-width: 25.5rem`, borda, `border-radius: 24px`), e **nenhum ancestral tem
+   `transform`/`filter`/`perspective`** — então elemento fixo se posiciona pela JANELA. Com
+   `left: 0; right: 0`, a barra atravessa um monitor inteiro por fora da moldura. No celular
+   passa despercebido (a janela É a moldura); em tela larga fica visivelmente quebrado, inclusive
+   na hora de conferir. Virou `left: 50%` + `translateX(-50%)` + o **mesmo** `max-width` do
+   `.screen`, com teste conferindo que os dois números não se separam.
+3. **`--barra-h: 62px` era chute meu, não medida.** A conta a partir do CSS dá ~56px. Se a barra
+   for mais ALTA que a constante, o respiro é curto e o último cartão fica atrás dela — o defeito
+   que a task existe pra tirar. Entrou na lista de medição do Step 5, com a ordem de ajustar a
+   constante pro valor medido (o padrão do `home-layout.ts`: alturas são medidas, não desejos).
+4. **A regex do `.folha` casa a PRIMEIRA ocorrência, de propósito** — acrescentar uma segunda
+   regra mais abaixo funcionaria pela cascata e deixaria o teste vermelho, que é o certo. Ficou
+   escrito "não conserte a regex", porque esse é o reflexo errado.
+
+A medição do Step 5 foi de quatro perguntas pra sete.
 
 ## E antes de despachar qualquer uma delas
 
