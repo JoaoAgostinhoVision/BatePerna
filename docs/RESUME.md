@@ -370,6 +370,23 @@ Herdados:
     ele rejeita. **Ao validar uma mutação, diga qual das duas coisas aconteceu.** "Ficou
     vermelho" não é prova; "caiu a asserção X" é.
 
+18. 🔴 **MEDIR NÃO BASTA SE A COMPARAÇÃO NÃO ESTIVER ESCRITA COMO PERGUNTA.** Na Task 12 o
+    implementador mediu, na MESMA sondagem e no mesmo objeto JSON, `.barra` com 375,20 de
+    largura e `.screen` com 352,70 — e **não comparou os dois**. Os números estavam na frente
+    dele. Ele respondeu a pergunta que o meu brief fez ("na janela larga a barra fica dentro da
+    moldura?") em vez da pergunta que os dados respondiam. E o meu brief escopou a conferência
+    de largura à **janela larga**, que era exatamente o único viewport onde o defeito não
+    existe — meia volta do achado do meu próprio pré-voo: o conserto tratou o monitor e deixou o
+    celular. **Passo de medição tem que nomear a COMPARAÇÃO e os viewports, não só o que
+    olhar.** Corolário: `toContain('max-width: 25.5rem')` era necessário e não suficiente —
+    trava o número, não o alinhamento; **quem prova geometria é o navegador.**
+
+19. **Uma mutação que morre cedo demais é prova de outra coisa.** No fix round da Task 12, a
+    mutação "copiei a fórmula da goteira pra dentro da barra" caiu na asserção *anterior* (a do
+    `left: var(...)`) sem nunca chegar na contagem que ela existia pra exercitar. Refeita pondo a
+    cópia num lugar neutro. **Ao validar, confira que a asserção que caiu é a que a mutação
+    visava** — senão o relatório credita uma prova que não aconteceu.
+
 17. **"E mais nenhum teste cai" é afirmação sobre a suíte INTEIRA.** Na Task 10 o revisor mediu
     quatro mutações com `npx vitest run tests/app/ tests/lib/` — subconjunto por caminho, 36 de
     45 arquivos — e relatou os números como se fossem do todo. O implementador pegou a
