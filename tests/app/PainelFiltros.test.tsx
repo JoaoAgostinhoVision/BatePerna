@@ -92,6 +92,46 @@ describe("o painel", () => {
     expect(leve.getAttribute("aria-pressed")).toBe("true");
   });
 
+  // ——— revisão: um teste de CLIQUE por grupo de chip.
+  //
+  // Só o grupo de esforço era exercitado por clique: neutralizando o `onClick`
+  // dos outros quatro — quatro botões MORTOS na tela — a suíte ficava inteira
+  // verde. E não fecha na Task 11: lá o único clique é no "limpar filtros",
+  // todo o resto é semeado por `localStorage.setItem`. Um chip mal ligado (o
+  // "só grátis" escrevendo `daHoje`) entraria em produção sem nada reclamar.
+  //
+  // Cada um lê o que foi GRAVADO e confere o campo daquele grupo — não basta
+  // "mudou alguma coisa": é o campo trocado que o defeito produz.
+  const abrirEClicar = async (nome: RegExp) => {
+    await act(async () => { screen.getByRole("button", { name: /filtrar/i }).click(); });
+    await act(async () => { screen.getByRole("button", { name: nome }).click(); });
+    return JSON.parse(localStorage.getItem(CHAVE_FILTROS)!);
+  };
+
+  it("o chip de DISTÂNCIA escreve em distanciaKm", async () => {
+    // O grupo só existe com localização — mesma semeadura do teste acima.
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+      tipo: "gps", coord: { lat: -8.2, lng: -35.56 }, em: 1_800_000_000,
+    }));
+    monta();
+    expect(await abrirEClicar(/^até 30 km$/i)).toMatchObject({ ...SEM_FILTRO, distanciaKm: 30 });
+  });
+
+  it("o chip de HOJE escreve em daHoje", async () => {
+    monta();
+    expect(await abrirEClicar(/^só as que dá hoje$/i)).toMatchObject({ ...SEM_FILTRO, daHoje: true });
+  });
+
+  it("o chip de CUSTO escreve em soGratis", async () => {
+    monta();
+    expect(await abrirEClicar(/^só grátis$/i)).toMatchObject({ ...SEM_FILTRO, soGratis: true });
+  });
+
+  it("o chip de DURAÇÃO escreve em duracaoMax", async () => {
+    monta();
+    expect(await abrirEClicar(/^até 2h$/i)).toMatchObject({ ...SEM_FILTRO, duracaoMax: 120 });
+  });
+
   // ——— pré-voo: ligar um recorte não pode DESLIGAR os outros.
   //
   // O `trocar` espalha `{...filtros, ...p}`. Trocado por `{...SEM_FILTRO, ...p}`
@@ -246,10 +286,27 @@ describe("armazenamento que estoura não derruba a home", () => {
 // `useContext(Ctx)!`, a home estoura no servidor — e nenhum teste acima
 // percebe, porque todos montam dentro do provedor.
 describe("fora de provedor", () => {
-  it("useFiltros devolve SEM_FILTRO e não estoura", () => {
+  // O `not.toThrow()` daqui NÃO é o que segura a mutação, e o nome não promete
+  // que seja: com `useContext(Ctx)!` o `!` desaparece em runtime e o render
+  // passa liso devolvendo `null`. Quem mata a mutação é a asserção de VALOR
+  // logo abaixo — o render sem estourar é o cenário, não a prova.
+  it("useFiltros devolve SEM_FILTRO — é o valor que prova", () => {
     let visto: unknown = null;
     function Espia() { visto = useFiltros(); return null; }
     expect(() => render(<Espia />)).not.toThrow();
     expect(visto).toEqual(SEM_FILTRO);
+  });
+
+  // ——— revisão: a outra metade do guarda não tinha proteção nenhuma.
+  //
+  // `useContext(Mexer) ?? INERTE` → `useContext(Mexer)!` deixava a suíte
+  // inteira verde e o `tsc` em exit 0. Aqui o `not.toThrow()` SEGURA peso, ao
+  // contrário do de cima: fora de provedor o valor vira `null` e CHAMAR é o
+  // que estoura — que é exatamente o que o servidor faria com a home.
+  it("useMexerFiltros devolve um inerte que dá pra CHAMAR", () => {
+    let visto: ((f: Filtros) => void) | null = null;
+    function Espia() { visto = useMexerFiltros(); return null; }
+    render(<Espia />);
+    expect(() => visto!({ ...SEM_FILTRO, daHoje: true })).not.toThrow();
   });
 });
