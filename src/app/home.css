@@ -20,16 +20,22 @@
    foi o que o João viu e apontou.
    O padding-bottom soma a área segura do iPhone: sem isso, em tela cheia, a
    barra nasce debaixo da faixa do gesto e os rótulos ficam intocáveis.
-   `left: 50%` + `translateX(-50%)` e não `left: 0; right: 0`: elemento fixo se
-   posiciona pela JANELA, e o app vive dentro de `.bp .screen`, uma moldura de
-   25.5rem com borda arredondada e nenhum ancestral com transform/filter. De
-   ponta a ponta, a barra atravessaria um monitor inteiro por fora da moldura —
-   no celular passa despercebido, porque lá a janela É a moldura. O max-width é
-   o MESMO do `.screen` (ficha.css) e tem teste conferindo que os dois números
-   não se separam. */
+   Elemento fixo se posiciona pela JANELA, não pela moldura — nenhum ancestral
+   tem transform/filter/perspective. Por isso ela se prende explicitamente na
+   caixa do `.screen`, por DUAS vias que precisam existir juntas:
+     • `left`/`right` nas MESMAS variáveis de goteira que dão o padding lateral
+       do `.bp` (ficha.css) — sem elas o `width: 100%` resolvia contra a janela
+       e a barra saía 22,5px mais larga que a moldura em 375, cobrindo os
+       cantos arredondados de baixo. Só aparecia no celular: acima de ~440px o
+       max-width morde nos dois e o defeito some;
+     • `max-width` igual ao do `.screen`, com `margin: 0 auto` centrando dentro
+       da goteira. Sem ele, num monitor a barra atravessaria a tela inteira.
+   As duas têm teste: uma trava o NÚMERO, a outra o ALINHAMENTO — e o número
+   sozinho não prova alinhamento, foi assim que o defeito passou. */
 .bp .barra {
-  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 5;
-  width: 100%; max-width: 25.5rem;
+  position: fixed; bottom: 0; z-index: 5;
+  left: var(--goteira-esq); right: var(--goteira-dir);
+  margin: 0 auto; max-width: 25.5rem;
   display: flex;
   border-top: 1px solid var(--line);
   background: var(--screen);
@@ -151,7 +157,13 @@
 /* Barra fixa flutua sobre o conteúdo: sem este respiro o último cartão nasce
    atrás dela e a pessoa nunca vê a última trilha da lista. Soma a área segura
    pelo mesmo motivo da barra — o `--barra-h` é a caixa dela, o inset é o que
-   o iPhone acrescenta por baixo. */
+   o iPhone acrescenta por baixo.
+   ⚠️ O `+ 1rem` NÃO é a folga que se vê: medido, o último cartão para 48,9px
+   acima da barra, porque abaixo da `.folha` ainda vêm 1px de borda do
+   `.screen` e os 32px de `padding-bottom` do `.bp` (ficha.css). E no iPhone o
+   `env(safe-area-inset-bottom)` entra DUAS vezes, porque o `.bp` já o soma.
+   Os dois sobram, nunca faltam, então nada some — mas quem for "afinar" este
+   1rem vai descobrir que não é ele que separa o cartão da barra. */
 .bp .folha { padding: .2rem .9rem calc(var(--barra-h) + env(safe-area-inset-bottom) + 1rem); }
 .bp .grupo-k {
   font-family: var(--type); font-size: .66rem; font-weight: 700; letter-spacing: .11em;

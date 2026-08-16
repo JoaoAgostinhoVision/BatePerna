@@ -38,15 +38,23 @@ describe("BarraNavegacao", () => {
  *  importam os dois arquivos. Duplicar uma regra pro teste ficar mais curto
  *  criaria duas fontes pro mesmo seletor — a família de defeito que este app
  *  persegue desde a rodada do carimbo. */
+/*  Os comentários do CSS saem antes de qualquer conta. Este arquivo CONTA
+ *  ocorrências (`--barra-h`, a fórmula da goteira) pra provar "num lugar só",
+ *  e comentário que fala SOBRE a constante é a coisa mais natural do mundo de
+ *  se escrever — um `--barra-h: 64px` citado dentro de um comentário viraria
+ *  uma segunda "declaração" e deixaria a suíte vermelha com uma mensagem que
+ *  não descreve nada. Some o benefício de tabela: sem comentário, o `[^}]*` do
+ *  `regraDe` não pode ser interrompido por uma chave escrita em prosa. */
 const css = (arq: string) =>
-  readFileSync(path.join(process.cwd(), "src", "app", arq), "utf8");
+  readFileSync(path.join(process.cwd(), "src", "app", arq), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
 const home = () => css("home.css");
 const ficha = () => css("ficha.css");
 
 /** `match` sem /g devolve a PRIMEIRA ocorrência. Os nulos viram asserção
- *  (`not.toBeNull()`) antes de qualquer `!`: um `!` em cima de `null` estoura
- *  TypeError e deixa a suíte vermelha SEM nenhuma asserção cair, que não é
- *  prova de nada. */
+ *  (`not.toBeNull()`) antes de qualquer `!` que INDEXE (`regra![0]`,
+ *  `largura![1]`): o `!` some no runtime, então `expect(null)` ainda cai como
+ *  asserção, mas `null[0]` estoura TypeError e deixa a suíte vermelha sem
+ *  nenhuma asserção cair — que não é prova de nada. */
 const regraDe = (fonte: string, seletor: string) => {
   const re = new RegExp(`${seletor.replace(/[.\-]/g, "\\$&")}\\s*\\{[^}]*\\}`, "s");
   return fonte.match(re);
@@ -73,8 +81,47 @@ describe("a barra fica presa no rodapé", () => {
     const largura = screen![0].match(/max-width:\s*([^;]+);/);
     expect(largura, "o .screen perdeu o max-width").not.toBeNull();
     expect(barra![0]).toContain(`max-width: ${largura![1].trim()}`);
-    expect(barra![0]).toMatch(/left:\s*50%/);
-    expect(barra![0]).toMatch(/translateX\(-50%\)/);
+    // O max-width sozinho não centra nada: com ele e sem isto, a barra encosta
+    // na esquerda da caixa em vez de acompanhar o `.screen`.
+    expect(barra![0]).toMatch(/margin:\s*0 auto/);
+  });
+
+  // 🔴 O max-width acima trava o NÚMERO e não prova ALINHAMENTO — foi por essa
+  // fresta que o defeito passou. O `.bp` tem goteira lateral, e a barra é
+  // `fixed`: o `width: 100%` dela resolvia contra a JANELA, que não tem
+  // goteira, então em 375 ela nascia 22,5px mais larga que a moldura e cobria
+  // os cantos arredondados de baixo. Acima de ~440px o max-width morde nos
+  // dois e o defeito SOME — o monitor mostrava certo, o celular mostrava
+  // errado, com o mesmo CSS. A prova de que não volta é as duas caixas lerem
+  // a MESMA fonte de goteira, e essa fonte existir uma vez só.
+  it("a barra e a moldura se prendem na MESMA goteira", () => {
+    const bp = regraDe(ficha(), ".bp");
+    expect(bp, "faltou a regra .bp no ficha.css").not.toBeNull();
+    expect(bp![0], "a goteira esquerda deixou de ser variável").toMatch(/--goteira-esq:\s*calc\(/);
+    expect(bp![0], "a goteira direita deixou de ser variável").toMatch(/--goteira-dir:\s*calc\(/);
+    // Esquerda e direita separadas: em landscape com notch os dois insets
+    // diferem, e uma variável só centraria errado justamente ali.
+    expect(bp![0]).toContain("env(safe-area-inset-left)");
+    expect(bp![0]).toContain("env(safe-area-inset-right)");
+    // O padding do `.bp` LÊ as variáveis em vez de repetir a fórmula: é ele
+    // que define onde a moldura começa e termina.
+    expect(bp![0], "o padding do .bp voltou a escrever a fórmula à mão")
+      .toMatch(/padding:[^;]*var\(--goteira-dir\)[^;]*var\(--goteira-esq\)/s);
+
+    const barra = regraDe(home(), ".bp .barra");
+    expect(barra, "faltou a regra .bp .barra").not.toBeNull();
+    expect(barra![0], "a barra não se prende na goteira esquerda").toMatch(/left:\s*var\(--goteira-esq\)/);
+    expect(barra![0], "a barra não se prende na goteira direita").toMatch(/right:\s*var\(--goteira-dir\)/);
+
+    // Uma fórmula só no app: as duas declarações do `.bp` e mais nenhuma.
+    // Copiada pra dentro da barra, ela concordaria hoje e discordaria no dia
+    // em que uma das duas mudasse — que é o defeito que esta task existe pra
+    // matar, com outra roupa.
+    const goteira = /clamp\(0px,\s*3vw,\s*1rem\)/g;
+    expect(ficha().match(goteira) ?? [], "a fórmula da goteira se multiplicou no ficha.css")
+      .toHaveLength(2);
+    expect(home().match(goteira) ?? [], "a fórmula da goteira foi copiada pro home.css")
+      .toHaveLength(0);
   });
 
   // Barra fixa flutua sobre o conteúdo: sem respiro, o último cartão nasce
@@ -103,7 +150,8 @@ describe("a barra fica presa no rodapé", () => {
   // fica atrás dela — o defeito que esta task existe pra tirar. O número vem
   // MEDIDO no navegador, não do desejo (mesmo padrão do home-layout.ts).
   it("--barra-h é declarado num lugar só, e é o .bp que o declara", () => {
-    expect(home().match(/--barra-h:/g) ?? [], "--barra-h não está no home.css").toHaveLength(1);
+    expect(home().match(/--barra-h:/g) ?? [], "--barra-h tem que estar em UM lugar só no home.css")
+      .toHaveLength(1);
     // Uma segunda declaração no ficha.css venceria ou perderia por ordem de
     // import, e ninguém saberia qual das duas está valendo.
     expect(ficha().match(/--barra-h:/g) ?? [], "--barra-h duplicado no ficha.css").toHaveLength(0);
