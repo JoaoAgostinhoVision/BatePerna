@@ -584,10 +584,14 @@ describe("MioloHome: de onde `confia` sai", () => {
     expect(container.querySelector(".selo")?.textContent).toContain("SEM INFORMAÇÕES");
   });
 
+  // O nome diz "em QUALQUER UMA" e o fixture tem que provar isso: uma com erro
+  // e outra sem. Com erro nas duas, `some` e `every` dão a mesma resposta e o
+  // teste exercitava a semântica que não está no nome — a família de teste que
+  // promete mais do que mede, que esta branch já corrigiu noutro arquivo.
   it("clima fora do ar — erro em qualquer uma — e nenhuma frase de veredito aparece", () => {
     const pares = [
       { ficha: fichaFake("seca"), leitura: { estado: "frio" as const, erro: true, calculadoEm: AGORA_S } },
-      { ficha: fichaFake("molhada"), leitura: { estado: "frio" as const, erro: true, calculadoEm: AGORA_S } },
+      { ficha: fichaFake("molhada"), leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_S } },
     ];
 
     const { container } = render(<MioloHome pares={pares} />);
