@@ -4,7 +4,72 @@
 > `.superpowers/sdd/2026-08-13-daqui-e-filtros/progress.md`, que é **scratch git-ignorado** —
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-17.
+**Última parada:** 2026-08-17. **Tudo mergeado, tudo NO AR, nada em voo.**
+
+---
+
+# ▶▶ SE O JOÃO DISSER "CONTINUA" — ele está voltando com um REVIEW do celular
+
+**Ele disse, ao encerrar:** *"depois eu dou um review, quero continuar na próxima sessão
+informando o que não gostei e o que melhorar."*
+
+**Então não é retomada de rodada. É recebimento de feedback de uso.** O trabalho está fechado e
+no ar; o que chega agora é a opinião dele **depois de usar o app no iPhone**.
+
+### O que NÃO fazer
+
+- ❌ **Não** devolva menu, não pergunte "por onde quer começar", não peça contexto.
+- ❌ **Não** comece a codar o primeiro item da lista dele. A lista vai **misturar** três coisas
+  que exigem tratamentos diferentes (ver abaixo).
+- ❌ **Não** trate "não gostei de X" como bug. Muitas vezes é decisão de produto que ele está
+  revendo — e várias das decisões atuais estão registradas com o porquê. **Se o que ele quer
+  contradiz uma decisão escrita, diga qual e por que ela foi tomada, e então faça o que ele
+  decidir.** Ele reafirmando é decisão dele, e segue.
+
+### O que fazer
+
+1. **Ouça a lista inteira antes de agir.** Se ele der um item só, pergunte se há mais — a
+   triagem muda conforme o conjunto.
+2. **Triage em três baldes**, e diga a ele em qual cada item caiu:
+   - **DEFEITO** — o app faz o que ninguém decidiu (ex.: algo desalinhado, algo que trava). Vai
+     direto pra conserto, com teste.
+   - **DECISÃO DE PRODUTO** — o app faz o que foi decidido, e ele quer diferente. Precisa de
+     brainstorm curto antes de código: o que muda, o que quebra junto, qual invariante encosta.
+   - **JÁ CONHECIDO** — está na lista de deferidos/perguntas abaixo. **Diga que já estava
+     registrado e mostre o que já se sabe**; isso economiza a discussão inteira.
+3. **Três coisas na lista dele provavelmente já estão previstas** — confira antes de tratar como
+   novidade: o **filtro que não filtra nada** (nenhuma ficha tem esforço/duração), o **rótulo do
+   mapa vazio** dizendo "trilhas de hoje" sem trilha nenhuma, e o **"piscar"** do mapa
+   reenquadrando ao mexer no filtro (ele aprovou no desenho, mas nunca viu acontecer).
+4. **Só depois da triagem** decida o método: item pequeno e isolado → conserto direto com teste;
+   conjunto que muda comportamento → spec curta + plano + SDD, como as duas últimas rodadas.
+
+### O chão, pra conferir em silêncio antes de responder
+
+```
+git branch --show-current   → main          git status --short → limpo
+npm test                    → 539/539 em 47 arquivos
+npx tsc --noEmit            → limpo         npm run build → passa
+```
+
+**Rode os três.** E, se precisar deployar: `npx --yes vercel@latest --prod --yes` (ver a seção
+do deploy).
+
+### O que ele foi olhar no celular (pra você saber o que ele viu)
+
+Nada disto jamais rodou em WebKit. As quatro da §15 da spec continuam abertas, mais duas novas:
+
+1. Os pins ficam dentro do mapa com folga?
+2. A **barra fixa** e a **faixa de gesto** do iPhone convivem? (`env(safe-area-inset-bottom)` é
+   **0** em qualquer desktop — nada aqui mediu isso.)
+3. O painel de filtros empurra a lista sem pular?
+4. O piso de zoom 8 orienta, ou vira mancha?
+5. 🆕 **O estado vazio**, que ele alcança com UM toque: ligar **"só grátis"** zera a home (a
+   única ficha real é paga). Sem GPS ele vê o mapa da região sem pin nenhum + "0 trilhas · 1
+   filtro ligado" + o aviso e o botão de limpar; **com** GPS, o mapa recentra nele a ~27 km.
+6. 🆕 **O reenquadramento** do mapa quando ele mexe no filtro.
+
+---
 
 ## ✅ "O MAPA FILTRA JUNTO" FECHADA E MERGEADA (`dca2a39`)
 
@@ -78,7 +143,7 @@ a remede. **Antes de escrever "não dá", esgotar os caminhos** — aqui faltou 
 
 ---
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" (estado novo, 2026-08-16)
+## ▶ O que ficou aberto (lista pra triagem do review)
 
 As duas rodadas acabaram e **estão NO AR** (deploy conferido: `Production ● Ready`, e a home
 servindo `FILTRAR`, `filtro-linha`, `Ver daqui`, `mapa-pilula`, mais o CSS com `--goteira-esq`,
