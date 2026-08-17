@@ -20,7 +20,6 @@ import {
   MAPA_JANELA_VISIVEL_HOME_PX,
   MAPA_LARGURA_PX,
   RAIO_ALVO_TOQUE_PX,
-  ZOOM_MINIMO_HOME_COM_VOCE,
   zoomDeTiles,
 } from "@/lib/mapa";
 
@@ -569,6 +568,47 @@ describe("MapaHome: o filtro zerou a lista", () => {
     expect(container.querySelectorAll("img")).toHaveLength(0);
     expect(container.querySelector(".mapa-pilula")).not.toBeNull();
     expect(container.textContent).toContain("OpenStreetMap");
+  });
+
+  // 🔴 A ALTURA, e ela é o PONTO DECLARADO da decisão do vazio: "o mapa some e
+  // volta com 168px, e a folha inteira salta embaixo do dedo de quem mexe no
+  // filtro". Os testes acima provavam a moldura, o mosaico ausente, a pílula e
+  // o crédito — nunca a altura, que é a promessa.
+  //
+  // jsdom não faz layout, então a altura se mede onde ela mora: a caixa que o
+  // vazio desenha tem que ser A MESMA que o mapa cheio desenha, e a regra dessa
+  // caixa tem que cravar MAPA_ALTURA_HOME_PX. As duas metades juntas, porque
+  // separadas nenhuma responde: só a classe não diz quanto ela mede, e só a
+  // regra não diz que o vazio a usa.
+  //
+  // Não confundir com o guarda de tests/lib/home-layout.test.ts, que lê a mesma
+  // regra: lá a pergunta é "o orçamento da dobra fecha"; aqui é "o vazio e o
+  // cheio ocupam a mesma caixa". Reverter esta task deixa aquele verde.
+  it("o vazio ocupa a MESMA altura do mapa cheio — senão a folha salta embaixo do dedo", () => {
+    const uma = fichaEm("uma", -35.56, false);
+    const cheio = render(
+      <MapaHome
+        fichas={[uma]}
+        leituras={{ uma: { estado: "fresco", erro: false, calculadoEm: 1_800_000_000 } }}
+      />,
+    );
+    const caixaCheia = cheio.container.firstElementChild;
+    expect(caixaCheia).not.toBeNull();
+    cleanup();
+
+    const vazio = render(<MapaHome fichas={[]} leituras={{}} />);
+    const caixaVazia = vazio.container.firstElementChild;
+    expect(caixaVazia, "o vazio não desenhou caixa nenhuma: a folha salta 168px").not.toBeNull();
+
+    // Mesma caixa nos dois estados — é o que faz a altura não mudar.
+    expect(caixaVazia!.className).toBe(caixaCheia!.className);
+
+    // E é a REGRA dessa caixa que crava os 168px. O `.mapa-home-tiles` de
+    // dentro não serve: ele é `position: absolute` e contribui altura zero.
+    const seletor = `.bp .${caixaVazia!.className}`;
+    const regra = regraDe(semComentarios("home.css"), seletor);
+    expect(regra, `faltou a regra ${seletor} no home.css`).not.toBeNull();
+    expect(valorDe(regra![0], "height")).toBe(`${MAPA_ALTURA_HOME_PX}px`);
   });
 
   // 🔴 A RESTRIÇÃO QUE A REVISÃO DA TASK A ACHOU. A caixa de digitar cidade

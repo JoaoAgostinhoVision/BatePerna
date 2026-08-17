@@ -99,11 +99,28 @@ export default function MapaHome({
   // há o que enquadrar, e saltar pra lugar nenhum é pior que ficar parado —
   // decisão do dono do produto (spec §4), não fallback improvisado.
   //
-  // Gravado DURANTE o render, e não num efeito, porque quem o lê é o render
-  // SEGUINTE (o que já chega com a lista vazia). O valor é função pura e
-  // determinística dos props (`enquadrarComVoce`), então gravá-lo não muda o
-  // que este render desenha, e o ref nasce vazio no servidor e no cliente — o
-  // primeiro paint continua idêntico nos dois.
+  // Gravado DURANTE o render, e não num efeito: quem o lê é o render SEGUINTE
+  // (o que já chega com a lista vazia), e um efeito só correria depois do
+  // commit — tarde pra decidir o que pintar.
+  //
+  // 🔴 O RISCO REAL DE ESCREVER EM REF NO RENDER, nomeado, porque não é
+  // "o valor pode não ser puro": é o render que o React COMEÇA E DESCARTA. O
+  // objeto devolvido pelo `useRef` é compartilhado entre a fiber `current` e a
+  // `workInProgress`, então a escrita de um render jogado fora SOBREVIVE ao
+  // descarte — e o sintoma aqui seria o mapa guardar um enquadramento que
+  // nunca chegou à tela.
+  //
+  // Hoje esta árvore não produz render descartado: não há `useTransition`,
+  // `useDeferredValue`, `startTransition` nem `<Suspense>` em lugar nenhum do
+  // `src/` (grepado). **É essa ausência, e não a pureza da conta, que segura
+  // esta linha** — no dia em que qualquer um dos quatro entrar acima da home,
+  // este é o primeiro lugar a reexaminar.
+  //
+  // Medido pela revisão desta task, e é o que sobra de garantia enquanto isso:
+  // sob StrictMode as duas escritas são idênticas (mosaico byte-idêntico), e a
+  // hidratação de verdade (`renderToString` → `hydrateRoot`) não acusa
+  // mismatch nenhum — o ref nasce vazio no servidor e no cliente, então o
+  // primeiro paint é o mesmo nos dois.
   const ultimo = useRef<{ centro: Coord; z: number } | null>(null);
 
   const comLeitura: { ficha: Ficha; leitura: LeituraCarimbo }[] = fichas.flatMap((f) => {
@@ -111,16 +128,29 @@ export default function MapaHome({
     return leitura ? [{ ficha: f, leitura }] : [];
   });
 
-  // 🔴 DOIS VAZIOS DIFERENTES, e confundi-los estraga os dois lados.
+  // 🔴 DOIS VAZIOS DIFERENTES — e um deles é CINTO, não caminho vivo. Vale
+  // dizer qual é qual, porque a metade de baixo desta condição parece
+  // load-bearing e não é:
   //
-  //   • há ficha e NENHUMA tem leitura = o clima não respondeu. O mapa some,
-  //     como sempre sumiu: não há o que mostrar nem o que lembrar, e desenhar
-  //     caixa cinza toda vez que a busca falha seria pior que não ter mapa.
-  //   • não há ficha nenhuma = o filtro escondeu todas (ou o acervo está
-  //     vazio). Aí o mapa FICA — os dois ramos estão no `quadro`, logo abaixo.
+  //   • NÃO HÁ FICHA NENHUMA = o filtro escondeu todas (ou o acervo está
+  //     vazio). Este acontece — é o assunto desta rodada — e aqui o mapa FICA;
+  //     os dois ramos dele estão no `quadro`, logo abaixo.
   //
-  // Teste de cada um: "sem NENHUMA leitura o mapa continua sumindo (é outro
-  // caso)" e "sem ficha nenhuma e sem quadro anterior: a moldura fica".
+  //   • HÁ FICHA E NENHUMA TEM LEITURA: hoje isto NÃO ACONTECE, e não por
+  //     acaso. Este componente tem um chamador só, o `MioloHome`, que monta
+  //     `leituras` a partir das MESMAS visíveis que viram `fichas` — uma chave
+  //     por ficha, sempre. E a busca de clima FALHANDO também não produz este
+  //     quadro: `resolverEstados` (src/lib/carimbo-estado.ts) captura o erro e
+  //     devolve o Map CHEIO, com `erro: true`, que a home desenha com pins de
+  //     erro. O único Map vazio que ela devolve é o de `fichas.length === 0` —
+  //     que é o OUTRO caso, o de cima.
+  //
+  // O guarda fica assim mesmo: sem ele, uma ficha sem leitura que chegasse por
+  // um chamador futuro viraria uma caixa de mapa sem pin nenhum, afirmando pela
+  // ausência que ali não há trilha. Ele é barato e a intenção está provada — o
+  // teste "sem NENHUMA leitura o mapa continua sumindo (é outro caso)" monta
+  // esse quadro À MÃO, que é o único jeito de exercitá-lo com o caminho de
+  // produção fechado.
   if (fichas.length > 0 && comLeitura.length === 0) return null;
 
   // O ENQUADRAMENTO cabe contra a janela que a tela realmente mostra
@@ -164,10 +194,15 @@ export default function MapaHome({
         style={{ width: MAPA_LARGURA_PX, height: MAPA_ALTURA_HOME_PX, marginLeft: -MAPA_LARGURA_PX / 2 }}
       >
         {/* Sem `quadro` não há centro nem zoom: nada de mosaico e nada de pin.
-            Sobra a moldura, que é o que segura a altura de 168px (home.css) —
-            o mapa sumindo e voltando enquanto a pessoa mexe no filtro faria a
-            folha inteira saltar embaixo do dedo dela. O `tsc` é quem impede
-            apagar esta condição: `quadro` é `… | null`. */}
+            Sobra esta caixa vazia — que NÃO é quem segura os 168px. Ela é
+            `position: absolute` (home.css) e contribui altura ZERO; quem crava
+            a altura é a regra `.bp .mapa-home { height: 168px }`, amarrada a
+            MAPA_ALTURA_HOME_PX por tests/lib/home-layout.test.ts. Ou seja: o
+            que impede a folha inteira de saltar embaixo do dedo de quem mexe
+            no filtro é **este componente não devolver `null`** — não o que
+            sobra dentro dele. Teste: "o vazio ocupa a MESMA altura do mapa
+            cheio". O `tsc` é quem impede apagar esta condição: `quadro` é
+            `… | null`. */}
         {quadro && (
           <>
             <div
