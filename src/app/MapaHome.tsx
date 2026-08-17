@@ -166,7 +166,7 @@ export default function MapaHome({
   //
   // As duas sub-cláusulas seguram coisas diferentes, cada uma medida contra a
   // própria mutação: sem `coords.length === 0`, todo mapa sem localização
-  // perde o mosaico (11 asserções caem); sem `&& !voce`, o vazio COM
+  // perde o mosaico (11 TESTES caem, em 2 arquivos); sem `&& !voce`, o vazio COM
   // localização passa a mostrar o quadro velho em vez de você — e essa só cai
   // porque o teste confere ONDE você está desenhado, não só o zoom.
   const quadro =
