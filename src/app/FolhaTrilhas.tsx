@@ -1,15 +1,10 @@
 "use client";
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
-import { faseDe } from "@/lib/carimbo-fase";
-import { SEM_FILTRO, passaNoFiltro } from "@/lib/filtros";
-import { coordDe } from "@/lib/local";
+import { SEM_FILTRO } from "@/lib/filtros";
 import CartaoTrilha from "./CartaoTrilha";
-import PainelFiltros from "./PainelFiltros";
-import { useFiltros, useMexerFiltros } from "./filtros";
+import { useMexerFiltros } from "./filtros";
 import { useLeiturasMapa } from "./leituras";
-import { useLocal } from "./local";
-import { useAlgumVenceu } from "./useVenceu";
 
 export type ParFolha = { ficha: Ficha; leitura: LeituraCarimbo };
 
@@ -37,50 +32,31 @@ export type ParFolha = { ficha: Ficha; leitura: LeituraCarimbo };
  *  regra pra "confiável" seria repetir o erro que criou este defeito — duas
  *  fontes que podem discordar.
  *
- *  Este componente também é quem RECORTA (os filtros) e quem informa a
- *  contagem à linha de resumo. Não é acúmulo de responsabilidade por
- *  preguiça: recortar num lugar e rotular em outro é a MESMA forma do defeito
- *  descrito acima, com outra roupa. A contagem que a linha mostra é
- *  `visiveis.length` — o `.length` da lista que desenhou os cartões, na mesma
- *  passada, e não uma segunda conta que pode divergir. */
-export default function FolhaTrilhas({ pares }: { pares: ParFolha[] }) {
+ *  Esta folha NÃO RECORTA e NÃO decide se dá pra confiar: recebe `visiveis` e
+ *  `confia` prontos do `MioloHome`. A conta subiu de propósito, e o comentário
+ *  de lá diz por quê — o mapa desenhava o acervo enquanto esta folha desenhava
+ *  o recorte, e pin, aviso e contagem discordavam na mesma tela. Recortar num
+ *  lugar e rotular em outro é a MESMA forma do defeito descrito acima; a saída
+ *  não foi espalhar a conta, foi ter UMA, e a lista que chega aqui é o mesmo
+ *  array que desenhou os pins e alimentou a contagem da linha.
+ *
+ *  Ela continua dona de DUAS coisas: o agrupamento (e a decisão de não agrupar)
+ *  e o estado vazio. */
+export default function FolhaTrilhas({
+  visiveis,
+  confia,
+}: {
+  visiveis: ParFolha[];
+  confia: boolean;
+}) {
+  // A leitura de AGORA, do mesmo contexto que pinta o selo, o cartão e o pin —
+  // "uma trilha, uma fonte". O `MioloHome` lê o MESMO contexto na MESMA passada
+  // de render pra decidir o recorte; o React garante um único valor de contexto
+  // por render, então não há duas respostas possíveis aqui.
   const mapa = useLeiturasMapa();
   const atual = (p: ParFolha): LeituraCarimbo => mapa?.get(p.ficha.slug) ?? p.leitura;
 
-  // `useAlgumVenceu` devolve `false` no primeiro quadro, sempre — por isso o
-  // primeiro render aqui bate com o que o HTML do servidor mostrou, mesmo que
-  // a leitura já tenha, no relógio, passado dos 30 minutos.
-  //
-  // 🔴 `algumVenceu`, `algumErro` e `confia` saem de `pares` — TODAS as
-  // trilhas, não as visíveis. Não é descuido e não é otimizável:
-  //   1. `passaNoFiltro` RECEBE `confia`; tirá-lo de `visiveis` seria circular;
-  //   2. `useAlgumVenceu` é hook e recebe um array — alimentá-lo com uma lista
-  //      que muda de tamanho a cada toque no filtro é convite pra defeito;
-  //   3. e é o certo pelo produto: a leitura vem numa busca só, pro lote
-  //      inteiro ("tudo ou nada no clima"). Leitura estragada não é notícia
-  //      sobre aquele morro, é notícia sobre a BUSCA — vale pra todos,
-  //      inclusive pros que o filtro escondeu.
-  // A consequência é visível e tem teste próprio ("trilha escondida pelo
-  // filtro ainda derruba o agrupamento se a leitura dela não presta"): não é
-  // pra "consertar".
-  const algumVenceu = useAlgumVenceu(pares.map((p) => atual(p).calculadoEm));
-  const algumErro = pares.some((p) => atual(p).erro);
-  const confia = faseDe({ conferindo: false, erro: algumErro, venceu: algumVenceu, falhou: false }) === "afirmando";
-
-  const filtros = useFiltros();
   const mexer = useMexerFiltros();
-  const voce = coordDe(useLocal());
-
-  // Filtro e agrupamento saem da MESMA leitura (`atual`), no MESMO componente,
-  // na mesma passada. Separá-los em duas etapas em dois lugares é exatamente
-  // como nasceu o Critical da rodada passada: o servidor agrupava, o cliente
-  // repintava, e o cabeçalho afirmava o contrário do cartão embaixo dele.
-  //
-  // `.filter` preserva a ordem de `pares`, que já chega pronta do servidor
-  // (fresco primeiro). Filtrar tira cartões; nunca os embaralha.
-  const visiveis = pares.filter((p) =>
-    passaNoFiltro({ ficha: p.ficha, leitura: atual(p), filtros, voce, confia }),
-  );
 
   // Função, não componente: chamada aqui dentro ela é a MESMA passada de
   // render, lendo `visiveis`, `confia` e `atual` do mesmo escopo. Um
@@ -97,12 +73,12 @@ export default function FolhaTrilhas({ pares }: { pares: ParFolha[] }) {
     // no carimbo".
     //
     // ⚠️ A frase abaixo NÃO é verdade universal — ela assume que algum recorte
-    // está ligado. Com `pares` vazio e nenhum filtro ligado, a tela se
-    // contradiz: a linha diz "0 trilhas" SEM o sufixo "· 1 filtro ligado", e
-    // logo abaixo o aviso culpa filtros que não existem.
+    // está ligado. Com o `pares` do `MioloHome` vazio e nenhum filtro ligado, a
+    // tela se contradiz: a linha diz "0 trilhas" SEM o sufixo "· 1 filtro
+    // ligado", e logo abaixo o aviso culpa filtros que não existem.
     //
-    // Hoje o ramo é INALCANÇÁVEL nesse formato — `pares` vem do acervo local,
-    // que nunca é vazio. Ele passa a ser alcançável se (a) o acervo virar dado
+    // Hoje o ramo é INALCANÇÁVEL nesse formato — aquele `pares` vem do acervo
+    // local, que nunca é vazio. Ele passa a ser alcançável se (a) o acervo virar dado
     // remoto/paginado, ou (b) entrar um recorte que zere por outra razão que
     // não um filtro ligado. Aí a saída barata é distinguir os dois casos por
     // `visiveis.length === 0 && contarLigados(filtros) > 0` e escrever a outra
@@ -118,9 +94,10 @@ export default function FolhaTrilhas({ pares }: { pares: ParFolha[] }) {
     }
 
     if (!confia) {
-      // Sem cabeçalho nenhum: a ORDEM continua a de `pares` — que já chega
-      // pronta (fresco primeiro, depois o resto, decidida pela classificação
-      // com que a página nasceu) — porque não se ordena de novo aqui, só se
+      // Sem cabeçalho nenhum: a ORDEM continua a que `visiveis` trouxe — que
+      // já chega pronta (fresco primeiro, depois o resto, decidida pela
+      // classificação com que a página nasceu, e o `.filter` do `MioloHome`
+      // preserva) — porque não se ordena de novo aqui, só se
       // para de rotular. Um cartão pulando de grupo bem agora seria uma
       // SEGUNDA coisa acontecendo na tela, e a pessoa está no portão decidindo.
       //
@@ -148,15 +125,7 @@ export default function FolhaTrilhas({ pares }: { pares: ParFolha[] }) {
     );
   };
 
-  return (
-    <>
-      {/* A linha fica FORA da `.folha` (que tem padding lateral) pra continuar
-          full-bleed entre o mapa e os cartões — é dela a altura medida em
-          ALTURA_LINHA_FILTRO_PX. */}
-      <PainelFiltros visiveis={visiveis.length} />
-      <div className="folha">{miolo()}</div>
-    </>
-  );
+  return <div className="folha">{miolo()}</div>;
 }
 
 /** Devolver `null` pra lista vazia é o que faz o cabeçalho sumir junto com o

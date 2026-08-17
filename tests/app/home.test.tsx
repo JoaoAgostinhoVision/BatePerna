@@ -105,7 +105,8 @@ describe("a home", () => {
     expect(container.querySelector('.cartao[data-state="frio"]')?.id).toBe("molhada");
   });
 
-  // A folha AGRUPADA reordena sozinha (podem/naoPodem em FolhaTrilhas.tsx),
+  // A folha AGRUPADA reordena sozinha (podem/naoPodem em FolhaTrilhas.tsx,
+  // alimentada pelo recorte do MioloHome.tsx),
   // então o teste acima passa mesmo se page.tsx entregasse `comLeitura` cru
   // em vez de `pares` — nada expõe a ordem que a PÁGINA calcula. Só o
   // caminho SEM cabeçalho expõe: ali a folha não filtra nem reordena de
@@ -123,7 +124,7 @@ describe("a home", () => {
       new Map([
         ["molhada", { estado: "frio" as const, erro: false, calculadoEm: AGORA_S }],
         ["seca", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S }],
-        // erro:true em qualquer par derruba `confia` (ver FolhaTrilhas.tsx) —
+        // erro:true em qualquer par derruba `confia` (ver MioloHome.tsx) —
         // é o que tira os cabeçalhos e força o caminho que não reordena.
         ["instavel", { estado: "frio" as const, erro: true, calculadoEm: AGORA_S }],
       ]),
@@ -200,13 +201,13 @@ describe("a home", () => {
   });
 
   // Irmão exato do teste acima, e pela mesma razão: todos os testes de
-  // tests/app/FolhaTrilhas.test.tsx e tests/app/PainelFiltros.test.tsx
+  // tests/app/MioloHome.test.tsx e tests/app/PainelFiltros.test.tsx
   // embrulham `<FiltrosVivos>` na mão. Se o page.tsx esquecer o provedor, eles
   // continuam TODOS verdes e a home real não filtra nada.
   //
   // A Task 10 deixou aqui só uma prova de FONTE (`expect(fonte).toContain(
   // "<FiltrosVivos>")`), fraca de propósito: naquela hora nada consumia o
-  // provedor ainda. Agora a folha consome, então a prova forte é possível — e
+  // provedor ainda. Agora o miolo consome, então a prova forte é possível — e
   // ela mora neste arquivo porque é aqui que a home de verdade é renderizada,
   // com o loader de ficha e o `resolverEstados` já no lugar.
   //

@@ -6,10 +6,9 @@ import type { Ficha } from "@/types/ficha";
 import Appbar from "./Appbar";
 import BarraNavegacao from "./BarraNavegacao";
 import FiltrosVivos from "./filtros";
-import FolhaTrilhas from "./FolhaTrilhas";
 import HomeViva from "./HomeViva";
 import LocalVivo from "./local";
-import MapaHome from "./MapaHome";
+import MioloHome from "./MioloHome";
 
 // Compute-on-load: o veredito é a chuva de agora. Página estática congelaria
 // `calculadoEm` no build e TODO visitante receberia carimbo já vencido.
@@ -38,9 +37,9 @@ export default async function Home() {
   });
 
   // Ordem FIXA da folha: fresco primeiro, decidida uma vez pela classificação
-  // com que a página nasceu no servidor. A `FolhaTrilhas` (client) é quem
-  // decide, a cada leitura nova, SE agrupa — mas não reordena: ver o
-  // comentário lá sobre por que um cartão não pode pular de lugar na tela.
+  // com que a página nasceu no servidor. O `MioloHome` (client) é quem decide,
+  // a cada leitura nova, o que aparece e SE agrupa — mas não reordena: ver o
+  // comentário da folha sobre por que um cartão não pode pular de lugar na tela.
   const pares = [
     ...comLeitura.filter((x) => x.leitura.estado === "fresco"),
     ...comLeitura.filter((x) => x.leitura.estado !== "fresco"),
@@ -55,12 +54,14 @@ export default async function Home() {
           <HomeViva inicial={Object.fromEntries(leituras)}>
             <div className="screen">
               <Appbar comSaida={false} />
-              <MapaHome fichas={fichas} leituras={Object.fromEntries(leituras)} />
-              {/* A linha de filtro e a folha saem os dois daqui: a `FolhaTrilhas`
-                  recorta uma vez e usa o MESMO `visiveis` pra desenhar os
-                  cartões e pra dizer quantos são. Renderizá-los como irmãos
-                  aqui obrigaria a contagem a sair de uma segunda conta. */}
-              <FolhaTrilhas pares={pares} />
+              {/* 🔴 O mapa, a linha de filtro e a folha saem os TRÊS de dentro
+                  do `MioloHome`, que recorta uma vez e usa o MESMO `visiveis`
+                  pros três. Renderizá-los como irmãos aqui é literalmente o
+                  defeito que esta rodada consertou: o mapa recebia o acervo
+                  inteiro enquanto a folha desenhava o recorte, e a tela
+                  mostrava 3 pins, 1 cartão e dois números que se
+                  contradiziam. */}
+              <MioloHome pares={pares} />
               <BarraNavegacao aqui="hoje" />
             </div>
           </HomeViva>

@@ -20,8 +20,13 @@ export function useLeitura(slug: string): LeituraCarimbo | undefined {
 }
 
 /** O mapa inteiro, não uma trilha. Existe pra quem precisa de uma pergunta
- *  AGREGADA sobre várias trilhas de uma vez — hoje, só a `FolhaTrilhas`
- *  decidindo se agrupa — sem cair na armadilha de chamar `useLeitura` dentro
+ *  AGREGADA sobre várias trilhas de uma vez — hoje são DOIS consumidores, o
+ *  `MioloHome` (recorta e decide se a folha agrupa) e a `FolhaTrilhas`
+ *  (`atual`, pra particionar os grupos). Que sejam dois é o ponto: os dois
+ *  leem o MESMO valor de contexto na mesma passada de render, e é essa
+ *  propriedade que a `FolhaTrilhas` invoca pra afirmar que não há duas
+ *  respostas possíveis. Um doc que nomeasse só um faria o próximo leitor achar
+ *  que a folha parou de ler o contexto — sem cair na armadilha de chamar `useLeitura` dentro
  *  de um loop (número de hooks variável entre renders, se a lista de fichas
  *  um dia deixar de ser estática). `null` fora de um provedor, mesma regra do
  *  `useLeitura`. */

@@ -79,7 +79,7 @@ export function lerFiltros(bruto: string | null): Filtros {
 
 /** Uma trilha passa se passar em TODOS os recortes ligados.
  *
- *  `confia` é a MESMA pergunta que a `FolhaTrilhas` já faz pra decidir se
+ *  `confia` é a MESMA pergunta que o `MioloHome` já faz pra decidir se a folha
  *  agrupa — recebida pronta de propósito. Escrever aqui uma segunda regra pra
  *  "confiável" seria criar duas fontes que podem discordar, que é a família
  *  de defeito que já custou dois Criticals a este app. */

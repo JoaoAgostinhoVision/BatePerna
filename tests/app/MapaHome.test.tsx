@@ -1,22 +1,26 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { render, cleanup, act, waitFor } from "@testing-library/react";
 import { regraDe, semComentarios, valorDe } from "../css";
 import MapaHome from "@/app/MapaHome";
+import MioloHome from "@/app/MioloHome";
 import CartaoTrilha from "@/app/CartaoTrilha";
+import type { ParFolha } from "@/app/FolhaTrilhas";
+import FiltrosVivos from "@/app/filtros";
 import LocalVivo from "@/app/local";
 import { LeiturasProvider } from "@/app/leituras";
 import { getFichasComCondicao } from "@/lib/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
-import { CHAVE_LOCAL } from "@/lib/local";
+import { CHAVE_FILTROS, SEM_FILTRO } from "@/lib/filtros";
+import { CHAVE_GPS, CHAVE_LOCAL } from "@/lib/local";
 import type { Ficha } from "@/types/ficha";
 import {
   MAPA_ALTURA_HOME_PX,
   MAPA_JANELA_VISIVEL_HOME_PX,
   MAPA_LARGURA_PX,
   RAIO_ALVO_TOQUE_PX,
-  ZOOM_MINIMO_HOME_COM_VOCE,
+  zoomDeTiles,
 } from "@/lib/mapa";
 
 afterEach(() => { cleanup(); });
@@ -393,5 +397,237 @@ describe("MapaHome com a localização da pessoa", () => {
   it("MapaHome é client component — sem isso a localização não move o mapa em produção", () => {
     const fonte = readFileSync(path.join(process.cwd(), "src", "app", "MapaHome.tsx"), "utf8");
     expect(fonte.trimStart().startsWith('"use client"')).toBe(true);
+  });
+});
+
+// ——————— o CASO VAZIO: o filtro escondeu todas ———————
+//
+// 🔴 POR QUE ESTES TESTES MONTAM O `MioloHome`, e não só o `MapaHome`.
+//
+// Depois que a conta subiu (Task A), `fichas` DENTRO do `MapaHome` já É a lista
+// visível — quem recorta é o `MioloHome`, uma vez só. Então mutar o recorte
+// aqui dentro é impossível: não existe recorte aqui dentro. O único jeito de
+// provar que o mapa desenha as VISÍVEIS é montar a ligação inteira e mexer no
+// filtro, que é o que a pessoa mexe. Um teste que chamasse `<MapaHome
+// fichas={[...]} />` com a lista já recortada à mão provaria só que o
+// componente desenha o que recebe — e isso já tem teste lá em cima.
+//
+// O que se prova aqui, e cada um tem prova de mutação anotada no relatório:
+//   • o aviso "N fora do mapa" conta as visíveis (era ele quem MENTIA);
+//   • filtro zerou + com localização → só você, na sua vizinhança;
+//   • filtro zerou + sem localização → o último enquadramento fica;
+//   • sem leitura NENHUMA o mapa some — que é outro caso, e continua valendo;
+//   • a caixa de digitar cidade sobrevive ao vazio.
+describe("MapaHome: o filtro zerou a lista", () => {
+  afterEach(() => { localStorage.clear(); });
+
+  // Mesma geometria do teste "a conta de quem ficou fora usa a janela VISÍVEL"
+  // logo acima — reaproveitada de propósito: os números dela já estão medidos e
+  // documentados (dx de 0, 182 e −1092 px no zoom do piso).
+  const VOCE = { lat: -8.2, lng: -35.56 };
+  const PAGO = { custo: { tag: "pago" as const, valor: "R$ 5" } };
+
+  function fichaEm(slug: string, lng: number, pago: boolean): Ficha {
+    const f = fichaFake(slug);
+    f.condicao.coords = { lat: VOCE.lat, lng };
+    if (pago) f.custo = PAGO.custo;
+    return f;
+  }
+
+  const parDe = (f: Ficha): ParFolha => ({
+    ficha: f,
+    leitura: { estado: "fresco", erro: false, calculadoEm: Math.floor(Date.now() / 1000) },
+  });
+
+  /** A home inteira menos a moldura, como o `page.tsx` a monta. */
+  function Tela({ pares }: { pares: ParFolha[] }) {
+    return (
+      <LocalVivo>
+        <FiltrosVivos>
+          <MioloHome pares={pares} />
+        </FiltrosVivos>
+      </LocalVivo>
+    );
+  }
+
+  const tilesDe = (c: HTMLElement) =>
+    Array.from(c.querySelectorAll("img")).map((i) => i.getAttribute("src"));
+
+  const euEstouEm = (coord: { lat: number; lng: number }) =>
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({ tipo: "gps", coord, em: 1_800_000_000 }));
+
+  const soGratis = () =>
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
+
+  // O defeito que motivou a rodada inteira: "2 trilhas fora do mapa" a 40px de
+  // uma linha que dizia "1 trilha". Com o filtro deixando UMA visível — e ela
+  // fora da janela —, o aviso tem que dizer 1. Contando o acervo, diria 2 (a
+  // "meio" cai na faixa em que as duas larguras discordam, já medida acima).
+  it("'N fora do mapa' conta só as VISÍVEIS — com 3 trilhas e filtro deixando 1, não diz 2", async () => {
+    euEstouEm(VOCE);
+    soGratis();
+    const pares = [
+      parDe(fichaEm("perto", -35.56, true)), // em cima de você, e paga: sai no filtro
+      parDe(fichaEm("meio", -34.56, true)),  // fora da janela visível, e paga: sai no filtro
+      parDe(fichaEm("longe", -41.56, false)), // a única grátis, e ela está fora
+    ];
+
+    const { container } = render(<Tela pares={pares} />);
+
+    // O recorte precisa ter MORDIDO, senão a asserção abaixo é trivial.
+    await waitFor(() => expect(container.querySelectorAll(".cartao")).toHaveLength(1));
+    expect(container.querySelector(".voce-pin")).not.toBeNull();
+
+    expect(container.querySelector(".mapa-fora")?.textContent).toBe("1 trilha fora do mapa");
+    expect(container.querySelectorAll(".pin-home")).toHaveLength(1);
+  });
+
+  // A decisão do dono do produto: sobrou nada e eu sei onde você está → o mapa
+  // vira "onde eu estou", na vizinhança (o zoom da ficha, ~26 km), e não o
+  // acervo inteiro no piso do zoom.
+  it("filtro zera + com localização: mostra você, sem pin nenhum, e sem aviso de 'fora'", async () => {
+    euEstouEm(VOCE);
+    soGratis();
+    // Duas pagas e MUITO longe: com o acervo na conta, o enquadramento cairia
+    // no piso (zoom 8) — é o que separa "só você" de "o acervo inteiro".
+    const longe = [
+      parDe(fichaEm("sp1", -46.6, true)),
+      parDe(fichaEm("sp2", -46.7, true)),
+    ];
+    longe[0].ficha.condicao.coords = { lat: -23.5, lng: -46.6 };
+    longe[1].ficha.condicao.coords = { lat: -23.5, lng: -46.7 };
+
+    const { container } = render(<Tela pares={longe} />);
+
+    await waitFor(() => expect(container.querySelectorAll(".cartao")).toHaveLength(0));
+    expect(container.querySelector(".mapa-home")).not.toBeNull();
+    const eu = container.querySelector<HTMLElement>(".voce-pin");
+    expect(eu).not.toBeNull();
+
+    // 🔴 "SÓ VOCÊ, NA SUA VIZINHANÇA" são DUAS coisas, e o teste precisa das
+    // duas — MEDIDO: com só o zoom aqui, a mutação `coords.length === 0` sozinha
+    // (sem o `&& !voce`) passou com os 538 verdes. Ela devolve o ÚLTIMO quadro,
+    // que neste fixture também é zoom 11 (as duas pagas estão a 0,1° uma da
+    // outra), e o mapa ficava centrado em São Paulo com o ponto "você" jogado
+    // pra fora da janela.
+    //
+    //   ONDE: você no centro da caixa — só é verdade se `centro` FOR você.
+    expect(eu!.style.left).toBe(`${MAPA_LARGURA_PX / 2}px`);
+    expect(eu!.style.top).toBe(`${MAPA_ALTURA_HOME_PX / 2}px`);
+    //   QUÃO PERTO: `enquadrarComVoce([], voce, …)` cai no ramo do ponto único
+    //   e devolve o zoom da ficha (~26 km). Os tiles vêm de um zoom a mais
+    //   (MAPA_ESCALA), que é o que `zoomDeTiles()` diz. No piso seria 8 → 9.
+    expect(tilesDe(container)[0]).toContain(`/${zoomDeTiles()}/`);
+    expect(container.querySelectorAll(".pin-home")).toHaveLength(0);
+    expect(container.querySelector(".mapa-fora")).toBeNull();
+    expect(container.textContent).toContain("OpenStreetMap");
+  });
+
+  // Sem trilha e sem você não há o que enquadrar, e saltar pra lugar nenhum é
+  // pior que ficar parado. O "antes" não é um número escrito aqui: é o mapa que
+  // as MESMAS duas trilhas desenham quando o filtro não está ligado.
+  it("filtro zera + SEM localização: mantém o enquadramento que tinha", async () => {
+    const duas = [fichaEm("a", -35.56, true), fichaEm("b", -34.56, true)];
+    const leiturasDuas = Object.fromEntries(
+      duas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
+    );
+
+    const antes = render(<MapaHome fichas={duas} leituras={leiturasDuas} />);
+    const tilesAntes = tilesDe(antes.container);
+    expect(tilesAntes.length).toBeGreaterThan(0);
+    cleanup();
+
+    // O primeiro render é sempre sem filtro (invariante da rodada passada), e é
+    // ele quem deixa o enquadramento guardado; o efeito lê o aparelho logo
+    // depois e zera a lista.
+    soGratis();
+    const { container } = render(<Tela pares={duas.map(parDe)} />);
+
+    await waitFor(() => expect(container.querySelectorAll(".cartao")).toHaveLength(0));
+    expect(container.querySelector(".mapa-home")).not.toBeNull();
+    expect(tilesDe(container)).toEqual(tilesAntes);
+    expect(container.querySelectorAll(".pin-home")).toHaveLength(0);
+    expect(container.textContent).toContain("OpenStreetMap");
+  });
+
+  // 🔴 HERDADO, e é um caso DIFERENTE: aqui o clima não respondeu por trilha
+  // nenhuma. O mapa some de verdade — não há o que mostrar e não há o que
+  // lembrar. Confundir os dois faria o app desenhar caixa cinza toda vez que a
+  // busca de leitura falhasse.
+  it("sem NENHUMA leitura o mapa continua sumindo (é outro caso)", () => {
+    const { container } = render(<MapaHome fichas={[fichaFake("orfa")]} leituras={{}} />);
+    expect(container.innerHTML).toBe("");
+  });
+
+  // O irmão dele, e é o que separa os dois: acervo VAZIO não é leitura
+  // faltando. Sem quadro anterior nenhum não dá pra desenhar mosaico, mas a
+  // moldura fica de pé — a altura não salta e a pílula continua na tela.
+  it("sem ficha nenhuma e sem quadro anterior: a moldura fica, sem mosaico", () => {
+    const { container } = render(<MapaHome fichas={[]} leituras={{}} />);
+    expect(container.querySelector(".mapa-home")).not.toBeNull();
+    expect(container.querySelectorAll("img")).toHaveLength(0);
+    expect(container.querySelector(".mapa-pilula")).not.toBeNull();
+    expect(container.textContent).toContain("OpenStreetMap");
+  });
+
+  // 🔴 A ALTURA, e ela é o PONTO DECLARADO da decisão do vazio: "o mapa some e
+  // volta com 168px, e a folha inteira salta embaixo do dedo de quem mexe no
+  // filtro". Os testes acima provavam a moldura, o mosaico ausente, a pílula e
+  // o crédito — nunca a altura, que é a promessa.
+  //
+  // jsdom não faz layout, então a altura se mede onde ela mora: a caixa que o
+  // vazio desenha tem que ser A MESMA que o mapa cheio desenha, e a regra dessa
+  // caixa tem que cravar MAPA_ALTURA_HOME_PX. As duas metades juntas, porque
+  // separadas nenhuma responde: só a classe não diz quanto ela mede, e só a
+  // regra não diz que o vazio a usa.
+  //
+  // Não confundir com o guarda de tests/lib/home-layout.test.ts, que lê a mesma
+  // regra: lá a pergunta é "o orçamento da dobra fecha"; aqui é "o vazio e o
+  // cheio ocupam a mesma caixa". Reverter esta task deixa aquele verde.
+  it("o vazio ocupa a MESMA altura do mapa cheio — senão a folha salta embaixo do dedo", () => {
+    const uma = fichaEm("uma", -35.56, false);
+    const cheio = render(
+      <MapaHome
+        fichas={[uma]}
+        leituras={{ uma: { estado: "fresco", erro: false, calculadoEm: 1_800_000_000 } }}
+      />,
+    );
+    const caixaCheia = cheio.container.firstElementChild;
+    expect(caixaCheia).not.toBeNull();
+    cleanup();
+
+    const vazio = render(<MapaHome fichas={[]} leituras={{}} />);
+    const caixaVazia = vazio.container.firstElementChild;
+    expect(caixaVazia, "o vazio não desenhou caixa nenhuma: a folha salta 168px").not.toBeNull();
+
+    // Mesma caixa nos dois estados — é o que faz a altura não mudar.
+    expect(caixaVazia!.className).toBe(caixaCheia!.className);
+
+    // E é a REGRA dessa caixa que crava os 168px. O `.mapa-home-tiles` de
+    // dentro não serve: ele é `position: absolute` e contribui altura zero.
+    const seletor = `.bp .${caixaVazia!.className}`;
+    const regra = regraDe(semComentarios("home.css"), seletor);
+    expect(regra, `faltou a regra ${seletor} no home.css`).not.toBeNull();
+    expect(valorDe(regra![0], "height")).toBe(`${MAPA_ALTURA_HOME_PX}px`);
+  });
+
+  // 🔴 A RESTRIÇÃO QUE A REVISÃO DA TASK A ACHOU. A caixa de digitar cidade
+  // mora DENTRO do `MapaHome`. Quem negou o GPS e zerou a lista com "só grátis"
+  // depende dela pra dizer onde está — e é justamente nesse instante que um
+  // `return null` no vazio a apagaria da tela. O caminho fica: a pílula está
+  // lá, e o toque abre a busca.
+  it("com o filtro zerando, ainda dá pra dizer onde estou", async () => {
+    localStorage.setItem(CHAVE_GPS, "negado");
+    soGratis();
+    const { container } = render(<Tela pares={[parDe(fichaEm("paga", -35.56, true))]} />);
+
+    await waitFor(() => expect(container.querySelectorAll(".cartao")).toHaveLength(0));
+
+    const pilula = container.querySelector<HTMLElement>(".mapa-pilula");
+    expect(pilula, "sem a pílula não sobra jeito nenhum de dizer onde estou").not.toBeNull();
+    expect(pilula!.textContent).toBe("escolher onde estou");
+
+    await act(async () => { pilula!.click(); });
+    expect(container.querySelector(".busca-campo")).not.toBeNull();
   });
 });
