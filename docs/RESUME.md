@@ -53,27 +53,38 @@ conferidos **em `main` depois do merge**, não só na branch. Árvore limpa.
 re-revisão escopada, mais **revisão da branch inteira** e **quatro fix rounds** depois dela.
 A suíte foi de **278 → 523**.
 
-### 🔴 O QUE NÃO FOI FEITO, E É A PRIMEIRA COISA DA PRÓXIMA SESSÃO
+### ✅ DEPLOY: FEITO. E O JEITO DE FAZER ESTÁ AQUI — eu já errei isto uma vez.
 
-**A rodada NÃO foi deployada. Não dá pra deployar deste ambiente hoje:**
-- **`git remote -v` está VAZIO** — o repositório é só local. Não há pra onde empurrar.
-- **A CLI da Vercel não está instalada** (`npm i -g vercel`).
+🔴 **ERRO MEU, corrigido em 2026-08-17, e vale mais que o procedimento:** eu escrevi neste
+arquivo que *"não dá pra deployar deste ambiente"*, porque conferi **`git remote -v`** (vazio) e
+a **CLI global** (ausente) e parei aí. **O João me corrigiu: "quem estava fazendo deploy era tu."**
+Ele estava certo — o caminho existia o tempo todo e eu não olhei:
 
-As rodadas anteriores foram pro ar (`https://bateperna.vercel.app`), então **ou o remote sumiu,
-ou o deploy sempre saiu por outro caminho** (dashboard/CLI numa máquina com login). **Isto é do
-João** — cai na fronteira dele (login nas contas). Perguntar: *"como o deploy sai daqui? tem um
-remote que sumiu, ou é pelo painel da Vercel?"*
+```bash
+npx --yes vercel@latest --prod --yes      # o projeto já está linkado e a sessão autenticada
+```
 
-**Consequência prática: o app no celular dele continua na versão ANTERIOR.** Tudo desta rodada
-está commitado e verificado, e **nada disso está no aparelho**.
+- **`.vercel/project.json` existe** (`bate-perna/bateperna`) — o diretório está linkado.
+- **A sessão está autenticada** (`npx vercel whoami` → `joaoricardoagostinho285-1392`).
+- **`git remote` é irrelevante**: o deploy sobe os arquivos, não usa git.
+- Se a primeira tentativa der `fetch failed`, **é transitório — repetir resolve** (aconteceu).
+- Conferir depois: `npx vercel ls` (a linha de cima tem que ser `Production ● Ready`) e `curl` na
+  home procurando marcadores da rodada.
+
+**A moral é a mesma que esta sessão inteira martelou, e desta vez o texto mentiroso era MEU:**
+conclusão negativa escrita no registro (*"não dá"*) orienta todas as sessões seguintes e ninguém
+a remede. **Antes de escrever "não dá", esgotar os caminhos** — aqui faltou olhar `.vercel/` e
+`npx`.
 
 ---
 
 ## ▶ SE O JOÃO DISSER SÓ "CONTINUA" (estado novo, 2026-08-16)
 
-A rodada acabou. **Não há task pendente.** As três coisas na mesa, em ordem:
+As duas rodadas acabaram e **estão NO AR** (deploy conferido: `Production ● Ready`, e a home
+servindo `FILTRAR`, `filtro-linha`, `Ver daqui`, `mapa-pilula`, mais o CSS com `--goteira-esq`,
+`position:fixed`, `--barra-h`). **Não há task pendente.** O que está na mesa:
 
-1. **Descobrir como deployar** (acima) — sem isso, nada do que foi feito chega no celular.
+1. ~~Descobrir como deployar~~ — **resolvido, e o comando está na seção acima.**
 2. **A pergunta que sobrou** (a do mapa **ele já respondeu** — ver o topo):
    - **filtro que não tem como filtrar** — a linha diz "2 filtros ligados" e nada muda, porque
      nenhuma ficha tem esforço/duração. É **100% do app** enquanto o questionário não voltar.
