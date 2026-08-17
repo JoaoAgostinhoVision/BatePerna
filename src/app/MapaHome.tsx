@@ -33,11 +33,24 @@ import PinTrilha from "./PinTrilha";
  *  resumo e pra folha. **Este componente não filtra e não pode passar a
  *  filtrar** — foi exatamente a segunda conta que pôs 3 pins sobre 1 cartão,
  *  com dois pins virando âncora morta e o aviso "2 trilhas fora do mapa" a
- *  40px de uma linha que dizia "1 trilha". Refazer o recorte aqui, ainda que
- *  com a mesma expressão, usaria a leitura que ESTE componente tem à mão (a
- *  semente do servidor) em vez da leitura de agora, e as duas listas voltariam
- *  a divergir na primeira leitura nova. Teste: "leitura nova chegando com
- *  filtro ligado: os três continuam concordando". */
+ *  40px de uma linha que dizia "1 trilha".
+ *
+ *  O QUE SEGURA ISSO, e é bom saber antes de mexer aqui:
+ *
+ *    1. o guarda de fonte "um recorte só, num escopo léxico só"
+ *       (tests/app/MioloHome.test.tsx), que varre o `src` inteiro contando
+ *       quem conhece `passaNoFiltro`. É ele o cinto, e não um teste de tela;
+ *    2. o teste "leitura nova que ADICIONA", que é o único cenário em que um
+ *       recorte a mais aqui dentro APARECE.
+ *
+ *  ⚠️ E a razão de (2) ser tão específico importa: como este componente já
+ *  recebe só as visíveis, filtrar de novo aqui só consegue TIRAR — nunca
+ *  devolver. Então a divergência não aparece quando a leitura nova esconde uma
+ *  trilha (os dois escondem), só quando ela TRAZ UMA DE VOLTA: a chuva parou,
+ *  a leitura de agora promove `frio → fresco` com "só as que dá hoje" ligado,
+ *  a folha traz o cartão e o mapa — filtrando pela semente do servidor, que
+ *  ainda diz frio — não traz o pin. MEDIDO: antes daquele teste existir, essa
+ *  mutação passava com a suíte inteira verde. */
 export default function MapaHome({
   fichas,
   leituras,

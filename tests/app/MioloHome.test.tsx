@@ -135,6 +135,41 @@ describe("MioloHome: pins, contagem e cartões saem de UMA lista só", () => {
     expect(contaDaLinha(container)).toBe(cartoes.length);
   });
 
+  // 🔴 O IRMÃO NA OUTRA DIREÇÃO, e ele existe porque a suíte inteira só
+  // exercitava a leitura nova TIRANDO trilha da tela.
+  //
+  // Depois que a conta subiu, o `MapaHome` recebe só as visíveis — então um
+  // segundo recorte lá dentro só consegue TIRAR mais, e nunca discorda no
+  // cenário de cima. A divergência que sobra é a de ADICIONAR: a chuva parou,
+  // a leitura de agora promove `frio → fresco` com "só as que dá hoje" ligado,
+  // a folha traz a trilha de volta — e o mapa, se filtrar pela semente do
+  // servidor (que ainda diz frio), não traz. Cartão sem pin, `.mapa-fora`
+  // subcontando e o enquadramento ignorando uma trilha que está na tela.
+  //
+  // MEDIDO pela revisão: sem este teste, um segundo `filter` dentro do
+  // `MapaHome` passa com os 530 verdes.
+  it("leitura nova que ADICIONA: a trilha que voltou ganha cartão E pin", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, daHoje: true }));
+    const todas = [par("zebra", "fresco"), par("abelha", "frio"), par("morro", "frio")];
+    const semente = new Map(todas.map((p) => [p.ficha.slug, p.leitura]));
+
+    const { container, rerender } = render(<Tela pares={todas} vivas={semente} />);
+    // "só as que dá hoje" ligado: só a zebra passa — o recorte mordeu.
+    await waitFor(() => expect(cartoesNaTela(container)).toEqual(["zebra"]));
+
+    // A chuva parou na abelha: a leitura de AGORA a promove de volta.
+    const nova = new Map(semente);
+    nova.set("abelha", { estado: "fresco", erro: false, calculadoEm: agoraSeg() });
+    rerender(<Tela pares={todas} vivas={nova} />);
+
+    const cartoes = cartoesNaTela(container);
+    expect(cartoes).toContain("abelha"); // a promoção entrou na folha
+    // e o recorte continua mordendo: o morro segue frio e segue fora
+    expect(cartoes.length).toBeLessThan(todas.length);
+    expect([...pinsNaTela(container)].sort()).toEqual([...cartoes].sort());
+    expect(contaDaLinha(container)).toBe(cartoes.length);
+  });
+
   // A invariante herdada, que subir a conta pode quebrar sem ninguém ver: o
   // HTML do servidor não conhece filtro nenhum, e a home chega do cache do
   // service worker. Ler o aparelho durante o render quebraria a hidratação bem
@@ -188,6 +223,27 @@ describe("MioloHome: pins, contagem e cartões saem de UMA lista só", () => {
     await waitFor(() => expect(cartoesNaTela(container)).toHaveLength(1));
     expect(container.querySelectorAll(".grupo-k")).toHaveLength(0);
     expect(container.textContent).not.toContain("Hoje o tempo deixa");
+  });
+
+  // ——— a ORDEM dos três na tela, que ficou sem trava quando eles vieram
+  // morar juntos.
+  //
+  // Antes, o mapa nascia no `page.tsx` e a linha dentro da folha: trocá-los de
+  // lugar exigia editar dois arquivos. Agora são quatro linhas de JSX vizinhas
+  // aqui — uma troca de ordem num refactor é fácil e silenciosa. E o teste de
+  // orçamento da dobra (tests/lib/home-layout.test.ts) NÃO acusa: ele SOMA
+  // appbar + mapa + linha + cabeçalho, e a soma não muda de lugar.
+  //
+  // A ordem é decisão de produto: o mapa em cima (é ele quem responde "onde
+  // fica"), a linha full-bleed entre o mapa e os cartões, e a folha embaixo.
+  // Com a linha acima do mapa, o resumo passa a rotular uma coisa que ainda
+  // não apareceu.
+  it("na tela, nesta ordem: o mapa, a linha de resumo, a folha", () => {
+    const { container } = render(<Tela pares={[par("zebra", "fresco"), par("morro", "frio")]} />);
+    const ordem = Array.from(container.querySelectorAll(".mapa-home, .filtro-linha, .folha")).map(
+      (el) => el.className,
+    );
+    expect(ordem).toEqual(["mapa-home", "filtro-linha", "folha"]);
   });
 
   // O `"use client"` é o que o jsdom NÃO enxerga: ele renderiza tudo como
@@ -417,7 +473,12 @@ describe("filtro e agrupamento juntos", () => {
 // as fontes que ele tem à mão — morde por comportamento (teste "leitura nova
 // chegando com filtro ligado"), e morde aqui também: são dois arquivos.
 describe("um recorte só, num escopo léxico só", () => {
-  const APP = path.join(process.cwd(), "src", "app");
+  // 🔴 `src` INTEIRO, não `src/app`. A primeira versão varria só `src/app` e a
+  // revisão a furou em três linhas: `export const recorta = passaNoFiltro` no
+  // `src/lib/filtros.ts` — onde o guarda não olhava — mais um `recorta(...)`
+  // dentro do `MapaHome`. **530/530 verde, tsc limpo, guarda verde**, e a tela
+  // com cartão sem pin. Quem varre o dono da função tem que varrer a casa dela.
+  const SRC = path.join(process.cwd(), "src");
 
   /** Fonte sem comentários: o guarda conta CHAMADAS, e um comentário que cite
    *  o nome (há um, logo acima da conta, explicando por que `confia` sai de
@@ -426,10 +487,10 @@ describe("um recorte só, num escopo léxico só", () => {
   const semComentarios = (fonte: string) =>
     fonte.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
-  const arquivosDoApp = (dir: string): string[] =>
+  const arquivosDoSrc = (dir: string): string[] =>
     readdirSync(dir).flatMap((e) => {
       const p = path.join(dir, e);
-      if (statSync(p).isDirectory()) return arquivosDoApp(p);
+      if (statSync(p).isDirectory()) return arquivosDoSrc(p);
       return /\.tsx?$/.test(e) ? [p] : [];
     });
 
@@ -441,24 +502,33 @@ describe("um recorte só, num escopo léxico só", () => {
   // documenta (`export { X as Y }` escapando da regex antiga). Quem NÃO some no
   // apelido é o nome importado — quem quiser usar a função tem que escrevê-lo
   // ao menos uma vez, no `import`.
-  it("o app inteiro conhece `passaNoFiltro` num arquivo só, e o chama uma vez só", () => {
+  it("o src inteiro conhece `passaNoFiltro` em dois arquivos só: quem a define e quem a chama", () => {
     const mencoes: Record<string, number> = {};
     const chamadas: Record<string, number> = {};
-    for (const arquivo of arquivosDoApp(APP)) {
+    for (const arquivo of arquivosDoSrc(SRC)) {
       const fonte = semComentarios(readFileSync(arquivo, "utf8"));
-      const curto = path.relative(APP, arquivo).replace(/\\/g, "/");
+      const curto = path.relative(SRC, arquivo).replace(/\\/g, "/");
       const m = (fonte.match(/\bpassaNoFiltro\b/g) ?? []).length;
       const c = (fonte.match(/\bpassaNoFiltro\s*\(/g) ?? []).length;
       if (m > 0) mencoes[curto] = m;
       if (c > 0) chamadas[curto] = c;
     }
-    // Um segundo arquivo aqui é a lista nascendo em dois escopos — inclusive
-    // por apelido, que é como a mutação passou despercebida da primeira vez.
-    expect(Object.keys(mencoes)).toEqual(["MioloHome.tsx"]);
-    // Duas menções e uma só: o `import` e a chamada. Uma terceira menção é um
-    // segundo uso, com ou sem parêntese à vista.
-    expect(mencoes["MioloHome.tsx"]).toBe(2);
-    expect(chamadas).toEqual({ "MioloHome.tsx": 1 });
+    // A conta, arquivo por arquivo, e cada número segura um jeito de furar:
+    //
+    //   lib/filtros.ts    1 menção  — a DECLARAÇÃO, e só ela. Um segundo nome
+    //                                 pra mesma função (`export const recorta =
+    //                                 passaNoFiltro`, `export { passaNoFiltro
+    //                                 as … }`) vira 2 e derruba isto. Foi a
+    //                                 mutação que passou pela versão anterior.
+    //   app/MioloHome.tsx 2 menções — o `import` e a chamada. Uma terceira é um
+    //                                 segundo recorte no mesmo escopo.
+    //
+    // Um TERCEIRO arquivo em qualquer um dos dois mapas é a lista nascendo em
+    // dois lugares.
+    expect(mencoes).toEqual({ "app/MioloHome.tsx": 2, "lib/filtros.ts": 1 });
+    // A declaração casa com `passaNoFiltro({`, e é por isso que ela aparece
+    // aqui também — o que importa é que nenhum arquivo NOVO apareça.
+    expect(chamadas).toEqual({ "app/MioloHome.tsx": 1, "lib/filtros.ts": 1 });
   });
 });
 

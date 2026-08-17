@@ -83,9 +83,15 @@ export default function MioloHome({ pares }: { pares: ParFolha[] }) {
   //
   // O mapa recebe FICHA + SEMENTE das visíveis. A semente é a leitura do
   // servidor que o `PinTrilha` usa como `inicial` — a mesma que o cartão
-  // recebe, tirada do mesmo `visiveis`. Um segundo `Record` de leituras vindo
-  // do `page.tsx` seria uma segunda fonte pra mesma pergunta, e o mapa poderia
-  // desenhar pin de trilha que a folha não desenhou.
+  // recebe, tirada do mesmo `visiveis`.
+  //
+  // O plano previa um segundo prop, um `Record` de leituras vindo do
+  // `page.tsx`. Não é o que está aqui, e vale registrar o motivo CERTO: como
+  // `fichas` já são as visíveis, um Record maior não desenharia pin a mais —
+  // teria chaves inertes. O que ele seria é a MESMA informação viajando duas
+  // vezes (ela já está dentro de `pares`), serializada de novo do servidor pro
+  // cliente. Duas cópias do mesmo dado é uma que pode ficar velha no próximo
+  // refactor, e é carga a mais no payload por nada.
   return (
     <>
       <MapaHome
