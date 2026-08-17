@@ -315,6 +315,22 @@ describe("filtro e agrupamento juntos", () => {
   });
 
   // A regra que já existe e não pode ser quebrada por esta task.
+  //
+  // 🔴 E ele carrega uma SEGUNDA prova, do outro eixo pelo qual um recorte a
+  // mais dentro do `MapaHome` diverge — o do `confia`, que não depende de
+  // leitura nova nenhuma.
+  //
+  // O mecanismo: **o `MapaHome` não recebe `confia`.** Quem quiser filtrar lá
+  // dentro tem que INVENTAR um valor pra ele, e o valor que se escreve sem
+  // pensar é `true`. Aí o "só as que dá hoje" fica ATIVO no mapa enquanto está
+  // INERTE na folha (a Regra de Honestidade 1 do `passaNoFiltro`: sem leitura
+  // confiável o recorte não esconde nada) — e a trilha de carimbo vencido
+  // perde o pin mas mantém o cartão. Este cenário é o dia ruim, que é
+  // justamente quando a pessoa mais filtra.
+  //
+  // Este teste já montava a `<Tela>` inteira, mapa incluído, e só contava
+  // `.cartao` — o pin estava na tela e ninguém olhava. A igualdade de três
+  // vias no fim é o que fecha o eixo.
   it("sem leitura confiável, continua sem cabeçalho — e o filtro 'dá hoje' fica inerte", async () => {
     localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, daHoje: true }));
     const vencido = { estado: "frio" as const, erro: false, calculadoEm: agoraSeg() - 99_999 };
@@ -324,6 +340,10 @@ describe("filtro e agrupamento juntos", () => {
     ]);
     await waitFor(() => expect(container.querySelectorAll(".cartao")).toHaveLength(2));
     expect(container.textContent).not.toContain("Hoje o tempo deixa");
+
+    const cartoes = cartoesNaTela(container);
+    expect([...pinsNaTela(container)].sort()).toEqual([...cartoes].sort());
+    expect(contaDaLinha(container)).toBe(cartoes.length);
   });
 
   // O ramo `!confia` desliga o AGRUPAMENTO, não o filtro. Quem ligou "só
@@ -469,9 +489,20 @@ describe("filtro e agrupamento juntos", () => {
 // prova na fonte, como o `"use client"` e o `<FiltrosVivos>` do page.tsx já se
 // provam neste projeto.
 //
-// A mutação escrita no lugar realista — o `filter` DENTRO do `MapaHome`, com
-// as fontes que ele tem à mão — morde por comportamento (teste "leitura nova
-// chegando com filtro ligado"), e morde aqui também: são dois arquivos.
+// 🔴 O QUE ESTE GUARDA NÃO VÊ, e não é conserto pendente — é o que ele é.
+// Ele conta NOMES. Duas formas de recortar de novo passam por ele inteiras, as
+// duas MEDIDAS:
+//
+//   • índice computado — `import * as F from "@/lib/filtros"` com o nome
+//     montado por concatenação: zero menção literal;
+//   • cópia da lógica à mão — um `.filter` que nem chama a função.
+//
+// Nas duas, quem pegou foi TESTE DE TELA. Então a divisão é: este guarda é o
+// cinto contra apelido e renomeação; os testes de junção lá de cima são o
+// suspensório contra reimplementação. Nenhum dos dois sozinho cobre o outro —
+// medido, não suposto: a cópia à mão que lê a leitura de agora e crava
+// `confia: true` escapa DESTE guarda e cai só na igualdade de três vias do
+// teste "sem leitura confiável, ... o filtro 'dá hoje' fica inerte".
 describe("um recorte só, num escopo léxico só", () => {
   // 🔴 `src` INTEIRO, não `src/app`. A primeira versão varria só `src/app` e a
   // revisão a furou em três linhas: `export const recorta = passaNoFiltro` no

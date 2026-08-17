@@ -35,22 +35,38 @@ import PinTrilha from "./PinTrilha";
  *  com dois pins virando âncora morta e o aviso "2 trilhas fora do mapa" a
  *  40px de uma linha que dizia "1 trilha".
  *
- *  O QUE SEGURA ISSO, e é bom saber antes de mexer aqui:
+ *  DOIS EIXOS pelos quais um recorte a mais aqui dentro diverge da folha. São
+ *  os dois que conhecemos, cada um com o teste que o pega (ambos em
+ *  tests/app/MioloHome.test.tsx) — não é promessa de lista completa:
  *
- *    1. o guarda de fonte "um recorte só, num escopo léxico só"
- *       (tests/app/MioloHome.test.tsx), que varre o `src` inteiro contando
- *       quem conhece `passaNoFiltro`. É ele o cinto, e não um teste de tela;
- *    2. o teste "leitura nova que ADICIONA", que é o único cenário em que um
- *       recorte a mais aqui dentro APARECE.
+ *    1. A LEITURA. Como este componente já recebe só as visíveis, filtrar de
+ *       novo aqui só consegue TIRAR — nunca devolver. Então a divergência não
+ *       aparece quando a leitura nova ESCONDE (os dois escondem): aparece
+ *       quando ela TRAZ DE VOLTA. A chuva parou, a leitura de agora promove
+ *       `frio → fresco` com "só as que dá hoje" ligado, a folha traz o cartão
+ *       e o mapa — filtrando pela semente do servidor, que ainda diz frio —
+ *       não traz o pin. Teste: "leitura nova que ADICIONA".
  *
- *  ⚠️ E a razão de (2) ser tão específico importa: como este componente já
- *  recebe só as visíveis, filtrar de novo aqui só consegue TIRAR — nunca
- *  devolver. Então a divergência não aparece quando a leitura nova esconde uma
- *  trilha (os dois escondem), só quando ela TRAZ UMA DE VOLTA: a chuva parou,
- *  a leitura de agora promove `frio → fresco` com "só as que dá hoje" ligado,
- *  a folha traz o cartão e o mapa — filtrando pela semente do servidor, que
- *  ainda diz frio — não traz o pin. MEDIDO: antes daquele teste existir, essa
- *  mutação passava com a suíte inteira verde. */
+ *    2. O `confia`, e este NÃO depende de leitura nova nenhuma. **Este
+ *       componente não recebe `confia`**, então quem filtrar aqui tem que
+ *       INVENTAR um valor — e o que se escreve sem pensar é `true`. Aí o "só
+ *       as que dá hoje" fica ATIVO no mapa enquanto está INERTE na folha (a
+ *       Regra de Honestidade 1: sem leitura confiável o recorte não esconde
+ *       nada), e a trilha de carimbo vencido perde o pin e mantém o cartão. É
+ *       o dia ruim, que é quando a pessoa mais filtra. Teste: "sem leitura
+ *       confiável, continua sem cabeçalho — e o filtro 'dá hoje' fica inerte".
+ *
+ *  ⚠️ QUEM PEGA O QUÊ, e a ordem importa porque foi MEDIDA, não suposta:
+ *
+ *    • o guarda de fonte "um recorte só, num escopo léxico só" é o cinto
+ *      contra APELIDO e RENOMEAÇÃO — `export const recorta = passaNoFiltro`,
+ *      `import { passaNoFiltro as pf }`. Ele conta NOMES;
+ *    • os dois testes de tela acima são o suspensório contra REIMPLEMENTAÇÃO.
+ *      Um índice computado (`import * as F` com o nome montado por
+ *      concatenação) e uma cópia da lógica à mão passam pelo guarda inteiros —
+ *      medido nas duas formas, e nas duas quem pegou foi teste de tela. Guarda
+ *      de nome não vê lógica copiada, e isso não é limitação a consertar: é o
+ *      que ele é. */
 export default function MapaHome({
   fichas,
   leituras,
