@@ -4,7 +4,44 @@
 > `.superpowers/sdd/2026-08-13-daqui-e-filtros/progress.md`, que é **scratch git-ignorado** —
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-16.
+**Última parada:** 2026-08-17.
+
+## ✅ "O MAPA FILTRA JUNTO" FECHADA E MERGEADA (`dca2a39`)
+
+**Decisão do João**, respondendo à pergunta que a revisão da rodada levantou: *"com filtro
+ligado, o mapa esconde os pins junto"*; e, no seguimento, *"filtrou e não sobrou nada → o mapa
+mostra só você, na sua vizinhança"*.
+
+**`main` em `dca2a39`. 539 testes em 47 arquivos**, `tsc` limpo, `npm run build` passa — os três
+conferidos em `main` depois do merge. 2 tasks, **4 fix rounds**, revisão da branch inteira.
+Spec: `docs/superpowers/specs/2026-08-17-mapa-filtra-junto.md` (emenda o §6 da spec anterior).
+
+**Fechou três defeitos de uma raiz só** (o `page.tsx` entregava o acervo inteiro ao mapa enquanto
+a folha desenhava as visíveis): pin virando âncora morta, o `.mapa-fora` **afirmando um número
+falso** a ~40px de uma contagem que o desmentia, e o enquadramento se abrindo pra caber trilha
+que o filtro escondeu. Agora pins, enquadramento e aviso saem da MESMA lista.
+
+**A conta subiu pro `src/app/MioloHome.tsx`** — dono único que alimenta mapa, linha e folha; a
+`FolhaTrilhas` parou de calcular e recebe `visiveis`/`confia` por prop. **Um array só, num
+escopo léxico só.** O caso vazio ganhou `useRef` do último enquadramento (escrito no render;
+hidratação verificada por `renderToString`→`hydrateRoot`, zero mismatch).
+
+**Duas restrições que só a revisão achou e que entraram junto:** o `BuscaLugar` mora dentro do
+`MapaHome`, então o vazio **não pode devolver `null`** (quem está sem GPS perderia o único jeito
+de dizer onde está); e o vazio ocupa a **mesma altura**, senão a folha salta embaixo do dedo.
+
+🔴 **A LIÇÃO DESTA RODADA, e ela é nova:** **nenhum defeito de CÓDIGO escapou das revisões de
+task. Os nove achados foram COMENTÁRIOS que prometiam proteção não medida** — três no mesmo
+arquivo, e um custou um fix round inteiro. O padrão, nomeado pelo próprio implementador: *"escrevo
+a proteção que o raciocínio PREVÊ em vez da que a execução MOSTROU"*. **Comentário mentiroso é a
+única coisa aqui que se propaga sozinha** — o próximo leitor confia nele em vez de medir. Virou
+regra de despacho: *se não der pra pôr uma prova rodada atrás da frase, escreva menos.*
+
+**Corolário medido:** não existe guarda de FONTE que feche reimplementação. O guarda de nomes é
+cinto contra apelido e renomeação; contra lógica copiada à mão só o **teste de tela** funciona —
+provado furando o guarda de duas formas (índice computado e cópia à mão), com o teste de
+comportamento pegando as duas.
+
 ## ✅ RODADA "DE ONDE EU ESTOU" FECHADA E MERGEADA — 12/12
 
 **`main` em `6f37bbb`** (a rodada em `ce40307`, mais o fecho do débito da régua) (merge `--no-ff` de `daqui-e-filtros`, que ficou em `a6f2f45`).
@@ -37,10 +74,25 @@ está commitado e verificado, e **nada disso está no aparelho**.
 A rodada acabou. **Não há task pendente.** As três coisas na mesa, em ordem:
 
 1. **Descobrir como deployar** (acima) — sem isso, nada do que foi feito chega no celular.
-2. **As duas perguntas que só ele responde**, ambas detalhadas na seção "Deferidos vivos":
-   - **o mapa com filtro ligado** (pin morto + `.mapa-fora` afirmando número falso);
+2. **A pergunta que sobrou** (a do mapa **ele já respondeu** — ver o topo):
    - **filtro que não tem como filtrar** — a linha diz "2 filtros ligados" e nada muda, porque
      nenhuma ficha tem esforço/duração. É **100% do app** enquanto o questionário não voltar.
+   - 🆕 **O caso vazio é alcançável com UM toque em produção**, e ele nunca o viu: a única ficha
+     real é **paga**, então "só grátis" zera a home. Sem GPS ele verá o mapa da região da Rampa
+     **sem pin nenhum** + "0 trilhas · 1 filtro ligado" + o aviso e o botão de limpar; com GPS,
+     o mapa recentra nele a ~27 km. **Os dois estados estão corretos pela spec e nenhum foi
+     visto em WebKit.**
+   - 🆕 **Deferido novo, e ele chega junto com a 2ª ficha:** o piso de zoom
+     (`ZOOM_MINIMO_HOME_COM_VOCE = 8`) **só se aplica quando há `voce`**. Sem localização,
+     `enquadrar` desce até `ZOOM_MINIMO = 2` — com uma 2ª ficha distante (Rampa + São Paulo,
+     medido) o primeiro render nasce em **z=3, ~6.597 km de largura**, e é esse quadro que o
+     `ultimo.current` passa a **congelar** quando o filtro zera. Não é regressão desta rodada,
+     mas ela transforma um quadro transitório em persistente. Saída barata: o mesmo piso, também
+     sem `voce`.
+   - 🆕 **Minor de honestidade, herdado de `main`:** no mapa vazio o `role="img"` mantém
+     `aria-label="Mapa com as trilhas de hoje"` sobre um mapa com **zero** trilhas — rótulo
+     afirmando o que não está lá, a mesma família de "informar, não afirmar" que o app persegue.
+     Nada desta rodada o tocou; ela só tornou o estado alcançável.
 3. **O iPhone**, que continua sem nenhuma medição possível daqui (§15 da spec, 4 perguntas).
 
 E as pendências antigas dele seguem: **responder `docs/questionario-ficha.md`** (a 2ª ficha
