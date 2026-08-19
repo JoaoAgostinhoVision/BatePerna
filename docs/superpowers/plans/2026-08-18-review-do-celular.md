@@ -52,6 +52,14 @@ Test: `tests/app/local.test.tsx`
 automático, um balão descartado ou um prédio sem sinal rebaixariam o app **permanentemente** na
 primeira abertura. Sem ele, esta task é uma regressão.
 
+### O alcance, que o pré-voo mediu e o brief não deixaria adivinhar
+
+`<LocalVivo>` é montado **em duas páginas**: a home (`page.tsx`) e a ficha (`[slug]/page.tsx:90`).
+Então o pedido automático vale nas duas — abrir uma ficha direto pelo link também pede o GPS.
+**Isso é o certo** ("uma pessoa, uma fonte": é o mesmo provedor, não dois pedidos), e é a razão de
+o botão do `DistanciaDaqui` virar caminho de exceção em vez de porta principal. Não "conserte"
+restringindo o pedido à home.
+
 ### A invariante que esta task chega perto de quebrar
 
 **Primeiro render sem localização, SEMPRE.** `useState(NAO_SEI)` continua; a busca mora no
@@ -93,8 +101,9 @@ três códigos, e dois deles mudam de comportamento nesta task.
 
 ## Task 2 — `piso.ts`, o schema expandido e o questionário reescrito
 
-**Files:** Create `src/lib/piso.ts`; Modify `src/types/ficha.ts`, `docs/questionario-ficha.md`;
-Test: `tests/lib/piso.test.ts` (novo), `tests/lib/ficha.test.ts`
+**Files:** Create `src/lib/piso.ts`; Modify `src/types/ficha.ts`, `src/lib/geo.ts`,
+`docs/questionario-ficha.md`; Test: `tests/lib/piso.test.ts` (novo), `tests/lib/ficha.test.ts`,
+`tests/lib/geo.test.ts`
 
 ### O que muda
 
@@ -117,6 +126,16 @@ coisa que faz `ordemPiso` significar alguma coisa.
 - `extensaoKm: z.number().positive().optional()` — km, **só ida**.
 - `esforco` e `duracao` **continuam** (a contração é a Task 8). Comentar que estão de saída.
 
+**`src/lib/geo.ts`** ganha `formatarExtensao(km: number): string` → **`"4 km de trilha"`**, a
+frase inteira, sufixo incluído.
+
+🔴 **Ruling do pré-voo, e a razão importa:** o cartão (Task 6) e a ficha (Task 7) mostram o MESMO
+número, e duas formatações escritas em dois arquivos é a invariante "uma trilha, uma fonte"
+quebrada por dentro — foi exatamente assim que a mesma trilha chegou a ter **dois km** na rodada
+passada. O sufixo mora **dentro** da função pra que nenhum chamador possa deixá-lo cair. Mora em
+`geo.ts` porque lá já é a casa client-safe do "km virando texto"; um módulo novo de uma função só
+repetiria o `duracao.ts` que esta rodada está apagando.
+
 **`docs/questionario-ficha.md`:** as perguntas de `esforco` e `duracao` são **substituídas** por:
 - **`piso`** — *"o pior trecho do caminho"*, com as quatro opções e o que cada uma quer dizer.
 - **`extensaoKm`** — *"quantos km, **só ida**"*.
@@ -135,6 +154,10 @@ it("a ordem vai do pior pro melhor: barro < paralelepipedo < esburacado < tapete
 it("PISOS_FILTRAVEIS é PISOS sem o primeiro — derivado, não copiado", ...)
 
 it("rotuloPiso troca o hífen por espaço: asfalto-esburacado → 'asfalto esburacado'", ...)
+
+// tests/lib/geo.test.ts — o sufixo é da FUNÇÃO, não do chamador.
+it("formatarExtensao(4) devolve '4 km de trilha', com o sufixo", ...)
+it("formatarExtensao não devolve o mesmo formato de formatarDistanciaCurta", ...)
 
 // tests/lib/ficha.test.ts
 it("ficha com piso inválido ('terra') não valida", ...)
@@ -226,7 +249,10 @@ it("pisoMinimo 'terra' → null", ...)
 it("filtro guardado da versão VELHA ({duracaoMax:120, esforco:'media'}) não estoura e não filtra", ...)
 
 // contarLigados com TODOS ligados — apagar um do array tem que doer.
-it("com os cinco recortes ligados, conta 5", ...)
+// 🔴 SETE, não cinco: durante a EXPANSÃO o `Filtros` carrega os dois velhos
+// (esforco, duracaoMax) junto dos novos. Vira 5 só depois da Task 8. Se a sua
+// contagem não bater com esta, NÃO ajuste o teste — descubra por quê.
+it("com os sete recortes ligados, conta 7", ...)
 ```
 
 ### Prova de mutação
@@ -239,7 +265,7 @@ it("com os cinco recortes ligados, conta 5", ...)
 | 4 | `>` vira `>=` na extensão | "extensão 4 com corte 4 PASSA" |
 | 5 | `Number.isFinite` sai da validação | "distanciaKm NaN → null" |
 | 6 | o teto `<= DIST_MAX_KM` sai | "distanciaKm 101 → null" |
-| 7 | tirar `pisoMinimo` do array do `contarLigados` | "com os cinco recortes ligados, conta 5" |
+| 7 | tirar `pisoMinimo` do array do `contarLigados` | "com os sete recortes ligados, conta 7" |
 
 **Antes de declarar qualquer linha morta, rode `npx tsc --noEmit`** — lição 13: há linhas que o
 vitest diz mortas e o `tsc` carrega (foi o caso do guarda do `lerFiltros`).
@@ -298,6 +324,12 @@ it("mudar o campo atualiza a barra — um valor só", ...)
 pessoa digitou é a tela mentindo sobre o que está filtrando. **A asserção tem que ler o `value` do
 campo depois**, não só o argumento do `onChange`.
 
+🔴 **Ao acrescentar regras no `home.css`, releia quem lê esse arquivo por TEXTO** (lição 20): uma
+asserção que casa "a regra `.bp` inteira" muda de significado sem uma linha de diff no teste, e a
+suíte fica verde com a constante que ela protegia invalidada. Já aconteceu aqui, com o
+`tests/lib/mapa.test.ts`. **Confira nominalmente**: `npx vitest run tests/lib/mapa.test.ts` antes
+e depois, e leia se as asserções de CSS ainda casam o que diziam casar.
+
 ⚠️ **O que este teste NÃO prova:** que dá pra arrastar com o polegar. Nenhum teste desta suíte
 mede geometria renderizada (lição 5). A altura de toque vira asserção de CSS pela régua central
 (`tests/css.ts`, `valorDe` + `toBe`), e o resto é iPhone.
@@ -350,7 +382,9 @@ it("a legenda do piso diz que é mínimo", ...)
 
 `~27 km em linha reta · 1h30 · média · R$ 5` → `~27 km em linha reta · 4 km de trilha · barro · R$ 5`
 
-- Sai `formatarDuracao(ficha.duracao)`; entra a extensão **com o sufixo `de trilha`**.
+- Sai `formatarDuracao(ficha.duracao)`; entra **`formatarExtensao(ficha.extensaoKm)`** — a função
+  criada na Task 2, que já traz o sufixo. **Não escreva o sufixo aqui**: a ficha (Task 7) chama a
+  mesma função, e duas formatações do mesmo número é o defeito dos dois km com outra roupa.
 - `ficha.esforco` vira `rotuloPiso(ficha.piso)`.
 - Campos ausentes continuam simplesmente não aparecendo (a linha some inteira se nada sobrar).
 
@@ -389,6 +423,9 @@ Test: `tests/app/ficha.test.tsx` (ou o arquivo que hoje renderiza a página)
 Dentro do bloco **📍 Trajeto**, junto da distância daqui: **o piso** e **a extensão**. Nada de
 frase nova — a prosa já é o `acesso`, logo abaixo.
 
+**Use `formatarExtensao` e `rotuloPiso`** — as mesmas funções que o cartão usa. Formatar de novo
+aqui é a mesma trilha ganhando duas caras.
+
 Campos ausentes: a linha não aparece. Nada de "—" nem "não informado".
 
 ### Os testes
@@ -406,6 +443,7 @@ it("a Rampa real continua abrindo", ...)
 |---|---|---|
 | 1 | mover o piso pra fora do bloco Trajeto | "mostra os dois **dentro do bloco Trajeto**" — a asserção tem que ser sobre a posição, não sobre existir |
 | 2 | o guarda de ausência some | "não mostra linha vazia" |
+| 3 | trocar `formatarExtensao(n)` por `` `${n} km` `` escrito à mão | "cartão e ficha mostram o MESMO texto de extensão" |
 
 ---
 
@@ -428,14 +466,16 @@ Se voltar sujo, a task anterior não terminou — não contorne.
 
 ```ts
 it("filtro guardado com duracaoMax e esforco continua não estourando", ...)  // o iPhone dele
-it("contarLigados agora conta 4 recortes, todos ligados", ...)
+// CINCO: distanciaKm, daHoje, soGratis, extensaoMaxKm, pisoMinimo. Eram sete
+// durante a expansão. Contagem que não bate = descubra por quê, não ajuste.
+it("contarLigados agora conta 5 recortes, todos ligados", ...)
 ```
 
 ### Prova de mutação
 
 | # | Mutação | Teste que TEM que cair |
 |---|---|---|
-| 1 | tirar um dos 4 do array do `contarLigados` | "conta 4 recortes, todos ligados" |
+| 1 | tirar um dos 5 do array do `contarLigados` | "conta 5 recortes, todos ligados" |
 | 2 | `lerFiltros` estourar em chave desconhecida | "filtro guardado… continua não estourando" |
 
 **A verificação desta task é o `npm run build`**, não o vitest: apagar um módulo reexportado é
