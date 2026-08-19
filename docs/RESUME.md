@@ -4,70 +4,123 @@
 > `.superpowers/sdd/2026-08-13-daqui-e-filtros/progress.md`, que é **scratch git-ignorado** —
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-17. **Tudo mergeado, tudo NO AR, nada em voo.**
+**Última parada:** 2026-08-18. **RODADA ABERTA E PARADA NO MEIO, a pedido dele.**
+Branch **`review-do-celular`**, NÃO mergeada, NÃO deployada. `main` segue em `f10f075`.
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA" — ele está voltando com um REVIEW do celular
+# ▶▶ SE O JOÃO DISSER "CONTINUA" — retome a rodada `review-do-celular` na Task 2
 
-**Ele disse, ao encerrar:** *"depois eu dou um review, quero continuar na próxima sessão
-informando o que não gostei e o que melhorar."*
+**O review do celular já aconteceu, já foi triado e já virou spec + plano aprovados.** Não
+pergunte o que ele achou; não peça a lista de novo; não devolva menu.
 
-**Então não é retomada de rodada. É recebimento de feedback de uso.** O trabalho está fechado e
-no ar; o que chega agora é a opinião dele **depois de usar o app no iPhone**.
+**Ele pediu pra parar** no meio da Task 2 de 8: *"quero parar por aqui, deixe tudo pronto para
+continuar na próxima sessão."*
 
-### O que NÃO fazer
-
-- ❌ **Não** devolva menu, não pergunte "por onde quer começar", não peça contexto.
-- ❌ **Não** comece a codar o primeiro item da lista dele. A lista vai **misturar** três coisas
-  que exigem tratamentos diferentes (ver abaixo).
-- ❌ **Não** trate "não gostei de X" como bug. Muitas vezes é decisão de produto que ele está
-  revendo — e várias das decisões atuais estão registradas com o porquê. **Se o que ele quer
-  contradiz uma decisão escrita, diga qual e por que ela foi tomada, e então faça o que ele
-  decidir.** Ele reafirmando é decisão dele, e segue.
-
-### O que fazer
-
-1. **Ouça a lista inteira antes de agir.** Se ele der um item só, pergunte se há mais — a
-   triagem muda conforme o conjunto.
-2. **Triage em três baldes**, e diga a ele em qual cada item caiu:
-   - **DEFEITO** — o app faz o que ninguém decidiu (ex.: algo desalinhado, algo que trava). Vai
-     direto pra conserto, com teste.
-   - **DECISÃO DE PRODUTO** — o app faz o que foi decidido, e ele quer diferente. Precisa de
-     brainstorm curto antes de código: o que muda, o que quebra junto, qual invariante encosta.
-   - **JÁ CONHECIDO** — está na lista de deferidos/perguntas abaixo. **Diga que já estava
-     registrado e mostre o que já se sabe**; isso economiza a discussão inteira.
-3. **Três coisas na lista dele provavelmente já estão previstas** — confira antes de tratar como
-   novidade: o **filtro que não filtra nada** (nenhuma ficha tem esforço/duração), o **rótulo do
-   mapa vazio** dizendo "trilhas de hoje" sem trilha nenhuma, e o **"piscar"** do mapa
-   reenquadrando ao mexer no filtro (ele aprovou no desenho, mas nunca viu acontecer).
-4. **Só depois da triagem** decida o método: item pequeno e isolado → conserto direto com teste;
-   conjunto que muda comportamento → spec curta + plano + SDD, como as duas últimas rodadas.
-
-### O chão, pra conferir em silêncio antes de responder
+### 1. Confira o chão em silêncio
 
 ```
-git branch --show-current   → main          git status --short → limpo
-npm test                    → 539/539 em 47 arquivos
-npx tsc --noEmit            → limpo         npm run build → passa
+git branch --show-current  → review-do-celular   (se estiver em main, só trocar)
+git status --short         → limpo
+npm test                   → 553/554  ← UMA falha ESPERADA, ver abaixo
+npx tsc --noEmit           → limpo
 ```
 
-**Rode os três.** E, se precisar deployar: `npx --yes vercel@latest --prod --yes` (ver a seção
-do deploy).
+🔴 **A falha é conhecida e é o marcador de onde parou:** `tests/lib/questionario.test.ts:39`
+ainda afirma a seção velha de `esforco` (leve/media/puxada), que o questionário reescrito
+removeu. **Não é regressão. É a Task 2 pela metade.** Se a suíte estiver diferente disso,
+alguma coisa mudou e vale descobrir o quê antes de seguir.
 
-### O que ele foi olhar no celular (pra você saber o que ele viu)
+### 2. Leia, nesta ordem
 
-Nada disto jamais rodou em WebKit. As quatro da §15 da spec continuam abertas, mais duas novas:
+1. `docs/superpowers/specs/2026-08-18-review-do-celular.md` — o desenho aprovado por ele.
+2. `docs/superpowers/plans/2026-08-18-review-do-celular.md` — 8 tasks, já emendado pelo pré-voo.
+3. `.superpowers/sdd/2026-08-18-review-do-celular/progress.md` — o ledger. **É scratch
+   git-ignorado; se um `git clean` o apagou, o essencial está aqui e nos briefs versionados.**
 
-1. Os pins ficam dentro do mapa com folga?
-2. A **barra fixa** e a **faixa de gesto** do iPhone convivem? (`env(safe-area-inset-bottom)` é
-   **0** em qualquer desktop — nada aqui mediu isso.)
-3. O painel de filtros empurra a lista sem pular?
-4. O piso de zoom 8 orienta, ou vira mancha?
-5. 🆕 **O estado vazio**, que ele alcança com UM toque: ligar **"só grátis"** zera a home (a
-   única ficha real é paga). Sem GPS ele vê o mapa da região sem pin nenhum + "0 trilhas · 1
-   filtro ligado" + o aviso e o botão de limpar; **com** GPS, o mapa recentra nele a ~27 km.
-6. 🆕 **O reenquadramento** do mapa quando ele mexe no filtro.
+Os **briefs das 8 tasks** ficaram em `.superpowers/sdd/.../task-N-brief.md`, que é scratch — mas
+são extraídos do plano com o script, então **regeneram**:
+`"…/superpowers/6.3.0/skills/subagent-driven-development/scripts/task-brief" <plano> <N>`.
+
+### 3. O estado exato, task a task
+
+| Task | Estado | Commits |
+|---|---|---|
+| 1 — GPS pede sozinho na 1ª abertura | **completa**, 1 fix round, re-revisão limpa | `b4a7585`, `2260c36` |
+| 2 — `piso.ts` + schema + questionário | 🔴 **NO MEIO, NÃO REVISADA** | `ad88d20` (WIP) |
+| 3 a 8 | não começadas | — |
+
+**O `ad88d20` é um commit de WIP rotulado, não uma task concluída.** Ele existe pra não perder
+trabalho real e pra deixar o estado legível. O que **falta** nele, medido e não suposto:
+
+- o `tests/lib/questionario.test.ts` (a falha acima);
+- **as provas de mutação da tabela do brief — não rodadas**;
+- **a verificação do questionário — não feita**, e ela é a que mais importa (ver o item 5);
+- `npm run build` — não rodado;
+- **revisão de task — não aconteceu.** Não existe `task-2-report.md`.
+
+### 4. Como retomar a Task 2 — duas saídas honestas, e a escolha é sua
+
+- **(a) Continuar de onde parou:** despachar um implementador com o brief da Task 2 + a lista
+  acima do que falta, deixando claro que o código já está no `ad88d20` e que ele **não começa do
+  zero — ele fecha e PROVA**. Mais barato.
+- **(b) Reverter o `ad88d20` e redespachar limpo.** Mais caro, e só vale se a leitura do diff
+  levantar dúvida sobre a qualidade do que está lá.
+
+**Recomendação: (a)**, porque o estado é legível e o `tsc` está limpo. Mas leia o diff antes de
+decidir — ninguém revisou aquele código ainda.
+
+### 5. 🔴 A armadilha da Task 2, que é o motivo de ela não poder ser dada como pronta
+
+`docs/questionario-ficha.md` é respondido **pelo João**, que não programa, e a resposta vira um
+JSON que tem que passar no schema. **Na rodada passada o revisor achou DOIS defeitos nesse
+arquivo que nenhuma leitura pegou — e só apareceram porque ele RESPONDEU o questionário e rodou
+o JSON contra o schema.** A lição da casa é literal: *para artefato que vira entrada de outra
+coisa, a prova é USÁ-LO.* **Isso não foi feito.** Quem fechar a Task 2 tem que fazer, e colar.
+
+Dois pontos do texto que decidem se o dado entra certo ou errado **pra sempre**:
+- **`extensaoKm` é SÓ IDA** — se a pergunta não disser com todas as letras, ele responde ida e
+  volta e o número fica errado sem ninguém perceber.
+- **`piso` é O PIOR TRECHO do caminho**, não o final nem a média. Na Rampa: asfalto até o pé da
+  serra, barro na subida → a resposta certa é `barro`. Esse exemplo tem que estar no
+  questionário; é ele que desfaz a ambiguidade.
+
+### 6. O método, e ele já está autorizado
+
+**SDD com subagentes — o João autorizou nesta rodada** ("pode seguir"). Implementador → revisão
+por task com dois veredictos → conserto pelo mesmo implementador → re-revisão escopada →
+**revisão da branch inteira no fim, sem exceção** (7ª rodada seguida em que ela é obrigatória).
+
+**A ordem das tasks é 1→8 e ela NÃO é arbitrária: é expandir → migrar → contrair.** A rodada
+apaga `esforco` e `duracao`, que têm consumidores em quatro arquivos; apagá-los antes da Task 8
+deixa o `tsc` vermelho no meio da rodada. **Não "limpe" os campos velhos cedo.**
+
+### 7. O que a rodada entrega (as palavras dele, no review do iPhone)
+
+1. *"o mapa já ia abrir pegando sua localização"* → GPS automático na 1ª abertura. **FEITO.**
+2. *"o filtro duração deveria ser distância — cada navegador tem seu ritmo"* → duração **morre**;
+   entra tamanho da trilha em km, **só ida**.
+3. *"com a chegada do esforço, isso deve ser inserido dentro das trilhas"* → piso e extensão
+   aparecem na ficha, junto ao Trajeto.
+4. *"o filtro quando selecionado não é possível deselecionar"* → **ele mesmo retirou** e trocou
+   por *"melhor o usuário conseguir digitar ou mover uma barra"*. Os dois recortes numéricos
+   viram **barra + campo**; o problema do chip morre por construção.
+5. *"esforço podia ser — barro, paralelepípedo, asfalto esburacado, asfalto tapete"* → o
+   `esforco` (leve/media/puxada, sobre o corpo) vira **piso da via** (sobre o lugar).
+
+**A descoberta que reorganizou tudo, e ela vale reler:** a lista dele é vocabulário de estrada, e
+a ficha real explica por quê — *"Dá pra ir de carro comum; molhado, o risco é atolar"*, *"não
+suba de carro comum; o barro segura água"*. **A Rampa do Pepê é um rolê de carro.** Por isso um
+campo sobre o preparo do corpo nunca teve de onde sair: este app só sabe falar de lugar.
+
+### 8. O que continua sendo só dele (não é trabalho da rodada)
+
+- **Responder `docs/questionario-ficha.md`** — a 2ª ficha. **As perguntas mudaram nesta rodada**,
+  então responder ANTES de a Task 2 fechar é responder o texto errado.
+- **Abrir a home no iPHONE.** As quatro perguntas da §15 da spec anterior continuam abertas
+  (pins com folga, barra fixa × faixa de gesto, painel empurrando a lista, piso de zoom 8), mais
+  as três novas da §14 da spec desta rodada: a barra arrasta com o polegar? o campo numérico abre
+  o teclado certo? o balão de GPS aparece antes ou depois da home pintar?
 
 ---
 
