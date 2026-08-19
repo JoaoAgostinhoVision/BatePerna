@@ -162,6 +162,48 @@ describe("esforço e duração", () => {
   });
 });
 
+describe("piso e extensaoKm", () => {
+  const base = JSON.parse(readFileSync(
+    path.join(process.cwd(), "content", "fichas", "rampa-do-pepe.json"), "utf8"));
+
+  it("ficha com piso inválido ('terra') não valida", () => {
+    expect(() => fichaSchema.parse({ ...base, piso: "terra" })).toThrow();
+  });
+
+  it("aceita os quatro pisos da escala", () => {
+    for (const p of ["barro", "paralelepipedo", "asfalto-esburacado", "asfalto-tapete"]) {
+      expect(() => fichaSchema.parse({ ...base, piso: p })).not.toThrow();
+    }
+  });
+
+  it("ficha SEM piso e SEM extensaoKm valida — os dois são opcionais", () => {
+    expect(() => fichaSchema.parse(base)).not.toThrow();
+    const lido = fichaSchema.parse(base);
+    expect(lido.piso).toBeUndefined();
+    expect(lido.extensaoKm).toBeUndefined();
+  });
+
+  it("extensaoKm zero ou negativa não valida", () => {
+    expect(() => fichaSchema.parse({ ...base, extensaoKm: 0 })).toThrow();
+    expect(() => fichaSchema.parse({ ...base, extensaoKm: -4 })).toThrow();
+  });
+
+  it("extensaoKm positivo valida e sobrevive ao parse", () => {
+    const lido = fichaSchema.parse({ ...base, extensaoKm: 4.2 });
+    expect(lido.extensaoKm).toBe(4.2);
+  });
+
+  // A ficha REAL. Sintética prova a função; só a real prova o conteúdo
+  // (lição 10) — a Rampa de hoje não tem piso nem extensaoKm, e por serem
+  // opcionais ela tem que continuar carregando exatamente como antes.
+  it("a Rampa continua carregando, sem piso e sem extensão", () => {
+    const f = getFicha("rampa-do-pepe");
+    expect(f).not.toBeNull();
+    expect(f!.piso).toBeUndefined();
+    expect(f!.extensaoKm).toBeUndefined();
+  });
+});
+
 describe("formatarDuracao: a linha do cartão", () => {
   it("abaixo de uma hora, em minutos", () => {
     expect(formatarDuracao(45)).toBe("~45min");

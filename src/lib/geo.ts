@@ -39,6 +39,19 @@ export function formatarDistanciaCurta(km: number): string {
   return formatarDistancia(km).replace(" daqui", "");
 }
 
+/** A extensão da trilha em si (não a distância até ela) — km SÓ IDA, decisão
+ *  explícita do dono do app. O sufixo mora AQUI DENTRO, não em cada chamador:
+ *  o cartão (Task 6) e a ficha (Task 7) mostram o MESMO número, e foi
+ *  exatamente duas formatações escritas em dois lugares que fez a mesma
+ *  trilha ter dois km diferentes numa rodada passada (ver o comentário de
+ *  `coordDaDistancia` abaixo, mesma família de defeito). Com o sufixo dentro
+ *  da função, nenhum chamador tem como deixá-lo cair. */
+export function formatarExtensao(km: number): string {
+  const arred = Math.round(km * 10) / 10;
+  const n = Number.isInteger(arred) ? String(arred) : arred.toFixed(1).replace(".", ",");
+  return `${n} km de trilha`;
+}
+
 /** 🔴 O ÚNICO ponto de onde o app mede distância até uma trilha.
  *
  *  Uma ficha carrega DUAS coordenadas — `trajeto.waypoints[0]` (onde a trilha

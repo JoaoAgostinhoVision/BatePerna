@@ -153,42 +153,48 @@ Molhado, o risco é atolar.`
 
 ---
 
-## Quão puxada é — `esforco`
+## O piso da via — `piso`
 
-**Pergunta:** pensando no corpo de quem for, essa trilha é **leve**, **media** ou
-**puxada**? Três degraus, e só estes três — responda com uma dessas três palavras
-exatamente, sem sinônimo (nem "moderada", nem "média" com acento):
+**Pergunta:** pensando no caminho INTEIRO até lá, da estrada principal até o
+ponto final — qual é o PIOR trecho? Não é o trecho final, não é a média dos
+trechos: é o pior pedaço que qualquer carro precisa passar. Responda com uma
+destas quatro palavras exatamente, sem sinônimo:
 
-- **leve** — dá pra levar criança ou alguém sem preparo nenhum, sem sofrer.
-- **media** — exige um preparo físico normal, mas não é sofrimento.
-- **puxada** — cansa de verdade, exige preparo físico de quem caminha com
-  frequência.
+- **barro** — terra que vira lama e segura água quando molha; o pior piso da
+  escala.
+- **paralelepipedo** — pedra irregular; sacoleja, mas não atola.
+- **asfalto-esburacado** — é asfalto, mas tem buraco.
+- **asfalto-tapete** — asfalto liso, sem buraco — o melhor piso da escala.
 
-**Por que importa:** é um dos filtros da tela inicial — quem não topa uma puxada
-pode esconder essas trilhas da lista.
+**Por que importa:** é um dos filtros da tela inicial — quem só topa ir de carro
+comum em piso bom pode esconder trilhas com piso pior que isso.
+
+**Exemplo (Rampa):** a estrada até o pé da serra é asfalto, e só a subida da
+serra é barro. Mesmo com a maior parte do caminho asfaltada, o PIOR trecho
+manda — a resposta certa pra Rampa é `barro`.
 
 **Pular é permitido:** sem resposta, a trilha simplesmente nunca é escondida por
-esse filtro — ela aparece pra qualquer nível de esforço que a pessoa escolher.
-
-**Exemplo:** `media`
+esse filtro — ela aparece pra qualquer piso mínimo que a pessoa escolher.
 
 ---
 
-## Quanto tempo leva — `duracao`
+## Quantos km — `extensaoKm`
 
-**Pergunta:** quanto tempo dura o trajeto em si — só o percurso, não contando
-parada, foto, banho de cachoeira no fim? Responda **em minutos**, não em texto
-("1h30" não serve; escreva `90`).
+**Pergunta:** quantos quilômetros tem o trajeto em si, contando **só a ida**
+— não conte a volta, mesmo que a volta seja pelo mesmo caminho de ida.
+Responda em número (pode ter casa decimal): `4` ou `4.2`, não `4 km` nem
+"4 km ida e volta".
 
-**Exemplos de conversão:** `30 minutos → 30` · `1h → 60` · `1h30 → 90` · `2h → 120`.
+**Por que importa:** é o outro filtro numérico da tela inicial — quem só quer
+uma caminhada curta pode esconder trajetos mais longos que isso. É também o
+número que aparece no cartão da home e na ficha — a mesma função escreve os
+dois textos, pra nunca discordarem entre si.
 
-**Por que importa:** é o outro filtro numérico da tela inicial — quem só tem uma
-manhã livre pode esconder trajetos mais longos que isso.
+**Exemplo (Rampa):** ainda não medido — quando você passar o número, ele entra
+como só ida, do jeito que a pergunta pede.
 
 **Pular é permitido:** sem resposta, a trilha simplesmente nunca é escondida por
-esse filtro — ela aparece pra qualquer duração que a pessoa escolher.
-
-**Exemplo:** `90`
+esse filtro — ela aparece pra qualquer extensão que a pessoa escolher.
 
 ---
 
@@ -344,7 +350,14 @@ recusa carregar em vez de mostrar algo quebrado. Depois de validado, a ficha nov
 aparece sozinha na home (agrupada por "hoje dá" ou "hoje não dá", junto com o pin no
 mapa) e no acervo em `/trilhas` — sem precisar mexer em mais nada.
 
-`esforco` e `duracao` são os dois únicos campos opcionais deste questionário: se você
+`piso` e `extensaoKm` são os dois únicos campos opcionais deste questionário: se você
 pulou uma das duas perguntas acima, a ficha carrega igual, só que essa trilha nunca
-fica escondida pelo filtro correspondente (esforço ou duração) na tela inicial — ela
+fica escondida pelo filtro correspondente (piso ou extensão) na tela inicial — ela
 aparece pra qualquer valor que a pessoa escolher no filtro.
+
+**Nota pra quem mantém o schema:** duas perguntas antigas, `esforco` (quão puxada é,
+pensando no corpo de quem vai) e `duracao` (quanto tempo dura, em minutos), saíram
+deste questionário — este app só sabe falar do LUGAR, não do corpo de quem vai, e
+`piso` cobre o mesmo papel de filtro. As fichas antigas que já tinham `esforco` e
+`duracao` continuam válidas; este documento só não pergunta mais por eles em fichas
+novas.

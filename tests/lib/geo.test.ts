@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { distanciaKm, formatarDistancia, formatarDistanciaCurta } from "@/lib/geo";
+import {
+  distanciaKm,
+  formatarDistancia,
+  formatarDistanciaCurta,
+  formatarExtensao,
+} from "@/lib/geo";
 
 // Âncoras derivadas da própria geometria da esfera, não de geografia real:
 // um grau no equador = 2·π·6371/360 = 111,195 km.
@@ -78,5 +83,29 @@ describe("formatarDistanciaCurta: a linha do cartão", () => {
   });
   it("uma casa decimal abaixo de 10, com vírgula", () => {
     expect(formatarDistanciaCurta(4.25)).toBe("~4,3 km em linha reta");
+  });
+});
+
+describe("formatarExtensao: o mesmo número no cartão e na ficha", () => {
+  // O sufixo é da FUNÇÃO, não do chamador — ver o comentário em geo.ts.
+  it("formatarExtensao(4) devolve '4 km de trilha', com o sufixo", () => {
+    expect(formatarExtensao(4)).toBe("4 km de trilha");
+  });
+
+  it("não devolve o mesmo formato de formatarDistanciaCurta", () => {
+    // formatarDistanciaCurta sempre diz "em linha reta" e nunca "de trilha";
+    // formatarExtensao é o oposto. Se as duas convergissem, um chamador
+    // trocado por outro passaria despercebido.
+    expect(formatarExtensao(4)).not.toBe(formatarDistanciaCurta(4));
+    expect(formatarExtensao(4)).not.toContain("em linha reta");
+    expect(formatarDistanciaCurta(4)).not.toContain("de trilha");
+  });
+
+  it("fração abaixo de 10 usa uma casa decimal com vírgula", () => {
+    expect(formatarExtensao(4.25)).toBe("4,3 km de trilha");
+  });
+
+  it("valor inteiro não ganha ',0' à toa", () => {
+    expect(formatarExtensao(12)).toBe("12 km de trilha");
   });
 });
