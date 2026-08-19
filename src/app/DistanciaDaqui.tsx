@@ -5,10 +5,12 @@ import type { Ficha } from "@/types/ficha";
 import { useGps, useLocal, useMexerLocal } from "./local";
 
 /** O pedido de GPS agora é automático (decisão do João, `local.tsx`): o
- *  `<LocalVivo>` já busca a posição sozinho ao montar. O botão aqui é o
- *  caminho de quem AINDA está sem posição — GPS ainda não respondeu, sem
- *  sinal, ou já foi negado antes (nesse caso o toque não faz nada de novo;
- *  o navegador não pergunta duas vezes).
+ *  `<LocalVivo>` já busca a posição sozinho ao montar. O botão aqui só
+ *  aparece enquanto ainda não há posição E o GPS não foi negado — é o
+ *  caminho de quem está esperando a resposta (ou sem sinal). Quando
+ *  `gps === "negado"` não existe botão: este componente mostra a mensagem
+ *  "sem localização" no lugar dele (ver abaixo), porque o navegador não
+ *  pergunta duas vezes e um botão ali seria um toque que não faz nada.
  *
  *  "Uma pessoa, uma fonte": lê a MESMA localização que o mapa e o cartão da
  *  home — não pede a posição ao aparelho por conta própria. O toque só
