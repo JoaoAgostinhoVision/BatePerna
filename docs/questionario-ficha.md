@@ -156,9 +156,11 @@ Molhado, o risco é atolar.`
 ## O piso da via — `piso`
 
 **Pergunta:** pensando no caminho INTEIRO até lá, da estrada principal até o
-ponto final — qual é o PIOR trecho? Não é o trecho final, não é a média dos
-trechos: é o pior pedaço que qualquer carro precisa passar. Responda com uma
-destas quatro palavras exatamente, sem sinônimo:
+ponto final — qual é o PIOR trecho? Vale o pior pedaço mesmo que ele seja
+curto, e mesmo que ele seja justamente o último: não é a média dos trechos, e
+não é o piso que predomina no caminho. É o pior pedaço que qualquer carro
+precisa passar. Responda com uma destas quatro palavras exatamente, sem
+sinônimo:
 
 - **barro** — terra que vira lama e segura água quando molha; o pior piso da
   escala.

@@ -96,6 +96,15 @@ describe("formatarExtensao: o mesmo número no cartão e na ficha", () => {
     // formatarDistanciaCurta sempre diz "em linha reta" e nunca "de trilha";
     // formatarExtensao é o oposto. Se as duas convergissem, um chamador
     // trocado por outro passaria despercebido.
+    //
+    // MEDIDO, pra este comentário não prometer mais do que entrega:
+    // - com `formatarExtensao` delegando pra `formatarDistanciaCurta` (a
+    //   convergência que o nome do teste cita), ele CAI — 'expected
+    //   "~4,0 km em linha reta" not to be "~4,0 km em linha reta"'.
+    // - com o sufixo " de trilha" simplesmente apagado, ele NÃO cai: "4 km" e
+    //   "~4,0 km em linha reta" continuam diferentes, e nenhuma das três
+    //   asserções olha pro sufixo. Quem mata esse caso são os testes de valor
+    //   exato acima e abaixo, e é lá que ele está coberto — não aqui.
     expect(formatarExtensao(4)).not.toBe(formatarDistanciaCurta(4));
     expect(formatarExtensao(4)).not.toContain("em linha reta");
     expect(formatarDistanciaCurta(4)).not.toContain("de trilha");
