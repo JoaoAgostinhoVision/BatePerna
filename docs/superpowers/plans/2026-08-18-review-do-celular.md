@@ -180,6 +180,17 @@ it("a Rampa continua carregando, sem piso e sem extensão", ...)
 é `expect(PISOS_FILTRAVEIS).toEqual(["paralelepipedo", ...])` — passa igual com a lista copiada à
 mão. Tem que ser comparado **contra `PISOS`**.
 
+> 🔴 **EMENDA DO PRÉ-VOO (2026-08-19) — a #2 é IMPOSSÍVEL na camada que eu escolhi. MEDIDA.**
+> Apliquei a mutação (`PISOS_FILTRAVEIS` virando lista literal com os três nomes) e rodei:
+> **`tests/lib/piso.test.ts` fecha 3/3 VERDE.** Comparar contra `PISOS` não resolve — em runtime,
+> lista derivada e lista copiada à mão com o mesmo conteúdo **são o mesmo valor**, e nenhuma
+> asserção de valor as distingue. O meu plano pediu uma coisa que a camada não pode dar.
+> **O remédio é asserção de FONTE**, o mesmo precedente do `"use client"` que o jsdom não enxerga
+> (`tests/app/DistanciaDaqui.test.tsx:120-125`, `tests/app/MapaHome.test.tsx:393-399`):
+> `expect(fonte).toMatch(/PISOS_FILTRAVEIS\s*=\s*PISOS\.slice\(/)`.
+> **O teste de valor FICA como cinto** — ele é o que morde quando alguém acrescenta um 5º piso a
+> `PISOS` e a cópia não acompanha. São coisas diferentes, e a diferença vai no comentário.
+
 ---
 
 ## Task 3 — os recortes novos em `filtros.ts` (convivendo com os velhos)
@@ -269,6 +280,32 @@ it("com os sete recortes ligados, conta 7", ...)
 
 **Antes de declarar qualquer linha morta, rode `npx tsc --noEmit`** — lição 13: há linhas que o
 vitest diz mortas e o `tsc` carrega (foi o caso do guarda do `lerFiltros`).
+
+> 🔴 **EMENDAS DO PRÉ-VOO (2026-08-19) — quatro furos meus. As detalhadas estão em
+> `.superpowers/sdd/2026-08-18-review-do-celular/task-3-brief.md`; o essencial fica aqui porque
+> aquele arquivo é scratch.**
+>
+> 1. **A mutação #5 é impossível como escrita — MEDIDA.** `Number.isInteger` já recusa `NaN`,
+>    `Infinity`, texto e fracionário sozinho (medido em node), então `Number.isFinite` ao lado é
+>    redundante e **inprovável**: nenhuma mutação o mata. A validação é
+>    `Number.isInteger(v) && v >= PASSO && v <= MAX`, e a mutação vira **"`Number.isInteger` sai"**,
+>    que tem que derrubar **três** testes: NaN, `"30"` texto e **7,5 (novo)**. Sem `isInteger`,
+>    `"30" >= 5` é `true` por coerção e `distanciaKm` viraria uma **string** no estado do app.
+>    Mutação irmã, separada: **o piso `>= DIST_PASSO_KM` sai** → "distanciaKm 0 → null".
+> 2. **`pisoMinimo` valida contra `PISOS_FILTRAVEIS`, não contra `PISOS`.** `barro` é o piso da
+>    escala: aceso, não esconde nada, **e o painel da Task 5 não desenha chip de barro** — a linha
+>    diria "1 filtro ligado" sem nenhum controle na tela pra desligar. É irmão exato do deferido já
+>    registrado no RESUME (o `contarLigados` contando `distanciaKm` sem o grupo Distância na tela).
+>    Teste: `it("pisoMinimo 'barro' → null …")`; mutação: "a validação volta a olhar `PISOS`".
+> 3. **O teste do filtro guardado velho tem o nome errado PARA ESTA FASE.** Na expansão, `esforco`
+>    e `duracaoMax` continuam sendo lidos e continuam recortando — um filtro velho **filtra sim**.
+>    Aqui o teste é *"não estoura, e os campos novos vêm null"*; o *"não filtra"* é da Task 8.
+>    Junto: `it("os valores guardados 30 e 60 da versão velha continuam válidos no intervalo novo")`
+>    — o celular dele tem `bp.filtros` gravado de verdade.
+> 4. **Dois testes existentes ficam com o nome mentindo e o brief não os citava:**
+>    `"contarLigados conta os CINCO recortes"` (l. 253) e `"preserva os CINCO campos válidos"`
+>    (l. 289). Viram SETE. **Estender os dois, não criar um terceiro ao lado** — e é o segundo que
+>    importa: sem estendê-lo, os dois campos novos ficam sem prova de que sobrevivem ao `lerFiltros`.
 
 ---
 
