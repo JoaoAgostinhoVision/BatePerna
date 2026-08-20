@@ -1,15 +1,22 @@
 # RESUME — BatePerna (retomar aqui)
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado.** O ledger da execução vive em
-> `.superpowers/sdd/2026-08-13-daqui-e-filtros/progress.md`, que é **scratch git-ignorado** —
+> `.superpowers/sdd/2026-08-18-review-do-celular/progress.md`, que é **scratch git-ignorado** —
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-19. **RODADA ABERTA, em execução.**
+**Última parada:** 2026-08-19. **RODADA ABERTA, PARADA A PEDIDO DELE, EM PONTO LIMPO.**
 Branch **`review-do-celular`**, NÃO mergeada, NÃO deployada. `main` segue em `f10f075`.
+
+**Ele pediu pra parar** depois da Task 3: *"gostaria de parar por aqui, deixe tudo pronto para
+quando eu iniciar uma outra sessão e digitar continua tudo ficar certo para voltar."*
+
+✅ **Não existe WIP desta vez.** A Task 4 chegou a ser despachada e foi interrompida **antes de
+escrever qualquer arquivo** — a árvore ficou limpa e todo commit no log é trabalho revisado. Você
+não precisa julgar código não revisado, como a sessão passada precisou.
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA" — retome a rodada `review-do-celular` na Task 3
+# ▶▶ SE O JOÃO DISSER "CONTINUA" — retome a rodada `review-do-celular` na Task 4
 
 **O review do celular já aconteceu, já foi triado e já virou spec + plano aprovados.** Não
 pergunte o que ele achou; não peça a lista de novo; não devolva menu.
@@ -19,55 +26,109 @@ pergunte o que ele achou; não peça a lista de novo; não devolva menu.
 ```
 git branch --show-current  → review-do-celular   (se estiver em main, só trocar)
 git status --short         → limpo
-npm test                   → 560/560   ← tudo verde; NÃO há falha esperada
+npm test                   → 588/588 em 48 arquivos   ← tudo verde, NÃO há falha esperada
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
 
-Se a suíte estiver diferente disso, alguma coisa mudou e vale descobrir o quê antes de seguir.
+**Os três foram conferidos por mim no fim da sessão, não relatados por agente.** Se a suíte
+estiver diferente disso, alguma coisa mudou e vale descobrir o quê antes de seguir.
 
 ### 2. Leia, nesta ordem
 
 1. `docs/superpowers/specs/2026-08-18-review-do-celular.md` — o desenho aprovado por ele.
-2. `docs/superpowers/plans/2026-08-18-review-do-celular.md` — 8 tasks, já emendado pelo pré-voo.
+2. `docs/superpowers/plans/2026-08-18-review-do-celular.md` — 8 tasks. 🔴 **Leia os blocos de
+   citação "EMENDA DO PRÉ-VOO"**: eles CORRIGEM o texto ao redor, e onde discordarem a emenda
+   vence. Tem emenda na Task 2, na 3 e na 4.
 3. `.superpowers/sdd/2026-08-18-review-do-celular/progress.md` — o ledger. **É scratch
-   git-ignorado; se um `git clean` o apagou, o essencial está aqui e nos briefs versionados.**
+   git-ignorado; se um `git clean` o apagou, o essencial está aqui e no plano versionado.**
 
 Os **briefs das 8 tasks** ficaram em `.superpowers/sdd/.../task-N-brief.md`, que é scratch — mas
 são extraídos do plano com o script, então **regeneram**:
 `"…/superpowers/6.3.0/skills/subagent-driven-development/scripts/task-brief" <plano> <N>`.
+🔴 **O brief regenerado NÃO tem as emendas do pré-voo** — elas foram escritas à mão por cima.
+Depois de regenerar, **releia o plano e recoloque a emenda da task** antes de despachar. As da
+Task 2, 3 e 4 estão no plano; as das Tasks 5 a 8 ainda não foram feitas.
 
 ### 3. O estado exato, task a task
 
 | Task | Estado | Commits |
 |---|---|---|
 | 1 — GPS pede sozinho na 1ª abertura | **completa**, 1 fix round, re-revisão limpa | `b4a7585`, `2260c36` |
-| 2 — `piso.ts` + schema + questionário | **completa**, 3 fix rounds, re-revisão **ADDRESSED** | `ad88d20` (WIP), `9b03f43`, `cb97792`, `0445f50`, `bdb4497` |
-| 3 — recortes novos em `filtros.ts` | despachada nesta sessão | — |
-| 4 a 8 | não começadas | — |
+| 2 — `piso.ts` + schema + questionário | **completa**, 3 fix rounds, re-revisão **ADDRESSED** nos 6 achados | `ad88d20` (WIP), `9b03f43`, `cb97792`, `0445f50`, `bdb4497` |
+| 3 — recortes novos em `filtros.ts` | **completa**, 1 fix round + 1 conserto meu, re-revisão **ADDRESSED** nos 4 | `066cb08`, `c4161b4`, `e0d1442` |
+| **4 — `FaixaKm`: a barra e o campo** | ⬅️ **É AQUI QUE VOCÊ COMEÇA.** Despachada e interrompida antes de escrever nada. | — |
+| 5 a 8 | não começadas | — |
 
-**Chão depois da Task 2:** `npm test` **560/560**, `npx tsc --noEmit` limpo, `npm run build`
-passa — os três conferidos por mim, não só relatados.
+**Chão depois da Task 3:** `npm test` **588/588**, `tsc` limpo, `npm run build` passa. A base da
+rodada era 539.
 
-### 4. 🔴 O PRÉ-VOO DE CADA TASK JÁ PAGOU SEIS VEZES NESTA RODADA — não pule
+### 3b. 🔴 O QUE JÁ ESTÁ DECIDIDO E A TASK 4 TEM QUE CASAR
+
+- **Os quatro limites moram em `src/lib/filtros.ts`** (`DIST_MAX_KM = 100`, `EXT_MAX_KM = 20`,
+  `DIST_PASSO_KM = 5`, `EXT_PASSO_KM = 1`) e o `FaixaKm` os **lê de lá**. Não os reescreva no
+  componente — duas fontes que podem discordar é a família de defeito que este app persegue, e o
+  `filtros.test.ts` já tem uma asserção que prende os quatro **valores literais**.
+- **`lerFiltros` valida `>= 1`, não `>= passo`.** Se o campo prender no `passo`, um `4` digitado
+  é aceito pela tela, guardado, e vira `null` na releitura — **o filtro se desligando sozinho
+  entre duas aberturas do app.** Ver a emenda da Task 4 no plano.
+- **Deferido que chega na Task 5** (achado I-2 da revisão da Task 3, plan-mandated): o tipo
+  `pisoMinimo: Piso | null` ainda deixa `barro` entrar pelo **estado em memória** — a emenda 2
+  fechou só a porta do `localStorage`. Aceso, `barro` não esconde nada **e não tem chip pra
+  desligar**: a linha diria "1 filtro ligado" sem controle na tela. Já está registrado no teste.
+
+### 4. 🔴 O PRÉ-VOO DE CADA TASK JÁ PAGOU OITO VEZES NESTA RODADA — não pule
 
 **Antes de despachar qualquer task, releia a lista de testes do brief perguntando "que linha do
 código eu posso apagar sem isto falhar?"** e mande o complemento junto no despacho. Nesta rodada
-o pré-voo achou **seis furos do plano**, e as emendas estão **no plano versionado**
+o pré-voo achou **oito furos do plano** — e as emendas estão **no plano versionado**
 (`docs/superpowers/plans/2026-08-18-review-do-celular.md`, em blocos de citação 🔴), não só nos
-briefs de scratch. Os dois mais instrutivos:
+briefs de scratch.
 
-- **Uma prova que a camada não pode dar.** A mutação #2 da Task 2 (`PISOS_FILTRAVEIS` virando
+🔴 **O padrão que as três tasks desta sessão confirmaram: o código dos implementadores estava
+certo todas as vezes. Os oito achados foram do PLANO e da PROVA.** Nenhum fix round desta sessão
+consertou lógica de aplicação. Quando o revisor rotula "plan-mandated", é literal.
+
+**As três formas novas, e elas valem além desta rodada:**
+
+- **Uma prova que a CAMADA não pode dar.** A mutação #2 da Task 2 (`PISOS_FILTRAVEIS` virando
   lista copiada à mão) **não morde** — medida, 3/3 verde. Em runtime, lista derivada e lista
-  copiada com o mesmo conteúdo **são o mesmo valor**. O remédio foi **asserção de fonte**, o
-  precedente do `"use client"`. **Antes de exigir uma mutação, pergunte se a camada consegue
-  distinguir as duas versões.**
+  copiada com o mesmo conteúdo **são o mesmo valor**; nenhuma asserção de valor as distingue. O
+  remédio foi **asserção de fonte**, o precedente do `"use client"`. **Antes de exigir uma
+  mutação, pergunte se a camada consegue distinguir as duas versões.**
+- **Prova OCA porque as duas versões coincidem no caso testado.** Eu cravei que
+  `"distanciaKm 0 → null"` provava o piso do intervalo. **Não prova:** `0 >= 5` também é falso,
+  então `>= 1` e `>= passo` eram indistinguíveis pela suíte que eu especifiquei. Medido pelo
+  implementador e confirmado pelo revisor: mutando o piso caem **só** os testes que ele
+  acrescentou (`distanciaKm 4 → 4`). **Escolha o caso de teste que SEPARA as duas versões, não um
+  que ambas rejeitam.**
+- **Teste auto-referente quanto ao VALOR.** Os testes de borda escritos contra o símbolo
+  (`DIST_MAX_KM + 1`) provam a RELAÇÃO e são cegos ao número: trocar `EXT_MAX_KM` de 20 pra 8
+  deixava tudo verde, porque o teste vira "9 → null" e "8 → 8", corretos com 8. **As duas provas
+  são ortogonais e as duas precisam existir** — medido nos dois sentidos: mutar o valor derruba
+  só a asserção literal; mutar a relação (`<=` → `<`) derruba só os testes de borda.
 - **Um campo indigitável.** A Task 4, como eu a escrevi, prendia o campo numérico no intervalo
   `[passo, max]` "na hora", com `DIST_PASSO_KM = 5` — o `4` vira `5` no primeiro dígito e
   **ninguém consegue digitar `45`**, nem `100`. Ruling: **o piso do intervalo é `1`**; `passo` é
-  granularidade da BARRA. Isso se propagou pra Task 3 (`lerFiltros` valida `>= 1`), senão um `4`
-  digitado é aceito, guardado, e vira `null` na releitura — **o filtro se desligando sozinho
-  entre uma abertura e outra do app**.
+  granularidade da BARRA. **Simule o dedo dígito a dígito antes de cravar comportamento de
+  campo** — nenhum teste desta suíte pega isso.
+
+### 4b. 🔴 A OUTRA FAMÍLIA QUE APARECEU TRÊS VEZES NESTA SESSÃO: comentário que envelhece
+
+Três achados foram **comentários afirmando medições que deixaram de ser verdade**, sempre dentro
+do comentário que existia justamente pra registrar a medição:
+
+1. um guarda afirmando que *"fecha a porta pela qual a invenção anterior entrou"* — recolando a
+   invenção como prosa, 9/9 verde. Ele fecha a porta **vizinha**;
+2. `"585/585 VERDE"` cravado num comentário, envelhecido em duas horas;
+3. um comentário afirmando **no presente** que quatro mutações deixam a suíte verde — o que era
+   verdade **antes** da asserção escrita três linhas abaixo, a asserção que ele existe pra
+   justificar.
+
+**A regra que ficou: não crave total absoluto de suíte em comentário** ("nenhuma asserção cai" não
+envelhece; "585/585" envelhece a cada task), **e escreva no passado o que foi medido antes da
+mudança.** O risco do #3 é o pior: quem medir recebe o oposto do escrito e **desacredita o bloco
+inteiro**, inclusive a parte que vale.
 
 ### 5. 🔴 A armadilha da Task 2, e ela vale além dela — foi o Critical desta rodada
 
@@ -117,16 +178,21 @@ deixa o `tsc` vermelho no meio da rodada. **Não "limpe" os campos velhos cedo.*
 
 ### 7. O que a rodada entrega (as palavras dele, no review do iPhone)
 
-1. *"o mapa já ia abrir pegando sua localização"* → GPS automático na 1ª abertura. **FEITO.**
+1. *"o mapa já ia abrir pegando sua localização"* → GPS automático na 1ª abertura. ✅ **FEITO**
+   (Task 1).
 2. *"o filtro duração deveria ser distância — cada navegador tem seu ritmo"* → duração **morre**;
-   entra tamanho da trilha em km, **só ida**.
+   entra tamanho da trilha em km, **só ida**. 🔶 **Meio feito:** o campo (`extensaoKm`), a pergunta
+   do questionário e o recorte em `filtros.ts` existem (Tasks 2 e 3); **falta a tela** (Tasks 4 e
+   5) e a morte da duração (Task 8).
 3. *"com a chegada do esforço, isso deve ser inserido dentro das trilhas"* → piso e extensão
-   aparecem na ficha, junto ao Trajeto.
+   aparecem na ficha, junto ao Trajeto. ⬜ **Task 7.**
 4. *"o filtro quando selecionado não é possível deselecionar"* → **ele mesmo retirou** e trocou
    por *"melhor o usuário conseguir digitar ou mover uma barra"*. Os dois recortes numéricos
-   viram **barra + campo**; o problema do chip morre por construção.
+   viram **barra + campo**; o problema do chip morre por construção. ⬜ **Tasks 4 e 5.**
 5. *"esforço podia ser — barro, paralelepípedo, asfalto esburacado, asfalto tapete"* → o
-   `esforco` (leve/media/puxada, sobre o corpo) vira **piso da via** (sobre o lugar).
+   `esforco` (leve/media/puxada, sobre o corpo) vira **piso da via** (sobre o lugar). 🔶 **Meio
+   feito:** o vocabulário (`src/lib/piso.ts`), o campo no schema, a pergunta e o recorte existem;
+   **falta os chips na tela** (Task 5), a ficha (Task 7) e apagar o `esforco` (Task 8).
 
 **A descoberta que reorganizou tudo, e ela vale reler:** a lista dele é vocabulário de estrada, e
 a ficha real explica por quê — *"Dá pra ir de carro comum; molhado, o risco é atolar"*, *"não
@@ -135,12 +201,35 @@ campo sobre o preparo do corpo nunca teve de onde sair: este app só sabe falar 
 
 ### 8. O que continua sendo só dele (não é trabalho da rodada)
 
-- **Responder `docs/questionario-ficha.md`** — a 2ª ficha. **As perguntas mudaram nesta rodada**,
-  então responder ANTES de a Task 2 fechar é responder o texto errado.
+- ✅ **`docs/questionario-ficha.md` está PRONTO pra ele responder.** As perguntas do `piso` e da
+  `extensaoKm` fecharam na Task 2, com as três armadilhas do §5 resolvidas e travadas por teste.
+  **Não há mais razão pra esperar** — antes havia (as perguntas iam mudar).
+- 🟠 **PERGUNTA CURTA PRO JOÃO, e ela nasceu do texto novo — não decida sozinho.** A pergunta da
+  extensão agora diz, com todas as letras, que se **não se caminha nada** (o rolê é do carro e
+  acabou) a resposta certa é **deixar em branco**. Se for esse o caso da Rampa, o filtro de
+  tamanho da trilha nasce **inerte** — exatamente o defeito "filtro que não tem como filtrar" já
+  registrado nos deferidos, que ele viu no celular e reclamou. *"Na Rampa se caminha? Se o rolê é
+  todo de carro, o filtro de tamanho da trilha tem o que filtrar?"*
 - **Abrir a home no iPHONE.** As quatro perguntas da §15 da spec anterior continuam abertas
   (pins com folga, barra fixa × faixa de gesto, painel empurrando a lista, piso de zoom 8), mais
   as três novas da §14 da spec desta rodada: a barra arrasta com o polegar? o campo numérico abre
-  o teclado certo? o balão de GPS aparece antes ou depois da home pintar?
+  o teclado certo? o balão de GPS aparece antes ou depois da home pintar? **As duas primeiras só
+  existem depois da Task 4** — hoje não há barra nem campo pra abrir.
+
+### 9. O resumo do que esta sessão (2026-08-19) fez
+
+Retomou na Task 2 (que estava como WIP não revisado) e fechou **as Tasks 2 e 3**, cada uma com
+implementador → revisão com dois veredictos → fix round → re-revisão escopada. Suíte **560 → 588**.
+
+**Nenhum fix round consertou lógica de aplicação.** Os quatro fix rounds foram sobre a **prova** e
+sobre o **conteúdo do questionário** — o código dos implementadores estava certo nas duas tasks.
+
+**O Critical da sessão foi meu:** o questionário afirmava *"a estrada até o pé da serra é
+asfalto"* e *"a maior parte do caminho asfaltada"* sobre a Rampa. **A ficha real não tem a palavra
+"asfalto" uma única vez.** A frase nasceu no §5 **deste arquivo**, foi pro plano, do plano pro
+brief, do brief pro `piso.ts` e pro questionário — que promete no cabeçalho que todo exemplo é
+dado real. **Quatro arquivos a partir de uma frase minha, e um teste já a protegia.** Corrigido
+na nascente; ver o §5.
 
 ---
 
