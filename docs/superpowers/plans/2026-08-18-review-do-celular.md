@@ -288,7 +288,10 @@ vitest diz mortas e o `tsc` carrega (foi o caso do guarda do `lerFiltros`).
 > 1. **A mutação #5 é impossível como escrita — MEDIDA.** `Number.isInteger` já recusa `NaN`,
 >    `Infinity`, texto e fracionário sozinho (medido em node), então `Number.isFinite` ao lado é
 >    redundante e **inprovável**: nenhuma mutação o mata. A validação é
->    `Number.isInteger(v) && v >= PASSO && v <= MAX`, e a mutação vira **"`Number.isInteger` sai"**,
+>    `Number.isInteger(v) && v >= 1 && v <= MAX` (⚠️ **`>= 1`, não `>= PASSO`** — ver a emenda do
+>    pré-voo da Task 4: com o piso em `passo`, um `4` digitado é aceito pela tela, guardado, e
+>    vira `null` na releitura; o filtro se desliga sozinho entre uma abertura e outra),
+>    e a mutação vira **"`Number.isInteger` sai"**,
 >    que tem que derrubar **três** testes: NaN, `"30"` texto e **7,5 (novo)**. Sem `isInteger`,
 >    `"30" >= 5` é `true` por coerção e `distanciaKm` viraria uma **string** no estado do app.
 >    Mutação irmã, separada: **o piso `>= DIST_PASSO_KM` sai** → "distanciaKm 0 → null".
@@ -360,6 +363,45 @@ it("mudar o campo atualiza a barra — um valor só", ...)
 ⚠️ **A #4 é a que quase sempre falta:** prender o valor e deixar o `input` mostrando o que a
 pessoa digitou é a tela mentindo sobre o que está filtrando. **A asserção tem que ler o `value` do
 campo depois**, não só o argumento do `onChange`.
+
+> 🔴 **EMENDA DO PRÉ-VOO (2026-08-19) — o item 4 desta task, como escrito, TORNA O CAMPO
+> INUTILIZÁVEL. E o furo se propaga pra Task 3.**
+>
+> *"O campo prende no intervalo `[passo, max]` e mostra o valor preso, **na hora**"* + `DIST_PASSO_KM = 5`
+> significa que **ninguém consegue digitar "45"**. Siga a mecânica: a pessoa digita `4` →
+> `clamp(4)` → **5** → o valor sobe, volta por prop, e o campo passa a mostrar `5`; o próximo
+> dígito faz `55`. Pior no caso óbvio: pra digitar `100` ela começa por `1`, que vira `5`
+> imediatamente. **Nenhum número de dois ou três dígitos que comece com dígito menor que 5 é
+> alcançável pelo teclado.**
+>
+> **E há uma contradição interna:** a mutação #5 exige que "o campo passa a ter estado local
+> próprio" derrube um teste — mas prender na hora **e** deixar digitar exige exatamente um
+> buffer de digitação, que é estado local. O plano pede as duas coisas.
+>
+> **RULING, e ele conserta os dois de uma vez — o piso do INTERVALO é `1`, não `passo`:**
+>
+> - `passo` é **granularidade da barra**, e o plano já decidiu isso quando aceitou `7` como valor
+>   válido (*"decisão: passo é da UI"*). Usá-lo como piso do intervalo foi desleixo meu.
+> - **O teto continua preso NA HORA** — é ele que carrega a honestidade que o item existe pra
+>   proteger: `150` não pode aparecer na tela enquanto o filtro corta em `100`. E prender só o
+>   teto **não atrapalha a digitação**: `1`, `10`, `100` passam todos.
+> - **O piso não precisa prender na hora**, porque abaixo dele não há mentira nenhuma: digitar `4`
+>   filtra por 4 km, e é verdade. Só não pode ser `0` nem negativo.
+> - Com isso **não há buffer de digitação**, a mutação #5 continua válida, e "um valor só"
+>   sobrevive.
+>
+> **Isto muda a Task 3 também:** `lerFiltros` valida `>= 1`, **não** `>= DIST_PASSO_KM`. Com o
+> piso em `passo`, um `4` digitado seria aceito pela tela, guardado, e viraria `null` na releitura
+> — o filtro se desligando sozinho entre uma abertura e outra, sem nada na tela dizendo por quê.
+> O teste `"distanciaKm 0 → null"` continua sendo o que morde o piso.
+>
+> **Os testes do item 4 mudam de nome junto:**
+> ```tsx
+> it("digitar 150 devolve 100 E o campo passa a MOSTRAR 100", ...)   // teto, na hora — FICA
+> it("digitar 4 devolve 4 — abaixo do passo da barra, e isso é válido", ...)  // troca o "digitar 0 devolve o passo"
+> it("digitar 0 devolve null (ou não desce de 1) — o campo nunca filtra por zero", ...)
+> it("dá pra digitar 45 dígito a dígito: 4 depois 5, sem o campo pular", ...)  // 🔴 o teste que este furo pede
+> ```
 
 🔴 **Ao acrescentar regras no `home.css`, releia quem lê esse arquivo por TEXTO** (lição 20): uma
 asserção que casa "a regra `.bp` inteira" muda de significado sem uma linha de diff no teste, e a
