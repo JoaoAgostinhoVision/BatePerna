@@ -5,9 +5,18 @@ import { PISOS } from "@/lib/piso";
 import { fichaSchema } from "@/types/ficha";
 
 const DOC = readFileSync(path.join(process.cwd(), "docs", "questionario-ficha.md"), "utf8");
+const FICHA_RAMPA = readFileSync(
+  path.join(process.cwd(), "content", "fichas", "rampa-do-pepe.json"),
+  "utf8",
+);
 
-/** Devolve o corpo da SEÇÃO (`## … \`campo\``) até o próximo `## ` — não uma
- *  janela de N caracteres a partir da primeira ocorrência do nome do campo.
+/** Junta as quebras de linha num espaço só. O documento é markdown quebrado a
+ *  ~80 colunas, e sem isto toda asserção sobre uma frase vira refém de ONDE a
+ *  linha quebrou — uma reflowada inocente derrubaria a suíte sem nada ter
+ *  mudado de sentido. */
+const plano = (s: string) => s.replace(/\s+/g, " ");
+
+/** Devolve o corpo da SEÇÃO (`## … \`campo\``) até o próximo `## `.
  *
  *  A janela por ocorrência já mentiu neste arquivo, medido: o teste antigo
  *  fatiava a partir do primeiro `` `duracao` `` do documento, que passou a ser
@@ -27,6 +36,30 @@ function secaoDoCampo(campo: string): string {
   const fim = resto.indexOf("\n## ");
   return fim === -1 ? resto : resto.slice(0, fim);
 }
+
+/** 🔴 O SEGUNDO CORTE, e ele é a correção de um furo medido pela revisão.
+ *
+ *  A seção inteira era régua grossa demais: dava pra apagar o bullet da opção
+ *  `barro` e a suíte fechava 6/6 VERDE, porque a palavra sobrevivia no
+ *  parágrafo do exemplo. Dava pra apagar a PERGUNTA INTEIRA do piso — a
+ *  redação que desfaz a ambiguidade do "pior trecho" — e a suíte fechava 6/6
+ *  verde também, porque `"PIOR"` sobrevivia no exemplo. É a lição 2 aplicada a
+ *  texto: num OU implícito (a palavra pode vir da lista OU do exemplo), a
+ *  ocorrência que casa primeiro esconde a que sumiu.
+ *
+ *  Cada bloco rotulado em negrito (`**Pergunta:**`, `**Exemplo (Rampa):**`…) é
+ *  uma coisa diferente do documento e tem que ser medido separado. Os bullets
+ *  das opções ficam DENTRO do bloco da pergunta de propósito: eles são a
+ *  resposta que ela oferece. */
+function blocoDoRotulo(secao: string, rotulo: string): string {
+  const inicio = secao.indexOf(`**${rotulo}`);
+  expect(inicio, `a seção não tem o bloco "**${rotulo}"`).toBeGreaterThanOrEqual(0);
+  const resto = secao.slice(inicio);
+  const fim = resto.indexOf("\n**");
+  return fim === -1 ? resto : resto.slice(0, fim);
+}
+
+const perguntaDe = (campo: string) => blocoDoRotulo(secaoDoCampo(campo), "Pergunta:");
 
 describe("o questionário cobre a ficha inteira", () => {
   // ⚠️ ESTE TESTE GARANTE MENOS DO QUE O NOME PROMETE, HOJE. Ele varre
@@ -60,39 +93,106 @@ describe("o questionário cobre a ficha inteira", () => {
   // mudar e o papel ficar para trás — é a mesma razão que fez
   // `PISOS_FILTRAVEIS` ser derivado (ver tests/lib/piso.test.ts).
   //
-  // Sem as palavras exatas no papel, a resposta natural de quem responde vem
-  // "terra batida" ou "calçamento", e o `z.enum` recusa a ficha inteira. O
-  // questionário é a interface de quem responde; se ela não diz as palavras
-  // aceitas, a culpa do erro é dela.
-  it("a pergunta do piso diz as QUATRO palavras aceitas, exatamente como o schema as quer", () => {
-    const secao = secaoDoCampo("piso");
+  // E a régua é o BLOCO DA PERGUNTA, não a seção: contra a seção inteira,
+  // apagar o bullet do `barro` deixava a suíte verde, porque a palavra
+  // sobrevivia no exemplo. `barro` é o valor que a única trilha do app tem
+  // hoje — some da lista de opções e a resposta vira a menos ruim das três que
+  // restaram, ou "terra batida", que o `z.enum` recusa.
+  it("a pergunta do piso oferece as QUATRO palavras aceitas, exatamente como o schema as quer", () => {
+    const pergunta = perguntaDe("piso");
     for (const palavra of PISOS) {
-      expect(secao, `a seção do piso não oferece a opção "${palavra}"`).toContain(palavra);
+      expect(pergunta, `a pergunta do piso não oferece a opção "${palavra}"`).toContain(palavra);
     }
   });
 
-  // 🔴 "o PIOR trecho" sozinho ainda deixa a dúvida de pé quando o caminho
-  // muda de piso no meio: quem lê pensa no trecho final, ou na média. O
-  // exemplo da Rampa é o que desfaz a ambiguidade porque ele é o caso
-  // CONFLITANTE — a maior parte do caminho é asfalto e a resposta ainda é
-  // `barro`. Sem ele no papel, a Rampa seria respondida `asfalto-tapete` e
-  // ninguém veria o erro.
-  it("a pergunta do piso diz que é o PIOR trecho, e traz o exemplo da Rampa", () => {
-    const secao = secaoDoCampo("piso");
-    expect(secao).toContain("PIOR");
-    expect(secao, "a seção do piso perdeu o exemplo da Rampa").toContain("Exemplo (Rampa)");
-    const exemplo = secao.slice(secao.indexOf("Exemplo (Rampa)"));
-    expect(exemplo, "o exemplo não mostra o caminho que muda de piso").toContain("asfalto");
+  // 🔴 Este teste é o que segura o único achado de conteúdo desta task. Sem
+  // ele, dá pra "enxugar" a redação da pergunta — que é longa, e a tentação é
+  // real — e reverter sem querer o conserto, com a suíte aplaudindo.
+  //
+  // As duas cláusulas são medidas separadas porque fecham portas diferentes:
+  // "mesmo que ele seja justamente o último" mata a leitura de que a frase
+  // manda EXCLUIR o trecho final (na Rampa o pior trecho é o último — era esse
+  // o furo), e "não é o piso que predomina" mata a leitura por maioria do
+  // caminho. Uma não cobre a outra.
+  //
+  // Sim, isto prende a redação: reescrever essas frases quebra o teste de
+  // propósito. Quem reescrever tem que vir aqui e dizer, por escrito, que a
+  // porta continua fechada.
+  it("a pergunta do piso diz que é o PIOR trecho, e diz as duas coisas que desfazem a ambiguidade", () => {
+    const pergunta = plano(perguntaDe("piso"));
+    expect(pergunta).toContain("PIOR");
+    expect(pergunta, "sumiu a cláusula que impede excluir o último trecho").toMatch(
+      /mesmo que ele seja justamente o último/i,
+    );
+    expect(pergunta, "sumiu a cláusula que impede responder pelo piso que predomina").toMatch(
+      /não é o piso que predomina/i,
+    );
+  });
+
+  // 🔴 O caso que ENSINA a regra tem que ser um lugar inventado e rotulado
+  // como tal. O documento promete no cabeçalho que "todo exemplo abaixo é a
+  // resposta real que já existe pra Rampa do Pepê — não é ficção, é o dado que
+  // você já deu"; uma versão anterior afirmava, ali, que a estrada da Rampa era
+  // asfalto até o pé da serra. A ficha real não tem a palavra "asfalto" uma
+  // única vez. Um fato de lugar inventado no arquivo que é a FONTE do dado é a
+  // linha vermelha deste projeto.
+  it("o caso que ensina a regra é declaradamente inventado, e não fala da Rampa", () => {
+    const caso = blocoDoRotulo(secaoDoCampo("piso"), "Um caso inventado");
+    expect(plano(caso)).toMatch(/hipotético/i);
+    expect(caso, "o caso hipotético não pode ser pendurado numa trilha real").not.toMatch(/Rampa/);
+    // ele só ensina se aterrissar no pior trecho apesar do resto do caminho
+    expect(caso).toContain("`barro`");
+  });
+
+  // 🔴 A prova de que o exemplo da Rampa não voltou a inventar geografia: toda
+  // citação em itálico dele tem que existir, palavra por palavra, na ficha
+  // real. É a lição "para artefato que vira entrada de outra coisa, a prova é
+  // USÁ-LO" virada do avesso — aqui o artefato afirma coisas SOBRE outro
+  // arquivo, e a prova é conferir contra ele.
+  //
+  // ⚠️ O que este teste NÃO pega: uma invenção escrita como prosa solta, fora
+  // de aspas em itálico. Ele fecha a porta pela qual a invenção anterior
+  // entrou (uma afirmação sobre a estrada da Rampa), não todas as portas. A
+  // regra continua sendo humana; isto é o cinto.
+  it("o exemplo da Rampa só cita o que a ficha real diz", () => {
+    const exemplo = plano(blocoDoRotulo(secaoDoCampo("piso"), "Exemplo (Rampa):"));
     expect(exemplo, "o exemplo não aterrissa na resposta certa").toContain("`barro`");
+    const citacoes = [...exemplo.matchAll(/\*"([^"]+)"\*/g)].map((m) => m[1]);
+    expect(citacoes.length, "o exemplo não cita a ficha — de onde ele tira a resposta?").toBeGreaterThan(0);
+    const ficha = plano(FICHA_RAMPA);
+    for (const c of citacoes) {
+      expect(ficha, `o exemplo cita "${c}", que não está em rampa-do-pepe.json`).toContain(c);
+    }
   });
 
   // 🔴 Sem "só a ida" com todas as letras, a resposta vem ida e volta: o número
   // sai dobrado e nada no app percebe — nem o schema (é um número positivo
   // válido) nem a tela. É o tipo de erro que só aparece quando alguém caminha.
   it("a pergunta da extensão diz SÓ IDA, com todas as letras", () => {
-    const secao = secaoDoCampo("extensaoKm");
-    expect(secao).toMatch(/só a ida/i);
-    expect(secao).toMatch(/não conte a volta/i);
+    const pergunta = plano(perguntaDe("extensaoKm"));
+    expect(pergunta).toMatch(/só a ida/i);
+    expect(pergunta).toMatch(/não conte a volta/i);
+  });
+
+  // 🔴 O campo é a TRILHA — o trecho a pé —, não a estrada de carro até lá, e
+  // isso tem que estar na PERGUNTA, não no "Por que importa" (que é a parte
+  // que quem responde pula). A seção logo acima, a do piso, acabou de gastar
+  // cinco linhas falando da estrada; lidas em sequência, "o trajeto em si"
+  // lia como a estrada.
+  //
+  // O estrago se a resposta vier da estrada: o cartão passa a mostrar
+  // "~20 km em linha reta · 27 km de trilha" — dois números em km lado a lado,
+  // ambos significando "quão longe fica", o segundo mentindo. É o defeito dos
+  // "dois km" da rodada passada com outra roupa. E o filtro inverte: um corte
+  // em 5 km esconde justamente a trilha de caminhada curta.
+  it("a pergunta da extensão diz que é a trilha a pé, e exclui a estrada de carro", () => {
+    const pergunta = plano(perguntaDe("extensaoKm"));
+    expect(pergunta, "a pergunta não diz que é o trecho a pé").toMatch(
+      /o trecho que se cobre a pé/i,
+    );
+    expect(pergunta, "a pergunta não exclui a estrada de carro até lá").toMatch(
+      /não conte a estrada de carro/i,
+    );
   });
 
   // Os dois campos são `.optional()` no schema, e quem responde precisa saber

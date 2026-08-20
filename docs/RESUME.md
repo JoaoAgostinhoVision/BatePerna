@@ -78,12 +78,25 @@ arquivo que nenhuma leitura pegou — e só apareceram porque ele RESPONDEU o qu
 o JSON contra o schema.** A lição da casa é literal: *para artefato que vira entrada de outra
 coisa, a prova é USÁ-LO.* **Isso não foi feito.** Quem fechar a Task 2 tem que fazer, e colar.
 
-Dois pontos do texto que decidem se o dado entra certo ou errado **pra sempre**:
+Três pontos do texto que decidem se o dado entra certo ou errado **pra sempre**:
 - **`extensaoKm` é SÓ IDA** — se a pergunta não disser com todas as letras, ele responde ida e
   volta e o número fica errado sem ninguém perceber.
-- **`piso` é O PIOR TRECHO do caminho**, não o final nem a média. Na Rampa: asfalto até o pé da
-  serra, barro na subida → a resposta certa é `barro`. Esse exemplo tem que estar no
+- **`extensaoKm` é a TRILHA, o trecho a pé — não a estrada de carro até lá.** A pergunta do
+  `piso`, logo acima no papel, acaba de falar da estrada; sem a exclusão escrita com todas as
+  letras, a resposta natural é a quilometragem da estrada, e o cartão passa a mostrar dois
+  números em km lado a lado, o segundo mentindo. É o defeito dos "dois km" com outra roupa.
+- **`piso` é O PIOR TRECHO do caminho DIRIGIDO**, não o final nem a média nem o que predomina.
+  Um exemplo do caso conflitante (o pior pedaço é curto e é o último) tem que estar no
   questionário; é ele que desfaz a ambiguidade.
+
+🔴 **E o exemplo tem que ser HIPOTÉTICO, não a Rampa.** Uma versão anterior deste bloco dizia
+*"Na Rampa: asfalto até o pé da serra, barro na subida"*. **A ficha real não tem a palavra
+"asfalto" uma única vez** — `barro` é dado do João; a proporção asfalto/barro é invenção. Ela
+nasceu aqui, foi pro plano, do plano pro brief, do brief pro `piso.ts` e pro questionário — que
+promete no cabeçalho, com todas as letras, que *"todo exemplo abaixo é a resposta real que já
+existe pra Rampa do Pepê — não é ficção"*. Quatro arquivos a partir de uma frase deste
+documento. **A Rampa entra só como `barro`, justificada pelo que a ficha diz; quem ensina a
+regra é um morro inventado e rotulado como tal.**
 
 ### 6. O método, e ele já está autorizado
 

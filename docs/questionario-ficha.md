@@ -155,12 +155,13 @@ Molhado, o risco é atolar.`
 
 ## O piso da via — `piso`
 
-**Pergunta:** pensando no caminho INTEIRO até lá, da estrada principal até o
-ponto final — qual é o PIOR trecho? Vale o pior pedaço mesmo que ele seja
-curto, e mesmo que ele seja justamente o último: não é a média dos trechos, e
-não é o piso que predomina no caminho. É o pior pedaço que qualquer carro
-precisa passar. Responda com uma destas quatro palavras exatamente, sem
-sinônimo:
+**Pergunta:** pensando no caminho INTEIRO de carro até lá, da estrada principal
+até onde o carro para — qual é o PIOR trecho? Vale o pior pedaço mesmo que ele
+seja curto, e mesmo que ele seja justamente o último: não é a média dos
+trechos, e não é o piso que predomina no caminho. É o pior pedaço que qualquer
+carro precisa passar. (Se depois de estacionar ainda se caminha, essa parte não
+entra aqui — ela é a pergunta seguinte.) Responda com uma destas quatro
+palavras exatamente, sem sinônimo:
 
 - **barro** — terra que vira lama e segura água quando molha; o pior piso da
   escala.
@@ -171,9 +172,17 @@ sinônimo:
 **Por que importa:** é um dos filtros da tela inicial — quem só topa ir de carro
 comum em piso bom pode esconder trilhas com piso pior que isso.
 
-**Exemplo (Rampa):** a estrada até o pé da serra é asfalto, e só a subida da
-serra é barro. Mesmo com a maior parte do caminho asfaltada, o PIOR trecho
-manda — a resposta certa pra Rampa é `barro`.
+**Um caso inventado, só pra deixar a regra clara** — este morro não existe, é
+hipotético, não é lugar nenhum e não é nenhuma trilha sua: se a estrada até o
+pé de um morro fosse asfalto liso e só o último quilômetro, subindo, fosse
+barro, a resposta seria `barro`. Ganha o pior pedaço mesmo curto, mesmo no
+fim — não o piso que cobre a maior parte do caminho.
+
+**Exemplo (Rampa):** `barro`. É o que você já disse na ficha — *"é barro:
+molhou, não vá"* — e a regra da trilha é *"não suba de carro comum; o barro
+segura água"*. Como é a estrada nos trechos antes desse, você ainda não me
+disse, e eu não vou supor: pra escolher a palavra basta o pior trecho, e o pior
+trecho você já nomeou.
 
 **Pular é permitido:** sem resposta, a trilha simplesmente nunca é escondida por
 esse filtro — ela aparece pra qualquer piso mínimo que a pessoa escolher.
@@ -182,18 +191,24 @@ esse filtro — ela aparece pra qualquer piso mínimo que a pessoa escolher.
 
 ## Quantos km — `extensaoKm`
 
-**Pergunta:** quantos quilômetros tem o trajeto em si, contando **só a ida**
-— não conte a volta, mesmo que a volta seja pelo mesmo caminho de ida.
-Responda em número (pode ter casa decimal): `4` ou `4.2`, não `4 km` nem
-"4 km ida e volta".
+**Pergunta:** quantos quilômetros tem **a trilha em si — o trecho que se cobre
+a pé**, do lugar onde o carro para até o ponto final? **Não conte a estrada de
+carro até lá** (essa é a pergunta de cima, a do piso): aqui é só o que se anda.
+E conte **só a ida** — não conte a volta, mesmo que a volta seja pelo mesmo
+caminho de ida. Responda em número (pode ter casa decimal): `4` ou `4.2`, não
+`4 km` nem "4 km ida e volta". Se não se caminha nada — se o rolê é do carro e
+acabou — deixe em branco.
 
 **Por que importa:** é o outro filtro numérico da tela inicial — quem só quer
-uma caminhada curta pode esconder trajetos mais longos que isso. É também o
-número que aparece no cartão da home e na ficha — a mesma função escreve os
-dois textos, pra nunca discordarem entre si.
+uma caminhada curta pode esconder trilhas com caminhada mais longa que isso. É
+também o número que aparece no cartão da home e na ficha, escrito como
+"N km de trilha". Se aqui entrar a quilometragem da estrada, o cartão passa a
+mostrar dois números em km lado a lado — a distância até a trilha e a "extensão
+da trilha" — os dois querendo dizer "quão longe fica", e o segundo mentindo.
 
-**Exemplo (Rampa):** ainda não medido — quando você passar o número, ele entra
-como só ida, do jeito que a pergunta pede.
+**Exemplo (Rampa):** ainda não medido — você ainda não me passou quanto se
+caminha lá, e eu não vou estimar. Quando passar, o número entra como só ida e
+só o trecho a pé, do jeito que a pergunta pede.
 
 **Pular é permitido:** sem resposta, a trilha simplesmente nunca é escondida por
 esse filtro — ela aparece pra qualquer extensão que a pessoa escolher.
