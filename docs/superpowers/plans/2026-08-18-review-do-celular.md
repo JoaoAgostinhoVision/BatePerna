@@ -403,6 +403,87 @@ campo depois**, não só o argumento do `onChange`.
 > it("dá pra digitar 45 dígito a dígito: 4 depois 5, sem o campo pular", ...)  // 🔴 o teste que este furo pede
 > ```
 
+> 🔴 **EMENDA 2 DO PRÉ-VOO (2026-08-20) — sete furos do plano, e dois deles são o defeito
+> "o filtro se desliga sozinho" com outra roupa. Onde esta emenda discordar do texto acima, ela vence.**
+>
+> **1. O teste `"o campo passa a MOSTRAR 100"` FORÇA o estado local que a mutação #5 proíbe — a
+> menos que o palco devolva o valor.** Com `onChange` sendo um espião pelado, a prop `valor` nunca
+> muda; num componente sem estado local o `value` do campo sai da prop, e a única forma de ele
+> "mostrar 100" seria o estado local. O plano pede as duas coisas de novo. **Ruling: todo teste
+> monta um palco controlado**, que é a forma honesta de testar componente controlado:
+> ```tsx
+> function Palco({ inicial = null, max = 100, passo = 5 }: …) {
+>   const [v, setV] = useState<number | null>(inicial);
+>   visto = v;                       // o que o teste confere é o valor que subiu
+>   return <FaixaKm rotulo="Distância daqui" valor={v} max={max} passo={passo} onChange={setV} />;
+> }
+> ```
+> Com o palco, a #5 volta a morder: com estado local no campo, mexer na BARRA não muda o campo.
+>
+> **2. O teste do dígito a dígito fica OCO se o segundo evento cravar `"45"`.** Não há
+> `@testing-library/user-event` neste projeto (nem acrescente um) — a digitação se simula com dois
+> `fireEvent.change`, e o segundo tem que ser montado **a partir do que o campo está MOSTRANDO**:
+> ```tsx
+> fireEvent.change(campo, { target: { value: "4" } });
+> fireEvent.change(campo, { target: { value: campo.value + "5" } });   // 🔴 não crave "45"
+> expect(campo.value).toBe("45");
+> ```
+> Cravando `"45"` o teste passa **também** na versão que puxa o `4` pra `5` — ele sobrescreveria o
+> pulo com a string certa. É a mutação inversa: escreva a asserção onde as duas versões DIFEREM.
+>
+> **3. A barra não tem prova de `min` nem de `step`, e sem `step={passo}` ela produz 101…104.**
+> O `step` cai pro padrão `1`, a barra passa a oferecer valores **acima do `max`**, e o
+> `lerFiltros` (`v <= max`) os joga fora na abertura seguinte: **o filtro se desligando sozinho
+> entre duas aberturas**, exatamente o que a emenda 1 existe pra impedir. Teste:
+> `it("a barra vai de passo até max+passo, de passo em passo")` lendo os três atributos.
+> ⚠️ É asserção de **RELAÇÃO**, e está certo que seja: as props vêm das constantes do próprio
+> teste. Os quatro números literais já estão presos em `tests/lib/filtros.test.ts`, e quem prova
+> que a tela os LÊ de lá é a **Task 5**. Não peça literal aqui.
+>
+> **4. `digitar 0` estava com dois desfechos no plano** (*"devolve null **ou** não desce de 1"*) —
+> furo de ESPECIFICAÇÃO, a mesma família do "até 2h com uma trilha de 120min": dois
+> implementadores razoáveis decidem diferente. **CRAVADO: `0` (e negativo) devolve `null`, e o
+> campo passa a mostrar VAZIO.** Razão: vazio e zero querem dizer a mesma coisa ("não corta"), e o
+> `lerFiltros` recusa `0` — das duas saídas, só esta mantém tela e armazém dizendo o mesmo.
+>
+> **5. O FRACIONÁRIO não estava no plano, e é o furo #3 com outra roupa.** `type="number"` aceita
+> `4.5`, o `ehInteiro` do `lerFiltros` o joga fora na releitura → filtro que se desliga sozinho.
+> **CRAVADO: `Math.trunc`.** `it("digitar 4.5 devolve 4 — o guardado é inteiro, e o campo mostra 4")`.
+> (No iPhone o `inputMode="numeric"` nem oferece o ponto; quem digita ponto é o teclado grande. O
+> custo de truncar é o ponto sumir enquanto se digita, e decimal de km aqui não serve pra nada.)
+>
+> **6. Valor fora do passo não pode ser arredondado pra desenhar a barra.** Um
+> `Math.round(v / passo) * passo` na posição da barra deixa a **barra em 5 e o campo em 4** — dois
+> números pra uma verdade só, a assinatura de defeito deste app. `it("com valor 4, a barra mostra
+> 4 e o campo mostra 4")`.
+>
+> **7. O `font-size: 16px` do campo, e o precedente já foi MEDIDO neste repo.** Abaixo de 16px o
+> Safari do iPhone dá zoom sozinho ao focar e a tela salta — é por isso que `.bp .busca-campo` tem
+> essa linha com teste em cima. O campo de km é o mesmo caso, e é uma das três perguntas do §14
+> pro iPhone. Teste pela régua central (`valorDe` + `toBe`, nunca `toContain`: a família do decoy
+> `--font-size`).
+>
+> **O contrato da leitura do campo, escrito uma vez pra implementador e revisor lerem o mesmo:**
+> ```
+> "" → null                      |  não-finito → null
+> i = Math.trunc(Number(txt))    |  i < 1 → null   |  i > max → max   |  senão i
+> o que o campo MOSTRA é sempre a prop (`valor === null ? "" : String(valor)`)
+> ```
+> **O teto prende NA HORA** (é ele que carrega a honestidade: `150` na tela com o filtro cortando
+> em `100` é a mentira que o item 4 existe pra matar). **O piso NÃO prende na hora** — digitar `4`
+> filtra por 4 km e isso é verdade. Sem buffer de digitação, portanto sem estado local.
+>
+> **A anatomia, cravada porque a Task 5 vai consumi-la:** `<fieldset className="filtro-grupo …">`
+> com `<legend>{rotulo}</legend>`; dentro, a barra (role `slider`) e o campo (role `spinbutton`) —
+> **os testes acham os dois por ROLE**, que já os distingue sem discussão de rótulo; e um
+> `<span>` de leitura dizendo `qualquer` ou `até N km`. O `<span>` existe pro caso `null`, em que
+> o campo está vazio e nada na tela diria que "vazio" quer dizer "qualquer" — e ele não é segunda
+> fonte: sai da mesma prop, no mesmo render.
+>
+> **`"use client"` entra no arquivo e NÃO ganha teste, de propósito.** O `FaixaKm` só é importado
+> pelo `PainelFiltros`, que já é client — a diretiva é redundante em runtime, e asserção de fonte
+> em cima dela protegeria linha que não faz nada. Registrado aqui pra a revisão não pedir.
+
 🔴 **Ao acrescentar regras no `home.css`, releia quem lê esse arquivo por TEXTO** (lição 20): uma
 asserção que casa "a regra `.bp` inteira" muda de significado sem uma linha de diff no teste, e a
 suíte fica verde com a constante que ela protegia invalidada. Já aconteceu aqui, com o
