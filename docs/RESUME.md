@@ -4,32 +4,27 @@
 > `.superpowers/sdd/2026-08-13-daqui-e-filtros/progress.md`, que é **scratch git-ignorado** —
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-18. **RODADA ABERTA E PARADA NO MEIO, a pedido dele.**
+**Última parada:** 2026-08-19. **RODADA ABERTA, em execução.**
 Branch **`review-do-celular`**, NÃO mergeada, NÃO deployada. `main` segue em `f10f075`.
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA" — retome a rodada `review-do-celular` na Task 2
+# ▶▶ SE O JOÃO DISSER "CONTINUA" — retome a rodada `review-do-celular` na Task 3
 
 **O review do celular já aconteceu, já foi triado e já virou spec + plano aprovados.** Não
 pergunte o que ele achou; não peça a lista de novo; não devolva menu.
-
-**Ele pediu pra parar** no meio da Task 2 de 8: *"quero parar por aqui, deixe tudo pronto para
-continuar na próxima sessão."*
 
 ### 1. Confira o chão em silêncio
 
 ```
 git branch --show-current  → review-do-celular   (se estiver em main, só trocar)
 git status --short         → limpo
-npm test                   → 553/554  ← UMA falha ESPERADA, ver abaixo
+npm test                   → 560/560   ← tudo verde; NÃO há falha esperada
 npx tsc --noEmit           → limpo
+npm run build              → passa
 ```
 
-🔴 **A falha é conhecida e é o marcador de onde parou:** `tests/lib/questionario.test.ts:39`
-ainda afirma a seção velha de `esforco` (leve/media/puxada), que o questionário reescrito
-removeu. **Não é regressão. É a Task 2 pela metade.** Se a suíte estiver diferente disso,
-alguma coisa mudou e vale descobrir o quê antes de seguir.
+Se a suíte estiver diferente disso, alguma coisa mudou e vale descobrir o quê antes de seguir.
 
 ### 2. Leia, nesta ordem
 
@@ -47,36 +42,48 @@ são extraídos do plano com o script, então **regeneram**:
 | Task | Estado | Commits |
 |---|---|---|
 | 1 — GPS pede sozinho na 1ª abertura | **completa**, 1 fix round, re-revisão limpa | `b4a7585`, `2260c36` |
-| 2 — `piso.ts` + schema + questionário | 🔴 **NO MEIO, NÃO REVISADA** | `ad88d20` (WIP) |
-| 3 a 8 | não começadas | — |
+| 2 — `piso.ts` + schema + questionário | **completa**, 3 fix rounds, re-revisão **ADDRESSED** | `ad88d20` (WIP), `9b03f43`, `cb97792`, `0445f50`, `bdb4497` |
+| 3 — recortes novos em `filtros.ts` | despachada nesta sessão | — |
+| 4 a 8 | não começadas | — |
 
-**O `ad88d20` é um commit de WIP rotulado, não uma task concluída.** Ele existe pra não perder
-trabalho real e pra deixar o estado legível. O que **falta** nele, medido e não suposto:
+**Chão depois da Task 2:** `npm test` **560/560**, `npx tsc --noEmit` limpo, `npm run build`
+passa — os três conferidos por mim, não só relatados.
 
-- o `tests/lib/questionario.test.ts` (a falha acima);
-- **as provas de mutação da tabela do brief — não rodadas**;
-- **a verificação do questionário — não feita**, e ela é a que mais importa (ver o item 5);
-- `npm run build` — não rodado;
-- **revisão de task — não aconteceu.** Não existe `task-2-report.md`.
+### 4. 🔴 O PRÉ-VOO DE CADA TASK JÁ PAGOU SEIS VEZES NESTA RODADA — não pule
 
-### 4. Como retomar a Task 2 — duas saídas honestas, e a escolha é sua
+**Antes de despachar qualquer task, releia a lista de testes do brief perguntando "que linha do
+código eu posso apagar sem isto falhar?"** e mande o complemento junto no despacho. Nesta rodada
+o pré-voo achou **seis furos do plano**, e as emendas estão **no plano versionado**
+(`docs/superpowers/plans/2026-08-18-review-do-celular.md`, em blocos de citação 🔴), não só nos
+briefs de scratch. Os dois mais instrutivos:
 
-- **(a) Continuar de onde parou:** despachar um implementador com o brief da Task 2 + a lista
-  acima do que falta, deixando claro que o código já está no `ad88d20` e que ele **não começa do
-  zero — ele fecha e PROVA**. Mais barato.
-- **(b) Reverter o `ad88d20` e redespachar limpo.** Mais caro, e só vale se a leitura do diff
-  levantar dúvida sobre a qualidade do que está lá.
+- **Uma prova que a camada não pode dar.** A mutação #2 da Task 2 (`PISOS_FILTRAVEIS` virando
+  lista copiada à mão) **não morde** — medida, 3/3 verde. Em runtime, lista derivada e lista
+  copiada com o mesmo conteúdo **são o mesmo valor**. O remédio foi **asserção de fonte**, o
+  precedente do `"use client"`. **Antes de exigir uma mutação, pergunte se a camada consegue
+  distinguir as duas versões.**
+- **Um campo indigitável.** A Task 4, como eu a escrevi, prendia o campo numérico no intervalo
+  `[passo, max]` "na hora", com `DIST_PASSO_KM = 5` — o `4` vira `5` no primeiro dígito e
+  **ninguém consegue digitar `45`**, nem `100`. Ruling: **o piso do intervalo é `1`**; `passo` é
+  granularidade da BARRA. Isso se propagou pra Task 3 (`lerFiltros` valida `>= 1`), senão um `4`
+  digitado é aceito, guardado, e vira `null` na releitura — **o filtro se desligando sozinho
+  entre uma abertura e outra do app**.
 
-**Recomendação: (a)**, porque o estado é legível e o `tsc` está limpo. Mas leia o diff antes de
-decidir — ninguém revisou aquele código ainda.
-
-### 5. 🔴 A armadilha da Task 2, que é o motivo de ela não poder ser dada como pronta
+### 5. 🔴 A armadilha da Task 2, e ela vale além dela — foi o Critical desta rodada
 
 `docs/questionario-ficha.md` é respondido **pelo João**, que não programa, e a resposta vira um
 JSON que tem que passar no schema. **Na rodada passada o revisor achou DOIS defeitos nesse
 arquivo que nenhuma leitura pegou — e só apareceram porque ele RESPONDEU o questionário e rodou
 o JSON contra o schema.** A lição da casa é literal: *para artefato que vira entrada de outra
-coisa, a prova é USÁ-LO.* **Isso não foi feito.** Quem fechar a Task 2 tem que fazer, e colar.
+coisa, a prova é USÁ-LO.*
+
+✅ **Feito na Task 2 (2026-08-19), e pagou de novo:** o JSON respondido passou no schema de
+primeira, **mas a checagem com o dado real da Rampa achou um furo que nenhuma leitura pegou** — a
+frase *"Não é o trecho final"* lia como instrução de **excluir** o último trecho, e na Rampa o
+pior trecho **é** o último. Um leitor obediente excluiria o barro, sobraria asfalto, e o campo
+que decide *"não suba de carro comum"* nasceria como `asfalto-tapete`. **Terceira rodada seguida
+em que responder o questionário acha o que ler não acha. Faça sempre que o texto mudar** — um §C
+velho não vale para pergunta nova.
 
 Três pontos do texto que decidem se o dado entra certo ou errado **pra sempre**:
 - **`extensaoKm` é SÓ IDA** — se a pergunta não disser com todas as letras, ele responde ida e
