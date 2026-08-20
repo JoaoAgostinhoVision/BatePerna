@@ -50,12 +50,32 @@ function secaoDoCampo(campo: string): string {
  *  Cada bloco rotulado em negrito (`**Pergunta:**`, `**Exemplo (Rampa):**`…) é
  *  uma coisa diferente do documento e tem que ser medido separado. Os bullets
  *  das opções ficam DENTRO do bloco da pergunta de propósito: eles são a
- *  resposta que ela oferece. */
+ *  resposta que ela oferece — e ficam porque começam com `- **`, não com `**`
+ *  no início de um parágrafo.
+ *
+ *  🔴 O CORTE É NA FRONTEIRA DE PARÁGRAFO (linha em branco + `**`), não em
+ *  qualquer `\n**`, e os dois motivos foram MEDIDOS numa re-revisão:
+ *
+ *  1. Cortar em `\n**` deixava um FALSO VERDE. Colando a invenção do C1 logo
+ *     abaixo do bloco do caso hipotético, sob um rótulo em negrito e sem linha
+ *     em branco, o bloco terminava antes dela e o `not.toMatch(/Rampa/)` dizia
+ *     que o texto proibido não estava lá — 9/9 verde com a invenção de volta.
+ *     Truncar cedo demais deixa asserção POSITIVA vermelha (barulhento, mas
+ *     seguro) e asserção NEGATIVA verde (mentira a nosso favor). Este arquivo
+ *     tem uma negativa, e era exatamente ela que escapava.
+ *  2. Cortar em `\n**` deixava um FALSO VERMELHO. Só re-quebrando as linhas da
+ *     pergunta da extensão — sem apagar uma palavra — dois testes ficavam
+ *     vermelhos afirmando que uma cláusula sumiu, com ela no lugar. O `plano()`
+ *     existe pra isso, mas ele roda DEPOIS daqui: de nada adianta normalizar o
+ *     espaço se o recorte já jogou fora metade do texto.
+ *
+ *  A regex tolera CRLF porque o arquivo é CRLF: `"\n\n**"` literal nunca casa
+ *  em `\r\n\r\n**`. */
 function blocoDoRotulo(secao: string, rotulo: string): string {
   const inicio = secao.indexOf(`**${rotulo}`);
   expect(inicio, `a seção não tem o bloco "**${rotulo}"`).toBeGreaterThanOrEqual(0);
   const resto = secao.slice(inicio);
-  const fim = resto.indexOf("\n**");
+  const fim = resto.search(/\r?\n[ \t]*\r?\n\*\*/);
   return fim === -1 ? resto : resto.slice(0, fim);
 }
 
@@ -136,33 +156,76 @@ describe("o questionário cobre a ficha inteira", () => {
   // asfalto até o pé da serra. A ficha real não tem a palavra "asfalto" uma
   // única vez. Um fato de lugar inventado no arquivo que é a FONTE do dado é a
   // linha vermelha deste projeto.
-  it("o caso que ensina a regra é declaradamente inventado, e não fala da Rampa", () => {
-    const caso = blocoDoRotulo(secaoDoCampo("piso"), "Um caso inventado");
+  it("o caso que ensina a regra é declaradamente inventado, e só o bloco do exemplo fala da Rampa", () => {
+    const secao = secaoDoCampo("piso");
+    const caso = blocoDoRotulo(secao, "Um caso inventado");
     expect(plano(caso)).toMatch(/hipotético/i);
-    expect(caso, "o caso hipotético não pode ser pendurado numa trilha real").not.toMatch(/Rampa/);
     // ele só ensina se aterrissar no pior trecho apesar do resto do caminho
     expect(caso).toContain("`barro`");
+
+    // 🔴 A NEGATIVA É SOBRE A SEÇÃO INTEIRA MENOS O BLOCO DO EXEMPLO, e não
+    // sobre o bloco do caso hipotético. A versão anterior olhava só o bloco, e
+    // isso foi FURADO por medição: colando a invenção sob um rótulo em negrito
+    // logo depois do caso, o texto proibido caía fora do recorte e a suíte
+    // fechava 9/9 verde com a invenção do C1 de volta. Numa asserção negativa,
+    // recortar de menos mente a nosso favor.
+    //
+    // Escrita assim ela é INDEPENDENTE DE POSIÇÃO: em qualquer lugar da seção
+    // do piso, fora do bloco `**Exemplo (Rampa):**` — antes, depois, no meio,
+    // com rótulo ou sem —, falar da Rampa é proibido. Um só lugar da seção tem
+    // licença de falar dela, e é o que está sob a régua do teste seguinte.
+    const foraDoExemplo = secao.replace(blocoDoRotulo(secao, "Exemplo (Rampa):"), "");
+    expect(
+      foraDoExemplo,
+      "só o bloco do Exemplo (Rampa) pode falar da Rampa nesta seção",
+    ).not.toMatch(/Rampa/);
   });
 
-  // 🔴 A prova de que o exemplo da Rampa não voltou a inventar geografia: toda
-  // citação em itálico dele tem que existir, palavra por palavra, na ficha
-  // real. É a lição "para artefato que vira entrada de outra coisa, a prova é
-  // USÁ-LO" virada do avesso — aqui o artefato afirma coisas SOBRE outro
-  // arquivo, e a prova é conferir contra ele.
+  // 🔴 O guarda contra a invenção do C1 voltar ao bloco do exemplo. São DUAS
+  // travas, porque a invenção sabe entrar por duas portas — e o alcance de
+  // cada uma está MEDIDO, não estimado:
   //
-  // ⚠️ O que este teste NÃO pega: uma invenção escrita como prosa solta, fora
-  // de aspas em itálico. Ele fecha a porta pela qual a invenção anterior
-  // entrou (uma afirmação sobre a estrada da Rampa), não todas as portas. A
-  // regra continua sendo humana; isto é o cinto.
-  it("o exemplo da Rampa só cita o que a ficha real diz", () => {
+  //  (a) CITAÇÃO FABRICADA: toda citação em itálico tem que existir, palavra
+  //      por palavra, em `rampa-do-pepe.json`. Medido: inventar uma citação
+  //      deixa este teste vermelho, nomeando a citação e o arquivo.
+  //
+  //  (b) VOCABULÁRIO DE PISO ALÉM DA RESPOSTA: a invenção original não era
+  //      citação, era PROSA — *"a estrada até o pé da serra é asfalto"*, *"a
+  //      maior parte do caminho asfaltada"*. Medido: com só a trava (a), essa
+  //      prosa recolada fechava 9/9 VERDE. O que ela tem de mecanicamente
+  //      pegável é o vocabulário: descrever OS OUTROS trechos do caminho exige
+  //      nomear outro piso, e quais são os outros pisos da Rampa ninguém
+  //      disse. Os radicais saem de `PISOS` (`split("-")`), não de uma lista
+  //      escrita aqui, pelo mesmo motivo de sempre — lista à mão não envelhece
+  //      junto com o enum.
+  //
+  // ⚠️ O QUE ESTE TESTE NÃO PEGA, e a frase que dizia o contrário foi apagada
+  // depois de medida: invenção em prosa que não use nenhuma palavra de piso —
+  // *"a estrada tem 12 km"*, *"o portão fecha às 17h"* — passa verde. As duas
+  // travas cobrem a porta por onde a invenção do C1 entrou (prosa sobre o
+  // piso do resto do caminho) e a vizinha (citação fabricada); não cobrem
+  // "esta frase é verdadeira sobre o mundo", que não é testável. Quem carrega
+  // o resto é a ESTRUTURA — o exemplo encolhido a resposta + citações + uma
+  // recusa explícita a supor — e a regra humana.
+  it("o exemplo da Rampa só cita o que a ficha real diz, e não descreve piso que ninguém deu", () => {
     const exemplo = plano(blocoDoRotulo(secaoDoCampo("piso"), "Exemplo (Rampa):"));
     expect(exemplo, "o exemplo não aterrissa na resposta certa").toContain("`barro`");
+
+    // (a) as citações têm que ser reais
     const citacoes = [...exemplo.matchAll(/\*"([^"]+)"\*/g)].map((m) => m[1]);
     expect(citacoes.length, "o exemplo não cita a ficha — de onde ele tira a resposta?").toBeGreaterThan(0);
     const ficha = plano(FICHA_RAMPA);
     for (const c of citacoes) {
       expect(ficha, `o exemplo cita "${c}", que não está em rampa-do-pepe.json`).toContain(c);
     }
+
+    // (b) o único piso que o exemplo pode nomear é o que ele responde
+    const radicais = [...new Set(PISOS.flatMap((p) => p.split("-")))];
+    const usados = radicais.filter((r) => exemplo.includes(r));
+    expect(
+      usados,
+      "o exemplo nomeia piso além da resposta — como é o resto da estrada da Rampa ninguém disse",
+    ).toEqual(["barro"]);
   });
 
   // 🔴 Sem "só a ida" com todas as letras, a resposta vem ida e volta: o número
