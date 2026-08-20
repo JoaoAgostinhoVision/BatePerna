@@ -427,9 +427,15 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
 // escritos contra o SÍMBOLO (`DIST_MAX_KM + 1`), eles provam a RELAÇÃO — o teto
 // é inclusivo, o de cima é recusado — e continuam certos assim; mas são
 // auto-referentes quanto ao VALOR, porque mudam de significado junto com a
-// constante. MEDIDO pela revisão desta task: `DIST_MAX_KM` 100→70,
-// `EXT_MAX_KM` 20→8 e os dois `PASSO` trocados deixam a suíte INTEIRA verde e o
-// `tsc` limpo. Provar a relação e prender o número são coisas diferentes.
+// constante. MEDIDO pela revisão desta task, ANTES de a asserção abaixo
+// existir: `DIST_MAX_KM` 100→70, `EXT_MAX_KM` 20→8 e os dois `PASSO` trocados
+// deixavam a suíte INTEIRA verde e o `tsc` limpo. Hoje cada uma dessas quatro
+// derruba a asserção abaixo — e SÓ ela: os testes de borda continuam verdes,
+// porque com `EXT_MAX_KM = 8` eles viram "9 → null" e "8 → 8", que são
+// corretos com 8. Provar a relação e prender o número são coisas diferentes, e
+// as duas provas são ortogonais: mutar só a RELAÇÃO (`v <= max` → `v < max`)
+// deixa a asserção abaixo VERDE e mata os testes de borda. Medido nos dois
+// sentidos.
 //
 // O que isso custaria no celular dele: `EXT_MAX_KM = 8` escrito por engano numa
 // tecla passa em tudo, e um `extensaoMaxKm: 15` que ele já tinha ligado volta
