@@ -204,8 +204,11 @@ export function passaNoFiltro({
   //
   // O `ficha.extensaoKm &&` escreve a honestidade 2, mas — MEDIDO, não
   // deduzido — quem a segura em runtime é a aritmética: `undefined > 4` é
-  // `false`, e apagar o `&&` deixa a suíte inteira 585/585 VERDE. Quem recusa
-  // apagá-lo é o `tsc` (TS18048, "'ficha.extensaoKm' is possibly 'undefined'").
+  // `false`, e apagar o `&&` deixa a suíte INTEIRA verde, sem uma asserção
+  // caindo. (Sem total escrito de propósito: a primeira versão desta linha
+  // cravou "585/585" e envelheceu em duas horas, dentro de um comentário que
+  // existe justamente pra registrar uma medição.) Quem recusa apagá-lo é o
+  // `tsc` (TS18048, "'ficha.extensaoKm' is possibly 'undefined'").
   // É a terceira resposta da lição 13, e é por isso que ele fica: diz a regra
   // na cara de quem lê, e é a única rede no dia em que a comparação mudar.
   //

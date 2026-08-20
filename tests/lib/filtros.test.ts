@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   DIST_MAX_KM,
+  DIST_PASSO_KM,
   EXT_MAX_KM,
+  EXT_PASSO_KM,
   SEM_FILTRO,
   contarLigados,
   lerFiltros,
@@ -417,6 +419,31 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
   });
 });
 
+// Os quatro números são DECISÃO DE PRODUTO, e a barra da tela vai lê-los DAQUI
+// — então trocar um deles muda o que o app oferece, sem duas fontes pra
+// discordar e sem nada gritando.
+//
+// 🔴 Os testes de borda logo abaixo NÃO cobrem isto, e a distinção é o achado:
+// escritos contra o SÍMBOLO (`DIST_MAX_KM + 1`), eles provam a RELAÇÃO — o teto
+// é inclusivo, o de cima é recusado — e continuam certos assim; mas são
+// auto-referentes quanto ao VALOR, porque mudam de significado junto com a
+// constante. MEDIDO pela revisão desta task: `DIST_MAX_KM` 100→70,
+// `EXT_MAX_KM` 20→8 e os dois `PASSO` trocados deixam a suíte INTEIRA verde e o
+// `tsc` limpo. Provar a relação e prender o número são coisas diferentes.
+//
+// O que isso custaria no celular dele: `EXT_MAX_KM = 8` escrito por engano numa
+// tecla passa em tudo, e um `extensaoMaxKm: 15` que ele já tinha ligado volta
+// `null` na abertura seguinte — o filtro se desligando sozinho entre duas
+// aberturas, o mesmo defeito do piso, entrando pela outra ponta.
+//
+// ⚠️ O lado direito é LITERAL de propósito: derivá-lo de qualquer coisa
+// importada do `filtros.ts` devolveria a asserção pro buraco de onde ela veio.
+describe("os limites são decisão de produto, e os números ficam presos", () => {
+  it("os limites cravados são estes — 100 e 20 km, passo 5 e 1", () => {
+    expect([DIST_MAX_KM, EXT_MAX_KM, DIST_PASSO_KM, EXT_PASSO_KM]).toEqual([100, 20, 5, 1]);
+  });
+});
+
 // Os dois recortes de km deixaram de ser "está no conjunto?" e viraram
 // intervalo. Cada caso erra em UMA coisa só: num E de quatro sub-cláusulas, a
 // que dispara primeiro esconde as outras (lição 2).
@@ -457,6 +484,13 @@ describe("lerFiltros: os intervalos de km", () => {
   });
   // `1e999` é JSON VÁLIDO e vira `Infinity` no parse (medido) — o único
   // não-finito que chega até aqui.
+  //
+  // CINTO, e a honestidade sobre o que ele é: **nenhuma mutação única o mata**,
+  // porque as duas cláusulas o barram sozinhas — sem `ehInteiro`,
+  // `Infinity <= 100` é `false`; sem o teto, `Number.isInteger(Infinity)` é
+  // `false` (medido dos dois lados). Ele fica como documentação do caminho
+  // medido, não como rede: ver este teste verde NÃO prova que o não-finito
+  // está protegido por alguma linha em particular.
   it("distanciaKm 1e999 (vira Infinity no JSON.parse) → null", () => {
     expect(JSON.parse('{"d":1e999}').d).toBe(Infinity);
     expect(lerFiltros('{"distanciaKm":1e999}').distanciaKm).toBe(null);
