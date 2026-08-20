@@ -16,6 +16,15 @@ const FICHA_RAMPA = readFileSync(
  *  mudado de sentido. */
 const plano = (s: string) => s.replace(/\s+/g, " ");
 
+/** O vocabulário de piso, DERIVADO de `PISOS` — `["barro", "paralelepipedo",
+ *  "asfalto", "esburacado", "tapete"]`. São os radicais, não os valores do
+ *  enum, e a diferença é o que faz o cerco funcionar: a invenção que este
+ *  projeto já teve escrevia *"é asfalto liso"* e *"a maior parte do caminho
+ *  asfaltada"* — nenhum dos dois é um valor de `PISOS`, os dois contêm
+ *  `asfalto`. Sai do enum, e não de uma lista escrita aqui, pelo mesmo motivo
+ *  de sempre: lista à mão não envelhece junto com o código. */
+const RADICAIS_DE_PISO = [...new Set(PISOS.flatMap((p) => p.split("-")))];
+
 /** Devolve o corpo da SEÇÃO (`## … \`campo\``) até o próximo `## `.
  *
  *  A janela por ocorrência já mentiu neste arquivo, medido: o teste antigo
@@ -156,7 +165,7 @@ describe("o questionário cobre a ficha inteira", () => {
   // asfalto até o pé da serra. A ficha real não tem a palavra "asfalto" uma
   // única vez. Um fato de lugar inventado no arquivo que é a FONTE do dado é a
   // linha vermelha deste projeto.
-  it("o caso que ensina a regra é declaradamente inventado, e só o bloco do exemplo fala da Rampa", () => {
+  it("o caso que ensina a regra é declaradamente inventado, e só os blocos licenciados falam da Rampa e de piso", () => {
     const secao = secaoDoCampo("piso");
     const caso = blocoDoRotulo(secao, "Um caso inventado");
     expect(plano(caso)).toMatch(/hipotético/i);
@@ -179,6 +188,43 @@ describe("o questionário cobre a ficha inteira", () => {
       foraDoExemplo,
       "só o bloco do Exemplo (Rampa) pode falar da Rampa nesta seção",
     ).not.toMatch(/Rampa/);
+
+    // 🔴 A FRESTA VIZINHA DESSA, e ela foi medida por quem revisou. A negativa
+    // acima proíbe a palavra "Rampa"; o cerco de vocabulário do teste seguinte
+    // é escopado ao bloco `**Exemplo (Rampa):**`. Entre os dois cabia isto,
+    // solto na seção e com linha em branco:
+    //
+    //     **Nota:** a estrada até o pé da serra é asfalto liso, só a subida é barro.
+    //
+    // Não diz "Rampa", não está no bloco cercado — 9/9 VERDE, com a invenção do
+    // C1 de volta em outra roupa. "Pé da serra" + "asfalto" lê como afirmação
+    // sobre a Rampa mesmo sem o nome dela, e essa invenção não é hipótese: é o
+    // Critical desta task, que aconteceu e se propagou por quatro arquivos.
+    //
+    // Na seção do piso, vocabulário de piso só tem licença em TRÊS lugares: a
+    // LISTA DE OPÇÕES (as linhas de bullet), o CASO HIPOTÉTICO e o bloco do
+    // EXEMPLO (RAMPA) — onde as duas travas do teste seguinte cuidam dele. Em
+    // qualquer outro ponto da seção, nomear um piso é descrever o chão de um
+    // lugar, e qual é o chão da Rampa fora o pior trecho ninguém disse.
+    //
+    // MEDIDO ANTES de escrever a asserção, pra não espremer o texto e fazê-lo
+    // caber no teste: hoje os três blocos são de fato os únicos com radical de
+    // piso na seção. O que sobra — a prosa da pergunta, o "Por que importa" e o
+    // "Pular é permitido" — tem ZERO. A palavra "piso" aparece lá, e não é
+    // radical; os radicais são os do enum.
+    const semLicenca = [
+      blocoDoRotulo(secao, "Um caso inventado"),
+      blocoDoRotulo(secao, "Exemplo (Rampa):"),
+    ]
+      .reduce((texto, bloco) => texto.replace(bloco, ""), secao)
+      .split(/\r?\n/)
+      // a lista de opções: a linha do bullet e a linha indentada que a continua
+      .filter((l) => !/^\s*-\s/.test(l) && !/^\s{2,}\S/.test(l))
+      .join("\n");
+    expect(
+      RADICAIS_DE_PISO.filter((r) => semLicenca.includes(r)),
+      "a seção nomeia piso fora da lista de opções, do caso hipotético e do exemplo — isso é descrever o chão de um lugar que ninguém descreveu",
+    ).toEqual([]);
   });
 
   // 🔴 O guarda contra a invenção do C1 voltar ao bloco do exemplo. São DUAS
@@ -220,8 +266,7 @@ describe("o questionário cobre a ficha inteira", () => {
     }
 
     // (b) o único piso que o exemplo pode nomear é o que ele responde
-    const radicais = [...new Set(PISOS.flatMap((p) => p.split("-")))];
-    const usados = radicais.filter((r) => exemplo.includes(r));
+    const usados = RADICAIS_DE_PISO.filter((r) => exemplo.includes(r));
     expect(
       usados,
       "o exemplo nomeia piso além da resposta — como é o resto da estrada da Rampa ninguém disse",
