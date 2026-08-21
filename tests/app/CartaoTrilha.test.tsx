@@ -75,8 +75,21 @@ describe("a linha de metadados do cartão", () => {
   // É a mesma família do `aria-label` que escondeu a `<legend>` na Task 4.
   // Com a linha sustentada por outra parte, "não tem custo" volta a significar
   // "a linha existe e o custo não está nela".
+  //
+  // O `valor` numa ficha `gratis` não é descuido, é o que faz o teste provar o
+  // que o nome promete. O schema PERMITE `{ tag: "gratis", valor: … }`, e uma
+  // ficha que virou gratuita com o texto de custo herdado de uma edição
+  // anterior é o caso real: sem esta string aqui, o cartão podia ler `valor`
+  // sem olhar a `tag` e mostrar "R$ 5" num cartão marcado como grátis, com a
+  // suíte inteira verde (medido: apagar `custo.tag === "pago" &&` sobrevivia).
+  // As duas versões só se separam quando existe um `valor` pra ser mostrado
+  // por engano.
   it("ficha gratuita não ganha linha de custo", () => {
-    const gratis = { ...ficha, custo: { tag: "gratis" as const }, extensaoKm: 4.25 };
+    const gratis = {
+      ...ficha,
+      custo: { tag: "gratis" as const, valor: "R$ 5 por pessoa" },
+      extensaoKm: 4.25,
+    };
     const { container } = render(<CartaoTrilha ficha={gratis} inicial={leitura} />);
     const meta = container.querySelector(".cartao-meta");
     expect(meta).not.toBeNull();
