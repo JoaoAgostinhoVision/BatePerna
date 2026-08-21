@@ -813,10 +813,30 @@ it("a Rampa real continua abrindo", ...)
 > **6. CORREÇÃO DA MINHA EMENDA 1 acima: onde ela diz "não cada uma contra um literal", leia "não
 > SÓ contra um literal".** A emenda 1 está errada como escrita, e o arquivo que ela nem sabia que
 > existia mostra por quê: o teste do km lá faz **as duas coisas** — assere cada tela contra
-> `KM_CERTO` **e** uma contra a outra. **São dois defeitos diferentes e cada asserção pega um:** o
-> cruzamento pega a DIVERGÊNCIA (as duas telas formatando diferente), o literal pega a VACUIDADE
-> (as duas telas não mostrando nada, e o teste passando feliz). Só o cruzamento é um teste que
-> passa com a linha apagada dos dois lados. **As duas asserções entram.**
+> `KM_CERTO` **e** uma contra a outra. **As três asserções entram.**
+>
+> 🔴 **CORREÇÃO DA CORREÇÃO (2026-08-21, medida na revisão da Task 7) — a repartição de papéis
+> que eu escrevi aqui é FALSA, e não por pouco.** Esta emenda dizia que *"cada asserção pega um
+> defeito: o cruzamento pega a DIVERGÊNCIA, o literal pega a VACUIDADE"*. **Errado.** Enquanto os
+> dois lados forem asseridos contra a **mesma constante**, vale transitividade:
+> `daFicha === LITERAL ∧ doCartao === LITERAL ⟹ daFicha === doCartao`. **Não existe estado do
+> mundo em que o cruzamento falhe e os dois literais passem** — logo **não existe mutação que só
+> o cruzamento pegue**, nem hoje nem depois. Medido: sob a mutação da formatação à mão, quem
+> estoura primeiro é o **literal do lado que quebrou**, sempre. Nem o cenário de "alguém atualiza
+> o literal pra casar com a tela quebrada" salva o cruzamento: nesse caso estoura o literal do
+> **outro** lado.
+>
+> **O cruzamento continua no teste** — custa nada e é rede pro dia em que um dos literais for
+> removido, ou em que os dois lados deixarem de compartilhar a constante. **Mas ele é redundante
+> por construção, e chamá-lo de "a metade que pega a divergência" é comentário prometendo
+> proteção que não existe.** Quem pega as duas coisas são **os dois literais juntos**.
+>
+> 🔴 **Achado pelo implementador da Task 7 e provado pelo revisor — e vale além daqui: "as duas
+> provas são ortogonais" é uma frase que eu já escrevi certo uma vez** (o par valor-literal ×
+> relação-simbólica, no §4 do RESUME) **e errado agora. Ortogonalidade se MEDE, não se supõe pela
+> forma das asserções.** O teste é: existe uma mutação que derruba A e não derruba B? Se não
+> existe nos dois sentidos, uma delas é redundante — o que pode até ser bom, mas tem que estar
+> escrito como redundância.
 >
 > **7. Cuidado ao mexer na ficha sintética compartilhada:** ela alimenta também os testes
 > *"as duas coordenadas da ficha são diferentes"*, *"lados OPOSTOS do recorte de 60 km"* e o do
