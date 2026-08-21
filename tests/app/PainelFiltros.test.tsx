@@ -256,9 +256,15 @@ describe("os chips de piso", () => {
   // `rotuloPiso(p)` por `p` deixa tudo verde e o chip diz `asfalto-esburacado`,
   // com hífen, na cara de quem lê.
   //
-  // 🔴 O piso escolhido é `asfalto-esburacado` de propósito: é o único da lista
-  // filtrável em que as duas versões SE SEPARAM. `rotuloPiso("paralelepipedo")`
-  // devolve `"paralelepipedo"` — sem hífen, a asserção seria oca.
+  // 🔴 O piso escolhido TEM hífen, e isso é a escolha inteira: dos três
+  // filtráveis, `paralelepipedo` é o que as duas versões devolvem IGUAL —
+  // `rotuloPiso("paralelepipedo")` é `"paralelepipedo"`, e uma asserção nele
+  // seria oca. Os outros dois (`asfalto-esburacado` e `asfalto-tapete`) servem;
+  // este ficou com o teste por ser o único que nenhum outro teste já usa.
+  // (Uma versão anterior deste comentário dizia "o único que separa". São
+  // dois — e a medição do fix round o desmentiu: com `rotuloPiso(p)` → `p`
+  // caíram seis testes, cinco deles porque o `chipPiso()` procura
+  // `asfalto tapete` e o hífen o quebra.)
   it("o chip mostra o rótulo sem hífen", async () => {
     monta();
     await abrir();
@@ -281,7 +287,18 @@ describe("os chips de piso", () => {
 // vir do módulo. As asserções de comportamento estão aqui; a de FONTE está no
 // bloco "o que o jsdom não vê", e as duas são necessárias — em runtime o
 // literal e a constante são o mesmo valor.
-describe("as faixas de km escrevem cada uma no seu campo", () => {
+//
+// 🔴 E a COSTURA tem DUAS pontas, achado T5-1 da revisão. Os testes de escrita
+// (mexer na faixa grava) deixavam passar verdes duas mutações de LEITURA:
+// `valor={null}` na faixa de distância (o recorte corta de verdade, a linha diz
+// "1 filtro ligado", e a faixa fica em branco dizendo "qualquer") e
+// `valor={filtros.distanciaKm}` na faixa de tamanho (os dois recortes exibindo
+// um número só). O `FaixaKm` é CONTROLADO: a Task 4 provou que ele obedece à
+// prop, e provar que o painel a ALIMENTA só é possível aqui. O
+// `"o PRIMEIRO render ignora o que está guardado"` agrava — o painel nasce em
+// branco de propósito, então esta leitura de volta é O mecanismo que faz um
+// recorte guardado reaparecer na tela.
+describe("as faixas de km escrevem e leem, cada uma no seu campo", () => {
   it("a faixa de distância escreve em distanciaKm", async () => {
     semeiaLocal();
     monta();
@@ -304,6 +321,34 @@ describe("as faixas de km escrevem cada uma no seu campo", () => {
       .toMatchObject({ ...SEM_FILTRO, extensaoMaxKm: 6 });
   });
 
+  // As duas metades de cada um destes: a faixa dona MOSTRA o número guardado
+  // (barra, campo e o texto de leitura — os três portadores), e a VIZINHA
+  // continua vazia. Sem a segunda metade, uma faixa lendo o campo da outra
+  // passa; sem a primeira, `valor={null}` passa.
+  it("a faixa de distância MOSTRA o recorte guardado, e a de tamanho não herda", async () => {
+    semeiaLocal();
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, distanciaKm: 30 }));
+    monta();
+    await abrir();
+    expect(campoDe(DISTANCIA).value).toBe("30");
+    expect(barraDe(DISTANCIA).value).toBe("30");
+    expect(within(grupo(DISTANCIA)).getByText("até 30 km")).toBeTruthy();
+    expect(campoDe(TAMANHO).value).toBe("");
+    expect(within(grupo(TAMANHO)).getByText("qualquer")).toBeTruthy();
+  });
+
+  it("a faixa de tamanho MOSTRA o recorte guardado, e a de distância não herda", async () => {
+    semeiaLocal();
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, extensaoMaxKm: 6 }));
+    monta();
+    await abrir();
+    expect(campoDe(TAMANHO).value).toBe("6");
+    expect(barraDe(TAMANHO).value).toBe("6");
+    expect(within(grupo(TAMANHO)).getByText("até 6 km")).toBeTruthy();
+    expect(campoDe(DISTANCIA).value).toBe("");
+    expect(within(grupo(DISTANCIA)).getByText("qualquer")).toBeTruthy();
+  });
+
   // Trocar os limites entre as duas faixas é "o filtro se desliga sozinho" com
   // outra roupa: a de tamanho aceitaria na tela um teto de distância, e o
   // `lerFiltros` o devolveria `null` na abertura seguinte, sem nada explicando.
@@ -319,6 +364,28 @@ describe("as faixas de km escrevem cada uma no seu campo", () => {
     expect(barraDe(TAMANHO).getAttribute("max")).toBe(String(EXT_MAX_KM + EXT_PASSO_KM));
     expect(barraDe(TAMANHO).getAttribute("step")).toBe(String(EXT_PASSO_KM));
     expect(campoDe(TAMANHO).getAttribute("max")).toBe(String(EXT_MAX_KM));
+  });
+
+  // ——— achado T5-3 da revisão: a emenda item 5 não tinha prova.
+  //
+  // MEDIDO no fix round: embrulhar a faixa de tamanho num
+  // `<fieldset className="filtro-grupo">` SEM legenda deixava a suíte inteira
+  // verde. (Com legenda ela já caía por acidente — `getByRole` estoura ao achar
+  // dois nós com o mesmo nome.) O `FaixaKm` já É o grupo: um segundo por fora
+  // dá grupo dentro de grupo, e o `.filtro-grupo` de fora vira container flex
+  // do de dentro, brigando com o layout do de dentro.
+  it("nenhum grupo mora dentro de outro — o FaixaKm já É o grupo", async () => {
+    semeiaLocal();
+    monta();
+    await abrir();
+    const painel = document.querySelector(".filtro-painel")!;
+    const grupos = [...painel.querySelectorAll("fieldset")];
+    // Não-vacuidade: sem esta linha, um painel sem `<fieldset>` nenhum passaria
+    // no laço abaixo por não ter o que percorrer.
+    expect(grupos.length).toBeGreaterThan(0);
+    for (const g of grupos) {
+      expect(g.parentElement?.closest("fieldset")).toBeNull();
+    }
   });
 });
 

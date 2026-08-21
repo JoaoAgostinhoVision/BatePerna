@@ -71,8 +71,11 @@ export default function PainelFiltros({ visiveis }: { visiveis: number }) {
             />
           )}
           {/* O `FaixaKm` JÁ É o grupo (fieldset + legend). Um `<fieldset>` por
-              fora daria grupo dentro de grupo e dois nomes acessíveis pro mesmo
-              controle. */}
+              fora daria grupo dentro de grupo: COM legenda, dois nomes pro
+              mesmo controle; SEM legenda, um grupo anônimo entre o painel e a
+              faixa, com o `.filtro-grupo` de fora virando container flex do de
+              dentro. Tem teste em cima das duas faixas — a versão sem legenda
+              passava verde antes dele. */}
           <FaixaKm
             rotulo="Tamanho da trilha"
             valor={filtros.extensaoMaxKm}
