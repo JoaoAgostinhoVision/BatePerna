@@ -862,8 +862,14 @@ oração, nunca lógica.** Se o conserto pedir mais que uma oração, pare e dev
   `contarLigados`.
 - `src/lib/duracao.ts` é **apagado**, junto do reexport em `src/lib/ficha.ts:69`.
 
-**Só entre nesta task depois de `rg "esforco|duracao|Esforco|Duração"` voltar limpo em `src/`.**
-Se voltar sujo, a task anterior não terminou — não contorne.
+~~**Só entre nesta task depois de `rg "esforco|duracao|Esforco|Duração"` voltar limpo em `src/`.**
+Se voltar sujo, a task anterior não terminou — não contorne.~~
+
+🔴 **RISCADO EM 2026-08-21, e não é detalhe de forma: este portão NÃO FECHA.** Medido — ele volta
+6 arquivos, dois deles comentários históricos legítimos, e o padrão nem casa com `formatarDuracao`
+(caixa). Um implementador obediente ao texto literal fica preso ou contorna, e o plano proíbe
+contornar. **Quem manda na contração é o `tsc` + o `npm run build`**, e a varredura virou a
+**classificação em três baldes** — ver a emenda, no fim desta task.
 
 ### Os testes
 
