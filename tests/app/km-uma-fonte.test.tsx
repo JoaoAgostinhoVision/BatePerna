@@ -30,6 +30,12 @@ const CLIMA = { lat: -7.2, lng: -36.0 };
 // função que está sendo provada: régua auto-referente não mede nada.
 const KM_CERTO = "~40 km em linha reta";
 
+// O mesmo, pros dois fatos que a Task 7 levou pra ficha: o texto que as DUAS
+// telas têm que dizer, escrito à mão. Chamar `formatarExtensao`/`rotuloPiso`
+// aqui seria medir a função com ela mesma.
+const EXTENSAO_CERTA = "4,3 km de trilha";
+const PISO_CERTO = "asfalto esburacado";
+
 const { FICHA } = vi.hoisted(() => ({
   FICHA: {
     slug: "morro-sintetico",
@@ -60,6 +66,20 @@ const { FICHA } = vi.hoisted(() => ({
       permissao_abortar: "Se marcar, volte.",
     },
     custo: { tag: "gratis" as const },
+    // 🔴 Os dois campos abaixo são a matéria da segunda prova de junção desta
+    //    família (a extensão e o piso, que a ficha ganhou na Task 7). Sem eles
+    //    a comparação entre as duas telas seria `null === null`: uma prova
+    //    OCA, verde com a linha apagada dos dois lados. Os valores são
+    //    load-bearing:
+    //    - `extensaoKm: 4.25` e não 4: `formatarExtensao` arredonda pra uma
+    //      casa e usa VÍRGULA ("4,3"); com inteiro, a função e um
+    //      `${km} km de trilha` escrito à mão dão a MESMA string e a prova não
+    //      separa as duas versões.
+    //    - `piso: "asfalto-esburacado"` e não "barro": `rotuloPiso("barro")`
+    //      devolve "barro", e aí chamar a função ou mostrar o enum cru é
+    //      indistinguível.
+    extensaoKm: 4.25,
+    piso: "asfalto-esburacado" as const,
   } satisfies Ficha as Ficha,
 }));
 
@@ -99,6 +119,43 @@ function guardarLocal() {
 /** O km que uma tela mostra, seja qual for o resto do texto ao redor. */
 const kmMostrado = (texto: string | null | undefined) =>
   texto?.match(/~[\d,]+ km em linha reta/)?.[0] ?? null;
+
+/** A extensão e o piso que uma tela mostra. O `.` e o `-` dentro dos padrões
+ *  são de propósito: a versão ERRADA ("4.25 km de trilha" escrito à mão,
+ *  "asfalto-esburacado" cru) tem que ser CAPTURADA pra ser comparada e
+ *  reprovada — um padrão que só aceitasse a versão certa devolveria `null` e
+ *  transformaria a divergência em silêncio. */
+const extensaoMostrada = (texto: string | null | undefined) =>
+  texto?.match(/[\d.,]+ km de trilha/)?.[0] ?? null;
+const pisoMostrado = (texto: string | null | undefined) =>
+  texto?.match(/asfalto[- ]esburacado/)?.[0] ?? null;
+
+/** As duas telas, renderizadas com a MESMA ficha. É a razão de este arquivo
+ *  existir: cada ponta testada contra si mesma nunca acusa divergência. */
+async function asDuasTelas() {
+  guardarLocal();
+  vi.mocked(resolverEstado).mockResolvedValue({
+    estado: "fresco",
+    erro: false,
+    calculadoEm: Math.floor(Date.now() / 1000),
+  });
+
+  const cartao = render(
+    <LocalVivo>
+      <CartaoTrilha ficha={FICHA} inicial={LEITURA} />
+    </LocalVivo>,
+  );
+  const pagina = render(
+    await PaginaDaFicha({
+      params: Promise.resolve({ slug: FICHA.slug }),
+      searchParams: Promise.resolve({}),
+    }),
+  );
+  return {
+    noCartao: cartao.container.querySelector(".cartao-meta")?.textContent,
+    naFicha: pagina.container.querySelector(".fatos")?.textContent,
+  };
+}
 
 afterEach(() => {
   cleanup();
@@ -162,5 +219,36 @@ describe("uma trilha, UM km", () => {
     // home mostrando "~40 km em linha reta" no cartão que a pessoa acabou de
     // ver. Filtro que esconde por um número que a tela não mostra.
     expect(passa, "o filtro escondeu uma trilha que o cartão anuncia a 40 km").toBe(true);
+  });
+});
+
+/** O irmão do de cima, pros dois fatos que a ficha ganhou na Task 7. Mesma
+ *  família de defeito: duas telas respondendo a mesma pergunta sobre a mesma
+ *  trilha e formatando cada uma do seu jeito — "4,3 km de trilha" no cartão e
+ *  "4.25 km de trilha" na ficha é a mesma trilha com duas caras.
+ *
+ *  Cada teste faz DUAS asserções contra o literal e UMA cruzada, e elas pegam
+ *  defeitos diferentes: o literal pega a VACUIDADE (as duas telas mostrando
+ *  nada, com `null === null` passando feliz), o cruzamento pega a DIVERGÊNCIA
+ *  (as duas mostrando, cada uma do seu jeito). Nenhuma sozinha pega as duas. */
+describe("uma trilha, UMA extensão e UM piso", () => {
+  it("cartão e ficha mostram o MESMO texto de extensão", async () => {
+    const { noCartao, naFicha } = await asDuasTelas();
+    const doCartao = extensaoMostrada(noCartao);
+    const daFicha = extensaoMostrada(naFicha);
+
+    expect(doCartao, "o cartão parou de mostrar a extensão").toBe(EXTENSAO_CERTA);
+    expect(daFicha, "a ficha parou de mostrar a extensão").toBe(EXTENSAO_CERTA);
+    expect(daFicha, "as duas telas formatam a extensão de jeitos diferentes").toBe(doCartao);
+  });
+
+  it("cartão e ficha mostram o MESMO piso", async () => {
+    const { noCartao, naFicha } = await asDuasTelas();
+    const doCartao = pisoMostrado(noCartao);
+    const daFicha = pisoMostrado(naFicha);
+
+    expect(doCartao, "o cartão parou de mostrar o piso").toBe(PISO_CERTO);
+    expect(daFicha, "a ficha parou de mostrar o piso").toBe(PISO_CERTO);
+    expect(daFicha, "uma das telas mostra o enum cru e a outra o rótulo").toBe(doCartao);
   });
 });
