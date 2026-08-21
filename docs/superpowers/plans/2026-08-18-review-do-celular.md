@@ -627,6 +627,25 @@ it("'em linha reta' continua no texto", ...)                                   /
 | 2 | a extensão é mostrada mesmo ausente (`?? 0`) | "sem extensaoKm, a linha não inventa" |
 | 3 | `formatarDistanciaCurta` → número cru | "'em linha reta' continua no texto" |
 
+> 🔴 **EMENDA DO PRÉ-VOO (2026-08-20).**
+>
+> **1. O exemplo `barro` torna o `rotuloPiso` INPROVÁVEL — prova oca, do tipo (b).**
+> `rotuloPiso("barro")` devolve `"barro"`: com esse exemplo, `rotuloPiso(ficha.piso)` e
+> `ficha.piso` cru dão **a mesma string**, e nenhuma asserção da lista separa as duas versões. A
+> ficha do teste tem que ter **`piso: "asfalto-esburacado"`** — aí a versão crua mostra o hífen e
+> a asserção morde. (Mesmo furo achado na Task 5 e o mesmo tipo que o implementador da Task 4
+> pegou em cima de mim.) **Acrescente a mutação: `rotuloPiso(ficha.piso)` → `ficha.piso`.**
+>
+> **2. "A Rampa REAL" quer dizer o JSON de verdade, carregado pelo loader** — não um fixture
+> "parecido com a Rampa". **Conferido hoje (2026-08-20) em `content/fichas/rampa-do-pepe.json`: a
+> ficha real não tem NENHUM dos quatro campos** (`piso`, `extensaoKm`, `esforco`, `duracao`). É
+> por isso que esse teste é o que fala de produção; um fixture sintético não fala.
+>
+> **3. Consequência disto, e ela não é defeito — é pra dizer ao João no fim da rodada:** com uma
+> ficha só, e sem os campos novos, **o cartão em produção não muda uma vírgula** nesta rodada. Ele
+> já mostra `~27 km em linha reta · R$ 5` e vai continuar mostrando. O que muda na tela dele é o
+> **painel de filtros**. O resto acende quando o questionário voltar.
+
 ---
 
 ## Task 7 — a ficha: piso e extensão junto ao Trajeto
@@ -661,6 +680,24 @@ it("a Rampa real continua abrindo", ...)
 | 2 | o guarda de ausência some | "não mostra linha vazia" |
 | 3 | trocar `formatarExtensao(n)` por `` `${n} km` `` escrito à mão | "cartão e ficha mostram o MESMO texto de extensão" |
 
+> 🔴 **EMENDA DO PRÉ-VOO (2026-08-20).**
+>
+> **1. A mutação #3 aponta pra um teste que NÃO está na lista — mutação sem dono.** O teste
+> `"cartão e ficha mostram o MESMO texto de extensão"` não existe em lugar nenhum desta task.
+> **Ele entra, e é um teste de JUNÇÃO:** renderiza o `CartaoTrilha` e a `[slug]/page.tsx` **com a
+> mesma ficha** e compara a string de extensão, uma contra a outra — não cada uma contra um
+> literal (dois literais iguais escritos à mão são a mesma mentira, escrita duas vezes). É
+> exatamente a família que só a revisão da branch inteira vem pegando nas últimas três rodadas;
+> aqui dá pra pegar antes.
+>
+> **2. Mesmo furo do `rotuloPiso` da Task 6:** a ficha de teste tem que usar
+> **`piso: "asfalto-esburacado"`**, senão a chamada de `rotuloPiso` fica inprovável.
+>
+> **3. "Dentro do bloco Trajeto" tem que ser asserção POSICIONAL**, não de existência: escopar por
+> `within(<o contêiner do Trajeto>)`. Se hoje o bloco não tiver contêiner endereçável, **criar um
+> faz parte desta task** — sem isso a mutação #1 (mover o piso pra fora do bloco) não tem como
+> cair, e um dado de estrada aparecendo debaixo do bloco errado é o app dizendo outra coisa.
+
 ---
 
 ## Task 8 — A CONTRAÇÃO: apagar o que ninguém mais lê
@@ -693,6 +730,19 @@ it("contarLigados agora conta 5 recortes, todos ligados", ...)
 |---|---|---|
 | 1 | tirar um dos 5 do array do `contarLigados` | "conta 5 recortes, todos ligados" |
 | 2 | `lerFiltros` estourar em chave desconhecida | "filtro guardado… continua não estourando" |
+
+> 🔴 **EMENDA DO PRÉ-VOO (2026-08-20) — "não estoura" não é o que a pessoa vê.**
+>
+> O teste do filtro velho prova só que a home **abre**. O defeito que o celular dele produziria é
+> outro: o `bp.filtros` gravado em produção tem `esforco`/`duracaoMax` de verdade, e se qualquer
+> caminho os preservasse, a linha de resumo diria **"1 filtro ligado" sem chip nenhum na tela pra
+> desligar** — o formato exato do deferido I-2, e uma coisa que ele já reclamou no celular.
+> **Acrescente `expect(contarLigados(lerFiltros(velho))).toBe(0)`** com um `velho` que tem os dois
+> campos mortos e nenhum vivo. É a asserção que fala da TELA; a outra fala do crash.
+>
+> E o portão `rg` do plano é sobre `src/` de propósito — em `tests/` os nomes velhos ainda vão
+> aparecer enquanto os testes migram. **Quem manda na contração é o `tsc` + o `npm run build`, não
+> o `rg`.**
 
 **A verificação desta task é o `npm run build`**, não o vitest: apagar um módulo reexportado é
 exatamente o tipo de coisa que a suíte não vê (lição 9).
