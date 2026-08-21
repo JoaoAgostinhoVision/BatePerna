@@ -532,6 +532,62 @@ it("a legenda do piso diz que é mínimo", ...)
 | 3 | o `temLocal &&` some | "sem localização, o grupo… não aparece" |
 | 4 | a faixa de tamanho passa o valor pro `distanciaKm` | "a faixa de tamanho escreve no contexto" — **a asserção tem que nomear o CAMPO, não só 'mudou'** |
 
+> 🔴 **EMENDA DO PRÉ-VOO (2026-08-20) — seis furos, e o primeiro faz a suíte PERDER prova sem
+> nenhum teste ficar vermelho.**
+>
+> **1. Esta task apaga o grupo Esforço, e com ele SEIS testes que provam outra coisa.** Em
+> `tests/app/PainelFiltros.test.tsx`, o chip `leve` e o grupo `/esforço/i` são o *instrumento* de
+> testes que não são sobre esforço nenhum. Apagá-los junto com o grupo deixa a suíte verde e
+> desarmada. **Eles se MIGRAM, um a um — a lista é fechada:**
+> - `"nasce fechado"` e `"abre no toque e fecha no toque de novo"` — sondam `/esforço/i`; a sonda
+>   passa a ser `/piso/i`.
+> - `"ligar um recorte grava no aparelho"` — vira um chip de piso.
+> - 🔴 `"ligar um recorte preserva os que já estavam ligados"` — **é a única prova do
+>   `{...filtros, ...p}` do `trocar`**. A mutação que ele mata (`{...SEM_FILTRO, ...p}`, "reinicia e
+>   aplica") apaga na tela um recorte que a pessoa acabou de ligar. Sem migrá-lo, essa mutação fica
+>   sem dono.
+> - `"tocar o mesmo esforço de novo desliga — é a única saída dele"` — é o ancestral direto do
+>   `"tocar duas vezes no mesmo chip de piso desliga"` desta task, e o raciocínio dele vale igual:
+>   **o piso também não tem chip "qualquer"**, então o segundo toque é a única saída.
+> - `"escrita que estoura ao ligar um recorte"` (armazenamento) — clica `leve`; passa a clicar piso.
+>
+> Os testes dos chips que morrem de verdade (`"o chip de DURAÇÃO escreve em duracaoMax"`, `"o chip
+> de DISTÂNCIA escreve em distanciaKm"` com o chip `até 30 km`) **saem**, e o segundo é substituído
+> pelo `"a faixa de distância escreve no contexto"`. **Relate quais saíram e quais foram migrados
+> — não devolva só um total.**
+>
+> **2. Nada prova que a faixa certa recebeu o limite certo, e trocá-los é o defeito "o filtro se
+> desliga sozinho".** Com `Tamanho da trilha` recebendo `max={DIST_MAX_KM}`, a tela aceita 50 km de
+> trilha, guarda, e o `lerFiltros` (`v <= EXT_MAX_KM`) devolve `null` na abertura seguinte. **Duas
+> asserções ORTOGONAIS, e as duas precisam existir** (é a lição (a)+(c) do RESUME):
+> - **comportamento:** o `max` da barra de distância é `DIST_MAX_KM + DIST_PASSO_KM` e o da
+>   extensão é `EXT_MAX_KM + EXT_PASSO_KM`, lidos do módulo;
+> - **fonte:** o `PainelFiltros.tsx` **importa** os quatro de `@/lib/filtros` e não escreve nenhum
+>   dos números à mão. Em runtime `100` e `DIST_MAX_KM` são o mesmo valor — **nenhuma asserção de
+>   comportamento distingue as duas versões**, e é por isso que a de fonte não é redundante.
+>   (Este é o "aqui" que a emenda da Task 4 prometeu: lá as props vêm do teste, aqui vêm do módulo.)
+>
+> **3. `rotuloPiso` não é exercitado por nenhum teste da lista.** Trocando `rotuloPiso(p)` por `p`,
+> tudo continua verde e o chip diz `asfalto-esburacado` com hífen. Uma asserção no texto visível
+> de um chip resolve: `getByRole("button", { name: /^asfalto esburacado$/i })`.
+>
+> **4. Falta o par do `temLocal`.** A mutação #3 pega o `&&` sumindo; não pega o excesso —
+> embrulhar **as duas** faixas no `temLocal &&` deixa "sem localização, o grupo Distância não
+> aparece" verde e faz o recorte de tamanho sumir pra quem está sem GPS, sem nada dizendo por quê.
+> `it("sem localização, o grupo Tamanho da trilha CONTINUA aparecendo")`.
+>
+> **5. Não embrulhe o `<FaixaKm>` num `<fieldset>`.** Ele já É o grupo (fieldset + legend, ver a
+> emenda 2 da Task 4); um segundo por fora daria fieldset dentro de fieldset e dois nomes
+> acessíveis pro mesmo controle. Com a legenda `"Distância daqui"`, o
+> `queryByRole("group", { name: /distância/i })` dos testes herdados continua casando — confira,
+> não presuma.
+>
+> **6. Transitório conhecido, e ele é aceitável: até a Task 8, `esforco`/`duracaoMax` guardados
+> continuam CONTANDO na linha de resumo sem chip na tela pra desligar.** É o mesmo formato do
+> deferido I-2 (`pisoMinimo: barro`), e aqui não trava ninguém: o botão "limpar filtros" da folha
+> continua sendo a saída, e a Task 8 apaga os campos. **Registrado de propósito — não "conserte"
+> mexendo em `contarLigados`, que é escopo da Task 8.**
+
 ---
 
 ## Task 6 — o cartão
