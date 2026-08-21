@@ -74,22 +74,81 @@ describe("a linha de metadados do cartão", () => {
     expect(container.querySelector(".cartao-meta")?.textContent ?? "").not.toContain("R$");
   });
 
-  // O PAYLOAD da Task 8 chega aqui. Sem este teste, os dois campos que ela
-  // acrescentou ao schema podiam nunca aparecer na tela e nada acusaria —
-  // todos os outros testes desta lista só provam AUSÊNCIA.
-  it("com esforço e duração, os dois aparecem na linha", () => {
-    const cheia = { ...ficha, esforco: "puxada" as const, duracao: 90 };
-    const { container } = render(<CartaoTrilha ficha={cheia} inicial={leitura} />);
+  // O PAYLOAD desta rodada chega aqui. Herdeiro direto do teste que antes
+  // guardava `esforco`/`duracao`: sem ele, os dois campos que o schema ganhou
+  // (`piso`, `extensaoKm`) podiam nunca chegar à tela e nada acusaria — todos
+  // os outros testes desta lista só provam AUSÊNCIA.
+  //
+  // Três escolhas de exemplo são load-bearing, e nenhuma é decorativa:
+  //
+  // - `piso: "asfalto-esburacado"`, não "barro". `rotuloPiso("barro")` devolve
+  //   "barro": com barro, chamar a função e mostrar o enum cru dão a MESMA
+  //   string e nenhuma asserção separa as duas versões. Com o hífen, separa.
+  // - `extensaoKm: 4.25`, não 4. `formatarExtensao(4)` e um `${km} km de
+  //   trilha` escrito à mão no cartão também dão a mesma string; 4.25 separa —
+  //   a função arredonda pra uma casa e usa VÍRGULA ("4,3"), a cópia à mão
+  //   mostraria "4.25". É a diferença entre provar o sufixo e provar que quem
+  //   formata é uma função só.
+  // - a asserção é da LINHA INTEIRA (`toBe`), não `toContain`. É a única coisa
+  //   aqui que prova a ORDEM — distância · extensão · piso · custo.
+  it("com piso e extensão, os dois aparecem na linha, nesta ordem e já formatados", async () => {
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+      tipo: "escolhido", coord: { lat: -8.20111, lng: -35.56472 },
+      em: 1_800_000_000, nome: "Gravatá", regiao: "Pernambuco",
+    }));
+    const cheia = { ...ficha, piso: "asfalto-esburacado" as const, extensaoKm: 4.25 };
+    const { container } = render(
+      <LocalVivo><CartaoTrilha ficha={cheia} inicial={leitura} /></LocalVivo>,
+    );
+    await screen.findByText(/km em linha reta/);
     const meta = container.querySelector(".cartao-meta")?.textContent ?? "";
-    expect(meta).toContain("puxada");
-    expect(meta).toContain("~1h30");
+    // O "~60 km" é de Gravatá até o waypoint da Rampa, com o conteúdo real: se
+    // a ficha mudar de coordenada este número muda e o teste quebra, que é o
+    // comportamento certo — alguém tem que olhar a tela de novo.
+    expect(meta).toBe("~60 km em linha reta · 4,3 km de trilha · asfalto esburacado · R$ 5 por pessoa");
   });
 
-  // Não inventar: ficha sem esforço não ganha traço nem "—" no lugar.
-  it("ficha sem esforço/duração não mostra campo vazio", () => {
-    const semCampos = { ...ficha, esforco: undefined, duracao: undefined };
-    const { container } = render(<CartaoTrilha ficha={semCampos} inicial={leitura} />);
+  // Não inventar: ficha sem extensão não ganha "0 km de trilha" nem separador
+  // solto. `toBe` e não `not.toContain` de propósito — um `?? 0` pendurado na
+  // chamada sobrevive a um `toContain`, e a um `toBe` não.
+  it("sem extensaoKm, a linha não inventa e não deixa separador solto", () => {
+    const semExtensao = {
+      ...ficha,
+      piso: "asfalto-esburacado" as const,
+      extensaoKm: undefined,
+    };
+    const { container } = render(<CartaoTrilha ficha={semExtensao} inicial={leitura} />);
+    const meta = container.querySelector(".cartao-meta")?.textContent ?? "";
+    expect(meta).toBe("asfalto esburacado · R$ 5 por pessoa");
+  });
+
+  // Herdeiro do antigo "ficha sem esforço/duração não mostra campo vazio",
+  // apontado pros campos novos: sem piso, nem traço nem "undefined" no lugar.
+  it("sem piso, a linha não inventa e não deixa separador solto", () => {
+    const semPiso = { ...ficha, piso: undefined, extensaoKm: 4.25 };
+    const { container } = render(<CartaoTrilha ficha={semPiso} inicial={leitura} />);
+    const meta = container.querySelector(".cartao-meta")?.textContent ?? "";
+    expect(meta).toBe("4,3 km de trilha · R$ 5 por pessoa");
     expect(container.textContent).not.toContain("undefined");
-    expect(container.querySelector(".cartao-meta")?.textContent ?? "").not.toContain("·  ·");
+  });
+
+  // O teste que fala de PRODUÇÃO. `ficha` é getFichasComCondicao()[0] sem
+  // override nenhum — o JSON de verdade da Rampa, que não traz `piso` nem
+  // `extensaoKm` (nem trazia `esforco`/`duracao`). Consequência, e não é
+  // defeito: com uma ficha só, o cartão no celular do João não muda uma
+  // vírgula nesta rodada. Fixture sintética não provaria isso.
+  it("a Rampa REAL (sem piso, sem extensão) mostra só distância e custo", async () => {
+    expect(ficha.piso).toBeUndefined();
+    expect(ficha.extensaoKm).toBeUndefined();
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+      tipo: "escolhido", coord: { lat: -8.20111, lng: -35.56472 },
+      em: 1_800_000_000, nome: "Gravatá", regiao: "Pernambuco",
+    }));
+    const { container } = render(
+      <LocalVivo><CartaoTrilha ficha={ficha} inicial={leitura} /></LocalVivo>,
+    );
+    await screen.findByText(/km em linha reta/);
+    const meta = container.querySelector(".cartao-meta")?.textContent ?? "";
+    expect(meta).toBe("~60 km em linha reta · R$ 5 por pessoa");
   });
 });
