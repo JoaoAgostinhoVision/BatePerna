@@ -7,9 +7,8 @@ import {
   formatarDistanciaCurta,
   formatarExtensao,
 } from "@/lib/geo";
-// `piso.ts` direto, NÃO "@/lib/ficha": aquele módulo carrega node:fs/node:path
-// (o loader de content/fichas) e quebraria o bundle do cliente. Foi essa mesma
-// regra que exilou o antigo `formatarDuracao` pra `duracao.ts`.
+// `piso.ts` é puro de propósito — sem zod e sem `node:fs` — e é por isso que um
+// client component pode lê-lo direto. A razão inteira está escrita lá.
 import { rotuloPiso } from "@/lib/piso";
 import { coordDe } from "@/lib/local";
 import SeloTrilha from "./SeloTrilha";

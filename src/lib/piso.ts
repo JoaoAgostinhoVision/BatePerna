@@ -8,14 +8,16 @@
  *  Dentro dessa via, vale o PIOR trecho — mesmo curto, mesmo sendo o último —
  *  e não a média nem o piso que predomina.
  *
- *  🔴 A Rampa do Pepê tem `piso` = `barro`, e isso é dado do dono do app:
- *  `voz` = "é barro: molhou, não vá", `regra_texto` = "não suba de carro
- *  comum; o barro segura água". COMO É O RESTO DA ESTRADA ATÉ LÁ NINGUÉM
- *  DISSE. Uma versão anterior deste comentário afirmava "a estrada até o pé da
- *  serra é asfalto e a subida é barro" — invenção, que a ficha real não
- *  sustenta em nenhum campo, e que daqui se propagou pro questionário que ele
- *  lê. Não reponha: a escala não precisa desse fato, e este projeto não afirma
- *  fato de lugar que o dono não deu.
+ *  🔴 A resposta do questionário pra Rampa do Pepê é `barro` — dado do dono do
+ *  app: `voz` = "é barro: molhou, não vá", `regra_texto` = "não suba de carro
+ *  comum; o barro segura água". O JSON ainda NÃO TRAZ o campo `piso`; enquanto
+ *  não trouxer, a Rampa é "piso desconhecido" pro filtro e nunca é escondida
+ *  por ele. COMO É O RESTO DA ESTRADA ATÉ LÁ NINGUÉM DISSE. Uma versão
+ *  anterior deste comentário afirmava "a estrada até o pé da serra é asfalto
+ *  e a subida é barro" — invenção, que a ficha real não sustenta em nenhum
+ *  campo, e que daqui se propagou pro questionário que ele lê. Não reponha: a
+ *  escala não precisa desse fato, e este projeto não afirma fato de lugar que
+ *  o dono não deu.
  *
  *  Puro de propósito, sem zod e sem `node:fs`: client components leem este
  *  módulo direto (é a mesma razão que já exilou `formatarDuracao` pra

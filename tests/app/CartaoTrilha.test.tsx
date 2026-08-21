@@ -68,10 +68,19 @@ describe("a linha de metadados do cartão", () => {
     expect(meta).toContain("R$ 10");
   });
 
+  // A extensão está aqui de propósito, e é o conserto de uma asserção que
+  // MASCARAVA um sumiço: antes este teste era só `?.textContent ?? ""` +
+  // `not.toContain("R$")` numa ficha gratuita SEM mais nada — e nessa ficha a
+  // linha inteira não existe, então a asserção passava com o elemento AUSENTE.
+  // É a mesma família do `aria-label` que escondeu a `<legend>` na Task 4.
+  // Com a linha sustentada por outra parte, "não tem custo" volta a significar
+  // "a linha existe e o custo não está nela".
   it("ficha gratuita não ganha linha de custo", () => {
-    const gratis = { ...ficha, custo: { tag: "gratis" as const } };
+    const gratis = { ...ficha, custo: { tag: "gratis" as const }, extensaoKm: 4.25 };
     const { container } = render(<CartaoTrilha ficha={gratis} inicial={leitura} />);
-    expect(container.querySelector(".cartao-meta")?.textContent ?? "").not.toContain("R$");
+    const meta = container.querySelector(".cartao-meta");
+    expect(meta).not.toBeNull();
+    expect(meta?.textContent).toBe("4,3 km de trilha");
   });
 
   // O PAYLOAD desta rodada chega aqui. Herdeiro direto do teste que antes
@@ -150,5 +159,25 @@ describe("a linha de metadados do cartão", () => {
     await screen.findByText(/km em linha reta/);
     const meta = container.querySelector(".cartao-meta")?.textContent ?? "";
     expect(meta).toBe("~60 km em linha reta · R$ 5 por pessoa");
+  });
+
+  // Ausência de ELEMENTO, não de texto — e é a diferença que importa. Nenhuma
+  // asserção sobre `textContent` pega isto: `?.textContent ?? ""` dá a mesma
+  // string vazia com o `<span>` presente e vazio ou com ele ausente, e o
+  // `partes.length > 0 &&` podia cair sem nada acusar (medido: caía, e a suíte
+  // ficava toda verde). Não é cosmético: `.bp .cartao` é flex com `gap: .2rem`
+  // e `.cartao-meta` tem `margin-top: .35rem`, então um span vazio ainda é
+  // item de flex e deixa ~0,55rem de folga — um cartão mais alto que os
+  // vizinhos, com nada dentro. Ficha gratuita, sem localização, sem piso e sem
+  // extensão é o caso real que chega lá.
+  it("sem nada pra mostrar, a linha de metadados não existe", () => {
+    const nua = {
+      ...ficha,
+      custo: { tag: "gratis" as const },
+      piso: undefined,
+      extensaoKm: undefined,
+    };
+    const { container } = render(<CartaoTrilha ficha={nua} inicial={leitura} />);
+    expect(container.querySelector(".cartao-meta")).toBeNull();
   });
 });

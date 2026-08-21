@@ -7,8 +7,8 @@
  *  component que importasse `formatarDuracao` de lá arrastaria esses
  *  módulos pro bundle do navegador, e o webpack do Next recusa: "node:fs"
  *  não tem como entrar no bundle do cliente (confirmado com `next build`
- *  falhando de verdade nesta rodada, não é teoria). Por isso o CartaoTrilha
- *  (client) importa DAQUI, não de `@/lib/ficha`. */
+ *  falhando de verdade numa rodada passada, não é teoria). Por isso quem
+ *  precisar dela num client component importa DAQUI, não de `@/lib/ficha`. */
 export function formatarDuracao(min: number): string {
   if (min < 60) return `~${min}min`;
   const horas = Math.floor(min / 60);
