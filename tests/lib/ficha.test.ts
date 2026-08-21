@@ -3,7 +3,6 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  formatarDuracao,
   getFicha,
   getAllFichas,
   getFichasComCondicao,
@@ -112,53 +111,32 @@ function dirSintetico(arquivos: Record<string, unknown>): string {
   return dir;
 }
 
-describe("esforço e duração", () => {
+// `esforco` e `duracao` foram APAGADOS do schema nesta rodada: este app só
+// sabe falar de LUGAR, e quem ficou no lugar dos dois é o par `piso` /
+// `extensaoKm` do bloco abaixo.
+describe("esforco e duracao saíram do schema", () => {
   const base = JSON.parse(readFileSync(
     path.join(process.cwd(), "content", "fichas", "rampa-do-pepe.json"), "utf8"));
 
-  it("são opcionais — a ficha que existe hoje não os tem e tem que carregar", () => {
-    expect(() => fichaSchema.parse(base)).not.toThrow();
-  });
-
-  it("aceita os três esforços", () => {
-    for (const e of ["leve", "media", "puxada"]) {
-      expect(() => fichaSchema.parse({ ...base, esforco: e })).not.toThrow();
-    }
-  });
-
-  it("recusa esforço inventado — o filtro compara contra estes três e mais nenhum", () => {
-    expect(() => fichaSchema.parse({ ...base, esforco: "moderada" })).toThrow();
-  });
-
-  // Minutos, não texto: o filtro compara número. "1h30" obrigaria a
-  // interpretar português na hora de filtrar.
-  it("duração é número de minutos, positivo", () => {
-    expect(() => fichaSchema.parse({ ...base, duracao: 90 })).not.toThrow();
-    expect(() => fichaSchema.parse({ ...base, duracao: "1h30" })).toThrow();
-    expect(() => fichaSchema.parse({ ...base, duracao: 0 })).toThrow();
-    expect(() => fichaSchema.parse({ ...base, duracao: -30 })).toThrow();
-  });
-
-  // ——— os dois abaixo vieram do pré-voo desta task.
-
-  // O `.int()` não tinha prova: 90, "1h30", 0 e -30 são pegos por `z.number()`
-  // e `.positive()`, então apagar `.int()` deixava a suíte verde. E meia hora
-  // vira 30 na tela, mas 90,5 minutos viraria "90,5 min" — número quebrado
-  // numa linha que a pessoa lê de relance no portão.
-  it("duração fracionada é recusada — minuto quebrado não existe pra quem lê", () => {
-    expect(() => fichaSchema.parse({ ...base, duracao: 90.5 })).toThrow();
-  });
-
-  // TODOS os testes acima usam `not.toThrow()` / `toThrow()`, e NENHUM olha o
-  // que sai do parse. Isso importa porque o Zod, por padrão, DESCARTA chave
-  // desconhecida em silêncio em vez de reclamar: se alguém escrever o campo
-  // errado no schema (ou esquecê-lo), `parse({...base, esforco: "leve"})`
-  // continua não estourando — só devolve um objeto sem `esforco`. E é o valor
-  // que sai daqui que a Task 7 vai ler pra desenhar a linha do cartão.
-  it("os dois campos SOBREVIVEM ao parse — não basta não estourar", () => {
+  // ⚠️ QUEM PROVA O QUÊ, e aqui a resposta é "só este teste".
+  //
+  // O `tsc` NÃO é dono desta remoção: devolver `esforco: esforcoSchema
+  // .optional()` ao `fichaSchema` é um campo opcional a mais num tipo
+  // inferido que ninguém lê — compila limpo, e o `next build` também passa.
+  //
+  // E "não estourar" também não separa as versões: o zod, por padrão,
+  // DESCARTA chave desconhecida em silêncio em vez de reclamar, então
+  // `parse({...base, esforco: "puxada"})` não estoura nem antes nem depois. O
+  // que separa é o campo NÃO CHEGAR no objeto lido.
+  //
+  // O `expect(lido.slug)` não é decoração: sem ele, um `parse` que devolvesse
+  // `{}` passaria nas duas asserções de ausência (é a mesma armadilha do
+  // `not.toContain` que mascara o elemento sumido).
+  it("ficha antiga com os dois campos ainda carrega, e eles não chegam no objeto lido", () => {
     const lido = fichaSchema.parse({ ...base, esforco: "puxada", duracao: 90 });
-    expect(lido.esforco).toBe("puxada");
-    expect(lido.duracao).toBe(90);
+    expect(lido.slug).toBe(base.slug);
+    expect(lido).not.toHaveProperty("esforco");
+    expect(lido).not.toHaveProperty("duracao");
   });
 });
 
@@ -201,23 +179,6 @@ describe("piso e extensaoKm", () => {
     expect(f).not.toBeNull();
     expect(f!.piso).toBeUndefined();
     expect(f!.extensaoKm).toBeUndefined();
-  });
-});
-
-describe("formatarDuracao: a linha do cartão", () => {
-  it("abaixo de uma hora, em minutos", () => {
-    expect(formatarDuracao(45)).toBe("~45min");
-  });
-  it("hora cheia não mostra minuto zero", () => {
-    expect(formatarDuracao(60)).toBe("~1h");
-    expect(formatarDuracao(120)).toBe("~2h");
-  });
-  it("hora e minuto", () => {
-    expect(formatarDuracao(90)).toBe("~1h30");
-  });
-  // Duas casas: "~2h5" se lê como 2h5min ou 2h50? O zero à esquerda desfaz.
-  it("minuto de um dígito ganha zero à esquerda", () => {
-    expect(formatarDuracao(125)).toBe("~2h05");
   });
 });
 

@@ -91,19 +91,13 @@ function blocoDoRotulo(secao: string, rotulo: string): string {
 const perguntaDe = (campo: string) => blocoDoRotulo(secaoDoCampo(campo), "Pergunta:");
 
 describe("o questionário cobre a ficha inteira", () => {
-  // ⚠️ ESTE TESTE GARANTE MENOS DO QUE O NOME PROMETE, HOJE. Ele varre
-  // `fichaSchema.shape`, que durante a EXPANSÃO desta rodada ainda tem
-  // `esforco` e `duracao`; os dois já não são perguntados, e o teste passa
-  // porque a NOTA DE RODAPÉ do questionário cita os dois nomes entre crases —
-  // uma nota que diz textualmente que não são pergunta. Ou seja: para esses
-  // dois campos, hoje, ele checa menção, não pergunta.
-  //
-  // Isso se resolve sozinho na Task 8, quando `esforco` e `duracao` saem do
-  // schema: aí o laço deixa de visitá-los e a asserção volta a significar o
-  // que diz. Não há máquina a construir aqui — construir uma lista de exceções
-  // agora seria código que a Task 8 apaga. Para os campos que importam nesta
-  // task (`piso`, `extensaoKm`), quem prova pergunta de verdade é
-  // `secaoDoCampo` nos testes abaixo.
+  // ⚠️ ESTE TESTE GARANTE MENOS DO QUE O NOME PROMETE: ele checa MENÇÃO ao
+  // nome do campo, não pergunta. Enquanto `esforco` e `duracao` ainda estavam
+  // no schema ele passava por uma NOTA DE RODAPÉ do questionário que cita os
+  // dois nomes entre crases — uma nota que diz textualmente que não são
+  // pergunta. A contração desta rodada apagou os dois do schema, o laço deixou
+  // de visitá-los, e essa folga em particular acabou. Quem prova pergunta de
+  // verdade, campo a campo, é `secaoDoCampo` nos testes abaixo.
   it("todo campo do schema tem pergunta — senão a ficha nova nasce incompleta", () => {
     for (const campo of Object.keys(fichaSchema.shape)) {
       expect(DOC, `faltou pergunta para "${campo}"`).toContain(`\`${campo}\``);

@@ -6,7 +6,7 @@
 import { coordDaDistancia, distanciaKm, type Coord } from "@/lib/geo";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { PISOS_FILTRAVEIS, ordemPiso, type Piso } from "@/lib/piso";
-import type { Esforco, Ficha } from "@/types/ficha";
+import type { Ficha } from "@/types/ficha";
 
 export type Filtros = {
   /** Número livre, não mais `30 | 60`: os dois recortes de km viraram barra +
@@ -16,11 +16,6 @@ export type Filtros = {
   soGratis: boolean;
   extensaoMaxKm: number | null;
   pisoMinimo: Piso | null;
-  // DE SAÍDA nesta rodada (quem apaga é a Task 8). Ficam de pé porque a ordem
-  // é expandir → migrar → contrair: a tela e a ficha ainda os leem, e apagá-los
-  // antes de os consumidores migrarem deixaria o `tsc` vermelho no meio.
-  esforco: Esforco | null;
-  duracaoMax: 120 | 240 | null;
 };
 
 export const CHAVE_FILTROS = "bp.filtros";
@@ -45,8 +40,6 @@ export const SEM_FILTRO: Filtros = {
   soGratis: false,
   extensaoMaxKm: null,
   pisoMinimo: null,
-  esforco: null,
-  duracaoMax: null,
 };
 
 /** Quantos recortes estão ligados — o número da linha de resumo.
@@ -56,20 +49,16 @@ export const SEM_FILTRO: Filtros = {
  *  `x !== false` nunca era alcançável — o `tsc` recusava a comparação (TS2367)
  *  e a prova de mutação daquela metade era impossível. */
 export function contarLigados(f: Filtros): number {
-  // SETE durante a expansão: os dois velhos (`esforco`, `duracaoMax`) ainda
-  // recortam de verdade, então ainda contam. Vira CINCO na Task 8, junto com
-  // eles. Cada campo aqui é uma linha do painel; um que falte faz a tela dizer
-  // "2 filtros ligados" com três ligados, e a pessoa procura na tela um
-  // controle que a contagem jura não existir.
-  return [
-    f.distanciaKm,
-    f.daHoje,
-    f.soGratis,
-    f.extensaoMaxKm,
-    f.pisoMinimo,
-    f.esforco,
-    f.duracaoMax,
-  ].filter((x) => x !== null && x !== false).length;
+  // CINCO: eram sete durante a expansão desta rodada, com `esforco` e
+  // `duracaoMax` juntos; os dois foram apagados na contração. Cada campo aqui é
+  // uma linha do painel, e a lista tem que ser exatamente os campos de
+  // `Filtros` — um que falte faz a tela dizer "2 filtros ligados" com três
+  // ligados, e a pessoa procura na tela um controle que a contagem jura não
+  // existir; um que sobre é o contrário, e foi o defeito que o dono do app
+  // viu no celular (contagem prometendo chip que a tela não desenha).
+  return [f.distanciaKm, f.daHoje, f.soGratis, f.extensaoMaxKm, f.pisoMinimo].filter(
+    (x) => x !== null && x !== false,
+  ).length;
 }
 
 /** `Number.isInteger` faz a pergunta certa mas **não é type guard**: o `tsc`
@@ -146,9 +135,13 @@ export function lerFiltros(bruto: string | null): Filtros {
     soGratis: x.soGratis === true,
     extensaoMaxKm: kmGuardado(x.extensaoMaxKm, EXT_MAX_KM),
     pisoMinimo: ehPisoFiltravel(x.pisoMinimo) ? x.pisoMinimo : null,
-    esforco:
-      x.esforco === "leve" || x.esforco === "media" || x.esforco === "puxada" ? x.esforco : null,
-    duracaoMax: x.duracaoMax === 120 || x.duracaoMax === 240 ? x.duracaoMax : null,
+    // O que está guardado no celular do dono do app tem `esforco` e
+    // `duracaoMax` gravados de verdade, e eles NÃO são lidos aqui — de
+    // propósito. Ler um campo que a tela não desenha mais faria a linha de
+    // resumo dizer "1 filtro ligado" sem nenhum chip pra desligar, que é
+    // exatamente o que ele reclamou. Chave desconhecida no JSON é ignorada em
+    // silêncio: o objeto de saída é montado campo a campo, nunca espalhado do
+    // que veio.
   };
 }
 
@@ -191,13 +184,9 @@ export function passaNoFiltro({
 
   // REGRA DE HONESTIDADE 2: ficha sem o campo NUNCA é escondida por ele.
   // Sumir por dado que falta é mentira silenciosa — e hoje todas as fichas
-  // estão nesse caso, nos QUATRO campos opcionais (`esforco`, `duracao`,
-  // `extensaoKm`, `piso`): a única ficha real não tem nenhum deles.
-  if (filtros.esforco !== null && ficha.esforco && ficha.esforco !== filtros.esforco) return false;
-  if (filtros.duracaoMax !== null && ficha.duracao && ficha.duracao > filtros.duracaoMax) {
-    return false;
-  }
-
+  // estão nesse caso, nos DOIS campos opcionais que sobraram (`extensaoKm` e
+  // `piso`): a única ficha real não tem nenhum dos dois.
+  //
   // Teto INCLUSIVO — precedente cravado na rodada passada: "até 4 km" inclui a
   // trilha de 4 km, que é como se lê em português; o contrário esconde
   // justamente o caso que a pessoa tinha em mente.

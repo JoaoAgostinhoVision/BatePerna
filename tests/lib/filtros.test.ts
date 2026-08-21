@@ -52,23 +52,19 @@ describe("sem filtro, tudo passa", () => {
     expect(contarLigados(SEM_FILTRO)).toBe(0);
   });
 
-  // ——— pré-voo 2: o "sem filtro, tudo passa" acima é CEGO pros três guardas
-  // `!== null`, porque a ficha base é a Rampa — paga, e sem esforço nem duração
+  // ——— pré-voo 2: o "sem filtro, tudo passa" acima é CEGO pros guardas
+  // `!== null`, porque a ficha base é a Rampa — paga, e sem piso nem extensão
   // preenchidos. Cada `if` daqui é um E de duas sub-cláusulas, e a que dispara
   // primeiro esconde a outra:
   //
-  //   `filtros.esforco !== null && ficha.esforco && ...`
+  //   `filtros.pisoMinimo !== null && ficha.piso && ...`
   //
-  // Apagando o `filtros.esforco !== null`, a ficha base salva o teste sozinha
-  // (`ficha.esforco` é undefined, curto-circuito, passa). Só uma ficha COM o
-  // campo preenchido e NENHUM filtro ligado faz o guarda ser o único a segurar.
-  // Isso vira caso real no dia em que o João responder o questionário.
-  it("ficha COM esforço preenchido não some quando o filtro está desligado", () => {
-    expect(passa({}, { esforco: "puxada" })).toBe(true);
-  });
-  it("ficha COM duração preenchida não some quando o filtro está desligado", () => {
-    expect(passa({}, { duracao: 90 })).toBe(true);
-  });
+  // Apagando o `filtros.pisoMinimo !== null`, a ficha base salva o teste
+  // sozinha (`ficha.piso` é undefined, curto-circuito, passa). Só uma ficha COM
+  // o campo preenchido e NENHUM filtro ligado faz o guarda ser o único a
+  // segurar. Os dois casos moram nos blocos de piso e de extensão, cada um ao
+  // lado da linha que protege. (Os irmãos deles eram `esforco` e `duracao`, os
+  // campos que esta rodada apagou.)
 });
 
 describe('"dá hoje"', () => {
@@ -108,7 +104,7 @@ describe('"dá hoje"', () => {
     expect(
       passa({ soGratis: true }, { custo: { tag: "pago", valor: "R$ 5" } }, { confia: false }),
     ).toBe(false);
-    expect(passa({ esforco: "leve" }, { esforco: "puxada" }, { confia: false })).toBe(false);
+    expect(passa({ extensaoMaxKm: 4 }, { extensaoKm: 10 }, { confia: false })).toBe(false);
   });
 });
 
@@ -145,8 +141,8 @@ describe("distância", () => {
 
   // ——— pré-voo 2: A BORDA DA DISTÂNCIA, e o que dela é honestamente provável.
   //
-  // A regra cravada diz que o teto é inclusivo nos DOIS recortes. Na duração
-  // isso é observável e está provado abaixo (120 é inteiro e a pessoa acerta
+  // A regra cravada diz que o teto é inclusivo nos DOIS recortes. Na extensão
+  // isso é observável e está provado abaixo (4 é inteiro e a pessoa acerta
   // ele). Na distância, NÃO É: medi antes de escrever este teste, e o
   // haversine com estas coordenadas pula o valor exato — o passo de saída
   // perto de 30 km é ~1e-13, e os vizinhos são 29.999999999999968 e
@@ -177,7 +173,7 @@ describe("distância", () => {
   // ——— fix round: o teto inclusivo na DISTÂNCIA, o único pedaço da regra
   // cravada que a aritmética real não deixa provar. Com o espião devolvendo 30
   // cravado uma única vez, `>` passa (inclusivo, certo) e `>=` esconde a trilha
-  // que a pessoa tinha em mente. É o mesmo ruling já provado na duração.
+  // que a pessoa tinha em mente. É o mesmo ruling já provado na extensão.
   it("o teto de distância é inclusivo — 'até 30 km' inclui os 30 km cravados", () => {
     vi.mocked(distanciaKm).mockReturnValueOnce(30);
     expect(passa({ distanciaKm: 30 }, {}, { voce: perto })).toBe(true);
@@ -193,56 +189,6 @@ describe("custo", () => {
   });
   it("só grátis mantém a grátis", () => {
     expect(passa({ soGratis: true }, { custo: { tag: "gratis" } })).toBe(true);
-  });
-});
-
-describe("esforço e duração", () => {
-  it("esforço igual passa, diferente não", () => {
-    expect(passa({ esforco: "leve" }, { esforco: "leve" })).toBe(true);
-    expect(passa({ esforco: "leve" }, { esforco: "puxada" })).toBe(false);
-  });
-  it("duração dentro do teto passa", () => {
-    expect(passa({ duracaoMax: 120 }, { duracao: 90 })).toBe(true);
-    expect(passa({ duracaoMax: 120 }, { duracao: 300 })).toBe(false);
-  });
-
-  // ——— pré-voo: A BORDA, que este brief não especificava.
-  //
-  // "até 2h" com uma trilha de exatamente 120min: passa ou não? Eu tinha dado
-  // só 90 e 300 — dois implementadores razoáveis decidiriam diferente, e a
-  // pessoa que ligou "até 2h" veria a trilha de 2h sumir sem entender.
-  // **A REGRA, cravada: o teto é INCLUSIVO nos dois recortes.** "até 2h"
-  // inclui 2h; "até 30 km" inclui 30 km. É como se lê em português, e o
-  // contrário esconde justamente o caso que a pessoa tinha em mente.
-  it("o teto de duração é inclusivo — 'até 2h' inclui a trilha de 2h", () => {
-    expect(passa({ duracaoMax: 120 }, { duracao: 120 })).toBe(true);
-    expect(passa({ duracaoMax: 120 }, { duracao: 121 })).toBe(false);
-  });
-
-  // Os outros dois degraus existem e nenhum teste os exercitava — só 120.
-  it("o degrau de 240 também recorta", () => {
-    expect(passa({ duracaoMax: 240 }, { duracao: 200 })).toBe(true);
-    expect(passa({ duracaoMax: 240 }, { duracao: 260 })).toBe(false);
-  });
-
-  // As três palavras de esforço, uma a uma: com só "leve"/"puxada" testados,
-  // um `===` trocado por comparação parcial passaria batido em "media".
-  it("cada esforço recorta o seu, e só o seu", () => {
-    for (const e of ["leve", "media", "puxada"] as const) {
-      expect(passa({ esforco: e }, { esforco: e })).toBe(true);
-      for (const outro of ["leve", "media", "puxada"] as const) {
-        if (outro !== e) expect(passa({ esforco: e }, { esforco: outro })).toBe(false);
-      }
-    }
-  });
-
-  // REGRA DE HONESTIDADE 2. Sumir por dado que falta é mentira silenciosa —
-  // e hoje TODAS as fichas estão nesse caso.
-  it("ficha sem esforço nunca é escondida pelo filtro de esforço", () => {
-    expect(passa({ esforco: "leve" }, { esforco: undefined })).toBe(true);
-  });
-  it("ficha sem duração nunca é escondida pelo filtro de duração", () => {
-    expect(passa({ duracaoMax: 120 }, { duracao: undefined })).toBe(true);
   });
 });
 
@@ -277,8 +223,10 @@ describe("piso da via", () => {
 });
 
 describe("extensão da trilha", () => {
-  // O teto é INCLUSIVO nos dois recortes de km — mesmo ruling já provado na
-  // duração e na distância. "até 4 km" inclui a trilha de 4 km.
+  // O teto é INCLUSIVO nos dois recortes de km — o mesmo ruling que o bloco da
+  // distância cita. "até 4 km" inclui a trilha de 4 km, e é AQUI que ele fica
+  // observável: a extensão é um número cravado na ficha, enquanto o haversine
+  // pula os 30 km exatos.
   it("extensão 4 com corte 4 PASSA; extensão 5 com corte 4 não", () => {
     expect(passa({ extensaoMaxKm: 4 }, { extensaoKm: 4 })).toBe(true);
     expect(passa({ extensaoMaxKm: 4 }, { extensaoKm: 5 })).toBe(false);
@@ -310,18 +258,23 @@ describe("filtros combinados", () => {
 
   // ——— pré-voo 2: o teste acima liga 3 dos recortes, então os outros podem ser
   // APAGADOS do array e ele continua devolvendo 3. A linha de resumo diria "3
-  // filtros ligados" com sete ligados, e a pessoa que não achasse mais nada na
-  // tela procuraria quatro filtros que a contagem jura não existirem. Com os
-  // sete ligados, apagar QUALQUER um dá 6.
+  // filtros ligados" com cinco ligados, e a pessoa que não achasse mais nada na
+  // tela procuraria dois filtros que a contagem jura não existirem. Com os
+  // cinco ligados, apagar QUALQUER um dá 4.
   //
-  // 🔴 SETE, não cinco: durante a EXPANSÃO o `Filtros` carrega os dois velhos
-  // (`esforco`, `duracaoMax`) junto dos novos, e eles ainda recortam de
-  // verdade. Vira cinco só na Task 8, quando eles saírem.
+  // 🔴 CINCO, e a contagem não se ajusta: eram SETE durante a expansão desta
+  // rodada, com `esforco` e `duracaoMax` no `Filtros`; a contração apagou os
+  // dois. Se este número não bater com o painel um dia, descubra por quê antes
+  // de mexer nele.
+  //
+  // Este é também o IRMÃO DE PRESENÇA do `contarLigados(lerFiltros(VELHO))
+  // === 0` lá embaixo: sem ele, um `contarLigados` que devolvesse `0` sempre
+  // deixaria aquele teste de ausência verde.
   //
   // O objeto é escrito por INTEIRO, sem espalhar `SEM_FILTRO`: espalhando, um
   // campo novo que ninguém ligasse entraria como `null` e o teste continuaria
-  // dando 7 sem exercitá-lo. Escrito à mão, o `tsc` cobra o campo novo.
-  it("contarLigados conta os SETE recortes, não só os três primeiros", () => {
+  // dando 5 sem exercitá-lo. Escrito à mão, o `tsc` cobra o campo novo.
+  it("contarLigados conta os CINCO recortes, não só os três primeiros", () => {
     expect(
       contarLigados({
         distanciaKm: 30,
@@ -329,10 +282,8 @@ describe("filtros combinados", () => {
         soGratis: true,
         extensaoMaxKm: 8,
         pisoMinimo: "asfalto-esburacado",
-        esforco: "leve",
-        duracaoMax: 120,
       }),
-    ).toBe(7);
+    ).toBe(5);
   });
 });
 
@@ -346,7 +297,8 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
   // Um valor fora do conjunto viraria um filtro que esconde tudo pra sempre,
   // e a pessoa não teria como desligar o que não sabe que ligou.
   it("valor fora do conjunto cai pro padrão daquele recorte", () => {
-    expect(lerFiltros(JSON.stringify({ distanciaKm: 999, esforco: "brutal" }))).toEqual(SEM_FILTRO);
+    expect(lerFiltros(JSON.stringify({ distanciaKm: 999, pisoMinimo: "cascalho" })))
+      .toEqual(SEM_FILTRO);
   });
   it("preserva o que é válido", () => {
     expect(lerFiltros(JSON.stringify({ ...SEM_FILTRO, daHoje: true, distanciaKm: 60 })))
@@ -356,23 +308,20 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
   // ——— pré-voo 2, quatro furos neste bloco.
   //
   // (a) O "preserva o que é válido" acima só exercita DOIS dos cinco campos.
-  // Trocar a linha do `esforco` por `esforco: null` fixo passa em tudo o que
-  // existe hoje — o filtro nunca mais voltaria depois de fechar o app, e a
-  // pessoa reclamaria que "ele esquece".
+  // Trocar a linha do `pisoMinimo` por `pisoMinimo: null` fixo passa em tudo o
+  // que existe lá em cima — o filtro nunca mais voltaria depois de fechar o
+  // app, e a pessoa reclamaria que "ele esquece".
   //
-  // 🔴 SETE durante a expansão (vira cinco na Task 8). Sem estender ESTE
-  // teste, os dois campos novos ficariam sem nenhuma prova de que sobrevivem
-  // ao `lerFiltros` — e o filtro que a pessoa ligou não voltaria depois de
-  // fechar o app, que é a reclamação "ele esquece".
-  it("preserva os SETE campos válidos, não só dois", () => {
+  // 🔴 CINCO: eram sete durante a expansão desta rodada, e a contração apagou
+  // `esforco` e `duracaoMax`. O tipo `Filtros` é escrito de propósito, sem
+  // espalhar `SEM_FILTRO`, pra o `tsc` cobrar campo novo aqui.
+  it("preserva os CINCO campos válidos, não só dois", () => {
     const cheio: Filtros = {
       distanciaKm: 60,
       daHoje: true,
       soGratis: true,
       extensaoMaxKm: 8,
       pisoMinimo: "asfalto-esburacado",
-      esforco: "media",
-      duracaoMax: 240,
     };
     expect(lerFiltros(JSON.stringify(cheio))).toEqual(cheio);
   });
@@ -392,8 +341,6 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
     ["soGratis", { soGratis: "sim" }],
     ["extensaoMaxKm", { extensaoMaxKm: 999 }],
     ["pisoMinimo", { pisoMinimo: "cascalho" }],
-    ["esforco", { esforco: "brutal" }],
-    ["duracaoMax", { duracaoMax: 999 }],
   ])("campo %s fora do conjunto cai pro padrão DELE, sozinho", (_campo, torto) => {
     expect(lerFiltros(JSON.stringify(torto))).toEqual(SEM_FILTRO);
   });
@@ -560,23 +507,39 @@ describe("lerFiltros: pisoMinimo", () => {
   });
 });
 
-// O celular dele abre com o `bp.filtros` da versão ANTERIOR gravado. Nesta
-// fase — expansão — `esforco` e `duracaoMax` continuam sendo lidos e continuam
-// recortando: um filtro velho FILTRA SIM, e é isso que tem que acontecer até a
-// Task 8. O que este teste trava é que ele não estoura e que os campos novos,
-// ausentes no JSON velho, chegam como `null` em vez de `undefined`.
+// O celular dele abre com o `bp.filtros` da versão ANTERIOR gravado, e ali
+// `esforco` e `duracaoMax` estão escritos de verdade. Depois da contração eles
+// não são mais lidos, e é isso que este bloco trava.
+//
+// 🔴 A FIXTURE É LOAD-BEARING, e a razão é esta: `VELHO` tem SÓ os dois campos
+// mortos e NENHUM dos cinco vivos. Com um vivo junto (um `distanciaKm: 60`, por
+// exemplo, que o JSON real dele também tem), o `contarLigados(...) === 0` viraria
+// `=== 1` e deixaria de separar as versões — passaria igual com os campos mortos
+// sendo contados. Que os valores vivos da versão velha sobrevivem já está
+// provado em "os valores guardados 30 e 60 da versão velha continuam válidos".
 describe("lerFiltros: o que já está gravado no celular dele", () => {
-  const VELHO = JSON.stringify({ duracaoMax: 120, esforco: "media", distanciaKm: 60 });
+  const VELHO = JSON.stringify({ duracaoMax: 120, esforco: "media" });
 
-  it("filtro guardado da versão VELHA não estoura, e os campos novos vêm null", () => {
+  it("filtro guardado com duracaoMax e esforco continua não estourando", () => {
     expect(() => lerFiltros(VELHO)).not.toThrow();
-    expect(lerFiltros(VELHO)).toEqual({
-      ...SEM_FILTRO,
-      duracaoMax: 120,
-      esforco: "media",
-      distanciaKm: 60,
-    });
-    expect(lerFiltros(VELHO).extensaoMaxKm).toBe(null);
-    expect(lerFiltros(VELHO).pisoMinimo).toBe(null);
+    expect(lerFiltros(VELHO)).toEqual(SEM_FILTRO);
+  });
+
+  // A asserção que fala da TELA dele, e não do crash: entre a expansão e agora,
+  // um `esforco` guardado contava na linha de resumo ("1 filtro ligado") sem
+  // nenhum chip no painel pra desligar e sem botão de limpar — ele reclamou
+  // disso no celular. A saída se fecha por construção, porque o `lerFiltros`
+  // deixou de ler os dois campos.
+  //
+  // ⚠️ HONESTIDADE SOBRE O QUE ESTA ASSERÇÃO É: ela é um CRUZAMENTO, e por
+  // transitividade é redundante — `lerFiltros(VELHO) === SEM_FILTRO` (acima)
+  // mais `contarLigados(SEM_FILTRO) === 0` (em "contarLigados é zero") já a
+  // implicam, e nenhuma mutação única derruba esta e deixa aquelas duas de pé.
+  // Medido, não suposto: não existe mutação que a torne o único detector. Ela
+  // fica porque é a única forma EXECUTÁVEL do requisito do jeito que a pessoa
+  // o vive — "o filtro fantasma não conta" —, e porque o dia em que alguém
+  // religar a leitura dos dois campos ela cai junto com as outras.
+  it("filtro guardado da versão velha não conta filtro ligado nenhum", () => {
+    expect(contarLigados(lerFiltros(VELHO))).toBe(0);
   });
 });
