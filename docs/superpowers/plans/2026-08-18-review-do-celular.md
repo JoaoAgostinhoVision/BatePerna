@@ -615,11 +615,22 @@ it("a legenda do piso diz que é mínimo", ...)
 > `queryByRole("group", { name: /distância/i })` dos testes herdados continua casando — confira,
 > não presuma.
 >
-> **6. Transitório conhecido, e ele é aceitável: até a Task 8, `esforco`/`duracaoMax` guardados
-> continuam CONTANDO na linha de resumo sem chip na tela pra desligar.** É o mesmo formato do
-> deferido I-2 (`pisoMinimo: barro`), e aqui não trava ninguém: o botão "limpar filtros" da folha
-> continua sendo a saída, e a Task 8 apaga os campos. **Registrado de propósito — não "conserte"
-> mexendo em `contarLigados`, que é escopo da Task 8.**
+> **6. Transitório conhecido: até a Task 8, `esforco`/`duracaoMax` guardados continuam CONTANDO na
+> linha de resumo sem chip na tela pra desligar.** É o mesmo formato do deferido I-2
+> (`pisoMinimo: barro`). **Não "conserte" mexendo em `contarLigados`, que é escopo da Task 8.**
+>
+> > 🔴 **CORRIGIDO NA NASCENTE (revisão da Task 5, achado T5-2) — a saída que este item prometia
+> > NÃO EXISTE.** Estava escrito aqui que *"o botão 'limpar filtros' da folha continua sendo a
+> > saída"*. **Medido:** o `limpar filtros` do `FolhaTrilhas.tsx` vive **dentro** do ramo
+> > `if (visiveis.length === 0)` — ele só aparece quando o filtro zerou a lista. O celular do João
+> > é o caso real: ele tem o PWA instalado e usou o painel antigo; se deixou "leve" ou "até 2h"
+> > ligado, ao abrir depois desta task ele vê **"1 filtro ligado", nenhum chip capaz de desligar,
+> > e nenhum botão de limpar** — porque a lista NÃO fica vazia (a única ficha real não tem
+> > `esforco`, então a REGRA DE HONESTIDADE 2 impede o recorte fantasma de esconder qualquer
+> > coisa). **Hoje o dano é o contador mentindo, não trilha sumida** — mas no dia em que entrar
+> > uma 2ª ficha COM `esforco`, o fantasma passa a esconder de verdade, ainda sem saída.
+> > **Transferido pra Task 8**, que apaga os campos e o resolve por construção. Segunda frase
+> > minha nesta sessão afirmando proteção que ninguém rodou.
 
 ---
 
@@ -776,6 +787,14 @@ it("contarLigados agora conta 5 recortes, todos ligados", ...)
 > E o portão `rg` do plano é sobre `src/` de propósito — em `tests/` os nomes velhos ainda vão
 > aparecer enquanto os testes migram. **Quem manda na contração é o `tsc` + o `npm run build`, não
 > o `rg`.**
+>
+> 🔴 **TRANSFERIDO DA TASK 5 (achado T5-2) — esta task é a ÚNICA saída do filtro fantasma.**
+> Entre a Task 5 e esta, um `esforco`/`duracaoMax` guardado no celular dele conta na linha de
+> resumo **sem nenhum controle na tela pra desligar e sem botão de limpar** (o `limpar filtros` do
+> `FolhaTrilhas` só existe no ramo de lista vazia — medido, e a lista não fica vazia porque a
+> única ficha real não tem esses campos). **Aqui isso se resolve por construção**, porque o
+> `lerFiltros` deixa de ler os dois campos. O teste do §Emenda acima (`contarLigados(lerFiltros(
+> velho)) === 0`) é exatamente a prova de que a saída se fechou — **é ele que fala da TELA dele.**
 
 **A verificação desta task é o `npm run build`**, não o vitest: apagar um módulo reexportado é
 exatamente o tipo de coisa que a suíte não vê (lição 9).
