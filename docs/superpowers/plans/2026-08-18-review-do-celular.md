@@ -920,6 +920,25 @@ exatamente o tipo de coisa que a suíte não vê (lição 9).
    anteriores ela achou o que nenhuma revisão de task pegou, e nas duas últimas o achado foi de
    **junção**. Assunto desta vez: *o vocabulário do piso está mesmo num lugar só?* e *o cartão e a
    ficha mostram o MESMO número de extensão?*
+
+   🔴 **A TERCEIRA PONTA, achada e MEDIDA na revisão da Task 6 (2026-08-21) — a tela arredonda, o
+   filtro compara cru.** Medido: `formatarExtensao(4.04)` mostra **"4 km de trilha"** e
+   `passaNoFiltro(…, extensaoMaxKm: 4)` devolve **`false`** — o recorte "até 4 km" esconde um
+   cartão que a tela anuncia como 4 km. É a forma exata do defeito que o comentário de
+   `filtros.ts:180-185` chama de *"a pior versão: some sem explicação"*, e é o irmão do "km, uma
+   fonte" da rodada passada — só que ali as duas telas discordavam entre si, e aqui **a tela
+   discorda do filtro**.
+
+   **Na extensão a faixa é estreita** — `(n, n+0,05]`, ~50 m, e com `EXT_PASSO_KM = 1` o teto é
+   sempre inteiro. **Mas o gêmeo da DISTÂNCIA já está no ar com faixa muito maior:**
+   `formatarDistancia` arredonda pra inteiro acima de 10 km, então até **0,5 km** de desencontro
+   contra o `distanciaKm > filtros.distanciaKm`. Isso não é regressão desta rodada; a Task 6 só
+   deu um segundo exemplo dele.
+
+   🟠 **É decisão do João, não minha:** ou o filtro passa a comparar **o valor arredondado como a
+   tela mostra** (uma pessoa filtra pelo número que está vendo), ou fica registrado com todas as
+   letras que a divergência é aceita e por quê. **Não decidir é o pior dos três** — vira o defeito
+   que some sem explicação, que é o que este app existe pra não fazer.
 4. Merge `--no-ff`, deploy (`npx --yes vercel@latest --prod --yes`), conferir com `curl`.
 5. Atualizar `docs/RESUME.md`: o que foi entregue, o que o iPhone ainda decide, e a pendência do
    questionário — que agora vale mais, porque as perguntas mudaram.
