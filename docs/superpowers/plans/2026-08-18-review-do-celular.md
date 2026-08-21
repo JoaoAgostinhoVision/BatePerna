@@ -690,6 +690,50 @@ it("'em linha reta' continua no texto", ...)                                   /
 > já mostra `~27 km em linha reta · R$ 5` e vai continuar mostrando. O que muda na tela dele é o
 > **painel de filtros**. O resto acende quando o questionário voltar.
 
+> 🔴 **SEGUNDA EMENDA DO PRÉ-VOO (2026-08-21) — os dois furos saíram de ABRIR os arquivos.**
+>
+> **4. `tests/app/CartaoTrilha.test.tsx` NÃO está vazio, e a lista de testes acima lê como se
+> estivesse.** Conferido hoje lendo o arquivo inteiro: ele já tem **oito** testes, e três deles
+> são desta task:
+> - *"com esforço e duração, os dois aparecem na linha"* (asserta `"puxada"` e `"~1h30"`) —
+>   **este vai a VERMELHO** no instante em que o cartão parar de mostrar os dois campos. É o
+>   PAYLOAD da rodada anterior, e o comentário dele diz por que existe: *"sem este teste, os dois
+>   campos que ela acrescentou ao schema podiam nunca aparecer na tela e nada acusaria — todos os
+>   outros só provam AUSÊNCIA"*. **Converta-o**, não o apague: `piso` e `extensaoKm` precisam
+>   herdar esse guarda, ou a rodada acrescenta dois campos ao schema com ninguém provando que
+>   chegam à tela.
+> - *"ficha sem esforço/duração não mostra campo vazio"* — este **continua verde e fica CEGO**
+>   (asserta ausência de campos que ninguém mais renderiza). Converter pra `piso`/`extensaoKm`.
+> - *"'em linha reta' continua no texto"*, o item 5 da lista acima, **já existe** como *"com
+>   localização, mostra o km em linha reta"* (+ o par *"sem localização, não inventa km"*). Não
+>   duplique; a mutação #3 já tem dono.
+>
+> 🔴 **E os dois convertidos têm que sair desta task, não da 8:** a Task 8 apaga `esforco` do
+> schema, e um teste que ainda escreva `esforco: "puxada"` deixa o **`tsc` vermelho** lá na
+> frente. Contrair cedo é o que a ordem da rodada existe pra impedir — mas isto aqui é o
+> contrário: é migração que ficou pra trás.
+>
+> **5. A prova oca do tipo (b) tem um GÊMEO que a emenda 1 deixou passar — agora na extensão.**
+> A emenda 1 acertou o `barro`. O mesmo furo está no número: com **`extensaoKm: 4`** — o valor do
+> exemplo escrito no topo desta task — `formatarExtensao(4)` e um `` `${ficha.extensaoKm} km de
+> trilha` `` **escrito à mão aqui** produzem a MESMA string. A mutação #1 (o sufixo some) morde,
+> mas a mutação que esta task diz com todas as letras que quer evitar — *"não escreva o sufixo
+> aqui"*, a duplicação de formatação que já fez a mesma trilha ter dois km diferentes — **não
+> morde com exemplo inteiro**. O que separa as duas versões é a formatação: `formatarExtensao`
+> arredonda pra uma casa e usa **vírgula** decimal. Com `extensaoKm: 4.25` a função dá
+> `"4,3 km de trilha"` e a cópia à mão dá `"4.25 km de trilha"`. **O exemplo do teste tem que ser
+> FRACIONÁRIO.** Mutação nova, com dono: `formatarExtensao(ficha.extensaoKm)` →
+> `` `${ficha.extensaoKm} km de trilha` ``.
+>
+> **6. Uma asserção de linha INTEIRA (`toBe`, não `toContain`), pelo menos uma.** É a única que
+> prova a **ORDEM** (extensão antes de piso — nada mais na lista prova isso) e é o que mata a
+> mutação #2 de verdade: `?? 0` pendurado num `toContain` sobrevive, num `toBe` não.
+>
+> **7. Conferido, e NÃO é furo:** `extensaoKm` é `z.number().positive()` no schema — `0` não
+> existe, então o teste de verdade `ficha.extensaoKm ? … : null` não esconde valor legítimo. E
+> **não apague `src/lib/duracao.ts` nem o re-export em `src/lib/ficha.ts`**: depois desta task o
+> `formatarDuracao` fica sem chamador em `src/`, e quem contrai é a **Task 8**.
+
 ---
 
 ## Task 7 — a ficha: piso e extensão junto ao Trajeto
