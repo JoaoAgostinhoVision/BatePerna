@@ -4,20 +4,24 @@
 > `.superpowers/sdd/2026-08-18-review-do-celular/progress.md`, que é **scratch git-ignorado** —
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-20. **RODADA ABERTA E EM ANDAMENTO.**
+**Última parada:** 2026-08-20. **RODADA ABERTA, PARADA A PEDIDO DELE, EM PONTO LIMPO.**
 Branch **`review-do-celular`**, NÃO mergeada, NÃO deployada. `main` segue em `f10f075`.
 
-✅ **Tasks 1 a 4 fechadas, cada uma com revisão dupla.** Sem WIP: todo commit no log é trabalho
-revisado. **A Task 5 estava em execução quando esta linha foi escrita** — confira `git log` e
-`git status` antes de acreditar nela.
+**Ele pediu pra parar** depois da Task 5: *"gostaria de continuar em outra sessão, deixe tudo
+pronto para quando eu acessar novamente em outra sessão digitar continua e continuar de onde
+parei."*
+
+✅ **Tasks 1 a 5 fechadas, cada uma com implementador → revisão com dois veredictos → fix round →
+re-revisão escopada. NÃO EXISTE WIP:** a árvore está limpa e todo commit no log é trabalho
+revisado. Você não precisa julgar código não revisado.
 
 🔴 **As OITO tasks têm pré-voo escrito no plano versionado agora** (antes só a 2, 3 e 4 tinham).
 Procure os blocos de citação 🔴 "EMENDA DO PRÉ-VOO" — eles corrigem o texto ao redor e vencem
-onde discordarem.
+onde discordarem. **Restam as Tasks 6, 7 e 8, e as três já estão pré-voadas.**
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA" — retome a rodada `review-do-celular` na Task 5
+# ▶▶ SE O JOÃO DISSER "CONTINUA" — retome a rodada `review-do-celular` na Task 6
 
 **O review do celular já aconteceu, já foi triado e já virou spec + plano aprovados.** Não
 pergunte o que ele achou; não peça a lista de novo; não devolva menu.
@@ -27,13 +31,13 @@ pergunte o que ele achou; não peça a lista de novo; não devolva menu.
 ```
 git branch --show-current  → review-do-celular   (se estiver em main, só trocar)
 git status --short         → limpo
-npm test                   → 611/611 em 49 arquivos (depois da Task 4)   ← tudo verde
+npm test                   → 622/622 em 49 arquivos   ← tudo verde, NÃO há falha esperada
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
 
-**Se a Task 5 tiver fechado, o número é outro** — ela migra testes e apaga chips. O `git log`
-manda. Se a suíte estiver diferente **e o log não explicar**, descubra o quê antes de seguir.
+**Os três foram conferidos por mim no fim da sessão, não relatados por agente.** Se a suíte
+estiver diferente disso, alguma coisa mudou e vale descobrir o quê antes de seguir.
 
 ### 2. Leia, nesta ordem
 
@@ -59,13 +63,14 @@ Task 2, 3 e 4 estão no plano; as das Tasks 5 a 8 ainda não foram feitas.
 | 2 — `piso.ts` + schema + questionário | **completa**, 3 fix rounds, re-revisão **ADDRESSED** nos 6 achados | `ad88d20` (WIP), `9b03f43`, `cb97792`, `0445f50`, `bdb4497` |
 | 3 — recortes novos em `filtros.ts` | **completa**, 1 fix round + 1 conserto meu, re-revisão **ADDRESSED** nos 4 | `066cb08`, `c4161b4`, `e0d1442` |
 | 4 — `FaixaKm`: a barra e o campo | **completa**, 1 fix round (9 achados), re-revisão **PROVA Approved** + 1 conserto meu de comentário | `41ee448`, `0ddf131`, `2250e7c` |
-| **5 — o painel: duas faixas e os chips de piso** | ⬅️ **É AQUI QUE VOCÊ COMEÇA** (se o `git log` não disser que ela fechou) | — |
-| 6 a 8 | não começadas, **mas todas com pré-voo escrito no plano** | — |
+| 5 — o painel: duas faixas e os chips de piso | **completa**, 1 fix round (3 achados), re-revisão escopada | `3dc3957`, `941365b` |
+| **6 — o cartão** | ⬅️ **É AQUI QUE VOCÊ COMEÇA.** Nunca despachada. | — |
+| 7 e 8 | não começadas, **as duas com pré-voo escrito no plano** | — |
 
-**Chão depois da Task 4:** `npm test` **611/611 em 49 arquivos**, `tsc` limpo, `npm run build`
+**Chão depois da Task 5:** `npm test` **622/622 em 49 arquivos**, `tsc` limpo, `npm run build`
 passa. A base da rodada era 539.
 
-### 3a. 🔴 O QUE A TASK 4 DEIXOU DECIDIDO, e a Task 5 consome
+### 3a. 🔴 O QUE AS TASKS 4 E 5 DEIXARAM DECIDIDO
 
 - O `FaixaKm` **já é o grupo**: `<fieldset class="filtro-grupo faixa-km">` + `<legend>{rotulo}</legend>`.
   **Não o embrulhe em outro fieldset.** O nome acessível sai da legend **de propósito** — o
@@ -77,16 +82,37 @@ passa. A base da rodada era 539.
   passo 5 — o pegador fica na primeira parada enquanto o campo diz `4` e a leitura diz `até 4 km`.
   Só o controle grosso discorda; os dois portadores de TEXTO dizem a verdade. As três saídas
   alternativas são piores, e o porquê está no item 6 da emenda 2 da Task 4.
+- **O painel (Task 5) está assim:** Distância daqui → Tamanho da trilha → Piso, no mínimo → Hoje →
+  Custo. As duas primeiras são `<FaixaKm>`; a de distância continua atrás do `temLocal &&`, a de
+  tamanho **não**. Esforço e Duração **saíram da tela** (os campos só morrem na Task 8). Os quatro
+  limites são **importados** de `@/lib/filtros`, e há asserção de FONTE provando que nenhum km
+  está escrito à mão — ela é a única capaz de pegar `max={100}` no lugar de `max={DIST_MAX_KM}`,
+  porque em runtime os dois são o mesmo valor. **Medido: essa mutação derruba só a de fonte.**
+- **Os `aria-label` dos fieldsets de `Hoje` e `Custo` foram removidos** (o implementador estendeu
+  o ruling da Task 4; o revisor verificou no repo inteiro que nenhum teste os consulta por
+  role/nome, e as duas `<legend>` dizem o mesmo que os atributos diziam).
 
-### 3b. 🔴 O QUE JÁ ESTÁ DECIDIDO E A TASK 4 TEM QUE CASAR
+### 3b. 🔴 O QUE JÁ ESTÁ DECIDIDO E AS TASKS 6 A 8 TÊM QUE CASAR
 
 - **Os quatro limites moram em `src/lib/filtros.ts`** (`DIST_MAX_KM = 100`, `EXT_MAX_KM = 20`,
-  `DIST_PASSO_KM = 5`, `EXT_PASSO_KM = 1`) e o `FaixaKm` os **lê de lá**. Não os reescreva no
-  componente — duas fontes que podem discordar é a família de defeito que este app persegue, e o
-  `filtros.test.ts` já tem uma asserção que prende os quatro **valores literais**.
-- **`lerFiltros` valida `>= 1`, não `>= passo`.** Se o campo prender no `passo`, um `4` digitado
-  é aceito pela tela, guardado, e vira `null` na releitura — **o filtro se desligando sozinho
-  entre duas aberturas do app.** Ver a emenda da Task 4 no plano.
+  `DIST_PASSO_KM = 5`, `EXT_PASSO_KM = 1`) e a tela os **lê de lá** — provado por asserção de
+  FONTE no `PainelFiltros`, e o `filtros.test.ts` prende os quatro **valores literais**.
+- **`lerFiltros` valida `>= 1`, não `>= passo`.** Se a tela prender no `passo`, um `4` digitado é
+  aceito, guardado, e vira `null` na releitura — **o filtro se desligando sozinho entre duas
+  aberturas do app.** É o defeito central desta rodada; ele reapareceu em quatro roupas
+  diferentes (o piso do campo, o `step` da barra, o fracionário, e os limites trocados entre as
+  duas faixas) e as quatro estão fechadas por teste.
+- ✅ **O deferido I-2 da Task 3 (`barro` entrando pelo estado em memória) FECHOU na Task 5**, por
+  construção: o único jeito de escrever `pisoMinimo` é tocar um chip, e os chips saem de
+  `PISOS_FILTRAVEIS`. Há teste de que o chip de `barro` não existe.
+- 🔴 **O filtro FANTASMA, e ele só morre na Task 8** (transferido da Task 5, achado T5-2): entre
+  agora e a Task 8, um `esforco`/`duracaoMax` guardado no celular dele **conta na linha de resumo
+  sem chip pra desligar e sem botão de limpar** — o `limpar filtros` do `FolhaTrilhas` vive dentro
+  do ramo `visiveis.length === 0`, e a lista não fica vazia. **Hoje o dano é o contador mentindo,
+  não trilha sumida**, porque a única ficha real não tem `esforco` e a REGRA DE HONESTIDADE 2
+  impede o fantasma de esconder. Com uma 2ª ficha COM `esforco`, passaria a esconder de verdade.
+  **A Task 8 resolve por construção** — e o teste `contarLigados(lerFiltros(velho)) === 0` é a
+  prova de que fechou. **Não mergeie a rodada sem a Task 8.**
 - **Deferido que chega na Task 5** (achado I-2 da revisão da Task 3, plan-mandated): o tipo
   `pisoMinimo: Piso | null` ainda deixa `barro` entrar pelo **estado em memória** — a emenda 2
   fechou só a porta do `localStorage`. Aceso, `barro` não esconde nada **e não tem chip pra
@@ -140,6 +166,29 @@ consertou lógica de aplicação. Quando o revisor rotula "plan-mandated", é li
   `i < 1` → `i <= 1`, **as duas com a suíte 19/19 verde**. A segunda é o "campo indigitável" de
   volta com um `=` de diferença: com `<= 1`, digitar `1` esvazia o campo e **todo número que
   começa por 1** (`1`, `10`, `100`) fica inalcançável pelo teclado.
+- 🆕 **E ACONTECEU DE NOVO NA TASK 5, mesma sessão, mesmo formato — são DUAS.** A emenda da Task 5
+  prometia que *"o botão 'limpar filtros' da folha continua sendo a saída"* pro filtro fantasma.
+  **Medido: o `limpar filtros` vive dentro do ramo `if (visiveis.length === 0)`** e só aparece
+  quando o filtro zerou a lista — que não é o caso. **As duas frases erradas desta sessão têm a
+  mesma assinatura: eu afirmando no plano uma proteção que existe no meu RACIOCÍNIO e não no
+  código, sobre um arquivo que eu não abri.** Nas duas vezes quem pegou foi a régua de MEDIR, não
+  a de ler. A regra que fica: **antes de escrever "X continua sendo a saída" ou "Y joga isso
+  fora", abra o arquivo e confira o RAMO em que a linha vive.**
+- 🆕 **A COSTURA DE COMPONENTE CONTROLADO — defeito de junção pego, pela primeira vez, na revisão
+  de TASK.** O `FaixaKm` é controlado: a Task 4 provou que ele **obedece** à prop, e a Task 5
+  tinha que provar que o painel **alimenta** a prop com o que está guardado. Ela provou só a
+  direção da ESCRITA (`fireEvent.change` → ler o `localStorage`), e as duas mutações da direção
+  de volta ficaram **33/33 verdes**: `valor={filtros.distanciaKm}` → `valor={null}` (a lista corta
+  em 30 km de verdade, a linha diz "1 filtro ligado", **e o campo fica em branco dizendo
+  "qualquer"**) e a faixa de tamanho lendo o valor da de distância (dois recortes exibindo um
+  número só). **Quando um componente controlado atravessa duas tasks, a de baixo prova a
+  obediência e a de cima tem que provar a ALIMENTAÇÃO — são duas direções, e a suíte da escrita
+  não vê a da leitura.**
+- 🆕 **A prova de mutação que não foi APLICADA conta como sobrevivente.** O implementador da Task 5
+  descobriu que o `PainelFiltros.tsx` está em **CRLF** no disco e o aplicador de mutações dele
+  casava padrões em **LF**: a mutação "não alterou nada" e teria virado "sobrevivente" se o script
+  não abortasse ao ver texto idêntico à entrada. **Todo aplicador de mutação precisa falhar quando
+  a substituição não muda o arquivo** — senão o falso verde vem da ferramenta, não do código.
 - 🆕 **O atributo que MASCARA o sumiço do elemento.** `aria-label` no `<fieldset>` **junto** com a
   `<legend>`: apagar a legenda deixava tudo verde, porque o nome acessível continuava vindo do
   atributo (ele tem precedência) e só quem OLHA a tela perdia o título. **Duas fontes pro mesmo
@@ -204,6 +253,23 @@ existe pra Rampa do Pepê — não é ficção"*. Quatro arquivos a partir de um
 documento. **A Rampa entra só como `barro`, justificada pelo que a ficha diz; quem ensina a
 regra é um morro inventado e rotulado como tal.**
 
+### 5b. 🔴 O QUE A TASK 6 VAI ENCONTRAR — já pré-voado, não redescubra
+
+- **`content/fichas/` tem UMA ficha** (`rampa-do-pepe.json`) e **ela não tem nenhum dos quatro
+  campos** (`piso`, `extensaoKm`, `esforco`, `duracao`) — conferido em 2026-08-20. Por isso o
+  teste *"a Rampa REAL"* tem que carregar o JSON **pelo loader**, não um fixture parecido: é ele
+  que fala de produção.
+- **Consequência, e é o que dizer ao João no fim da rodada:** o **cartão em produção não muda uma
+  vírgula** nesta rodada. Ele já mostra `~27 km em linha reta · R$ 5` e vai continuar mostrando.
+  **O que muda na tela dele é o painel de filtros.** O resto acende quando o questionário voltar.
+- **O exemplo do teste tem que ser `asfalto-esburacado`, nunca `barro`:** `rotuloPiso("barro")`
+  devolve `"barro"`, então com esse exemplo chamar a função ou usar o campo cru dá a MESMA string
+  e a prova é oca. Vale pra Task 6 e pra Task 7.
+- **A Task 7 tem uma mutação sem dono** no plano original (o teste *"cartão e ficha mostram o
+  MESMO texto de extensão"* não estava na lista). Ele entra, e é de **JUNÇÃO**: os dois
+  renderizados com a mesma ficha, comparados **um contra o outro** — não cada um contra um
+  literal, porque dois literais iguais escritos à mão são a mesma mentira duas vezes.
+
 ### 6. O método, e ele já está autorizado
 
 **SDD com subagentes — o João autorizou nesta rodada** ("pode seguir"). Implementador → revisão
@@ -220,19 +286,19 @@ deixa o `tsc` vermelho no meio da rodada. **Não "limpe" os campos velhos cedo.*
    (Task 1).
 2. *"o filtro duração deveria ser distância — cada navegador tem seu ritmo"* → duração **morre**;
    entra tamanho da trilha em km, **só ida**. 🔶 **Meio feito:** o campo (`extensaoKm`), a pergunta
-   do questionário e o recorte em `filtros.ts` existem (Tasks 2 e 3); **falta a tela** (Tasks 4 e
-   5) e a morte da duração (Task 8).
+   do questionário, o recorte em `filtros.ts` **e a tela** existem (Tasks 2, 3, 4 e 5); falta o
+   cartão (Task 6), a ficha (Task 7) e a morte da duração (Task 8).
 3. *"com a chegada do esforço, isso deve ser inserido dentro das trilhas"* → piso e extensão
    aparecem na ficha, junto ao Trajeto. ⬜ **Task 7.**
 4. *"o filtro quando selecionado não é possível deselecionar"* → **ele mesmo retirou** e trocou
    por *"melhor o usuário conseguir digitar ou mover uma barra"*. Os dois recortes numéricos
-   viram **barra + campo**; o problema do chip morre por construção. 🔶 **Meio feito:** o
-   `FaixaKm` existe, revisado (Task 4); **falta ligá-lo na tela** (Task 5) — hoje ele não é
-   importado por ninguém.
+   viram **barra + campo**; o problema do chip morre por construção. ✅ **FEITO** (Tasks 4 e 5) —
+   e o chip que sobrou (piso) desliga no segundo toque, com teste.
 5. *"esforço podia ser — barro, paralelepípedo, asfalto esburacado, asfalto tapete"* → o
    `esforco` (leve/media/puxada, sobre o corpo) vira **piso da via** (sobre o lugar). 🔶 **Meio
-   feito:** o vocabulário (`src/lib/piso.ts`), o campo no schema, a pergunta e o recorte existem;
-   **falta os chips na tela** (Task 5), a ficha (Task 7) e apagar o `esforco` (Task 8).
+   feito:** o vocabulário (`src/lib/piso.ts`), o campo no schema, a pergunta, o recorte **e os
+   chips na tela** existem (Tasks 2, 3 e 5); falta o cartão (Task 6), a ficha (Task 7) e apagar o
+   `esforco` (Task 8).
 
 **A descoberta que reorganizou tudo, e ela vale reler:** a lista dele é vocabulário de estrada, e
 a ficha real explica por quê — *"Dá pra ir de carro comum; molhado, o risco é atolar"*, *"não
@@ -253,14 +319,38 @@ campo sobre o preparo do corpo nunca teve de onde sair: este app só sabe falar 
 - **Abrir a home no iPHONE.** As quatro perguntas da §15 da spec anterior continuam abertas
   (pins com folga, barra fixa × faixa de gesto, painel empurrando a lista, piso de zoom 8), mais
   as três novas da §14 da spec desta rodada: a barra arrasta com o polegar? o campo numérico abre
-  o teclado certo? o balão de GPS aparece antes ou depois da home pintar? **As duas primeiras só
-  existem depois da Task 5** — o `FaixaKm` está pronto e revisado, mas ninguém ainda o importa.
-  🆕 Junto delas, o que a revisão da Task 4 listou como impossível de medir daqui: o trilho de 4px
-  centrado na caixa de 44px; **a linha da faixa provavelmente quebrando em DUAS** em ~360px
-  (barra 55% + campo 4,4rem + a leitura + dois gaps), o que com duas faixas muda o orçamento da
-  dobra; e qual teclado o `inputMode="numeric"` de fato abre.
+  o teclado certo? o balão de GPS aparece antes ou depois da home pintar? ✅ **As duas primeiras
+  JÁ EXISTEM na tela** desde a Task 5 — dá pra abrir e ver.
+  🆕 Junto delas, o que as revisões das Tasks 4 e 5 listaram como impossível de medir daqui:
+  o trilho de 4px centrado na caixa de 44px; **cada faixa provavelmente quebrando em DUAS linhas**
+  em ~360px (barra 55% + campo 4,4rem + a leitura + dois gaps não cabem), e com **duas** faixas o
+  painel aberto ficou bem mais alto do que já foi — "Custo" pode nascer longe da dobra; os três
+  chips de piso são rótulos de duas palavras num alvo de 36px; e qual teclado o
+  `inputMode="numeric"` de fato abre. **Nada disso quebra constante nenhuma** (o orçamento da
+  dobra mede a `.filtro-linha`, não o painel aberto, e isso foi conferido) — é rolagem, e ninguém
+  nunca viu este painel deste tamanho.
 
-### 9. O resumo do que esta sessão (2026-08-19) fez
+### 9. O resumo do que a sessão de 2026-08-20 fez
+
+Fechou **as Tasks 4 e 5**, cada uma com implementador → revisão com dois veredictos → fix round →
+re-revisão escopada. Suíte **588 → 622**. E **pré-voou as oito tasks**: antes só a 2, 3 e 4 tinham
+emenda; agora a 5, a 6, a 7 e a 8 também têm, no plano versionado.
+
+**De novo, nenhum fix round consertou lógica de aplicação.** Os doze achados foram de PROVA e de
+COMENTÁRIO. O padrão desta rodada está confirmado pela quarta task seguida: o código dos
+implementadores chega certo; o que erra é o meu plano e a minha prova.
+
+**Os dois Importants meus da sessão são a mesma frase, escrita duas vezes** — ver o §4: uma
+justificando o `step` (*"o `lerFiltros` joga esses valores fora"*) e outra prometendo uma saída
+pro filtro fantasma (*"o botão limpar filtros continua sendo a saída"*). As duas falsas, as duas
+medidas pelo revisor, as duas corrigidas na nascente antes de qualquer conserto de código. A
+primeira já tinha se propagado pra dois arquivos.
+
+**O que os implementadores acharam em cima de mim, e vale registrar porque é mão dupla:** o da
+Task 4 pegou uma prova OCA minha (`valor 4` com `min=5` — o elemento prende o 4 em `"5"` e as
+duas versões coincidem; com `7` elas se separam) e mediu a razão em vez de deduzi-la.
+
+### 9b. O resumo do que a sessão de 2026-08-19 fez
 
 Retomou na Task 2 (que estava como WIP não revisado) e fechou **as Tasks 2 e 3**, cada uma com
 implementador → revisão com dois veredictos → fix round → re-revisão escopada. Suíte **560 → 588**.
