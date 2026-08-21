@@ -63,20 +63,18 @@ Task 2, 3 e 4 estão no plano; as das Tasks 5 a 8 ainda não foram feitas.
 | 2 — `piso.ts` + schema + questionário | **completa**, 3 fix rounds, re-revisão **ADDRESSED** nos 6 achados | `ad88d20` (WIP), `9b03f43`, `cb97792`, `0445f50`, `bdb4497` |
 | 3 — recortes novos em `filtros.ts` | **completa**, 1 fix round + 1 conserto meu, re-revisão **ADDRESSED** nos 4 | `066cb08`, `c4161b4`, `e0d1442` |
 | 4 — `FaixaKm`: a barra e o campo | **completa**, 1 fix round (9 achados), re-revisão **PROVA Approved** + 1 conserto meu de comentário | `41ee448`, `0ddf131`, `2250e7c` |
-| 5 — o painel: duas faixas e os chips de piso | **completa**, 1 fix round (3 achados) — ⚠️ ver a nota abaixo sobre a re-revisão | `3dc3957`, `941365b` |
+| 5 — o painel: duas faixas e os chips de piso | **completa**, 1 fix round (3 achados), re-revisão **Approved nos DOIS veredictos** | `3dc3957`, `941365b` |
 | **6 — o cartão** | ⬅️ **É AQUI QUE VOCÊ COMEÇA.** Nunca despachada. | — |
 | 7 e 8 | não começadas, **as duas com pré-voo escrito no plano** | — |
 
 **Chão depois da Task 5:** `npm test` **622/622 em 49 arquivos**, `tsc` limpo, `npm run build`
 passa — **os três conferidos por mim**, não relatados por agente. A base da rodada era 539.
 
-⚠️ **A re-revisão escopada do fix round da Task 5 foi despachada e a sessão acabou antes de ela
-voltar.** O que se sabe: o implementador **re-rodou as 12 mutações** (as 3 novas + as 9 antigas,
-porque o arquivo de teste mudou) e todas morderam; os três achados (T5-1, T5-3, T5-4) foram
-endereçados com teste, não com afrouxamento. **O código está commitado e a árvore limpa** — não
-há WIP. Se você quiser o carimbo formal antes de seguir, o barato é despachar uma re-revisão
-escopada do `941365b` (contra `3dc3957`) e só então abrir a Task 6; se preferir seguir, a
-**revisão da branch inteira no fim pega o que sobrar** — ela é obrigatória de qualquer jeito.
+✅ **A re-revisão da Task 5 voltou e fechou: Approved nos DOIS veredictos.** Somadas as duas
+passadas, **30 mutações medidas nesta task e 30 morrem** — inclusive as três que estavam vivas.
+O teste novo de aninhamento **não passa por vacuidade**: o revisor apontou o seletor pra uma
+classe inexistente e mediu que o teste CAI com a linha de guarda e PASSA sem ela. É o primeiro
+guarda anti-vacuidade desta rodada escrito **e** medido no mesmo commit.
 
 ### 3a. 🔴 O QUE AS TASKS 4 E 5 DEIXARAM DECIDIDO
 
@@ -192,11 +190,17 @@ consertou lógica de aplicação. Quando o revisor rotula "plan-mandated", é li
   número só). **Quando um componente controlado atravessa duas tasks, a de baixo prova a
   obediência e a de cima tem que provar a ALIMENTAÇÃO — são duas direções, e a suíte da escrita
   não vê a da leitura.**
-- 🆕 **A prova de mutação que não foi APLICADA conta como sobrevivente.** O implementador da Task 5
-  descobriu que o `PainelFiltros.tsx` está em **CRLF** no disco e o aplicador de mutações dele
-  casava padrões em **LF**: a mutação "não alterou nada" e teria virado "sobrevivente" se o script
-  não abortasse ao ver texto idêntico à entrada. **Todo aplicador de mutação precisa falhar quando
-  a substituição não muda o arquivo** — senão o falso verde vem da ferramenta, não do código.
+- 🆕 **A prova de mutação que não foi APLICADA conta como sobrevivente — e neste repo há uma
+  armadilha concreta pra isso.** Medido: **o código-fonte (`PainelFiltros.tsx`, `FaixaKm.tsx`,
+  `home.css`) está em CRLF e os arquivos de teste em LF.** Uma âncora de mutação com quebra de
+  linha casada em LF simplesmente não encontra nada no `.tsx`, a substituição vira no-op, a suíte
+  fica verde e a mutação entra no relatório como "sobreviveu" — a revisão então pede conserto de
+  coisa que não está quebrada. **Todo aplicador de mutação tem que ABORTAR ALTO quando a âncora
+  não casa** (e quando casa mais de uma vez), nunca seguir em silêncio.
+  🔴 **A assimetria que salva, e vale saber:** uma mutação não aplicada só produz **falso
+  sobrevivente**, nunca falsa morte. Então todo "morde" reportado é seguro por construção; quem
+  precisa de verificação é só o sobrevivente. E nesta rodada **todo sobrevivente reportado voltou
+  a FALHAR depois do conserto**, o que prova retroativamente que foi aplicado de verdade.
 - 🆕 **O atributo que MASCARA o sumiço do elemento.** `aria-label` no `<fieldset>` **junto** com a
   `<legend>`: apagar a legenda deixava tudo verde, porque o nome acessível continuava vindo do
   atributo (ele tem precedência) e só quem OLHA a tela perdia o título. **Duas fontes pro mesmo
