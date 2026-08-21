@@ -279,6 +279,29 @@ consertou lógica de aplicação. Quando o revisor rotula "plan-mandated", é li
   mesmo que "não mostrou linha vazia". Ele resolveu com lista única + guarda único (o desenho do
   cartão), e aí a remoção do guarda falha **por asserção**, com a mensagem exata do defeito.
   **Ao desenhar a mutação, pergunte se ela falha pelo motivo que você quer provar.**
+- 🆕 **QUEM PROVA O QUÊ, na contração (Task 8) — medido, e com a correção do que eu ia registrar
+  errado.** Numa task que APAGA, o `npm test` não é o juiz principal, mas ele também não é
+  dispensável — e a repartição exata só apareceu medindo cada ressurreição:
+  - **`esforco` de volta ao SCHEMA** → 1 teste cai, **e o `tsc` fica LIMPO**. O compilador **não**
+    é dono disso;
+  - **`esforco`/`duracaoMax` de volta ao `Filtros`/`contarLigados`** → 8 testes (é o filtro
+    fantasma voltando a contar);
+  - **re-export sem o módulo** → `tsc` **TS2307**;
+  - **`lerFiltros` voltando a preservar o campo** → 1 teste (`toEqual`);
+  - **SEM DONO, e declarado:** `esforcoSchema`, `type Esforco` **e a ausência do próprio
+    `src/lib/duracao.ts`**. 🔴 **Esta terceira eu ia registrar errado:** o commit dizia que o
+    `tsc` era dono "do módulo apagado", e o revisor mediu — **recriar `duracao.ts` sem consumidor
+    deixa `tsc` limpo, `build` passando e a suíte verde**. O `tsc` é dono do **re-export**, não da
+    ausência do módulo.
+- 🆕 **QUANDO a asserção de FONTE se justifica — a régua que faltava, e ela fecha uma dúvida que
+  esta rodada abriu duas vezes.** O precedente (`PISOS_FILTRAVEIS`, `"use client"`) valia porque
+  as duas versões **produzem o mesmo valor em runtime** e a diferença tem **consequência
+  observável** que nenhuma outra camada alcança (a lista copiada diverge e o filtro esconde
+  trilha errada; o componente vira server e a cor congela). Já `esforcoSchema` exportado sem
+  chamador **não tem consequência**: não renderiza, não computa, nem entra no bundle. **Asserção
+  de FONTE se justifica quando a diferença que ela pega tem consequência observável; sem
+  consequência atrás, ela vira prova de ARRUMAÇÃO** — a mesma família do rename consistente que a
+  Task 7 aceitou deixar invisível.
 - 🆕 **O limite conhecido vale escrito AO LADO da prova.** O par de testes de CSS da Task 7
   *"parece a mesma prova e não é"* (um prende o DOM à cadeia, o outro prende a cadeia a existir).
   Sem uma oração dizendo o que o par deliberadamente **não** cobre — o rename consistente em JSX

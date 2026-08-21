@@ -957,7 +957,7 @@ it("contarLigados agora conta 5 recortes, todos ligados", ...)
 > | Balde | O que é | O que fazer |
 > |---|---|---|
 > | **(a)** | frase que **AFIRMA** um consumidor ou estado que a task acabou de desfazer — *"o `CartaoTrilha` importa DAQUI"*, *"a Rampa **tem** `piso` = `barro`"* | **corrija agora, só a oração**, e cite no corpo do commit |
-> | **(b)** | referência declarada como **HISTÓRIA** — *"foi essa regra que já exilou o `formatarDuracao` pra `duracao.ts`"* | **deixe, não toque.** Continua verdadeira depois da deleção, desde que não afirme o presente |
+> | **(b)** | referência declarada como **HISTÓRIA** — *"foi essa regra que já exilou o `formatarDuracao` pra `duracao.ts`"* | **deixe, não toque.** Continua verdadeira depois da deleção, desde que não afirme o presente — **exceto pelo refinamento abaixo** |
 > | **(c)** | **CÓDIGO** — import, chamada, tipo | **a task não terminou.** Só este bloqueia |
 >
 > **E a permissão tem que estar no brief, senão o passo é ilegal.** A linha `**Files:**` de toda
@@ -972,6 +972,30 @@ it("contarLigados agora conta 5 recortes, todos ligados", ...)
 > 🔴 **Aplicado a ESTA task, de saída:** deletar `duracao.ts` vai gerar **(b)** em `geo.ts:74` e
 > `piso.ts:21-22` (história — ficam) e **(a)** no cabeçalho do próprio `src/lib/ficha.ts` (some
 > junto com o re-export).
+>
+> 🔴 **REFINAMENTO DO BALDE (b), descoberto EXECUTANDO a Task 8 (2026-08-21).** O implementador
+> achou que o **item 11 desta emenda contradiz o balde (b)** — o item mandava reescrever
+> `geo.ts:74` e `piso.ts:23`, e o balde manda deixar — **e nomeou a contradição em vez de agir em
+> silêncio.** Ele estava certo na letra: a varredura é posterior e mais específica, e as duas
+> frases se declaram como história ("**já** exilou"). **O item 11 fica revogado nesta forma**, e
+> entra o refinamento:
+>
+> > **(b) história fica intocada — mas se ela cita um arquivo ou símbolo que HOJE não resolve, o
+> > alvo ganha uma marca de que não existe mais.** Quatro palavras entre parênteses, **nunca uma
+> > reescrita**: `` `duracao.ts` (apagado na contração) ``.
+>
+> **O discriminador é MECÂNICO, não de gosto:** *o alvo citado resolve?* — `ls`/`rg` responde sim
+> ou não. E a lista de alvos é **fechada e vem do diff** (só os caminhos que a própria task
+> apagou), então não é varredura nova.
+>
+> **O que se protege não é a trivia, é a REGRA VIVA.** Os dois comentários existem pra ensinar
+> algo que continua valendo — `node:fs` não entra no bundle do cliente. Um leitor que procura
+> `duracao.ts`, não acha, e conclui "comentário podre" **desconta a regra junto**.
+>
+> **E a regra já se satisfaz sozinha quando a prosa é boa:** `CartaoTrilha.tsx:56` cita `esforco`,
+> que também não existe mais, mas escreve *"o **antigo** `esforco`"* — o alvo já vem marcado como
+> ido. O refinamento não cria trabalho onde a escrita já está certa; ele só nomeia o que a boa
+> escrita já fazia.
 
 **A verificação desta task é o `npm run build`**, não o vitest: apagar um módulo reexportado é
 exatamente o tipo de coisa que a suíte não vê (lição 9).
