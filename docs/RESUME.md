@@ -4,19 +4,20 @@
 > `.superpowers/sdd/2026-08-18-review-do-celular/progress.md`, que é **scratch git-ignorado** —
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-19. **RODADA ABERTA, PARADA A PEDIDO DELE, EM PONTO LIMPO.**
+**Última parada:** 2026-08-20. **RODADA ABERTA E EM ANDAMENTO.**
 Branch **`review-do-celular`**, NÃO mergeada, NÃO deployada. `main` segue em `f10f075`.
 
-**Ele pediu pra parar** depois da Task 3: *"gostaria de parar por aqui, deixe tudo pronto para
-quando eu iniciar uma outra sessão e digitar continua tudo ficar certo para voltar."*
+✅ **Tasks 1 a 4 fechadas, cada uma com revisão dupla.** Sem WIP: todo commit no log é trabalho
+revisado. **A Task 5 estava em execução quando esta linha foi escrita** — confira `git log` e
+`git status` antes de acreditar nela.
 
-✅ **Não existe WIP desta vez.** A Task 4 chegou a ser despachada e foi interrompida **antes de
-escrever qualquer arquivo** — a árvore ficou limpa e todo commit no log é trabalho revisado. Você
-não precisa julgar código não revisado, como a sessão passada precisou.
+🔴 **As OITO tasks têm pré-voo escrito no plano versionado agora** (antes só a 2, 3 e 4 tinham).
+Procure os blocos de citação 🔴 "EMENDA DO PRÉ-VOO" — eles corrigem o texto ao redor e vencem
+onde discordarem.
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA" — retome a rodada `review-do-celular` na Task 4
+# ▶▶ SE O JOÃO DISSER "CONTINUA" — retome a rodada `review-do-celular` na Task 5
 
 **O review do celular já aconteceu, já foi triado e já virou spec + plano aprovados.** Não
 pergunte o que ele achou; não peça a lista de novo; não devolva menu.
@@ -26,13 +27,13 @@ pergunte o que ele achou; não peça a lista de novo; não devolva menu.
 ```
 git branch --show-current  → review-do-celular   (se estiver em main, só trocar)
 git status --short         → limpo
-npm test                   → 588/588 em 48 arquivos   ← tudo verde, NÃO há falha esperada
+npm test                   → 611/611 em 49 arquivos (depois da Task 4)   ← tudo verde
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
 
-**Os três foram conferidos por mim no fim da sessão, não relatados por agente.** Se a suíte
-estiver diferente disso, alguma coisa mudou e vale descobrir o quê antes de seguir.
+**Se a Task 5 tiver fechado, o número é outro** — ela migra testes e apaga chips. O `git log`
+manda. Se a suíte estiver diferente **e o log não explicar**, descubra o quê antes de seguir.
 
 ### 2. Leia, nesta ordem
 
@@ -57,11 +58,25 @@ Task 2, 3 e 4 estão no plano; as das Tasks 5 a 8 ainda não foram feitas.
 | 1 — GPS pede sozinho na 1ª abertura | **completa**, 1 fix round, re-revisão limpa | `b4a7585`, `2260c36` |
 | 2 — `piso.ts` + schema + questionário | **completa**, 3 fix rounds, re-revisão **ADDRESSED** nos 6 achados | `ad88d20` (WIP), `9b03f43`, `cb97792`, `0445f50`, `bdb4497` |
 | 3 — recortes novos em `filtros.ts` | **completa**, 1 fix round + 1 conserto meu, re-revisão **ADDRESSED** nos 4 | `066cb08`, `c4161b4`, `e0d1442` |
-| **4 — `FaixaKm`: a barra e o campo** | ⬅️ **É AQUI QUE VOCÊ COMEÇA.** Despachada e interrompida antes de escrever nada. | — |
-| 5 a 8 | não começadas | — |
+| 4 — `FaixaKm`: a barra e o campo | **completa**, 1 fix round (9 achados), re-revisão **PROVA Approved** + 1 conserto meu de comentário | `41ee448`, `0ddf131`, `2250e7c` |
+| **5 — o painel: duas faixas e os chips de piso** | ⬅️ **É AQUI QUE VOCÊ COMEÇA** (se o `git log` não disser que ela fechou) | — |
+| 6 a 8 | não começadas, **mas todas com pré-voo escrito no plano** | — |
 
-**Chão depois da Task 3:** `npm test` **588/588**, `tsc` limpo, `npm run build` passa. A base da
-rodada era 539.
+**Chão depois da Task 4:** `npm test` **611/611 em 49 arquivos**, `tsc` limpo, `npm run build`
+passa. A base da rodada era 539.
+
+### 3a. 🔴 O QUE A TASK 4 DEIXOU DECIDIDO, e a Task 5 consome
+
+- O `FaixaKm` **já é o grupo**: `<fieldset class="filtro-grupo faixa-km">` + `<legend>{rotulo}</legend>`.
+  **Não o embrulhe em outro fieldset.** O nome acessível sai da legend **de propósito** — o
+  `aria-label` foi REMOVIDO na revisão porque, junto com a legend, ele mascarava o sumiço dela
+  (medido: apagar a legenda deixava a suíte 19/19 verde, e só quem OLHA a tela perdia o título).
+- Barra: `min={passo}`, `max={max + passo}`, `step={passo}`; a parada extra vale **`null`**.
+  Campo: role `spinbutton`, prende **só o teto** na hora, piso é `1`, `Math.trunc`.
+- **Custo aceito e registrado** (não re-litigar): com corte abaixo do passo — 4 km na distância,
+  passo 5 — o pegador fica na primeira parada enquanto o campo diz `4` e a leitura diz `até 4 km`.
+  Só o controle grosso discorda; os dois portadores de TEXTO dizem a verdade. As três saídas
+  alternativas são piores, e o porquê está no item 6 da emenda 2 da Task 4.
 
 ### 3b. 🔴 O QUE JÁ ESTÁ DECIDIDO E A TASK 4 TEM QUE CASAR
 
@@ -81,7 +96,8 @@ rodada era 539.
 
 **Antes de despachar qualquer task, releia a lista de testes do brief perguntando "que linha do
 código eu posso apagar sem isto falhar?"** e mande o complemento junto no despacho. Nesta rodada
-o pré-voo achou **oito furos do plano** — e as emendas estão **no plano versionado**
+o pré-voo já achou **mais de vinte furos do plano** (sem total cravado de propósito: o número
+envelhece) — e as emendas estão **no plano versionado**
 (`docs/superpowers/plans/2026-08-18-review-do-celular.md`, em blocos de citação 🔴), não só nos
 briefs de scratch.
 
@@ -107,6 +123,28 @@ consertou lógica de aplicação. Quando o revisor rotula "plan-mandated", é li
   deixava tudo verde, porque o teste vira "9 → null" e "8 → 8", corretos com 8. **As duas provas
   são ortogonais e as duas precisam existir** — medido nos dois sentidos: mutar o valor derruba
   só a asserção literal; mutar a relação (`<=` → `<`) derruba só os testes de borda.
+- 🆕 **O COMENTÁRIO MENTIROSO DESTA VEZ FOI MEU, E ESTAVA NO PLANO — 2026-08-20.** Minha emenda
+  justificava o `step` da barra dizendo que sem ele ela produz 101…104 *"que o `lerFiltros` joga
+  fora na abertura seguinte: o filtro se desligando sozinho"*. **É falso, e o revisor mediu:** o
+  próprio componente faz `n > max ? null : n` antes de qualquer coisa sair dele — com `step={1}`,
+  pedir 101 à barra devolve `null`. **Nenhum valor acima do teto escapa, com ou sem `step`.** A
+  linha vale (o `step` é DESENHO: sem ele a barra vira granular de 1 km e sobram ~4px de zona
+  morta), mas a razão escrita era outra. Do plano a frase foi pro `FaixaKm.tsx` e pro teste:
+  **dois arquivos a partir de uma frase minha, pela segunda sessão seguida** (a primeira foi o
+  "asfalto" da Rampa, que virou quatro). Corrigido na nascente em `6fb4e39`.
+- 🆕 **A lição do caso-que-separa vale por COMPARAÇÃO, não por controle.** O implementador da
+  Task 4 aplicou-a certo na barra — pegou uma prova oca MINHA (`valor 4` com `min=5`: o elemento
+  prende o 4 em `"5"`, e a versão certa e a arredondada mostram a mesma coisa; com `7` elas se
+  separam) — e no **mesmo arquivo** deixou o campo sem nenhum caso de fronteira. As duas
+  comparações que faltavam eram exatamente as duas que a revisão achou: `n > max` → `n >= max` e
+  `i < 1` → `i <= 1`, **as duas com a suíte 19/19 verde**. A segunda é o "campo indigitável" de
+  volta com um `=` de diferença: com `<= 1`, digitar `1` esvazia o campo e **todo número que
+  começa por 1** (`1`, `10`, `100`) fica inalcançável pelo teclado.
+- 🆕 **O atributo que MASCARA o sumiço do elemento.** `aria-label` no `<fieldset>` **junto** com a
+  `<legend>`: apagar a legenda deixava tudo verde, porque o nome acessível continuava vindo do
+  atributo (ele tem precedência) e só quem OLHA a tela perdia o título. **Duas fontes pro mesmo
+  nome, e a de fora mascarando a de dentro.** Mesma família: três `getByRole` soltos não provam
+  contenção — é `within(grupo)` que prova.
 - **Um campo indigitável.** A Task 4, como eu a escrevi, prendia o campo numérico no intervalo
   `[passo, max]` "na hora", com `DIST_PASSO_KM = 5` — o `4` vira `5` no primeiro dígito e
   **ninguém consegue digitar `45`**, nem `100`. Ruling: **o piso do intervalo é `1`**; `passo` é
@@ -188,7 +226,9 @@ deixa o `tsc` vermelho no meio da rodada. **Não "limpe" os campos velhos cedo.*
    aparecem na ficha, junto ao Trajeto. ⬜ **Task 7.**
 4. *"o filtro quando selecionado não é possível deselecionar"* → **ele mesmo retirou** e trocou
    por *"melhor o usuário conseguir digitar ou mover uma barra"*. Os dois recortes numéricos
-   viram **barra + campo**; o problema do chip morre por construção. ⬜ **Tasks 4 e 5.**
+   viram **barra + campo**; o problema do chip morre por construção. 🔶 **Meio feito:** o
+   `FaixaKm` existe, revisado (Task 4); **falta ligá-lo na tela** (Task 5) — hoje ele não é
+   importado por ninguém.
 5. *"esforço podia ser — barro, paralelepípedo, asfalto esburacado, asfalto tapete"* → o
    `esforco` (leve/media/puxada, sobre o corpo) vira **piso da via** (sobre o lugar). 🔶 **Meio
    feito:** o vocabulário (`src/lib/piso.ts`), o campo no schema, a pergunta e o recorte existem;
@@ -214,7 +254,11 @@ campo sobre o preparo do corpo nunca teve de onde sair: este app só sabe falar 
   (pins com folga, barra fixa × faixa de gesto, painel empurrando a lista, piso de zoom 8), mais
   as três novas da §14 da spec desta rodada: a barra arrasta com o polegar? o campo numérico abre
   o teclado certo? o balão de GPS aparece antes ou depois da home pintar? **As duas primeiras só
-  existem depois da Task 4** — hoje não há barra nem campo pra abrir.
+  existem depois da Task 5** — o `FaixaKm` está pronto e revisado, mas ninguém ainda o importa.
+  🆕 Junto delas, o que a revisão da Task 4 listou como impossível de medir daqui: o trilho de 4px
+  centrado na caixa de 44px; **a linha da faixa provavelmente quebrando em DUAS** em ~360px
+  (barra 55% + campo 4,4rem + a leitura + dois gaps), o que com duas faixas muda o orçamento da
+  dobra; e qual teclado o `inputMode="numeric"` de fato abre.
 
 ### 9. O resumo do que esta sessão (2026-08-19) fez
 
