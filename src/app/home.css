@@ -168,9 +168,11 @@
 
 /* ---- a faixa de km: a barra e o campo ----
    44px de alvo na barra e pegador de 28px: o trilho tem 4px, e sem a caixa de
-   44px o dedo teria que acertar uma linha de 4 pixels. O `appearance: none` é
-   o que permite desenhar o pegador — sem ele o `::-webkit-slider-thumb` do
-   Safari é ignorado, e é o Safari do iPhone que este app roda instalado.
+   44px o dedo teria que acertar uma linha de 4 pixels. O `-webkit-appearance:
+   none` é o que permite desenhar o pegador — enquanto o controle tem aparência
+   nativa, o `::-webkit-slider-thumb` não pinta, e é o Safari do iPhone que roda
+   este app instalado. Tem teste lendo as duas declarações e o tamanho do
+   pegador; não apagar.
    ⚠️ Isto NÃO é prova de que dá pra arrastar com o polegar: nenhum teste desta
    suíte mede geometria renderizada. O que o teste lê é o alvo declarado. */
 .bp .faixa-km { gap: .5rem .6rem; }

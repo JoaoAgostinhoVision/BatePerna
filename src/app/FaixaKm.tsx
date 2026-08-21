@@ -18,25 +18,44 @@ type Props = {
   valor: number | null;
   /** Teto do recorte. A barra ganha UMA parada além dele, e essa parada vale
    *  `null`. Se o fim da barra fosse `max` chamado de "qualquer", uma trilha a
-   *  130 km sumiria com a tela dizendo "qualquer distância". */
+   *  130 km sumiria com a tela dizendo "qualquer distância".
+   *
+   *  ⚠️ PRÉ-CONDIÇÃO: **inteiro**. A barra NÃO trunca o que o elemento entrega —
+   *  ela sobe `Number(e.target.value)` cru —, e só é honesta porque as paradas
+   *  são inteiras. Teto ou passo fracionário fariam km fracionário subir pelo
+   *  `onChange`, e o `lerFiltros` recusa fracionário: o filtro se desligaria
+   *  sozinho na abertura seguinte. Quem passa os dois é o painel, das
+   *  constantes de `src/lib/filtros.ts`, que são inteiras. */
   max: number;
   /** Granularidade da BARRA, e só dela. NÃO é o piso do intervalo: o piso é 1,
    *  e digitar 4 com passo 5 filtra por 4 km, o que é verdade. Prender o piso
    *  no passo tornaria o campo indigitável (o `4` viraria `5` no primeiro
-   *  dígito, e `100` seria inalcançável pelo teclado). */
+   *  dígito, e `100` seria inalcançável pelo teclado).
+   *
+   *  ⚠️ PRÉ-CONDIÇÃO: **inteiro**, e pela mesma razão do `max` acima. */
   passo: number;
   onChange: (km: number | null) => void;
 };
 
 /** O contrato da leitura do campo, escrito uma vez:
  *
- *      ""  → null                    |  não-finito → null
+ *      não-finito → null
  *      i = Math.trunc(Number(txt))   |  i < 1 → null  |  i > max → max  |  senão i
+ *
+ *  O vazio cai no `i < 1` sozinho, e por isso não tem guarda próprio: MEDIDO em
+ *  node, `Number("")` e `Number("   ")` são `0`, e `0 < 1`. Um `if (txt === "")`
+ *  aqui devolveria o mesmo `null` por outro caminho, sem nenhuma mutação capaz
+ *  de matá-lo — linha que não faz nada, e teste que a "protegesse" seria
+ *  decoração. Pela mesma medição saiu o `txt.trim()`: `Number(" 45 ")` é `45`.
  *
  *  O TETO prende NA HORA porque é ele que carrega a honestidade: `150` na tela
  *  com o filtro cortando em `100` é a tela mentindo sobre o que está
  *  escondendo. O PISO não prende na hora — abaixo dele não há mentira, só um
  *  número menor —, e é por isso que não existe buffer de digitação aqui.
+ *
+ *  🔴 O piso é `< 1`, e o `=` que falta é o que separa este campo do "campo
+ *  indigitável": com `<= 1`, digitar `1` esvazia o campo e todo número que
+ *  COMEÇA por 1 (`1`, `10`, `100`) fica inalcançável pelo teclado.
  *
  *  `Math.trunc` porque `type="number"` aceita `4.5` e o `lerFiltros` só guarda
  *  inteiro: sem truncar, o valor voltaria `null` na releitura.
@@ -48,9 +67,7 @@ type Props = {
  *  `onChange` — e `Math.trunc(NaN) < 1` é `false`, ou seja, NaN passaria
  *  inteiro pelos dois guardas abaixo. */
 function kmDoTexto(txt: string, max: number): number | null {
-  const t = txt.trim();
-  if (t === "") return null;
-  const n = Number(t);
+  const n = Number(txt);
   if (!Number.isFinite(n)) return null;
   const i = Math.trunc(n);
   if (i < 1) return null;
@@ -65,8 +82,14 @@ export default function FaixaKm({ rotulo, valor, max, passo, onChange }: Props) 
   // diria que vazio quer dizer "qualquer".
   const leitura = valor === null ? "qualquer" : `até ${valor} km`;
 
+  // O `<fieldset>` NÃO leva `aria-label`, de propósito: o nome do grupo sai da
+  // `<legend>`, que é o título VISÍVEL na tela. MEDIDO na revisão — com o
+  // `aria-label` junto, apagar a legenda deixava a suíte inteira verde: o nome
+  // acessível continuava vindo do atributo (ele tem precedência) e só quem OLHA
+  // a tela perdia o título. Duas fontes pro mesmo nome, e a de fora mascarando
+  // o sumiço da de dentro.
   return (
-    <fieldset className="filtro-grupo faixa-km" aria-label={rotulo}>
+    <fieldset className="filtro-grupo faixa-km">
       <legend>{rotulo}</legend>
       <input
         type="range"
@@ -79,15 +102,21 @@ export default function FaixaKm({ rotulo, valor, max, passo, onChange }: Props) 
         // intervalo (7), o único caso em que as duas versões se separam.
         min={passo}
         max={qualquer}
-        // Sem o `step`, a barra cai no padrão 1 e passa a oferecer valores
-        // ACIMA do teto (com max 100 e passo 5: 101…104) que o `lerFiltros`
-        // joga fora na releitura.
+        // O `step` é DESENHO, não honestidade — e a versão anterior deste
+        // comentário dizia o contrário. Medido na revisão: com `step={1}`,
+        // pedir 101 à barra devolve `null` do mesmo jeito, porque o `n > max`
+        // logo abaixo fecha a porta antes de qualquer coisa sair daqui; nenhum
+        // valor acima do teto escapa, com ou sem `step`. O que o `step` evita é
+        // a barra virar granular de 1 km num trilho onde cada pixel vale meio
+        // quilômetro, com as posições 101–104 sobrando como uns 4px de zona
+        // morta que querem dizer "qualquer".
         step={passo}
         value={valor === null ? qualquer : valor}
         aria-label={`${rotulo}: arrastar`}
-        // Sem isto, quem ouve a tela ouviria o número da parada extra na
-        // posição que quer dizer "qualquer".
         aria-valuetext={leitura}
+        // Sem isto, quem ouve a tela ouve o número da parada extra na posição
+        // que quer dizer "qualquer" — e ouve um km a mais que o teto, que é
+        // justamente a mentira que a parada extra existe pra evitar.
         onChange={(e) => {
           const n = Number(e.target.value);
           onChange(n > max ? null : n);

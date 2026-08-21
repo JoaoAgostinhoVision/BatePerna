@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import FaixaKm from "@/app/FaixaKm";
 import { regraDe, semComentarios, valorDe } from "../css";
 
@@ -13,6 +13,7 @@ afterEach(cleanup);
 const MAX = 100;
 const PASSO = 5;
 const QUALQUER = MAX + PASSO;
+const ROTULO = "Distância daqui";
 
 // 🔴 O PALCO CONTROLADO, e ele é o que torna as provas possíveis.
 //
@@ -34,7 +35,7 @@ function Palco({
 }) {
   const [v, setV] = useState<number | null>(inicial);
   visto = v;
-  return <FaixaKm rotulo="Distância daqui" valor={v} max={max} passo={passo} onChange={setV} />;
+  return <FaixaKm rotulo={ROTULO} valor={v} max={max} passo={passo} onChange={setV} />;
 }
 
 const monta = (props: { inicial?: number | null; max?: number; passo?: number } = {}) => {
@@ -42,23 +43,47 @@ const monta = (props: { inicial?: number | null; max?: number; passo?: number } 
   render(<Palco {...props} />);
 };
 
-// Por ROLE, que já distingue os dois sem discussão de rótulo.
-const barra = () => screen.getByRole("slider") as HTMLInputElement;
-const campo = () => screen.getByRole("spinbutton") as HTMLInputElement;
+// 🔴 TUDO é procurado DENTRO do grupo, e o grupo é achado pelo nome que sai da
+// `<legend>` — as duas coisas são prova, não conveniência (achado I-4 da
+// revisão):
+//   • um `getByRole("slider")` solto passa verde com a barra, o campo e a
+//     leitura FORA do `<fieldset>` — e a Task 5 esconde o grupo de Distância
+//     quando não há localização: com os controles fora, esconder o grupo
+//     esconderia só a legenda.
+//   • o nome ancorado (`^…$`) obriga a legenda a existir e a ser o título. Um
+//     `aria-label` no `<fieldset>` daria o mesmo nome sem título nenhum na
+//     tela, e foi assim que a versão anterior deste arquivo ficou verde com a
+//     legenda apagada.
+const grupo = () => screen.getByRole("group", { name: new RegExp(`^${ROTULO}$`, "i") });
+const barra = () => within(grupo()).getByRole("slider") as HTMLInputElement;
+const campo = () => within(grupo()).getByRole("spinbutton") as HTMLInputElement;
+const leituraNaTela = (txt: string) => within(grupo()).getByText(txt);
 
 describe("a anatomia que a Task 5 vai consumir", () => {
-  it("o rótulo vira a legenda do grupo, com a barra e o campo dentro", () => {
+  it("a legenda é o título do grupo, e a barra, o campo e a leitura moram DENTRO dele", () => {
     monta();
-    expect(screen.getByRole("group", { name: /distância daqui/i })).toBeTruthy();
-    expect(barra()).toBeTruthy();
-    expect(campo()).toBeTruthy();
+    const g = grupo();
+    expect(within(g).getByRole("slider")).toBeTruthy();
+    expect(within(g).getByRole("spinbutton")).toBeTruthy();
+    expect(within(g).getByText("qualquer")).toBeTruthy();
+    // O nome do grupo tem que sair da legenda — o título que se VÊ — e não de
+    // um atributo. Segunda fonte pro mesmo nome mascara o sumiço da primeira.
+    expect(g.querySelector("legend")?.textContent).toBe(ROTULO);
+    expect(g.getAttribute("aria-label")).toBeNull();
+  });
+
+  // É ele que decide qual teclado o iPhone abre. Sem ele vem o teclado de
+  // texto inteiro, com letras, pra um campo que só aceita número.
+  it("o campo pede o teclado numérico do aparelho", () => {
+    monta();
+    expect(campo().getAttribute("inputmode")).toBe("numeric");
   });
 });
 
 describe("a barra", () => {
-  // Sem `step`, a barra cai no padrão 1 e passa a oferecer 101…104 — valores
-  // que o `lerFiltros` (`v <= max`) joga fora na abertura seguinte: o filtro
-  // se desligando sozinho entre duas aberturas do app.
+  // O `step` aqui é DESENHO (sem ele a barra fica granular de 1 km e sobram
+  // ~4px de zona morta acima do teto), não honestidade: nenhum valor acima do
+  // `max` escapa com ou sem ele, porque o componente converte antes de subir.
   it("a barra vai de passo até max+passo, de passo em passo", () => {
     monta();
     expect(barra().getAttribute("min")).toBe(String(PASSO));
@@ -74,7 +99,18 @@ describe("a barra", () => {
     // seria 100 — "qualquer" na tela cortando em 100 de verdade.
     expect(visto).toBeNull();
     expect(campo().value).toBe("");
-    expect(screen.getByText("qualquer")).toBeTruthy();
+    expect(leituraNaTela("qualquer")).toBeTruthy();
+  });
+
+  // 🔴 A FRONTEIRA DE CIMA, e ela é a única onde `>` e `>=` se separam (achado
+  // I-1). Com `n >= max`, arrastar até o último km REAL desliga o recorte na
+  // cara de quem acabou de escolhê-lo — e na faixa de tamanho, onde o teto é
+  // 20, o topo inteiro do controle fica inalcançável.
+  it("arrastar até a última parada de km REAL devolve o número, não null", () => {
+    monta();
+    fireEvent.change(barra(), { target: { value: String(MAX) } });
+    expect(visto).toBe(MAX);
+    expect(leituraNaTela(`até ${MAX} km`)).toBeTruthy();
   });
 
   it("arrastar pra dentro do intervalo devolve o número", () => {
@@ -86,12 +122,16 @@ describe("a barra", () => {
   it("com valor null, a barra fica na última parada e o texto diz 'qualquer'", () => {
     monta();
     expect(barra().value).toBe(String(QUALQUER));
-    expect(screen.getByText("qualquer")).toBeTruthy();
+    expect(leituraNaTela("qualquer")).toBeTruthy();
+    // Quem ouve a tela ouviria o número da parada extra — um km A MAIS que o
+    // teto — na posição que quer dizer justamente "não corto nada".
+    expect(barra().getAttribute("aria-valuetext")).toBe("qualquer");
   });
 
   it("com corte ligado, o texto de leitura diz até quanto", () => {
     monta({ inicial: 40 });
-    expect(screen.getByText("até 40 km")).toBeTruthy();
+    expect(leituraNaTela("até 40 km")).toBeTruthy();
+    expect(barra().getAttribute("aria-valuetext")).toBe("até 40 km");
   });
 
   // Um `Math.round(v / passo) * passo` na posição deixaria a barra em 5 e o
@@ -101,7 +141,8 @@ describe("a barra", () => {
   // versões COINCIDEM e a prova seria oca: MEDIDO no jsdom, `min="5"` prende
   // o `4` em `"5"` sozinho, com ou sem arredondamento nosso — e o navegador
   // faz o mesmo. Abaixo do passo quem manda é o `min` da barra; fora do passo,
-  // e é só aí, dá pra separar as versões.
+  // e é só aí, dá pra separar as versões. (O custo aceito está escrito na
+  // emenda 2, item 6, do plano desta rodada.)
   it("com valor 7 — fora do passo — a barra mostra 7 e o campo mostra 7", () => {
     monta({ inicial: 7 });
     expect(barra().value).toBe("7");
@@ -134,6 +175,18 @@ describe("o campo", () => {
     expect(campo().value).toBe("4");
   });
 
+  // 🔴 A FRONTEIRA DE BAIXO, e ela é a única onde `< 1` e `<= 1` se separam
+  // (achado I-2). Com `<= 1`, digitar `1` esvazia o campo — e como o campo
+  // mostra a prop, TODO número que começa por 1 (`1`, `10`, `15`, `100`) fica
+  // inalcançável pelo teclado. É o "campo indigitável" da emenda 1 de volta,
+  // com um `=` de diferença. O `1` é o piso que o `lerFiltros` aceita.
+  it("digitar 1 devolve 1 — é o piso do intervalo, e o lerFiltros o aceita", () => {
+    monta();
+    fireEvent.change(campo(), { target: { value: "1" } });
+    expect(visto).toBe(1);
+    expect(campo().value).toBe("1");
+  });
+
   // Vazio e zero querem dizer a mesma coisa ("não corta"), e o `lerFiltros`
   // recusa `0`: das duas saídas possíveis, só esta mantém tela e armazém
   // dizendo o mesmo.
@@ -154,7 +207,7 @@ describe("o campo", () => {
     monta({ inicial: 40 });
     fireEvent.change(campo(), { target: { value: "" } });
     expect(visto).toBeNull();
-    expect(screen.getByText("qualquer")).toBeTruthy();
+    expect(leituraNaTela("qualquer")).toBeTruthy();
   });
 
   // `type="number"` aceita ponto no teclado grande, e o `lerFiltros` só guarda
@@ -213,5 +266,17 @@ describe("o CSS da faixa", () => {
   it("a barra e o campo têm 44px de alvo de toque", () => {
     expect(valorDe(regra(".bp .faixa-arrasto"), "min-height")).toBe("44px");
     expect(valorDe(regra(".bp .faixa-campo"), "min-height")).toBe("44px");
+  });
+
+  // Os 44px acima são a CAIXA; o que o dedo agarra é o pegador. Enquanto o
+  // controle tem aparência nativa o `::-webkit-slider-thumb` não pinta, então
+  // as duas declarações de `-webkit-appearance: none` e o tamanho do pegador
+  // são uma corrente só — e o trilho tem 4px.
+  it("o pegador é desenhável e tem 28px no Safari", () => {
+    expect(valorDe(regra(".bp .faixa-arrasto"), "-webkit-appearance")).toBe("none");
+    const pegador = regra(".bp .faixa-arrasto::-webkit-slider-thumb");
+    expect(valorDe(pegador, "-webkit-appearance")).toBe("none");
+    expect(valorDe(pegador, "width")).toBe("28px");
+    expect(valorDe(pegador, "height")).toBe("28px");
   });
 });
