@@ -786,6 +786,44 @@ it("a Rampa real continua abrindo", ...)
 > faz parte desta task** — sem isso a mutação #1 (mover o piso pra fora do bloco) não tem como
 > cair, e um dado de estrada aparecendo debaixo do bloco errado é o app dizendo outra coisa.
 
+> 🔴 **SEGUNDA EMENDA DO PRÉ-VOO (2026-08-21) — e uma dela CORRIGE a emenda 1 acima.**
+>
+> **4. O contêiner endereçável: CONFIRMADO que não existe, e o detalhe importa.** Conferido hoje
+> em `src/app/[slug]/page.tsx`: os três blocos — **📍 Trajeto (l. 75), 🚗 Acesso (l. 99), ⚠ Avisos
+> (l. 104)** — são `<div className="sec">` **idênticos**, distinguidos só pelo texto do
+> `<div className="k">` lá dentro. Então `container.querySelector(".sec")` é ambíguo por
+> construção e **não serve de âncora**. Dar identidade ao bloco do Trajeto faz parte desta task
+> (atributo próprio no `.sec` dele, ou o `.sec` virando elemento endereçável por papel/nome) — e
+> essa identidade é o que a mutação #1 morde.
+>
+> **5. 🔴 O TESTE DE JUNÇÃO JÁ TEM CASA, e ela é feita sob medida: `tests/app/km-uma-fonte.test.tsx`.**
+> Não invente arquivo novo, não recrie andaime. Esse arquivo **já é** a prova de junção desta
+> família — o cabeçalho dele diz *"PROVA DE JUNÇÃO, não de unidade"* — e já tem tudo montado:
+> uma ficha sintética em `vi.hoisted`, o mock de `getFicha` e de `resolverEstado`, o
+> `guardarLocal()`, e um teste que **renderiza o `CartaoTrilha` e a `PaginaDaFicha` com a MESMA
+> ficha** e compara as duas strings. O teste de extensão é o irmão do que já está lá.
+>
+> 🔴 **A armadilha, e ela é de VACUIDADE:** a ficha sintética de lá **não tem `extensaoKm` nem
+> `piso`** (conferido — ela para no `custo`). Comparar as duas telas com essa ficha como está é
+> comparar **nada com nada**, e `null === null` passa. Acrescente os dois campos à ficha
+> sintética, com **`piso: "asfalto-esburacado"`** e **`extensaoKm` FRACIONÁRIO** (a mesma razão da
+> emenda 5 da Task 6: com inteiro, a função e o sufixo escrito à mão dão a mesma string, e a
+> mutação #3 desta task — que é exatamente essa — não morde).
+>
+> **6. CORREÇÃO DA MINHA EMENDA 1 acima: onde ela diz "não cada uma contra um literal", leia "não
+> SÓ contra um literal".** A emenda 1 está errada como escrita, e o arquivo que ela nem sabia que
+> existia mostra por quê: o teste do km lá faz **as duas coisas** — assere cada tela contra
+> `KM_CERTO` **e** uma contra a outra. **São dois defeitos diferentes e cada asserção pega um:** o
+> cruzamento pega a DIVERGÊNCIA (as duas telas formatando diferente), o literal pega a VACUIDADE
+> (as duas telas não mostrando nada, e o teste passando feliz). Só o cruzamento é um teste que
+> passa com a linha apagada dos dois lados. **As duas asserções entram.**
+>
+> **7. Cuidado ao mexer na ficha sintética compartilhada:** ela alimenta também os testes
+> *"as duas coordenadas da ficha são diferentes"*, *"lados OPOSTOS do recorte de 60 km"* e o do
+> filtro `até 60 km`. Acrescentar campos novos não deve mexer em nenhum deles (o `SEM_FILTRO` não
+> liga `extensaoMaxKm` nem `pisoMinimo`) — mas **rode o arquivo inteiro** e confirme, em vez de
+> supor.
+
 ---
 
 ## Task 8 — A CONTRAÇÃO: apagar o que ninguém mais lê
