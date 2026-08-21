@@ -878,6 +878,33 @@ it("contarLigados agora conta 5 recortes, todos ligados", ...)
 > `lerFiltros` deixa de ler os dois campos. O teste do §Emenda acima (`contarLigados(lerFiltros(
 > velho)) === 0`) é exatamente a prova de que a saída se fechou — **é ele que fala da TELA dele.**
 
+> 🔴 **SEGUNDA EMENDA DO PRÉ-VOO (2026-08-21) — o portão desta task não fecha, e eu MEDI.**
+>
+> **8. O `rg "esforco|duracao|Esforco|Duração"` sobre `src/` NUNCA volta limpo, e a task diz
+> "só entre depois que voltar limpo".** Rodado hoje: **6 arquivos**, e dois deles são
+> `src/lib/geo.ts:74` e `src/lib/piso.ts:21` — **comentários que citam `duracao.ts` pela
+> história** ("o mesmo motivo que já exilou o `formatarDuracao` pra duracao.ts"). Esses
+> comentários explicam por que módulos puros existem neste projeto e **não são rastro pra
+> apagar**. Um implementador obediente ao portão literal fica preso ou "contorna" — e o plano
+> proíbe contornar. **O portão como escrito é impossível de satisfazer; vale a emenda acima: quem
+> manda é o `tsc` + o `npm run build`.**
+>
+> **9. E o portão não acha o símbolo que a task existe pra apagar.** `rg` é sensível a caixa: o
+> padrão tem `duracao` minúsculo e `Duração` com acento, e o símbolo real é **`formatarDuracao`**
+> — `Duracao`, maiúsculo e sem cedilha. Medido: o padrão do plano **não casa uma única vez** com
+> `formatarDuracao`, e **não encontra `src/lib/duracao.ts`**, que é justamente o arquivo que esta
+> task deleta. Quem varrer, varra **`Duracao`** junto.
+>
+> **10. `tests/lib/duracao.test.ts` NÃO EXISTE.** A task manda apagá-lo. Conferido hoje: não há
+> esse arquivo. O `formatarDuracao` é exercitado de **`tests/lib/ficha.test.ts`** (pelo
+> re-export). É lá que o trabalho está — apagar um arquivo inexistente é no-op silencioso, e o
+> teste de verdade ficaria órfão apontando pra um módulo deletado.
+>
+> **11. Quando `duracao.ts` for deletado, os dois comentários do item 8 passam a citar um arquivo
+> que não existe mais.** É a família "comentário que envelhece", que esta rodada já pagou três
+> vezes. Reescreva-os na mesma task (o argumento continua válido — é sobre `node:fs` no bundle do
+> cliente — só o exemplo é que morreu; `geo.ts` e `piso.ts` são exemplos vivos do mesmo motivo).
+
 **A verificação desta task é o `npm run build`**, não o vitest: apagar um módulo reexportado é
 exatamente o tipo de coisa que a suíte não vê (lição 9).
 
