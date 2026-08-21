@@ -4,24 +4,21 @@
 > `.superpowers/sdd/2026-08-18-review-do-celular/progress.md`, que é **scratch git-ignorado** —
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-20. **RODADA ABERTA, PARADA A PEDIDO DELE, EM PONTO LIMPO.**
+**Última parada:** 2026-08-21. **RODADA ABERTA.**
 Branch **`review-do-celular`**, NÃO mergeada, NÃO deployada. `main` segue em `f10f075`.
 
-**Ele pediu pra parar** depois da Task 5: *"gostaria de continuar em outra sessão, deixe tudo
-pronto para quando eu acessar novamente em outra sessão digitar continua e continuar de onde
-parei."*
-
-✅ **Tasks 1 a 5 fechadas, cada uma com implementador → revisão com dois veredictos → fix round →
+✅ **Tasks 1 a 6 fechadas, cada uma com implementador → revisão com dois veredictos → fix round →
 re-revisão escopada. NÃO EXISTE WIP:** a árvore está limpa e todo commit no log é trabalho
 revisado. Você não precisa julgar código não revisado.
 
-🔴 **As OITO tasks têm pré-voo escrito no plano versionado agora** (antes só a 2, 3 e 4 tinham).
+🔴 **As OITO tasks têm pré-voo escrito no plano versionado** (antes só a 2, 3 e 4 tinham).
 Procure os blocos de citação 🔴 "EMENDA DO PRÉ-VOO" — eles corrigem o texto ao redor e vencem
-onde discordarem. **Restam as Tasks 6, 7 e 8, e as três já estão pré-voadas.**
+onde discordarem. **Restam as Tasks 7 e 8, e as duas já estão pré-voadas DUAS vezes** (há
+"SEGUNDA EMENDA DO PRÉ-VOO" na 6, na 7 e na 8, escrita em 2026-08-21).
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA" — retome a rodada `review-do-celular` na Task 6
+# ▶▶ SE O JOÃO DISSER "CONTINUA" — retome a rodada `review-do-celular` na Task 7
 
 **O review do celular já aconteceu, já foi triado e já virou spec + plano aprovados.** Não
 pergunte o que ele achou; não peça a lista de novo; não devolva menu.
@@ -31,7 +28,7 @@ pergunte o que ele achou; não peça a lista de novo; não devolva menu.
 ```
 git branch --show-current  → review-do-celular   (se estiver em main, só trocar)
 git status --short         → limpo
-npm test                   → 622/622 em 49 arquivos   ← tudo verde, NÃO há falha esperada
+npm test                   → 625/625 em 49 arquivos   ← tudo verde, NÃO há falha esperada
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
@@ -64,11 +61,12 @@ Task 2, 3 e 4 estão no plano; as das Tasks 5 a 8 ainda não foram feitas.
 | 3 — recortes novos em `filtros.ts` | **completa**, 1 fix round + 1 conserto meu, re-revisão **ADDRESSED** nos 4 | `066cb08`, `c4161b4`, `e0d1442` |
 | 4 — `FaixaKm`: a barra e o campo | **completa**, 1 fix round (9 achados), re-revisão **PROVA Approved** + 1 conserto meu de comentário | `41ee448`, `0ddf131`, `2250e7c` |
 | 5 — o painel: duas faixas e os chips de piso | **completa**, 1 fix round (3 achados), re-revisão **Approved nos DOIS veredictos** | `3dc3957`, `941365b` |
-| **6 — o cartão** | ⬅️ **É AQUI QUE VOCÊ COMEÇA.** Nunca despachada. | — |
-| 7 e 8 | não começadas, **as duas com pré-voo escrito no plano** | — |
+| 6 — o cartão | **completa**, 1 fix round (1 Important + 3 Minor) + 1 conserto de 1 linha, re-revisão **Approved nos DOIS veredictos** | `b03b985`, `627e8e0`, `eb9daab` |
+| **7 — a ficha** | ⬅️ **É AQUI QUE VOCÊ COMEÇA.** Brief escrito e pré-voado duas vezes. | — |
+| 8 | não começada, **pré-voada duas vezes no plano** | — |
 
-**Chão depois da Task 5:** `npm test` **622/622 em 49 arquivos**, `tsc` limpo, `npm run build`
-passa — **os três conferidos por mim**, não relatados por agente. A base da rodada era 539.
+**Chão depois da Task 6:** `npm test` **625/625 em 49 arquivos**, `tsc` limpo, `npm run build`
+passa. A base da rodada era 539.
 
 ✅ **A re-revisão da Task 5 voltou e fechou: Approved nos DOIS veredictos.** Somadas as duas
 passadas, **30 mutações medidas nesta task e 30 morrem** — inclusive as três que estavam vivas.
@@ -211,6 +209,38 @@ consertou lógica de aplicação. Quando o revisor rotula "plan-mandated", é li
   **ninguém consegue digitar `45`**, nem `100`. Ruling: **o piso do intervalo é `1`**; `passo` é
   granularidade da BARRA. **Simule o dedo dígito a dígito antes de cravar comportamento de
   campo** — nenhum teste desta suíte pega isso.
+- 🆕 **REQUISITO ENUNCIADO EM PROSA, SEM DONO NA TABELA DE MUTAÇÃO — o Important da Task 6
+  (2026-08-21), e é meu.** O brief dizia *"a linha some inteira se nada sobrar"* e não pôs isso
+  nem na lista de testes nem na tabela. **Medido: apagar a guarda `partes.length > 0 &&` deixava
+  a suíte 624/624 verde.** A regra que fica: **toda frase de comportamento escrita em prosa no
+  brief precisa de linha na tabela de mutação** — se não tem dono, não existe.
+- 🆕 **A ASSERÇÃO DE AUSÊNCIA DE TEXTO MASCARA O SUMIÇO DO ELEMENTO, e é a família do
+  `aria-label` sobre a `<legend>` com outra roupa.** `container.querySelector(".x")?.textContent
+  ?? ""` seguido de `not.toContain(...)` **passa nos dois mundos**: com o elemento presente e
+  vazio, e com ele ausente. O `?.` e o `?? ""` são a máscara. **Se o que se prova é que o
+  elemento não existe, a asserção é `toBeNull()`** — e o teste tem que cair **pelo motivo certo**
+  (na Task 6 a mensagem do vitest, `expected <span class="cartao-meta"></span> to be null`, foi
+  ela mesma a prova de que o seletor casava quando o elemento existia; um seletor digitado errado
+  teria passado em silêncio).
+- 🆕 **Teste de ausência sem o irmão de PRESENÇA é meia prova.** Todos os "não inventa" passam
+  com o componente inteiro apagado.
+- 🆕 **ESCOLHA DE FIXTURE LOAD-BEARING TEM QUE TER A RAZÃO ESCRITA AO LADO.** Na Task 6 foram
+  **três** no mesmo arquivo: `piso: "asfalto-esburacado"` em vez de `barro` (senão `rotuloPiso` é
+  inprovável), `extensaoKm: 4.25` em vez de `4` (senão o sufixo à mão é indistinguível da
+  função), e `valor: "R$ 5 por pessoa"` numa ficha **gratuita** (senão a checagem de
+  `tag === "pago"` não tem como ser provada — medido, a mutação sobrevivia 625/625). **Sem a
+  frase ao lado, o próximo leitor "limpa" o valor como ruído e a prova fica oca em silêncio.**
+- 🆕 **A COLISÃO ESTRUTURAL "só estes arquivos" × "não deixe comentário mentir", e a saída medida
+  (Task 6, 2026-08-21).** Toda task que remove o **último chamador** de um símbolo torna falsas,
+  **no mesmo instante**, frases que vivem fora do escopo dela — na Task 6 foram três comentários,
+  e nenhum estava num arquivo que a task podia tocar. **A saída NÃO é outro portão "volte
+  limpo"** (o meu, na Task 8, não fechava por duas razões: o termo era digitado de memória —
+  `duracao` não acha `formatarDuracao`, e `rg` é sensível a caixa — e porque **referência
+  histórica legítima deve sobreviver**). A forma que funciona está escrita no plano, na Task 8:
+  **termos copiados do diff, busca `-i`, e o passo produz CLASSIFICAÇÃO em três baldes** — (a)
+  frase que AFIRMA um consumidor desfeito → corrija a oração agora; (b) referência declarada como
+  HISTÓRIA → deixe; (c) CÓDIGO → a task não terminou, **e só este bloqueia**. Mais a cláusula de
+  permissão na linha `Files:`, senão o passo é ilegal pra quem o executa.
 
 ### 4b. 🔴 A OUTRA FAMÍLIA QUE APARECEU TRÊS VEZES NESTA SESSÃO: comentário que envelhece
 
@@ -265,7 +295,25 @@ existe pra Rampa do Pepê — não é ficção"*. Quatro arquivos a partir de um
 documento. **A Rampa entra só como `barro`, justificada pelo que a ficha diz; quem ensina a
 regra é um morro inventado e rotulado como tal.**
 
-### 5b. 🔴 O QUE A TASK 6 VAI ENCONTRAR — já pré-voado, não redescubra
+### 5c. 🟠 PERGUNTA NOVA PRO JOÃO, MEDIDA NA REVISÃO DA TASK 6 — a tela arredonda, o filtro compara cru
+
+`formatarExtensao(4.04)` mostra **"4 km de trilha"** e `passaNoFiltro(…, extensaoMaxKm: 4)`
+devolve **`false`**: o recorte "até 4 km" **esconde um cartão que a tela anuncia como 4 km**. É a
+forma exata do que o comentário de `filtros.ts:180-185` chama de *"a pior versão: some sem
+explicação"*, e o irmão do "km, uma fonte" da rodada passada — só que lá as duas telas discordavam
+entre si, e aqui **a tela discorda do filtro**.
+
+Na extensão a faixa é estreita (`(n, n+0,05]`, ~50 m, e com `EXT_PASSO_KM = 1` o teto é sempre
+inteiro). **Mas o gêmeo da DISTÂNCIA já está no ar com faixa muito maior:** `formatarDistancia`
+arredonda pra inteiro acima de 10 km → até **0,5 km** de desencontro. **Não é regressão desta
+rodada**; a Task 6 só deu o segundo exemplo.
+
+**Duas saídas, e é decisão dele:** ou o filtro compara **o valor arredondado como a tela mostra**
+(a pessoa filtra pelo número que está vendo), ou fica registrado que a divergência é aceita e por
+quê. **Não decidir é o pior dos três.** Está na pauta da revisão da branch inteira (plano,
+"Depois das oito", item 3).
+
+### 5b. 🔴 O QUE A TASK 6 ENCONTROU — confirmado, não redescubra
 
 - **`content/fichas/` tem UMA ficha** (`rampa-do-pepe.json`) e **ela não tem nenhum dos quatro
   campos** (`piso`, `extensaoKm`, `esforco`, `duracao`) — conferido em 2026-08-20. Por isso o
@@ -298,8 +346,8 @@ deixa o `tsc` vermelho no meio da rodada. **Não "limpe" os campos velhos cedo.*
    (Task 1).
 2. *"o filtro duração deveria ser distância — cada navegador tem seu ritmo"* → duração **morre**;
    entra tamanho da trilha em km, **só ida**. 🔶 **Meio feito:** o campo (`extensaoKm`), a pergunta
-   do questionário, o recorte em `filtros.ts` **e a tela** existem (Tasks 2, 3, 4 e 5); falta o
-   cartão (Task 6), a ficha (Task 7) e a morte da duração (Task 8).
+   do questionário, o recorte em `filtros.ts`, **a tela e o cartão** existem (Tasks 2, 3, 4, 5
+   e 6); falta a ficha (Task 7) e a morte da duração (Task 8).
 3. *"com a chegada do esforço, isso deve ser inserido dentro das trilhas"* → piso e extensão
    aparecem na ficha, junto ao Trajeto. ⬜ **Task 7.**
 4. *"o filtro quando selecionado não é possível deselecionar"* → **ele mesmo retirou** e trocou
@@ -308,8 +356,8 @@ deixa o `tsc` vermelho no meio da rodada. **Não "limpe" os campos velhos cedo.*
    e o chip que sobrou (piso) desliga no segundo toque, com teste.
 5. *"esforço podia ser — barro, paralelepípedo, asfalto esburacado, asfalto tapete"* → o
    `esforco` (leve/media/puxada, sobre o corpo) vira **piso da via** (sobre o lugar). 🔶 **Meio
-   feito:** o vocabulário (`src/lib/piso.ts`), o campo no schema, a pergunta, o recorte **e os
-   chips na tela** existem (Tasks 2, 3 e 5); falta o cartão (Task 6), a ficha (Task 7) e apagar o
+   feito:** o vocabulário (`src/lib/piso.ts`), o campo no schema, a pergunta, o recorte, os
+   chips na tela **e o cartão** existem (Tasks 2, 3, 5 e 6); falta a ficha (Task 7) e apagar o
    `esforco` (Task 8).
 
 **A descoberta que reorganizou tudo, e ela vale reler:** a lista dele é vocabulário de estrada, e
