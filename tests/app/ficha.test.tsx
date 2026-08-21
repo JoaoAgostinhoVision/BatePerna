@@ -230,6 +230,17 @@ describe("o piso e a extensão no bloco Trajeto", () => {
   // segurança nenhuma, e continuaria sem responder a única pergunta que
   // importa de verdade — como a linha fica no celular. Essa metade não tem
   // prova nesta camada, de propósito, e vai junto na conferência do iPhone.
+  //
+  // 🔴 O QUE O PAR COBRE, e o que ele deliberadamente NÃO cobre — os dois
+  // testes parecem a mesma prova e não são. Juntos, eles prendem o DOM à
+  // cadeia (o de posição) e a cadeia a existir (este). O que fica de fora é o
+  // rename CONSISTENTE, no JSX e no CSS juntos: ali nada observável muda — a
+  // estrutura é a mesma, a regra casa, a tela é idêntica —, então um teste que
+  // caísse aí estaria provando a ESCOLHA DO NOME, e nome de classe não é
+  // comportamento; travá-lo cobraria pedágio de toda renomeação futura sem
+  // comprar segurança. Não "complete" o par com uma asserção de nome de
+  // classe. Como a linha fica na tela segue sem prova nesta camada — vai no
+  // iPhone.
   it("a regra do .fatos existe no ficha.css, na mesma cadeia que o DOM monta", () => {
     const seletor = ".bp .wp-body .fatos";
     expect(
