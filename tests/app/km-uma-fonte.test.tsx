@@ -227,10 +227,22 @@ describe("uma trilha, UM km", () => {
  *  trilha e formatando cada uma do seu jeito — "4,3 km de trilha" no cartão e
  *  "4.25 km de trilha" na ficha é a mesma trilha com duas caras.
  *
- *  Cada teste faz DUAS asserções contra o literal e UMA cruzada, e elas pegam
- *  defeitos diferentes: o literal pega a VACUIDADE (as duas telas mostrando
- *  nada, com `null === null` passando feliz), o cruzamento pega a DIVERGÊNCIA
- *  (as duas mostrando, cada uma do seu jeito). Nenhuma sozinha pega as duas. */
+ *  Cada teste faz DUAS asserções contra o literal e UMA cruzada — e a verdade
+ *  medida sobre elas, que vale igual pro teste do km aqui em cima:
+ *
+ *  **Os dois literais já pegam tudo, e o cruzamento é redundante por
+ *  TRANSITIVIDADE.** Enquanto os dois lados forem asseridos contra a MESMA
+ *  constante, `daFicha === LITERAL ∧ doCartao === LITERAL ⟹ daFicha ===
+ *  doCartao`: não existe estado do mundo em que o cruzamento estoure e os dois
+ *  literais passem. Medido: sob a mutação que troca `formatarExtensao` por um
+ *  sufixo escrito à mão, quem estoura é o literal da ficha, não o cruzamento.
+ *  Nem "alguém atualiza a constante pra casar com a tela quebrada" o salva —
+ *  aí estoura o literal do OUTRO lado.
+ *
+ *  O cruzamento fica assim mesmo, porque custa nada e é rede pro dia em que um
+ *  dos literais sair ou em que os dois lados deixarem de compartilhar a
+ *  constante — que é justamente quando a transitividade acaba. O que ele NÃO é
+ *  é a asserção que pega a divergência hoje. */
 describe("uma trilha, UMA extensão e UM piso", () => {
   it("cartão e ficha mostram o MESMO texto de extensão", async () => {
     const { noCartao, naFicha } = await asDuasTelas();

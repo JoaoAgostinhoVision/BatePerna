@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, within } from "@testing-library/react";
 import { CHAVE_LOCAL } from "@/lib/local";
 import type { Ficha as TipoFicha } from "@/types/ficha";
+import { regraDe, semComentarios } from "../css";
 
 vi.mock("@/lib/carimbo-estado", async (real) => ({
   ...(await real<typeof import("@/lib/carimbo-estado")>()),
@@ -105,6 +106,22 @@ function blocoTrajeto(container: HTMLElement): HTMLElement {
   return bloco!;
 }
 
+/** 🔴 A âncora das asserções de posição é o `.wp-body`, e não o bloco inteiro,
+ *  porque é a MESMA cadeia que o CSS declara: `.bp .wp-body .fatos`
+ *  (`ficha.css`). Escopar pelo bloco é grosso demais — MEDIDO: com a linha
+ *  virando irmã do `.waypoint` (fora do `.wp-body`, ainda dentro do
+ *  `[data-bloco="trajeto"]`) a suíte fechava 631/631 verde e o seletor do CSS
+ *  deixava de casar, deixando a linha sem estilo nenhum na tela.
+ *
+ *  Isso não é aparência (essa metade continua sem prova, de propósito, e vai
+ *  no iPhone): é a precondição estrutural pra QUALQUER regra se aplicar, e o
+ *  jsdom responde isso com um `querySelector`. */
+function corpoDoWaypoint(container: HTMLElement): HTMLElement {
+  const corpo = blocoTrajeto(container).querySelector<HTMLElement>(".wp-body");
+  expect(corpo, "o .wp-body sumiu de dentro do bloco Trajeto").not.toBeNull();
+  return corpo!;
+}
+
 // Mesma trilha e mesmas coordenadas de tests/app/DistanciaDaqui.test.tsx —
 // content/fichas/rampa-do-pepe.json, waypoint (-7.907889, -36.019222). Um
 // grau de latitude ao norte ≈ 111 km, que é o que o teste abaixo espera ler.
@@ -153,17 +170,19 @@ describe("a ficha de verdade", () => {
 });
 
 describe("o piso e a extensão no bloco Trajeto", () => {
-  // A asserção é POSICIONAL (`within` no bloco), não de existência: um dado de
-  // estrada é uma coisa debaixo do 📍 Trajeto e outra debaixo do 🚗 Acesso ou
-  // do ⚠ Avisos. Movida a linha pro bloco vizinho, o texto continua na página
-  // e este teste tem que cair mesmo assim.
+  // A asserção é POSICIONAL (`within` no corpo do waypoint, que só existe
+  // dentro do bloco Trajeto), não de existência: um dado de estrada é uma
+  // coisa debaixo do 📍 Trajeto e outra debaixo do 🚗 Acesso ou do ⚠ Avisos.
+  // Movida a linha pro bloco vizinho, o texto continua na página e este teste
+  // tem que cair mesmo assim — e cai também se ela só escorregar pra fora do
+  // `.wp-body` (ver `corpoDoWaypoint`).
   //
   // E é a LINHA INTEIRA (`toBe`), não `toContain`: só assim ela prova de uma
   // vez a ordem (extensão · piso), o formato de cada um e a ausência de
   // separador solto.
   it("ficha com piso e extensão mostra os dois dentro do bloco Trajeto", async () => {
     const { container } = await abrir(COM_FATOS.slug);
-    const fatos = within(blocoTrajeto(container)).getByText(/km de trilha/);
+    const fatos = within(corpoDoWaypoint(container)).getByText(/km de trilha/);
     expect(fatos.textContent).toBe("4,3 km de trilha · asfalto esburacado");
   });
 
@@ -173,7 +192,9 @@ describe("o piso e a extensão no bloco Trajeto", () => {
   // (uma linha em branco no meio do bloco).
   it("ficha sem os dois não mostra linha vazia nem separador solto", async () => {
     const { container } = await abrir(SEM_FATOS.slug);
-    expect(container.querySelector(".fatos")).toBeNull();
+    // Escopado pelo bloco, como o teste da Rampa aqui embaixo — a pergunta é
+    // sobre o Trajeto, não sobre a página inteira.
+    expect(blocoTrajeto(container).querySelector(".fatos")).toBeNull();
     expect(container.textContent).not.toContain("undefined");
   });
 
@@ -181,7 +202,7 @@ describe("o piso e a extensão no bloco Trajeto", () => {
   // aparece com o que tem e sem o " · " pendurado.
   it("com só um dos dois, a linha mostra o que tem e nada mais", async () => {
     const { container } = await abrir(SO_PISO.slug);
-    const fatos = within(blocoTrajeto(container)).getByText(/asfalto/);
+    const fatos = within(corpoDoWaypoint(container)).getByText(/asfalto/);
     expect(fatos.textContent).toBe("asfalto esburacado");
   });
 
@@ -197,5 +218,23 @@ describe("o piso e a extensão no bloco Trajeto", () => {
     const { container } = await abrir("rampa-do-pepe");
     expect(container.querySelector("h1")?.textContent).toBe("Rampa do Pepê");
     expect(blocoTrajeto(container).querySelector(".fatos")).toBeNull();
+  });
+
+  // A OUTRA metade do par seletor↔DOM: o teste de posição acima prende o DOM
+  // debaixo da cadeia que o CSS declara; este prende a cadeia a existir. Sem
+  // ele, apagar a regra do `ficha.css` deixa a suíte verde e a linha perde
+  // estilo inteiro na tela.
+  //
+  // 🔴 Só a EXISTÊNCIA, nunca os valores. `font-size`/`color`/`margin-top`
+  // aqui são decoração: cravá-los num `toBe` compraria churn de design sem
+  // segurança nenhuma, e continuaria sem responder a única pergunta que
+  // importa de verdade — como a linha fica no celular. Essa metade não tem
+  // prova nesta camada, de propósito, e vai junto na conferência do iPhone.
+  it("a regra do .fatos existe no ficha.css, na mesma cadeia que o DOM monta", () => {
+    const seletor = ".bp .wp-body .fatos";
+    expect(
+      regraDe(semComentarios("ficha.css"), seletor),
+      `faltou a regra ${seletor} no ficha.css`,
+    ).not.toBeNull();
   });
 });
