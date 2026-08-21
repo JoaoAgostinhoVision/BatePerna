@@ -39,7 +39,7 @@ type Props = {
 
 /** O contrato da leitura do campo, escrito uma vez:
  *
- *      não-finito → null
+ *      não-finito → null            |  "" → null (cai no `i < 1`, ver abaixo)
  *      i = Math.trunc(Number(txt))   |  i < 1 → null  |  i > max → max  |  senão i
  *
  *  O vazio cai no `i < 1` sozinho, e por isso não tem guarda próprio: MEDIDO em
@@ -113,10 +113,11 @@ export default function FaixaKm({ rotulo, valor, max, passo, onChange }: Props) 
         step={passo}
         value={valor === null ? qualquer : valor}
         aria-label={`${rotulo}: arrastar`}
+        // Sem o `aria-valuetext`, quem ouve a tela ouve o NÚMERO da parada
+        // extra na posição que quer dizer "qualquer" — `passo` km acima do
+        // teto, que na distância são 105 contra 100 —, e é justamente essa a
+        // mentira que a parada extra existe pra evitar.
         aria-valuetext={leitura}
-        // Sem isto, quem ouve a tela ouve o número da parada extra na posição
-        // que quer dizer "qualquer" — e ouve um km a mais que o teto, que é
-        // justamente a mentira que a parada extra existe pra evitar.
         onChange={(e) => {
           const n = Number(e.target.value);
           onChange(n > max ? null : n);

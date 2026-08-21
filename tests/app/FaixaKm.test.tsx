@@ -72,8 +72,11 @@ describe("a anatomia que a Task 5 vai consumir", () => {
     expect(g.getAttribute("aria-label")).toBeNull();
   });
 
-  // É ele que decide qual teclado o iPhone abre. Sem ele vem o teclado de
-  // texto inteiro, com letras, pra um campo que só aceita número.
+  // O que se SABE: `type="number"` já abre teclado numérico, mas com
+  // pontuação; `inputMode="numeric"` pede o de dígitos, que é o alvo maior pra
+  // quem digita km no portão. **Qual teclado o iPhone abre de fato é pergunta
+  // de aparelho, e esta suíte não responde** — ela prova só que o atributo está
+  // na tela. Está na lista do iPhone junto com o resto (ver o ⚠️ do home.css).
   it("o campo pede o teclado numérico do aparelho", () => {
     monta();
     expect(campo().getAttribute("inputmode")).toBe("numeric");
