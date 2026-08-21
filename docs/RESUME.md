@@ -7,18 +7,23 @@
 **Última parada:** 2026-08-21. **RODADA ABERTA.**
 Branch **`review-do-celular`**, NÃO mergeada, NÃO deployada. `main` segue em `f10f075`.
 
-✅ **Tasks 1 a 6 fechadas, cada uma com implementador → revisão com dois veredictos → fix round →
+✅ **Tasks 1 a 7 fechadas, cada uma com implementador → revisão com dois veredictos → fix round →
 re-revisão escopada. NÃO EXISTE WIP:** a árvore está limpa e todo commit no log é trabalho
 revisado. Você não precisa julgar código não revisado.
 
 🔴 **As OITO tasks têm pré-voo escrito no plano versionado** (antes só a 2, 3 e 4 tinham).
 Procure os blocos de citação 🔴 "EMENDA DO PRÉ-VOO" — eles corrigem o texto ao redor e vencem
-onde discordarem. **Restam as Tasks 7 e 8, e as duas já estão pré-voadas DUAS vezes** (há
-"SEGUNDA EMENDA DO PRÉ-VOO" na 6, na 7 e na 8, escrita em 2026-08-21).
+onde discordarem. **Resta a Task 8, e ela está pré-voada duas vezes** mais as lições das Tasks 6
+e 7; o brief dela já está escrito em `.superpowers/sdd/.../task-8-brief.md`.
+
+🔴 **Depois da Task 8 vem a REVISÃO DA BRANCH INTEIRA, e ela não é opcional** — 7ª rodada seguida
+em que é obrigatória. Nas três últimas o achado foi de **JUNÇÃO**, invisível pra revisão de task.
+A pauta desta vez está no plano ("Depois das oito", item 3), e inclui a decisão do João sobre o
+arredondamento (§5c aqui embaixo).
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA" — retome a rodada `review-do-celular` na Task 7
+# ▶▶ SE O JOÃO DISSER "CONTINUA" — retome a rodada `review-do-celular` na Task 8
 
 **O review do celular já aconteceu, já foi triado e já virou spec + plano aprovados.** Não
 pergunte o que ele achou; não peça a lista de novo; não devolva menu.
@@ -28,7 +33,7 @@ pergunte o que ele achou; não peça a lista de novo; não devolva menu.
 ```
 git branch --show-current  → review-do-celular   (se estiver em main, só trocar)
 git status --short         → limpo
-npm test                   → 625/625 em 49 arquivos   ← tudo verde, NÃO há falha esperada
+npm test                   → 632/632 em 49 arquivos   ← tudo verde, NÃO há falha esperada
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
@@ -62,10 +67,10 @@ Task 2, 3 e 4 estão no plano; as das Tasks 5 a 8 ainda não foram feitas.
 | 4 — `FaixaKm`: a barra e o campo | **completa**, 1 fix round (9 achados), re-revisão **PROVA Approved** + 1 conserto meu de comentário | `41ee448`, `0ddf131`, `2250e7c` |
 | 5 — o painel: duas faixas e os chips de piso | **completa**, 1 fix round (3 achados), re-revisão **Approved nos DOIS veredictos** | `3dc3957`, `941365b` |
 | 6 — o cartão | **completa**, 1 fix round (1 Important + 3 Minor) + 1 conserto de 1 linha, re-revisão **Approved nos DOIS veredictos** | `b03b985`, `627e8e0`, `eb9daab` |
-| **7 — a ficha** | ⬅️ **É AQUI QUE VOCÊ COMEÇA.** Brief escrito e pré-voado duas vezes. | — |
-| 8 | não começada, **pré-voada duas vezes no plano** | — |
+| 7 — a ficha: piso e extensão no Trajeto | **completa**, 1 fix round (1 Important + 2 Minor) + 1 oração, re-revisão **Approved nos DOIS veredictos, sem achado novo** | `75ef513`, `f8455ba`, `80e6834` |
+| **8 — A CONTRAÇÃO** | ⬅️ **É AQUI QUE VOCÊ COMEÇA.** Brief escrito, pré-voado duas vezes + as lições das Tasks 6 e 7. | — |
 
-**Chão depois da Task 6:** `npm test` **625/625 em 49 arquivos**, `tsc` limpo, `npm run build`
+**Chão depois da Task 7:** `npm test` **632/632 em 49 arquivos**, `tsc` limpo, `npm run build`
 passa. A base da rodada era 539.
 
 ✅ **A re-revisão da Task 5 voltou e fechou: Approved nos DOIS veredictos.** Somadas as duas
@@ -241,6 +246,45 @@ consertou lógica de aplicação. Quando o revisor rotula "plan-mandated", é li
   frase que AFIRMA um consumidor desfeito → corrija a oração agora; (b) referência declarada como
   HISTÓRIA → deixe; (c) CÓDIGO → a task não terminou, **e só este bloqueia**. Mais a cláusula de
   permissão na linha `Files:`, senão o passo é ilegal pra quem o executa.
+- 🆕 **ORTOGONALIDADE SE MEDE, NÃO SE SUPÕE PELA FORMA — e o erro foi meu, na Task 7
+  (2026-08-21).** Eu escrevi no plano que, num teste de junção, *"cada asserção pega um defeito:
+  o cruzamento pega a DIVERGÊNCIA, o literal pega a VACUIDADE"*. **Falso, e por transitividade,
+  não por amostragem:** enquanto os dois lados forem asseridos contra a **mesma constante**,
+  `A === L ∧ B === L ⟹ A === B`. **Não existe estado do mundo em que o cruzamento falhe e os dois
+  literais passem** — logo não existe mutação que só ele pegue, nem hoje nem depois. Medido: sob
+  a mutação da formatação à mão, quem estoura é sempre o literal do lado que quebrou; e no
+  cenário "alguém atualiza a constante pra casar com a tela quebrada", estoura o literal do
+  **outro** lado (essa segunda foi medida com mutação DUPLA, de propósito, porque era a única
+  frase do conserto ainda não medida). **O cruzamento fica** — é rede pro dia em que um literal
+  sair ou as constantes divergirem — **mas escrito como REDUNDÂNCIA.** A régua geral: *existe
+  mutação que derruba A e não B, nos dois sentidos?* Se não existe, uma é redundante. Eu já
+  escrevi essa mesma frase CERTA uma vez (o par valor-literal × relação-simbólica) e errada
+  agora — o que muda é ter medido.
+- 🆕 **DECLARAR BURACO É CERTO; ENTERRAR JUNTO A METADE PROVÁVEL, NÃO.** Na Task 7 o
+  implementador declarou *"a CSS não tem dono, o jsdom não mede aparência"* — e estava **meio**
+  certo. São duas perguntas: *fica bonito?* (não mede — declarar foi correto, e cravar
+  `font-size` num `toBe` compraria churn de design por nenhuma segurança) e ***o seletor casa?***
+  (mede perfeitamente, com um `querySelector`). **Antes de declarar buraco, separe o que a camada
+  não pode medir do que ela pode.**
+- 🆕 **O DOM ESCORREGANDO DE BAIXO DO PRÓPRIO SELETOR — forma nova, e passava verde.** Medido:
+  mover a linha pra **fora do `.wp-body`** mantendo-a **dentro** do bloco endereçável deixava
+  632 testes verdes, e nessa posição a cadeia que o CSS declara (`.bp .wp-body .fatos`) **deixa
+  de casar** — a linha perde estilo inteiro em silêncio. A asserção posicional escopava pelo
+  bloco, que é grosso demais. **Escope a asserção pela MESMA cadeia que o CSS usa**, não por um
+  ancestral qualquer. E o fecho honesto do outro lado é **existência do seletor** (`regraDe(...)`
+  `.not.toBeNull()`), **nunca valor** — a régua `tests/css.ts` já existe neste repo pra isso.
+- 🆕 **Mutação que derruba a suíte por EXCEÇÃO não prova o requisito.** Achado do implementador
+  da Task 7, em cima do meu brief: com a linha do piso e a da extensão como elementos separados,
+  tirar o guarda `ficha.piso &&` faria `rotuloPiso(undefined)` **estourar** — e "quebrou" não é o
+  mesmo que "não mostrou linha vazia". Ele resolveu com lista única + guarda único (o desenho do
+  cartão), e aí a remoção do guarda falha **por asserção**, com a mensagem exata do defeito.
+  **Ao desenhar a mutação, pergunte se ela falha pelo motivo que você quer provar.**
+- 🆕 **O limite conhecido vale escrito AO LADO da prova.** O par de testes de CSS da Task 7
+  *"parece a mesma prova e não é"* (um prende o DOM à cadeia, o outro prende a cadeia a existir).
+  Sem uma oração dizendo o que o par deliberadamente **não** cobre — o rename consistente em JSX
+  **e** CSS, que é refatoração e não defeito — o próximo leitor ou confia demais, ou "completa" a
+  prova com asserção de **nome de classe**, que não deveria existir: nome de classe não é
+  comportamento, e travá-lo cobra pedágio de toda renomeação sem comprar segurança.
 
 ### 4b. 🔴 A OUTRA FAMÍLIA QUE APARECEU TRÊS VEZES NESTA SESSÃO: comentário que envelhece
 
@@ -349,7 +393,10 @@ deixa o `tsc` vermelho no meio da rodada. **Não "limpe" os campos velhos cedo.*
    do questionário, o recorte em `filtros.ts`, **a tela e o cartão** existem (Tasks 2, 3, 4, 5
    e 6); falta a ficha (Task 7) e a morte da duração (Task 8).
 3. *"com a chegada do esforço, isso deve ser inserido dentro das trilhas"* → piso e extensão
-   aparecem na ficha, junto ao Trajeto. ⬜ **Task 7.**
+   aparecem na ficha, junto ao Trajeto. ✅ **FEITO** (Task 7) — dentro do bloco 📍 Trajeto, no
+   `.wp-body`, com a mesma função de formatação e a mesma ordem do cartão. 🟠 **Nunca visto em
+   tela nenhuma:** a prova de aparência não existe e está declarada como inexistente (o jsdom não
+   mede) — vai na fila do iPhone.
 4. *"o filtro quando selecionado não é possível deselecionar"* → **ele mesmo retirou** e trocou
    por *"melhor o usuário conseguir digitar ou mover uma barra"*. Os dois recortes numéricos
    viram **barra + campo**; o problema do chip morre por construção. ✅ **FEITO** (Tasks 4 e 5) —
