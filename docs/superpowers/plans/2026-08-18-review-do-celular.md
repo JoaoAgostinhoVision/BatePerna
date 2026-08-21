@@ -431,10 +431,20 @@ campo depois**, não só o argumento do `onChange`.
 > Cravando `"45"` o teste passa **também** na versão que puxa o `4` pra `5` — ele sobrescreveria o
 > pulo com a string certa. É a mutação inversa: escreva a asserção onde as duas versões DIFEREM.
 >
-> **3. A barra não tem prova de `min` nem de `step`, e sem `step={passo}` ela produz 101…104.**
-> O `step` cai pro padrão `1`, a barra passa a oferecer valores **acima do `max`**, e o
-> `lerFiltros` (`v <= max`) os joga fora na abertura seguinte: **o filtro se desligando sozinho
-> entre duas aberturas**, exatamente o que a emenda 1 existe pra impedir. Teste:
+> **3. A barra não tem prova de `min` nem de `step`.**
+>
+> > 🔴 **CORRIGIDO NA NASCENTE (revisão da Task 4, achado I-3) — a justificativa que estava aqui
+> > era FALSA, e foi medida.** Este item dizia que sem `step` a barra oferece 101…104 e *"o
+> > `lerFiltros` os joga fora na abertura seguinte: o filtro se desligando sozinho"*. **Não
+> > acontece:** o próprio componente faz `n > max ? null : n` antes de qualquer coisa sair dele —
+> > com `step={1}` o revisor pediu 101 à barra e o que subiu foi `null`. **Nenhum valor acima do
+> > `max` escapa, com ou sem `step`.** Era comentário meu afirmando proteção que ninguém rodou, e
+> > daqui ele foi parar em dois arquivos. A razão verdadeira do `step` é **o desenho**: sem ele as
+> > posições 101–104 viram ~4px de zona morta que querem dizer "qualquer", e a barra de distância
+> > vira granular de 1 km num trilho onde cada pixel vale meio quilômetro. É UX, não honestidade —
+> > e vale a linha do mesmo jeito, só não vale a frase que estava escrita.
+>
+> Teste:
 > `it("a barra vai de passo até max+passo, de passo em passo")` lendo os três atributos.
 > ⚠️ É asserção de **RELAÇÃO**, e está certo que seja: as props vêm das constantes do próprio
 > teste. Os quatro números literais já estão presos em `tests/lib/filtros.test.ts`, e quem prova
@@ -453,9 +463,32 @@ campo depois**, não só o argumento do `onChange`.
 > custo de truncar é o ponto sumir enquanto se digita, e decimal de km aqui não serve pra nada.)
 >
 > **6. Valor fora do passo não pode ser arredondado pra desenhar a barra.** Um
-> `Math.round(v / passo) * passo` na posição da barra deixa a **barra em 5 e o campo em 4** — dois
-> números pra uma verdade só, a assinatura de defeito deste app. `it("com valor 4, a barra mostra
-> 4 e o campo mostra 4")`.
+> `Math.round(v / passo) * passo` na posição da barra deixa a barra e o campo em números
+> diferentes — a assinatura de defeito deste app.
+>
+> > 🔴 **CORRIGIDO NA NASCENTE (Task 4) — o valor é `7`, não `4`, e o `4` era prova OCA.** Eu
+> > tinha cravado `it("com valor 4, a barra mostra 4 e o campo mostra 4")`. **Medido no jsdom com
+> > `input[type=range]` cru:** com `min="5"`, o valor `4` é preso em `"5"` pelo próprio elemento —
+> > então a versão certa e a arredondada mostram **as duas** `"5"`, e a asserção não separa nada.
+> > Com `7` elas se separam (7 contra 5). É a lição (b) do RESUME, e o item vinha ainda por cima
+> > **contradizendo o item 3 desta mesma emenda** (`min={passo}` torna "a barra mostra 4"
+> > impossível de cumprir). **`it("com valor 7 — fora do passo — a barra mostra 7 e o campo
+> > mostra 7")`.**
+> >
+> > **O custo aceito, escrito pra ninguém re-litigar:** com corte abaixo do passo (4 km na
+> > distância, passo 5) o pegador fica na primeira parada enquanto o campo diz `4` e a leitura diz
+> > `até 4 km`. **Aceito**: só o controle grosso discorda, os dois portadores de TEXTO dizem a
+> > verdade, a zona é 1–4 km e só na faixa de distância (na de tamanho, `passo=1`, não existe), e
+> > as três saídas são piores — `min={1}` com `step={passo}` põe a parada "qualquer" fora da grade
+> > e mata o arrasto até ela; `min={1}` com `step={1}` faz cada pixel valer meio quilômetro; `min`
+> > dinâmico move a grade debaixo do dedo.
+>
+> **7'. Faltavam as duas fronteiras que separam as versões — achados I-1 e I-2 da revisão, os dois
+> medidos com a suíte inteira verde.** `it("arrastar até a última parada de km REAL (o `max`)
+> devolve o número, não null")` — sem ele, `n > max` virando `n >= max` faz o topo do controle se
+> desligar na cara de quem acabou de escolhê-lo. E `it("digitar 1 devolve 1")` — sem ele,
+> `i < 1` virando `i <= 1` faz **todo número que começa por `1` ficar indigitável** (`1`, `10`,
+> `100`), que é o "campo indigitável" da emenda 1 de volta com um `=` de diferença.
 >
 > **7. O `font-size: 16px` do campo, e o precedente já foi MEDIDO neste repo.** Abaixo de 16px o
 > Safari do iPhone dá zoom sozinho ao focar e a tela salta — é por isso que `.bp .busca-campo` tem
