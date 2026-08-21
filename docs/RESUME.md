@@ -63,12 +63,20 @@ Task 2, 3 e 4 estão no plano; as das Tasks 5 a 8 ainda não foram feitas.
 | 2 — `piso.ts` + schema + questionário | **completa**, 3 fix rounds, re-revisão **ADDRESSED** nos 6 achados | `ad88d20` (WIP), `9b03f43`, `cb97792`, `0445f50`, `bdb4497` |
 | 3 — recortes novos em `filtros.ts` | **completa**, 1 fix round + 1 conserto meu, re-revisão **ADDRESSED** nos 4 | `066cb08`, `c4161b4`, `e0d1442` |
 | 4 — `FaixaKm`: a barra e o campo | **completa**, 1 fix round (9 achados), re-revisão **PROVA Approved** + 1 conserto meu de comentário | `41ee448`, `0ddf131`, `2250e7c` |
-| 5 — o painel: duas faixas e os chips de piso | **completa**, 1 fix round (3 achados), re-revisão escopada | `3dc3957`, `941365b` |
+| 5 — o painel: duas faixas e os chips de piso | **completa**, 1 fix round (3 achados) — ⚠️ ver a nota abaixo sobre a re-revisão | `3dc3957`, `941365b` |
 | **6 — o cartão** | ⬅️ **É AQUI QUE VOCÊ COMEÇA.** Nunca despachada. | — |
 | 7 e 8 | não começadas, **as duas com pré-voo escrito no plano** | — |
 
 **Chão depois da Task 5:** `npm test` **622/622 em 49 arquivos**, `tsc` limpo, `npm run build`
-passa. A base da rodada era 539.
+passa — **os três conferidos por mim**, não relatados por agente. A base da rodada era 539.
+
+⚠️ **A re-revisão escopada do fix round da Task 5 foi despachada e a sessão acabou antes de ela
+voltar.** O que se sabe: o implementador **re-rodou as 12 mutações** (as 3 novas + as 9 antigas,
+porque o arquivo de teste mudou) e todas morderam; os três achados (T5-1, T5-3, T5-4) foram
+endereçados com teste, não com afrouxamento. **O código está commitado e a árvore limpa** — não
+há WIP. Se você quiser o carimbo formal antes de seguir, o barato é despachar uma re-revisão
+escopada do `941365b` (contra `3dc3957`) e só então abrir a Task 6; se preferir seguir, a
+**revisão da branch inteira no fim pega o que sobrar** — ela é obrigatória de qualquer jeito.
 
 ### 3a. 🔴 O QUE AS TASKS 4 E 5 DEIXARAM DECIDIDO
 
