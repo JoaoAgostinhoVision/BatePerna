@@ -829,7 +829,11 @@ it("a Rampa real continua abrindo", ...)
 ## Task 8 — A CONTRAÇÃO: apagar o que ninguém mais lê
 
 **Files:** Modify `src/types/ficha.ts`, `src/lib/filtros.ts`, `src/lib/ficha.ts`;
-Delete `src/lib/duracao.ts`; Test: apagar `tests/lib/duracao.test.ts` e o que restar
+Delete `src/lib/duracao.ts`; Test: `tests/lib/ficha.test.ts`, `tests/lib/filtros.test.ts` e o que
+restar (🔴 **não** `tests/lib/duracao.test.ts` — ele não existe; ver a emenda, item 10)
+— **mais qualquer arquivo cujo comentário nomeie um consumidor que esta task remove: só a
+oração, nunca lógica.** Se o conserto pedir mais que uma oração, pare e devolva pro orquestrador.
+(É a varredura dos três baldes, na emenda abaixo.)
 
 ### O que muda
 
@@ -904,6 +908,44 @@ it("contarLigados agora conta 5 recortes, todos ligados", ...)
 > que não existe mais.** É a família "comentário que envelhece", que esta rodada já pagou três
 > vezes. Reescreva-os na mesma task (o argumento continua válido — é sobre `node:fs` no bundle do
 > cliente — só o exemplo é que morreu; `geo.ts` e `piso.ts` são exemplos vivos do mesmo motivo).
+
+> 🔴 **A VARREDURA DOS TRÊS BALDES — substitui o portão `rg` desta task, que não fecha.**
+> *(Nasceu na Task 6, em 2026-08-21: o implementador nomeou a colisão, o revisor deu a forma.)*
+>
+> **A colisão, e ela é estrutural:** toda task que remove o **último chamador** de um símbolo
+> torna falsas, no mesmo instante, frases que vivem **fora do escopo de arquivos dela**. O limite
+> *"só estes arquivos"* e a regra *"não deixe comentário mentir"* não se conciliam por boa
+> vontade — o implementador tem que escolher qual desobedecer. Medido na Task 6: **três
+> comentários mentiram, e nenhum estava num arquivo que a task podia tocar.**
+>
+> **Por que o portão "volte limpo" é a resposta errada,** e são duas razões distintas:
+> 1. **o termo era digitado de memória** (`duracao` não acha `formatarDuracao`; `rg` é sensível a
+>    caixa) → **os termos se COPIAM do diff**, não se digitam: os identificadores exatos removidos
+>    (`formatarDuracao`, `esforco`, `duracaoMax`, `Esforco`) mais o **caminho** de todo arquivo
+>    deletado (`lib/duracao`), e a busca é `-i`;
+> 2. **"zero acertos" é alvo impossível E errado** — referência histórica legítima *deve*
+>    sobreviver → **o passo produz uma CLASSIFICAÇÃO, não um zero.**
+>
+> **Cada acerto cai em exatamente um balde, e só um bloqueia:**
+>
+> | Balde | O que é | O que fazer |
+> |---|---|---|
+> | **(a)** | frase que **AFIRMA** um consumidor ou estado que a task acabou de desfazer — *"o `CartaoTrilha` importa DAQUI"*, *"a Rampa **tem** `piso` = `barro`"* | **corrija agora, só a oração**, e cite no corpo do commit |
+> | **(b)** | referência declarada como **HISTÓRIA** — *"foi essa regra que já exilou o `formatarDuracao` pra `duracao.ts`"* | **deixe, não toque.** Continua verdadeira depois da deleção, desde que não afirme o presente |
+> | **(c)** | **CÓDIGO** — import, chamada, tipo | **a task não terminou.** Só este bloqueia |
+>
+> **E a permissão tem que estar no brief, senão o passo é ilegal.** A linha `**Files:**` de toda
+> task que apaga consumidor ganha: *"…mais qualquer arquivo cujo comentário nomeie um consumidor
+> que esta task remove — **só a oração, nunca lógica**; se o conserto pedir mais que uma oração,
+> pare e devolva pro orquestrador."*
+>
+> **A rede fica na revisão**, que é barata e tem a árvore inteira à vista: uma linha no checklist
+> do revisor — *rode a busca pelos identificadores removidos e classifique nos três baldes*. Foi
+> assim que os três da Task 6 apareceram.
+>
+> 🔴 **Aplicado a ESTA task, de saída:** deletar `duracao.ts` vai gerar **(b)** em `geo.ts:74` e
+> `piso.ts:21-22` (história — ficam) e **(a)** no cabeçalho do próprio `src/lib/ficha.ts` (some
+> junto com o re-export).
 
 **A verificação desta task é o `npm run build`**, não o vitest: apagar um módulo reexportado é
 exatamente o tipo de coisa que a suíte não vê (lição 9).
