@@ -4,46 +4,83 @@
 > `.superpowers/sdd/2026-08-18-review-do-celular/progress.md`, que é **scratch git-ignorado** —
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-21. **RODADA ABERTA.**
-Branch **`review-do-celular`**, NÃO mergeada, NÃO deployada. `main` segue em `f10f075`.
+**Última parada:** 2026-08-21. ✅ **RODADA FECHADA, MERGEADA E NO AR.**
+`main` em **`5bfe76e`** (merge `--no-ff` de `review-do-celular`). **662/662 em 49 arquivos**,
+`tsc` limpo, `npm run build` passa — **os três conferidos por mim em `main` DEPOIS do merge**, não
+relatados por agente. Deploy `● Ready · Production`, e os **seis marcadores conferidos por `curl`**
+em produção (ver §D).
 
-✅ **AS OITO TASKS ESTÃO FECHADAS**, cada uma com implementador → revisão com dois veredictos →
-fix round → re-revisão escopada. **NÃO EXISTE WIP:** a árvore está limpa e todo commit no log é
-trabalho revisado. Você não precisa julgar código não revisado.
+✅ **AS OITO TASKS FECHARAM**, cada uma com implementador → revisão com dois veredictos → fix
+round → re-revisão escopada. Mais a **revisão da branch inteira**, que achou **1 Critical, 2
+Important e 2 Minor** — e o Critical era de **JUNÇÃO**, invisível pra revisão de task. **Sétima
+rodada seguida em que ela paga.**
 
-🔴 **O placar de método desta rodada, e ele é o mesmo há três sessões: NENHUM fix round consertou
-lógica de aplicação.** O código dos implementadores chegou certo **oito vezes em oito**. Todos os
-achados foram de **PROVA** e de **COMENTÁRIO** — e vários foram deles em cima de MIM.
-
-🔴 **As OITO tasks têm pré-voo escrito no plano versionado** (antes só a 2, 3 e 4 tinham).
-Procure os blocos de citação 🔴 "EMENDA DO PRÉ-VOO" — eles corrigem o texto ao redor e vencem
-onde discordarem. **Resta a Task 8, e ela está pré-voada duas vezes** mais as lições das Tasks 6
-e 7; o brief dela já está escrito em `.superpowers/sdd/.../task-8-brief.md`.
-
-🔴 **Depois da Task 8 vem a REVISÃO DA BRANCH INTEIRA, e ela não é opcional** — 7ª rodada seguida
-em que é obrigatória. Nas três últimas o achado foi de **JUNÇÃO**, invisível pra revisão de task.
-A pauta desta vez está no plano ("Depois das oito", item 3), e inclui a decisão do João sobre o
-arredondamento (§5c aqui embaixo).
+🔴 **O placar de método, o mesmo há três sessões: NENHUM fix round consertou lógica de
+aplicação.** O código dos implementadores chegou certo **oito vezes em oito**. Todos os achados
+foram de **PROVA** e de **COMENTÁRIO** — e vários foram **deles em cima de MIM**, inclusive uma
+frase falsa que eu tinha acabado de escrever neste arquivo.
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA" — as 8 tasks acabaram; retome na REVISÃO DA BRANCH INTEIRA
+# ▶▶ SE O JOÃO DISSER "CONTINUA" — a rodada acabou. Comece pelo §P (o que sobrou pra ele)
 
-**O review do celular já aconteceu, já foi triado e já virou spec + plano aprovados.** Não
-pergunte o que ele achou; não peça a lista de novo; não devolva menu.
+**Não devolva menu. Não pergunte "o que faltou" — ele já respondeu, e a resposta virou esta
+rodada inteira, que está no ar.**
 
 ### 1. Confira o chão em silêncio
 
 ```
-git branch --show-current  → review-do-celular   (se estiver em main, só trocar)
+git branch --show-current  → main
 git status --short         → limpo
-npm test                   → 613/613 em 49 arquivos   ← tudo verde, NÃO há falha esperada
+npm test                   → 662/662 em 49 arquivos   ← tudo verde, NÃO há falha esperada
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
 
-**Os três foram conferidos por mim no fim da sessão, não relatados por agente.** Se a suíte
-estiver diferente disso, alguma coisa mudou e vale descobrir o quê antes de seguir.
+**Os três foram conferidos por mim em `main` depois do merge**, não relatados por agente. Se a
+suíte estiver diferente disso, alguma coisa mudou e vale descobrir o quê antes de seguir.
+
+### §P — O QUE SOBROU, e as três primeiras são SÓ DELE
+
+1. 🟠 **O iPHONE.** Nada desta rodada foi visto em WebKit. O que só ele responde: a barra de km
+   **arrasta com o polegar**? o campo numérico abre o **teclado certo** e não empurra a tela? o
+   painel com **duas** faixas (cada uma provavelmente quebrando em 2 linhas a ~360px) deixa o
+   grupo "Custo" longe da dobra? e o balão do GPS aparece antes ou depois da home pintar?
+2. 🟠 **`docs/questionario-ficha.md` está PRONTO pra ele responder** — e agora vale mais do que
+   nunca: **com uma ficha só, sem `piso` e sem `extensaoKm`, os filtros novos aparecem e não
+   filtram nada.** A 2ª ficha é o que acende a rodada inteira.
+3. 🟠 **Falta um *"de onde eu estou"* no painel de busca** (achado na revisão da branch, e é
+   **pré-existente — já está no ar hoje**): quem escolhe uma cidade à mão fica sem caminho de
+   volta pro GPS. O conserto mínimo é um primeiro item no painel chamando `pedirGps` quando
+   `gps !== "negado"`. **Ninguém inventou essa tela — é decisão dele.**
+4. 🟠 **Dívida técnica registrada, não bloqueio:** **11 provas de fonte** ainda leem o arquivo
+   **cru** e estão sãs **por acidente** — ver a lição da "prova de fonte que lê o comentário" no
+   §4. Os dois helpers já existem. É trabalho de minutos.
+
+### §D — O DEPLOY, e 🔴 O COMANDO DO REGISTRO ESTAVA INCOMPLETO
+
+🔴 **`npx --yes vercel@latest --prod --yes` FALHA com `Not authorized`.** Descoberto em
+2026-08-21. **Não é sessão expirada** — `npx vercel whoami` responde
+`joaoricardoagostinho285-1392` normalmente. **O projeto vive num TIME** (`.vercel/project.json`
+tem `orgId: team_anCtRLJUFJs5xrs9X57lYltw`), e sem `--scope` a CLI mira a **conta pessoal**. O
+comando certo é:
+
+```bash
+npx --yes vercel@latest --prod --yes --scope bate-perna
+npx --yes vercel@latest ls --scope bate-perna     # a linha de cima tem que ser ● Ready · Production
+```
+
+**Conferência em produção (os seis passaram em 2026-08-21):**
+
+```bash
+H=https://bateperna.vercel.app
+curl -s $H/rampa-do-pepe | grep -c 'data-bloco="trajeto"'   # 1  — a Task 7 no ar
+curl -s $H/rampa-do-pepe | grep -c 'class="fatos"'          # 0  — a Rampa não tem os campos: honesto
+curl -s $H/ | grep -c 'km em linha reta'                    # 0  — 1º render sem localização, SEMPRE
+curl -s $H/ | grep -c 'FILTRAR'                             # 1
+# e nos chunks: 0 de /puxada|duracaoMax|1h30|formatarDuracao/ (a CONTRAÇÃO chegou ao bundle,
+# que é o que o vitest não vê) e >=1 de /asfalto-esburacado/ (o vocabulário novo chegou).
+```
 
 ### 2. Leia, nesta ordem
 
