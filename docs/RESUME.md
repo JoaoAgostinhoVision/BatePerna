@@ -313,6 +313,33 @@ consertou lógica de aplicação. Quando o revisor rotula "plan-mandated", é li
   de FONTE se justifica quando a diferença que ela pega tem consequência observável; sem
   consequência atrás, ela vira prova de ARRUMAÇÃO** — a mesma família do rename consistente que a
   Task 7 aceitou deixar invisível.
+- 🆕 🔴 **A PROVA DE FONTE QUE LÊ O COMENTÁRIO — e a armadilha nasce JUNTO com a boa prática que
+  este projeto prega (2026-08-21).** Achada pelo implementador **dentro do próprio teste que ele
+  estava escrevendo**, e só porque ele mediu: a asserção lia o arquivo **cru**, ele apagou a
+  chamada da função pra ver o teste cair, e ele **passou verde** — porque o **comentário** logo
+  acima citava `kmNaTelaExtensao(undefined)` pra registrar uma medição, e o regex casou o
+  comentário.
+  > **Prova de fonte que lê comentário mostra que alguém ESCREVEU o nome, não que o código o
+  > CHAMA.**
+
+  **Por que isto é pior do que parece:** asserção de fonte é o instrumento que esta rodada usou
+  **seis vezes**, e a regra da casa manda **escrever a medição num comentário ao lado da prova**.
+  As duas boas práticas se atropelam — *"o comentário que fura nasce junto com a medição que ele
+  registra"*. **O remédio:** tirar comentários antes da busca, **com asserção conferindo que a
+  tira não comeu o código** (senão o remédio vira o próximo furo).
+
+  **A auditoria do repo inteiro (27 provas) deu 1 furada — a que já foi consertada.** Mas o
+  revisor mediu que a tira é **load-bearing nos dois sentidos**: `filtros.ts:223` tem um
+  `Math.round(NaN)/10` **dentro de um comentário**, e a asserção irmã é de **AUSÊNCIA**
+  (`not.toMatch(/Math\.round\(/)`) — lendo o arquivo cru ela **falharia hoje, com o código
+  certo**. Presença fica furada, ausência fica falso-positiva.
+
+  🟠 **DÍVIDA REGISTRADA, não bloqueio:** **11 provas de presença** em `.ts/.tsx` ainda leem o
+  arquivo cru (P1, P2a/b, P3a/b, P4a/b, P5a/b, P7, P11). Estão sãs **por acidente** — nenhum
+  comentário casa **hoje**. Os dois helpers já existem (`tests/css.ts:24` e o local em
+  `tests/app/MioloHome.test.tsx:518`). As cinco de CSS são seguras por forma (pedem seletor +
+  corpo `{…}` juntos) e as cinco de `"use client"` são **estruturalmente imunes**
+  (`trimStart().startsWith`).
 - 🆕 **O limite conhecido vale escrito AO LADO da prova.** O par de testes de CSS da Task 7
   *"parece a mesma prova e não é"* (um prende o DOM à cadeia, o outro prende a cadeia a existir).
   Sem uma oração dizendo o que o par deliberadamente **não** cobre — o rename consistente em JSX
