@@ -511,14 +511,25 @@ describe("lerFiltros: pisoMinimo", () => {
 // `esforco` e `duracaoMax` estão escritos de verdade. Depois da contração eles
 // não são mais lidos, e é isso que este bloco trava.
 //
-// 🔴 A FIXTURE É LOAD-BEARING, e a razão é esta: `VELHO` tem SÓ os dois campos
-// mortos e NENHUM dos cinco vivos. Com um vivo junto (um `distanciaKm: 60`, por
-// exemplo, que o JSON real dele também tem), o `contarLigados(...) === 0` viraria
-// `=== 1` e deixaria de separar as versões — passaria igual com os campos mortos
-// sendo contados. Que os valores vivos da versão velha sobrevivem já está
-// provado em "os valores guardados 30 e 60 da versão velha continuam válidos".
+// 🔴 A FIXTURE É LOAD-BEARING DUAS VEZES, e as duas razões são estas:
+//
+// 1. É a FORMA DE PRODUÇÃO. `src/app/filtros.tsx` grava `JSON.stringify(f)` — o
+//    objeto `Filtros` INTEIRO, não só o que a pessoa ligou —, então o que está
+//    no celular dele traz os cinco vivos escritos como `null`/`false` ao lado
+//    dos dois mortos. Fixture com só os dois mortos dá o mesmo resultado (chave
+//    ausente e chave nula caem no mesmo padrão, medido), mas não é o que o
+//    comentário acima afirma estar gravado lá.
+// 2. NENHUM recorte vivo vem LIGADO. Com um ligado junto (um `distanciaKm: 60`,
+//    que o JSON real dele também pode ter), o `contarLigados(...) === 0` viraria
+//    `=== 1` e deixaria de separar as versões — passaria igual com os campos
+//    mortos sendo contados. Que os valores vivos da versão velha sobrevivem já
+//    está provado em "os valores guardados 30 e 60 da versão velha continuam
+//    válidos".
 describe("lerFiltros: o que já está gravado no celular dele", () => {
-  const VELHO = JSON.stringify({ duracaoMax: 120, esforco: "media" });
+  const VELHO = JSON.stringify({
+    distanciaKm: null, daHoje: false, soGratis: false, extensaoMaxKm: null, pisoMinimo: null,
+    duracaoMax: 120, esforco: "media",
+  });
 
   it("filtro guardado com duracaoMax e esforco continua não estourando", () => {
     expect(() => lerFiltros(VELHO)).not.toThrow();
@@ -531,14 +542,22 @@ describe("lerFiltros: o que já está gravado no celular dele", () => {
   // disso no celular. A saída se fecha por construção, porque o `lerFiltros`
   // deixou de ler os dois campos.
   //
-  // ⚠️ HONESTIDADE SOBRE O QUE ESTA ASSERÇÃO É: ela é um CRUZAMENTO, e por
-  // transitividade é redundante — `lerFiltros(VELHO) === SEM_FILTRO` (acima)
-  // mais `contarLigados(SEM_FILTRO) === 0` (em "contarLigados é zero") já a
-  // implicam, e nenhuma mutação única derruba esta e deixa aquelas duas de pé.
-  // Medido, não suposto: não existe mutação que a torne o único detector. Ela
-  // fica porque é a única forma EXECUTÁVEL do requisito do jeito que a pessoa
-  // o vive — "o filtro fantasma não conta" —, e porque o dia em que alguém
-  // religar a leitura dos dois campos ela cai junto com as outras.
+  // ⚠️ O QUE ESTA ASSERÇÃO É, MEDIDO NOS DOIS SENTIDOS — e o resultado tem duas
+  // metades que não se misturam:
+  //
+  // ELA NÃO É REDUNDANTE COM O `toEqual(SEM_FILTRO)` DE CIMA. Um `...x`
+  // espalhado no `lerFiltros` derruba SÓ aquele (1 teste da suíte inteira, e o
+  // `tsc` fica limpo: spread não dispara checagem de propriedade excedente);
+  // um `contarLigados` contando um a mais derruba SÓ esta aqui, dentro deste
+  // bloco. As duas medições foram feitas, uma em cada sentido.
+  //
+  // O QUE É REDUNDANTE é ela ser o ÚNICO detector de alguma coisa: não existe.
+  // Sempre que ela cai, ou cai o `toEqual` junto, ou caem os irmãos de
+  // presença ("contarLigados é zero", "conta cada recorte ligado uma vez",
+  // "conta os CINCO recortes") — a mutação do parágrafo acima derruba 8 testes,
+  // e esta é um dos 8. Ela fica porque é a única forma EXECUTÁVEL do requisito
+  // do jeito que a pessoa o vive: "o filtro fantasma não conta na linha de
+  // resumo".
   it("filtro guardado da versão velha não conta filtro ligado nenhum", () => {
     expect(contarLigados(lerFiltros(VELHO))).toBe(0);
   });

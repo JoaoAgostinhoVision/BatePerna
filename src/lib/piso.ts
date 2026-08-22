@@ -21,10 +21,10 @@
  *
  *  Puro de propósito, sem zod e sem `node:fs`: client components leem este
  *  módulo direto (é a mesma razão que já exilou `formatarDuracao` pra
- *  `duracao.ts` e `coordDaDistancia` pra dentro de `geo.ts` — um client
- *  component que importasse algo carregando `node:fs` no meio do caminho
- *  arrastaria esses módulos pro bundle do navegador, e o webpack do Next
- *  recusa). `src/types/ficha.ts` monta o `z.enum` A PARTIR de `PISOS` — nunca
+ *  `duracao.ts` (apagado na contração) e `coordDaDistancia` pra dentro de
+ *  `geo.ts` — um client component que importasse algo carregando `node:fs` no
+ *  meio do caminho arrastaria esses módulos pro bundle do navegador, e o
+ *  webpack do Next recusa). `src/types/ficha.ts` monta o `z.enum` A PARTIR de `PISOS` — nunca
  *  o contrário — pra este arquivo continuar sem zod. */
 
 /** A ORDEM do array É A ESCALA, do pior pro melhor. É a única coisa que dá

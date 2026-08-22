@@ -71,8 +71,9 @@ export function formatarExtensao(km: number): string {
  *  Mora em geo.ts, e não em ficha.ts, por uma razão dura: ficha.ts carrega
  *  `node:fs` no topo e quebraria o bundle do navegador — e dois dos três
  *  consumidores (`CartaoTrilha`, `DistanciaDaqui`) são client components. É o
- *  mesmo motivo que já exilou o `formatarDuracao` pra duracao.ts. O `import
- *  type` daqui some na compilação, então nada de zod entra no bundle.
+ *  mesmo motivo que já exilou o `formatarDuracao` pra duracao.ts (apagado na
+ *  contração). O `import type` daqui some na compilação, então nada de zod
+ *  entra no bundle.
  *
  *  Recebe a FICHA inteira de propósito. Se recebesse uma `Coord`, cada chamador
  *  voltaria a escolher qual das duas passar — que é exatamente o defeito. */
