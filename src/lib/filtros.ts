@@ -3,7 +3,13 @@
  *  Puro, sem React: a folha aplica, a tela desenha, e as duas REGRAS DE
  *  HONESTIDADE abaixo vivem aqui, onde podem ser provadas. */
 
-import { coordDaDistancia, distanciaKm, type Coord } from "@/lib/geo";
+import {
+  coordDaDistancia,
+  distanciaKm,
+  kmNaTelaDistancia,
+  kmNaTelaExtensao,
+  type Coord,
+} from "@/lib/geo";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { PISOS_FILTRAVEIS, ordemPiso, type Piso } from "@/lib/piso";
 import type { Ficha } from "@/types/ficha";
@@ -176,8 +182,22 @@ export function passaNoFiltro({
   // ficha mostra. Enquanto isto aqui media até `condicao.coords`, o "até 60 km"
   // escondia trilha cujo cartão anunciava 40. Filtro que esconde por um número
   // que a tela não mostra é a pior versão do defeito: some sem explicação.
+  //
+  // 🔴 E o NÚMERO sai de `kmNaTelaDistancia` — o mesmo defeito entrando pela
+  // outra ponta, este ainda EM PRODUÇÃO quando foi medido: a coordenada já era
+  // uma só, mas a tela arredondava e esta linha comparava o km CRU. Com "até 10
+  // km" ligado, uma trilha a 10,4495 km sumia da home enquanto o cartão dela
+  // anunciava "~10 km em linha reta" (faixa de ~450 m no teto de 10; abaixo de
+  // 10 km, onde a tela mostra uma casa, ~50 m). A decisão do dono do app: **o
+  // filtro segue a tela**. NÃO refaça a conta aqui — a fonte é `geo.ts`, e uma
+  // cópia à mão devolve o defeito com outra roupa.
+  //
+  // O `naTela !== null` é o ramo "a tela não mostra número" (menos de 1 km): o
+  // que a tela não mostrou não pode esconder. Ele não é opcional — sem ele, o
+  // `tsc` recusa a comparação (TS18047, `naTela` is possibly 'null').
   if (filtros.distanciaKm !== null && voce) {
-    if (distanciaKm(voce, coordDaDistancia(ficha)) > filtros.distanciaKm) return false;
+    const naTela = kmNaTelaDistancia(distanciaKm(voce, coordDaDistancia(ficha)));
+    if (naTela !== null && naTela > filtros.distanciaKm) return false;
   }
 
   if (filtros.soGratis && ficha.custo.tag !== "gratis") return false;
@@ -191,13 +211,24 @@ export function passaNoFiltro({
   // trilha de 4 km, que é como se lê em português; o contrário esconde
   // justamente o caso que a pessoa tinha em mente.
   //
-  // O `ficha.extensaoKm &&` escreve a honestidade 2, mas — MEDIDO, não
-  // deduzido — quem a segura em runtime é a aritmética: `undefined > 4` é
-  // `false`, e apagar o `&&` deixa a suíte INTEIRA verde, sem uma asserção
-  // caindo. (Sem total escrito de propósito: a primeira versão desta linha
-  // cravou "585/585" e envelheceu em duas horas, dentro de um comentário que
-  // existe justamente pra registrar uma medição.) Quem recusa apagá-lo é o
-  // `tsc` (TS18048, "'ficha.extensaoKm' is possibly 'undefined'").
+  // 🔴 O NÚMERO sai de `kmNaTelaExtensao`, não da ficha crua — irmão exato do
+  // que está escrito no bloco da distância. Com o km cru, "até 4 km" escondia um
+  // cartão que dizia "4 km de trilha": faixa (n, n+0,05) em TODO teto de 1 a 20,
+  // ~49 m de trilha que a tela anuncia e o filtro nega. NÃO refaça a conta aqui.
+  //
+  // O `ficha.extensaoKm &&` escreve a honestidade 2, mas — MEDIDO de novo
+  // DEPOIS desta mudança, não herdado do comentário antigo — quem a segura em
+  // runtime continua sendo a aritmética, agora por outro caminho:
+  // `kmNaTelaExtensao(undefined)` faz `undefined < 1` dar `false` e
+  // `Math.round(NaN)/10` dar `NaN`, e `NaN > 4` é `false`. Apagar o `&&` deixa
+  // a suíte verde. (Sem total escrito de propósito: a primeira versão desta
+  // linha cravou "585/585" e envelheceu em duas horas, dentro de um comentário
+  // que existe justamente pra registrar uma medição.) Quem recusa apagá-lo
+  // continua sendo o `tsc`, e o código do erro MUDOU com esta rodada — medido
+  // agora, não herdado: era TS18048 ("'ficha.extensaoKm' is possibly
+  // 'undefined'") enquanto o campo era COMPARADO aqui; hoje ele é ARGUMENTO de
+  // `kmNaTelaExtensao`, e o erro é TS2345 ("Argument of type 'number |
+  // undefined' is not assignable to parameter of type 'number'").
   // É a terceira resposta da lição 13, e é por isso que ele fica: diz a regra
   // na cara de quem lê, e é a única rede no dia em que a comparação mudar.
   //
@@ -206,12 +237,11 @@ export function passaNoFiltro({
   // existe. Se o `.positive()` cair, o `&&` passa a LER `0` como "campo
   // ausente" — hoje sem consequência observável (zero nunca é maior que um
   // teto ≥ 1), mas a linha muda de significado sem uma linha de diff aqui.
-  if (
-    filtros.extensaoMaxKm !== null &&
-    ficha.extensaoKm &&
-    ficha.extensaoKm > filtros.extensaoMaxKm
-  ) {
-    return false;
+  if (filtros.extensaoMaxKm !== null && ficha.extensaoKm) {
+    // Mesmo `!== null` do bloco da distância, mesma razão nas duas ferramentas:
+    // a tela sem número não esconde, e o `tsc` recusa comparar `number | null`.
+    const naTela = kmNaTelaExtensao(ficha.extensaoKm);
+    if (naTela !== null && naTela > filtros.extensaoMaxKm) return false;
   }
 
   // "No mínimo daqui pra cima" na escala de `PISOS` (a ORDEM do array É a

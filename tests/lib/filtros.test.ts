@@ -141,41 +141,93 @@ describe("distância", () => {
     expect(passa({}, {}, { voce: longe })).toBe(true);
   });
 
-  // ——— pré-voo 2: A BORDA DA DISTÂNCIA, e o que dela é honestamente provável.
+  // ——— pré-voo 2: A BORDA DA DISTÂNCIA. Que o corte acontece NO limite pedido,
+  // e não num número parecido (km trocado por metro, degrau trocado, constante
+  // errada).
   //
-  // A regra cravada diz que o teto é inclusivo nos DOIS recortes. Na extensão
-  // isso é observável e está provado abaixo (4 é inteiro e a pessoa acerta
-  // ele). Na distância, NÃO É: medi antes de escrever este teste, e o
-  // haversine com estas coordenadas pula o valor exato — o passo de saída
-  // perto de 30 km é ~1e-13, e os vizinhos são 29.999999999999968 e
-  // 30.000000000000068. Não existe coordenada que devolva 30 cravado, então
-  // `>` e `>=` são indistinguíveis aqui, na suíte e na vida.
+  // 🔴 A BORDA MUDOU DE LUGAR nesta rodada, e a razão é a decisão do dono do
+  // app — **o filtro segue a tela**. O que o recorte compara agora é o número
+  // ARREDONDADO, o mesmo que o cartão está mostrando (`kmNaTelaDistancia`, em
+  // `src/lib/geo.ts`). De 10 km pra cima a tela mostra INTEIRO, então "até 30
+  // km" corta onde a tela deixa de dizer "~30": em 30,45 km, e não em 30,000.
   //
-  // O que É provável, e é o que este teste faz: que o corte acontece NO
-  // limite pedido, e não num número parecido (km trocado por metro, degrau
-  // trocado, constante errada).
+  // O comentário antigo daqui dizia que `>` e `>=` eram indistinguíveis na
+  // distância porque o haversine pula o 30 cravado. Isso ERA verdade e deixou
+  // de ser: o valor comparado hoje é o inteiro da tela, e ele acerta o 30 com
+  // folga — qualquer km em [29,5; 30,45) vira 30. Por isso o par 30,44/30,46
+  // abaixo mata o `>=` sozinho, sem espião nenhum.
   const aoNorte = (km: number) => ({
     lat: RAMPA.lat + (km / 6371) * (180 / Math.PI),
     lng: RAMPA.lng,
   });
 
-  it("o corte acontece no limite pedido, por um triz dos dois lados", () => {
+  it("o corte acontece onde a TELA muda de número, por um triz dos dois lados", () => {
     // A construção é conferida antes de valer como prova: com dLng = 0 o
     // haversine vira R·Δφ. Se `geo.ts` mudar de fórmula, esta linha falha
     // alto em vez de o teste abaixo virar vazio.
-    expect(distanciaKm(aoNorte(29.999), RAMPA)).toBeCloseTo(29.999, 6);
-    expect(distanciaKm(aoNorte(30.001), RAMPA)).toBeCloseTo(30.001, 6);
+    expect(distanciaKm(aoNorte(30.44), RAMPA)).toBeCloseTo(30.44, 6);
+    expect(distanciaKm(aoNorte(30.46), RAMPA)).toBeCloseTo(30.46, 6);
 
-    expect(passa({ distanciaKm: 30 }, {}, { voce: aoNorte(29.999) })).toBe(true);
-    expect(passa({ distanciaKm: 30 }, {}, { voce: aoNorte(30.001) })).toBe(false);
-    expect(passa({ distanciaKm: 60 }, {}, { voce: aoNorte(59.999) })).toBe(true);
-    expect(passa({ distanciaKm: 60 }, {}, { voce: aoNorte(60.001) })).toBe(false);
+    // 30,44 → a tela diz "~30 km"; 30,46 → a tela diz "~31 km". O corte é ali.
+    expect(passa({ distanciaKm: 30 }, {}, { voce: aoNorte(30.44) })).toBe(true);
+    expect(passa({ distanciaKm: 30 }, {}, { voce: aoNorte(30.46) })).toBe(false);
+    expect(passa({ distanciaKm: 60 }, {}, { voce: aoNorte(60.44) })).toBe(true);
+    expect(passa({ distanciaKm: 60 }, {}, { voce: aoNorte(60.46) })).toBe(false);
   });
 
-  // ——— fix round: o teto inclusivo na DISTÂNCIA, o único pedaço da regra
-  // cravada que a aritmética real não deixa provar. Com o espião devolvendo 30
-  // cravado uma única vez, `>` passa (inclusivo, certo) e `>=` esconde a trilha
-  // que a pessoa tinha em mente. É o mesmo ruling já provado na extensão.
+  // 🔴 O DEFEITO, no valor exato em que a revisão da branch inteira o mediu — e
+  // este estava EM PRODUÇÃO, não só na branch. Com "até 10 km" ligado, uma
+  // trilha a 10,4495 km sumia da home enquanto o cartão dela anunciava "~10 km
+  // em linha reta": o filtro escondendo por um número que a pessoa não tinha
+  // como ver na tela. A faixa é de ~450 m no teto de 10 (abaixo de 10 km a tela
+  // mostra uma casa e ela cai pra ~50 m).
+  //
+  // Este é um caso que SEPARA as duas versões: com o km cru, `10.4495 > 10` e a
+  // trilha some; com o número da tela, `10 > 10` é falso e ela fica.
+  it("'até 10 km' NÃO esconde a trilha que o cartão anuncia como ~10 km (10,4495)", () => {
+    expect(distanciaKm(aoNorte(10.4495), RAMPA)).toBeCloseTo(10.4495, 6);
+    expect(passa({ distanciaKm: 10 }, {}, { voce: aoNorte(10.4495) })).toBe(true);
+    // O irmão que ainda esconde, pra isto não virar "o recorte de 10 não filtra
+    // mais nada": em 10,46 a tela já diz "~11 km", e aí sumir é honesto.
+    expect(passa({ distanciaKm: 10 }, {}, { voce: aoNorte(10.46) })).toBe(false);
+  });
+
+  // 🔴 O RAMO. `kmNaTelaDistancia` muda de forma no meio da escala: uma casa
+  // decimal abaixo de 10, INTEIRO de 10 pra cima. Sem um caso de cada lado, o
+  // recorte podia herdar o ramo errado sem nada cair — e aí "até 9 km"
+  // esconderia (ou mostraria) uma trilha por um arredondamento que a tela não
+  // faz. 9,44 é o par exato do 30,44 de cima, do outro lado da fronteira: lá
+  // ele passa (30 inteiro), aqui ele NÃO passa, porque a tela diz "~9,4 km" e
+  // 9,4 > 9.
+  it("abaixo de 10 km o corte é o da tela de UMA CASA, não o do inteiro", () => {
+    expect(passa({ distanciaKm: 9 }, {}, { voce: aoNorte(9.44) })).toBe(false);
+    // E o que a tela mostra como "~9,0 km" fica: 8,96 arredonda pra 9,0.
+    expect(passa({ distanciaKm: 9 }, {}, { voce: aoNorte(8.96) })).toBe(true);
+  });
+
+  // "Menos de 1 km": a tela NÃO mostra número nenhum ("menos de 1 km em linha
+  // reta"), e `kmNaTelaDistancia` devolve `null` justamente por isso. O que a
+  // tela não mostrou não pode esconder — então a trilha ao lado passa em
+  // QUALQUER recorte, inclusive no menor que o app deixa guardar (1 km).
+  //
+  // ⚠️ HONESTIDADE SOBRE ESTA PROVA: ela NÃO separa o `null` das alternativas
+  // razoáveis, e isso foi medido. Devolver o km cru (0,4) ou devolver 1 dá o
+  // MESMO resultado aqui, porque `lerFiltros` só guarda teto inteiro ≥ 1 e a
+  // `FaixaKm` só deixa digitar ≥ 1: nenhum teto alcançável separa as três
+  // versões. Quem separa é o teste de unidade em tests/lib/geo.test.ts, que
+  // olha o valor devolvido. Este aqui trava o COMPORTAMENTO — e o domínio: se
+  // um dia o teto puder ser fracionário, ele é quem grita.
+  it("a trilha a menos de 1 km não some nem no menor recorte guardável", () => {
+    expect(passa({ distanciaKm: 1 }, {}, { voce: aoNorte(0.4) })).toBe(true);
+    expect(passa({ distanciaKm: 5 }, {}, { voce: aoNorte(0.4) })).toBe(true);
+  });
+
+  // ——— fix round: o teto inclusivo na DISTÂNCIA, com o km CRU cravado em 30
+  // pelo espião. Ele nasceu quando este era o único jeito de acertar o valor
+  // exato; depois da mudança de rodada não é mais — o par 30,44/30,46 lá em
+  // cima já mata o `>=` sozinho, e foi medido. Fica como cinto e como o único
+  // caso da suíte em que o km cru e o número da tela COINCIDEM, que é o estado
+  // em que as duas versões do filtro concordam.
   it("o teto de distância é inclusivo — 'até 30 km' inclui os 30 km cravados", () => {
     vi.mocked(distanciaKm).mockReturnValueOnce(30);
     expect(passa({ distanciaKm: 30 }, {}, { voce: perto })).toBe(true);
@@ -245,6 +297,44 @@ describe("extensão da trilha", () => {
   // toda ficha com extensão preenchida sumiria da home com o filtro DESLIGADO.
   it("ficha COM extensaoKm preenchida não some quando o recorte está desligado", () => {
     expect(passa({}, { extensaoKm: 12 })).toBe(true);
+  });
+
+  // 🔴 O DEFEITO desta rodada, do lado da extensão, no valor exato em que a
+  // revisão da branch inteira o mediu: `formatarExtensao(4.04)` mostra "4 km de
+  // trilha" e o recorte "até 4 km" ESCONDIA o cartão que a tela acabou de
+  // anunciar como 4 km. A faixa é (n, n+0,05) — uns 49 m — e existe em TODO
+  // teto de 1 a 20.
+  //
+  // O caso SEPARA as duas versões (que é o ponto): com o km cru, `4.04 > 4` e a
+  // trilha some; com o número da tela, `4 > 4` é falso e ela fica. Um caso onde
+  // as duas concordassem (4, ou 5) não provaria nada — e os dois já estão
+  // travados no primeiro teste deste bloco.
+  it("'até 4 km' NÃO esconde a trilha que o cartão anuncia como 4 km (4,04)", () => {
+    expect(passa({ extensaoMaxKm: 4 }, { extensaoKm: 4.04 })).toBe(true);
+    // O irmão do outro lado da fronteira do arredondamento: 4,06 a tela mostra
+    // como "4,1 km de trilha", e aí sumir de "até 4 km" é honesto. Sem ele,
+    // um recorte que parasse de filtrar passaria neste bloco.
+    expect(passa({ extensaoMaxKm: 4 }, { extensaoKm: 4.06 })).toBe(false);
+  });
+
+  // O ramo da extensão é UM SÓ — sempre uma casa decimal, em toda a escala —, e
+  // é o que a distingue da irmã (que vira inteira de 10 km pra cima). Este caso
+  // é o que morde se as duas funções forem fundidas numa: com o ramo do
+  // inteiro, 12,4 viraria 12 e esta trilha passaria em "até 12 km" enquanto a
+  // tela mostra "12,4 km de trilha".
+  it("de 10 km pra cima a extensão continua com uma casa: 12,4 não some pra 12", () => {
+    expect(passa({ extensaoMaxKm: 12 }, { extensaoKm: 12.4 })).toBe(false);
+    expect(passa({ extensaoMaxKm: 12 }, { extensaoKm: 12.04 })).toBe(true);
+  });
+
+  // "Menos de 1 km de trilha": a tela não mostra número, `kmNaTelaExtensao`
+  // devolve `null`, e o que a tela não mostrou não esconde. Mesma honestidade
+  // sobre a prova que está escrita no bloco da distância: nenhum teto
+  // alcançável separa `null` de devolver 0,4 ou 1 — quem separa é o teste de
+  // unidade em tests/lib/geo.test.ts.
+  it("a trilha de menos de 1 km não some nem no menor recorte guardável", () => {
+    expect(passa({ extensaoMaxKm: 1 }, { extensaoKm: 0.4 })).toBe(true);
+    expect(passa({ extensaoMaxKm: EXT_MAX_KM }, { extensaoKm: 0.04 })).toBe(true);
   });
 });
 
@@ -532,6 +622,71 @@ describe("lerFiltros: pisoMinimo", () => {
     expect(src, "o predicado tem que consultar PISOS_FILTRAVEIS").toMatch(
       /PISOS_FILTRAVEIS\.some\(/,
     );
+  });
+});
+
+// 🔴 A PROVA DE FONTE DO ARREDONDAMENTO — a quarta desta família no repo, e a
+// que este conserto existe pra instalar.
+//
+// Em runtime, `kmNaTelaExtensao(4.04)` e um `Math.round(4.04 * 10) / 10`
+// escrito à mão AQUI DENTRO devolvem o MESMO valor: nenhuma asserção sobre o
+// que o filtro esconde separa as duas versões — todos os testes de fronteira
+// deste arquivo passam com a conta copiada. Só a FONTE separa, e é a fonte que
+// garante que no dia em que a tela mudar de arredondamento (mais uma casa,
+// outro degrau) o recorte mude junto, em vez de a divergência voltar com outra
+// roupa. É exatamente esse padrão — duas cópias da mesma conta em dois arquivos
+// — que já custou a este app os "dois km" da mesma trilha e o "não suba" em
+// selo verde.
+//
+// Dois lados, como as irmãs: importar não obriga a usar, e não refazer a conta
+// não obriga a chamar quem a faz. As três asserções são independentes.
+// 🔴 OS COMENTÁRIOS SAEM ANTES DE QUALQUER BUSCA, e isto NÃO é higiene: foi
+// medido. A primeira versão destas asserções lia o arquivo cru, e a mutação que
+// troca `kmNaTelaExtensao(ficha.extensaoKm)` por `Math.round(...)` à mão deixou
+// o "e CHAMA as duas" VERDE — porque o comentário do bloco da extensão cita
+// `kmNaTelaExtensao(undefined)` pra registrar uma medição, e o regex casou o
+// comentário. Um teste de fonte lendo comentário prova que alguém ESCREVEU o
+// nome, não que o código o CHAMA. O que se procura é código.
+describe("o filtro não refaz a conta do arredondamento — ele chama a fonte", () => {
+  const src = readFileSync(path.join(process.cwd(), "src", "lib", "filtros.ts"), "utf8");
+  const codigo = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+  // A tira de comentários é conferida antes de valer como prova: se ela
+  // engolisse o arquivo, todas as asserções abaixo passariam vazias — as de
+  // ausência sozinhas, e as de presença pela mensagem errada.
+  it("a tira de comentários deixa o código de pé", () => {
+    expect(codigo).toContain("export function passaNoFiltro");
+    expect(codigo).toContain("export function lerFiltros");
+    // E tirou mesmo alguma coisa: senão ela é um `replace` que não replaceia.
+    expect(codigo.length).toBeLessThan(src.length);
+  });
+
+  it("filtros.ts importa as duas funções de km da tela de @/lib/geo", () => {
+    const importado = codigo.match(/import\s*\{([\s\S]*?)\}\s*from\s*"@\/lib\/geo"/);
+    expect(importado, "filtros.ts tem que importar de @/lib/geo").not.toBeNull();
+    expect(importado![1]).toContain("kmNaTelaDistancia");
+    expect(importado![1]).toContain("kmNaTelaExtensao");
+  });
+
+  it("e CHAMA as duas — uma em cada recorte de km", () => {
+    expect(codigo, "o recorte de distância tem que chamar kmNaTelaDistancia").toMatch(
+      /kmNaTelaDistancia\(/,
+    );
+    expect(codigo, "o recorte de extensão tem que chamar kmNaTelaExtensao").toMatch(
+      /kmNaTelaExtensao\(/,
+    );
+  });
+
+  // A outra metade: nenhuma aritmética de arredondamento escrita aqui. As duas
+  // formas realistas de reimplementar a conta à mão são `Math.round(km * 10)`
+  // e `Number(km.toFixed(1))` — as duas ficam proibidas por nome. `filtros.ts`
+  // é um módulo de REGRA, não de formatação: se um dia ele precisar
+  // legitimamente de uma delas, esta asserção é o lugar de discutir por quê.
+  it("e não escreve arredondamento nenhum de próprio punho", () => {
+    expect(codigo, "arredondamento em filtros.ts é a segunda fonte voltando").not.toMatch(
+      /Math\.round\(/,
+    );
+    expect(codigo, "toFixed em filtros.ts é a segunda fonte voltando").not.toMatch(/toFixed\(/);
   });
 });
 

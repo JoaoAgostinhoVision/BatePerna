@@ -243,6 +243,90 @@ describe("uma trilha, UM km", () => {
  *  dos literais sair ou em que os dois lados deixarem de compartilhar a
  *  constante — que é justamente quando a transitividade acaba. O que ele NÃO é
  *  é a asserção que pega a divergência hoje. */
+/** 🔴 A TERCEIRA JUNÇÃO DESTA FAMÍLIA, e a que este conserto veio fechar: não
+ *  "duas telas discordando entre si", mas **a tela e o FILTRO discordando**.
+ *
+ *  A tela arredondava o km e o recorte comparava o km CRU. Resultado medido
+ *  pela revisão da branch inteira: um cartão anunciando "4 km de trilha" sumia
+ *  do "até 4 km", e — este já EM PRODUÇÃO — um anunciando "~10 km em linha
+ *  reta" sumia do "até 10 km". A pessoa lê o número no cartão, digita esse
+ *  mesmo número no recorte, e a trilha some. Nenhum teste de unidade dos dois
+ *  lados pega isso: cada lado está certo sozinho.
+ *
+ *  O teste é escrito NA ORDEM EM QUE A PESSOA FAZ: renderiza o cartão, LÊ os
+ *  dois números do texto que apareceu, e usa **esses** números como teto do
+ *  filtro. Nada aqui chama `formatarExtensao` nem `kmNaTela*` — régua
+ *  auto-referente não mede nada.
+ *
+ *  A ficha da FRONTEIRA é sintética pela mesma razão da outra deste arquivo:
+ *  4,04 km de trilha e 10,4495 km de distância são os valores exatos em que as
+ *  duas versões do filtro se SEPARAM (com o km cru, as duas somem). Um valor em
+ *  que elas concordassem — 4 km cravados — deixaria a prova oca.
+ *
+ *  Por que só o CARTÃO, e não também a ficha da trilha: as duas telas já estão
+ *  presas ao mesmo texto pelos testes deste arquivo, e `geo.ts` já tem prova de
+ *  fonte de que quem formata não refaz a conta (tests/lib/geo.test.ts). O que
+ *  faltava, e é o que está aqui, é a ponte TELA→FILTRO. */
+describe("o número que a tela mostra é o número que o filtro compara", () => {
+  // 10,4495 km ao NORTE de VOCE: com dLng = 0 o haversine vira R·Δφ, e a
+  // conversão está escrita aqui pra o número não ser copiado à mão. A
+  // construção é conferida dentro do teste antes de valer como prova.
+  const KM_DAQUI = 10.4495;
+  const KM_DE_TRILHA = 4.04;
+  const FRONTEIRA = {
+    ...FICHA,
+    slug: "morro-da-fronteira",
+    trajeto: {
+      waypoints: [
+        {
+          ...FICHA.trajeto.waypoints[0],
+          lat: VOCE.lat + (KM_DAQUI / 6371) * (180 / Math.PI),
+          lng: VOCE.lng,
+        },
+      ],
+    },
+    extensaoKm: KM_DE_TRILHA,
+  } satisfies Ficha as Ficha;
+
+  /** O número CRU que a pessoa leu no cartão — o que ela digitaria no recorte.
+   *  Vírgula vira ponto porque o campo do filtro é numérico. */
+  const numeroDe = (texto: string | null) =>
+    texto === null ? null : Number(texto.match(/[\d,]+/)![0].replace(",", "."));
+
+  it("o cartão mostra ~10 km e 4 km, e 'até 10' + 'até 4' NÃO o escondem", () => {
+    expect(distanciaKm(VOCE, FRONTEIRA.trajeto.waypoints[0])).toBeCloseTo(KM_DAQUI, 6);
+
+    guardarLocal();
+    const cartao = render(
+      <LocalVivo>
+        <CartaoTrilha ficha={FRONTEIRA} inicial={LEITURA} />
+      </LocalVivo>,
+    );
+    const meta = cartao.container.querySelector(".cartao-meta")?.textContent;
+
+    const tetoDistancia = numeroDe(kmMostrado(meta));
+    const tetoExtensao = numeroDe(extensaoMostrada(meta));
+
+    // Sem estas duas, um cartão que parasse de mostrar os números deixaria os
+    // tetos em `null` — e filtro desligado passa em tudo, com a prova oca.
+    expect(tetoDistancia, "o cartão parou de mostrar a distância").toBe(10);
+    expect(tetoExtensao, "o cartão parou de mostrar a extensão").toBe(4);
+
+    // E agora o recorte, com os números que a tela acabou de dar. Com o km cru
+    // dos dois lados, este `toBe(true)` era `false` nas duas contas.
+    expect(
+      passaNoFiltro({
+        ficha: FRONTEIRA,
+        leitura: LEITURA,
+        filtros: { ...SEM_FILTRO, distanciaKm: tetoDistancia, extensaoMaxKm: tetoExtensao },
+        voce: VOCE,
+        confia: true,
+      }),
+      "o filtro escondeu a trilha pelos números que o próprio cartão mostrou",
+    ).toBe(true);
+  });
+});
+
 describe("uma trilha, UMA extensão e UM piso", () => {
   it("cartão e ficha mostram o MESMO texto de extensão", async () => {
     const { noCartao, naFicha } = await asDuasTelas();
