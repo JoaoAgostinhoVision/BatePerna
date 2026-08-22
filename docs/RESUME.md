@@ -7,9 +7,13 @@
 **Última parada:** 2026-08-21. **RODADA ABERTA.**
 Branch **`review-do-celular`**, NÃO mergeada, NÃO deployada. `main` segue em `f10f075`.
 
-✅ **Tasks 1 a 7 fechadas, cada uma com implementador → revisão com dois veredictos → fix round →
-re-revisão escopada. NÃO EXISTE WIP:** a árvore está limpa e todo commit no log é trabalho
-revisado. Você não precisa julgar código não revisado.
+✅ **AS OITO TASKS ESTÃO FECHADAS**, cada uma com implementador → revisão com dois veredictos →
+fix round → re-revisão escopada. **NÃO EXISTE WIP:** a árvore está limpa e todo commit no log é
+trabalho revisado. Você não precisa julgar código não revisado.
+
+🔴 **O placar de método desta rodada, e ele é o mesmo há três sessões: NENHUM fix round consertou
+lógica de aplicação.** O código dos implementadores chegou certo **oito vezes em oito**. Todos os
+achados foram de **PROVA** e de **COMENTÁRIO** — e vários foram deles em cima de MIM.
 
 🔴 **As OITO tasks têm pré-voo escrito no plano versionado** (antes só a 2, 3 e 4 tinham).
 Procure os blocos de citação 🔴 "EMENDA DO PRÉ-VOO" — eles corrigem o texto ao redor e vencem
@@ -23,7 +27,7 @@ arredondamento (§5c aqui embaixo).
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA" — retome a rodada `review-do-celular` na Task 8
+# ▶▶ SE O JOÃO DISSER "CONTINUA" — as 8 tasks acabaram; retome na REVISÃO DA BRANCH INTEIRA
 
 **O review do celular já aconteceu, já foi triado e já virou spec + plano aprovados.** Não
 pergunte o que ele achou; não peça a lista de novo; não devolva menu.
@@ -33,7 +37,7 @@ pergunte o que ele achou; não peça a lista de novo; não devolva menu.
 ```
 git branch --show-current  → review-do-celular   (se estiver em main, só trocar)
 git status --short         → limpo
-npm test                   → 632/632 em 49 arquivos   ← tudo verde, NÃO há falha esperada
+npm test                   → 613/613 em 49 arquivos   ← tudo verde, NÃO há falha esperada
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
@@ -68,10 +72,17 @@ Task 2, 3 e 4 estão no plano; as das Tasks 5 a 8 ainda não foram feitas.
 | 5 — o painel: duas faixas e os chips de piso | **completa**, 1 fix round (3 achados), re-revisão **Approved nos DOIS veredictos** | `3dc3957`, `941365b` |
 | 6 — o cartão | **completa**, 1 fix round (1 Important + 3 Minor) + 1 conserto de 1 linha, re-revisão **Approved nos DOIS veredictos** | `b03b985`, `627e8e0`, `eb9daab` |
 | 7 — a ficha: piso e extensão no Trajeto | **completa**, 1 fix round (1 Important + 2 Minor) + 1 oração, re-revisão **Approved nos DOIS veredictos, sem achado novo** | `75ef513`, `f8455ba`, `80e6834` |
-| **8 — A CONTRAÇÃO** | ⬅️ **É AQUI QUE VOCÊ COMEÇA.** Brief escrito, pré-voado duas vezes + as lições das Tasks 6 e 7. | — |
+| 8 — A CONTRAÇÃO | **completa**, revisão **Approved nos dois** de cara + 1 fix round (2 Minor), re-revisão **Approved nos DOIS, sem achado novo** | `903575b`, `0426475` |
 
-**Chão depois da Task 7:** `npm test` **632/632 em 49 arquivos**, `tsc` limpo, `npm run build`
-passa. A base da rodada era 539.
+✅ **AS OITO TASKS ESTÃO FECHADAS.** **Chão depois da Task 8:** `npm test` **613/613 em 49
+arquivos**, `tsc` limpo, `npm run build` passa. A base da rodada era 539; o pico foi 632, e a
+**contração devolveu 19** — conferidos teste a teste pelo revisor (24 nomes sumiram, 5 entraram,
+e **3 dos 24 eram RENOMES, não remoções**; os 21 removidos de verdade são todos sobre os campos
+mortos).
+
+⬅️ **É AQUI QUE VOCÊ COMEÇA: a REVISÃO DA BRANCH INTEIRA**, com agente **novo** (sem o viés de
+quem revisou task a task). Pauta no plano, "Depois das oito", item 3. Depois dela: merge
+`--no-ff`, deploy, e conferir com `curl`.
 
 ✅ **A re-revisão da Task 5 voltou e fechou: Approved nos DOIS veredictos.** Somadas as duas
 passadas, **30 mutações medidas nesta task e 30 morrem** — inclusive as três que estavam vivas.
@@ -412,9 +423,9 @@ deixa o `tsc` vermelho no meio da rodada. **Não "limpe" os campos velhos cedo.*
 1. *"o mapa já ia abrir pegando sua localização"* → GPS automático na 1ª abertura. ✅ **FEITO**
    (Task 1).
 2. *"o filtro duração deveria ser distância — cada navegador tem seu ritmo"* → duração **morre**;
-   entra tamanho da trilha em km, **só ida**. 🔶 **Meio feito:** o campo (`extensaoKm`), a pergunta
-   do questionário, o recorte em `filtros.ts`, **a tela e o cartão** existem (Tasks 2, 3, 4, 5
-   e 6); falta a ficha (Task 7) e a morte da duração (Task 8).
+   entra tamanho da trilha em km, **só ida**. ✅ **FEITO INTEIRO** (Tasks 2 a 8): o campo, a
+   pergunta do questionário, o recorte, a tela, o cartão, a ficha — e a `duracao` **apagada** do
+   schema, dos filtros e do `src/lib/duracao.ts`, que deixou de existir.
 3. *"com a chegada do esforço, isso deve ser inserido dentro das trilhas"* → piso e extensão
    aparecem na ficha, junto ao Trajeto. ✅ **FEITO** (Task 7) — dentro do bloco 📍 Trajeto, no
    `.wp-body`, com a mesma função de formatação e a mesma ordem do cartão. 🟠 **Nunca visto em
@@ -425,10 +436,10 @@ deixa o `tsc` vermelho no meio da rodada. **Não "limpe" os campos velhos cedo.*
    viram **barra + campo**; o problema do chip morre por construção. ✅ **FEITO** (Tasks 4 e 5) —
    e o chip que sobrou (piso) desliga no segundo toque, com teste.
 5. *"esforço podia ser — barro, paralelepípedo, asfalto esburacado, asfalto tapete"* → o
-   `esforco` (leve/media/puxada, sobre o corpo) vira **piso da via** (sobre o lugar). 🔶 **Meio
-   feito:** o vocabulário (`src/lib/piso.ts`), o campo no schema, a pergunta, o recorte, os
-   chips na tela **e o cartão** existem (Tasks 2, 3, 5 e 6); falta a ficha (Task 7) e apagar o
-   `esforco` (Task 8).
+   `esforco` (leve/media/puxada, sobre o corpo) vira **piso da via** (sobre o lugar). ✅ **FEITO
+   INTEIRO** (Tasks 2 a 8): o vocabulário (`src/lib/piso.ts`), o campo no schema, a pergunta, o
+   recorte, os chips, o cartão, a ficha — e o `esforco` **apagado**, junto do `esforcoSchema` e
+   do `type Esforco`.
 
 **A descoberta que reorganizou tudo, e ela vale reler:** a lista dele é vocabulário de estrada, e
 a ficha real explica por quê — *"Dá pra ir de carro comum; molhado, o risco é atolar"*, *"não
