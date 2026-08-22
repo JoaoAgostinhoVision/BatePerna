@@ -379,10 +379,28 @@ Levei as duas com as saídas na mesa e os números medidos. Ele respondeu:
 
 **1. `A escolha à mão vence`** — sobre o Critical da revisão da branch (o GPS automático apagando
 a cidade escolhida). Se `bp.local` tem `tipo === "escolhido"`, o app **não pede GPS sozinho** e a
-escolha **não é sobrescrita**. O caminho de voltar pro GPS continua sendo tocar na pílula. Bate
-com as palavras dele no review original: *"já ia abrir pegando sua localização, **só modificaria
+escolha **não é sobrescrita**. Bate com as palavras dele no review original: *"já ia abrir pegando sua localização, **só modificaria
 se o usuário quiser**"* — a escolha manual **é** o "usuário quis". **O GPS automático da Task 1
 continua valendo pra quem não escolheu à mão** (`gps`, `nao-sei`, ou nada guardado).
+
+🔴 **ERRO MEU, PEGO PELO IMPLEMENTADOR NO MESMO DIA, e é a assinatura que esta sessão inteira
+repetiu.** Eu escrevi aqui, junto do ruling, que *"o caminho de voltar pro GPS continua sendo
+tocar na pílula"*. **É FALSO, e ele conferiu em vez de aceitar:** com `local.tipo === "escolhido"`,
+o `BuscaLugar.tsx:32` faz `soGps` virar `false`, então **o toque na pílula abre a busca de
+cidade** e nunca chama `pedirGps`; o painel só oferece cidades, sem item *"de onde eu estou"*; e o
+botão do `DistanciaDaqui` só aparece quando **não há localização nenhuma**. `pedirGps` não tem
+outro chamador no repo.
+
+**Ele implementou assim mesmo, e a razão é boa: conferiu o `main` (`f10f075`) e o beco JÁ EXISTE
+em produção** — lá a linha é `if (guardado.tipo === "gps") buscarGps()` e o `soGps` é idêntico.
+**Quem escolhe uma cidade no app que está no celular dele hoje já fica sem caminho de volta.** O
+conserto **restaura a semântica que está no ar**; não cria a armadilha. O que a branch fazia era
+*mascarar* a armadilha com um defeito pior — a escolha nem sobrevivia.
+
+🟠 **PENDÊNCIA NOVA PRO JOÃO, e ela é pré-existente, não desta rodada:** o "trocar" da pílula
+devolve **só outra cidade**. Falta um *"de onde eu estou"*. O conserto mínimo seria um primeiro
+item no painel de busca chamando `pedirGps` quando `gps !== "negado"`. **Ninguém inventou essa
+tela** — é decisão dele.
 
 **2. `O filtro segue a tela`** — sobre a divergência do §5c abaixo. O recorte passa a comparar o
 número **arredondado, do jeito que a pessoa está vendo**. A regra é *"a pessoa filtra pelo número
