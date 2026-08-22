@@ -22,10 +22,34 @@ frase falsa que eu tinha acabado de escrever neste arquivo.
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA" — a rodada acabou. Comece pelo §P (o que sobrou pra ele)
+# ▶▶ SE O JOÃO DISSER "CONTINUA" — ele volta pra DIZER O QUE ACHOU. Isto é triagem, não retomada.
 
-**Não devolva menu. Não pergunte "o que faltou" — ele já respondeu, e a resposta virou esta
-rodada inteira, que está no ar.**
+🔴 **NÃO EXISTE TASK PENDENTE.** A rodada fechou, mergeou e está no ar. Ele encerrou a sessão de
+2026-08-21 dizendo, com todas as letras: ***"depois eu digo o que achei"***. Então:
+
+- **Não devolva menu.** Não pergunte "o que você quer fazer agora".
+- **Não pergunte "o que faltou"** — ele já respondeu isso uma vez, e a resposta virou esta rodada
+  inteira. Perguntar de novo é fazê-lo repetir trabalho.
+- **Se ele disser só "continua" e mais nada:** o correto é dizer **em três linhas** o que está no
+  ar (§7), o que sobrou pra ele (§P), e **calar**. Ele fala quando quiser.
+- **Se ele vier com o review** (o caso provável): **triagem**, no molde que já funcionou duas
+  vezes — cada frase dele vira um item; cada item vira *defeito* / *pedido novo* / *decisão de
+  produto*; e **só depois** vira spec e plano. **Não comece a codar na primeira frase.**
+
+🔴 **E leia a ficha real antes de traduzir qualquer pedido dele em campo.** Foi o que reorganizou
+a rodada passada inteira: a lista dele parecia ser sobre *esforço do corpo* e era sobre *piso da
+via*, porque **a Rampa do Pepê é um rolê de carro**. Este app só sabe falar de LUGAR.
+
+### 0. As permissões já estão largas — isto foi pedido dele em 2026-08-21
+
+Ele disse que **os prompts de permissão são o que mais atrasa**. Então `.claude/settings.json`
+(local, porque `.claude/` é gitignored inteiro) agora tem `defaultMode: "acceptEdits"` + 59 regras
+de allow cobrindo `git`, `npm`/`npx`/`node`, e o shell de leitura. **Não peça permissão pra
+editar, criar arquivo, rodar teste, build ou commit — já está liberado.**
+
+Três coisas continuam **perguntando de propósito**, e não são atraso: `git push`, o **deploy do
+vercel**, e o `gh`. São as que saem da máquina dele. E o `git clean -fdx` está **negado** — neste
+repo ele apaga o ledger de scratch e o próprio `.claude/`.
 
 ### 1. Confira o chão em silêncio
 
@@ -39,6 +63,19 @@ npm run build              → passa
 
 **Os três foram conferidos por mim em `main` depois do merge**, não relatados por agente. Se a
 suíte estiver diferente disso, alguma coisa mudou e vale descobrir o quê antes de seguir.
+
+### §7 — O QUE ESTÁ NO AR AGORA (as três linhas, se ele só disser "continua")
+
+1. **O painel de filtros mudou**: os dois recortes de km viraram **barra + campo digitável**, e os
+   chips de piso são a lista dele (paralelepípedo, asfalto esburacado, asfalto tapete).
+2. **O GPS pede sozinho** na 1ª abertura; **e se ele escolher cidade à mão, o app respeita** e não
+   volta pro GPS por conta própria.
+3. **O filtro corta pelo número que está no cartão** — o que aparece como "~30 km" só some no
+   "até 29", nunca no "até 30".
+
+**E o que NÃO mudou, de propósito:** o cartão em produção está idêntico. A Rampa é a única ficha e
+**não tem `piso` nem `extensaoKm`** — então os filtros novos aparecem e não filtram nada. Isso é
+esperado, está honesto na tela, e acende quando o questionário voltar.
 
 ### §P — O QUE SOBROU, e as três primeiras são SÓ DELE
 
