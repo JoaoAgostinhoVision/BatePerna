@@ -373,7 +373,26 @@ existe pra Rampa do Pepê — não é ficção"*. Quatro arquivos a partir de um
 documento. **A Rampa entra só como `barro`, justificada pelo que a ficha diz; quem ensina a
 regra é um morro inventado e rotulado como tal.**
 
-### 5c. 🟠 PERGUNTA NOVA PRO JOÃO, MEDIDA NA REVISÃO DA TASK 6 — a tela arredonda, o filtro compara cru
+### 5d. ✅ AS DUAS DECISÕES QUE O JOÃO TOMOU EM 2026-08-21 — não re-litigue
+
+Levei as duas com as saídas na mesa e os números medidos. Ele respondeu:
+
+**1. `A escolha à mão vence`** — sobre o Critical da revisão da branch (o GPS automático apagando
+a cidade escolhida). Se `bp.local` tem `tipo === "escolhido"`, o app **não pede GPS sozinho** e a
+escolha **não é sobrescrita**. O caminho de voltar pro GPS continua sendo tocar na pílula. Bate
+com as palavras dele no review original: *"já ia abrir pegando sua localização, **só modificaria
+se o usuário quiser**"* — a escolha manual **é** o "usuário quis". **O GPS automático da Task 1
+continua valendo pra quem não escolheu à mão** (`gps`, `nao-sei`, ou nada guardado).
+
+**2. `O filtro segue a tela`** — sobre a divergência do §5c abaixo. O recorte passa a comparar o
+número **arredondado, do jeito que a pessoa está vendo**. A regra é *"a pessoa filtra pelo número
+que está na tela"*, e ela fecha **os quatro pares** de uma vez (cartão-distância, ficha-distância,
+cartão-extensão, ficha-extensão). 🔴 **O jeito certo de fazer é UMA FONTE:** o arredondamento vira
+função própria em `geo.ts`, e **tanto o formatador quanto o `passaNoFiltro` chamam ela** — se o
+filtro reimplementar o arredondamento à mão, o defeito volta com outra roupa, que é o padrão que
+este projeto já pagou três vezes ("km, uma fonte").
+
+### 5c. 🟠 A DIVERGÊNCIA MEDIDA — a tela arredonda, o filtro compara cru (DECIDIDA, ver §5d)
 
 `formatarExtensao(4.04)` mostra **"4 km de trilha"** e `passaNoFiltro(…, extensaoMaxKm: 4)`
 devolve **`false`**: o recorte "até 4 km" **esconde um cartão que a tela anuncia como 4 km**. É a
@@ -386,10 +405,18 @@ inteiro). **Mas o gêmeo da DISTÂNCIA já está no ar com faixa muito maior:** 
 arredonda pra inteiro acima de 10 km → até **0,5 km** de desencontro. **Não é regressão desta
 rodada**; a Task 6 só deu o segundo exemplo.
 
-**Duas saídas, e é decisão dele:** ou o filtro compara **o valor arredondado como a tela mostra**
-(a pessoa filtra pelo número que está vendo), ou fica registrado que a divergência é aceita e por
-quê. **Não decidir é o pior dos três.** Está na pauta da revisão da branch inteira (plano,
-"Depois das oito", item 3).
+✅ **DECIDIDO por ele em 2026-08-21: `O filtro segue a tela`** — ver o §5d acima.
+
+🔴 **A revisão da branch mediu o tamanho real, e é maior do que a Task 6 tinha visto:**
+- **Extensão:** faixa `(n, n+0,05)` ≈ **49 m**, presente em **todo** teto de 1 a 20 (varredura de
+  1 m: 980 pontos divergentes).
+- **Distância:** pior caso **teto 10, km 10,4495** → a tela diz `~10 km em linha reta` e o filtro
+  esconde. Faixa = **0,4495 km (~450 m)**. Abaixo de 10 km cai pra ~50 m.
+- 🔴 **E há um TERCEIRO ponto que ninguém tinha listado: a FICHA.** O `DistanciaDaqui` usa a
+  **mesma** `formatarDistancia`. O inventário completo é **4 superfícies de exibição** ×
+  **2 comparações**: cartão-distância, ficha-distância, cartão-extensão, ficha-extensão.
+  **O mapa NÃO é um quinto** — ele não mostra km nenhum (conferido: só `CartaoTrilha`,
+  `DistanciaDaqui`, `[slug]/page.tsx` e `filtros.ts` tocam essas funções).
 
 ### 5b. 🔴 O QUE A TASK 6 ENCONTROU — confirmado, não redescubra
 
