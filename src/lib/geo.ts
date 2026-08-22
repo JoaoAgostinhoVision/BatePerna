@@ -47,6 +47,14 @@ export function formatarDistanciaCurta(km: number): string {
  *  `coordDaDistancia` abaixo, mesma família de defeito). Com o sufixo dentro
  *  da função, nenhum chamador tem como deixá-lo cair. */
 export function formatarExtensao(km: number): string {
+  // O PISO, no molde da irmã sete linhas acima (`formatarDistancia`). Sem ele,
+  // `formatarExtensao(0.04)` devolve "0 km de trilha" — o app AFIRMANDO zero km
+  // de trilha, que é o tipo de mentira que este projeto não conta. E o valor é
+  // alcançável: `extensaoKm` é `z.number().positive()` (não inteiro) em
+  // `src/types/ficha.ts`, e o questionário CONVIDA o decimal ("pode ter casa
+  // decimal: `4` ou `4.2`"). Nada aqui muda o FILTRO: quem ele compara é o km
+  // cru da ficha, não este texto.
+  if (km < 1) return "menos de 1 km de trilha";
   const arred = Math.round(km * 10) / 10;
   const n = Number.isInteger(arred) ? String(arred) : arred.toFixed(1).replace(".", ",");
   return `${n} km de trilha`;

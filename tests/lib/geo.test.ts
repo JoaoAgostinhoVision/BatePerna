@@ -117,4 +117,20 @@ describe("formatarExtensao: o mesmo número no cartão e na ficha", () => {
   it("valor inteiro não ganha ',0' à toa", () => {
     expect(formatarExtensao(12)).toBe("12 km de trilha");
   });
+
+  // O piso, no molde do "abaixo de 1 km não finge precisão" da irmã. Sem ele o
+  // arredondamento devolve "0 km de trilha" — o app afirmando ZERO, que é
+  // justamente o que ele não faz. `0.9` entra junto porque o defeito não é só o
+  // zero: "0,9 km de trilha" também é precisão que a fonte do número não tem.
+  it("abaixo de 1 km não afirma zero", () => {
+    expect(formatarExtensao(0.04)).toBe("menos de 1 km de trilha");
+    expect(formatarExtensao(0.9)).toBe("menos de 1 km de trilha");
+  });
+
+  // A borda, do lado de cá: o piso não pode engolir o próprio limite. Sem este
+  // caso, um `km <= 1` passaria batido e a trilha de 1 km — que a ficha sabe
+  // medir — perderia o número.
+  it("1 km exato continua sendo número: o piso não engole o limite", () => {
+    expect(formatarExtensao(1)).toBe("1 km de trilha");
+  });
 });

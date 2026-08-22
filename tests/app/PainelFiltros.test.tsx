@@ -442,6 +442,27 @@ describe("o que o jsdom não vê", () => {
     expect(passados).toHaveLength(4);
     for (const v of passados) expect(v).toMatch(/^(?:DIST|EXT)_(?:MAX|PASSO)_KM$/);
   });
+
+  // 🔴 A prova de FONTE dos chips de piso, irmã da de cima e pela MESMA razão.
+  // Em runtime, `PISOS_FILTRAVEIS.map(...)` e os três nomes escritos à mão
+  // desenham os MESMOS três chips, com os mesmos rótulos e gravando os mesmos
+  // valores: nenhuma asserção sobre a tela separa as duas versões — foi medido,
+  // a suíte inteira fecha verde com a lista à mão. O que a fonte garante é que
+  // um piso novo em `src/lib/piso.ts` vire chip sozinho, em vez de a tela
+  // oferecer um vocabulário e o `lerFiltros` conferir outro — e aí o recorte que
+  // a pessoa acabou de tocar voltar `null` na abertura seguinte, calado.
+  //
+  // Dois lados, como no teste acima: importar não obriga a usar, então a segunda
+  // asserção exige que os chips saiam DELE.
+  it("os chips de piso saem de PISOS_FILTRAVEIS — nenhum piso escrito à mão", () => {
+    const src = fonte("PainelFiltros.tsx");
+    expect(src, "o painel tem que importar PISOS_FILTRAVEIS de @/lib/piso").toMatch(
+      /import\s*\{[^}]*\bPISOS_FILTRAVEIS\b[^}]*\}\s*from\s*"@\/lib\/piso"/,
+    );
+    expect(src, "os chips têm que ser mapeados de PISOS_FILTRAVEIS").toMatch(
+      /PISOS_FILTRAVEIS\.map\(/,
+    );
+  });
 });
 
 // ——————— pré-voo: os guardas do armazenamento ———————

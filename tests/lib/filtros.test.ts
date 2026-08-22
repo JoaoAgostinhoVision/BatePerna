@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   DIST_MAX_KM,
@@ -504,6 +506,32 @@ describe("lerFiltros: pisoMinimo", () => {
     for (const p of PISOS_FILTRAVEIS) {
       expect(lerFiltros(JSON.stringify({ pisoMinimo: p })).pisoMinimo).toBe(p);
     }
+  });
+
+  // 🔴 A prova de FONTE do lado do filtro, terceira da mesma família (as outras
+  // duas estão em tests/lib/ficha.test.ts e tests/app/PainelFiltros.test.tsx).
+  // O teste logo acima ITERA `PISOS_FILTRAVEIS` e por isso é cego ao defeito:
+  // ele confere que cada nome da lista sobrevive, e uma cópia à mão com os
+  // mesmos três nomes o satisfaz igual — foi medido, a suíte inteira fecha verde
+  // com `["paralelepipedo", "asfalto-esburacado", "asfalto-tapete"].some(...)`
+  // aqui. É o mesmo argumento do "derivado na fonte" em tests/lib/piso.test.ts:
+  // em runtime, lista derivada e lista copiada são o MESMO VALOR.
+  //
+  // O que ela protege: no dia em que um piso entrar em `src/lib/piso.ts`, a tela
+  // desenha o chip novo e a validação da releitura tem que aceitá-lo. Com a
+  // cópia à mão, o filtro que a pessoa acabou de tocar volta `null` na abertura
+  // seguinte, sem nada dizendo por quê.
+  //
+  // Dois lados, como as irmãs: importar não obriga a usar, então a segunda
+  // asserção exige que o predicado consulte ELE.
+  it("a validação do piso guardado consulta PISOS_FILTRAVEIS — nenhum piso escrito à mão", () => {
+    const src = readFileSync(path.join(process.cwd(), "src", "lib", "filtros.ts"), "utf8");
+    expect(src, "filtros.ts tem que importar PISOS_FILTRAVEIS de @/lib/piso").toMatch(
+      /import\s*\{[^}]*\bPISOS_FILTRAVEIS\b[^}]*\}\s*from\s*"@\/lib\/piso"/,
+    );
+    expect(src, "o predicado tem que consultar PISOS_FILTRAVEIS").toMatch(
+      /PISOS_FILTRAVEIS\.some\(/,
+    );
   });
 });
 

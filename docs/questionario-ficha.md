@@ -376,5 +376,6 @@ aparece pra qualquer valor que a pessoa escolher no filtro.
 pensando no corpo de quem vai) e `duracao` (quanto tempo dura, em minutos), saíram
 deste questionário — este app só sabe falar do LUGAR, não do corpo de quem vai, e
 `piso` cobre o mesmo papel de filtro. As fichas antigas que já tinham `esforco` e
-`duracao` continuam válidas; este documento só não pergunta mais por eles em fichas
-novas.
+`duracao` continuam válidas — o parse não estoura com eles ali —, mas os dois campos
+são **ignorados na leitura**: o schema não os carrega mais, e eles não chegam no
+objeto que o app lê. Não é só o questionário que parou de perguntar.

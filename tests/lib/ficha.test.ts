@@ -180,6 +180,29 @@ describe("piso e extensaoKm", () => {
     expect(f!.piso).toBeUndefined();
     expect(f!.extensaoKm).toBeUndefined();
   });
+
+  // 🔴 PROVA DE FONTE — mesma família do "PISOS_FILTRAVEIS é derivado de PISOS"
+  // em tests/lib/piso.test.ts, e existe pela MESMA razão. Em runtime,
+  // `z.enum(PISOS)` e `z.enum(["barro", "paralelepipedo", ...])` são o mesmo
+  // schema: aceitam os mesmos quatro nomes e recusam os mesmos, então nenhuma
+  // asserção sobre o que o parse faz separa as duas versões — foi MEDIDO, a
+  // suíte inteira fecha verde com a lista escrita à mão aqui. Só a FONTE
+  // distingue, e é ela que garante que um quinto piso acrescentado em
+  // `src/lib/piso.ts` entre no zod junto, em vez de ser recusado no parse por
+  // uma segunda lista que ninguém lembrou de atualizar.
+  //
+  // Cobre os DOIS lados de propósito — precedente do teste dos quatro limites em
+  // tests/app/PainelFiltros.test.tsx: o `import` sozinho não impede importar e
+  // não usar, então a segunda asserção exige que seja `PISOS` quem monta o enum.
+  it("o zod monta o enum do piso a partir de PISOS — nenhum nome escrito à mão", () => {
+    const src = readFileSync(path.join(process.cwd(), "src", "types", "ficha.ts"), "utf8");
+    expect(src, "ficha.ts tem que importar PISOS de @/lib/piso").toMatch(
+      /import\s*\{[^}]*\bPISOS\b[^}]*\}\s*from\s*"@\/lib\/piso"/,
+    );
+    expect(src, "o campo `piso` tem que ser montado com z.enum(PISOS)").toMatch(
+      /piso:\s*z\.enum\(PISOS\)/,
+    );
+  });
 });
 
 describe("loadAll: slug repetido não pode divergir entre telas", () => {
