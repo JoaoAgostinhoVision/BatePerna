@@ -4,9 +4,13 @@ import { coordDe } from "@/lib/local";
 import type { Ficha } from "@/types/ficha";
 import { useGps, useLocal, useMexerLocal } from "./local";
 
-/** A distância fica ATRÁS DE UM TOQUE de propósito: prompt de GPS não
- *  solicitado é o jeito mais rápido de ser negado pra sempre — e negado uma
- *  vez, o navegador não pergunta de novo.
+/** O pedido de GPS agora é automático (decisão do João, `local.tsx`): o
+ *  `<LocalVivo>` já busca a posição sozinho ao montar. O botão aqui só
+ *  aparece enquanto ainda não há posição E o GPS não foi negado — é o
+ *  caminho de quem está esperando a resposta (ou sem sinal). Quando
+ *  `gps === "negado"` não existe botão: este componente mostra a mensagem
+ *  "sem localização" no lugar dele (ver abaixo), porque o navegador não
+ *  pergunta duas vezes e um botão ali seria um toque que não faz nada.
  *
  *  "Uma pessoa, uma fonte": lê a MESMA localização que o mapa e o cartão da
  *  home — não pede a posição ao aparelho por conta própria. O toque só

@@ -1,11 +1,15 @@
 "use client";
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
-import { coordDaDistancia, distanciaKm, formatarDistanciaCurta } from "@/lib/geo";
-// Direto de duracao.ts, NÃO de "@/lib/ficha": aquele módulo carrega
-// node:fs/node:path (o loader de content/fichas) e quebraria o bundle do
-// cliente. Ver o comentário em src/lib/duracao.ts.
-import { formatarDuracao } from "@/lib/duracao";
+import {
+  coordDaDistancia,
+  distanciaKm,
+  formatarDistanciaCurta,
+  formatarExtensao,
+} from "@/lib/geo";
+// `piso.ts` é puro de propósito — sem zod e sem `node:fs` — e é por isso que um
+// client component pode lê-lo direto. A razão inteira está escrita lá.
+import { rotuloPiso } from "@/lib/piso";
 import { coordDe } from "@/lib/local";
 import SeloTrilha from "./SeloTrilha";
 import { useLeitura } from "./leituras";
@@ -43,8 +47,16 @@ export default function CartaoTrilha({
     // `coordDaDistancia`, nunca `ficha.condicao.coords`: o km do cartão e o km
     // da ficha são a MESMA pergunta, e quem responde é uma função só.
     voce ? formatarDistanciaCurta(distanciaKm(voce, coordDaDistancia(ficha))) : null,
-    ficha.duracao ? formatarDuracao(ficha.duracao) : null,
-    ficha.esforco ?? null,
+    // A extensão da trilha vem FORMATADA de `geo.ts`, com o sufixo "de trilha"
+    // dentro dela: a ficha (Task 7) mostra o mesmo número pela mesma função, e
+    // dois lugares formatando o mesmo km foi o defeito dos "dois km". O sufixo
+    // também é o que distingue os DOIS números em km desta linha — "quão longe
+    // daqui" e "quão longa a trilha"; sem ele, nada na tela os separa.
+    ficha.extensaoKm ? formatarExtensao(ficha.extensaoKm) : null,
+    // O piso da VIA (fato do lugar), no lugar do antigo `esforco` (fato do
+    // corpo de quem vai). `rotuloPiso` troca o hífen do enum por espaço —
+    // "asfalto-esburacado" é chave de dado, não texto de tela.
+    ficha.piso ? rotuloPiso(ficha.piso) : null,
     // `custo.valor` é texto livre (schema não garante separador nenhum). O
     // JSON real da Rampa usa " · ", não " — " como um teste antigo supunha —
     // por isso o corte aceita os dois. Sem separador algum, o split não acha

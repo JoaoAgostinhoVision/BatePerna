@@ -3,7 +3,6 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  formatarDuracao,
   getFicha,
   getAllFichas,
   getFichasComCondicao,
@@ -112,70 +111,97 @@ function dirSintetico(arquivos: Record<string, unknown>): string {
   return dir;
 }
 
-describe("esforço e duração", () => {
+// `esforco` e `duracao` foram APAGADOS do schema nesta rodada: este app só
+// sabe falar de LUGAR, e quem ficou no lugar dos dois é o par `piso` /
+// `extensaoKm` do bloco abaixo.
+describe("esforco e duracao saíram do schema", () => {
   const base = JSON.parse(readFileSync(
     path.join(process.cwd(), "content", "fichas", "rampa-do-pepe.json"), "utf8"));
 
-  it("são opcionais — a ficha que existe hoje não os tem e tem que carregar", () => {
-    expect(() => fichaSchema.parse(base)).not.toThrow();
-  });
-
-  it("aceita os três esforços", () => {
-    for (const e of ["leve", "media", "puxada"]) {
-      expect(() => fichaSchema.parse({ ...base, esforco: e })).not.toThrow();
-    }
-  });
-
-  it("recusa esforço inventado — o filtro compara contra estes três e mais nenhum", () => {
-    expect(() => fichaSchema.parse({ ...base, esforco: "moderada" })).toThrow();
-  });
-
-  // Minutos, não texto: o filtro compara número. "1h30" obrigaria a
-  // interpretar português na hora de filtrar.
-  it("duração é número de minutos, positivo", () => {
-    expect(() => fichaSchema.parse({ ...base, duracao: 90 })).not.toThrow();
-    expect(() => fichaSchema.parse({ ...base, duracao: "1h30" })).toThrow();
-    expect(() => fichaSchema.parse({ ...base, duracao: 0 })).toThrow();
-    expect(() => fichaSchema.parse({ ...base, duracao: -30 })).toThrow();
-  });
-
-  // ——— os dois abaixo vieram do pré-voo desta task.
-
-  // O `.int()` não tinha prova: 90, "1h30", 0 e -30 são pegos por `z.number()`
-  // e `.positive()`, então apagar `.int()` deixava a suíte verde. E meia hora
-  // vira 30 na tela, mas 90,5 minutos viraria "90,5 min" — número quebrado
-  // numa linha que a pessoa lê de relance no portão.
-  it("duração fracionada é recusada — minuto quebrado não existe pra quem lê", () => {
-    expect(() => fichaSchema.parse({ ...base, duracao: 90.5 })).toThrow();
-  });
-
-  // TODOS os testes acima usam `not.toThrow()` / `toThrow()`, e NENHUM olha o
-  // que sai do parse. Isso importa porque o Zod, por padrão, DESCARTA chave
-  // desconhecida em silêncio em vez de reclamar: se alguém escrever o campo
-  // errado no schema (ou esquecê-lo), `parse({...base, esforco: "leve"})`
-  // continua não estourando — só devolve um objeto sem `esforco`. E é o valor
-  // que sai daqui que a Task 7 vai ler pra desenhar a linha do cartão.
-  it("os dois campos SOBREVIVEM ao parse — não basta não estourar", () => {
+  // ⚠️ QUEM PROVA O QUÊ, e aqui a resposta é "só este teste".
+  //
+  // O `tsc` NÃO é dono desta remoção: devolver `esforco: esforcoSchema
+  // .optional()` ao `fichaSchema` é um campo opcional a mais num tipo
+  // inferido que ninguém lê — compila limpo, e o `next build` também passa.
+  //
+  // E "não estourar" também não separa as versões: o zod, por padrão,
+  // DESCARTA chave desconhecida em silêncio em vez de reclamar, então
+  // `parse({...base, esforco: "puxada"})` não estoura nem antes nem depois. O
+  // que separa é o campo NÃO CHEGAR no objeto lido.
+  //
+  // O `expect(lido.slug)` não é decoração: sem ele, um `parse` que devolvesse
+  // `{}` passaria nas duas asserções de ausência (é a mesma armadilha do
+  // `not.toContain` que mascara o elemento sumido).
+  it("ficha antiga com os dois campos ainda carrega, e eles não chegam no objeto lido", () => {
     const lido = fichaSchema.parse({ ...base, esforco: "puxada", duracao: 90 });
-    expect(lido.esforco).toBe("puxada");
-    expect(lido.duracao).toBe(90);
+    expect(lido.slug).toBe(base.slug);
+    expect(lido).not.toHaveProperty("esforco");
+    expect(lido).not.toHaveProperty("duracao");
   });
 });
 
-describe("formatarDuracao: a linha do cartão", () => {
-  it("abaixo de uma hora, em minutos", () => {
-    expect(formatarDuracao(45)).toBe("~45min");
+describe("piso e extensaoKm", () => {
+  const base = JSON.parse(readFileSync(
+    path.join(process.cwd(), "content", "fichas", "rampa-do-pepe.json"), "utf8"));
+
+  it("ficha com piso inválido ('terra') não valida", () => {
+    expect(() => fichaSchema.parse({ ...base, piso: "terra" })).toThrow();
   });
-  it("hora cheia não mostra minuto zero", () => {
-    expect(formatarDuracao(60)).toBe("~1h");
-    expect(formatarDuracao(120)).toBe("~2h");
+
+  it("aceita os quatro pisos da escala", () => {
+    for (const p of ["barro", "paralelepipedo", "asfalto-esburacado", "asfalto-tapete"]) {
+      expect(() => fichaSchema.parse({ ...base, piso: p })).not.toThrow();
+    }
   });
-  it("hora e minuto", () => {
-    expect(formatarDuracao(90)).toBe("~1h30");
+
+  it("ficha SEM piso e SEM extensaoKm valida — os dois são opcionais", () => {
+    expect(() => fichaSchema.parse(base)).not.toThrow();
+    const lido = fichaSchema.parse(base);
+    expect(lido.piso).toBeUndefined();
+    expect(lido.extensaoKm).toBeUndefined();
   });
-  // Duas casas: "~2h5" se lê como 2h5min ou 2h50? O zero à esquerda desfaz.
-  it("minuto de um dígito ganha zero à esquerda", () => {
-    expect(formatarDuracao(125)).toBe("~2h05");
+
+  it("extensaoKm zero ou negativa não valida", () => {
+    expect(() => fichaSchema.parse({ ...base, extensaoKm: 0 })).toThrow();
+    expect(() => fichaSchema.parse({ ...base, extensaoKm: -4 })).toThrow();
+  });
+
+  it("extensaoKm positivo valida e sobrevive ao parse", () => {
+    const lido = fichaSchema.parse({ ...base, extensaoKm: 4.2 });
+    expect(lido.extensaoKm).toBe(4.2);
+  });
+
+  // A ficha REAL. Sintética prova a função; só a real prova o conteúdo
+  // (lição 10) — a Rampa de hoje não tem piso nem extensaoKm, e por serem
+  // opcionais ela tem que continuar carregando exatamente como antes.
+  it("a Rampa continua carregando, sem piso e sem extensão", () => {
+    const f = getFicha("rampa-do-pepe");
+    expect(f).not.toBeNull();
+    expect(f!.piso).toBeUndefined();
+    expect(f!.extensaoKm).toBeUndefined();
+  });
+
+  // 🔴 PROVA DE FONTE — mesma família do "PISOS_FILTRAVEIS é derivado de PISOS"
+  // em tests/lib/piso.test.ts, e existe pela MESMA razão. Em runtime,
+  // `z.enum(PISOS)` e `z.enum(["barro", "paralelepipedo", ...])` são o mesmo
+  // schema: aceitam os mesmos quatro nomes e recusam os mesmos, então nenhuma
+  // asserção sobre o que o parse faz separa as duas versões — foi MEDIDO, a
+  // suíte inteira fecha verde com a lista escrita à mão aqui. Só a FONTE
+  // distingue, e é ela que garante que um quinto piso acrescentado em
+  // `src/lib/piso.ts` entre no zod junto, em vez de ser recusado no parse por
+  // uma segunda lista que ninguém lembrou de atualizar.
+  //
+  // Cobre os DOIS lados de propósito — precedente do teste dos quatro limites em
+  // tests/app/PainelFiltros.test.tsx: o `import` sozinho não impede importar e
+  // não usar, então a segunda asserção exige que seja `PISOS` quem monta o enum.
+  it("o zod monta o enum do piso a partir de PISOS — nenhum nome escrito à mão", () => {
+    const src = readFileSync(path.join(process.cwd(), "src", "types", "ficha.ts"), "utf8");
+    expect(src, "ficha.ts tem que importar PISOS de @/lib/piso").toMatch(
+      /import\s*\{[^}]*\bPISOS\b[^}]*\}\s*from\s*"@\/lib\/piso"/,
+    );
+    expect(src, "o campo `piso` tem que ser montado com z.enum(PISOS)").toMatch(
+      /piso:\s*z\.enum\(PISOS\)/,
+    );
   });
 });
 

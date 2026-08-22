@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PISOS } from "@/lib/piso";
 
 export const waypointSchema = z.object({
   nome: z.string(),
@@ -27,11 +28,6 @@ export const discriminadorSchema = z.object({
   permissao_abortar: z.string(),
 });
 
-/** Quanto o corpo sofre. Três degraus e só: mais que isso e ninguém sabe a
- *  diferença entre o segundo e o terceiro. */
-export const esforcoSchema = z.enum(["leve", "media", "puxada"]);
-export type Esforco = z.infer<typeof esforcoSchema>;
-
 export const fichaSchema = z.object({
   slug: z.string(),
   modos: z.array(z.string()),
@@ -48,10 +44,21 @@ export const fichaSchema = z.object({
   // Opcionais porque são FATO DE ROTEIRO — quem responde é quem conhece o
   // lugar, não quem escreve o código. A ficha que existe hoje não os tem, e
   // obrigatórios eles derrubariam o carregamento dela.
-  esforco: esforcoSchema.optional(),
-  // Minutos, não texto: é o filtro que compara. `duracao: "1h30"` obrigaria a
-  // interpretar português na hora de decidir se cabe numa manhã.
-  duracao: z.number().int().positive().optional(),
+  //
+  // A rodada "review do celular" APAGOU daqui `esforco` (quão puxada, sobre o
+  // corpo de quem vai) e `duracao`: este app só sabe falar de LUGAR, e quem
+  // ficou no lugar deles é o par abaixo. Ficha antiga que ainda traga os dois
+  // campos continua carregando — o zod descarta chave desconhecida em silêncio
+  // —, ela só não os enxerga mais.
+  //
+  // O piso da via até a trilha — o PIOR trecho do caminho, não o final nem a
+  // média (ver o comentário em `src/lib/piso.ts`). Opcional porque é fato de
+  // roteiro, e ficha sem ele nunca é escondida pelo filtro de piso. Montado a
+  // partir de `PISOS`, nunca uma lista repetida aqui.
+  piso: z.enum(PISOS).optional(),
+  // Km, SÓ IDA — decisão explícita do dono do app. Ficha sem ele nunca é
+  // escondida pelo filtro de extensão.
+  extensaoKm: z.number().positive().optional(),
 });
 
 export type Waypoint = z.infer<typeof waypointSchema>;

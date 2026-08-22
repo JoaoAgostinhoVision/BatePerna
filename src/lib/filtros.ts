@@ -3,26 +3,49 @@
  *  Puro, sem React: a folha aplica, a tela desenha, e as duas REGRAS DE
  *  HONESTIDADE abaixo vivem aqui, onde podem ser provadas. */
 
-import { coordDaDistancia, distanciaKm, type Coord } from "@/lib/geo";
+import {
+  coordDaDistancia,
+  distanciaKm,
+  kmNaTelaDistancia,
+  kmNaTelaExtensao,
+  type Coord,
+} from "@/lib/geo";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
-import type { Esforco, Ficha } from "@/types/ficha";
+import { PISOS_FILTRAVEIS, ordemPiso, type Piso } from "@/lib/piso";
+import type { Ficha } from "@/types/ficha";
 
 export type Filtros = {
-  distanciaKm: 30 | 60 | null;
+  /** Número livre, não mais `30 | 60`: os dois recortes de km viraram barra +
+   *  campo digitável. Quem confere o que está guardado é o `lerFiltros`. */
+  distanciaKm: number | null;
   daHoje: boolean;
   soGratis: boolean;
-  esforco: Esforco | null;
-  duracaoMax: 120 | 240 | null;
+  extensaoMaxKm: number | null;
+  pisoMinimo: Piso | null;
 };
 
 export const CHAVE_FILTROS = "bp.filtros";
+
+/** Os limites dos dois recortes de km, e eles moram AQUI — ao lado da
+ *  validação que os aplica. A faixa da tela os lê deste módulo; escrevê-los de
+ *  novo lá seriam duas fontes que podem discordar, e discordando a barra
+ *  aceitaria um valor que o `lerFiltros` joga fora na abertura seguinte.
+ *
+ *  🔴 `PASSO` é granularidade da BARRA, NÃO o piso do intervalo — o piso é 1.
+ *  Com o piso em 5, um `4` digitado seria aceito pela tela, guardado, e viraria
+ *  `null` na releitura: o filtro se desligando sozinho entre uma abertura e
+ *  outra do app, sem nada na tela dizendo por quê. */
+export const DIST_MAX_KM = 100;
+export const DIST_PASSO_KM = 5;
+export const EXT_MAX_KM = 20;
+export const EXT_PASSO_KM = 1;
 
 export const SEM_FILTRO: Filtros = {
   distanciaKm: null,
   daHoje: false,
   soGratis: false,
-  esforco: null,
-  duracaoMax: null,
+  extensaoMaxKm: null,
+  pisoMinimo: null,
 };
 
 /** Quantos recortes estão ligados — o número da linha de resumo.
@@ -32,9 +55,54 @@ export const SEM_FILTRO: Filtros = {
  *  `x !== false` nunca era alcançável — o `tsc` recusava a comparação (TS2367)
  *  e a prova de mutação daquela metade era impossível. */
 export function contarLigados(f: Filtros): number {
-  return [f.distanciaKm, f.daHoje, f.soGratis, f.esforco, f.duracaoMax].filter(
+  // CINCO: eram sete durante a expansão desta rodada, com `esforco` e
+  // `duracaoMax` juntos; os dois foram apagados na contração. Cada campo aqui é
+  // uma linha do painel, e a lista tem que ser exatamente os campos de
+  // `Filtros` — um que falte faz a tela dizer "2 filtros ligados" com três
+  // ligados, e a pessoa procura na tela um controle que a contagem jura não
+  // existir; um que sobre é o contrário, e foi o defeito que o dono do app
+  // viu no celular (contagem prometendo chip que a tela não desenha).
+  return [f.distanciaKm, f.daHoje, f.soGratis, f.extensaoMaxKm, f.pisoMinimo].filter(
     (x) => x !== null && x !== false,
   ).length;
+}
+
+/** `Number.isInteger` faz a pergunta certa mas **não é type guard**: o `tsc`
+ *  não estreita `unknown` com ele, e sem estreitar o `v >= 1` nem compila
+ *  (lição 13 do RESUME). Embrulhado num predicado `v is number` ele resolve os
+ *  dois de uma vez — e o embrulho é sólido: se `Number.isInteger(v)` é
+ *  verdade, `v` é número.
+ *
+ *  Ele SOZINHO já recusa `NaN`, `Infinity`, texto e fracionário — MEDIDO em
+ *  node, não deduzido. Um `Number.isFinite` ao lado seria redundante e, pior,
+ *  INPROVÁVEL: nenhuma mutação o mataria, e teste que "protege" linha que não
+ *  faz nada é decoração.
+ *
+ *  ⚠️ E é ele quem barra o TEXTO: sem ele, `"30" >= 1` e `"30" <= 100` são os
+ *  dois `true` por coerção (medido), e `distanciaKm` viraria uma string dentro
+ *  do estado do app. */
+function ehInteiro(v: unknown): v is number {
+  return Number.isInteger(v);
+}
+
+/** Km guardado: inteiro, de 1 até `max`. Qualquer outra coisa vira `null` —
+ *  um valor estranho que passasse viraria um filtro escondendo trilha pra
+ *  sempre, sem a pessoa saber o que desligar.
+ *
+ *  Um só pros dois recortes de propósito: duas cópias desta regra podiam
+ *  divergir, e é o mesmo `max` que a faixa da tela lê. */
+function kmGuardado(v: unknown, max: number): number | null {
+  return ehInteiro(v) && v >= 1 && v <= max ? v : null;
+}
+
+/** `PISOS_FILTRAVEIS`, não `PISOS`: `barro` é o piso da escala e, com o filtro
+ *  lido como "no mínimo daqui pra cima", aceso ele não esconde NADA — e o
+ *  painel não desenha chip de barro, então a linha de resumo diria "1 filtro
+ *  ligado" sem nenhum controle na tela capaz de desligá-lo. Predicado, e não
+ *  `includes` com cast, pela mesma razão do `ehInteiro`: quem estreita
+ *  `unknown` é ele. */
+function ehPisoFiltravel(v: unknown): v is Piso {
+  return PISOS_FILTRAVEIS.some((p) => p === v);
 }
 
 export function lerFiltros(bruto: string | null): Filtros {
@@ -68,12 +136,18 @@ export function lerFiltros(bruto: string | null): Filtros {
   // estranho que passasse viraria um filtro escondendo tudo pra sempre, sem a
   // pessoa saber o que desligar.
   return {
-    distanciaKm: x.distanciaKm === 30 || x.distanciaKm === 60 ? x.distanciaKm : null,
+    distanciaKm: kmGuardado(x.distanciaKm, DIST_MAX_KM),
     daHoje: x.daHoje === true,
     soGratis: x.soGratis === true,
-    esforco:
-      x.esforco === "leve" || x.esforco === "media" || x.esforco === "puxada" ? x.esforco : null,
-    duracaoMax: x.duracaoMax === 120 || x.duracaoMax === 240 ? x.duracaoMax : null,
+    extensaoMaxKm: kmGuardado(x.extensaoMaxKm, EXT_MAX_KM),
+    pisoMinimo: ehPisoFiltravel(x.pisoMinimo) ? x.pisoMinimo : null,
+    // O que está guardado no celular do dono do app tem `esforco` e
+    // `duracaoMax` gravados de verdade, e eles NÃO são lidos aqui — de
+    // propósito. Ler um campo que a tela não desenha mais faria a linha de
+    // resumo dizer "1 filtro ligado" sem nenhum chip pra desligar, que é
+    // exatamente o que ele reclamou. Chave desconhecida no JSON é ignorada em
+    // silêncio: o objeto de saída é montado campo a campo, nunca espalhado do
+    // que veio.
   };
 }
 
@@ -108,17 +182,82 @@ export function passaNoFiltro({
   // ficha mostra. Enquanto isto aqui media até `condicao.coords`, o "até 60 km"
   // escondia trilha cujo cartão anunciava 40. Filtro que esconde por um número
   // que a tela não mostra é a pior versão do defeito: some sem explicação.
+  //
+  // 🔴 E o NÚMERO sai de `kmNaTelaDistancia` — o mesmo defeito entrando pela
+  // outra ponta, este ainda EM PRODUÇÃO quando foi medido: a coordenada já era
+  // uma só, mas a tela arredondava e esta linha comparava o km CRU. Com "até 10
+  // km" ligado, uma trilha a 10,4495 km sumia da home enquanto o cartão dela
+  // anunciava "~10 km em linha reta" (faixa de ~450 m no teto de 10; abaixo de
+  // 10 km, onde a tela mostra uma casa, ~50 m). A decisão do dono do app: **o
+  // filtro segue a tela**. NÃO refaça a conta aqui — a fonte é `geo.ts`, e uma
+  // cópia à mão devolve o defeito com outra roupa.
+  //
+  // O `naTela !== null` é o ramo "a tela não mostra número" (menos de 1 km): o
+  // que a tela não mostrou não pode esconder. Ele não é opcional — sem ele, o
+  // `tsc` recusa a comparação (TS18047, `naTela` is possibly 'null').
   if (filtros.distanciaKm !== null && voce) {
-    if (distanciaKm(voce, coordDaDistancia(ficha)) > filtros.distanciaKm) return false;
+    const naTela = kmNaTelaDistancia(distanciaKm(voce, coordDaDistancia(ficha)));
+    if (naTela !== null && naTela > filtros.distanciaKm) return false;
   }
 
   if (filtros.soGratis && ficha.custo.tag !== "gratis") return false;
 
   // REGRA DE HONESTIDADE 2: ficha sem o campo NUNCA é escondida por ele.
   // Sumir por dado que falta é mentira silenciosa — e hoje todas as fichas
-  // estão nesse caso.
-  if (filtros.esforco !== null && ficha.esforco && ficha.esforco !== filtros.esforco) return false;
-  if (filtros.duracaoMax !== null && ficha.duracao && ficha.duracao > filtros.duracaoMax) {
+  // estão nesse caso, nos DOIS campos opcionais que sobraram (`extensaoKm` e
+  // `piso`): a única ficha real não tem nenhum dos dois.
+  //
+  // Teto INCLUSIVO — precedente cravado na rodada passada: "até 4 km" inclui a
+  // trilha de 4 km, que é como se lê em português; o contrário esconde
+  // justamente o caso que a pessoa tinha em mente.
+  //
+  // 🔴 O NÚMERO sai de `kmNaTelaExtensao`, não da ficha crua — irmão exato do
+  // que está escrito no bloco da distância. Com o km cru, "até 4 km" escondia um
+  // cartão que dizia "4 km de trilha": faixa (n, n+0,05) em TODO teto de 1 a 20,
+  // ~49 m de trilha que a tela anuncia e o filtro nega. NÃO refaça a conta aqui.
+  //
+  // O `ficha.extensaoKm &&` escreve a honestidade 2, mas — MEDIDO de novo
+  // DEPOIS desta mudança, não herdado do comentário antigo — quem a segura em
+  // runtime continua sendo a aritmética, agora por outro caminho:
+  // `kmNaTelaExtensao(undefined)` faz `undefined < 1` dar `false` e
+  // `Math.round(NaN)/10` dar `NaN`, e `NaN > 4` é `false`. Apagar o `&&` deixa
+  // a suíte verde. (Sem total escrito de propósito: a primeira versão desta
+  // linha cravou "585/585" e envelheceu em duas horas, dentro de um comentário
+  // que existe justamente pra registrar uma medição.) Quem recusa apagá-lo
+  // continua sendo o `tsc`, e o código do erro MUDOU com esta rodada — medido
+  // agora, não herdado: era TS18048 ("'ficha.extensaoKm' is possibly
+  // 'undefined'") enquanto o campo era COMPARADO aqui; hoje ele é ARGUMENTO de
+  // `kmNaTelaExtensao`, e o erro é TS2345 ("Argument of type 'number |
+  // undefined' is not assignable to parameter of type 'number'").
+  // É a terceira resposta da lição 13, e é por isso que ele fica: diz a regra
+  // na cara de quem lê, e é a única rede no dia em que a comparação mudar.
+  //
+  // Dependência silenciosa que mora em OUTRO arquivo, e por isso está escrita:
+  // `extensaoKm` é `.positive()` no `src/types/ficha.ts`, então `0` não
+  // existe. Se o `.positive()` cair, o `&&` passa a LER `0` como "campo
+  // ausente" — hoje sem consequência observável (zero nunca é maior que um
+  // teto ≥ 1), mas a linha muda de significado sem uma linha de diff aqui.
+  if (filtros.extensaoMaxKm !== null && ficha.extensaoKm) {
+    // Mesmo `!== null` do bloco da distância, mesma razão nas duas ferramentas:
+    // a tela sem número não esconde, e o `tsc` recusa comparar `number | null`.
+    const naTela = kmNaTelaExtensao(ficha.extensaoKm);
+    if (naTela !== null && naTela > filtros.extensaoMaxKm) return false;
+  }
+
+  // "No mínimo daqui pra cima" na escala de `PISOS` (a ORDEM do array É a
+  // escala). Ficha com piso PIOR que o pedido some; ficha sem piso, nunca.
+  //
+  // Aqui o `ficha.piso &&` MORDE no vitest, ao contrário do irmão acima:
+  // `ordemPiso(undefined)` cai num `indexOf` e devolve -1, que é MENOR que
+  // qualquer piso — sem o `&&`, ficha sem piso sumiria da home. Já o
+  // `!== null` é o caso oposto: `ordemPiso(null)` também dá -1, `0 < -1` é
+  // `false`, e apagá-lo deixa a suíte verde; quem o segura é o `tsc`. As duas
+  // metades foram medidas separadas, porque num E a primeira esconde a outra.
+  if (
+    filtros.pisoMinimo !== null &&
+    ficha.piso &&
+    ordemPiso(ficha.piso) < ordemPiso(filtros.pisoMinimo)
+  ) {
     return false;
   }
 

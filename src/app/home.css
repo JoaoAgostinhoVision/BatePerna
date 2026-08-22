@@ -166,6 +166,50 @@
 }
 .bp .chip:active { opacity: .7; }
 
+/* ---- a faixa de km: a barra e o campo ----
+   44px de alvo na barra e pegador de 28px: o trilho tem 4px, e sem a caixa de
+   44px o dedo teria que acertar uma linha de 4 pixels. O `-webkit-appearance:
+   none` é o que permite desenhar o pegador — enquanto o controle tem aparência
+   nativa, o `::-webkit-slider-thumb` não pinta, e é o Safari do iPhone que roda
+   este app instalado. Tem teste lendo as duas declarações e o tamanho do
+   pegador; não apagar.
+   ⚠️ Isto NÃO é prova de que dá pra arrastar com o polegar: nenhum teste desta
+   suíte mede geometria renderizada. O que o teste lê é o alvo declarado. */
+.bp .faixa-km { gap: .5rem .6rem; }
+.bp .faixa-arrasto {
+  flex: 1 1 55%; min-width: 7rem; min-height: 44px; height: 44px;
+  -webkit-appearance: none; appearance: none; background: transparent; margin: 0;
+}
+.bp .faixa-arrasto::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 2px; background: var(--line);
+}
+.bp .faixa-arrasto::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 28px; height: 28px; margin-top: -12px; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--screen);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+}
+.bp .faixa-arrasto::-moz-range-track {
+  height: 4px; border-radius: 2px; background: var(--line);
+}
+.bp .faixa-arrasto::-moz-range-thumb {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--screen);
+}
+/* 16px, não menos: abaixo disso o Safari do iPhone dá zoom sozinho ao focar o
+   campo e a tela salta — o mesmo precedente já medido no `.busca-campo`. Tem
+   teste lendo esta regra; não baixar. */
+.bp .faixa-campo {
+  flex: none; width: 4.4rem; min-height: 44px; text-align: center;
+  font-family: var(--type); font-size: 16px;
+  border: 1px solid var(--line); border-radius: 10px; padding: .4rem .3rem;
+  background: var(--surface-2); color: var(--ink);
+}
+.bp .faixa-leitura {
+  flex: none; font-family: var(--type); font-size: .66rem; font-weight: 650;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--ink-faint);
+}
+
 /* ---- a folha e os cartões ---- */
 /* Barra fixa flutua sobre o conteúdo: sem este respiro o último cartão nasce
    atrás dela e a pessoa nunca vê a última trilha da lista. Soma a área segura

@@ -47,23 +47,33 @@ describe("a pílula", () => {
   });
 
   // "Ver daqui" é o toque que pede o GPS — a promessa do "um toque na vida".
+  // Desde a Task 1 do review do celular o `<LocalVivo>` já pede sozinho ao
+  // montar, então a asserção mede a chamada A MAIS que o toque faz, não a
+  // primeira (que já aconteceu antes do clique).
   it("'Ver daqui' pede o GPS, não abre a busca", async () => {
     const pediu = vi.fn();
     vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: pediu } });
     comLocalVivo();
+    await act(async () => {});
+    const chamadasAntes = pediu.mock.calls.length;
     await act(async () => { screen.getByRole("button", { name: /Ver daqui/ }).click(); });
-    expect(pediu).toHaveBeenCalled();
+    expect(pediu.mock.calls.length).toBeGreaterThan(chamadasAntes);
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 
+  // Mesma ressalva: com gps já negado, a montagem também chama
+  // `getCurrentPosition` sozinha (o navegador só não pergunta de novo — a
+  // chamada em si não é o que este teste proíbe). O que este teste prova é
+  // que o TOQUE na pílula não soma mais uma chamada — ele abre a busca.
   it("com gps negado, o toque abre a busca em vez de pedir de novo", async () => {
     localStorage.setItem(CHAVE_GPS, "negado");
     const pediu = vi.fn();
     vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: pediu } });
     comLocalVivo();
     const b = await screen.findByRole("button", { name: /escolher onde estou/ });
+    const chamadasAntes = pediu.mock.calls.length;
     await act(async () => { b.click(); });
-    expect(pediu).not.toHaveBeenCalled();
+    expect(pediu.mock.calls.length).toBe(chamadasAntes);
     expect(screen.getByRole("textbox")).toBeTruthy();
   });
 });

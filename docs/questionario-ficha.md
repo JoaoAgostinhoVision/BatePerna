@@ -153,42 +153,65 @@ Molhado, o risco é atolar.`
 
 ---
 
-## Quão puxada é — `esforco`
+## O piso da via — `piso`
 
-**Pergunta:** pensando no corpo de quem for, essa trilha é **leve**, **media** ou
-**puxada**? Três degraus, e só estes três — responda com uma dessas três palavras
-exatamente, sem sinônimo (nem "moderada", nem "média" com acento):
+**Pergunta:** pensando no caminho INTEIRO de carro até lá, da estrada principal
+até onde o carro para — qual é o PIOR trecho? Vale o pior pedaço mesmo que ele
+seja curto, e mesmo que ele seja justamente o último: não é a média dos
+trechos, e não é o piso que predomina no caminho. É o pior pedaço que qualquer
+carro precisa passar. (Se depois de estacionar ainda se caminha, essa parte não
+entra aqui — ela é a pergunta seguinte.) Responda com uma destas quatro
+palavras exatamente, sem sinônimo:
 
-- **leve** — dá pra levar criança ou alguém sem preparo nenhum, sem sofrer.
-- **media** — exige um preparo físico normal, mas não é sofrimento.
-- **puxada** — cansa de verdade, exige preparo físico de quem caminha com
-  frequência.
+- **barro** — terra que vira lama e segura água quando molha; o pior piso da
+  escala.
+- **paralelepipedo** — pedra irregular; sacoleja, mas não atola.
+- **asfalto-esburacado** — é asfalto, mas tem buraco.
+- **asfalto-tapete** — asfalto liso, sem buraco — o melhor piso da escala.
 
-**Por que importa:** é um dos filtros da tela inicial — quem não topa uma puxada
-pode esconder essas trilhas da lista.
+**Por que importa:** é um dos filtros da tela inicial — quem só topa ir de carro
+comum em piso bom pode esconder trilhas com piso pior que isso.
+
+**Um caso inventado, só pra deixar a regra clara** — este morro não existe, é
+hipotético, não é lugar nenhum e não é nenhuma trilha sua: se a estrada até o
+pé de um morro fosse asfalto liso e só o último quilômetro, subindo, fosse
+barro, a resposta seria `barro`. Ganha o pior pedaço mesmo curto, mesmo no
+fim — não o piso que cobre a maior parte do caminho.
+
+**Exemplo (Rampa):** `barro`. É o que você já disse na ficha — *"é barro:
+molhou, não vá"* — e a regra da trilha é *"não suba de carro comum; o barro
+segura água"*. Como é a estrada nos trechos antes desse, você ainda não me
+disse, e eu não vou supor: pra escolher a palavra basta o pior trecho, e o pior
+trecho você já nomeou.
 
 **Pular é permitido:** sem resposta, a trilha simplesmente nunca é escondida por
-esse filtro — ela aparece pra qualquer nível de esforço que a pessoa escolher.
-
-**Exemplo:** `media`
+esse filtro — ela aparece pra qualquer piso mínimo que a pessoa escolher.
 
 ---
 
-## Quanto tempo leva — `duracao`
+## Quantos km — `extensaoKm`
 
-**Pergunta:** quanto tempo dura o trajeto em si — só o percurso, não contando
-parada, foto, banho de cachoeira no fim? Responda **em minutos**, não em texto
-("1h30" não serve; escreva `90`).
+**Pergunta:** quantos quilômetros tem **a trilha em si — o trecho que se cobre
+a pé**, do lugar onde o carro para até o ponto final? **Não conte a estrada de
+carro até lá** (essa é a pergunta de cima, a do piso): aqui é só o que se anda.
+E conte **só a ida** — não conte a volta, mesmo que a volta seja pelo mesmo
+caminho de ida. Responda em número (pode ter casa decimal): `4` ou `4.2`, não
+`4 km` nem "4 km ida e volta". Se não se caminha nada — se o rolê é do carro e
+acabou — deixe em branco.
 
-**Exemplos de conversão:** `30 minutos → 30` · `1h → 60` · `1h30 → 90` · `2h → 120`.
+**Por que importa:** é o outro filtro numérico da tela inicial — quem só quer
+uma caminhada curta pode esconder trilhas com caminhada mais longa que isso. É
+também o número que aparece no cartão da home e na ficha, escrito como
+"N km de trilha". Se aqui entrar a quilometragem da estrada, o cartão passa a
+mostrar dois números em km lado a lado — a distância até a trilha e a "extensão
+da trilha" — os dois querendo dizer "quão longe fica", e o segundo mentindo.
 
-**Por que importa:** é o outro filtro numérico da tela inicial — quem só tem uma
-manhã livre pode esconder trajetos mais longos que isso.
+**Exemplo (Rampa):** ainda não medido — você ainda não me passou quanto se
+caminha lá, e eu não vou estimar. Quando passar, o número entra como só ida e
+só o trecho a pé, do jeito que a pergunta pede.
 
 **Pular é permitido:** sem resposta, a trilha simplesmente nunca é escondida por
-esse filtro — ela aparece pra qualquer duração que a pessoa escolher.
-
-**Exemplo:** `90`
+esse filtro — ela aparece pra qualquer extensão que a pessoa escolher.
 
 ---
 
@@ -344,7 +367,15 @@ recusa carregar em vez de mostrar algo quebrado. Depois de validado, a ficha nov
 aparece sozinha na home (agrupada por "hoje dá" ou "hoje não dá", junto com o pin no
 mapa) e no acervo em `/trilhas` — sem precisar mexer em mais nada.
 
-`esforco` e `duracao` são os dois únicos campos opcionais deste questionário: se você
+`piso` e `extensaoKm` são os dois únicos campos opcionais deste questionário: se você
 pulou uma das duas perguntas acima, a ficha carrega igual, só que essa trilha nunca
-fica escondida pelo filtro correspondente (esforço ou duração) na tela inicial — ela
+fica escondida pelo filtro correspondente (piso ou extensão) na tela inicial — ela
 aparece pra qualquer valor que a pessoa escolher no filtro.
+
+**Nota pra quem mantém o schema:** duas perguntas antigas, `esforco` (quão puxada é,
+pensando no corpo de quem vai) e `duracao` (quanto tempo dura, em minutos), saíram
+deste questionário — este app só sabe falar do LUGAR, não do corpo de quem vai, e
+`piso` cobre o mesmo papel de filtro. As fichas antigas que já tinham `esforco` e
+`duracao` continuam válidas — o parse não estoura com eles ali —, mas os dois campos
+são **ignorados na leitura**: o schema não os carrega mais, e eles não chegam no
+objeto que o app lê. Não é só o questionário que parou de perguntar.

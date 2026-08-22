@@ -1,73 +1,582 @@
 # RESUME — BatePerna (retomar aqui)
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado.** O ledger da execução vive em
-> `.superpowers/sdd/2026-08-13-daqui-e-filtros/progress.md`, que é **scratch git-ignorado** —
+> `.superpowers/sdd/2026-08-18-review-do-celular/progress.md`, que é **scratch git-ignorado** —
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-17. **Tudo mergeado, tudo NO AR, nada em voo.**
+**Última parada:** 2026-08-21. **RODADA ABERTA.**
+Branch **`review-do-celular`**, NÃO mergeada, NÃO deployada. `main` segue em `f10f075`.
+
+✅ **AS OITO TASKS ESTÃO FECHADAS**, cada uma com implementador → revisão com dois veredictos →
+fix round → re-revisão escopada. **NÃO EXISTE WIP:** a árvore está limpa e todo commit no log é
+trabalho revisado. Você não precisa julgar código não revisado.
+
+🔴 **O placar de método desta rodada, e ele é o mesmo há três sessões: NENHUM fix round consertou
+lógica de aplicação.** O código dos implementadores chegou certo **oito vezes em oito**. Todos os
+achados foram de **PROVA** e de **COMENTÁRIO** — e vários foram deles em cima de MIM.
+
+🔴 **As OITO tasks têm pré-voo escrito no plano versionado** (antes só a 2, 3 e 4 tinham).
+Procure os blocos de citação 🔴 "EMENDA DO PRÉ-VOO" — eles corrigem o texto ao redor e vencem
+onde discordarem. **Resta a Task 8, e ela está pré-voada duas vezes** mais as lições das Tasks 6
+e 7; o brief dela já está escrito em `.superpowers/sdd/.../task-8-brief.md`.
+
+🔴 **Depois da Task 8 vem a REVISÃO DA BRANCH INTEIRA, e ela não é opcional** — 7ª rodada seguida
+em que é obrigatória. Nas três últimas o achado foi de **JUNÇÃO**, invisível pra revisão de task.
+A pauta desta vez está no plano ("Depois das oito", item 3), e inclui a decisão do João sobre o
+arredondamento (§5c aqui embaixo).
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA" — ele está voltando com um REVIEW do celular
+# ▶▶ SE O JOÃO DISSER "CONTINUA" — as 8 tasks acabaram; retome na REVISÃO DA BRANCH INTEIRA
 
-**Ele disse, ao encerrar:** *"depois eu dou um review, quero continuar na próxima sessão
-informando o que não gostei e o que melhorar."*
+**O review do celular já aconteceu, já foi triado e já virou spec + plano aprovados.** Não
+pergunte o que ele achou; não peça a lista de novo; não devolva menu.
 
-**Então não é retomada de rodada. É recebimento de feedback de uso.** O trabalho está fechado e
-no ar; o que chega agora é a opinião dele **depois de usar o app no iPhone**.
-
-### O que NÃO fazer
-
-- ❌ **Não** devolva menu, não pergunte "por onde quer começar", não peça contexto.
-- ❌ **Não** comece a codar o primeiro item da lista dele. A lista vai **misturar** três coisas
-  que exigem tratamentos diferentes (ver abaixo).
-- ❌ **Não** trate "não gostei de X" como bug. Muitas vezes é decisão de produto que ele está
-  revendo — e várias das decisões atuais estão registradas com o porquê. **Se o que ele quer
-  contradiz uma decisão escrita, diga qual e por que ela foi tomada, e então faça o que ele
-  decidir.** Ele reafirmando é decisão dele, e segue.
-
-### O que fazer
-
-1. **Ouça a lista inteira antes de agir.** Se ele der um item só, pergunte se há mais — a
-   triagem muda conforme o conjunto.
-2. **Triage em três baldes**, e diga a ele em qual cada item caiu:
-   - **DEFEITO** — o app faz o que ninguém decidiu (ex.: algo desalinhado, algo que trava). Vai
-     direto pra conserto, com teste.
-   - **DECISÃO DE PRODUTO** — o app faz o que foi decidido, e ele quer diferente. Precisa de
-     brainstorm curto antes de código: o que muda, o que quebra junto, qual invariante encosta.
-   - **JÁ CONHECIDO** — está na lista de deferidos/perguntas abaixo. **Diga que já estava
-     registrado e mostre o que já se sabe**; isso economiza a discussão inteira.
-3. **Três coisas na lista dele provavelmente já estão previstas** — confira antes de tratar como
-   novidade: o **filtro que não filtra nada** (nenhuma ficha tem esforço/duração), o **rótulo do
-   mapa vazio** dizendo "trilhas de hoje" sem trilha nenhuma, e o **"piscar"** do mapa
-   reenquadrando ao mexer no filtro (ele aprovou no desenho, mas nunca viu acontecer).
-4. **Só depois da triagem** decida o método: item pequeno e isolado → conserto direto com teste;
-   conjunto que muda comportamento → spec curta + plano + SDD, como as duas últimas rodadas.
-
-### O chão, pra conferir em silêncio antes de responder
+### 1. Confira o chão em silêncio
 
 ```
-git branch --show-current   → main          git status --short → limpo
-npm test                    → 539/539 em 47 arquivos
-npx tsc --noEmit            → limpo         npm run build → passa
+git branch --show-current  → review-do-celular   (se estiver em main, só trocar)
+git status --short         → limpo
+npm test                   → 613/613 em 49 arquivos   ← tudo verde, NÃO há falha esperada
+npx tsc --noEmit           → limpo
+npm run build              → passa
 ```
 
-**Rode os três.** E, se precisar deployar: `npx --yes vercel@latest --prod --yes` (ver a seção
-do deploy).
+**Os três foram conferidos por mim no fim da sessão, não relatados por agente.** Se a suíte
+estiver diferente disso, alguma coisa mudou e vale descobrir o quê antes de seguir.
 
-### O que ele foi olhar no celular (pra você saber o que ele viu)
+### 2. Leia, nesta ordem
 
-Nada disto jamais rodou em WebKit. As quatro da §15 da spec continuam abertas, mais duas novas:
+1. `docs/superpowers/specs/2026-08-18-review-do-celular.md` — o desenho aprovado por ele.
+2. `docs/superpowers/plans/2026-08-18-review-do-celular.md` — 8 tasks. 🔴 **Leia os blocos de
+   citação "EMENDA DO PRÉ-VOO"**: eles CORRIGEM o texto ao redor, e onde discordarem a emenda
+   vence. Tem emenda na Task 2, na 3 e na 4.
+3. `.superpowers/sdd/2026-08-18-review-do-celular/progress.md` — o ledger. **É scratch
+   git-ignorado; se um `git clean` o apagou, o essencial está aqui e no plano versionado.**
 
-1. Os pins ficam dentro do mapa com folga?
-2. A **barra fixa** e a **faixa de gesto** do iPhone convivem? (`env(safe-area-inset-bottom)` é
-   **0** em qualquer desktop — nada aqui mediu isso.)
-3. O painel de filtros empurra a lista sem pular?
-4. O piso de zoom 8 orienta, ou vira mancha?
-5. 🆕 **O estado vazio**, que ele alcança com UM toque: ligar **"só grátis"** zera a home (a
-   única ficha real é paga). Sem GPS ele vê o mapa da região sem pin nenhum + "0 trilhas · 1
-   filtro ligado" + o aviso e o botão de limpar; **com** GPS, o mapa recentra nele a ~27 km.
-6. 🆕 **O reenquadramento** do mapa quando ele mexe no filtro.
+Os **briefs das 8 tasks** ficaram em `.superpowers/sdd/.../task-N-brief.md`, que é scratch — mas
+são extraídos do plano com o script, então **regeneram**:
+`"…/superpowers/6.3.0/skills/subagent-driven-development/scripts/task-brief" <plano> <N>`.
+🔴 **O brief regenerado NÃO tem as emendas do pré-voo** — elas foram escritas à mão por cima.
+Depois de regenerar, **releia o plano e recoloque a emenda da task** antes de despachar. As da
+Task 2, 3 e 4 estão no plano; as das Tasks 5 a 8 ainda não foram feitas.
+
+### 3. O estado exato, task a task
+
+| Task | Estado | Commits |
+|---|---|---|
+| 1 — GPS pede sozinho na 1ª abertura | **completa**, 1 fix round, re-revisão limpa | `b4a7585`, `2260c36` |
+| 2 — `piso.ts` + schema + questionário | **completa**, 3 fix rounds, re-revisão **ADDRESSED** nos 6 achados | `ad88d20` (WIP), `9b03f43`, `cb97792`, `0445f50`, `bdb4497` |
+| 3 — recortes novos em `filtros.ts` | **completa**, 1 fix round + 1 conserto meu, re-revisão **ADDRESSED** nos 4 | `066cb08`, `c4161b4`, `e0d1442` |
+| 4 — `FaixaKm`: a barra e o campo | **completa**, 1 fix round (9 achados), re-revisão **PROVA Approved** + 1 conserto meu de comentário | `41ee448`, `0ddf131`, `2250e7c` |
+| 5 — o painel: duas faixas e os chips de piso | **completa**, 1 fix round (3 achados), re-revisão **Approved nos DOIS veredictos** | `3dc3957`, `941365b` |
+| 6 — o cartão | **completa**, 1 fix round (1 Important + 3 Minor) + 1 conserto de 1 linha, re-revisão **Approved nos DOIS veredictos** | `b03b985`, `627e8e0`, `eb9daab` |
+| 7 — a ficha: piso e extensão no Trajeto | **completa**, 1 fix round (1 Important + 2 Minor) + 1 oração, re-revisão **Approved nos DOIS veredictos, sem achado novo** | `75ef513`, `f8455ba`, `80e6834` |
+| 8 — A CONTRAÇÃO | **completa**, revisão **Approved nos dois** de cara + 1 fix round (2 Minor), re-revisão **Approved nos DOIS, sem achado novo** | `903575b`, `0426475` |
+
+✅ **AS OITO TASKS ESTÃO FECHADAS.** **Chão depois da Task 8:** `npm test` **613/613 em 49
+arquivos**, `tsc` limpo, `npm run build` passa. A base da rodada era 539; o pico foi 632, e a
+**contração devolveu 19** — conferidos teste a teste pelo revisor (24 nomes sumiram, 5 entraram,
+e **3 dos 24 eram RENOMES, não remoções**; os 21 removidos de verdade são todos sobre os campos
+mortos).
+
+⬅️ **É AQUI QUE VOCÊ COMEÇA: a REVISÃO DA BRANCH INTEIRA**, com agente **novo** (sem o viés de
+quem revisou task a task). Pauta no plano, "Depois das oito", item 3. Depois dela: merge
+`--no-ff`, deploy, e conferir com `curl`.
+
+✅ **A re-revisão da Task 5 voltou e fechou: Approved nos DOIS veredictos.** Somadas as duas
+passadas, **30 mutações medidas nesta task e 30 morrem** — inclusive as três que estavam vivas.
+O teste novo de aninhamento **não passa por vacuidade**: o revisor apontou o seletor pra uma
+classe inexistente e mediu que o teste CAI com a linha de guarda e PASSA sem ela. É o primeiro
+guarda anti-vacuidade desta rodada escrito **e** medido no mesmo commit.
+
+### 3a. 🔴 O QUE AS TASKS 4 E 5 DEIXARAM DECIDIDO
+
+- O `FaixaKm` **já é o grupo**: `<fieldset class="filtro-grupo faixa-km">` + `<legend>{rotulo}</legend>`.
+  **Não o embrulhe em outro fieldset.** O nome acessível sai da legend **de propósito** — o
+  `aria-label` foi REMOVIDO na revisão porque, junto com a legend, ele mascarava o sumiço dela
+  (medido: apagar a legenda deixava a suíte 19/19 verde, e só quem OLHA a tela perdia o título).
+- Barra: `min={passo}`, `max={max + passo}`, `step={passo}`; a parada extra vale **`null`**.
+  Campo: role `spinbutton`, prende **só o teto** na hora, piso é `1`, `Math.trunc`.
+- **Custo aceito e registrado** (não re-litigar): com corte abaixo do passo — 4 km na distância,
+  passo 5 — o pegador fica na primeira parada enquanto o campo diz `4` e a leitura diz `até 4 km`.
+  Só o controle grosso discorda; os dois portadores de TEXTO dizem a verdade. As três saídas
+  alternativas são piores, e o porquê está no item 6 da emenda 2 da Task 4.
+- **O painel (Task 5) está assim:** Distância daqui → Tamanho da trilha → Piso, no mínimo → Hoje →
+  Custo. As duas primeiras são `<FaixaKm>`; a de distância continua atrás do `temLocal &&`, a de
+  tamanho **não**. Esforço e Duração **saíram da tela** (os campos só morrem na Task 8). Os quatro
+  limites são **importados** de `@/lib/filtros`, e há asserção de FONTE provando que nenhum km
+  está escrito à mão — ela é a única capaz de pegar `max={100}` no lugar de `max={DIST_MAX_KM}`,
+  porque em runtime os dois são o mesmo valor. **Medido: essa mutação derruba só a de fonte.**
+- **Os `aria-label` dos fieldsets de `Hoje` e `Custo` foram removidos** (o implementador estendeu
+  o ruling da Task 4; o revisor verificou no repo inteiro que nenhum teste os consulta por
+  role/nome, e as duas `<legend>` dizem o mesmo que os atributos diziam).
+
+### 3b. 🔴 O QUE JÁ ESTÁ DECIDIDO E AS TASKS 6 A 8 TÊM QUE CASAR
+
+- **Os quatro limites moram em `src/lib/filtros.ts`** (`DIST_MAX_KM = 100`, `EXT_MAX_KM = 20`,
+  `DIST_PASSO_KM = 5`, `EXT_PASSO_KM = 1`) e a tela os **lê de lá** — provado por asserção de
+  FONTE no `PainelFiltros`, e o `filtros.test.ts` prende os quatro **valores literais**.
+- **`lerFiltros` valida `>= 1`, não `>= passo`.** Se a tela prender no `passo`, um `4` digitado é
+  aceito, guardado, e vira `null` na releitura — **o filtro se desligando sozinho entre duas
+  aberturas do app.** É o defeito central desta rodada; ele reapareceu em quatro roupas
+  diferentes (o piso do campo, o `step` da barra, o fracionário, e os limites trocados entre as
+  duas faixas) e as quatro estão fechadas por teste.
+- ✅ **O deferido I-2 da Task 3 (`barro` entrando pelo estado em memória) FECHOU na Task 5**, por
+  construção: o único jeito de escrever `pisoMinimo` é tocar um chip, e os chips saem de
+  `PISOS_FILTRAVEIS`. Há teste de que o chip de `barro` não existe.
+- 🔴 **O filtro FANTASMA, e ele só morre na Task 8** (transferido da Task 5, achado T5-2): entre
+  agora e a Task 8, um `esforco`/`duracaoMax` guardado no celular dele **conta na linha de resumo
+  sem chip pra desligar e sem botão de limpar** — o `limpar filtros` do `FolhaTrilhas` vive dentro
+  do ramo `visiveis.length === 0`, e a lista não fica vazia. **Hoje o dano é o contador mentindo,
+  não trilha sumida**, porque a única ficha real não tem `esforco` e a REGRA DE HONESTIDADE 2
+  impede o fantasma de esconder. Com uma 2ª ficha COM `esforco`, passaria a esconder de verdade.
+  **A Task 8 resolve por construção** — e o teste `contarLigados(lerFiltros(velho)) === 0` é a
+  prova de que fechou. **Não mergeie a rodada sem a Task 8.**
+- **Deferido que chega na Task 5** (achado I-2 da revisão da Task 3, plan-mandated): o tipo
+  `pisoMinimo: Piso | null` ainda deixa `barro` entrar pelo **estado em memória** — a emenda 2
+  fechou só a porta do `localStorage`. Aceso, `barro` não esconde nada **e não tem chip pra
+  desligar**: a linha diria "1 filtro ligado" sem controle na tela. Já está registrado no teste.
+
+### 4. 🔴 O PRÉ-VOO DE CADA TASK JÁ PAGOU OITO VEZES NESTA RODADA — não pule
+
+**Antes de despachar qualquer task, releia a lista de testes do brief perguntando "que linha do
+código eu posso apagar sem isto falhar?"** e mande o complemento junto no despacho. Nesta rodada
+o pré-voo já achou **mais de vinte furos do plano** (sem total cravado de propósito: o número
+envelhece) — e as emendas estão **no plano versionado**
+(`docs/superpowers/plans/2026-08-18-review-do-celular.md`, em blocos de citação 🔴), não só nos
+briefs de scratch.
+
+🔴 **O padrão que as três tasks desta sessão confirmaram: o código dos implementadores estava
+certo todas as vezes. Os oito achados foram do PLANO e da PROVA.** Nenhum fix round desta sessão
+consertou lógica de aplicação. Quando o revisor rotula "plan-mandated", é literal.
+
+**As três formas novas, e elas valem além desta rodada:**
+
+- **Uma prova que a CAMADA não pode dar.** A mutação #2 da Task 2 (`PISOS_FILTRAVEIS` virando
+  lista copiada à mão) **não morde** — medida, 3/3 verde. Em runtime, lista derivada e lista
+  copiada com o mesmo conteúdo **são o mesmo valor**; nenhuma asserção de valor as distingue. O
+  remédio foi **asserção de fonte**, o precedente do `"use client"`. **Antes de exigir uma
+  mutação, pergunte se a camada consegue distinguir as duas versões.**
+- **Prova OCA porque as duas versões coincidem no caso testado.** Eu cravei que
+  `"distanciaKm 0 → null"` provava o piso do intervalo. **Não prova:** `0 >= 5` também é falso,
+  então `>= 1` e `>= passo` eram indistinguíveis pela suíte que eu especifiquei. Medido pelo
+  implementador e confirmado pelo revisor: mutando o piso caem **só** os testes que ele
+  acrescentou (`distanciaKm 4 → 4`). **Escolha o caso de teste que SEPARA as duas versões, não um
+  que ambas rejeitam.**
+- **Teste auto-referente quanto ao VALOR.** Os testes de borda escritos contra o símbolo
+  (`DIST_MAX_KM + 1`) provam a RELAÇÃO e são cegos ao número: trocar `EXT_MAX_KM` de 20 pra 8
+  deixava tudo verde, porque o teste vira "9 → null" e "8 → 8", corretos com 8. **As duas provas
+  são ortogonais e as duas precisam existir** — medido nos dois sentidos: mutar o valor derruba
+  só a asserção literal; mutar a relação (`<=` → `<`) derruba só os testes de borda.
+- 🆕 **O COMENTÁRIO MENTIROSO DESTA VEZ FOI MEU, E ESTAVA NO PLANO — 2026-08-20.** Minha emenda
+  justificava o `step` da barra dizendo que sem ele ela produz 101…104 *"que o `lerFiltros` joga
+  fora na abertura seguinte: o filtro se desligando sozinho"*. **É falso, e o revisor mediu:** o
+  próprio componente faz `n > max ? null : n` antes de qualquer coisa sair dele — com `step={1}`,
+  pedir 101 à barra devolve `null`. **Nenhum valor acima do teto escapa, com ou sem `step`.** A
+  linha vale (o `step` é DESENHO: sem ele a barra vira granular de 1 km e sobram ~4px de zona
+  morta), mas a razão escrita era outra. Do plano a frase foi pro `FaixaKm.tsx` e pro teste:
+  **dois arquivos a partir de uma frase minha, pela segunda sessão seguida** (a primeira foi o
+  "asfalto" da Rampa, que virou quatro). Corrigido na nascente em `6fb4e39`.
+- 🆕 **A lição do caso-que-separa vale por COMPARAÇÃO, não por controle.** O implementador da
+  Task 4 aplicou-a certo na barra — pegou uma prova oca MINHA (`valor 4` com `min=5`: o elemento
+  prende o 4 em `"5"`, e a versão certa e a arredondada mostram a mesma coisa; com `7` elas se
+  separam) — e no **mesmo arquivo** deixou o campo sem nenhum caso de fronteira. As duas
+  comparações que faltavam eram exatamente as duas que a revisão achou: `n > max` → `n >= max` e
+  `i < 1` → `i <= 1`, **as duas com a suíte 19/19 verde**. A segunda é o "campo indigitável" de
+  volta com um `=` de diferença: com `<= 1`, digitar `1` esvazia o campo e **todo número que
+  começa por 1** (`1`, `10`, `100`) fica inalcançável pelo teclado.
+- 🆕 **E ACONTECEU DE NOVO NA TASK 5, mesma sessão, mesmo formato — são DUAS.** A emenda da Task 5
+  prometia que *"o botão 'limpar filtros' da folha continua sendo a saída"* pro filtro fantasma.
+  **Medido: o `limpar filtros` vive dentro do ramo `if (visiveis.length === 0)`** e só aparece
+  quando o filtro zerou a lista — que não é o caso. **As duas frases erradas desta sessão têm a
+  mesma assinatura: eu afirmando no plano uma proteção que existe no meu RACIOCÍNIO e não no
+  código, sobre um arquivo que eu não abri.** Nas duas vezes quem pegou foi a régua de MEDIR, não
+  a de ler. A regra que fica: **antes de escrever "X continua sendo a saída" ou "Y joga isso
+  fora", abra o arquivo e confira o RAMO em que a linha vive.**
+- 🆕 **A COSTURA DE COMPONENTE CONTROLADO — defeito de junção pego, pela primeira vez, na revisão
+  de TASK.** O `FaixaKm` é controlado: a Task 4 provou que ele **obedece** à prop, e a Task 5
+  tinha que provar que o painel **alimenta** a prop com o que está guardado. Ela provou só a
+  direção da ESCRITA (`fireEvent.change` → ler o `localStorage`), e as duas mutações da direção
+  de volta ficaram **33/33 verdes**: `valor={filtros.distanciaKm}` → `valor={null}` (a lista corta
+  em 30 km de verdade, a linha diz "1 filtro ligado", **e o campo fica em branco dizendo
+  "qualquer"**) e a faixa de tamanho lendo o valor da de distância (dois recortes exibindo um
+  número só). **Quando um componente controlado atravessa duas tasks, a de baixo prova a
+  obediência e a de cima tem que provar a ALIMENTAÇÃO — são duas direções, e a suíte da escrita
+  não vê a da leitura.**
+- 🆕 **A prova de mutação que não foi APLICADA conta como sobrevivente — e neste repo há uma
+  armadilha concreta pra isso.** Medido: **o código-fonte (`PainelFiltros.tsx`, `FaixaKm.tsx`,
+  `home.css`) está em CRLF e os arquivos de teste em LF.** Uma âncora de mutação com quebra de
+  linha casada em LF simplesmente não encontra nada no `.tsx`, a substituição vira no-op, a suíte
+  fica verde e a mutação entra no relatório como "sobreviveu" — a revisão então pede conserto de
+  coisa que não está quebrada. **Todo aplicador de mutação tem que ABORTAR ALTO quando a âncora
+  não casa** (e quando casa mais de uma vez), nunca seguir em silêncio.
+  🔴 **A assimetria que salva, e vale saber:** uma mutação não aplicada só produz **falso
+  sobrevivente**, nunca falsa morte. Então todo "morde" reportado é seguro por construção; quem
+  precisa de verificação é só o sobrevivente. E nesta rodada **todo sobrevivente reportado voltou
+  a FALHAR depois do conserto**, o que prova retroativamente que foi aplicado de verdade.
+- 🆕 **O atributo que MASCARA o sumiço do elemento.** `aria-label` no `<fieldset>` **junto** com a
+  `<legend>`: apagar a legenda deixava tudo verde, porque o nome acessível continuava vindo do
+  atributo (ele tem precedência) e só quem OLHA a tela perdia o título. **Duas fontes pro mesmo
+  nome, e a de fora mascarando a de dentro.** Mesma família: três `getByRole` soltos não provam
+  contenção — é `within(grupo)` que prova.
+- **Um campo indigitável.** A Task 4, como eu a escrevi, prendia o campo numérico no intervalo
+  `[passo, max]` "na hora", com `DIST_PASSO_KM = 5` — o `4` vira `5` no primeiro dígito e
+  **ninguém consegue digitar `45`**, nem `100`. Ruling: **o piso do intervalo é `1`**; `passo` é
+  granularidade da BARRA. **Simule o dedo dígito a dígito antes de cravar comportamento de
+  campo** — nenhum teste desta suíte pega isso.
+- 🆕 **REQUISITO ENUNCIADO EM PROSA, SEM DONO NA TABELA DE MUTAÇÃO — o Important da Task 6
+  (2026-08-21), e é meu.** O brief dizia *"a linha some inteira se nada sobrar"* e não pôs isso
+  nem na lista de testes nem na tabela. **Medido: apagar a guarda `partes.length > 0 &&` deixava
+  a suíte 624/624 verde.** A regra que fica: **toda frase de comportamento escrita em prosa no
+  brief precisa de linha na tabela de mutação** — se não tem dono, não existe.
+- 🆕 **A ASSERÇÃO DE AUSÊNCIA DE TEXTO MASCARA O SUMIÇO DO ELEMENTO, e é a família do
+  `aria-label` sobre a `<legend>` com outra roupa.** `container.querySelector(".x")?.textContent
+  ?? ""` seguido de `not.toContain(...)` **passa nos dois mundos**: com o elemento presente e
+  vazio, e com ele ausente. O `?.` e o `?? ""` são a máscara. **Se o que se prova é que o
+  elemento não existe, a asserção é `toBeNull()`** — e o teste tem que cair **pelo motivo certo**
+  (na Task 6 a mensagem do vitest, `expected <span class="cartao-meta"></span> to be null`, foi
+  ela mesma a prova de que o seletor casava quando o elemento existia; um seletor digitado errado
+  teria passado em silêncio).
+- 🆕 **Teste de ausência sem o irmão de PRESENÇA é meia prova.** Todos os "não inventa" passam
+  com o componente inteiro apagado.
+- 🆕 **ESCOLHA DE FIXTURE LOAD-BEARING TEM QUE TER A RAZÃO ESCRITA AO LADO.** Na Task 6 foram
+  **três** no mesmo arquivo: `piso: "asfalto-esburacado"` em vez de `barro` (senão `rotuloPiso` é
+  inprovável), `extensaoKm: 4.25` em vez de `4` (senão o sufixo à mão é indistinguível da
+  função), e `valor: "R$ 5 por pessoa"` numa ficha **gratuita** (senão a checagem de
+  `tag === "pago"` não tem como ser provada — medido, a mutação sobrevivia 625/625). **Sem a
+  frase ao lado, o próximo leitor "limpa" o valor como ruído e a prova fica oca em silêncio.**
+- 🆕 **A COLISÃO ESTRUTURAL "só estes arquivos" × "não deixe comentário mentir", e a saída medida
+  (Task 6, 2026-08-21).** Toda task que remove o **último chamador** de um símbolo torna falsas,
+  **no mesmo instante**, frases que vivem fora do escopo dela — na Task 6 foram três comentários,
+  e nenhum estava num arquivo que a task podia tocar. **A saída NÃO é outro portão "volte
+  limpo"** (o meu, na Task 8, não fechava por duas razões: o termo era digitado de memória —
+  `duracao` não acha `formatarDuracao`, e `rg` é sensível a caixa — e porque **referência
+  histórica legítima deve sobreviver**). A forma que funciona está escrita no plano, na Task 8:
+  **termos copiados do diff, busca `-i`, e o passo produz CLASSIFICAÇÃO em três baldes** — (a)
+  frase que AFIRMA um consumidor desfeito → corrija a oração agora; (b) referência declarada como
+  HISTÓRIA → deixe; (c) CÓDIGO → a task não terminou, **e só este bloqueia**. Mais a cláusula de
+  permissão na linha `Files:`, senão o passo é ilegal pra quem o executa.
+- 🆕 **ORTOGONALIDADE SE MEDE, NÃO SE SUPÕE PELA FORMA — e o erro foi meu, na Task 7
+  (2026-08-21).** Eu escrevi no plano que, num teste de junção, *"cada asserção pega um defeito:
+  o cruzamento pega a DIVERGÊNCIA, o literal pega a VACUIDADE"*. **Falso, e por transitividade,
+  não por amostragem:** enquanto os dois lados forem asseridos contra a **mesma constante**,
+  `A === L ∧ B === L ⟹ A === B`. **Não existe estado do mundo em que o cruzamento falhe e os dois
+  literais passem** — logo não existe mutação que só ele pegue, nem hoje nem depois. Medido: sob
+  a mutação da formatação à mão, quem estoura é sempre o literal do lado que quebrou; e no
+  cenário "alguém atualiza a constante pra casar com a tela quebrada", estoura o literal do
+  **outro** lado (essa segunda foi medida com mutação DUPLA, de propósito, porque era a única
+  frase do conserto ainda não medida). **O cruzamento fica** — é rede pro dia em que um literal
+  sair ou as constantes divergirem — **mas escrito como REDUNDÂNCIA.** A régua geral: *existe
+  mutação que derruba A e não B, nos dois sentidos?* Se não existe, uma é redundante. Eu já
+  escrevi essa mesma frase CERTA uma vez (o par valor-literal × relação-simbólica) e errada
+  agora — o que muda é ter medido.
+- 🆕 **DECLARAR BURACO É CERTO; ENTERRAR JUNTO A METADE PROVÁVEL, NÃO.** Na Task 7 o
+  implementador declarou *"a CSS não tem dono, o jsdom não mede aparência"* — e estava **meio**
+  certo. São duas perguntas: *fica bonito?* (não mede — declarar foi correto, e cravar
+  `font-size` num `toBe` compraria churn de design por nenhuma segurança) e ***o seletor casa?***
+  (mede perfeitamente, com um `querySelector`). **Antes de declarar buraco, separe o que a camada
+  não pode medir do que ela pode.**
+- 🆕 **O DOM ESCORREGANDO DE BAIXO DO PRÓPRIO SELETOR — forma nova, e passava verde.** Medido:
+  mover a linha pra **fora do `.wp-body`** mantendo-a **dentro** do bloco endereçável deixava
+  632 testes verdes, e nessa posição a cadeia que o CSS declara (`.bp .wp-body .fatos`) **deixa
+  de casar** — a linha perde estilo inteiro em silêncio. A asserção posicional escopava pelo
+  bloco, que é grosso demais. **Escope a asserção pela MESMA cadeia que o CSS usa**, não por um
+  ancestral qualquer. E o fecho honesto do outro lado é **existência do seletor** (`regraDe(...)`
+  `.not.toBeNull()`), **nunca valor** — a régua `tests/css.ts` já existe neste repo pra isso.
+- 🆕 **Mutação que derruba a suíte por EXCEÇÃO não prova o requisito.** Achado do implementador
+  da Task 7, em cima do meu brief: com a linha do piso e a da extensão como elementos separados,
+  tirar o guarda `ficha.piso &&` faria `rotuloPiso(undefined)` **estourar** — e "quebrou" não é o
+  mesmo que "não mostrou linha vazia". Ele resolveu com lista única + guarda único (o desenho do
+  cartão), e aí a remoção do guarda falha **por asserção**, com a mensagem exata do defeito.
+  **Ao desenhar a mutação, pergunte se ela falha pelo motivo que você quer provar.**
+- 🆕 **QUEM PROVA O QUÊ, na contração (Task 8) — medido, e com a correção do que eu ia registrar
+  errado.** Numa task que APAGA, o `npm test` não é o juiz principal, mas ele também não é
+  dispensável — e a repartição exata só apareceu medindo cada ressurreição:
+  - **`esforco` de volta ao SCHEMA** → 1 teste cai, **e o `tsc` fica LIMPO**. O compilador **não**
+    é dono disso;
+  - **`esforco`/`duracaoMax` de volta ao `Filtros`/`contarLigados`** → 8 testes (é o filtro
+    fantasma voltando a contar);
+  - **re-export sem o módulo** → `tsc` **TS2307**;
+  - **`lerFiltros` voltando a preservar o campo** → 1 teste (`toEqual`);
+  - **SEM DONO, e declarado:** `esforcoSchema`, `type Esforco` **e a ausência do próprio
+    `src/lib/duracao.ts`**. 🔴 **Esta terceira eu ia registrar errado:** o commit dizia que o
+    `tsc` era dono "do módulo apagado", e o revisor mediu — **recriar `duracao.ts` sem consumidor
+    deixa `tsc` limpo, `build` passando e a suíte verde**. O `tsc` é dono do **re-export**, não da
+    ausência do módulo.
+- 🆕 **QUANDO a asserção de FONTE se justifica — a régua que faltava, e ela fecha uma dúvida que
+  esta rodada abriu duas vezes.** O precedente (`PISOS_FILTRAVEIS`, `"use client"`) valia porque
+  as duas versões **produzem o mesmo valor em runtime** e a diferença tem **consequência
+  observável** que nenhuma outra camada alcança (a lista copiada diverge e o filtro esconde
+  trilha errada; o componente vira server e a cor congela). Já `esforcoSchema` exportado sem
+  chamador **não tem consequência**: não renderiza, não computa, nem entra no bundle. **Asserção
+  de FONTE se justifica quando a diferença que ela pega tem consequência observável; sem
+  consequência atrás, ela vira prova de ARRUMAÇÃO** — a mesma família do rename consistente que a
+  Task 7 aceitou deixar invisível.
+- 🆕 🔴 **A PROVA DE FONTE QUE LÊ O COMENTÁRIO — e a armadilha nasce JUNTO com a boa prática que
+  este projeto prega (2026-08-21).** Achada pelo implementador **dentro do próprio teste que ele
+  estava escrevendo**, e só porque ele mediu: a asserção lia o arquivo **cru**, ele apagou a
+  chamada da função pra ver o teste cair, e ele **passou verde** — porque o **comentário** logo
+  acima citava `kmNaTelaExtensao(undefined)` pra registrar uma medição, e o regex casou o
+  comentário.
+  > **Prova de fonte que lê comentário mostra que alguém ESCREVEU o nome, não que o código o
+  > CHAMA.**
+
+  **Por que isto é pior do que parece:** asserção de fonte é o instrumento que esta rodada usou
+  **seis vezes**, e a regra da casa manda **escrever a medição num comentário ao lado da prova**.
+  As duas boas práticas se atropelam — *"o comentário que fura nasce junto com a medição que ele
+  registra"*. **O remédio:** tirar comentários antes da busca, **com asserção conferindo que a
+  tira não comeu o código** (senão o remédio vira o próximo furo).
+
+  **A auditoria do repo inteiro (27 provas) deu 1 furada — a que já foi consertada.** Mas o
+  revisor mediu que a tira é **load-bearing nos dois sentidos**: `filtros.ts:223` tem um
+  `Math.round(NaN)/10` **dentro de um comentário**, e a asserção irmã é de **AUSÊNCIA**
+  (`not.toMatch(/Math\.round\(/)`) — lendo o arquivo cru ela **falharia hoje, com o código
+  certo**. Presença fica furada, ausência fica falso-positiva.
+
+  🟠 **DÍVIDA REGISTRADA, não bloqueio:** **11 provas de presença** em `.ts/.tsx` ainda leem o
+  arquivo cru (P1, P2a/b, P3a/b, P4a/b, P5a/b, P7, P11). Estão sãs **por acidente** — nenhum
+  comentário casa **hoje**. Os dois helpers já existem (`tests/css.ts:24` e o local em
+  `tests/app/MioloHome.test.tsx:518`). As cinco de CSS são seguras por forma (pedem seletor +
+  corpo `{…}` juntos) e as cinco de `"use client"` são **estruturalmente imunes**
+  (`trimStart().startsWith`).
+- 🆕 **O limite conhecido vale escrito AO LADO da prova.** O par de testes de CSS da Task 7
+  *"parece a mesma prova e não é"* (um prende o DOM à cadeia, o outro prende a cadeia a existir).
+  Sem uma oração dizendo o que o par deliberadamente **não** cobre — o rename consistente em JSX
+  **e** CSS, que é refatoração e não defeito — o próximo leitor ou confia demais, ou "completa" a
+  prova com asserção de **nome de classe**, que não deveria existir: nome de classe não é
+  comportamento, e travá-lo cobra pedágio de toda renomeação sem comprar segurança.
+
+### 4b. 🔴 A OUTRA FAMÍLIA QUE APARECEU TRÊS VEZES NESTA SESSÃO: comentário que envelhece
+
+Três achados foram **comentários afirmando medições que deixaram de ser verdade**, sempre dentro
+do comentário que existia justamente pra registrar a medição:
+
+1. um guarda afirmando que *"fecha a porta pela qual a invenção anterior entrou"* — recolando a
+   invenção como prosa, 9/9 verde. Ele fecha a porta **vizinha**;
+2. `"585/585 VERDE"` cravado num comentário, envelhecido em duas horas;
+3. um comentário afirmando **no presente** que quatro mutações deixam a suíte verde — o que era
+   verdade **antes** da asserção escrita três linhas abaixo, a asserção que ele existe pra
+   justificar.
+
+**A regra que ficou: não crave total absoluto de suíte em comentário** ("nenhuma asserção cai" não
+envelhece; "585/585" envelhece a cada task), **e escreva no passado o que foi medido antes da
+mudança.** O risco do #3 é o pior: quem medir recebe o oposto do escrito e **desacredita o bloco
+inteiro**, inclusive a parte que vale.
+
+### 5. 🔴 A armadilha da Task 2, e ela vale além dela — foi o Critical desta rodada
+
+`docs/questionario-ficha.md` é respondido **pelo João**, que não programa, e a resposta vira um
+JSON que tem que passar no schema. **Na rodada passada o revisor achou DOIS defeitos nesse
+arquivo que nenhuma leitura pegou — e só apareceram porque ele RESPONDEU o questionário e rodou
+o JSON contra o schema.** A lição da casa é literal: *para artefato que vira entrada de outra
+coisa, a prova é USÁ-LO.*
+
+✅ **Feito na Task 2 (2026-08-19), e pagou de novo:** o JSON respondido passou no schema de
+primeira, **mas a checagem com o dado real da Rampa achou um furo que nenhuma leitura pegou** — a
+frase *"Não é o trecho final"* lia como instrução de **excluir** o último trecho, e na Rampa o
+pior trecho **é** o último. Um leitor obediente excluiria o barro, sobraria asfalto, e o campo
+que decide *"não suba de carro comum"* nasceria como `asfalto-tapete`. **Terceira rodada seguida
+em que responder o questionário acha o que ler não acha. Faça sempre que o texto mudar** — um §C
+velho não vale para pergunta nova.
+
+Três pontos do texto que decidem se o dado entra certo ou errado **pra sempre**:
+- **`extensaoKm` é SÓ IDA** — se a pergunta não disser com todas as letras, ele responde ida e
+  volta e o número fica errado sem ninguém perceber.
+- **`extensaoKm` é a TRILHA, o trecho a pé — não a estrada de carro até lá.** A pergunta do
+  `piso`, logo acima no papel, acaba de falar da estrada; sem a exclusão escrita com todas as
+  letras, a resposta natural é a quilometragem da estrada, e o cartão passa a mostrar dois
+  números em km lado a lado, o segundo mentindo. É o defeito dos "dois km" com outra roupa.
+- **`piso` é O PIOR TRECHO do caminho DIRIGIDO**, não o final nem a média nem o que predomina.
+  Um exemplo do caso conflitante (o pior pedaço é curto e é o último) tem que estar no
+  questionário; é ele que desfaz a ambiguidade.
+
+🔴 **E o exemplo tem que ser HIPOTÉTICO, não a Rampa.** Uma versão anterior deste bloco dizia
+*"Na Rampa: asfalto até o pé da serra, barro na subida"*. **A ficha real não tem a palavra
+"asfalto" uma única vez** — `barro` é dado do João; a proporção asfalto/barro é invenção. Ela
+nasceu aqui, foi pro plano, do plano pro brief, do brief pro `piso.ts` e pro questionário — que
+promete no cabeçalho, com todas as letras, que *"todo exemplo abaixo é a resposta real que já
+existe pra Rampa do Pepê — não é ficção"*. Quatro arquivos a partir de uma frase deste
+documento. **A Rampa entra só como `barro`, justificada pelo que a ficha diz; quem ensina a
+regra é um morro inventado e rotulado como tal.**
+
+### 5d. ✅ AS DUAS DECISÕES QUE O JOÃO TOMOU EM 2026-08-21 — não re-litigue
+
+Levei as duas com as saídas na mesa e os números medidos. Ele respondeu:
+
+**1. `A escolha à mão vence`** — sobre o Critical da revisão da branch (o GPS automático apagando
+a cidade escolhida). Se `bp.local` tem `tipo === "escolhido"`, o app **não pede GPS sozinho** e a
+escolha **não é sobrescrita**. Bate com as palavras dele no review original: *"já ia abrir pegando sua localização, **só modificaria
+se o usuário quiser**"* — a escolha manual **é** o "usuário quis". **O GPS automático da Task 1
+continua valendo pra quem não escolheu à mão** (`gps`, `nao-sei`, ou nada guardado).
+
+🔴 **ERRO MEU, PEGO PELO IMPLEMENTADOR NO MESMO DIA, e é a assinatura que esta sessão inteira
+repetiu.** Eu escrevi aqui, junto do ruling, que *"o caminho de voltar pro GPS continua sendo
+tocar na pílula"*. **É FALSO, e ele conferiu em vez de aceitar:** com `local.tipo === "escolhido"`,
+o `BuscaLugar.tsx:32` faz `soGps` virar `false`, então **o toque na pílula abre a busca de
+cidade** e nunca chama `pedirGps`; o painel só oferece cidades, sem item *"de onde eu estou"*; e o
+botão do `DistanciaDaqui` só aparece quando **não há localização nenhuma**. `pedirGps` não tem
+outro chamador no repo.
+
+**Ele implementou assim mesmo, e a razão é boa: conferiu o `main` (`f10f075`) e o beco JÁ EXISTE
+em produção** — lá a linha é `if (guardado.tipo === "gps") buscarGps()` e o `soGps` é idêntico.
+**Quem escolhe uma cidade no app que está no celular dele hoje já fica sem caminho de volta.** O
+conserto **restaura a semântica que está no ar**; não cria a armadilha. O que a branch fazia era
+*mascarar* a armadilha com um defeito pior — a escolha nem sobrevivia.
+
+🟠 **PENDÊNCIA NOVA PRO JOÃO, e ela é pré-existente, não desta rodada:** o "trocar" da pílula
+devolve **só outra cidade**. Falta um *"de onde eu estou"*. O conserto mínimo seria um primeiro
+item no painel de busca chamando `pedirGps` quando `gps !== "negado"`. **Ninguém inventou essa
+tela** — é decisão dele.
+
+**2. `O filtro segue a tela`** — sobre a divergência do §5c abaixo. O recorte passa a comparar o
+número **arredondado, do jeito que a pessoa está vendo**. A regra é *"a pessoa filtra pelo número
+que está na tela"*, e ela fecha **os quatro pares** de uma vez (cartão-distância, ficha-distância,
+cartão-extensão, ficha-extensão). 🔴 **O jeito certo de fazer é UMA FONTE:** o arredondamento vira
+função própria em `geo.ts`, e **tanto o formatador quanto o `passaNoFiltro` chamam ela** — se o
+filtro reimplementar o arredondamento à mão, o defeito volta com outra roupa, que é o padrão que
+este projeto já pagou três vezes ("km, uma fonte").
+
+### 5c. 🟠 A DIVERGÊNCIA MEDIDA — a tela arredonda, o filtro compara cru (DECIDIDA, ver §5d)
+
+`formatarExtensao(4.04)` mostra **"4 km de trilha"** e `passaNoFiltro(…, extensaoMaxKm: 4)`
+devolve **`false`**: o recorte "até 4 km" **esconde um cartão que a tela anuncia como 4 km**. É a
+forma exata do que o comentário de `filtros.ts:180-185` chama de *"a pior versão: some sem
+explicação"*, e o irmão do "km, uma fonte" da rodada passada — só que lá as duas telas discordavam
+entre si, e aqui **a tela discorda do filtro**.
+
+Na extensão a faixa é estreita (`(n, n+0,05]`, ~50 m, e com `EXT_PASSO_KM = 1` o teto é sempre
+inteiro). **Mas o gêmeo da DISTÂNCIA já está no ar com faixa muito maior:** `formatarDistancia`
+arredonda pra inteiro acima de 10 km → até **0,5 km** de desencontro. **Não é regressão desta
+rodada**; a Task 6 só deu o segundo exemplo.
+
+✅ **DECIDIDO por ele em 2026-08-21: `O filtro segue a tela`** — ver o §5d acima.
+
+🔴 **A revisão da branch mediu o tamanho real, e é maior do que a Task 6 tinha visto:**
+- **Extensão:** faixa `(n, n+0,05)` ≈ **49 m**, presente em **todo** teto de 1 a 20 (varredura de
+  1 m: 980 pontos divergentes).
+- **Distância:** pior caso **teto 10, km 10,4495** → a tela diz `~10 km em linha reta` e o filtro
+  esconde. Faixa = **0,4495 km (~450 m)**. Abaixo de 10 km cai pra ~50 m.
+- 🔴 **E há um TERCEIRO ponto que ninguém tinha listado: a FICHA.** O `DistanciaDaqui` usa a
+  **mesma** `formatarDistancia`. O inventário completo é **4 superfícies de exibição** ×
+  **2 comparações**: cartão-distância, ficha-distância, cartão-extensão, ficha-extensão.
+  **O mapa NÃO é um quinto** — ele não mostra km nenhum (conferido: só `CartaoTrilha`,
+  `DistanciaDaqui`, `[slug]/page.tsx` e `filtros.ts` tocam essas funções).
+
+### 5b. 🔴 O QUE A TASK 6 ENCONTROU — confirmado, não redescubra
+
+- **`content/fichas/` tem UMA ficha** (`rampa-do-pepe.json`) e **ela não tem nenhum dos quatro
+  campos** (`piso`, `extensaoKm`, `esforco`, `duracao`) — conferido em 2026-08-20. Por isso o
+  teste *"a Rampa REAL"* tem que carregar o JSON **pelo loader**, não um fixture parecido: é ele
+  que fala de produção.
+- **Consequência, e é o que dizer ao João no fim da rodada:** o **cartão em produção não muda uma
+  vírgula** nesta rodada. Ele já mostra `~27 km em linha reta · R$ 5` e vai continuar mostrando.
+  **O que muda na tela dele é o painel de filtros.** O resto acende quando o questionário voltar.
+- **O exemplo do teste tem que ser `asfalto-esburacado`, nunca `barro`:** `rotuloPiso("barro")`
+  devolve `"barro"`, então com esse exemplo chamar a função ou usar o campo cru dá a MESMA string
+  e a prova é oca. Vale pra Task 6 e pra Task 7.
+- **A Task 7 tem uma mutação sem dono** no plano original (o teste *"cartão e ficha mostram o
+  MESMO texto de extensão"* não estava na lista). Ele entra, e é de **JUNÇÃO**: os dois
+  renderizados com a mesma ficha, comparados **um contra o outro** — não cada um contra um
+  literal, porque dois literais iguais escritos à mão são a mesma mentira duas vezes.
+
+### 6. O método, e ele já está autorizado
+
+**SDD com subagentes — o João autorizou nesta rodada** ("pode seguir"). Implementador → revisão
+por task com dois veredictos → conserto pelo mesmo implementador → re-revisão escopada →
+**revisão da branch inteira no fim, sem exceção** (7ª rodada seguida em que ela é obrigatória).
+
+**A ordem das tasks é 1→8 e ela NÃO é arbitrária: é expandir → migrar → contrair.** A rodada
+apaga `esforco` e `duracao`, que têm consumidores em quatro arquivos; apagá-los antes da Task 8
+deixa o `tsc` vermelho no meio da rodada. **Não "limpe" os campos velhos cedo.**
+
+### 7. O que a rodada entrega (as palavras dele, no review do iPhone)
+
+1. *"o mapa já ia abrir pegando sua localização"* → GPS automático na 1ª abertura. ✅ **FEITO**
+   (Task 1).
+2. *"o filtro duração deveria ser distância — cada navegador tem seu ritmo"* → duração **morre**;
+   entra tamanho da trilha em km, **só ida**. ✅ **FEITO INTEIRO** (Tasks 2 a 8): o campo, a
+   pergunta do questionário, o recorte, a tela, o cartão, a ficha — e a `duracao` **apagada** do
+   schema, dos filtros e do `src/lib/duracao.ts`, que deixou de existir.
+3. *"com a chegada do esforço, isso deve ser inserido dentro das trilhas"* → piso e extensão
+   aparecem na ficha, junto ao Trajeto. ✅ **FEITO** (Task 7) — dentro do bloco 📍 Trajeto, no
+   `.wp-body`, com a mesma função de formatação e a mesma ordem do cartão. 🟠 **Nunca visto em
+   tela nenhuma:** a prova de aparência não existe e está declarada como inexistente (o jsdom não
+   mede) — vai na fila do iPhone.
+4. *"o filtro quando selecionado não é possível deselecionar"* → **ele mesmo retirou** e trocou
+   por *"melhor o usuário conseguir digitar ou mover uma barra"*. Os dois recortes numéricos
+   viram **barra + campo**; o problema do chip morre por construção. ✅ **FEITO** (Tasks 4 e 5) —
+   e o chip que sobrou (piso) desliga no segundo toque, com teste.
+5. *"esforço podia ser — barro, paralelepípedo, asfalto esburacado, asfalto tapete"* → o
+   `esforco` (leve/media/puxada, sobre o corpo) vira **piso da via** (sobre o lugar). ✅ **FEITO
+   INTEIRO** (Tasks 2 a 8): o vocabulário (`src/lib/piso.ts`), o campo no schema, a pergunta, o
+   recorte, os chips, o cartão, a ficha — e o `esforco` **apagado**, junto do `esforcoSchema` e
+   do `type Esforco`.
+
+**A descoberta que reorganizou tudo, e ela vale reler:** a lista dele é vocabulário de estrada, e
+a ficha real explica por quê — *"Dá pra ir de carro comum; molhado, o risco é atolar"*, *"não
+suba de carro comum; o barro segura água"*. **A Rampa do Pepê é um rolê de carro.** Por isso um
+campo sobre o preparo do corpo nunca teve de onde sair: este app só sabe falar de lugar.
+
+### 8. O que continua sendo só dele (não é trabalho da rodada)
+
+- ✅ **`docs/questionario-ficha.md` está PRONTO pra ele responder.** As perguntas do `piso` e da
+  `extensaoKm` fecharam na Task 2, com as três armadilhas do §5 resolvidas e travadas por teste.
+  **Não há mais razão pra esperar** — antes havia (as perguntas iam mudar).
+- 🟠 **PERGUNTA CURTA PRO JOÃO, e ela nasceu do texto novo — não decida sozinho.** A pergunta da
+  extensão agora diz, com todas as letras, que se **não se caminha nada** (o rolê é do carro e
+  acabou) a resposta certa é **deixar em branco**. Se for esse o caso da Rampa, o filtro de
+  tamanho da trilha nasce **inerte** — exatamente o defeito "filtro que não tem como filtrar" já
+  registrado nos deferidos, que ele viu no celular e reclamou. *"Na Rampa se caminha? Se o rolê é
+  todo de carro, o filtro de tamanho da trilha tem o que filtrar?"*
+- **Abrir a home no iPHONE.** As quatro perguntas da §15 da spec anterior continuam abertas
+  (pins com folga, barra fixa × faixa de gesto, painel empurrando a lista, piso de zoom 8), mais
+  as três novas da §14 da spec desta rodada: a barra arrasta com o polegar? o campo numérico abre
+  o teclado certo? o balão de GPS aparece antes ou depois da home pintar? ✅ **As duas primeiras
+  JÁ EXISTEM na tela** desde a Task 5 — dá pra abrir e ver.
+  🆕 Junto delas, o que as revisões das Tasks 4 e 5 listaram como impossível de medir daqui:
+  o trilho de 4px centrado na caixa de 44px; **cada faixa provavelmente quebrando em DUAS linhas**
+  em ~360px (barra 55% + campo 4,4rem + a leitura + dois gaps não cabem), e com **duas** faixas o
+  painel aberto ficou bem mais alto do que já foi — "Custo" pode nascer longe da dobra; os três
+  chips de piso são rótulos de duas palavras num alvo de 36px; e qual teclado o
+  `inputMode="numeric"` de fato abre. **Nada disso quebra constante nenhuma** (o orçamento da
+  dobra mede a `.filtro-linha`, não o painel aberto, e isso foi conferido) — é rolagem, e ninguém
+  nunca viu este painel deste tamanho.
+
+### 9. O resumo do que a sessão de 2026-08-20 fez
+
+Fechou **as Tasks 4 e 5**, cada uma com implementador → revisão com dois veredictos → fix round →
+re-revisão escopada. Suíte **588 → 622**. E **pré-voou as oito tasks**: antes só a 2, 3 e 4 tinham
+emenda; agora a 5, a 6, a 7 e a 8 também têm, no plano versionado.
+
+**De novo, nenhum fix round consertou lógica de aplicação.** Os doze achados foram de PROVA e de
+COMENTÁRIO. O padrão desta rodada está confirmado pela quarta task seguida: o código dos
+implementadores chega certo; o que erra é o meu plano e a minha prova.
+
+**Os dois Importants meus da sessão são a mesma frase, escrita duas vezes** — ver o §4: uma
+justificando o `step` (*"o `lerFiltros` joga esses valores fora"*) e outra prometendo uma saída
+pro filtro fantasma (*"o botão limpar filtros continua sendo a saída"*). As duas falsas, as duas
+medidas pelo revisor, as duas corrigidas na nascente antes de qualquer conserto de código. A
+primeira já tinha se propagado pra dois arquivos.
+
+**O que os implementadores acharam em cima de mim, e vale registrar porque é mão dupla:** o da
+Task 4 pegou uma prova OCA minha (`valor 4` com `min=5` — o elemento prende o 4 em `"5"` e as
+duas versões coincidem; com `7` elas se separam) e mediu a razão em vez de deduzi-la.
+
+### 9b. O resumo do que a sessão de 2026-08-19 fez
+
+Retomou na Task 2 (que estava como WIP não revisado) e fechou **as Tasks 2 e 3**, cada uma com
+implementador → revisão com dois veredictos → fix round → re-revisão escopada. Suíte **560 → 588**.
+
+**Nenhum fix round consertou lógica de aplicação.** Os quatro fix rounds foram sobre a **prova** e
+sobre o **conteúdo do questionário** — o código dos implementadores estava certo nas duas tasks.
+
+**O Critical da sessão foi meu:** o questionário afirmava *"a estrada até o pé da serra é
+asfalto"* e *"a maior parte do caminho asfaltada"* sobre a Rampa. **A ficha real não tem a palavra
+"asfalto" uma única vez.** A frase nasceu no §5 **deste arquivo**, foi pro plano, do plano pro
+brief, do brief pro `piso.ts` e pro questionário — que promete no cabeçalho que todo exemplo é
+dado real. **Quatro arquivos a partir de uma frase minha, e um teste já a protegia.** Corrigido
+na nascente; ver o §5.
 
 ---
 

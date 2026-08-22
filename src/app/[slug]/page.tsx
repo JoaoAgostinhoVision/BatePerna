@@ -1,6 +1,8 @@
 import "../ficha.css";
 import { getFicha } from "@/lib/ficha";
 import { resolverEstado } from "@/lib/carimbo-estado";
+import { formatarExtensao } from "@/lib/geo";
+import { rotuloPiso } from "@/lib/piso";
 import { notFound } from "next/navigation";
 import ConfirmarFui from "../ConfirmarFui";
 import MapaEstatico from "../MapaEstatico";
@@ -34,6 +36,22 @@ export default async function Ficha({
   // Chip/ticket derivados do custo (dado real).
   const precoCurto = ficha.custo.valor?.match(/R\$\s?\d+/)?.[0] ?? "Pago";
   const restoCusto = ficha.custo.valor?.replace(precoCurto, "").replace(/^\s*[·-]?\s*/, "").trim();
+
+  // Os dois fatos do LUGAR que o cartão da home já mostra, agora também aqui,
+  // dentro do bloco Trajeto: quão longa é a trilha e que piso tem a via.
+  // Formatados pelas MESMAS funções do cartão (`formatarExtensao`,
+  // `rotuloPiso`) — formatar de novo aqui seria a mesma trilha com duas caras,
+  // que foi exatamente o defeito dos "dois km". A ordem também é a do cartão:
+  // extensão, depois piso.
+  //
+  // Campo ausente não vira "—" nem "não informado": ele some da lista, e se
+  // nada sobrar a linha inteira não é desenhada (o `.filter(Boolean)` mais o
+  // guarda lá embaixo). Sem o guarda, uma ficha sem os dois ganharia uma linha
+  // vazia no meio do bloco.
+  const fatosDaVia = [
+    ficha.extensaoKm ? formatarExtensao(ficha.extensaoKm) : null,
+    ficha.piso ? rotuloPiso(ficha.piso) : null,
+  ].filter(Boolean);
 
   // Ressalva: negrito na primeira oração (até o travessão).
   const [ressalvaLead, ...ressalvaResto] = ficha.condicao.ressalva_proxy.split("—");
@@ -72,7 +90,13 @@ export default async function Ficha({
             <span className="who">— a voz de quem conhece</span>
           </div>
 
-          <div className="sec">
+          {/* `data-bloco` não é enfeite: os três blocos abaixo são
+              `<div className="sec">` idênticos, distinguidos só pelo texto do
+              `.k` lá dentro, e sem uma identidade endereçável nenhum teste
+              consegue dizer que o piso está DENTRO do Trajeto e não debaixo do
+              Acesso. Dado de estrada aparecendo no bloco errado é o app
+              dizendo outra coisa. */}
+          <div className="sec" data-bloco="trajeto">
             <div className="k">📍 Trajeto</div>
             <div className="waypoint">
               {/* Sem prop de estado: a cor do pin vem do data-state da Moldura,
@@ -83,6 +107,7 @@ export default async function Ficha({
                   <div className="t">{wp.nome}</div>
                   {wp.nota && <div className="n">{wp.nota}</div>}
                   <div className="coord">{wp.lat}, {wp.lng}</div>
+                  {fatosDaVia.length > 0 && <div className="fatos">{fatosDaVia.join(" · ")}</div>}
                   {/* LocalVivo não desenha nenhum elemento (só Context.Provider
                       por baixo) — envolve só a distância porque é o único
                       consumidor da localização nesta página hoje. Mesma fonte

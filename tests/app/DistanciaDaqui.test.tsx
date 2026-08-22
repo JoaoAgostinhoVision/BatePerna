@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import DistanciaDaqui from "@/app/DistanciaDaqui";
 import LocalVivo from "@/app/local";
 import { getFichasComCondicao } from "@/lib/ficha";
@@ -64,28 +64,46 @@ describe("DistanciaDaqui", () => {
     expect(screen.queryByRole("button", { name: /dist[âa]ncia/i })).toBe(null);
   });
 
+  // O `<LocalVivo>` agora busca sozinho ao montar (Task 1 do review do
+  // celular) — a primeira chamada aqui é a da montagem, não a do toque. O
+  // mock falha na primeira chamada (sem sinal, code 2) pra deixar o botão
+  // na tela, e só resolve na segunda — a do toque — pra continuar provando
+  // que o CLIQUE também busca e a distância nasce da resposta dele.
   it("o toque pede a localização ao CONTEXTO, e a distância nasce quando ele responde", async () => {
+    let chamadas = 0;
     plantarGeo({
-      getCurrentPosition: (ok: PositionCallback) =>
+      getCurrentPosition: (ok: PositionCallback, erro: PositionErrorCallback) => {
+        chamadas += 1;
+        if (chamadas === 1) {
+          erro({ code: 2 } as GeolocationPositionError);
+          return;
+        }
         // um grau de latitude ao norte da Rampa ≈ 111 km
-        ok({ coords: { latitude: RAMPA.lat + 1, longitude: RAMPA.lng } } as GeolocationPosition),
+        ok({ coords: { latitude: RAMPA.lat + 1, longitude: RAMPA.lng } } as GeolocationPosition);
+      },
     });
 
     render(<LocalVivo><DistanciaDaqui ficha={ficha} /></LocalVivo>);
+    await screen.findByRole("button", { name: /dist[âa]ncia/i });
     fireEvent.click(screen.getByRole("button", { name: /dist[âa]ncia/i }));
 
     expect(await screen.findByText(/~111 km em linha reta daqui/)).toBeTruthy();
   });
 
-  it("não pede localização sozinho — só depois do toque", () => {
+  // Task 1 do review do celular virou este teste do avesso: o pedido de GPS
+  // deixou de ficar atrás de um toque de propósito (era esta a garantia
+  // antes) e passou a disparar sozinho na montagem, por decisão do João. O
+  // toque continua funcionando — é a chamada ADICIONAL que a prova mede.
+  it("já pede sozinho ao montar, e o toque busca de novo", async () => {
     const espiao = vi.fn();
     plantarGeo({ getCurrentPosition: espiao });
 
     render(<LocalVivo><DistanciaDaqui ficha={ficha} /></LocalVivo>);
-    expect(espiao).not.toHaveBeenCalled();
+    await act(async () => {});
+    expect(espiao).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole("button", { name: /dist[âa]ncia/i }));
-    expect(espiao).toHaveBeenCalledTimes(1);
+    expect(espiao).toHaveBeenCalledTimes(2);
   });
 
   // "Uma pessoa, uma fonte" — a invariante desta rodada. Hoje o

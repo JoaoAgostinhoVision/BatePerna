@@ -72,10 +72,15 @@ export default function LocalVivo({ children }: { children: ReactNode }) {
           coord: { lat: pos.coords.latitude, lng: pos.coords.longitude },
           em: Math.floor(Date.now() / 1000),
         }),
-      // Negado, sem sinal, estourou o prazo: pro app dá tudo no mesmo — não
-      // insiste. A localização que já existia NÃO é apagada; trocá-la por
+      // Só PERMISSION_DENIED (code 1) grava "negado" pra sempre. Sem sinal
+      // (2) ou estourou o prazo (3) não são recusa — são o aparelho não
+      // tendo resposta agora. Gravar "negado" nesses dois rebaixaria o app
+      // permanentemente por causa de um prédio sem sinal, e a busca automática
+      // desta tela (pedido do João) torna esse risco real logo na primeira
+      // abertura. A localização que já existia NÃO é apagada; trocá-la por
       // "não sei" tiraria da tela um km que estava certo.
-      () => {
+      (err) => {
+        if (err.code !== 1 /* PERMISSION_DENIED */) return;
         setGps("negado");
         try {
           localStorage.setItem(CHAVE_GPS, "negado");
@@ -92,10 +97,23 @@ export default function LocalVivo({ children }: { children: ReactNode }) {
       setGps(lerEstadoGps(localStorage.getItem(CHAVE_GPS)));
     } catch { /* sem armazenamento: segue como "não sei" */ }
     if (guardado.tipo !== "nao-sei") setLocal(guardado);
-    // Já usou GPS antes = já concedeu, e o navegador não pergunta de novo.
-    // Buscar aqui é o que cumpre "um toque na vida": das próximas vezes a
-    // posição chega sozinha e atualizada.
-    if (guardado.tipo === "gps") buscarGps();
+    // Quem escolheu uma cidade na mão JÁ disse onde está — e a decisão do
+    // João é que essa escolha vence: "só modificaria se o usuário quiser".
+    // Sem este guarda, o callback de sucesso lá em cima chama `escolher` e
+    // GRAVA por cima do `bp.local`: a cidade escolhida some do aparelho, sem
+    // nada na tela dizendo por quê. E não é caso de canto — este app não usa
+    // `next/link`, todo toque em cartão é navegação completa e remonta o
+    // `<LocalVivo>`, então escolher "Gravatá" na home e tocar num cartão já
+    // bastava. O guarda também impede o PEDIDO, não só a gravação: disparado,
+    // o navegador exibiria o balão de permissão do sistema pra quem já
+    // respondeu essa pergunta na mão.
+    //
+    // Pedido do João: o GPS pede sozinho já na primeira abertura, não só
+    // depois de já ter sido concedido antes. Se o navegador já negou, ele
+    // responde com erro sem exibir nada (não insiste); se ainda não foi
+    // perguntado, é aqui que a pergunta acontece. O remédio pro risco de
+    // rebaixar o app à toa é o `code === 1` do callback de erro logo acima.
+    if (guardado.tipo !== "escolhido") buscarGps();
   }, [buscarGps]);
 
   return (

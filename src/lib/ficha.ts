@@ -60,10 +60,3 @@ export function getFicha(slug: string): Ficha | null {
 export function getFichasComCondicao(): Ficha[] {
   return loadAll().filter((f) => f.condicao != null);
 }
-
-// Reexportada aqui pra ficar "junto do resto que descreve uma ficha" — mas a
-// implementação mora em src/lib/duracao.ts, um módulo puro, sem `node:fs`.
-// Quem precisa importá-la de um client component (o CartaoTrilha) importa de
-// lá direto, não daqui: este arquivo carrega `node:fs`/`node:path` no topo,
-// e isso quebra o bundle do navegador. Ver o comentário em duracao.ts.
-export { formatarDuracao } from "./duracao";
