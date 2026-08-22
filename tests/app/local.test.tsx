@@ -125,6 +125,53 @@ describe("o GPS", () => {
     expect(pediu).toHaveBeenCalled();
   });
 
+  // A OUTRA METADE do mesmo pedido do João: "só modificaria se o usuário
+  // quiser" — e quem escolheu a cidade na mão já quis. Sem guarda no efeito de
+  // montagem, o callback de sucesso chama `escolher` e grava por cima do
+  // `bp.local`. MEDIDO na revisão da branch: guardado "Gravatá", o GPS
+  // responde (-7, -34.8), e o que sobra no aparelho é `{"tipo":"gps",…}` — a
+  // cidade some e nada na tela diz por quê. Como o app não usa `next/link`,
+  // todo toque em cartão remonta o `<LocalVivo>`: escolher na home e abrir uma
+  // ficha já bastava.
+  //
+  // O mock RESPONDE de propósito. Um mock mudo provaria só que nada foi
+  // gravado, e não gravar por não ter resposta é outra coisa.
+  it("com cidade escolhida na mão, a montagem não sobrescreve — nem na tela, nem no aparelho", async () => {
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify(GRAVATA));
+    const pediu = vi.fn((ok: PositionCallback) =>
+      ok({ coords: { latitude: -7, longitude: -34.8 } } as GeolocationPosition),
+    );
+    aparelhoComGps(pediu);
+    render(<LocalVivo><Espia /></LocalVivo>);
+    expect(await screen.findByText("escolhido|nunca")).toBeTruthy();
+    await act(async () => {});
+    // Nem chega a PEDIR — e isso é asserção própria, não luxo: disparado, o
+    // navegador exibe o balão de permissão do sistema pra quem já respondeu
+    // essa pergunta na mão.
+    expect(pediu).not.toHaveBeenCalled();
+    expect(screen.getByTestId("espia").textContent).toBe("escolhido|nunca");
+    const noAparelho = JSON.parse(localStorage.getItem(CHAVE_LOCAL)!);
+    expect(noAparelho.tipo).toBe("escolhido");
+    expect(noAparelho.nome).toBe("Gravatá");
+    expect(noAparelho.coord).toEqual(GRAVATA.coord);
+  });
+
+  // A direção oposta, e as duas precisam existir juntas: sem nada guardado o
+  // pedido automático não só acontece como GRAVA. Um guarda largo demais
+  // (pegando "nao-sei" junto com "escolhido") deixaria o teste de cima verde
+  // e mataria em silêncio o automático que a Task 1 entregou.
+  it("sem nada guardado, a leitura automática entra na tela E no aparelho", async () => {
+    aparelhoComGps((ok) =>
+      ok({ coords: { latitude: -7, longitude: -34.8 } } as GeolocationPosition),
+    );
+    render(<LocalVivo><Espia /></LocalVivo>);
+    expect(await screen.findByText("gps|nunca")).toBeTruthy();
+    expect(JSON.parse(localStorage.getItem(CHAVE_LOCAL)!)).toMatchObject({
+      tipo: "gps",
+      coord: { lat: -7, lng: -34.8 },
+    });
+  });
+
   it("pedirGps aceito vira localização de gps", async () => {
     aparelhoComGps((ok) =>
       ok({ coords: { latitude: -8.1, longitude: -35.5 } } as GeolocationPosition),
@@ -214,8 +261,12 @@ describe("o GPS", () => {
       return <button onClick={pedirGps}>pedir</button>;
     }
     render(<LocalVivo><Espia /><Botao /></LocalVivo>);
-    expect(await screen.findByText("escolhido|negado")).toBeTruthy();
+    // Antes do toque o gps ainda é "nunca": com uma cidade escolhida na mão
+    // guardada, a montagem NÃO pede a posição sozinha (ver o bloco abaixo).
+    // Este teste é sobre o TOQUE, então quem dispara aqui é o botão.
+    expect(await screen.findByText("escolhido|nunca")).toBeTruthy();
     await act(async () => { screen.getByText("pedir").click(); });
+    expect(await screen.findByText("escolhido|negado")).toBeTruthy();
     expect(screen.getByTestId("espia").textContent).toBe("escolhido|negado");
   });
 
@@ -233,5 +284,11 @@ describe("o GPS", () => {
     render(<LocalVivo><Espia /></LocalVivo>);
     expect(await screen.findByText("gps|nunca")).toBeTruthy();
     expect(pediu).toHaveBeenCalled();
+    // E GRAVA: o que fica no aparelho é a posição de AGORA (-8.31/-35.41),
+    // não a que estava guardada (-8.3/-35.4). Sem essas duas coordenadas
+    // diferentes, "gps|nunca" na tela também apareceria se a leitura nova
+    // tivesse sido jogada fora.
+    expect(JSON.parse(localStorage.getItem(CHAVE_LOCAL)!).coord)
+      .toEqual({ lat: -8.31, lng: -35.41 });
   });
 });

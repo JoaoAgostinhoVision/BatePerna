@@ -97,12 +97,23 @@ export default function LocalVivo({ children }: { children: ReactNode }) {
       setGps(lerEstadoGps(localStorage.getItem(CHAVE_GPS)));
     } catch { /* sem armazenamento: segue como "não sei" */ }
     if (guardado.tipo !== "nao-sei") setLocal(guardado);
+    // Quem escolheu uma cidade na mão JÁ disse onde está — e a decisão do
+    // João é que essa escolha vence: "só modificaria se o usuário quiser".
+    // Sem este guarda, o callback de sucesso lá em cima chama `escolher` e
+    // GRAVA por cima do `bp.local`: a cidade escolhida some do aparelho, sem
+    // nada na tela dizendo por quê. E não é caso de canto — este app não usa
+    // `next/link`, todo toque em cartão é navegação completa e remonta o
+    // `<LocalVivo>`, então escolher "Gravatá" na home e tocar num cartão já
+    // bastava. O guarda também impede o PEDIDO, não só a gravação: disparado,
+    // o navegador exibiria o balão de permissão do sistema pra quem já
+    // respondeu essa pergunta na mão.
+    //
     // Pedido do João: o GPS pede sozinho já na primeira abertura, não só
     // depois de já ter sido concedido antes. Se o navegador já negou, ele
     // responde com erro sem exibir nada (não insiste); se ainda não foi
     // perguntado, é aqui que a pergunta acontece. O remédio pro risco de
     // rebaixar o app à toa é o `code === 1` do callback de erro logo acima.
-    buscarGps();
+    if (guardado.tipo !== "escolhido") buscarGps();
   }, [buscarGps]);
 
   return (
