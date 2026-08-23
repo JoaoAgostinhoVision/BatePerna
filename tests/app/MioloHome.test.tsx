@@ -8,7 +8,8 @@ import type { ParFolha } from "@/app/FolhaTrilhas";
 import FiltrosVivos from "@/app/filtros";
 import { LeiturasProvider } from "@/app/leituras";
 import LocalVivo from "@/app/local";
-import { CHAVE_FILTROS, SEM_FILTRO } from "@/lib/filtros";
+import { CHAVE_FILTROS, DIST_TETO_MINIMO_KM, SEM_FILTRO } from "@/lib/filtros";
+import { CHAVE_LOCAL } from "@/lib/local";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import type { Ficha } from "@/types/ficha";
 
@@ -622,5 +623,56 @@ describe("MioloHome: de onde `confia` sai", () => {
     expect(quadros[0]).toBe("Hoje o tempo deixa"); // primeiro commit: useAlgumVenceu ainda não rodou
     // depois do efeito, o mesmo DOM já sabe que a leitura venceu
     expect(document.querySelector(".grupo-k")).toBeNull();
+  });
+});
+
+// ——————— o teto da barra de distância sai de `pares`, nunca de `visiveis` ———————
+//
+// 🔴 É CIRCULAR com `visiveis`: ligar "até 10 km" esconderia a trilha mais
+// longe, o teto encolheria, e a barra se reescreveria embaixo do dedo — o
+// caminho de volta pra 50 km deixaria de existir na tela. Mesmo motivo pelo
+// qual o `confia` já sai de `pares` neste arquivo.
+describe("o teto da barra de distância", () => {
+  // VOCE em (-8, -35): `longe` fica a ~46,7 km e `perto` a ~7,8 km.
+  const semeiaVoce = () =>
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+      tipo: "gps", coord: { lat: -8, lng: -35 }, em: Math.floor(Date.now() / 1000),
+    }));
+  const parEm = (slug: string, graus: number): ParFolha => ({
+    ficha: { ...fichaFake(slug), trajeto: { waypoints: [{ nome: slug, lat: -8 + graus, lng: -35 }] } },
+    leitura: { estado: "fresco", erro: false, calculadoEm: agoraSeg() },
+  });
+  const maxDoCampo = () =>
+    (screen.getByRole("spinbutton", { name: /distância daqui: km/i }) as HTMLInputElement)
+      .getAttribute("max");
+
+  it("com um filtro que ESCONDE a trilha mais longe, o teto não encolhe", async () => {
+    semeiaVoce();
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, distanciaKm: 10 }));
+    render(<Tela pares={[parEm("perto", 0.07), parEm("longe", 0.42)]} />);
+    await act(async () => {});
+    await act(async () => { screen.getByRole("button", { name: /filtrar/i }).click(); });
+    // Não-vacuidade: o filtro está de fato escondendo a trilha longe.
+    expect(cartoesNaTela(document.body).length).toBe(1);
+    // E o teto continua o do ACERVO (46,7 → 50), não o das visíveis (7,8 → 30).
+    expect(maxDoCampo()).toBe("50");
+  });
+
+  // 🔴 MEDIDO: a mutação "3º argumento vira `null`" (o candidato `valorAtual`
+  // saindo da conta do teto) NÃO morde no teste acima — com "até 10 km"
+  // guardado, o candidato do acervo (50) já vence o do valor atual (10) dos
+  // dois jeitos, e a suíte inteira continua verde. Este é o caso que SEPARA as
+  // duas versões: um corte guardado MAIOR que a trilha mais longe do acervo —
+  // sem o 3º argumento, o teto voltaria a 50 (só acervo); com ele, sobe pra
+  // 200, porque é o corte ligado que garante a "TELA DE MENTIR" no meio do
+  // comentário do `tetoDaBarraDistancia`: sem ele, o pegador da barra ficaria
+  // preso em 50 enquanto a leitura ao lado diz "até 200 km".
+  it("um corte guardado maior que o acervo também vira candidato do teto", async () => {
+    semeiaVoce();
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, distanciaKm: 200 }));
+    render(<Tela pares={[parEm("perto", 0.07), parEm("longe", 0.42)]} />);
+    await act(async () => {});
+    await act(async () => { screen.getByRole("button", { name: /filtrar/i }).click(); });
+    expect(maxDoCampo()).toBe("200");
   });
 });

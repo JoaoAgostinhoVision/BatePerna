@@ -26,16 +26,19 @@ export type Filtros = {
 
 export const CHAVE_FILTROS = "bp.filtros";
 
-/** Os limites dos dois recortes de km, e eles moram AQUI — ao lado da
- *  validação que os aplica. A faixa da tela os lê deste módulo; escrevê-los de
- *  novo lá seriam duas fontes que podem discordar, e discordando a barra
+/** O limite do recorte de tamanho da trilha, e ele mora AQUI — ao lado da
+ *  validação que o aplica. A faixa da tela o lê deste módulo; escrevê-lo de
+ *  novo lá seria duas fontes que podem discordar, e discordando a barra
  *  aceitaria um valor que o `lerFiltros` joga fora na abertura seguinte.
+ *
+ *  🔴 A distância NÃO tem mais um teto fixo aqui — `DIST_MAX_KM` morreu nesta
+ *  rodada, decisão do João: "não faz sentido limitar no bate perna". O teto da
+ *  barra de distância agora é dinâmico, calculado por `tetoDaBarraDistancia`.
  *
  *  🔴 `PASSO` é granularidade da BARRA, NÃO o piso do intervalo — o piso é 1.
  *  Com o piso em 5, um `4` digitado seria aceito pela tela, guardado, e viraria
  *  `null` na releitura: o filtro se desligando sozinho entre uma abertura e
  *  outra do app, sem nada na tela dizendo por quê. */
-export const DIST_MAX_KM = 100;
 export const DIST_PASSO_KM = 5;
 export const EXT_MAX_KM = 20;
 export const EXT_PASSO_KM = 1;
@@ -71,9 +74,11 @@ export const DIST_TETO_MINIMO_KM = 30;
  *  `lerFiltros` recusa fracionário — o filtro se desligando sozinho entre duas
  *  aberturas do app.
  *
- *  ⚠️ O `?? 0` do ramo sub-1km é CINTO e não tem asserção fingindo que carrega
- *  algo: com o piso de 30 dominando, `null` e `0` dão o mesmo resultado em toda
- *  entrada possível, e nenhuma mutação os separa. */
+ *  ⚠️ O `?? 0` do ramo sub-1km é indistinguível em runtime — nenhuma mutação o
+ *  separa, porque `Math.max` converte `null` pra `0` via `ToNumber` de
+ *  qualquer jeito, INDEPENDENTE de o piso de 30 dominar — e é exigido pelo
+ *  compilador: sem ele o `tsc` recusa (`TS2345`, `number | null` não é
+ *  atribuível a `number`). */
 export function tetoDaBarraDistancia(
   fichas: Ficha[],
   voce: Coord | null,
@@ -131,14 +136,22 @@ function ehInteiro(v: unknown): v is number {
   return Number.isInteger(v);
 }
 
-/** Km guardado: inteiro, de 1 até `max`. Qualquer outra coisa vira `null` —
- *  um valor estranho que passasse viraria um filtro escondendo trilha pra
- *  sempre, sem a pessoa saber o que desligar.
+/** Km guardado: inteiro, de 1 até `max` — e `max: null` quer dizer SEM TETO.
+ *
+ *  A distância passa `null` desde que o teto virou dinâmico: sem teto não
+ *  existe valor "grande demais", só filtro inerte. Prender aqui num número
+ *  fixo faria a barra aceitar um corte que a releitura joga fora na abertura
+ *  seguinte — o filtro se desligando sozinho, que é o defeito central da
+ *  rodada passada.
+ *
+ *  O piso continua sendo `1`, e não o passo: com o piso em 5, um `4` digitado
+ *  seria aceito pela tela, guardado, e viraria `null` na releitura.
  *
  *  Um só pros dois recortes de propósito: duas cópias desta regra podiam
  *  divergir, e é o mesmo `max` que a faixa da tela lê. */
-function kmGuardado(v: unknown, max: number): number | null {
-  return ehInteiro(v) && v >= 1 && v <= max ? v : null;
+function kmGuardado(v: unknown, max: number | null): number | null {
+  if (!ehInteiro(v) || v < 1) return null;
+  return max !== null && v > max ? null : v;
 }
 
 /** `PISOS_FILTRAVEIS`, não `PISOS`: `barro` é o piso da escala e, com o filtro
@@ -182,7 +195,7 @@ export function lerFiltros(bruto: string | null): Filtros {
   // estranho que passasse viraria um filtro escondendo tudo pra sempre, sem a
   // pessoa saber o que desligar.
   return {
-    distanciaKm: kmGuardado(x.distanciaKm, DIST_MAX_KM),
+    distanciaKm: kmGuardado(x.distanciaKm, null),
     daHoje: x.daHoje === true,
     soGratis: x.soGratis === true,
     extensaoMaxKm: kmGuardado(x.extensaoMaxKm, EXT_MAX_KM),

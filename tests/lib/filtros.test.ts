@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
-  DIST_MAX_KM,
   DIST_PASSO_KM,
   DIST_TETO_MINIMO_KM,
   EXT_MAX_KM,
@@ -390,8 +389,12 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
   });
   // Um valor fora do conjunto viraria um filtro que esconde tudo pra sempre,
   // e a pessoa não teria como desligar o que não sabe que ligou.
+  //
+  // 🔴 `distanciaKm` SAIU deste caso nesta rodada: sem teto, `999` é um valor
+  // VÁLIDO pra ela (vira filtro inerte, não escondido). Quem ainda tem "fora do
+  // conjunto" alcançável por um número redondo é a extensão, que mantém teto.
   it("valor fora do conjunto cai pro padrão daquele recorte", () => {
-    expect(lerFiltros(JSON.stringify({ distanciaKm: 999, pisoMinimo: "cascalho" })))
+    expect(lerFiltros(JSON.stringify({ extensaoMaxKm: 999, pisoMinimo: "cascalho" })))
       .toEqual(SEM_FILTRO);
   });
   it("preserva o que é válido", () => {
@@ -425,12 +428,13 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
   // inteiro diferente. `soGratis: "sim"` é o caso realista — JSON de uma
   // versão futura, ou mexido na mão pelo inspetor do navegador.
   //
-  // ⚠️ O caso do `distanciaKm` era `45` e PRECISOU mudar: com o conjunto
-  // `{30,60}` virando o intervalo `[1,100]`, 45 passou a ser um valor VÁLIDO —
-  // o teste continuaria verde só enquanto a linha nova estivesse errada. Trocado
-  // por `999`, que é torto nos dois mundos.
+  // ⚠️ O caso do `distanciaKm` mudou DE NOVO nesta rodada: era `45`, e quando o
+  // conjunto `{30,60}` virou o intervalo `[1,100]` passou a `999` (acima do
+  // teto de então). Nesta rodada o teto da distância morreu — `999` também
+  // virou um valor VÁLIDO, e o caso precisou trocar mais uma vez. Trocado por
+  // `0`, que fica torto em qualquer versão: o piso (1) não se move.
   it.each([
-    ["distanciaKm", { distanciaKm: 999 }],
+    ["distanciaKm", { distanciaKm: 0 }],
     ["daHoje", { daHoje: "sim" }],
     ["soGratis", { soGratis: "sim" }],
     ["extensaoMaxKm", { extensaoMaxKm: 999 }],
@@ -460,23 +464,24 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
   });
 });
 
-// Os quatro números são DECISÃO DE PRODUTO, e a barra da tela vai lê-los DAQUI
-// — então trocar um deles muda o que o app oferece, sem duas fontes pra
-// discordar e sem nada gritando.
+// Os três números que sobraram são DECISÃO DE PRODUTO, e a barra da tela vai
+// lê-los DAQUI — então trocar um deles muda o que o app oferece, sem duas
+// fontes pra discordar e sem nada gritando. (Eram quatro: `DIST_MAX_KM` morreu
+// nesta rodada — o teto da distância agora é dinâmico, vem do acervo, e tem
+// describe próprio, "tetoDaBarraDistancia: o teto vem do acervo".)
 //
 // 🔴 Os testes de borda logo abaixo NÃO cobrem isto, e a distinção é o achado:
-// escritos contra o SÍMBOLO (`DIST_MAX_KM + 1`), eles provam a RELAÇÃO — o teto
+// escritos contra o SÍMBOLO (`EXT_MAX_KM + 1`), eles provam a RELAÇÃO — o teto
 // é inclusivo, o de cima é recusado — e continuam certos assim; mas são
 // auto-referentes quanto ao VALOR, porque mudam de significado junto com a
 // constante. MEDIDO pela revisão desta task, ANTES de a asserção abaixo
-// existir: `DIST_MAX_KM` 100→70, `EXT_MAX_KM` 20→8 e os dois `PASSO` trocados
-// deixavam a suíte INTEIRA verde e o `tsc` limpo. Hoje cada uma dessas quatro
-// derruba a asserção abaixo — e SÓ ela: os testes de borda continuam verdes,
-// porque com `EXT_MAX_KM = 8` eles viram "9 → null" e "8 → 8", que são
-// corretos com 8. Provar a relação e prender o número são coisas diferentes, e
-// as duas provas são ortogonais: mutar só a RELAÇÃO (`v <= max` → `v < max`)
-// deixa a asserção abaixo VERDE e mata os testes de borda. Medido nos dois
-// sentidos.
+// existir: `EXT_MAX_KM` 20→8 e os dois `PASSO` trocados deixavam a suíte
+// INTEIRA verde e o `tsc` limpo. Hoje cada uma dessas três derruba a asserção
+// abaixo — e SÓ ela: os testes de borda continuam verdes, porque com
+// `EXT_MAX_KM = 8` eles viram "9 → null" e "8 → 8", que são corretos com 8.
+// Provar a relação e prender o número são coisas diferentes, e as duas provas
+// são ortogonais: mutar só a RELAÇÃO (`v <= max` → `v < max`) deixa a
+// asserção abaixo VERDE e mata os testes de borda. Medido nos dois sentidos.
 //
 // O que isso custaria no celular dele: `EXT_MAX_KM = 8` escrito por engano numa
 // tecla passa em tudo, e um `extensaoMaxKm: 15` que ele já tinha ligado volta
@@ -486,8 +491,8 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
 // ⚠️ O lado direito é LITERAL de propósito: derivá-lo de qualquer coisa
 // importada do `filtros.ts` devolveria a asserção pro buraco de onde ela veio.
 describe("os limites são decisão de produto, e os números ficam presos", () => {
-  it("os limites cravados são estes — 100 e 20 km, passo 5 e 1", () => {
-    expect([DIST_MAX_KM, EXT_MAX_KM, DIST_PASSO_KM, EXT_PASSO_KM]).toEqual([100, 20, 5, 1]);
+  it("os limites cravados são estes — 20 km, passo 5 e 1", () => {
+    expect([EXT_MAX_KM, DIST_PASSO_KM, EXT_PASSO_KM]).toEqual([20, 5, 1]);
   });
 });
 
@@ -497,23 +502,20 @@ describe("os limites são decisão de produto, e os números ficam presos", () =
 describe("lerFiltros: os intervalos de km", () => {
   const so = (campo: string, v: unknown) => lerFiltros(JSON.stringify({ [campo]: v }));
 
-  it("distanciaKm 0 → null", () => {
-    expect(so("distanciaKm", 0).distanciaKm).toBe(null);
-  });
-  it("distanciaKm 101 (acima do teto) → null", () => {
-    expect(so("distanciaKm", DIST_MAX_KM + 1).distanciaKm).toBe(null);
-  });
-  // O teto cravado, dos dois lados, e ele é o que pega CONSTANTE TROCADA: com
-  // `EXT_MAX_KM` no lugar do `DIST_MAX_KM`, este 100 viraria `null` e a pessoa
-  // veria o filtro que ela acabou de ligar sumir na abertura seguinte.
-  it("distanciaKm 100 (o teto cravado) → 100", () => {
-    expect(so("distanciaKm", DIST_MAX_KM).distanciaKm).toBe(DIST_MAX_KM);
+  // 🔴 O CASO QUE SEPARA a versão nova da velha. Com `DIST_MAX_KM = 100`, este
+  // valor virava `null`. Sem teto não existe "grande demais": um corte absurdo
+  // guardado produz um filtro INERTE, não um filtro que esconde.
+  it("distância guardada acima de 100 km é aceita — não há mais teto", () => {
+    expect(so("distanciaKm", 5000).distanciaKm).toBe(5000);
   });
   it("distanciaKm '30' (texto) → null", () => {
     expect(so("distanciaKm", "30").distanciaKm).toBe(null);
   });
-  it("distanciaKm 7.5 (fracionário) → null", () => {
-    expect(so("distanciaKm", 7.5).distanciaKm).toBe(null);
+  // As duas metades que CONTINUAM valendo, e a de baixo é a que impede o
+  // "campo indigitável" de voltar: o piso é 1, não o passo.
+  it("distância 0 e fracionária continuam virando null", () => {
+    expect(so("distanciaKm", 0).distanciaKm).toBeNull();
+    expect(so("distanciaKm", 4.5).distanciaKm).toBeNull();
   });
   // Decisão do plano: `passo` é da UI (granularidade da barra), não do valor. O
   // campo digitável aceita 7, então o que foi guardado tem que voltar.
@@ -524,9 +526,8 @@ describe("lerFiltros: os intervalos de km", () => {
   // piso em 5, um `4` digitado seria aceito pela tela, guardado no
   // `localStorage`, e voltaria `null` na abertura seguinte — o filtro se
   // desligando sozinho entre uma abertura e outra, sem nada na tela dizendo
-  // por quê. Sem ESTE caso, nenhum teste da suíte distingue os dois pisos: o
-  // `distanciaKm 0 → null` passa com `>= 5` do mesmo jeito.
-  it("distanciaKm 4 (abaixo do passo da barra, digitado à mão) → 4", () => {
+  // por quê. Sem ESTE caso, nenhum teste da suíte distingue os dois pisos.
+  it("distância 4 é aceita — o piso é 1, não o passo", () => {
     expect(so("distanciaKm", 4).distanciaKm).toBe(4);
   });
   // `1e999` é JSON VÁLIDO e vira `Infinity` no parse (medido) — o único
@@ -561,9 +562,9 @@ describe("lerFiltros: os intervalos de km", () => {
   it("extensaoMaxKm 1 (o piso cravado) → 1", () => {
     expect(so("extensaoMaxKm", 1).extensaoMaxKm).toBe(1);
   });
-  // O par que pega o teto ERRADO na extensão: com `DIST_MAX_KM` aqui, 21
-  // passaria — e a barra da tela, que vai até 20, nunca conseguiria desligar
-  // um filtro cortando em 21.
+  // O par que pega o teto TROCADO na extensão: com 100 aqui (o antigo teto da
+  // distância, que não existe mais), 21 passaria — e a barra da tela, que vai
+  // até 20, nunca conseguiria desligar um filtro cortando em 21.
   it("extensaoMaxKm 21 (acima do teto de 20) → null", () => {
     expect(so("extensaoMaxKm", EXT_MAX_KM + 1).extensaoMaxKm).toBe(null);
   });
@@ -572,6 +573,12 @@ describe("lerFiltros: os intervalos de km", () => {
   });
   it("extensaoMaxKm 3.5 (fracionário) → null", () => {
     expect(so("extensaoMaxKm", 3.5).extensaoMaxKm).toBe(null);
+  });
+  // O teto da EXTENSÃO continua existindo nesta task — ela só some na Task 7.
+  // Sem este caso, um `kmGuardado(x.extensaoMaxKm, null)` escrito por engano
+  // (copiando o da distância) passaria a suíte inteira.
+  it("a extensão continua com teto", () => {
+    expect(so("extensaoMaxKm", 999).extensaoMaxKm).toBeNull();
   });
 
   // O celular dele tem `bp.filtros` gravado de verdade, e ali `distanciaKm` só

@@ -2,7 +2,6 @@
 import { useState } from "react";
 import {
   contarLigados,
-  DIST_MAX_KM,
   DIST_PASSO_KM,
   EXT_MAX_KM,
   EXT_PASSO_KM,
@@ -21,19 +20,30 @@ import { useLocal } from "./local";
  *  nenhuma camada flutuante, e uma cortina puxaria junto fechar-tocando-fora,
  *  prender o foco atrás dela e Esc, três coisas que hoje não existem aqui.
  *
- *  🔴 OS QUATRO LIMITES DE KM SAEM DE `@/lib/filtros`, e nenhum deles é escrito
- *  à mão aqui. Não é preciosismo: é o mesmo módulo que o `lerFiltros` usa pra
- *  conferir o que está guardado. Uma segunda cópia poderia discordar, e
+ *  🔴 OS TRÊS LIMITES DE KM FIXOS SAEM DE `@/lib/filtros`, e nenhum deles é
+ *  escrito à mão aqui. Não é preciosismo: é o mesmo módulo que o `lerFiltros`
+ *  usa pra conferir o que está guardado. Uma segunda cópia poderia discordar, e
  *  discordando a tela aceitaria um valor que a releitura joga fora — o filtro
  *  se desligando sozinho entre duas aberturas do app, sem nada dizendo por quê.
- *  Trocar os limites ENTRE as duas faixas produz exatamente esse defeito — o
- *  `Tamanho da trilha` aceitaria na tela um teto de distância, e o `lerFiltros`
- *  o devolveria `null` na abertura seguinte. Por isso há teste lendo o `max` de
- *  cada barra E teste lendo esta fonte: em runtime o número escrito à mão e a
- *  constante são o MESMO valor, e nenhuma asserção de comportamento separa as
- *  duas versões. (Sem os números aqui de propósito: comentário que crava
- *  número envelhece calado no dia em que a constante mudar.) */
-export default function PainelFiltros({ visiveis }: { visiveis: number }) {
+ *  O da distância NÃO é fixo: `tetoDistanciaKm` chega PRONTO por prop, calculado
+ *  no `MioloHome` a partir do acervo (ver `tetoDaBarraDistancia`) — o
+ *  `DIST_MAX_KM` que morava aqui era um número inventado, e o painel continua
+ *  sem fazer conta de km, só de um jeito diferente: lendo em vez de importar.
+ *  Por isso há teste lendo o `max` de cada barra E teste lendo esta fonte: em
+ *  runtime o número escrito à mão e a constante são o MESMO valor, e nenhuma
+ *  asserção de comportamento separa as duas versões. (Sem os números aqui de
+ *  propósito: comentário que crava número envelhece calado no dia em que a
+ *  constante mudar.) */
+export default function PainelFiltros({
+  visiveis,
+  tetoDistanciaKm,
+}: {
+  visiveis: number;
+  /** Até onde a barra de distância vai. Vem PRONTO do `MioloHome`, que é quem
+   *  tem o acervo, a sua coordenada e o filtro no mesmo escopo — o painel
+   *  continua sem fazer conta de km. Ver `tetoDaBarraDistancia`. */
+  tetoDistanciaKm: number;
+}) {
   const filtros = useFiltros();
   const mexer = useMexerFiltros();
   const temLocal = coordDe(useLocal()) !== null;
@@ -65,7 +75,7 @@ export default function PainelFiltros({ visiveis }: { visiveis: number }) {
             <FaixaKm
               rotulo="Distância daqui"
               valor={filtros.distanciaKm}
-              max={DIST_MAX_KM}
+              max={tetoDistanciaKm}
               passo={DIST_PASSO_KM}
               onChange={(km) => trocar({ distanciaKm: km })}
             />
