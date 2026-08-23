@@ -248,17 +248,42 @@ describe("o GPS", () => {
   // sessionStorage também estoura em aba anônima do Safari. Mesma disciplina
   // dos outros dois try/catch deste arquivo: a escolha vale em memória e
   // pronto, sem tela de erro.
-  it("sessionStorage que estoura não derruba a montagem", async () => {
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new DOMException("cheio", "QuotaExceededError");
+  //
+  // Só o `sessionStorage.setItem` falha — o `localStorage.setItem` funciona
+  // de verdade. Se os dois estourassem juntos, a exceção do `localStorage` —
+  // a PRIMEIRA linha do bloco — já seria pega antes do código chegar na linha
+  // do `sessionStorage`, e o teste provaria proteção nenhuma sobre ELA.
+  //
+  // MEDIDO: `vi.spyOn(sessionStorage, "setItem")` sozinho NÃO intercepta a
+  // chamada — o objeto global do jsdom ignora a propriedade própria e o
+  // `setItem` real segue rodando, sem lançar nada. É preciso espionar
+  // `Storage.prototype` (que os dois compartilham) e usar `this` pra
+  // distinguir QUAL instância chamou, preservando o comportamento real do
+  // `localStorage` via a implementação original capturada antes do mock.
+  //
+  // Chama `escolher` direto (não via clique de botão), mesma razão do teste
+  // irmão logo acima: o despacho sintético de evento do React reporta
+  // exceções de handler como erro global em vez de propagar pro chamador,
+  // mascarando a mutação em vez de provar o guarda.
+  it("sessionStorage que estoura não derruba a montagem", () => {
+    const setItemOriginal = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
+      this: Storage, chave: string, valor: string,
+    ) {
+      if (this === sessionStorage) throw new DOMException("cheio", "QuotaExceededError");
+      return setItemOriginal.call(this, chave, valor);
     });
-    function Botao() {
-      const { escolher } = useMexerLocal();
-      return <button onClick={() => escolher(GRAVATA)}>escolher</button>;
+    let escolherCaptado: ((l: Local) => void) | null = null;
+    function Capta() {
+      escolherCaptado = useMexerLocal().escolher;
+      return null;
     }
-    render(<LocalVivo><Botao /><Espia /></LocalVivo>);
-    await act(async () => { screen.getByText("escolher").click(); });
+    render(<LocalVivo><Espia /><Capta /></LocalVivo>);
+    act(() => { escolherCaptado!(GRAVATA); });
     expect(screen.getByTestId("espia").textContent).toBe("escolhido|nunca");
+    // E o localStorage GRAVOU de verdade — não é o caso de os dois terem
+    // falhado juntos.
+    expect(localStorage.getItem(CHAVE_LOCAL)).toContain("Gravatá");
   });
 
   // A direção oposta, e as duas precisam existir juntas: sem nada guardado o
