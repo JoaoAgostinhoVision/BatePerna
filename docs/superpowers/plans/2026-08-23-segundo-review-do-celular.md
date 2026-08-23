@@ -1244,11 +1244,33 @@ function kmGuardado(v: unknown): number | null {
 
 **3e. `docs/questionario-ficha.md`:** apague a seção `## Quantos km — extensaoKm` inteira; ajuste a linha ~370 que diz *"`piso` e `extensaoKm` são os dois únicos campos opcionais"* pra falar de um; e confira as menções das linhas ~54-57 e ~205-214.
 
+- [ ] **Step 3f: 🔴 EMENDA DO PRÉ-VOO — as asserções de `extensaoKm` que vivem em `tests/`**
+
+Apagado o campo do tipo `Ficha`, todo teste que **lê** `ficha.extensaoKm` deixa de compilar
+(TS2339) e o `tsc` do Step 5 fica vermelho. **Medido no pré-voo, são cinco referências:**
+
+```
+tests/app/CartaoTrilha.test.tsx:164   expect(ficha.extensaoKm).toBeUndefined();
+tests/app/ficha.test.tsx:216          expect(rampa?.extensaoKm).toBeUndefined();
+tests/lib/ficha.test.ts:161           expect(lido.extensaoKm).toBeUndefined();
+tests/lib/ficha.test.ts:171           expect(lido.extensaoKm).toBe(4.2);      ← já coberta no Step 1
+tests/lib/ficha.test.ts:181           expect(f!.extensaoKm).toBeUndefined();
+```
+
+Apague **só as linhas de `extensaoKm`**. 🔴 **As de `piso` nas mesmas funções FICAM** — elas são
+da Task 8, que as inverte. Se você apagar as duas, a Task 8 perde o teste que ela existe pra virar.
+
+E ajuste os **nomes** dos testes que passam a mentir: `"a Rampa REAL (sem piso, sem extensão)…"`
+e `"a Rampa continua carregando, sem piso e sem extensão"` passam a falar de um campo só. (A
+metade do `piso` continua verdadeira **até a Task 8** — não a antecipe.)
+
 - [ ] **Step 4: A VARREDURA — termos copiados do diff, busca `-i`**
+
+🔴 **Inclui `tests/`, não só `src/`** — emenda do pré-voo, e é de onde saiu o Step 3f.
 
 ```bash
 git diff --stat HEAD~1
-grep -rin "extensaoKm\|extensaoMaxKm\|formatarExtensao\|kmNaTelaExtensao\|EXT_MAX_KM\|EXT_PASSO_KM" src/ docs/questionario-ficha.md
+grep -rin "extensaoKm\|extensaoMaxKm\|formatarExtensao\|kmNaTelaExtensao\|EXT_MAX_KM\|EXT_PASSO_KM" src/ tests/ docs/questionario-ficha.md
 ```
 
 Classifique **cada** ocorrência em três baldes:
@@ -1342,9 +1364,22 @@ Em `tests/lib/ficha.test.ts` (~177):
   });
 ```
 
-- [ ] **Step 2: Prove a Regra de Honestidade 2 do `piso` por FIXTURE**
+- [ ] **Step 2: 🔴 EMENDA DO PRÉ-VOO — a Honestidade 2 JÁ ESTÁ SEGURA; o que quebra é COMENTÁRIO**
 
-🔴 **A Rampa era o único exemplo real de "ficha sem o campo".** Com `barro` gravado, ela deixa de servir. Procure em `tests/lib/filtros.test.ts` e nos testes de cartão/ficha qualquer teste de honestidade que carregue a Rampa **pelo loader** e troque-o por fixture sem `piso`:
+🔴 **O texto riscado abaixo estava escrito sobre uma premissa FALSA, medida no pré-voo. Onde os dois discordarem, ESTA EMENDA VENCE.** Eu afirmei que a Rampa era "o único exemplo real de ficha sem o campo" e que os testes de Honestidade 2 precisariam virar fixture. É o contrário: eles **já** passam o override na mão — `tests/lib/filtros.test.ts:265` faz `passa({ pisoMinimo: p }, { piso: undefined })`, e `tests/app/CartaoTrilha.test.tsx:149` faz `{ ...ficha, piso: undefined }`. Gravar `barro` na Rampa **não os afeta**. ⚠️ **NÃO os "conserte" — eles estão certos, e mexer neles é estragar prova que funciona.**
+
+O que de fato quebra é a família **"comentário que envelhece"**, com dois pontos medidos em `tests/lib/filtros.test.ts`:
+
+1. **A linha 58** afirma que *"a ficha base é a Rampa — paga, e **sem piso nem extensão preenchidos**"*. A extensão morreu na Task 7 e o piso passa a existir agora: **as duas metades ficam falsas**.
+2. **O bloco "pré-voo 2" (`:56-68`)** constrói um raciocínio inteiro em cima disso — *"Apagando o `filtros.pisoMinimo !== null`, a ficha base salva o teste sozinha (`ficha.piso` é `undefined`, curto-circuito, passa)"*. Com `piso: "barro"` no fixture base, **o curto-circuito descrito deixa de ser o que acontece**. O guarda continua sem morder (`ordemPiso("barro") < -1` é `false`), mas **por outro motivo** — e o motivo é justamente o que aquele comentário existe pra registrar.
+
+Reescreva as duas orações dizendo o que é verdade **depois** desta rodada. **Não apague o bloco:** o raciocínio dele (num E, a primeira sub-cláusula esconde a segunda) continua sendo a razão de aqueles testes existirem.
+
+⚠️ **E confira, não presuma:** rode `grep -rn "sem piso\|nem piso\|piso.*undefined" tests/` e classifique cada ocorrência nos três baldes da Task 7 — afirma consumidor desfeito / história / código.
+
+<details><summary>Texto original deste passo, mantido só como registro — não o siga</summary>
+
+~~A Rampa era o único exemplo real de "ficha sem o campo". Com `barro` gravado, ela deixa de servir. Procure em `tests/lib/filtros.test.ts` e nos testes de cartão/ficha qualquer teste de honestidade que carregue a Rampa pelo loader e troque-o por fixture sem `piso`:~~
 
 ```ts
   // REGRA DE HONESTIDADE 2: ficha SEM o campo nunca é escondida por ele.
@@ -1361,6 +1396,8 @@ Em `tests/lib/ficha.test.ts` (~177):
     }
   });
 ```
+
+</details>
 
 - [ ] **Step 3: Prove a consequência na HOME — o chip esvazia**
 
