@@ -40,6 +40,52 @@ export const DIST_PASSO_KM = 5;
 export const EXT_MAX_KM = 20;
 export const EXT_PASSO_KM = 1;
 
+/** O piso do TETO da barra — não é o teto. Sem ele, um acervo todo perto
+ *  degenera a barra em duas ou três paradas. */
+export const DIST_TETO_MINIMO_KM = 30;
+
+/** Até onde a barra de distância vai.
+ *
+ *  🔴 O TETO VEM DO ACERVO, e essa é a decisão do João em 2026-08-23: *"não faz
+ *  sentido limitar no bate perna"*. O `DIST_MAX_KM = 100` que morreu era um
+ *  número inventado; o limite agora é o mundo que existe.
+ *
+ *  São três candidatos, e o maior manda:
+ *
+ *  1. `DIST_TETO_MINIMO_KM`, o piso;
+ *  2. **o corte que está ligado agora** — e este é o que impede a TELA DE
+ *     MENTIR. Com "até 500 km" guardado e a trilha mais longe a 27, um teto de
+ *     30 poria o pegador na parada "qualquer" (o elemento `range` prende
+ *     sozinho o valor acima do `max`) enquanto a leitura ao lado diz "até 500
+ *     km". A barra estica pra conter o pegador;
+ *  3. a trilha mais longe do acervo.
+ *
+ *  🔴 O candidato 3 usa `kmNaTelaDistancia`, NÃO o km cru: é "o filtro segue a
+ *  tela" aplicado ao teto. A barra tem que oferecer uma parada capaz de
+ *  alcançar o número que o cartão anuncia — com o km cru, uma trilha a 30,4 km
+ *  (cartão: "~30 km") empurraria o teto pra 35 e sobraria uma parada que não
+ *  esconde ninguém.
+ *
+ *  O arredondamento pra cima no passo é PRÉ-CONDIÇÃO do `FaixaKm`: teto ou
+ *  passo fracionário fariam km fracionário subir pelo `onChange`, e o
+ *  `lerFiltros` recusa fracionário — o filtro se desligando sozinho entre duas
+ *  aberturas do app.
+ *
+ *  ⚠️ O `?? 0` do ramo sub-1km é CINTO e não tem asserção fingindo que carrega
+ *  algo: com o piso de 30 dominando, `null` e `0` dão o mesmo resultado em toda
+ *  entrada possível, e nenhuma mutação os separa. */
+export function tetoDaBarraDistancia(
+  fichas: Ficha[],
+  voce: Coord | null,
+  valorAtual: number | null,
+): number {
+  const doAcervo = voce
+    ? fichas.map((f) => kmNaTelaDistancia(distanciaKm(voce, coordDaDistancia(f))) ?? 0)
+    : [];
+  const bruto = Math.max(DIST_TETO_MINIMO_KM, valorAtual ?? 0, ...doAcervo);
+  return Math.ceil(bruto / DIST_PASSO_KM) * DIST_PASSO_KM;
+}
+
 export const SEM_FILTRO: Filtros = {
   distanciaKm: null,
   daHoje: false,

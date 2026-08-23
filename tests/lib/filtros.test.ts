@@ -4,16 +4,18 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DIST_MAX_KM,
   DIST_PASSO_KM,
+  DIST_TETO_MINIMO_KM,
   EXT_MAX_KM,
   EXT_PASSO_KM,
   SEM_FILTRO,
   contarLigados,
   lerFiltros,
   passaNoFiltro,
+  tetoDaBarraDistancia,
   type Filtros,
 } from "@/lib/filtros";
 import { getFichasComCondicao } from "@/lib/ficha";
-import { distanciaKm } from "@/lib/geo";
+import { distanciaKm, kmNaTelaDistancia } from "@/lib/geo";
 import { PISOS, PISOS_FILTRAVEIS } from "@/lib/piso";
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
@@ -743,5 +745,100 @@ describe("lerFiltros: o que já está gravado no celular dele", () => {
   // resumo".
   it("filtro guardado da versão velha não conta filtro ligado nenhum", () => {
     expect(contarLigados(lerFiltros(VELHO))).toBe(0);
+  });
+});
+
+// Um grau de latitude ≈ 111,195 km (é o que tests/lib/geo.test.ts mede). Pra
+// pôr uma ficha a ~N km de VOCE, desloca-se a latitude. Não é preciso ao
+// metro, e nenhum teste abaixo depende disso: os que dependem de um valor
+// exato ASSERTAM a distância antes de usá-la.
+const VOCE = { lat: -8, lng: -35 };
+
+// Sobrescreve SÓ o waypoint, deixando `condicao.coords` como o da Rampa real
+// (`base`). Na Rampa as duas coordenadas coincidem por acaso; sobrescrevendo
+// só uma, elas passam a DIFERIR — e é isso que faz a mutação #8 da tabela
+// (`coordDaDistancia(f)` → `f.condicao.coords`) morder sozinha. Se as duas
+// fossem sobrescritas juntas, elas continuariam iguais entre si e a mutação
+// não teria como se separar da versão correta.
+const fichaA = (slug: string, grausAoNorte: number): Ficha => ({
+  ...base,
+  slug,
+  trajeto: { waypoints: [{ nome: slug, lat: VOCE.lat + grausAoNorte, lng: VOCE.lng }] },
+});
+
+describe("tetoDaBarraDistancia: o teto vem do acervo, não de um número inventado", () => {
+  // O piso. Sem ele, um acervo todo perto degenera a barra em duas paradas.
+  it("com tudo perto, o teto é o mínimo — não a trilha mais longe", () => {
+    const perto = fichaA("perto", 0.07); // ~7,8 km
+    expect(tetoDaBarraDistancia([perto], VOCE, null)).toBe(DIST_TETO_MINIMO_KM);
+  });
+
+  // 🔴 O CASO QUE SEPARA a versão "acervo" da versão "constante fixa": a
+  // trilha mais longe TEM que estar acima do piso, senão as duas versões
+  // devolvem o mesmo número e a prova é oca.
+  it("com uma trilha longe, o teto sobe pra ela, arredondado pra cima no passo", () => {
+    const longe = fichaA("longe", 0.42); // ~46,7 km
+    const bruta = distanciaKm(VOCE, { lat: VOCE.lat + 0.42, lng: VOCE.lng });
+    // Não-vacuidade: o caso só separa se a distância cair na faixa que eu digo.
+    expect(bruta).toBeGreaterThan(45);
+    expect(bruta).toBeLessThan(50);
+    expect(tetoDaBarraDistancia([longe], VOCE, null)).toBe(50);
+  });
+
+  // 🔴 O CANDIDATO 2, e ele é o que impede a TELA DE MENTIR: com um corte
+  // guardado acima do teto do acervo, o elemento `range` prende o pegador no
+  // `max` e ele encosta na parada "qualquer" enquanto a leitura ao lado diz
+  // "até 500 km". A barra estica pra conter o pegador.
+  it("um corte guardado ACIMA do acervo estica o teto", () => {
+    const perto = fichaA("perto", 0.07);
+    expect(tetoDaBarraDistancia([perto], VOCE, 500)).toBe(500);
+  });
+
+  it("um corte guardado ABAIXO do teto não o encolhe", () => {
+    const longe = fichaA("longe", 0.42);
+    expect(tetoDaBarraDistancia([longe], VOCE, 10)).toBe(50);
+  });
+
+  // 🔴 "O FILTRO SEGUE A TELA" aplicado ao teto. O caso que separa km cru de
+  // km da tela: uma trilha cuja distância CRUA está logo acima de um múltiplo
+  // do passo, mas cujo número NA TELA é o múltiplo. Com o km cru o teto pularia
+  // pro próximo passo e sobraria uma parada que não esconde ninguém.
+  it("o teto sai do número que a TELA mostra, não do km cru", () => {
+    const f = fichaA("borda", 0.2735); // ~30,4 km cru → "~30 km" na tela
+    const bruta = distanciaKm(VOCE, { lat: VOCE.lat + 0.2735, lng: VOCE.lng });
+    // Não-vacuidade nos dois lados: o caso só separa dentro desta faixa.
+    expect(bruta).toBeGreaterThan(30);
+    expect(bruta).toBeLessThan(30.5);
+    expect(kmNaTelaDistancia(bruta)).toBe(30);
+    expect(tetoDaBarraDistancia([f], VOCE, null)).toBe(30); // com o km cru daria 35
+  });
+
+  // Sem localização o recorte nem aparece na tela; a função ainda tem que
+  // devolver um número usável, e o acervo não entra na conta.
+  it("sem localização, o teto é o mínimo", () => {
+    const longe = fichaA("longe", 0.42);
+    expect(tetoDaBarraDistancia([longe], null, null)).toBe(DIST_TETO_MINIMO_KM);
+  });
+
+  it("acervo vazio não estoura", () => {
+    expect(tetoDaBarraDistancia([], VOCE, null)).toBe(DIST_TETO_MINIMO_KM);
+  });
+
+  // O contrato do FaixaKm: `max` inteiro, e as paradas inteiras. Sem isso a
+  // barra sobe km fracionário pelo onChange e o `lerFiltros` o recusa — o
+  // filtro se desligando sozinho entre duas aberturas do app.
+  it("o teto é sempre múltiplo inteiro do passo — é pré-condição do FaixaKm", () => {
+    for (const graus of [0.01, 0.07, 0.2735, 0.42, 1.1, 3.7]) {
+      const teto = tetoDaBarraDistancia([fichaA("x", graus)], VOCE, null);
+      expect(Number.isInteger(teto)).toBe(true);
+      expect(teto % DIST_PASSO_KM).toBe(0);
+    }
+  });
+
+  // O teto sai da trilha MAIS LONGE, não da primeira nem da última do array.
+  it("com várias trilhas, manda a mais longe — em qualquer ordem", () => {
+    const a = fichaA("a", 0.07), b = fichaA("b", 0.42), c = fichaA("c", 0.2);
+    expect(tetoDaBarraDistancia([a, b, c], VOCE, null)).toBe(50);
+    expect(tetoDaBarraDistancia([b, c, a], VOCE, null)).toBe(50);
   });
 });
