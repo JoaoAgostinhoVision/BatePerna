@@ -160,8 +160,8 @@ até onde o carro para — qual é o PIOR trecho? Vale o pior pedaço mesmo que 
 seja curto, e mesmo que ele seja justamente o último: não é a média dos
 trechos, e não é o piso que predomina no caminho. É o pior pedaço que qualquer
 carro precisa passar. (Se depois de estacionar ainda se caminha, essa parte não
-entra aqui — ela é a pergunta seguinte.) Responda com uma destas quatro
-palavras exatamente, sem sinônimo:
+entra neste campo — este questionário não pergunta por ela.) Responda com uma
+destas quatro palavras exatamente, sem sinônimo:
 
 - **barro** — terra que vira lama e segura água quando molha; o pior piso da
   escala.
@@ -341,14 +341,15 @@ recusa carregar em vez de mostrar algo quebrado. Depois de validado, a ficha nov
 aparece sozinha na home (agrupada por "hoje dá" ou "hoje não dá", junto com o pin no
 mapa) e no acervo em `/trilhas` — sem precisar mexer em mais nada.
 
-`piso` é o único campo opcional deste questionário: se você pulou a pergunta acima, a
-ficha carrega igual, só que essa trilha nunca fica escondida pelo filtro de piso na
-tela inicial — ela aparece pra qualquer valor que a pessoa escolher no filtro.
+`piso` é o único campo opcional deste questionário: se você pulou a pergunta da seção
+"O piso da via", a ficha carrega igual, só que essa trilha nunca fica escondida pelo
+filtro de piso na tela inicial — ela aparece pra qualquer valor que a pessoa escolher
+no filtro.
 
 **Nota pra quem mantém o schema:** três perguntas antigas saíram deste questionário —
-`esforco` (quão puxada é, pensando no corpo de quem vai) e `duracao` (quanto tempo
-dura, em minutos), porque este app só sabe falar do LUGAR, não do corpo de quem vai, e
-`piso` cobre o mesmo papel de filtro; e `extensaoKm` (quantos km tem a trilha a pé),
+esforco (quão puxada é, pensando no corpo de quem vai) e duracao (quanto tempo dura,
+em minutos), porque este app só sabe falar do LUGAR, não do corpo de quem vai, e
+`piso` cobre o mesmo papel de filtro; e extensaoKm (quantos km tem a trilha a pé),
 apagada na contração de 2026-08-23 (Task 7) — o recorte de "tamanho da trilha" saiu da
 tela na Task 6 da mesma rodada, e sem tela nem filtro não sobrou o que o campo
 alimentasse. As fichas antigas que já tinham qualquer um dos três continuam válidas —

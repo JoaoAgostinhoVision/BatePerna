@@ -282,9 +282,10 @@ describe("piso da via", () => {
 
 // 🔴 O describe "extensão da trilha" morreu aqui (Task 7, 2026-08-23): o
 // campo `extensaoKm` saiu do modelo, `extensaoMaxKm` saiu de `Filtros`, e
-// `passaNoFiltro` não tem mais o bloco que os comparava. Os nove testes que
-// viviam aqui provavam exatamente esse recorte — sem ele, não sobra o que
-// provar; não há substituto porque não há mais comportamento.
+// `passaNoFiltro` não tem mais o bloco que os comparava. Os SEIS testes que
+// viviam aqui (contados no commit anterior a esta contração, por
+// `ancestorTitles`) provavam exatamente esse recorte — sem ele, não sobra o
+// que provar; não há substituto porque não há mais comportamento.
 
 describe("filtros combinados", () => {
   it("todos têm que passar, não basta um", () => {
@@ -425,9 +426,11 @@ describe("os limites são decisão de produto, e o número fica preso", () => {
   });
 });
 
-// Os dois recortes de km deixaram de ser "está no conjunto?" e viraram
-// intervalo. Cada caso erra em UMA coisa só: num E de quatro sub-cláusulas, a
-// que dispara primeiro esconde as outras (lição 2).
+// O recorte de km deixou de ser "está no conjunto?" e virou intervalo. (Era
+// um de DOIS recortes assim — os seis casos do de extensão foram removidos
+// mais abaixo, junto com o campo, na contração da Task 7.) Cada caso erra em
+// UMA coisa só: num E de quatro sub-cláusulas, a que dispara primeiro esconde
+// as outras (lição 2).
 describe("lerFiltros: os intervalos de km", () => {
   const so = (campo: string, v: unknown) => lerFiltros(JSON.stringify({ [campo]: v }));
 

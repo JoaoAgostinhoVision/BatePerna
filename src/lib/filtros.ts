@@ -14,8 +14,10 @@ import { PISOS_FILTRAVEIS, ordemPiso, type Piso } from "@/lib/piso";
 import type { Ficha } from "@/types/ficha";
 
 export type Filtros = {
-  /** Número livre, não mais `30 | 60`: os dois recortes de km viraram barra +
-   *  campo digitável. Quem confere o que está guardado é o `lerFiltros`. */
+  /** Número livre, não mais `30 | 60`: virou barra + campo digitável. (Era um
+   *  de DOIS recortes de km assim — o de extensão, `extensaoMaxKm`, saiu de
+   *  `Filtros` na contração da Task 7.) Quem confere o que está guardado é o
+   *  `lerFiltros`. */
   distanciaKm: number | null;
   daHoje: boolean;
   soGratis: boolean;
@@ -264,9 +266,12 @@ export function passaNoFiltro({
   //
   // 🔴 Até esta task (Task 7, 2026-08-23) esta regra tinha DOIS campos
   // opcionais: `extensaoKm` (com um bloco de filtro inteiro, apagado junto com
-  // o campo) e `piso` (o bloco logo abaixo). Hoje só `piso` sobra — e a única
-  // ficha real segue sem ele, então continua nunca sendo escondida por esta
-  // regra.
+  // o campo) e `piso` (o bloco logo abaixo). Hoje só `piso` sobra.
+  //
+  // A regra é sobre o CAMPO AUSENTE, não sobre qual ficha o tem hoje: ficha
+  // sem `piso` nunca é escondida por ele, tenha o dado quem tiver. (Não é
+  // "a única ficha real não tem piso" — isso é verdade agora e falso depois da
+  // Task 8, que grava `piso: "barro"` na Rampa; a regra não depende disso.)
   //
   // "No mínimo daqui pra cima" na escala de `PISOS` (a ORDEM do array É a
   // escala). Ficha com piso PIOR que o pedido some; ficha sem piso, nunca.

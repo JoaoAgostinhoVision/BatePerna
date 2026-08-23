@@ -22,8 +22,12 @@ vi.mock("@/lib/carimbo-estado", async (real) => ({
 // pra provar "a tela parou de mostrar" (campo presente) contra "o dado sumiu"
 // (campo ausente). A contração desta task (Task 7, 2026-08-23) apagou
 // `extensaoKm` do schema — sem o campo, essa distinção não existe mais pra
-// provar, e `COM_FATOS` virou byte-a-byte igual a `SO_PISO` (mesmo piso, sem o
-// campo morto). O teste que a usava foi apagado junto — ver a nota abaixo.
+// provar, e `COM_FATOS` virou EQUIVALENTE a `SO_PISO` pra este teste (só o
+// `slug` difere entre as duas; o piso é o mesmo, "asfalto-esburacado", e nem
+// um nem outro tem mais o campo morto). O `slug` não carrega prova nenhuma —
+// nada no bloco de baixo lê ou compara essa string —, então a diferença não
+// separa as duas versões. O teste que usava `COM_FATOS` foi apagado junto —
+// ver a nota abaixo.
 const { SEM_FATOS, SO_PISO } = vi.hoisted(() => {
   const base = {
     slug: "morro-de-teste",
@@ -170,10 +174,11 @@ describe("o piso no bloco Trajeto (a extensão saiu da tela na Task 6, e do mode
   // só ele usava. Ele provava "a tela parou de mostrar" (campo presente)
   // contra "o dado sumiu" (campo ausente) — distinção que só faz sentido
   // enquanto o campo existe pra estar presente ou ausente. Sem `extensaoKm`
-  // no schema, `COM_FATOS` (piso + extensaoKm) e `SO_PISO` (só piso) eram
-  // byte-a-byte o mesmo fixture, e o teste duplicava exatamente o de baixo
-  // ("com piso, a linha mostra o piso e nada mais"). Preservar as duas seria
-  // um teste redundante fingindo provar algo que não existe mais.
+  // no schema, `COM_FATOS` (piso + extensaoKm) e `SO_PISO` (só piso) ficaram
+  // EQUIVALENTES pra este teste — só o `slug` os distingue, e nada aqui lê ou
+  // compara essa string —, e o teste duplicava exatamente o de baixo ("com
+  // piso, a linha mostra o piso e nada mais"). Preservar as duas seria um
+  // teste redundante fingindo provar algo que não existe mais.
 
   // Ausência de TEXTO mascara o sumiço do elemento: `?.textContent ?? ""`
   // devolve a mesma string vazia com o span presente-e-vazio e com ele

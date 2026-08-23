@@ -131,11 +131,17 @@ describe("a linha de metadados do cartão", () => {
   // ficha" morreu aqui (Task 7, 2026-08-23): ele escrevia `extensaoKm: 4.2`
   // de propósito no fixture pra provar "a tela parou de mostrar" (campo
   // presente) contra "o dado sumiu" (campo ausente) — distinção que só faz
-  // sentido enquanto o campo existe no schema. Sem `extensaoKm`, o fixture
-  // (`custo: gratis, piso: "asfalto-esburacado"`) e a asserção final
-  // ("asfalto esburacado") ficaram byte-a-byte iguais ao teste "ficha
-  // gratuita não ganha linha de custo" lá em cima — preservar os dois seria
-  // duplicar sem motivo.
+  // sentido enquanto o campo existe no schema. Sem `extensaoKm`, ele ficou
+  // EQUIVALENTE ao teste "ficha gratuita não ganha linha de custo" lá em
+  // cima: os dois chegam na mesma asserção final ("asfalto esburacado") pelo
+  // mesmo caminho (gratis + piso "asfalto-esburacado", sem localização). Eles
+  // diferem em dois detalhes — o sobrevivente tem `custo.valor: "R$ 5 por
+  // pessoa"` (o apagado não tinha) e não usa `<LocalVivo>` (o apagado usava)
+  // —, e nenhum dos dois carrega prova que o outro não já carregasse: o
+  // `valor` extra é exatamente o que já faz o sobrevivente mais forte (prova
+  // que `gratis` ignora um `valor` presente, não só que ele fica ausente), e
+  // o `<LocalVivo>` não muda o resultado porque nenhum dos dois grava
+  // localização — preservar os dois seria duplicar sem motivo.
 
   // Herdeiro do antigo "ficha sem esforço/duração não mostra campo vazio",
   // apontado pro campo novo: sem piso, nem traço nem "undefined" no lugar.
