@@ -1,7 +1,6 @@
 import "../ficha.css";
 import { getFicha } from "@/lib/ficha";
 import { resolverEstado } from "@/lib/carimbo-estado";
-import { formatarExtensao } from "@/lib/geo";
 import { rotuloPiso } from "@/lib/piso";
 import { notFound } from "next/navigation";
 import ConfirmarFui from "../ConfirmarFui";
@@ -37,19 +36,24 @@ export default async function Ficha({
   const precoCurto = ficha.custo.valor?.match(/R\$\s?\d+/)?.[0] ?? "Pago";
   const restoCusto = ficha.custo.valor?.replace(precoCurto, "").replace(/^\s*[·-]?\s*/, "").trim();
 
-  // Os dois fatos do LUGAR que o cartão da home já mostra, agora também aqui,
-  // dentro do bloco Trajeto: quão longa é a trilha e que piso tem a via.
-  // Formatados pelas MESMAS funções do cartão (`formatarExtensao`,
-  // `rotuloPiso`) — formatar de novo aqui seria a mesma trilha com duas caras,
-  // que foi exatamente o defeito dos "dois km". A ordem também é a do cartão:
-  // extensão, depois piso.
+  // O fato do LUGAR que o cartão da home já mostra, agora também aqui, dentro
+  // do bloco Trajeto: que piso tem a via. Formatado pela MESMA função do
+  // cartão (`rotuloPiso`) — formatar de novo aqui seria a mesma trilha com
+  // duas caras, que foi exatamente o defeito dos "dois km".
+  //
+  // A extensão (`ficha.extensaoKm`) saiu desta lista por decisão do João em
+  // 2026-08-23: "remova o filtro tamanho da trilha, acho que não está para
+  // hoje". O campo continua existindo no schema (só morre na Task 7) — esta
+  // tela apenas parou de lê-lo.
   //
   // Campo ausente não vira "—" nem "não informado": ele some da lista, e se
   // nada sobrar a linha inteira não é desenhada (o `.filter(Boolean)` mais o
-  // guarda lá embaixo). Sem o guarda, uma ficha sem os dois ganharia uma linha
-  // vazia no meio do bloco.
+  // guarda lá embaixo). Sem o guarda, com um único item a lista continua
+  // sendo uma LISTA — a razão está medida na Task 7 da rodada passada: com
+  // elementos separados em vez de lista, tirar o guarda faria
+  // `rotuloPiso(undefined)` ESTOURAR, e "quebrou" não é o mesmo que "não
+  // mostrou linha vazia".
   const fatosDaVia = [
-    ficha.extensaoKm ? formatarExtensao(ficha.extensaoKm) : null,
     ficha.piso ? rotuloPiso(ficha.piso) : null,
   ].filter(Boolean);
 

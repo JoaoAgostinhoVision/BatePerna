@@ -3,8 +3,6 @@ import { useState } from "react";
 import {
   contarLigados,
   DIST_PASSO_KM,
-  EXT_MAX_KM,
-  EXT_PASSO_KM,
   type Filtros,
 } from "@/lib/filtros";
 import { coordDe } from "@/lib/local";
@@ -20,20 +18,25 @@ import { useLocal } from "./local";
  *  nenhuma camada flutuante, e uma cortina puxaria junto fechar-tocando-fora,
  *  prender o foco atrás dela e Esc, três coisas que hoje não existem aqui.
  *
- *  🔴 OS TRÊS LIMITES DE KM FIXOS SAEM DE `@/lib/filtros`, e nenhum deles é
- *  escrito à mão aqui. Não é preciosismo: é o mesmo módulo que o `lerFiltros`
- *  usa pra conferir o que está guardado. Uma segunda cópia poderia discordar, e
- *  discordando a tela aceitaria um valor que a releitura joga fora — o filtro
- *  se desligando sozinho entre duas aberturas do app, sem nada dizendo por quê.
- *  O da distância NÃO é fixo: `tetoDistanciaKm` chega PRONTO por prop, calculado
- *  no `MioloHome` a partir do acervo (ver `tetoDaBarraDistancia`) — o
- *  `DIST_MAX_KM` que morava aqui era um número inventado, e o painel continua
- *  sem fazer conta de km, só de um jeito diferente: lendo em vez de importar.
- *  Por isso há teste lendo o `max` de cada barra E teste lendo esta fonte: em
- *  runtime o número escrito à mão e a constante são o MESMO valor, e nenhuma
- *  asserção de comportamento separa as duas versões. (Sem os números aqui de
- *  propósito: comentário que crava número envelhece calado no dia em que a
- *  constante mudar.) */
+ *  🔴 O LIMITE DE KM FIXO (o passo da faixa de distância) SAI DE
+ *  `@/lib/filtros`, e não é escrito à mão aqui. Não é preciosismo: é o mesmo
+ *  módulo que o `lerFiltros` usa pra conferir o que está guardado. Uma
+ *  segunda cópia poderia discordar, e discordando a tela aceitaria um valor
+ *  que a releitura joga fora — o filtro se desligando sozinho entre duas
+ *  aberturas do app, sem nada dizendo por quê.
+ *  O teto da distância NÃO é fixo: `tetoDistanciaKm` chega PRONTO por prop,
+ *  calculado no `MioloHome` a partir do acervo (ver `tetoDaBarraDistancia`) —
+ *  o `DIST_MAX_KM` que morava aqui era um número inventado, e o painel
+ *  continua sem fazer conta de km, só de um jeito diferente: lendo em vez de
+ *  importar. Por isso há teste lendo o `max` da barra E teste lendo esta
+ *  fonte: em runtime o número escrito à mão e a constante são o MESMO valor,
+ *  e nenhuma asserção de comportamento separa as duas versões. (Sem os
+ *  números aqui de propósito: comentário que crava número envelhece calado
+ *  no dia em que a constante mudar.)
+ *  (A faixa de "Tamanho da trilha" e os limites `EXT_MAX_KM`/`EXT_PASSO_KM`
+ *  que ela lia saíram desta tela por decisão do João em 2026-08-23 — o campo
+ *  `extensaoMaxKm` continua existindo em `Filtros`, mas não tem mais nenhum
+ *  controle aqui que o ligue.) */
 export default function PainelFiltros({
   visiveis,
   tetoDistanciaKm,
@@ -67,11 +70,19 @@ export default function PainelFiltros({
       </div>
       {aberto && (
         <div className="filtro-painel">
-          {/* O recorte de distância só existe quando há de onde medir — e SÓ
-              ele. A faixa de tamanho da trilha não depende de localização
-              nenhuma: embrulhar as duas aqui faria o recorte de tamanho sumir
-              pra quem está sem GPS, sem nada na tela dizendo por quê. */}
+          {/* O recorte de distância só existe quando há de onde medir. A faixa
+              de tamanho da trilha, que dependia só do acervo e não de
+              localização nenhuma, saiu da tela por decisão do João em
+              2026-08-23 ("remova o filtro tamanho da trilha, acho que não
+              está para hoje") — este `temLocal &&` hoje embrulha uma faixa
+              só. */}
           {temLocal && (
+            // O `FaixaKm` JÁ É o grupo (fieldset + legend). Um `<fieldset>`
+            // por fora daria grupo dentro de grupo: COM legenda, dois nomes
+            // pro mesmo controle; SEM legenda, um grupo anônimo entre o
+            // painel e a faixa, com o `.filtro-grupo` de fora virando
+            // container flex do de dentro. Tem teste em cima desta faixa — a
+            // versão sem legenda passava verde antes dele.
             <FaixaKm
               rotulo="Distância daqui"
               valor={filtros.distanciaKm}
@@ -80,19 +91,6 @@ export default function PainelFiltros({
               onChange={(km) => trocar({ distanciaKm: km })}
             />
           )}
-          {/* O `FaixaKm` JÁ É o grupo (fieldset + legend). Um `<fieldset>` por
-              fora daria grupo dentro de grupo: COM legenda, dois nomes pro
-              mesmo controle; SEM legenda, um grupo anônimo entre o painel e a
-              faixa, com o `.filtro-grupo` de fora virando container flex do de
-              dentro. Tem teste em cima das duas faixas — a versão sem legenda
-              passava verde antes dele. */}
-          <FaixaKm
-            rotulo="Tamanho da trilha"
-            valor={filtros.extensaoMaxKm}
-            max={EXT_MAX_KM}
-            passo={EXT_PASSO_KM}
-            onChange={(km) => trocar({ extensaoMaxKm: km })}
-          />
           {/* A legenda diz "no mínimo" porque sem isso "asfalto tapete" lê como
               "SÓ asfalto tapete" — e o recorte é "daqui pra cima".
 

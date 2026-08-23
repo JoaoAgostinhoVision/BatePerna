@@ -8,8 +8,6 @@ import LocalVivo from "@/app/local";
 import {
   CHAVE_FILTROS,
   DIST_PASSO_KM,
-  EXT_MAX_KM,
-  EXT_PASSO_KM,
   SEM_FILTRO,
   type Filtros,
 } from "@/lib/filtros";
@@ -122,24 +120,23 @@ describe("o painel", () => {
     expect(screen.queryByRole("button", { name: /^até 2h$/i })).toBeNull();
   });
 
+  // A faixa saiu por decisão do João em 2026-08-23: "remova o filtro tamanho
+  // da trilha, acho que não está para hoje". Irmã dos testes de Duração e
+  // Esforço logo acima — o que sai da tela tem que ter prova de que saiu.
+  it("não existe mais grupo Tamanho da trilha", async () => {
+    semeiaLocal();
+    monta();
+    await abrir();
+    expect(screen.queryByRole("group", { name: TAMANHO })).toBeNull();
+    // Não-vacuidade: o painel está aberto e tem grupos.
+    expect(screen.getByRole("group", { name: DISTANCIA })).toBeTruthy();
+  });
+
   // Filtro que não tem como filtrar não entra na tela.
   it("sem localização, o grupo Distância daqui não aparece", async () => {
     monta();
     await abrir();
     expect(screen.queryByRole("group", { name: DISTANCIA })).toBeNull();
-  });
-
-  // ——— pré-voo (emenda, item 4): o PAR do teste acima.
-  //
-  // O teste de cima pega o `temLocal &&` sumindo; não pega o EXCESSO.
-  // Embrulhando as DUAS faixas no `temLocal &&`, ele continua verde e o recorte
-  // de tamanho some pra quem está sem GPS — sem nada na tela dizendo por quê, e
-  // sem nenhuma razão: medir o tamanho de uma trilha não depende de onde a
-  // pessoa está.
-  it("sem localização, o grupo Tamanho da trilha CONTINUA aparecendo", async () => {
-    monta();
-    await abrir();
-    expect(screen.getByRole("group", { name: TAMANHO })).toBeTruthy();
   });
 
   it("com localização, o grupo Distância daqui aparece", async () => {
@@ -318,22 +315,11 @@ describe("as faixas de km escrevem e leem, cada uma no seu campo", () => {
       .toMatchObject({ ...SEM_FILTRO, distanciaKm: 30 });
   });
 
-  it("a faixa de tamanho escreve em extensaoMaxKm", async () => {
-    semeiaLocal();
-    monta();
-    await abrir();
-    fireEvent.change(campoDe(TAMANHO), { target: { value: "6" } });
-    // Se ela escrevesse em `distanciaKm`, as duas metades desta asserção caem:
-    // `extensaoMaxKm` continuaria `null` e `distanciaKm` não seria `null`.
-    expect(JSON.parse(localStorage.getItem(CHAVE_FILTROS)!))
-      .toMatchObject({ ...SEM_FILTRO, extensaoMaxKm: 6 });
-  });
-
-  // As duas metades de cada um destes: a faixa dona MOSTRA o número guardado
-  // (barra, campo e o texto de leitura — os três portadores), e a VIZINHA
-  // continua vazia. Sem a segunda metade, uma faixa lendo o campo da outra
-  // passa; sem a primeira, `valor={null}` passa.
-  it("a faixa de distância MOSTRA o recorte guardado, e a de tamanho não herda", async () => {
+  // A METADE que sobrou de "MOSTRA o recorte guardado, e a de tamanho não
+  // herda": a faixa de tamanho saiu da tela na Task 6, então só resta provar
+  // que a de distância mostra o que foi guardado — não há mais vizinha pra
+  // checar que NÃO herdou.
+  it("a faixa de distância MOSTRA o recorte guardado", async () => {
     semeiaLocal();
     localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, distanciaKm: 30 }));
     monta();
@@ -341,20 +327,6 @@ describe("as faixas de km escrevem e leem, cada uma no seu campo", () => {
     expect(campoDe(DISTANCIA).value).toBe("30");
     expect(barraDe(DISTANCIA).value).toBe("30");
     expect(within(grupo(DISTANCIA)).getByText("até 30 km")).toBeTruthy();
-    expect(campoDe(TAMANHO).value).toBe("");
-    expect(within(grupo(TAMANHO)).getByText("qualquer")).toBeTruthy();
-  });
-
-  it("a faixa de tamanho MOSTRA o recorte guardado, e a de distância não herda", async () => {
-    semeiaLocal();
-    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, extensaoMaxKm: 6 }));
-    monta();
-    await abrir();
-    expect(campoDe(TAMANHO).value).toBe("6");
-    expect(barraDe(TAMANHO).value).toBe("6");
-    expect(within(grupo(TAMANHO)).getByText("até 6 km")).toBeTruthy();
-    expect(campoDe(DISTANCIA).value).toBe("");
-    expect(within(grupo(DISTANCIA)).getByText("qualquer")).toBeTruthy();
   });
 
   // Trocar os limites entre as duas faixas é "o filtro se desliga sozinho" com
@@ -369,9 +341,6 @@ describe("as faixas de km escrevem e leem, cada uma no seu campo", () => {
     expect(barraDe(DISTANCIA).getAttribute("max")).toBe(String(TETO + DIST_PASSO_KM));
     expect(barraDe(DISTANCIA).getAttribute("step")).toBe(String(DIST_PASSO_KM));
     expect(campoDe(DISTANCIA).getAttribute("max")).toBe(String(TETO));
-    // A de tamanho continua lendo as constantes dela — ela só some na Task 6.
-    expect(barraDe(TAMANHO).getAttribute("max")).toBe(String(EXT_MAX_KM + EXT_PASSO_KM));
-    expect(campoDe(TAMANHO).getAttribute("max")).toBe(String(EXT_MAX_KM));
   });
 
   // Não-vacuidade do teste acima: com um teto DIFERENTE, a tela muda junto.
@@ -447,21 +416,26 @@ describe("o que o jsdom não vê", () => {
     const src = fonte("PainelFiltros.tsx");
     const importados = src.match(/import\s*\{([^}]*)\}\s*from\s*"@\/lib\/filtros"/);
     expect(importados, "o painel tem que importar os limites de @/lib/filtros").not.toBeNull();
-    for (const c of ["DIST_PASSO_KM", "EXT_MAX_KM", "EXT_PASSO_KM"]) {
+    for (const c of ["DIST_PASSO_KM"]) {
       expect(importados![1]).toContain(c);
     }
     // 🔴 DIST_MAX_KM não existe mais. Se ele reaparecer aqui, é o teto
     // inventado voltando.
     expect(importados![1]).not.toContain("DIST_MAX_KM");
+    // 🔴 EXT_MAX_KM/EXT_PASSO_KM saíram do import na Task 6: a faixa de
+    // tamanho não existe mais na tela, e reimportar as constantes seria o
+    // painel voltando a falar de um recorte que ninguém liga mais aqui.
+    expect(importados![1]).not.toContain("EXT_MAX_KM");
+    expect(importados![1]).not.toContain("EXT_PASSO_KM");
     // O outro lado: todo `max=`/`passo=` que o painel passa sai do vocabulário
     // permitido. Sem esta metade, importar tudo e ainda escrever `max={100}`
     // numa das faixas passaria verde.
     const passados = [...src.matchAll(/\b(?:max|passo)=\{([^}]*)\}/g)].map((m) => m[1]);
-    expect(passados).toHaveLength(4);
+    expect(passados).toHaveLength(2);
     for (const v of passados) {
-      expect(v).toMatch(/^(?:tetoDistanciaKm|DIST_PASSO_KM|EXT_MAX_KM|EXT_PASSO_KM)$/);
+      expect(v).toMatch(/^(?:tetoDistanciaKm|DIST_PASSO_KM)$/);
     }
-    // Anti-vacuidade: sem esta linha, os quatro poderiam ser `DIST_PASSO_KM`.
+    // Anti-vacuidade: sem esta linha, os dois poderiam ser `DIST_PASSO_KM`.
     expect(passados).toContain("tetoDistanciaKm");
   });
 

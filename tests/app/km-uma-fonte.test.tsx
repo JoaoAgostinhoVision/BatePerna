@@ -30,10 +30,11 @@ const CLIMA = { lat: -7.2, lng: -36.0 };
 // função que está sendo provada: régua auto-referente não mede nada.
 const KM_CERTO = "~40 km em linha reta";
 
-// O mesmo, pros dois fatos que a Task 7 levou pra ficha: o texto que as DUAS
-// telas têm que dizer, escrito à mão. Chamar `formatarExtensao`/`rotuloPiso`
-// aqui seria medir a função com ela mesma.
-const EXTENSAO_CERTA = "4,3 km de trilha";
+// O mesmo, pro piso que a Task 7 levou pra ficha: o texto que as DUAS telas
+// têm que dizer, escrito à mão. Chamar `rotuloPiso` aqui seria medir a função
+// com ela mesma.
+// (A extensão saiu da TELA na Task 6 — ver a nota junto de `FICHA` mais
+// abaixo — então ela não tem mais um par cartão↔ficha pra proteger aqui.)
 const PISO_CERTO = "asfalto esburacado";
 
 const { FICHA } = vi.hoisted(() => ({
@@ -66,19 +67,17 @@ const { FICHA } = vi.hoisted(() => ({
       permissao_abortar: "Se marcar, volte.",
     },
     custo: { tag: "gratis" as const },
-    // 🔴 Os dois campos abaixo são a matéria da segunda prova de junção desta
-    //    família (a extensão e o piso, que a ficha ganhou na Task 7). Sem eles
-    //    a comparação entre as duas telas seria `null === null`: uma prova
-    //    OCA, verde com a linha apagada dos dois lados. Os valores são
-    //    load-bearing:
-    //    - `extensaoKm: 4.25` e não 4: `formatarExtensao` arredonda pra uma
-    //      casa e usa VÍRGULA ("4,3"); com inteiro, a função e um
-    //      `${km} km de trilha` escrito à mão dão a MESMA string e a prova não
-    //      separa as duas versões.
-    //    - `piso: "asfalto-esburacado"` e não "barro": `rotuloPiso("barro")`
-    //      devolve "barro", e aí chamar a função ou mostrar o enum cru é
-    //      indistinguível.
-    extensaoKm: 4.25,
+    // 🔴 O campo abaixo é a matéria da segunda prova de junção desta família
+    //    (o piso, que a ficha ganhou na Task 7). Sem ele a comparação entre as
+    //    duas telas seria `null === null`: uma prova OCA, verde com a linha
+    //    apagada dos dois lados. O valor é load-bearing: `piso:
+    //    "asfalto-esburacado"` e não "barro", porque `rotuloPiso("barro")`
+    //    devolve "barro", e aí chamar a função ou mostrar o enum cru é
+    //    indistinguível.
+    //
+    //    A extensão SAIU da tela na Task 6 (cartão e ficha pararam de
+    //    mostrá-la): esta ficha sintética não traz mais `extensaoKm` — sem
+    //    consumidor nenhum na tela, o campo aqui seria só decoração morta.
     piso: "asfalto-esburacado" as const,
   } satisfies Ficha as Ficha,
 }));
@@ -120,13 +119,10 @@ function guardarLocal() {
 const kmMostrado = (texto: string | null | undefined) =>
   texto?.match(/~[\d,]+ km em linha reta/)?.[0] ?? null;
 
-/** A extensão e o piso que uma tela mostra. O `.` e o `-` dentro dos padrões
- *  são de propósito: a versão ERRADA ("4.25 km de trilha" escrito à mão,
- *  "asfalto-esburacado" cru) tem que ser CAPTURADA pra ser comparada e
- *  reprovada — um padrão que só aceitasse a versão certa devolveria `null` e
- *  transformaria a divergência em silêncio. */
-const extensaoMostrada = (texto: string | null | undefined) =>
-  texto?.match(/[\d.,]+ km de trilha/)?.[0] ?? null;
+/** O piso que uma tela mostra. O `-` dentro do padrão é de propósito: a
+ *  versão ERRADA ("asfalto-esburacado" cru) tem que ser CAPTURADA pra ser
+ *  comparada e reprovada — um padrão que só aceitasse a versão certa
+ *  devolveria `null` e transformaria a divergência em silêncio. */
 const pisoMostrado = (texto: string | null | undefined) =>
   texto?.match(/asfalto[- ]esburacado/)?.[0] ?? null;
 
@@ -222,46 +218,57 @@ describe("uma trilha, UM km", () => {
   });
 });
 
-/** O irmão do de cima, pros dois fatos que a ficha ganhou na Task 7. Mesma
- *  família de defeito: duas telas respondendo a mesma pergunta sobre a mesma
- *  trilha e formatando cada uma do seu jeito — "4,3 km de trilha" no cartão e
- *  "4.25 km de trilha" na ficha é a mesma trilha com duas caras.
+/** O irmão do de cima, pro piso que a ficha ganhou na Task 7. Mesma família de
+ *  defeito: duas telas respondendo a mesma pergunta sobre a mesma trilha e
+ *  formatando cada uma do seu jeito — "asfalto esburacado" no cartão e
+ *  "asfalto-esburacado" cru na ficha seria a mesma trilha com duas caras.
  *
- *  Cada teste faz DUAS asserções contra o literal e UMA cruzada — e a verdade
+ *  🔴 Este describe tinha um segundo teste, gêmeo deste, pra extensão. A Task
+ *  6 tirou a extensão da TELA (cartão e ficha pararam de mostrá-la), e sem
+ *  saída na tela não sobra o que comparar entre as duas — o par cartão↔ficha
+ *  da extensão foi apagado, e só o do piso continua de pé.
+ *
+ *  O teste faz DUAS asserções contra o literal e UMA cruzada — e a verdade
  *  medida sobre elas, que vale igual pro teste do km aqui em cima:
  *
  *  **Os dois literais já pegam tudo, e o cruzamento é redundante por
  *  TRANSITIVIDADE.** Enquanto os dois lados forem asseridos contra a MESMA
  *  constante, `daFicha === LITERAL ∧ doCartao === LITERAL ⟹ daFicha ===
  *  doCartao`: não existe estado do mundo em que o cruzamento estoure e os dois
- *  literais passem. Medido: sob a mutação que troca `formatarExtensao` por um
- *  sufixo escrito à mão, quem estoura é o literal da ficha, não o cruzamento.
- *  Nem "alguém atualiza a constante pra casar com a tela quebrada" o salva —
- *  aí estoura o literal do OUTRO lado.
+ *  literais passem. Medido, na época em que a extensão ainda tinha este par:
+ *  sob a mutação que trocava `formatarExtensao` por um sufixo escrito à mão,
+ *  quem estourava era o literal da ficha, não o cruzamento. Nem "alguém
+ *  atualiza a constante pra casar com a tela quebrada" o salvava — aí
+ *  estourava o literal do OUTRO lado.
  *
- *  O cruzamento fica assim mesmo, porque custa nada e é rede pro dia em que um
- *  dos literais sair ou em que os dois lados deixarem de compartilhar a
- *  constante — que é justamente quando a transitividade acaba. O que ele NÃO é
- *  é a asserção que pega a divergência hoje. */
+ *  O cruzamento fica assim mesmo, porque custa nada e é rede pro dia em que o
+ *  literal sair ou em que os dois lados deixarem de compartilhar a constante —
+ *  que é justamente quando a transitividade acaba. O que ele NÃO é é a
+ *  asserção que pega a divergência hoje. */
 /** 🔴 A TERCEIRA JUNÇÃO DESTA FAMÍLIA, e a que este conserto veio fechar: não
  *  "duas telas discordando entre si", mas **a tela e o FILTRO discordando**.
  *
  *  A tela arredondava o km e o recorte comparava o km CRU. Resultado medido
- *  pela revisão da branch inteira: um cartão anunciando "4 km de trilha" sumia
- *  do "até 4 km", e — este já EM PRODUÇÃO — um anunciando "~10 km em linha
- *  reta" sumia do "até 10 km". A pessoa lê o número no cartão, digita esse
- *  mesmo número no recorte, e a trilha some. Nenhum teste de unidade dos dois
- *  lados pega isso: cada lado está certo sozinho.
+ *  pela revisão da branch inteira, e — este já EM PRODUÇÃO — um cartão
+ *  anunciando "~10 km em linha reta" sumia do "até 10 km". A pessoa lê o
+ *  número no cartão, digita esse mesmo número no recorte, e a trilha some.
+ *  Nenhum teste de unidade dos dois lados pega isso: cada lado está certo
+ *  sozinho.
  *
- *  O teste é escrito NA ORDEM EM QUE A PESSOA FAZ: renderiza o cartão, LÊ os
- *  dois números do texto que apareceu, e usa **esses** números como teto do
- *  filtro. Nada aqui chama `formatarExtensao` nem `kmNaTela*` — régua
- *  auto-referente não mede nada.
+ *  O teste é escrito NA ORDEM EM QUE A PESSOA FAZ: renderiza o cartão, LÊ o
+ *  número do texto que apareceu, e usa **esse** número como teto do filtro.
+ *  Nada aqui chama `kmNaTela*` — régua auto-referente não mede nada.
  *
  *  A ficha da FRONTEIRA é sintética pela mesma razão da outra deste arquivo:
- *  4,04 km de trilha e 10,4495 km de distância são os valores exatos em que as
- *  duas versões do filtro se SEPARAM (com o km cru, as duas somem). Um valor em
- *  que elas concordassem — 4 km cravados — deixaria a prova oca.
+ *  10,4495 km de distância é o valor exato em que as duas versões do filtro se
+ *  SEPARAM (com o km cru, a trilha some). Um valor em que elas concordassem —
+ *  10 km cravados — deixaria a prova oca.
+ *
+ *  🔴 Este teste tinha uma metade de EXTENSÃO (a Task 6 tirou a extensão da
+ *  tela): comparava `~4 km de trilha` mostrado no cartão contra `até 4 km` no
+ *  filtro de `extensaoMaxKm`. Sem consumidor na tela, essa ponte deixou de
+ *  existir — o cartão não anuncia mais nenhum número de extensão pra alguém
+ *  digitar de volta no filtro. Fica só a ponte de distância.
  *
  *  Por que só o CARTÃO, e não também a ficha da trilha: as duas telas já estão
  *  presas ao mesmo texto pelos testes deste arquivo, e `geo.ts` já tem prova de
@@ -272,7 +279,6 @@ describe("o número que a tela mostra é o número que o filtro compara", () => 
   // conversão está escrita aqui pra o número não ser copiado à mão. A
   // construção é conferida dentro do teste antes de valer como prova.
   const KM_DAQUI = 10.4495;
-  const KM_DE_TRILHA = 4.04;
   const FRONTEIRA = {
     ...FICHA,
     slug: "morro-da-fronteira",
@@ -285,7 +291,6 @@ describe("o número que a tela mostra é o número que o filtro compara", () => 
         },
       ],
     },
-    extensaoKm: KM_DE_TRILHA,
   } satisfies Ficha as Ficha;
 
   /** O número CRU que a pessoa leu no cartão — o que ela digitaria no recorte.
@@ -293,7 +298,7 @@ describe("o número que a tela mostra é o número que o filtro compara", () => 
   const numeroDe = (texto: string | null) =>
     texto === null ? null : Number(texto.match(/[\d,]+/)![0].replace(",", "."));
 
-  it("o cartão mostra ~10 km e 4 km, e 'até 10' + 'até 4' NÃO o escondem", () => {
+  it("o cartão mostra ~10 km, e 'até 10' NÃO o esconde", () => {
     expect(distanciaKm(VOCE, FRONTEIRA.trajeto.waypoints[0])).toBeCloseTo(KM_DAQUI, 6);
 
     guardarLocal();
@@ -305,39 +310,27 @@ describe("o número que a tela mostra é o número que o filtro compara", () => 
     const meta = cartao.container.querySelector(".cartao-meta")?.textContent;
 
     const tetoDistancia = numeroDe(kmMostrado(meta));
-    const tetoExtensao = numeroDe(extensaoMostrada(meta));
 
-    // Sem estas duas, um cartão que parasse de mostrar os números deixaria os
-    // tetos em `null` — e filtro desligado passa em tudo, com a prova oca.
+    // Sem esta, um cartão que parasse de mostrar o número deixaria o teto em
+    // `null` — e filtro desligado passa em tudo, com a prova oca.
     expect(tetoDistancia, "o cartão parou de mostrar a distância").toBe(10);
-    expect(tetoExtensao, "o cartão parou de mostrar a extensão").toBe(4);
 
-    // E agora o recorte, com os números que a tela acabou de dar. Com o km cru
-    // dos dois lados, este `toBe(true)` era `false` nas duas contas.
+    // E agora o recorte, com o número que a tela acabou de dar. Com o km cru,
+    // este `toBe(true)` era `false`.
     expect(
       passaNoFiltro({
         ficha: FRONTEIRA,
         leitura: LEITURA,
-        filtros: { ...SEM_FILTRO, distanciaKm: tetoDistancia, extensaoMaxKm: tetoExtensao },
+        filtros: { ...SEM_FILTRO, distanciaKm: tetoDistancia },
         voce: VOCE,
         confia: true,
       }),
-      "o filtro escondeu a trilha pelos números que o próprio cartão mostrou",
+      "o filtro escondeu a trilha pelo número que o próprio cartão mostrou",
     ).toBe(true);
   });
 });
 
-describe("uma trilha, UMA extensão e UM piso", () => {
-  it("cartão e ficha mostram o MESMO texto de extensão", async () => {
-    const { noCartao, naFicha } = await asDuasTelas();
-    const doCartao = extensaoMostrada(noCartao);
-    const daFicha = extensaoMostrada(naFicha);
-
-    expect(doCartao, "o cartão parou de mostrar a extensão").toBe(EXTENSAO_CERTA);
-    expect(daFicha, "a ficha parou de mostrar a extensão").toBe(EXTENSAO_CERTA);
-    expect(daFicha, "as duas telas formatam a extensão de jeitos diferentes").toBe(doCartao);
-  });
-
+describe("uma trilha, UM piso", () => {
   it("cartão e ficha mostram o MESMO piso", async () => {
     const { noCartao, naFicha } = await asDuasTelas();
     const doCartao = pisoMostrado(noCartao);

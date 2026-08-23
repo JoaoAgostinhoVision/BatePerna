@@ -9,20 +9,21 @@ vi.mock("@/lib/carimbo-estado", async (real) => ({
   resolverEstado: vi.fn(),
 }));
 
-// Três fichas sintéticas pros três casos do piso/extensão. Sintéticas porque o
+// Três fichas sintéticas pros casos do piso (e, no `COM_FATOS`, também com
+// `extensaoKm` presente — ver comentário mais abaixo). Sintéticas porque o
 // JSON real (a Rampa) não traz nenhum dos dois campos — com ele só dá pra
 // provar AUSÊNCIA, e ausência sem o irmão da presença é meia prova.
 //
-// Duas escolhas de exemplo aqui são load-bearing, e nenhuma é decorativa:
+// `piso: "asfalto-esburacado"`, não "barro", é load-bearing e não decorativo:
+// `rotuloPiso("barro")` devolve "barro", e aí chamar a função e mostrar o enum
+// cru dão a MESMA string — nenhuma asserção separaria as duas versões. Com o
+// hífen, separa.
 //
-// - `piso: "asfalto-esburacado"`, não "barro": `rotuloPiso("barro")` devolve
-//   "barro", e aí chamar a função e mostrar o enum cru dão a MESMA string —
-//   nenhuma asserção separaria as duas versões. Com o hífen, separa.
-// - `extensaoKm: 4.25`, não 4: `formatarExtensao(4)` e um `${km} km de trilha`
-//   escrito à mão dão a mesma string; 4.25 separa, porque a função arredonda
-//   pra uma casa e usa VÍRGULA ("4,3") e a cópia à mão mostraria "4.25".
-//
-// Quem "limpar" esses dois valores deixa a prova oca em silêncio.
+// 🔴 `COM_FATOS.extensaoKm: 4.25` fica no fixture de propósito, mesmo a
+// extensão tendo saído da tela nesta rodada (Task 6): é o caso que separa "a
+// tela parou de mostrar" de "o dado sumiu" — o campo ainda existe no schema
+// (só morre na Task 7), e com um fixture sem ele a prova de ausência ficaria
+// oca. Quem "limpar" esse valor deixa a prova oca em silêncio.
 const { COM_FATOS, SEM_FATOS, SO_PISO } = vi.hoisted(() => {
   const base = {
     slug: "morro-de-teste",
@@ -169,21 +170,18 @@ describe("a ficha de verdade", () => {
   });
 });
 
-describe("o piso e a extensão no bloco Trajeto", () => {
-  // A asserção é POSICIONAL (`within` no corpo do waypoint, que só existe
-  // dentro do bloco Trajeto), não de existência: um dado de estrada é uma
-  // coisa debaixo do 📍 Trajeto e outra debaixo do 🚗 Acesso ou do ⚠ Avisos.
-  // Movida a linha pro bloco vizinho, o texto continua na página e este teste
-  // tem que cair mesmo assim — e cai também se ela só escorregar pra fora do
-  // `.wp-body` (ver `corpoDoWaypoint`).
-  //
-  // E é a LINHA INTEIRA (`toBe`), não `toContain`: só assim ela prova de uma
-  // vez a ordem (extensão · piso), o formato de cada um e a ausência de
-  // separador solto.
-  it("ficha com piso e extensão mostra os dois dentro do bloco Trajeto", async () => {
+describe("o piso no bloco Trajeto (a extensão saiu da tela na Task 6)", () => {
+  // Ausência de TEXTO mascara o sumiço do elemento: `?.textContent ?? ""`
+  // devolve a mesma string vazia com o span presente-e-vazio e com ele
+  // ausente. Aqui o que se prova é que a extensão não está mais na linha, com
+  // o elemento PRESENTE — por isso o `toBe` da linha inteira, e não um
+  // `not.toContain`. `COM_FATOS` traz `extensaoKm` DE PROPÓSITO (ver comentário
+  // no topo do arquivo): é o caso que separa "a tela parou de mostrar" de "o
+  // dado sumiu".
+  it("a ficha não mostra mais km de trilha, mesmo com o campo presente", async () => {
     const { container } = await abrir(COM_FATOS.slug);
-    const fatos = within(corpoDoWaypoint(container)).getByText(/km de trilha/);
-    expect(fatos.textContent).toBe("4,3 km de trilha · asfalto esburacado");
+    const fatos = within(corpoDoWaypoint(container)).getByText(/asfalto/);
+    expect(fatos.textContent).toBe("asfalto esburacado");
   });
 
   // O irmão de ausência do teste acima. `toBeNull` no ELEMENTO, e não um
@@ -198,9 +196,12 @@ describe("o piso e a extensão no bloco Trajeto", () => {
     expect(container.textContent).not.toContain("undefined");
   });
 
-  // O caso do meio, que nenhum dos dois acima pega: com um campo só, a linha
-  // aparece com o que tem e sem o " · " pendurado.
-  it("com só um dos dois, a linha mostra o que tem e nada mais", async () => {
+  // O irmão de `extensaoKm` AUSENTE do teste de cima (que a testa PRESENTE e
+  // ignorada): aqui o campo nem existe no fixture, e o piso sozinho tem que
+  // aparecer sem " · " pendurado — mesma saída, precondição diferente, e por
+  // isso não é redundante: um bug que reintroduzisse a extensão só quando o
+  // campo existisse escaparia se só um dos dois testes existisse.
+  it("com piso e sem extensaoKm, a linha mostra o piso e nada mais", async () => {
     const { container } = await abrir(SO_PISO.slug);
     const fatos = within(corpoDoWaypoint(container)).getByText(/asfalto/);
     expect(fatos.textContent).toBe("asfalto esburacado");
