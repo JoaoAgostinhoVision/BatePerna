@@ -1,9 +1,12 @@
 /** O piso da VIA — o trecho que se DIRIGE, da estrada principal até onde o
- *  carro para. O que se caminha depois de estacionar não é deste campo; é do
- *  `extensaoKm` (ver `formatarExtensao` em `geo.ts`). O questionário faz o
- *  mesmo corte, com as mesmas palavras, e os dois têm que continuar batendo:
- *  este campo responde "que carro serve", e é isso que o filtro da tela
- *  pergunta.
+ *  carro para. O que se caminha depois de estacionar não é deste campo.
+ *
+ *  🔴 Até a contração de 2026-08-23 (Task 7) esse "o que se caminha" tinha
+ *  nome — `extensaoKm`, formatado em `geo.ts`. O campo saiu do modelo; o
+ *  corte que esta oração descreve (via dirigida × trecho a pé) continua sendo
+ *  o certo, só não há mais o par pra apontar. O questionário faz o mesmo
+ *  corte, com as mesmas palavras, e os dois têm que continuar batendo: este
+ *  campo responde "que carro serve", e é isso que o filtro da tela pergunta.
  *
  *  Dentro dessa via, vale o PIOR trecho — mesmo curto, mesmo sendo o último —
  *  e não a média nem o piso que predomina.

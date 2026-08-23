@@ -48,8 +48,8 @@ export default function CartaoTrilha({
     voce ? formatarDistanciaCurta(distanciaKm(voce, coordDaDistancia(ficha))) : null,
     // A extensão da trilha (`ficha.extensaoKm`) saiu desta linha por decisão
     // do João em 2026-08-23: "remova o filtro tamanho da trilha, acho que não
-    // está para hoje". O campo continua existindo no schema (só morre na
-    // Task 7) — esta tela apenas parou de lê-lo.
+    // está para hoje". O campo saiu do schema na contração da mesma rodada
+    // (Task 7) — não existe mais nada aqui pra esta tela ler.
     // O piso da VIA (fato do lugar), no lugar do antigo `esforco` (fato do
     // corpo de quem vai). `rotuloPiso` troca o hífen do enum por espaço —
     // "asfalto-esburacado" é chave de dado, não texto de tela.

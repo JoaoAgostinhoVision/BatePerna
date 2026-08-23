@@ -33,10 +33,12 @@ import { useLocal } from "./local";
  *  e nenhuma asserção de comportamento separa as duas versões. (Sem os
  *  números aqui de propósito: comentário que crava número envelhece calado
  *  no dia em que a constante mudar.)
- *  (A faixa de "Tamanho da trilha" e os limites `EXT_MAX_KM`/`EXT_PASSO_KM`
- *  que ela lia saíram desta tela por decisão do João em 2026-08-23 — o campo
- *  `extensaoMaxKm` continua existindo em `Filtros`, mas não tem mais nenhum
- *  controle aqui que o ligue.) */
+ *  (A faixa de "Tamanho da trilha" saiu desta tela por decisão do João em
+ *  2026-08-23 (Task 6 da mesma rodada). O campo `extensaoMaxKm` que ela ligava
+ *  e os limites `EXT_MAX_KM`/`EXT_PASSO_KM` que ela lia saíram de `Filtros` e
+ *  de `@/lib/filtros` na contração desta rodada (Task 7) — não sobrou nem o
+ *  campo, nem o limite, nem controle nenhum aqui pra ligar algo que não
+ *  existe.) */
 export default function PainelFiltros({
   visiveis,
   tetoDistanciaKm,

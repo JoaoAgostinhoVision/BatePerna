@@ -4,8 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DIST_PASSO_KM,
   DIST_TETO_MINIMO_KM,
-  EXT_MAX_KM,
-  EXT_PASSO_KM,
   SEM_FILTRO,
   contarLigados,
   lerFiltros,
@@ -107,7 +105,12 @@ describe('"dá hoje"', () => {
     expect(
       passa({ soGratis: true }, { custo: { tag: "pago", valor: "R$ 5" } }, { confia: false }),
     ).toBe(false);
-    expect(passa({ extensaoMaxKm: 4 }, { extensaoKm: 10 }, { confia: false })).toBe(false);
+    // 🔴 O segundo recorte aqui era `extensaoMaxKm` (a extensão saiu do
+    // modelo nesta rodada, Task 7); o piso ocupa o lugar como o outro recorte
+    // independente do carimbo.
+    expect(
+      passa({ pisoMinimo: "asfalto-tapete" }, { piso: "barro" }, { confia: false }),
+    ).toBe(false);
   });
 });
 
@@ -277,69 +280,11 @@ describe("piso da via", () => {
   });
 });
 
-describe("extensão da trilha", () => {
-  // O teto é INCLUSIVO nos dois recortes de km — o mesmo ruling que o bloco da
-  // distância cita. "até 4 km" inclui a trilha de 4 km, e é AQUI que ele fica
-  // observável: a extensão é um número cravado na ficha, enquanto o haversine
-  // pula os 30 km exatos.
-  it("extensão 4 com corte 4 PASSA; extensão 5 com corte 4 não", () => {
-    expect(passa({ extensaoMaxKm: 4 }, { extensaoKm: 4 })).toBe(true);
-    expect(passa({ extensaoMaxKm: 4 }, { extensaoKm: 5 })).toBe(false);
-  });
-
-  // REGRA DE HONESTIDADE 2, nos dois extremos do intervalo válido.
-  it("ficha SEM extensaoKm passa com qualquer extensaoMaxKm ligado", () => {
-    expect(passa({ extensaoMaxKm: 1 }, { extensaoKm: undefined })).toBe(true);
-    expect(passa({ extensaoMaxKm: EXT_MAX_KM }, { extensaoKm: undefined })).toBe(true);
-  });
-
-  // ——— o guarda `filtros.extensaoMaxKm !== null`, e aqui o vitest MORDE
-  // sozinho: sem ele, `12 > null` é `12 > 0` — `true` por coerção (medido) — e
-  // toda ficha com extensão preenchida sumiria da home com o filtro DESLIGADO.
-  it("ficha COM extensaoKm preenchida não some quando o recorte está desligado", () => {
-    expect(passa({}, { extensaoKm: 12 })).toBe(true);
-  });
-
-  // 🔴 O DEFEITO de uma rodada passada, do lado da extensão, no valor exato em
-  // que a revisão da branch inteira o mediu: `formatarExtensao(4.04)` devolve
-  // "4 km de trilha" — com o km CRU, "até 4 km" ESCONDIA uma trilha de 4,04 km,
-  // o mesmo "4" que a tela (então, antes da extensão sair do cartão e da
-  // ficha) anunciava. A faixa é (n, n+0,05) — uns 49 m — e existe em TODO teto
-  // de 1 a 20.
-  //
-  // O caso SEPARA as duas versões (que é o ponto): com o km cru, `4.04 > 4` e a
-  // trilha some; com o número de `kmNaTelaExtensao`, `4 > 4` é falso e ela
-  // fica. Um caso onde as duas concordassem (4, ou 5) não provaria nada — e os
-  // dois já estão travados no primeiro teste deste bloco.
-  it("'até 4 km' NÃO esconde a trilha que formatarExtensao(4.04) arredonda pra 4 km", () => {
-    expect(passa({ extensaoMaxKm: 4 }, { extensaoKm: 4.04 })).toBe(true);
-    // O irmão do outro lado da fronteira do arredondamento: `formatarExtensao`
-    // arredonda 4,06 pra "4,1 km de trilha", e aí sumir de "até 4 km" é
-    // honesto. Sem ele, um recorte que parasse de filtrar passaria neste
-    // bloco.
-    expect(passa({ extensaoMaxKm: 4 }, { extensaoKm: 4.06 })).toBe(false);
-  });
-
-  // O ramo da extensão é UM SÓ — sempre uma casa decimal, em toda a escala —, e
-  // é o que a distingue da irmã (que vira inteira de 10 km pra cima). Este caso
-  // é o que morde se as duas funções forem fundidas numa: com o ramo do
-  // inteiro, 12,4 viraria 12 e esta trilha passaria em "até 12 km" enquanto a
-  // tela mostra "12,4 km de trilha".
-  it("de 10 km pra cima a extensão continua com uma casa: 12,4 não some pra 12", () => {
-    expect(passa({ extensaoMaxKm: 12 }, { extensaoKm: 12.4 })).toBe(false);
-    expect(passa({ extensaoMaxKm: 12 }, { extensaoKm: 12.04 })).toBe(true);
-  });
-
-  // "Menos de 1 km de trilha": a tela não mostra número, `kmNaTelaExtensao`
-  // devolve `null`, e o que a tela não mostrou não esconde. Mesma honestidade
-  // sobre a prova que está escrita no bloco da distância: nenhum teto
-  // alcançável separa `null` de devolver 0,4 ou 1 — quem separa é o teste de
-  // unidade em tests/lib/geo.test.ts.
-  it("a trilha de menos de 1 km não some nem no menor recorte guardável", () => {
-    expect(passa({ extensaoMaxKm: 1 }, { extensaoKm: 0.4 })).toBe(true);
-    expect(passa({ extensaoMaxKm: EXT_MAX_KM }, { extensaoKm: 0.04 })).toBe(true);
-  });
-});
+// 🔴 O describe "extensão da trilha" morreu aqui (Task 7, 2026-08-23): o
+// campo `extensaoKm` saiu do modelo, `extensaoMaxKm` saiu de `Filtros`, e
+// `passaNoFiltro` não tem mais o bloco que os comparava. Os nove testes que
+// viviam aqui provavam exatamente esse recorte — sem ele, não sobra o que
+// provar; não há substituto porque não há mais comportamento.
 
 describe("filtros combinados", () => {
   it("todos têm que passar, não basta um", () => {
@@ -353,32 +298,27 @@ describe("filtros combinados", () => {
 
   // ——— pré-voo 2: o teste acima liga 3 dos recortes, então os outros podem ser
   // APAGADOS do array e ele continua devolvendo 3. A linha de resumo diria "3
-  // filtros ligados" com cinco ligados, e a pessoa que não achasse mais nada na
-  // tela procuraria dois filtros que a contagem jura não existirem. Com os
-  // cinco ligados, apagar QUALQUER um dá 4.
+  // filtros ligados" com quatro ligados, e a pessoa que não achasse mais nada
+  // na tela procuraria um filtro que a contagem jura não existir. Com os
+  // quatro ligados, apagar QUALQUER um dá 3.
   //
-  // 🔴 CINCO, e a contagem não se ajusta: eram SETE durante a expansão desta
-  // rodada, com `esforco` e `duracaoMax` no `Filtros`; a contração apagou os
-  // dois. Se este número não bater com o painel um dia, descubra por quê antes
-  // de mexer nele.
+  // 🔴 QUATRO, e a contagem não se ajusta: eram CINCO até esta rodada, com
+  // `extensaoMaxKm` no `Filtros`; a contração desta task (Task 7) apagou o
+  // campo. Se este número não bater com o painel um dia, descubra por quê
+  // antes de mexer nele.
   //
-  // Este é também o IRMÃO DE PRESENÇA do `contarLigados(lerFiltros(VELHO))
-  // === 0` lá embaixo: sem ele, um `contarLigados` que devolvesse `0` sempre
+  // Este é também o IRMÃO DE PRESENÇA do `contarLigados(lerFiltros(velho))
+  // === 1` mais abaixo: sem ele, um `contarLigados` que devolvesse `1` sempre
   // deixaria aquele teste de ausência verde.
   //
   // O objeto é escrito por INTEIRO, sem espalhar `SEM_FILTRO`: espalhando, um
   // campo novo que ninguém ligasse entraria como `null` e o teste continuaria
-  // dando 5 sem exercitá-lo. Escrito à mão, o `tsc` cobra o campo novo.
-  it("contarLigados conta os CINCO recortes, não só os três primeiros", () => {
-    expect(
-      contarLigados({
-        distanciaKm: 30,
-        daHoje: true,
-        soGratis: true,
-        extensaoMaxKm: 8,
-        pisoMinimo: "asfalto-esburacado",
-      }),
-    ).toBe(5);
+  // dando 4 sem exercitá-lo. Escrito à mão, o `tsc` cobra o campo novo.
+  it("contarLigados conta os QUATRO campos que sobraram", () => {
+    expect(contarLigados({
+      distanciaKm: 30, daHoje: true, soGratis: true, pisoMinimo: "asfalto-tapete",
+    })).toBe(4);
+    expect(contarLigados(SEM_FILTRO)).toBe(0);
   });
 });
 
@@ -392,11 +332,12 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
   // Um valor fora do conjunto viraria um filtro que esconde tudo pra sempre,
   // e a pessoa não teria como desligar o que não sabe que ligou.
   //
-  // 🔴 `distanciaKm` SAIU deste caso nesta rodada: sem teto, `999` é um valor
-  // VÁLIDO pra ela (vira filtro inerte, não escondido). Quem ainda tem "fora do
-  // conjunto" alcançável por um número redondo é a extensão, que mantém teto.
+  // 🔴 `distanciaKm` SAIU deste caso já na rodada passada: sem teto, `999` é um
+  // valor VÁLIDO pra ela (vira filtro inerte, não escondido). E a extensão, que
+  // ainda tinha teto, saiu do modelo NESTA rodada (Task 7) — o único recorte
+  // que sobra com "conjunto fechado" é o piso, um enum de string.
   it("valor fora do conjunto cai pro padrão daquele recorte", () => {
-    expect(lerFiltros(JSON.stringify({ extensaoMaxKm: 999, pisoMinimo: "cascalho" })))
+    expect(lerFiltros(JSON.stringify({ pisoMinimo: "cascalho" })))
       .toEqual(SEM_FILTRO);
   });
   it("preserva o que é válido", () => {
@@ -406,20 +347,20 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
 
   // ——— pré-voo 2, quatro furos neste bloco.
   //
-  // (a) O "preserva o que é válido" acima só exercita DOIS dos cinco campos.
+  // (a) O "preserva o que é válido" acima só exercita DOIS dos quatro campos.
   // Trocar a linha do `pisoMinimo` por `pisoMinimo: null` fixo passa em tudo o
   // que existe lá em cima — o filtro nunca mais voltaria depois de fechar o
   // app, e a pessoa reclamaria que "ele esquece".
   //
-  // 🔴 CINCO: eram sete durante a expansão desta rodada, e a contração apagou
-  // `esforco` e `duracaoMax`. O tipo `Filtros` é escrito de propósito, sem
-  // espalhar `SEM_FILTRO`, pra o `tsc` cobrar campo novo aqui.
-  it("preserva os CINCO campos válidos, não só dois", () => {
+  // 🔴 QUATRO: eram cinco até esta rodada, com `extensaoMaxKm` no `Filtros`; a
+  // contração desta task (Task 7) apagou o campo. O tipo `Filtros` é escrito
+  // de propósito, sem espalhar `SEM_FILTRO`, pra o `tsc` cobrar campo novo
+  // aqui.
+  it("preserva os QUATRO campos válidos, não só dois", () => {
     const cheio: Filtros = {
       distanciaKm: 60,
       daHoje: true,
       soGratis: true,
-      extensaoMaxKm: 8,
       pisoMinimo: "asfalto-esburacado",
     };
     expect(lerFiltros(JSON.stringify(cheio))).toEqual(cheio);
@@ -439,7 +380,6 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
     ["distanciaKm", { distanciaKm: 0 }],
     ["daHoje", { daHoje: "sim" }],
     ["soGratis", { soGratis: "sim" }],
-    ["extensaoMaxKm", { extensaoMaxKm: 999 }],
     ["pisoMinimo", { pisoMinimo: "cascalho" }],
   ])("campo %s fora do conjunto cai pro padrão DELE, sozinho", (_campo, torto) => {
     expect(lerFiltros(JSON.stringify(torto))).toEqual(SEM_FILTRO);
@@ -466,35 +406,22 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
   });
 });
 
-// Os três números que sobraram são DECISÃO DE PRODUTO, e a barra da tela vai
-// lê-los DAQUI — então trocar um deles muda o que o app oferece, sem duas
-// fontes pra discordar e sem nada gritando. (Eram quatro: `DIST_MAX_KM` morreu
-// nesta rodada — o teto da distância agora é dinâmico, vem do acervo, e tem
-// describe próprio, "tetoDaBarraDistancia: o teto vem do acervo".)
+// O número que sobrou é DECISÃO DE PRODUTO, e a barra da tela vai lê-lo
+// DAQUI — trocá-lo muda o que o app oferece, sem duas fontes pra discordar e
+// sem nada gritando.
 //
-// 🔴 Os testes de borda logo abaixo NÃO cobrem isto, e a distinção é o achado:
-// escritos contra o SÍMBOLO (`EXT_MAX_KM + 1`), eles provam a RELAÇÃO — o teto
-// é inclusivo, o de cima é recusado — e continuam certos assim; mas são
-// auto-referentes quanto ao VALOR, porque mudam de significado junto com a
-// constante. MEDIDO pela revisão desta task, ANTES de a asserção abaixo
-// existir: `EXT_MAX_KM` 20→8 e os dois `PASSO` trocados deixavam a suíte
-// INTEIRA verde e o `tsc` limpo. Hoje cada uma dessas três derruba a asserção
-// abaixo — e SÓ ela: os testes de borda continuam verdes, porque com
-// `EXT_MAX_KM = 8` eles viram "9 → null" e "8 → 8", que são corretos com 8.
-// Provar a relação e prender o número são coisas diferentes, e as duas provas
-// são ortogonais: mutar só a RELAÇÃO (`v <= max` → `v < max`) deixa a
-// asserção abaixo VERDE e mata os testes de borda. Medido nos dois sentidos.
-//
-// O que isso custaria no celular dele: `EXT_MAX_KM = 8` escrito por engano numa
-// tecla passa em tudo, e um `extensaoMaxKm: 15` que ele já tinha ligado volta
-// `null` na abertura seguinte — o filtro se desligando sozinho entre duas
-// aberturas, o mesmo defeito do piso, entrando pela outra ponta.
+// 🔴 Eram TRÊS até esta rodada (`DIST_PASSO_KM`, `EXT_MAX_KM`, `EXT_PASSO_KM`).
+// `DIST_MAX_KM` já tinha morrido antes — o teto da distância é dinâmico, vem
+// do acervo, e tem describe próprio ("tetoDaBarraDistancia: o teto vem do
+// acervo"). `EXT_MAX_KM` e `EXT_PASSO_KM` morrem NESTA task (Task 7,
+// 2026-08-23): sem o campo `extensaoKm` no modelo, não sobra recorte pra ter
+// teto nem passo. Só `DIST_PASSO_KM` continua de pé.
 //
 // ⚠️ O lado direito é LITERAL de propósito: derivá-lo de qualquer coisa
 // importada do `filtros.ts` devolveria a asserção pro buraco de onde ela veio.
-describe("os limites são decisão de produto, e os números ficam presos", () => {
-  it("os limites cravados são estes — 20 km, passo 5 e 1", () => {
-    expect([EXT_MAX_KM, DIST_PASSO_KM, EXT_PASSO_KM]).toEqual([20, 5, 1]);
+describe("os limites são decisão de produto, e o número fica preso", () => {
+  it("o limite cravado é este — passo 5", () => {
+    expect(DIST_PASSO_KM).toBe(5);
   });
 });
 
@@ -555,33 +482,11 @@ describe("lerFiltros: os intervalos de km", () => {
     expect(lerFiltros('{"distanciaKm":null}').distanciaKm).toBe(null);
   });
 
-  it("extensaoMaxKm 0 → null", () => {
-    expect(so("extensaoMaxKm", 0).extensaoMaxKm).toBe(null);
-  });
-  // O piso, do lado de cá: 1 km é o menor recorte que faz sentido pedir, e ele
-  // tem que sobreviver. (`EXT_PASSO_KM` é 1, então aqui os dois pisos
-  // coincidem — quem separa os conceitos é o caso do `4` na distância.)
-  it("extensaoMaxKm 1 (o piso cravado) → 1", () => {
-    expect(so("extensaoMaxKm", 1).extensaoMaxKm).toBe(1);
-  });
-  // O par que pega o teto TROCADO na extensão: com 100 aqui (o antigo teto da
-  // distância, que não existe mais), 21 passaria — e a barra da tela, que vai
-  // até 20, nunca conseguiria desligar um filtro cortando em 21.
-  it("extensaoMaxKm 21 (acima do teto de 20) → null", () => {
-    expect(so("extensaoMaxKm", EXT_MAX_KM + 1).extensaoMaxKm).toBe(null);
-  });
-  it("extensaoMaxKm 20 (o teto cravado) → 20", () => {
-    expect(so("extensaoMaxKm", EXT_MAX_KM).extensaoMaxKm).toBe(EXT_MAX_KM);
-  });
-  it("extensaoMaxKm 3.5 (fracionário) → null", () => {
-    expect(so("extensaoMaxKm", 3.5).extensaoMaxKm).toBe(null);
-  });
-  // O teto da EXTENSÃO continua existindo nesta task — ela só some na Task 7.
-  // Sem este caso, um `kmGuardado(x.extensaoMaxKm, null)` escrito por engano
-  // (copiando o da distância) passaria a suíte inteira.
-  it("a extensão continua com teto", () => {
-    expect(so("extensaoMaxKm", 999).extensaoMaxKm).toBeNull();
-  });
+  // 🔴 Os seis testes de `extensaoMaxKm` que viviam aqui morreram nesta task
+  // (Task 7, 2026-08-23): o campo saiu de `Filtros`, `lerFiltros` não o lê
+  // mais, e `so("extensaoMaxKm", ...)` produziria um objeto que `kmGuardado`
+  // nunca vê — não haveria mais o que provar. `EXT_MAX_KM`/`EXT_PASSO_KM`
+  // morreram junto, em `src/lib/filtros.ts`.
 
   // O celular dele tem `bp.filtros` gravado de verdade, e ali `distanciaKm` só
   // podia ser 30 ou 60. Os dois têm que continuar de pé no intervalo novo —
@@ -672,18 +577,21 @@ describe("o filtro não refaz a conta do arredondamento — ele chama a fonte", 
     expect(codigo.length).toBeLessThan(src.length);
   });
 
-  it("filtros.ts importa as duas funções de km da tela de @/lib/geo", () => {
+  // 🔴 Era "as duas funções" e "CHAMA as duas": `kmNaTelaExtensao` saiu do
+  // import nesta task (Task 7, 2026-08-23) junto com o campo `extensaoKm` —
+  // sem recorte de extensão, não sobra o que a função meça pro filtro.
+  it("filtros.ts importa kmNaTelaDistancia de @/lib/geo", () => {
     const importado = codigo.match(/import\s*\{([\s\S]*?)\}\s*from\s*"@\/lib\/geo"/);
     expect(importado, "filtros.ts tem que importar de @/lib/geo").not.toBeNull();
     expect(importado![1]).toContain("kmNaTelaDistancia");
-    expect(importado![1]).toContain("kmNaTelaExtensao");
+    expect(importado![1]).not.toContain("kmNaTelaExtensao");
   });
 
-  it("e CHAMA as duas — uma em cada recorte de km", () => {
+  it("e CHAMA a função — no recorte de distância", () => {
     expect(codigo, "o recorte de distância tem que chamar kmNaTelaDistancia").toMatch(
       /kmNaTelaDistancia\(/,
     );
-    expect(codigo, "o recorte de extensão tem que chamar kmNaTelaExtensao").toMatch(
+    expect(codigo, "kmNaTelaExtensao não existe mais — não há mais recorte pra chamá-la").not.toMatch(
       /kmNaTelaExtensao\(/,
     );
   });
@@ -705,14 +613,20 @@ describe("o filtro não refaz a conta do arredondamento — ele chama a fonte", 
 // `esforco` e `duracaoMax` estão escritos de verdade. Depois da contração eles
 // não são mais lidos, e é isso que este bloco trava.
 //
+// 🔴 `extensaoMaxKm` entra nesta fixture como um TERCEIRO campo morto: esta
+// task (Task 7, 2026-08-23) apagou o recorte de extensão junto com o campo
+// `extensaoKm` do modelo. Ele fica como `null` aqui (não é o caso que separa
+// "gravado de verdade" — esse é o bloco "o FILTRO FANTASMA" logo abaixo, com
+// um valor não-nulo).
+//
 // 🔴 A FIXTURE É LOAD-BEARING DUAS VEZES, e as duas razões são estas:
 //
 // 1. É a FORMA DE PRODUÇÃO. `src/app/filtros.tsx` grava `JSON.stringify(f)` — o
 //    objeto `Filtros` INTEIRO, não só o que a pessoa ligou —, então o que está
-//    no celular dele traz os cinco vivos escritos como `null`/`false` ao lado
-//    dos dois mortos. Fixture com só os dois mortos dá o mesmo resultado (chave
-//    ausente e chave nula caem no mesmo padrão, medido), mas não é o que o
-//    comentário acima afirma estar gravado lá.
+//    no celular dele traz os quatro vivos escritos como `null`/`false` ao lado
+//    dos três mortos. Fixture com só os campos mortos dá o mesmo resultado
+//    (chave ausente e chave nula caem no mesmo padrão, medido), mas não é o
+//    que o comentário acima afirma estar gravado lá.
 // 2. NENHUM recorte vivo vem LIGADO. Com um ligado junto (um `distanciaKm: 60`,
 //    que o JSON real dele também pode ter), o `contarLigados(...) === 0` viraria
 //    `=== 1` e deixaria de separar as versões — passaria igual com os campos
@@ -748,12 +662,34 @@ describe("lerFiltros: o que já está gravado no celular dele", () => {
   // O QUE É REDUNDANTE é ela ser o ÚNICO detector de alguma coisa: não existe.
   // Sempre que ela cai, ou cai o `toEqual` junto, ou caem os irmãos de
   // presença ("contarLigados é zero", "conta cada recorte ligado uma vez",
-  // "conta os CINCO recortes") — a mutação do parágrafo acima derruba 8 testes,
-  // e esta é um dos 8. Ela fica porque é a única forma EXECUTÁVEL do requisito
-  // do jeito que a pessoa o vive: "o filtro fantasma não conta na linha de
-  // resumo".
+  // "conta os QUATRO campos") — a mutação do parágrafo acima derruba vários
+  // testes, e esta é um deles. Ela fica porque é a única forma EXECUTÁVEL do
+  // requisito do jeito que a pessoa o vive: "o filtro fantasma não conta na
+  // linha de resumo".
   it("filtro guardado da versão velha não conta filtro ligado nenhum", () => {
     expect(contarLigados(lerFiltros(VELHO))).toBe(0);
+  });
+});
+
+// 🔴 O FILTRO FANTASMA DESTA TASK (Task 7, 2026-08-23) — a prova de que a
+// CONTRAÇÃO fechou. É a mesma família do bloco acima (esforco/duracaoMax na
+// rodada passada), mas com um detalhe mais forte: aqui `extensaoMaxKm` não
+// está `null`, está GRAVADO DE VERDADE — o celular do João tem o recorte que
+// ele usou. Se `lerFiltros` continuasse lendo o campo, a linha de resumo
+// diria "1 filtro ligado" sem chip pra desligar e sem botão de limpar (o
+// `limpar filtros` do `FolhaTrilhas` vive dentro do ramo
+// `visiveis.length === 0`, e a lista não fica vazia). Foi exatamente o que
+// ele reclamou no primeiro review do celular.
+describe("lerFiltros: o filtro fantasma da extensão (Task 7)", () => {
+  it("o que está guardado no celular dele não acende filtro nenhum", () => {
+    const velho = JSON.stringify({
+      distanciaKm: 30, extensaoMaxKm: 6, esforco: "media", duracaoMax: 90,
+    });
+    const lido = lerFiltros(velho);
+    expect(contarLigados(lido)).toBe(1); // só a distância, que continua existindo
+    expect(Object.keys(lido).sort()).toEqual(
+      ["daHoje", "distanciaKm", "pisoMinimo", "soGratis"],
+    );
   });
 });
 

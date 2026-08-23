@@ -104,11 +104,14 @@ describe("o questionário cobre a ficha inteira", () => {
     }
   });
 
-  it("o questionário pergunta os dois campos novos, com o nome do campo", () => {
+  it("o questionário pergunta o campo novo, com o nome do campo", () => {
     // `secaoDoCampo` falha se não existir um `## … \`campo\`` — menção solta na
     // nota de rodapé não serve.
+    //
+    // 🔴 Era "os dois campos novos": `extensaoKm` saiu do schema nesta task
+    // (Task 7, 2026-08-23), e com ele a seção que o questionário tinha pra
+    // perguntá-lo. Só `piso` sobra.
     expect(secaoDoCampo("piso").length).toBeGreaterThan(0);
-    expect(secaoDoCampo("extensaoKm").length).toBeGreaterThan(0);
   });
 
   // 🔴 As QUATRO palavras vêm de `PISOS`, não de uma lista literal escrita
@@ -267,48 +270,20 @@ describe("o questionário cobre a ficha inteira", () => {
     ).toEqual(["barro"]);
   });
 
-  // 🔴 Sem "só a ida" com todas as letras, a resposta vem ida e volta: o número
-  // sai dobrado e nada no app percebe — nem o schema (é um número positivo
-  // válido) nem a tela. É o tipo de erro que só aparece quando alguém caminha.
-  it("a pergunta da extensão diz SÓ IDA, com todas as letras", () => {
-    const pergunta = plano(perguntaDe("extensaoKm"));
-    expect(pergunta).toMatch(/só a ida/i);
-    expect(pergunta).toMatch(/não conte a volta/i);
-  });
+  // 🔴 As duas perguntas da extensão ("SÓ IDA" e "trilha a pé × estrada de
+  // carro") morreram aqui (Task 7, 2026-08-23): o campo `extensaoKm` saiu do
+  // schema, a seção `## Quantos km — extensaoKm` saiu do questionário, e não
+  // sobra pergunta pra examinar.
 
-  // 🔴 O campo é a TRILHA — o trecho a pé —, não a estrada de carro até lá, e
-  // isso tem que estar na PERGUNTA, não no "Por que importa" (que é a parte
-  // que quem responde pula). A seção logo acima, a do piso, acabou de gastar
-  // cinco linhas falando da estrada; lidas em sequência, "o trajeto em si"
-  // lia como a estrada.
-  //
-  // O estrago se a resposta vier da estrada: até a extensão sair do cartão e
-  // da ficha (Task 6 de 2026-08-23), a tela chegava a mostrar "~20 km em linha
-  // reta · 27 km de trilha" — dois números em km lado a lado, ambos
-  // significando "quão longe fica", o segundo mentindo (o defeito dos "dois
-  // km" da rodada passada com outra roupa). Esse sintoma específico saiu da
-  // tela junto com a extensão, mas o campo `extensaoKm` ainda alimenta o
-  // recorte "até N km de trilha" em `src/lib/filtros.ts`: e AÍ o filtro
-  // inverte — um corte em 5 km ainda esconde justamente a trilha de caminhada
-  // curta, com um número errado.
-  it("a pergunta da extensão diz que é a trilha a pé, e exclui a estrada de carro", () => {
-    const pergunta = plano(perguntaDe("extensaoKm"));
-    expect(pergunta, "a pergunta não diz que é o trecho a pé").toMatch(
-      /o trecho que se cobre a pé/i,
-    );
-    expect(pergunta, "a pergunta não exclui a estrada de carro até lá").toMatch(
-      /não conte a estrada de carro/i,
-    );
-  });
-
-  // Os dois campos são `.optional()` no schema, e quem responde precisa saber
-  // disso ANTES de inventar um valor pra não deixar em branco — inventar é
+  // O campo é `.optional()` no schema, e quem responde precisa saber disso
+  // ANTES de inventar um valor pra não deixar em branco — inventar é
   // exatamente o que o aviso no topo do documento proíbe.
-  it("as duas perguntas novas dizem que pular é permitido", () => {
-    for (const campo of ["piso", "extensaoKm"]) {
-      expect(secaoDoCampo(campo), `a seção de \`${campo}\` não diz que dá pra pular`).toMatch(
-        /pular é permitido/i,
-      );
-    }
+  //
+  // 🔴 Era "as duas perguntas novas": a da extensão morreu com o campo nesta
+  // task (Task 7). Só a do piso sobra.
+  it("a pergunta do piso diz que pular é permitido", () => {
+    expect(secaoDoCampo("piso"), "a seção de `piso` não diz que dá pra pular").toMatch(
+      /pular é permitido/i,
+    );
   });
 });

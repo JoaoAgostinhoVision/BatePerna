@@ -43,8 +43,8 @@ export default async function Ficha({
   //
   // A extensão (`ficha.extensaoKm`) saiu desta lista por decisão do João em
   // 2026-08-23: "remova o filtro tamanho da trilha, acho que não está para
-  // hoje". O campo continua existindo no schema (só morre na Task 7) — esta
-  // tela apenas parou de lê-lo.
+  // hoje". O campo saiu do schema na contração da mesma rodada (Task 7) —
+  // não existe mais nada aqui pra esta tela ler.
   //
   // Campo ausente não vira "—" nem "não informado": ele some da lista, e se
   // nada sobrar a linha inteira não é desenhada (o `.filter(Boolean)` mais o

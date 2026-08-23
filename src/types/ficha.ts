@@ -41,24 +41,25 @@ export const fichaSchema = z.object({
   condicao: condicaoSchema,
   discriminador: discriminadorSchema,
   custo: z.object({ tag: z.enum(["gratis", "pago"]), valor: z.string().optional() }),
-  // Opcionais porque são FATO DE ROTEIRO — quem responde é quem conhece o
-  // lugar, não quem escreve o código. A ficha que existe hoje não os tem, e
-  // obrigatórios eles derrubariam o carregamento dela.
+  // Opcional porque é FATO DE ROTEIRO — quem responde é quem conhece o
+  // lugar, não quem escreve o código. A ficha que existe hoje não o tem, e
+  // obrigatório ele derrubaria o carregamento dela.
   //
   // A rodada "review do celular" APAGOU daqui `esforco` (quão puxada, sobre o
   // corpo de quem vai) e `duracao`: este app só sabe falar de LUGAR, e quem
-  // ficou no lugar deles é o par abaixo. Ficha antiga que ainda traga os dois
-  // campos continua carregando — o zod descarta chave desconhecida em silêncio
-  // —, ela só não os enxerga mais.
+  // ficou no lugar deles é o campo abaixo. Ficha antiga que ainda traga os
+  // dois campos continua carregando — o zod descarta chave desconhecida em
+  // silêncio —, ela só não os enxerga mais.
   //
   // O piso da via até a trilha — o PIOR trecho do caminho, não o final nem a
   // média (ver o comentário em `src/lib/piso.ts`). Opcional porque é fato de
   // roteiro, e ficha sem ele nunca é escondida pelo filtro de piso. Montado a
   // partir de `PISOS`, nunca uma lista repetida aqui.
+  //
+  // 🔴 `extensaoKm` — km da trilha, SÓ IDA — morava aqui ao lado, como par
+  // deste campo. Apagado na contração de 2026-08-23 (Task 7): sem o campo, não
+  // sobra recorte de "tamanho da trilha" nem tela que o mostre.
   piso: z.enum(PISOS).optional(),
-  // Km, SÓ IDA — decisão explícita do dono do app. Ficha sem ele nunca é
-  // escondida pelo filtro de extensão.
-  extensaoKm: z.number().positive().optional(),
 });
 
 export type Waypoint = z.infer<typeof waypointSchema>;

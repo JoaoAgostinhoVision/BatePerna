@@ -5,9 +5,7 @@ import {
   distanciaKm,
   formatarDistancia,
   formatarDistanciaCurta,
-  formatarExtensao,
   kmNaTelaDistancia,
-  kmNaTelaExtensao,
 } from "@/lib/geo";
 
 // Âncoras derivadas da própria geometria da esfera, não de geografia real:
@@ -90,58 +88,10 @@ describe("formatarDistanciaCurta: a linha do cartão", () => {
   });
 });
 
-// 🔴 Sem chamador hoje: a extensão saiu do cartão e da ficha em 2026-08-23
-// (ver o comentário em geo.ts). O título descreve a GARANTIA da função — o
-// mesmo número pra qualquer chamador, ontem cartão e ficha, hoje nenhum —,
-// não uma tela ao vivo.
-describe("formatarExtensao: o mesmo número pra qualquer chamador", () => {
-  // O sufixo é da FUNÇÃO, não do chamador — ver o comentário em geo.ts.
-  it("formatarExtensao(4) devolve '4 km de trilha', com o sufixo", () => {
-    expect(formatarExtensao(4)).toBe("4 km de trilha");
-  });
-
-  it("não devolve o mesmo formato de formatarDistanciaCurta", () => {
-    // formatarDistanciaCurta sempre diz "em linha reta" e nunca "de trilha";
-    // formatarExtensao é o oposto. Se as duas convergissem, um chamador
-    // trocado por outro passaria despercebido.
-    //
-    // MEDIDO, pra este comentário não prometer mais do que entrega:
-    // - com `formatarExtensao` delegando pra `formatarDistanciaCurta` (a
-    //   convergência que o nome do teste cita), ele CAI — 'expected
-    //   "~4,0 km em linha reta" not to be "~4,0 km em linha reta"'.
-    // - com o sufixo " de trilha" simplesmente apagado, ele NÃO cai: "4 km" e
-    //   "~4,0 km em linha reta" continuam diferentes, e nenhuma das três
-    //   asserções olha pro sufixo. Quem mata esse caso são os testes de valor
-    //   exato acima e abaixo, e é lá que ele está coberto — não aqui.
-    expect(formatarExtensao(4)).not.toBe(formatarDistanciaCurta(4));
-    expect(formatarExtensao(4)).not.toContain("em linha reta");
-    expect(formatarDistanciaCurta(4)).not.toContain("de trilha");
-  });
-
-  it("fração abaixo de 10 usa uma casa decimal com vírgula", () => {
-    expect(formatarExtensao(4.25)).toBe("4,3 km de trilha");
-  });
-
-  it("valor inteiro não ganha ',0' à toa", () => {
-    expect(formatarExtensao(12)).toBe("12 km de trilha");
-  });
-
-  // O piso, no molde do "abaixo de 1 km não finge precisão" da irmã. Sem ele o
-  // arredondamento devolve "0 km de trilha" — o app afirmando ZERO, que é
-  // justamente o que ele não faz. `0.9` entra junto porque o defeito não é só o
-  // zero: "0,9 km de trilha" também é precisão que a fonte do número não tem.
-  it("abaixo de 1 km não afirma zero", () => {
-    expect(formatarExtensao(0.04)).toBe("menos de 1 km de trilha");
-    expect(formatarExtensao(0.9)).toBe("menos de 1 km de trilha");
-  });
-
-  // A borda, do lado de cá: o piso não pode engolir o próprio limite. Sem este
-  // caso, um `km <= 1` passaria batido e a trilha de 1 km — que a ficha sabe
-  // medir — perderia o número.
-  it("1 km exato continua sendo número: o piso não engole o limite", () => {
-    expect(formatarExtensao(1)).toBe("1 km de trilha");
-  });
-});
+// 🔴 O describe "formatarExtensao: o mesmo número pra qualquer chamador"
+// morreu aqui (Task 7, 2026-08-23): a função saiu de geo.ts junto com o campo
+// `extensaoKm` do modelo. Não sobrou tela nem filtro que a chamasse (achado
+// da Task 6) — agora não sobra nem o campo que ela formataria.
 
 /** 🔴 O NÚMERO DA TELA — a fonte única do arredondamento, e a razão de este
  *  bloco existir.
@@ -202,52 +152,25 @@ describe("kmNaTelaDistancia: o número que a tela da distância mostra", () => {
   });
 });
 
-describe("kmNaTelaExtensao: o número que a tela da extensão mostra", () => {
-  it("é sempre o de uma casa decimal, em toda a escala", () => {
-    expect(kmNaTelaExtensao(1)).toBe(1);
-    expect(kmNaTelaExtensao(4.04)).toBe(4);
-    expect(kmNaTelaExtensao(4.25)).toBe(4.3);
-    expect(kmNaTelaExtensao(12)).toBe(12);
-    expect(kmNaTelaExtensao(12.4)).toBe(12.4);
-    expect(kmNaTelaExtensao(124.64)).toBe(124.6);
-  });
-
-  it("abaixo de 1 km não há número na tela: devolve null", () => {
-    expect(kmNaTelaExtensao(0.4)).toBe(null);
-    expect(kmNaTelaExtensao(0.04)).toBe(null);
-  });
-
-  // 🔴 SÃO DUAS FUNÇÕES, e este é o caso que prova que uma só não serviria. As
-  // duas telas divergem de 10 km pra cima: a distância vira inteira ("~12 km"),
-  // a extensão fica com a casa ("12,4 km de trilha"). Fundir as duas faria uma
-  // das duas telas mentir — e um recorte comparar um número que a outra não
-  // mostra, que é o defeito que este conserto veio fechar.
-  it("as duas divergem de 10 km pra cima — por isso são duas", () => {
-    expect(kmNaTelaDistancia(12.4)).toBe(12);
-    expect(kmNaTelaExtensao(12.4)).toBe(12.4);
-    expect(kmNaTelaDistancia(12.4)).not.toBe(kmNaTelaExtensao(12.4));
-  });
-
-  // E o outro lado: abaixo de 10 km as duas COINCIDEM. Sem isto, "são duas"
-  // podia virar "são duas que fazem coisas diferentes em qualquer lugar", e
-  // alguém trocaria o degrau de uma delas sem nada cair.
-  it("abaixo de 10 km as duas dão o mesmo número", () => {
-    expect(kmNaTelaDistancia(4.25)).toBe(kmNaTelaExtensao(4.25));
-    expect(kmNaTelaDistancia(9.94)).toBe(kmNaTelaExtensao(9.94));
-  });
-});
+// 🔴 O describe "kmNaTelaExtensao: o número que a tela da extensão mostra"
+// morreu aqui (Task 7, 2026-08-23), inclusive o teste "as duas divergem de 10
+// km pra cima — por isso são duas": a função `kmNaTelaExtensao` saiu de
+// geo.ts, e sem ela não sobra par pra comparar com `kmNaTelaDistancia`.
 
 /** 🔴 A PROVA DE FONTE do lado do `geo.ts` — irmã da que está em
  *  tests/lib/filtros.test.ts, e pela MESMA razão.
  *
- *  Em runtime, um `formatarExtensao` que refizesse `Math.round(km * 10) / 10`
+ *  Em runtime, um `formatarDistancia` que refizesse `Math.round(km * 10) / 10`
  *  por conta própria devolve exatamente o mesmo texto: nenhuma asserção sobre a
  *  string separa as duas versões — todos os testes de texto deste arquivo
  *  passam com a conta duplicada. E DUPLICADA ela volta a divergir do filtro no
  *  dia em que uma das duas mudar, que é o defeito inteiro.
  *
  *  A "uma fonte" tem dois lados e os dois estão aqui: quem formata CHAMA a
- *  função do número, e quem formata NÃO arredonda. */
+ *  função do número, e quem formata NÃO arredonda.
+ *
+ *  🔴 Era um par (`formatarDistancia`/`formatarExtensao`); a irmã morreu nesta
+ *  task (Task 7, 2026-08-23) junto com o campo `extensaoKm` do modelo. */
 describe("quem formata não refaz a conta — os dois lados da mesma fonte", () => {
   const src = readFileSync(path.join(process.cwd(), "src", "lib", "geo.ts"), "utf8");
 
@@ -273,9 +196,11 @@ describe("quem formata não refaz a conta — os dois lados da mesma fonte", () 
       .replace(/\/\/.*$/gm, "");
   };
 
+  // 🔴 Era um `it.each` de DOIS pares — o segundo era
+  // `["formatarExtensao", "kmNaTelaExtensao"]`, apagado nesta task (Task 7,
+  // 2026-08-23) junto com as duas funções.
   it.each([
     ["formatarDistancia", "kmNaTelaDistancia"],
-    ["formatarExtensao", "kmNaTelaExtensao"],
   ])("%s formata o que %s devolve, e não arredonda nada", (formatador, fonte) => {
     const c = corpo(formatador);
     // A extração é conferida antes de valer como prova: um corpo vazio faria as
@@ -318,12 +243,8 @@ describe("o número da função é o número que está escrito no texto", () => 
     },
   );
 
-  it.each([1, 4, 4.04, 4.06, 4.25, 12, 12.4, 20])(
-    "extensão de %s km: o texto mostra o mesmo número que kmNaTelaExtensao",
-    (km) => {
-      expect(noTexto(formatarExtensao(km))).toBe(kmNaTelaExtensao(km));
-    },
-  );
+  // 🔴 O `it.each` da extensão que vivia aqui morreu nesta task (Task 7,
+  // 2026-08-23): `formatarExtensao`/`kmNaTelaExtensao` saíram de geo.ts.
 
   // O ramo sem número: o texto do "menos de 1 km" tem um `1` escrito, e a
   // função devolve `null`. Aqui as duas rotas divergem DE PROPÓSITO — e é essa
@@ -334,7 +255,5 @@ describe("o número da função é o número que está escrito no texto", () => 
     expect(formatarDistancia(0.4)).toBe("menos de 1 km em linha reta daqui");
     expect(noTexto(formatarDistancia(0.4))).toBe(1);
     expect(kmNaTelaDistancia(0.4)).toBe(null);
-    expect(formatarExtensao(0.4)).toBe("menos de 1 km de trilha");
-    expect(kmNaTelaExtensao(0.4)).toBe(null);
   });
 });

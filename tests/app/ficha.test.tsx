@@ -9,22 +9,22 @@ vi.mock("@/lib/carimbo-estado", async (real) => ({
   resolverEstado: vi.fn(),
 }));
 
-// Três fichas sintéticas pros casos do piso (e, no `COM_FATOS`, também com
-// `extensaoKm` presente — ver comentário mais abaixo). Sintéticas porque o
-// JSON real (a Rampa) não traz nenhum dos dois campos — com ele só dá pra
-// provar AUSÊNCIA, e ausência sem o irmão da presença é meia prova.
+// Duas fichas sintéticas pros casos do piso. Sintéticas porque o JSON real (a
+// Rampa) não traz o campo — com ele só dá pra provar AUSÊNCIA, e ausência sem
+// o irmão da presença é meia prova.
 //
 // `piso: "asfalto-esburacado"`, não "barro", é load-bearing e não decorativo:
 // `rotuloPiso("barro")` devolve "barro", e aí chamar a função e mostrar o enum
 // cru dão a MESMA string — nenhuma asserção separaria as duas versões. Com o
 // hífen, separa.
 //
-// 🔴 `COM_FATOS.extensaoKm: 4.25` fica no fixture de propósito, mesmo a
-// extensão tendo saído da tela nesta rodada (Task 6): é o caso que separa "a
-// tela parou de mostrar" de "o dado sumiu" — o campo ainda existe no schema
-// (só morre na Task 7), e com um fixture sem ele a prova de ausência ficaria
-// oca. Quem "limpar" esse valor deixa a prova oca em silêncio.
-const { COM_FATOS, SEM_FATOS, SO_PISO } = vi.hoisted(() => {
+// 🔴 Havia uma terceira ficha aqui, `COM_FATOS` (piso + `extensaoKm: 4.25`),
+// pra provar "a tela parou de mostrar" (campo presente) contra "o dado sumiu"
+// (campo ausente). A contração desta task (Task 7, 2026-08-23) apagou
+// `extensaoKm` do schema — sem o campo, essa distinção não existe mais pra
+// provar, e `COM_FATOS` virou byte-a-byte igual a `SO_PISO` (mesmo piso, sem o
+// campo morto). O teste que a usava foi apagado junto — ver a nota abaixo.
+const { SEM_FATOS, SO_PISO } = vi.hoisted(() => {
   const base = {
     slug: "morro-de-teste",
     modos: ["contemplativo"],
@@ -56,12 +56,6 @@ const { COM_FATOS, SEM_FATOS, SO_PISO } = vi.hoisted(() => {
     custo: { tag: "gratis" as const },
   };
   return {
-    COM_FATOS: {
-      ...base,
-      slug: "morro-com-fatos",
-      piso: "asfalto-esburacado",
-      extensaoKm: 4.25,
-    },
     SEM_FATOS: { ...base, slug: "morro-sem-fatos" },
     SO_PISO: { ...base, slug: "morro-so-piso", piso: "asfalto-esburacado" },
   };
@@ -71,7 +65,7 @@ const { COM_FATOS, SEM_FATOS, SO_PISO } = vi.hoisted(() => {
 // JSON de verdade, senão o teste que fala de produção viraria decoração.
 vi.mock("@/lib/ficha", async (real) => {
   const mod = await real<typeof import("@/lib/ficha")>();
-  const sinteticas = [COM_FATOS, SEM_FATOS, SO_PISO] as unknown as TipoFicha[];
+  const sinteticas = [SEM_FATOS, SO_PISO] as unknown as TipoFicha[];
   return {
     ...mod,
     getFicha: (slug: string) => sinteticas.find((f) => f.slug === slug) ?? mod.getFicha(slug),
@@ -170,25 +164,23 @@ describe("a ficha de verdade", () => {
   });
 });
 
-describe("o piso no bloco Trajeto (a extensão saiu da tela na Task 6)", () => {
+describe("o piso no bloco Trajeto (a extensão saiu da tela na Task 6, e do modelo na Task 7)", () => {
+  // 🔴 O teste "a ficha não mostra mais km de trilha, mesmo com o campo
+  // presente" morreu aqui (Task 7, 2026-08-23), com a fixture `COM_FATOS` que
+  // só ele usava. Ele provava "a tela parou de mostrar" (campo presente)
+  // contra "o dado sumiu" (campo ausente) — distinção que só faz sentido
+  // enquanto o campo existe pra estar presente ou ausente. Sem `extensaoKm`
+  // no schema, `COM_FATOS` (piso + extensaoKm) e `SO_PISO` (só piso) eram
+  // byte-a-byte o mesmo fixture, e o teste duplicava exatamente o de baixo
+  // ("com piso, a linha mostra o piso e nada mais"). Preservar as duas seria
+  // um teste redundante fingindo provar algo que não existe mais.
+
   // Ausência de TEXTO mascara o sumiço do elemento: `?.textContent ?? ""`
   // devolve a mesma string vazia com o span presente-e-vazio e com ele
   // ausente. Aqui o que se prova é que a extensão não está mais na linha, com
   // o elemento PRESENTE — por isso o `toBe` da linha inteira, e não um
-  // `not.toContain`. `COM_FATOS` traz `extensaoKm` DE PROPÓSITO (ver comentário
-  // no topo do arquivo): é o caso que separa "a tela parou de mostrar" de "o
-  // dado sumiu".
-  it("a ficha não mostra mais km de trilha, mesmo com o campo presente", async () => {
-    const { container } = await abrir(COM_FATOS.slug);
-    const fatos = within(corpoDoWaypoint(container)).getByText(/asfalto/);
-    expect(fatos.textContent).toBe("asfalto esburacado");
-  });
-
-  // O irmão de ausência do teste acima. `toBeNull` no ELEMENTO, e não um
-  // `not.toContain` no texto: um teste de ausência de texto passa também
-  // quando o elemento existe e está vazio — que é exatamente o defeito aqui
-  // (uma linha em branco no meio do bloco).
-  it("ficha sem os dois não mostra linha vazia nem separador solto", async () => {
+  // `not.toContain`.
+  it("ficha sem piso não mostra linha vazia nem separador solto", async () => {
     const { container } = await abrir(SEM_FATOS.slug);
     // Escopado pelo bloco, como o teste da Rampa aqui embaixo — a pergunta é
     // sobre o Trajeto, não sobre a página inteira.
@@ -196,25 +188,19 @@ describe("o piso no bloco Trajeto (a extensão saiu da tela na Task 6)", () => {
     expect(container.textContent).not.toContain("undefined");
   });
 
-  // O irmão de `extensaoKm` AUSENTE do teste de cima (que a testa PRESENTE e
-  // ignorada): aqui o campo nem existe no fixture, e o piso sozinho tem que
-  // aparecer sem " · " pendurado — mesma saída, precondição diferente, e por
-  // isso não é redundante: um bug que reintroduzisse a extensão só quando o
-  // campo existisse escaparia se só um dos dois testes existisse.
-  it("com piso e sem extensaoKm, a linha mostra o piso e nada mais", async () => {
+  it("com piso, a linha mostra o piso e nada mais", async () => {
     const { container } = await abrir(SO_PISO.slug);
     const fatos = within(corpoDoWaypoint(container)).getByText(/asfalto/);
     expect(fatos.textContent).toBe("asfalto esburacado");
   });
 
   // O teste que fala de PRODUÇÃO: a Rampa vem do JSON de verdade (o mock
-  // acima só intercepta os slugs sintéticos) e hoje não traz nenhum dos dois
-  // campos. Consequência, e não defeito: no celular do João esta rodada não
-  // muda uma vírgula da ficha da Rampa. Fixture sintética não provaria isso.
-  it("a Rampa real continua abrindo — e, sem os dois campos no JSON, sem a linha", async () => {
+  // acima só intercepta os slugs sintéticos) e hoje não traz o campo.
+  // Consequência, e não defeito: no celular do João esta rodada não muda uma
+  // vírgula da ficha da Rampa. Fixture sintética não provaria isso.
+  it("a Rampa real continua abrindo — e, sem piso no JSON, sem a linha", async () => {
     const rampa = getFicha("rampa-do-pepe");
     expect(rampa?.piso).toBeUndefined();
-    expect(rampa?.extensaoKm).toBeUndefined();
 
     const { container } = await abrir("rampa-do-pepe");
     expect(container.querySelector("h1")?.textContent).toBe("Rampa do Pepê");

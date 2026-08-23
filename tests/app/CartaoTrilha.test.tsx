@@ -127,44 +127,20 @@ describe("a linha de metadados do cartão", () => {
     expect(meta).toBe("~60 km em linha reta · asfalto esburacado · R$ 5 por pessoa");
   });
 
-  // Ausência de TEXTO mascara o sumiço do elemento: `?.textContent ?? ""`
-  // devolve a mesma string vazia com o span presente-e-vazio e com ele
-  // ausente. Aqui o que se prova é que o número da trilha não está mais na
-  // linha, com o elemento PRESENTE — por isso o `toBe` da linha inteira, e não
-  // um `not.toContain`.
-  // 🔴 A ficha do teste TRAZ `extensaoKm` de propósito: nesta task o campo
-  // ainda existe no schema (ele só morre na Task 7), então este é o caso que
-  // SEPARA "a tela parou de mostrar" de "o dado sumiu". Com um fixture sem o
-  // campo, a asserção passaria com a linha do cartão de volta no lugar.
-  //
-  // E `piso: "asfalto-esburacado"`, nunca `barro`: `rotuloPiso("barro")`
-  // devolve `"barro"`, então com esse exemplo chamar a função ou usar o campo
-  // cru dá a MESMA string e a prova fica oca (lição da Task 6 da rodada
-  // passada).
-  it("o cartão não mostra mais km de trilha, mesmo com o campo na ficha", async () => {
-    const semExtensaoNaTela = {
-      ...ficha,
-      custo: { tag: "gratis" as const },
-      extensaoKm: 4.2,
-      piso: "asfalto-esburacado" as const,
-    };
-    const { container } = render(
-      <LocalVivo><CartaoTrilha ficha={semExtensaoNaTela} inicial={leitura} /></LocalVivo>,
-    );
-    // Sem localização e ficha gratuita, o piso é a única parte que sobra — e o
-    // `toBe` da linha INTEIRA é o que prova a ausência, porque um
-    // `not.toContain("km de trilha")` passaria também com o elemento sumido.
-    expect(container.querySelector(".cartao-meta")!.textContent)
-      .toBe("asfalto esburacado");
-  });
+  // 🔴 O teste "o cartão não mostra mais km de trilha, mesmo com o campo na
+  // ficha" morreu aqui (Task 7, 2026-08-23): ele escrevia `extensaoKm: 4.2`
+  // de propósito no fixture pra provar "a tela parou de mostrar" (campo
+  // presente) contra "o dado sumiu" (campo ausente) — distinção que só faz
+  // sentido enquanto o campo existe no schema. Sem `extensaoKm`, o fixture
+  // (`custo: gratis, piso: "asfalto-esburacado"`) e a asserção final
+  // ("asfalto esburacado") ficaram byte-a-byte iguais ao teste "ficha
+  // gratuita não ganha linha de custo" lá em cima — preservar os dois seria
+  // duplicar sem motivo.
 
   // Herdeiro do antigo "ficha sem esforço/duração não mostra campo vazio",
   // apontado pro campo novo: sem piso, nem traço nem "undefined" no lugar.
-  // 🔴 `extensaoKm: 4.25` fica no fixture de propósito: mesmo com o campo
-  // presente e sem piso, a linha não pode inventar "km de trilha" — a
-  // extensão não é mais lida por esta tela, e é isso que este teste prova.
   it("sem piso, a linha não inventa e não deixa separador solto", () => {
-    const semPiso = { ...ficha, piso: undefined, extensaoKm: 4.25 };
+    const semPiso = { ...ficha, piso: undefined };
     const { container } = render(<CartaoTrilha ficha={semPiso} inicial={leitura} />);
     const meta = container.querySelector(".cartao-meta")?.textContent ?? "";
     expect(meta).toBe("R$ 5 por pessoa");
@@ -172,13 +148,13 @@ describe("a linha de metadados do cartão", () => {
   });
 
   // O teste que fala de PRODUÇÃO. `ficha` é getFichasComCondicao()[0] sem
-  // override nenhum — o JSON de verdade da Rampa, que não traz `piso` nem
-  // `extensaoKm` (nem trazia `esforco`/`duracao`). Consequência, e não é
-  // defeito: com uma ficha só, o cartão no celular do João não muda uma
-  // vírgula nesta rodada. Fixture sintética não provaria isso.
-  it("a Rampa REAL (sem piso, sem extensão) mostra só distância e custo", async () => {
+  // override nenhum — o JSON de verdade da Rampa, que não traz `piso` (nem
+  // trazia `esforco`/`duracao`, nem `extensaoKm` — apagado do schema nesta
+  // task, Task 7). Consequência, e não é defeito: com uma ficha só, o cartão
+  // no celular do João não muda uma vírgula nesta rodada. Fixture sintética
+  // não provaria isso.
+  it("a Rampa REAL (sem piso) mostra só distância e custo", async () => {
     expect(ficha.piso).toBeUndefined();
-    expect(ficha.extensaoKm).toBeUndefined();
     localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
       tipo: "escolhido", coord: { lat: -8.20111, lng: -35.56472 },
       em: 1_800_000_000, nome: "Gravatá", regiao: "Pernambuco",
@@ -198,14 +174,13 @@ describe("a linha de metadados do cartão", () => {
   // ficava toda verde). Não é cosmético: `.bp .cartao` é flex com `gap: .2rem`
   // e `.cartao-meta` tem `margin-top: .35rem`, então um span vazio ainda é
   // item de flex e deixa ~0,55rem de folga — um cartão mais alto que os
-  // vizinhos, com nada dentro. Ficha gratuita, sem localização, sem piso e sem
-  // extensão é o caso real que chega lá.
+  // vizinhos, com nada dentro. Ficha gratuita, sem localização e sem piso é o
+  // caso real que chega lá.
   it("sem nada pra mostrar, a linha de metadados não existe", () => {
     const nua = {
       ...ficha,
       custo: { tag: "gratis" as const },
       piso: undefined,
-      extensaoKm: undefined,
     };
     const { container } = render(<CartaoTrilha ficha={nua} inicial={leitura} />);
     expect(container.querySelector(".cartao-meta")).toBeNull();

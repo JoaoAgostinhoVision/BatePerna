@@ -140,7 +140,15 @@ describe("esforco e duracao saíram do schema", () => {
   });
 });
 
-describe("piso e extensaoKm", () => {
+// 🔴 Era "piso e extensaoKm": o campo `extensaoKm` saiu do schema nesta task
+// (Task 7, 2026-08-23). Os dois testes que só existiam pra validar a
+// positividade dele ("extensaoKm zero ou negativa não valida" e "extensaoKm
+// positivo valida e sobrevive ao parse") morreram junto — não sobra regra de
+// validação pra provar, e `fichaSchema.parse({ ...base, extensaoKm: 0 })`
+// deixaria de estourar (zod descarta chave desconhecida em silêncio), o que
+// faria o primeiro deles falhar por razão errada em vez de simplesmente não
+// existir mais.
+describe("piso", () => {
   const base = JSON.parse(readFileSync(
     path.join(process.cwd(), "content", "fichas", "rampa-do-pepe.json"), "utf8"));
 
@@ -154,31 +162,19 @@ describe("piso e extensaoKm", () => {
     }
   });
 
-  it("ficha SEM piso e SEM extensaoKm valida — os dois são opcionais", () => {
+  it("ficha SEM piso valida — é opcional", () => {
     expect(() => fichaSchema.parse(base)).not.toThrow();
     const lido = fichaSchema.parse(base);
     expect(lido.piso).toBeUndefined();
-    expect(lido.extensaoKm).toBeUndefined();
-  });
-
-  it("extensaoKm zero ou negativa não valida", () => {
-    expect(() => fichaSchema.parse({ ...base, extensaoKm: 0 })).toThrow();
-    expect(() => fichaSchema.parse({ ...base, extensaoKm: -4 })).toThrow();
-  });
-
-  it("extensaoKm positivo valida e sobrevive ao parse", () => {
-    const lido = fichaSchema.parse({ ...base, extensaoKm: 4.2 });
-    expect(lido.extensaoKm).toBe(4.2);
   });
 
   // A ficha REAL. Sintética prova a função; só a real prova o conteúdo
-  // (lição 10) — a Rampa de hoje não tem piso nem extensaoKm, e por serem
-  // opcionais ela tem que continuar carregando exatamente como antes.
-  it("a Rampa continua carregando, sem piso e sem extensão", () => {
+  // (lição 10) — a Rampa de hoje não tem piso, e por ser opcional ela tem que
+  // continuar carregando exatamente como antes.
+  it("a Rampa continua carregando, sem piso", () => {
     const f = getFicha("rampa-do-pepe");
     expect(f).not.toBeNull();
     expect(f!.piso).toBeUndefined();
-    expect(f!.extensaoKm).toBeUndefined();
   });
 
   // 🔴 PROVA DE FONTE — mesma família do "PISOS_FILTRAVEIS é derivado de PISOS"

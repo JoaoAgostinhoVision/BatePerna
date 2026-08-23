@@ -7,7 +7,6 @@ import {
   coordDaDistancia,
   distanciaKm,
   kmNaTelaDistancia,
-  kmNaTelaExtensao,
   type Coord,
 } from "@/lib/geo";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
@@ -20,28 +19,27 @@ export type Filtros = {
   distanciaKm: number | null;
   daHoje: boolean;
   soGratis: boolean;
-  extensaoMaxKm: number | null;
   pisoMinimo: Piso | null;
 };
 
 export const CHAVE_FILTROS = "bp.filtros";
 
-/** O limite do recorte de tamanho da trilha, e ele mora AQUI — ao lado da
- *  validação que o aplica. A faixa da tela o lê deste módulo; escrevê-lo de
- *  novo lá seria duas fontes que podem discordar, e discordando a barra
- *  aceitaria um valor que o `lerFiltros` joga fora na abertura seguinte.
+/** `PASSO` é granularidade da BARRA de distância, NÃO o piso do intervalo — o
+ *  piso é 1 (ver `kmGuardado` abaixo). Com o piso em 5, um `4` digitado seria
+ *  aceito pela tela, guardado, e viraria `null` na releitura: o filtro se
+ *  desligando sozinho entre uma abertura e outra do app, sem nada na tela
+ *  dizendo por quê.
  *
- *  🔴 A distância NÃO tem mais um teto fixo aqui — `DIST_MAX_KM` morreu nesta
- *  rodada, decisão do João: "não faz sentido limitar no bate perna". O teto da
- *  barra de distância agora é dinâmico, calculado por `tetoDaBarraDistancia`.
+ *  🔴 A distância NÃO tem mais um teto fixo aqui — `DIST_MAX_KM` morreu numa
+ *  rodada passada, decisão do João: "não faz sentido limitar no bate perna". O
+ *  teto da barra de distância agora é dinâmico, calculado por
+ *  `tetoDaBarraDistancia`.
  *
- *  🔴 `PASSO` é granularidade da BARRA, NÃO o piso do intervalo — o piso é 1.
- *  Com o piso em 5, um `4` digitado seria aceito pela tela, guardado, e viraria
- *  `null` na releitura: o filtro se desligando sozinho entre uma abertura e
- *  outra do app, sem nada na tela dizendo por quê. */
+ *  🔴 `EXT_MAX_KM` e `EXT_PASSO_KM` — o teto e o passo do recorte de tamanho da
+ *  trilha — morreram nesta task (Task 7, 2026-08-23) junto com o campo
+ *  `extensaoKm` do modelo: sem o campo, não sobra recorte pra ter teto nem
+ *  passo. */
 export const DIST_PASSO_KM = 5;
-export const EXT_MAX_KM = 20;
-export const EXT_PASSO_KM = 1;
 
 /** O piso do TETO da barra — não é o teto. Sem ele, um acervo todo perto
  *  degenera a barra em duas ou três paradas. */
@@ -95,7 +93,6 @@ export const SEM_FILTRO: Filtros = {
   distanciaKm: null,
   daHoje: false,
   soGratis: false,
-  extensaoMaxKm: null,
   pisoMinimo: null,
 };
 
@@ -106,14 +103,16 @@ export const SEM_FILTRO: Filtros = {
  *  `x !== false` nunca era alcançável — o `tsc` recusava a comparação (TS2367)
  *  e a prova de mutação daquela metade era impossível. */
 export function contarLigados(f: Filtros): number {
-  // CINCO: eram sete durante a expansão desta rodada, com `esforco` e
-  // `duracaoMax` juntos; os dois foram apagados na contração. Cada campo aqui é
-  // uma linha do painel, e a lista tem que ser exatamente os campos de
-  // `Filtros` — um que falte faz a tela dizer "2 filtros ligados" com três
-  // ligados, e a pessoa procura na tela um controle que a contagem jura não
-  // existir; um que sobre é o contrário, e foi o defeito que o dono do app
-  // viu no celular (contagem prometendo chip que a tela não desenha).
-  return [f.distanciaKm, f.daHoje, f.soGratis, f.extensaoMaxKm, f.pisoMinimo].filter(
+  // QUATRO: eram sete durante a expansão da rodada passada, com `esforco` e
+  // `duracaoMax` juntos; os dois foram apagados na contração daquela rodada.
+  // `extensaoMaxKm` era o quinto, e morre nesta task (Task 7, 2026-08-23)
+  // junto com o campo `extensaoKm` do modelo. Cada campo aqui é uma linha do
+  // painel, e a lista tem que ser exatamente os campos de `Filtros` — um que
+  // falte faz a tela dizer "2 filtros ligados" com três ligados, e a pessoa
+  // procura na tela um controle que a contagem jura não existir; um que sobre
+  // é o contrário, e foi o defeito que o dono do app viu no celular (contagem
+  // prometendo chip que a tela não desenha).
+  return [f.distanciaKm, f.daHoje, f.soGratis, f.pisoMinimo].filter(
     (x) => x !== null && x !== false,
   ).length;
 }
@@ -136,22 +135,22 @@ function ehInteiro(v: unknown): v is number {
   return Number.isInteger(v);
 }
 
-/** Km guardado: inteiro, de 1 até `max` — e `max: null` quer dizer SEM TETO.
+/** Km guardado: inteiro, de 1 pra cima. **Não há teto** — o da distância virou
+ *  dinâmico (`tetoDaBarraDistancia`) e o da extensão deixou de existir com o
+ *  campo. Sem teto não existe valor "grande demais": um corte absurdo produz um
+ *  filtro INERTE, não um filtro que esconde.
  *
- *  A distância passa `null` desde que o teto virou dinâmico: sem teto não
- *  existe valor "grande demais", só filtro inerte. Prender aqui num número
- *  fixo faria a barra aceitar um corte que a releitura joga fora na abertura
- *  seguinte — o filtro se desligando sozinho, que é o defeito central da
- *  rodada passada.
+ *  O piso continua `1`, e não o passo: com o piso em 5, um `4` digitado seria
+ *  aceito pela tela, guardado, e viraria `null` na releitura — o filtro se
+ *  desligando sozinho entre duas aberturas do app.
  *
- *  O piso continua sendo `1`, e não o passo: com o piso em 5, um `4` digitado
- *  seria aceito pela tela, guardado, e viraria `null` na releitura.
- *
- *  Um só pros dois recortes de propósito: duas cópias desta regra podiam
- *  divergir, e é o mesmo `max` que a faixa da tela lê. */
-function kmGuardado(v: unknown, max: number | null): number | null {
-  if (!ehInteiro(v) || v < 1) return null;
-  return max !== null && v > max ? null : v;
+ *  🔴 Tinha um segundo parâmetro (`max`) até esta task (Task 7, 2026-08-23):
+ *  servia pros DOIS recortes de km — a distância com `null` (sem teto) e a
+ *  extensão com `EXT_MAX_KM`. Com a extensão fora do modelo, sobrou um
+ *  chamador só, e o parâmetro morto seria uma pergunta sem resposta possível
+ *  (`max` sempre `null`) — pior que apagá-lo. */
+function kmGuardado(v: unknown): number | null {
+  return ehInteiro(v) && v >= 1 ? v : null;
 }
 
 /** `PISOS_FILTRAVEIS`, não `PISOS`: `barro` é o piso da escala e, com o filtro
@@ -195,18 +194,17 @@ export function lerFiltros(bruto: string | null): Filtros {
   // estranho que passasse viraria um filtro escondendo tudo pra sempre, sem a
   // pessoa saber o que desligar.
   return {
-    distanciaKm: kmGuardado(x.distanciaKm, null),
+    distanciaKm: kmGuardado(x.distanciaKm),
     daHoje: x.daHoje === true,
     soGratis: x.soGratis === true,
-    extensaoMaxKm: kmGuardado(x.extensaoMaxKm, EXT_MAX_KM),
     pisoMinimo: ehPisoFiltravel(x.pisoMinimo) ? x.pisoMinimo : null,
-    // O que está guardado no celular do dono do app tem `esforco` e
-    // `duracaoMax` gravados de verdade, e eles NÃO são lidos aqui — de
-    // propósito. Ler um campo que a tela não desenha mais faria a linha de
-    // resumo dizer "1 filtro ligado" sem nenhum chip pra desligar, que é
-    // exatamente o que ele reclamou. Chave desconhecida no JSON é ignorada em
-    // silêncio: o objeto de saída é montado campo a campo, nunca espalhado do
-    // que veio.
+    // O que está guardado no celular do dono do app tem `esforco`,
+    // `duracaoMax` e (a partir desta task) `extensaoMaxKm` gravados de
+    // verdade, e nenhum dos três é lido aqui — de propósito. Ler um campo que
+    // a tela não desenha mais faria a linha de resumo dizer "1 filtro ligado"
+    // sem nenhum chip pra desligar, que é exatamente o que ele reclamou.
+    // Chave desconhecida no JSON é ignorada em silêncio: o objeto de saída é
+    // montado campo a campo, nunca espalhado do que veio.
   };
 }
 
@@ -262,56 +260,23 @@ export function passaNoFiltro({
   if (filtros.soGratis && ficha.custo.tag !== "gratis") return false;
 
   // REGRA DE HONESTIDADE 2: ficha sem o campo NUNCA é escondida por ele.
-  // Sumir por dado que falta é mentira silenciosa — e hoje todas as fichas
-  // estão nesse caso, nos DOIS campos opcionais que sobraram (`extensaoKm` e
-  // `piso`): a única ficha real não tem nenhum dos dois.
+  // Sumir por dado que falta é mentira silenciosa.
   //
-  // Teto INCLUSIVO — precedente cravado na rodada passada: "até 4 km" inclui a
-  // trilha de 4 km, que é como se lê em português; o contrário esconde
-  // justamente o caso que a pessoa tinha em mente.
+  // 🔴 Até esta task (Task 7, 2026-08-23) esta regra tinha DOIS campos
+  // opcionais: `extensaoKm` (com um bloco de filtro inteiro, apagado junto com
+  // o campo) e `piso` (o bloco logo abaixo). Hoje só `piso` sobra — e a única
+  // ficha real segue sem ele, então continua nunca sendo escondida por esta
+  // regra.
   //
-  // 🔴 O NÚMERO sai de `kmNaTelaExtensao`, não da ficha crua — irmão exato do
-  // que está escrito no bloco da distância. Com o km cru, "até 4 km" escondia um
-  // cartão que dizia "4 km de trilha": faixa (n, n+0,05) em TODO teto de 1 a 20,
-  // ~49 m de trilha que a tela anuncia e o filtro nega. NÃO refaça a conta aqui.
-  //
-  // O `ficha.extensaoKm &&` escreve a honestidade 2, mas — MEDIDO de novo
-  // DEPOIS desta mudança, não herdado do comentário antigo — quem a segura em
-  // runtime continua sendo a aritmética, agora por outro caminho:
-  // `kmNaTelaExtensao(undefined)` faz `undefined < 1` dar `false` e
-  // `Math.round(NaN)/10` dar `NaN`, e `NaN > 4` é `false`. Apagar o `&&` deixa
-  // a suíte verde. (Sem total escrito de propósito: a primeira versão desta
-  // linha cravou "585/585" e envelheceu em duas horas, dentro de um comentário
-  // que existe justamente pra registrar uma medição.) Quem recusa apagá-lo
-  // continua sendo o `tsc`, e o código do erro MUDOU com esta rodada — medido
-  // agora, não herdado: era TS18048 ("'ficha.extensaoKm' is possibly
-  // 'undefined'") enquanto o campo era COMPARADO aqui; hoje ele é ARGUMENTO de
-  // `kmNaTelaExtensao`, e o erro é TS2345 ("Argument of type 'number |
-  // undefined' is not assignable to parameter of type 'number'").
-  // É a terceira resposta da lição 13, e é por isso que ele fica: diz a regra
-  // na cara de quem lê, e é a única rede no dia em que a comparação mudar.
-  //
-  // Dependência silenciosa que mora em OUTRO arquivo, e por isso está escrita:
-  // `extensaoKm` é `.positive()` no `src/types/ficha.ts`, então `0` não
-  // existe. Se o `.positive()` cair, o `&&` passa a LER `0` como "campo
-  // ausente" — hoje sem consequência observável (zero nunca é maior que um
-  // teto ≥ 1), mas a linha muda de significado sem uma linha de diff aqui.
-  if (filtros.extensaoMaxKm !== null && ficha.extensaoKm) {
-    // Mesmo `!== null` do bloco da distância, mesma razão nas duas ferramentas:
-    // a tela sem número não esconde, e o `tsc` recusa comparar `number | null`.
-    const naTela = kmNaTelaExtensao(ficha.extensaoKm);
-    if (naTela !== null && naTela > filtros.extensaoMaxKm) return false;
-  }
-
   // "No mínimo daqui pra cima" na escala de `PISOS` (a ORDEM do array É a
   // escala). Ficha com piso PIOR que o pedido some; ficha sem piso, nunca.
   //
-  // Aqui o `ficha.piso &&` MORDE no vitest, ao contrário do irmão acima:
-  // `ordemPiso(undefined)` cai num `indexOf` e devolve -1, que é MENOR que
-  // qualquer piso — sem o `&&`, ficha sem piso sumiria da home. Já o
-  // `!== null` é o caso oposto: `ordemPiso(null)` também dá -1, `0 < -1` é
-  // `false`, e apagá-lo deixa a suíte verde; quem o segura é o `tsc`. As duas
-  // metades foram medidas separadas, porque num E a primeira esconde a outra.
+  // O `ficha.piso &&` MORDE no vitest: `ordemPiso(undefined)` cai num
+  // `indexOf` e devolve -1, que é MENOR que qualquer piso — sem o `&&`, ficha
+  // sem piso sumiria da home. Já o `!== null` é o caso oposto: `ordemPiso(null)`
+  // também dá -1, `0 < -1` é `false`, e apagá-lo deixa a suíte verde; quem o
+  // segura é o `tsc`. As duas metades foram medidas separadas, porque num E a
+  // primeira esconde a outra.
   if (
     filtros.pisoMinimo !== null &&
     ficha.piso &&
