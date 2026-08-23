@@ -300,21 +300,23 @@ describe("extensão da trilha", () => {
     expect(passa({}, { extensaoKm: 12 })).toBe(true);
   });
 
-  // 🔴 O DEFEITO desta rodada, do lado da extensão, no valor exato em que a
-  // revisão da branch inteira o mediu: `formatarExtensao(4.04)` mostra "4 km de
-  // trilha" e o recorte "até 4 km" ESCONDIA o cartão que a tela acabou de
-  // anunciar como 4 km. A faixa é (n, n+0,05) — uns 49 m — e existe em TODO
-  // teto de 1 a 20.
+  // 🔴 O DEFEITO de uma rodada passada, do lado da extensão, no valor exato em
+  // que a revisão da branch inteira o mediu: `formatarExtensao(4.04)` devolve
+  // "4 km de trilha" — com o km CRU, "até 4 km" ESCONDIA uma trilha de 4,04 km,
+  // o mesmo "4" que a tela (então, antes da extensão sair do cartão e da
+  // ficha) anunciava. A faixa é (n, n+0,05) — uns 49 m — e existe em TODO teto
+  // de 1 a 20.
   //
   // O caso SEPARA as duas versões (que é o ponto): com o km cru, `4.04 > 4` e a
-  // trilha some; com o número da tela, `4 > 4` é falso e ela fica. Um caso onde
-  // as duas concordassem (4, ou 5) não provaria nada — e os dois já estão
-  // travados no primeiro teste deste bloco.
-  it("'até 4 km' NÃO esconde a trilha que o cartão anuncia como 4 km (4,04)", () => {
+  // trilha some; com o número de `kmNaTelaExtensao`, `4 > 4` é falso e ela
+  // fica. Um caso onde as duas concordassem (4, ou 5) não provaria nada — e os
+  // dois já estão travados no primeiro teste deste bloco.
+  it("'até 4 km' NÃO esconde a trilha que formatarExtensao(4.04) arredonda pra 4 km", () => {
     expect(passa({ extensaoMaxKm: 4 }, { extensaoKm: 4.04 })).toBe(true);
-    // O irmão do outro lado da fronteira do arredondamento: 4,06 a tela mostra
-    // como "4,1 km de trilha", e aí sumir de "até 4 km" é honesto. Sem ele,
-    // um recorte que parasse de filtrar passaria neste bloco.
+    // O irmão do outro lado da fronteira do arredondamento: `formatarExtensao`
+    // arredonda 4,06 pra "4,1 km de trilha", e aí sumir de "até 4 km" é
+    // honesto. Sem ele, um recorte que parasse de filtrar passaria neste
+    // bloco.
     expect(passa({ extensaoMaxKm: 4 }, { extensaoKm: 4.06 })).toBe(false);
   });
 

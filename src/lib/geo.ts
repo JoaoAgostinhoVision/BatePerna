@@ -98,11 +98,17 @@ export function kmNaTelaExtensao(km: number): number | null {
 
 /** A extensão da trilha em si (não a distância até ela) — km SÓ IDA, decisão
  *  explícita do dono do app. O sufixo mora AQUI DENTRO, não em cada chamador:
- *  o cartão (Task 6) e a ficha (Task 7) mostram o MESMO número, e foi
- *  exatamente duas formatações escritas em dois lugares que fez a mesma
- *  trilha ter dois km diferentes numa rodada passada (ver o comentário de
- *  `coordDaDistancia` abaixo, mesma família de defeito). Com o sufixo dentro
- *  da função, nenhum chamador tem como deixá-lo cair.
+ *  quando o cartão e a ficha mostravam este número, os dois chamavam esta
+ *  MESMA função, e foi exatamente duas formatações escritas em dois lugares
+ *  que fez a mesma trilha ter dois km diferentes numa rodada passada (ver o
+ *  comentário de `coordDaDistancia` abaixo, mesma família de defeito). Com o
+ *  sufixo dentro da função, nenhum chamador teria como deixá-lo cair.
+ *
+ *  🔴 SEM CHAMADOR HOJE (2026-08-23): a extensão saiu da tela — cartão e ficha
+ *  — por decisão do João ("remova o filtro tamanho da trilha, acho que não
+ *  está para hoje"; ver `CartaoTrilha.tsx` e `[slug]/page.tsx`). A função
+ *  continua aqui, exportada e testada, porque `ficha.extensaoKm` ainda existe
+ *  no schema — ela só morre junto com o campo.
  *
  *  Como a irmã `formatarDistancia`, aqui NÃO se arredonda nada: a conta é toda
  *  de `kmNaTelaExtensao`, e o que sobra é escolher entre "12" e "12,4". */

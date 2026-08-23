@@ -282,11 +282,15 @@ describe("o questionário cobre a ficha inteira", () => {
   // cinco linhas falando da estrada; lidas em sequência, "o trajeto em si"
   // lia como a estrada.
   //
-  // O estrago se a resposta vier da estrada: o cartão passa a mostrar
-  // "~20 km em linha reta · 27 km de trilha" — dois números em km lado a lado,
-  // ambos significando "quão longe fica", o segundo mentindo. É o defeito dos
-  // "dois km" da rodada passada com outra roupa. E o filtro inverte: um corte
-  // em 5 km esconde justamente a trilha de caminhada curta.
+  // O estrago se a resposta vier da estrada: até a extensão sair do cartão e
+  // da ficha (Task 6 de 2026-08-23), a tela chegava a mostrar "~20 km em linha
+  // reta · 27 km de trilha" — dois números em km lado a lado, ambos
+  // significando "quão longe fica", o segundo mentindo (o defeito dos "dois
+  // km" da rodada passada com outra roupa). Esse sintoma específico saiu da
+  // tela junto com a extensão, mas o campo `extensaoKm` ainda alimenta o
+  // recorte "até N km de trilha" em `src/lib/filtros.ts`: e AÍ o filtro
+  // inverte — um corte em 5 km ainda esconde justamente a trilha de caminhada
+  // curta, com um número errado.
   it("a pergunta da extensão diz que é a trilha a pé, e exclui a estrada de carro", () => {
     const pergunta = plano(perguntaDe("extensaoKm"));
     expect(pergunta, "a pergunta não diz que é o trecho a pé").toMatch(

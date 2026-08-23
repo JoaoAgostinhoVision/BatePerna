@@ -90,7 +90,11 @@ describe("formatarDistanciaCurta: a linha do cartão", () => {
   });
 });
 
-describe("formatarExtensao: o mesmo número no cartão e na ficha", () => {
+// 🔴 Sem chamador hoje: a extensão saiu do cartão e da ficha em 2026-08-23
+// (ver o comentário em geo.ts). O título descreve a GARANTIA da função — o
+// mesmo número pra qualquer chamador, ontem cartão e ficha, hoje nenhum —,
+// não uma tela ao vivo.
+describe("formatarExtensao: o mesmo número pra qualquer chamador", () => {
   // O sufixo é da FUNÇÃO, não do chamador — ver o comentário em geo.ts.
   it("formatarExtensao(4) devolve '4 km de trilha', com o sufixo", () => {
     expect(formatarExtensao(4)).toBe("4 km de trilha");
