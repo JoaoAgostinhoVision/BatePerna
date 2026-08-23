@@ -71,6 +71,30 @@ export default function BuscaLugar() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
+          {/* 🔴 O caminho de VOLTA pro GPS, e ele conserta um beco que já está
+              em produção: com uma cidade escolhida, `soGps` é falso, o toque
+              na pílula abre esta busca, e ela só oferecia outras cidades —
+              `pedirGps` ficava sem chamador nenhum no app.
+
+              FORA do `.busca-rolo` de propósito, pelo mesmo motivo medido do
+              crédito do GeoNames logo abaixo: o que mora dentro da caixa que
+              rola sai de vista quando a lista de cidades cresce, e este é o
+              item que precisa continuar alcançável.
+
+              Some com o GPS negado — o navegador não pergunta duas vezes, e o
+              botão viraria um que não faz nada. Mesmo argumento do
+              `rotuloPilula`. */}
+          {gps !== "negado" && (
+            <button
+              className="busca-item"
+              onClick={() => {
+                pedirGps();
+                setFase("fechado");
+              }}
+            >
+              de onde eu estou
+            </button>
+          )}
           {/* 🔴 O que ROLA é só esta caixa. O campo fica em cima dela e o
               crédito embaixo, os dois FORA da área de rolagem — ver o
               comentário do crédito logo abaixo. */}

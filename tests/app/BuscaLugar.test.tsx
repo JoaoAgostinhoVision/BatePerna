@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, cleanup, act, fireEvent } from "@testing-library/react";
 import BuscaLugar, { ESPERA_MS } from "@/app/BuscaLugar";
 import LocalVivo from "@/app/local";
-import { CHAVE_GPS, CHAVE_LOCAL } from "@/lib/local";
+import { CHAVE_GPS, CHAVE_LOCAL, CHAVE_SESSAO, MARCA_SESSAO } from "@/lib/local";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { regraDe, semComentarios, valorDe } from "../css";
@@ -13,7 +13,7 @@ import { regraDe, semComentarios, valorDe } from "../css";
 // Assim os testes de relógio avançam o tempo pelo valor REAL: mudar a espera
 // não faz um teste mentir, e não trava o valor a um número escrito à mão.
 
-afterEach(() => { cleanup(); localStorage.clear(); vi.restoreAllMocks(); });
+afterEach(() => { cleanup(); localStorage.clear(); sessionStorage.clear(); vi.restoreAllMocks(); });
 
 const GRAVATA = { nome: "Gravatá", regiao: "Pernambuco", pais: "Brasil", lat: -8.2, lng: -35.56 };
 // Segunda cidade, pros dois testes de relógio falso lá embaixo. Nome diferente
@@ -85,6 +85,74 @@ describe("a busca", () => {
     const b = await screen.findByRole("button", { name: /escolher onde estou/ });
     await act(async () => { b.click(); });
   }
+
+  // ——— o caminho de volta pro GPS (pedido do João, 2026-08-23) ———
+  //
+  // 🔴 Isto conserta um beco PRÉ-EXISTENTE, não desta rodada: com uma cidade
+  // escolhida, `soGps` é falso, o toque na pílula abre a busca, e a busca só
+  // oferecia outras cidades. `pedirGps` ficava sem nenhum chamador.
+  it("o painel oferece 'de onde eu estou' e o toque PEDE o GPS", async () => {
+    const pediu = vi.fn();
+    vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: pediu } });
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+      tipo: "escolhido", coord: { lat: -8.2, lng: -35.56 },
+      em: 1_800_000_000, nome: "Gravatá", regiao: "Pernambuco",
+    }));
+    render(<LocalVivo><BuscaLugar /></LocalVivo>);
+    const pilula = await screen.findByRole("button", { name: /de Gravatá/ });
+    await act(async () => { pilula.click(); });
+    const volta = screen.getByRole("button", { name: /de onde eu estou/i });
+    const antes = pediu.mock.calls.length;
+    await act(async () => { volta.click(); });
+    expect(pediu.mock.calls.length).toBeGreaterThan(antes);
+    // Fecha o painel, igual a escolher uma cidade já faz. Sem esta metade, um
+    // botão que pede o GPS e deixa a busca aberta por cima do mapa passaria.
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
+  // Regra da casa (é o mesmo argumento do `rotuloPilula`): negado uma vez, o
+  // navegador não pergunta de novo — o item viraria um botão que não faz nada.
+  it("com gps negado, o item 'de onde eu estou' NÃO aparece", async () => {
+    await abrir();  // o helper já grava bp.gps = "negado"
+    expect(screen.queryByRole("button", { name: /de onde eu estou/i })).toBeNull();
+    // Não-vacuidade: o painel ESTÁ aberto. Sem esta linha, o teste passa com o
+    // componente inteiro apagado — é a família "teste de ausência sem o irmão
+    // de presença é meia prova".
+    expect(screen.getByRole("textbox")).toBeTruthy();
+  });
+
+  // 🔴 POSICIONAL, e é a mesma prova do crédito do GeoNames logo acima, pela
+  // mesma razão medida: o que mora dentro do `.busca-rolo` sai de vista assim
+  // que a lista de cidades cresce (medido em 375×667 com cinco resultados: 168
+  // de 344px visíveis). Este é justamente o item que precisa estar sempre
+  // alcançável.
+  it("o 'de onde eu estou' fica FORA da caixa que rola", async () => {
+    const pediu = vi.fn();
+    vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: pediu } });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json([GRAVATA, RECIFE, GRAVATA, RECIFE, GRAVATA]),
+    );
+    // 🔴 Uma cidade escolhida É A PRÉ-CONDIÇÃO de o toque ABRIR o painel: com
+    // `local` = "não sei" e `gps` = "nunca", `soGps` é true e a pílula PEDE o
+    // GPS em vez de abrir. O marcador de sessão vai junto porque, sem ele, a
+    // Task 2 faz a escolha vencer e o app volta pro estado "não sei".
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+      tipo: "escolhido", coord: { lat: -8.2, lng: -35.56 },
+      em: Math.floor(Date.now() / 1000), nome: "Gravatá", regiao: "Pernambuco",
+    }));
+    sessionStorage.setItem(CHAVE_SESSAO, MARCA_SESSAO);
+    render(<LocalVivo><BuscaLugar /></LocalVivo>);
+    const pilula = await screen.findByRole("button", { name: /de Gravatá/ });
+    await act(async () => { pilula.click(); });
+    // A lista cheia é o cenário que torna a posição observável: é com ela que
+    // o que mora dentro do rolo sai de vista.
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Gravatá" } });
+    await screen.findAllByText(/Pernambuco/);
+
+    const volta = screen.getByRole("button", { name: /de onde eu estou/i });
+    expect(volta.closest(".busca-rolo"), "o item voltou pra dentro da caixa que rola").toBeNull();
+    expect(volta.closest(".busca"), "o item saiu do painel de busca").not.toBeNull();
+  });
 
   it("mostra a região de cada resultado — sem ela o dedo acerta o lugar errado", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([GRAVATA]));
