@@ -3,7 +3,10 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import {
   CHAVE_GPS,
   CHAVE_LOCAL,
+  CHAVE_SESSAO,
+  MARCA_SESSAO,
   NAO_SEI,
+  escolhaAindaVale,
   lerEstadoGps,
   lerLocal,
   type EstadoGps,
@@ -56,9 +59,15 @@ export default function LocalVivo({ children }: { children: ReactNode }) {
     setLocal(l);
     try {
       localStorage.setItem(CHAVE_LOCAL, JSON.stringify(l));
+      // 🔴 O marcador é SÓ da escolha à mão. Este callback é TAMBÉM o caminho
+      // de sucesso do GPS: marcar aqui sem o guarda faria uma leitura
+      // automática se disfarçar de escolha manual e mandar por 6h.
+      if (l.tipo === "escolhido") sessionStorage.setItem(CHAVE_SESSAO, MARCA_SESSAO);
     } catch {
       // Aba anônima ou armazenamento cheio: a escolha vale nesta sessão e
-      // pronto. Não é motivo pra tela de erro.
+      // pronto. Não é motivo pra tela de erro. Se o localStorage estourou, o
+      // marcador nem é tentado — e isso é o certo: sem a escolha guardada, não
+      // há o que a sessão prolongue.
     }
   }, []);
 
@@ -92,28 +101,26 @@ export default function LocalVivo({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let guardado: Local = NAO_SEI;
+    let marcador: string | null = null;
     try {
       guardado = lerLocal(localStorage.getItem(CHAVE_LOCAL));
       setGps(lerEstadoGps(localStorage.getItem(CHAVE_GPS)));
+      marcador = sessionStorage.getItem(CHAVE_SESSAO);
     } catch { /* sem armazenamento: segue como "não sei" */ }
     if (guardado.tipo !== "nao-sei") setLocal(guardado);
-    // Quem escolheu uma cidade na mão JÁ disse onde está — e a decisão do
-    // João é que essa escolha vence: "só modificaria se o usuário quiser".
-    // Sem este guarda, o callback de sucesso lá em cima chama `escolher` e
-    // GRAVA por cima do `bp.local`: a cidade escolhida some do aparelho, sem
-    // nada na tela dizendo por quê. E não é caso de canto — este app não usa
-    // `next/link`, todo toque em cartão é navegação completa e remonta o
-    // `<LocalVivo>`, então escolher "Gravatá" na home e tocar num cartão já
-    // bastava. O guarda também impede o PEDIDO, não só a gravação: disparado,
-    // o navegador exibiria o balão de permissão do sistema pra quem já
-    // respondeu essa pergunta na mão.
+    // A escolha à mão vence — mas só pela sessão. Decisão do João em
+    // 2026-08-23, depois de ver no celular que a cidade não mudava nunca: vale
+    // enquanto a aba viver E por no máximo 6h (`escolhaAindaVale`).
     //
-    // Pedido do João: o GPS pede sozinho já na primeira abertura, não só
-    // depois de já ter sido concedido antes. Se o navegador já negou, ele
-    // responde com erro sem exibir nada (não insiste); se ainda não foi
-    // perguntado, é aqui que a pergunta acontece. O remédio pro risco de
-    // rebaixar o app à toa é o `code === 1` do callback de erro logo acima.
-    if (guardado.tipo !== "escolhido") buscarGps();
+    // 🔴 A troca PRESERVA os dois ramos que já estão no ar, e não por sorte:
+    // pra `tipo: "gps"` e pra `nao-sei` a função é falsa pela PRIMEIRA
+    // cláusula, então o GPS continua sendo pedido sozinho na abertura, como a
+    // Task 1 da rodada passada entregou.
+    //
+    // E o que está na tela não pisca: o `setLocal(guardado)` acima já
+    // aconteceu. Só o SUCESSO do GPS sobrescreve; erro e recusa deixam a
+    // cidade onde está.
+    if (!escolhaAindaVale(guardado, Math.floor(Date.now() / 1000), marcador)) buscarGps();
   }, [buscarGps]);
 
   return (
