@@ -298,16 +298,24 @@ describe("a busca", () => {
         expect(getComputedStyle(campo).fontSize, "a folha de estilo NÃO está sendo aplicada — o resto deste teste é vácuo")
           .toBe("16px");
 
-        // O requisito, escrito contra o que o `.busca-item` IMPORIA se ganhasse
-        // a cascata. Foi exatamente esse o defeito medido: o botão saía com os
-        // três valores do item de LISTA e tomava a primeira linha inteira,
-        // espremendo o campo até ~24px.
+        // 🔴 OS VALORES POSITIVOS, e não a negação do que o `.busca-item`
+        // imporia. A primeira versão desta prova dizia `not.toBe("100%")`,
+        // `not.toBe("block")`, `not.toBe("left")` — o que prova que o item de
+        // LISTA perdeu, mas **passa com qualquer terceiro valor**: trocar
+        // `width: auto` por `width: 60%` no CSS não seria pego por teste
+        // nenhum do repo. Como os valores certos são conhecidos, afirmá-los é
+        // estritamente mais forte e prova a mesma coisa de quebra — se o
+        // `.busca-item` ganhar a cascata, estes três caem junto.
+        //
+        // (O defeito medido era exatamente os três valores do item de lista:
+        // o botão tomava a primeira linha inteira e espremia o campo até 24px
+        // — medido em Chrome real, não estimado.)
         const botao = screen.getByRole("button", { name: /^daqui$/i });
         const lido = getComputedStyle(botao);
-        expect(lido.width, "o `.busca-item` ganhou a cascata: o botão estica pela linha e esmaga o campo")
-          .not.toBe("100%");
-        expect(lido.display, "o `.busca-item` ganhou a cascata no display").not.toBe("block");
-        expect(lido.textAlign, "o `.busca-item` ganhou a cascata no alinhamento").not.toBe("left");
+        expect(lido.width, "o botão deixou de encolher ao conteúdo — estica pela linha e esmaga o campo")
+          .toBe("auto");
+        expect(lido.display, "o botão perdeu o display da própria regra").toBe("flex");
+        expect(lido.textAlign, "o botão voltou a alinhar como item de LISTA").toBe("center");
         // A metade que NÃO pode ser sobrescrita: o alvo de toque de 44px vem
         // do `.busca-item`, e desfazê-lo por acidente deixaria o botão menor
         // que o mínimo tocável do resto do app.

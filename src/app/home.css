@@ -373,7 +373,7 @@
    `getComputedStyle` —, não leitura de texto de regra. */
 .bp .busca-linha .busca-daqui {
   flex: none; width: auto; text-align: center; white-space: nowrap;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: center;
 }
 .bp .busca-nome { display: block; font-family: var(--serif); font-size: 1rem; font-weight: 600; }
 .bp .busca-reg { display: block; color: var(--ink-soft); font-size: .78rem; }
