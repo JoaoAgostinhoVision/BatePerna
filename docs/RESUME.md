@@ -6,7 +6,7 @@
 
 **Última parada:** 2026-08-23. ✅ **SEGUNDA RODADA DO REVIEW FECHADA E MERGEADA.**
 `main` em **`8329284`** (merge `--no-ff` de `review-2-celular`, 15 commits), mais a **rodada curta
-do "daqui"** que veio depois (ver §Z). **659/659 em 49 arquivos**, `tsc` limpo, `npm run build` passa — **os três conferidos por mim em `main` DEPOIS do
+do "daqui"** que veio depois (ver §Z). **668/668 em 49 arquivos**, `tsc` limpo, `npm run build` passa — **os três conferidos por mim em `main` DEPOIS do
 merge**, não relatados por agente. ✅ **NO AR**: deploy `● Ready · Production`, e os **seis
 marcadores conferidos por `curl`** em produção (ver §D).
 
@@ -63,7 +63,7 @@ repo ele apaga o ledger de scratch e o próprio `.claude/`.
 ```
 git branch --show-current  → main
 git status --short         → limpo
-npm test                   → 659/659 em 49 arquivos   ← tudo verde, NÃO há falha esperada
+npm test                   → 668/668 em 49 arquivos   ← tudo verde, NÃO há falha esperada
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
@@ -181,7 +181,8 @@ curl -s $H/ | grep -c 'FILTRAR'                             # 1
 ### §Z — 🆕 A RODADA CURTA DE DEPOIS: o "daqui" ao lado do campo (2026-08-23, mesma sessão)
 
 **Ele usou o app e pediu o oposto da correção do Critical:** queria poder ir pro GPS **no meio da
-digitação**. Está no ar (`main`, merge `--no-ff` de `gps-ao-lado-do-campo`, **659/659**).
+digitação**. Está no ar (`main`, merge `--no-ff` de `gps-ao-lado-do-campo`; a suíte estava em
+**659/659** naquele merge — hoje é maior, ver o §Z2).
 
 O campo e o botão agora dividem a primeira linha, dentro de uma `.busca-linha`. **É geometria, não
 estética:** os dois custam UMA linha de 44px, a mesma que o campo sozinho custava, e a lista fica
@@ -202,6 +203,35 @@ regra antiga via CSSOM ao vivo.
 - a **posição**, depois do `.busca-item`, é o que torna a regra **provável**: 🔴 **medido, o
   `getComputedStyle` do jsdom resolve este caso por ORDEM e não por especificidade.** Sem a
   posição, o teste falharia com o CSS certo.
+
+### §Z2 — 🔴 O DEFEITO QUE ELE ACHOU DIZENDO "MUDOU NADA AQUI" (2026-08-23, mesma sessão)
+
+**Depois do deploy do "daqui", ele abriu e disse que nada tinha mudado.** Diagnóstico feito no
+navegador dele, não por teoria: **o código novo ESTAVA rodando** (o painel já tinha o
+`busca-linha`), mas o botão ficava escondido porque o app guardava `bp.gps = "negado"` — e
+`navigator.permissions.query({name:"geolocation"})` respondia **`granted`**. Medido, lado a lado.
+
+🔴 **A causa é de DESENHO, não de linha: o app usava MEMÓRIA onde existe FONTE.** O `"negado"` era
+gravado **uma única vez** (callback de erro `code 1`) e **nenhum ponto do código o apagava ou
+reescrevia**. Quem negasse uma vez — num teste, sem querer — ficava marcado **pra sempre**, e
+liberar a permissão nas configurações do navegador **não desfazia**. A funcionalidade que ele pediu
+DUAS vezes era invisível justamente pra ele.
+
+**Conserto:** `estadoGpsEfetivo(lembranca, permissao)` puro em `src/lib/local.ts`; o `local.tsx`
+pergunta ao navegador na montagem e **o que ele responde vence**. A chave velha é **APAGADA**, não
+só ignorada — senão volta a mandar no dia em que a API não responder.
+
+⚠️ **O ramo sem API é load-bearing e tem dois testes.** O Safari só passou a responder
+`permissions.query` pra geolocalização em versões recentes — antes **rejeita** —, e o veículo deste
+app é um **PWA no iPhone**. Sem fonte, o comportamento é exatamente o de antes; se esse ramo
+estivesse errado, o conserto viraria regressão no único ambiente que importa.
+
+✅ **Provado em produção**, com o estado do defeito semeado de novo: lembrança apagada, botão
+aparece, lista com 70px.
+
+🟠 **E isto reabre uma pendência do §P item 3 com peso maior:** o outro beco (o painel que nunca
+abre com `local="nao-sei"` e GPS falhando por `code 2`/`code 3`) é da **mesma família** — o app
+decidindo por lembrança em vez de perguntar. Vale reavaliar com a `permissions` na mão.
 
 ### 2. Leia, nesta ordem
 
