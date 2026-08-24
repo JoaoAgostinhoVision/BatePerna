@@ -8,6 +8,7 @@ import {
   VALIDADE_ESCOLHA_S,
   coordDe,
   escolhaAindaVale,
+  estadoGpsEfetivo,
   lerEstadoGps,
   lerLocal,
   rotuloPilula,
@@ -234,5 +235,44 @@ describe("a chave da sessão", () => {
   });
   it("CHAVE_SESSAO tem valor exato — contrato com o local.tsx", () => {
     expect(CHAVE_SESSAO).toBe("bp.sessao");
+  });
+});
+
+// ——————— a permissão do navegador vence a lembrança do app ———————
+//
+// 🔴 O DEFEITO QUE ISTO CORRIGE FOI MEDIDO NO NAVEGADOR DO DONO DO APP, em
+// produção: `navigator.permissions.query({name:"geolocation"})` respondia
+// `granted` e o `bp.gps` guardado dizia `negado`. O app escondia o botão
+// "daqui" com base na lembrança, e a lembrança estava errada.
+//
+// A causa é de desenho, não de linha: `"negado"` era gravado UMA vez, no
+// callback de erro `code 1`, e **nenhum ponto do código o apagava ou
+// reescrevia**. Quem negasse uma vez — num teste, sem querer — ficava marcado
+// pra sempre, e liberar a permissão nas configurações do navegador não
+// desfazia. O app usava MEMÓRIA onde existe FONTE.
+describe("estadoGpsEfetivo: quem manda é o navegador, não a lembrança", () => {
+  it("navegador PERMITE e a lembrança diz negado: o navegador vence", () => {
+    expect(estadoGpsEfetivo("negado", "granted")).toBe("nunca");
+  });
+
+  it("navegador ainda vai PERGUNTAR: também não é negado", () => {
+    expect(estadoGpsEfetivo("negado", "prompt")).toBe("nunca");
+  });
+
+  // A direção oposta, e ela precisa existir junto: sem este caso, devolver
+  // "nunca" sempre passaria nos dois testes acima.
+  it("navegador NEGA de verdade: negado, mesmo sem lembrança", () => {
+    expect(estadoGpsEfetivo("nunca", "denied")).toBe("negado");
+    expect(estadoGpsEfetivo("negado", "denied")).toBe("negado");
+  });
+
+  // 🔴 O RAMO DO iPHONE, e ele não é hipotético: o Safari só passou a
+  // responder `permissions.query` pra geolocalização em versões recentes, e
+  // antes disso REJEITA. Sem fonte, a lembrança é tudo o que há — e o
+  // comportamento tem que ser exatamente o de hoje, senão esta correção vira
+  // uma regressão em quem não tem a API.
+  it("sem a API de permissão, a lembrança continua mandando", () => {
+    expect(estadoGpsEfetivo("negado", null)).toBe("negado");
+    expect(estadoGpsEfetivo("nunca", null)).toBe("nunca");
   });
 });

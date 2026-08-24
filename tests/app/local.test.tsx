@@ -427,3 +427,67 @@ describe("o GPS", () => {
       .toEqual({ lat: -8.31, lng: -35.41 });
   });
 });
+
+// ——————— a permissão do navegador desfaz a lembrança velha ———————
+//
+// 🔴 MEDIDO EM PRODUÇÃO, no navegador do dono do app: a API respondia
+// `granted` e o `bp.gps` dizia `negado`. O botão "daqui" — o caminho de volta
+// pro GPS, que ele pediu duas vezes — ficava escondido por causa disso.
+// `"negado"` era gravado uma vez e nenhum ponto do código o desfazia.
+describe("a permissão do navegador vence a lembrança guardada", () => {
+  function aparelhoComPermissao(estado: PermissionState | "erro") {
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      geolocation: { getCurrentPosition: vi.fn() },
+      permissions: {
+        query: estado === "erro"
+          ? vi.fn(() => Promise.reject(new Error("sem suporte")))
+          : vi.fn(() => Promise.resolve({ state: estado } as PermissionStatus)),
+      },
+    });
+  }
+
+  it("guardado 'negado' mas o navegador PERMITE: o app para de tratar como negado", async () => {
+    localStorage.setItem(CHAVE_GPS, "negado");
+    aparelhoComPermissao("granted");
+    render(<LocalVivo><Espia /></LocalVivo>);
+    expect(await screen.findByText("nao-sei|nunca")).toBeTruthy();
+  });
+
+  // 🔴 E a lembrança MENTIROSA tem que sair do aparelho, não só da tela: senão
+  // ela volta a mandar no dia em que a API não responder (o Safari antigo).
+  it("a chave velha é APAGADA do aparelho, não só ignorada", async () => {
+    localStorage.setItem(CHAVE_GPS, "negado");
+    aparelhoComPermissao("granted");
+    render(<LocalVivo><Espia /></LocalVivo>);
+    await screen.findByText("nao-sei|nunca");
+    expect(localStorage.getItem(CHAVE_GPS)).toBeNull();
+  });
+
+  // A direção oposta, e sem ela "ignora a lembrança sempre" passaria acima.
+  it("o navegador NEGA de verdade: continua negado, e fica gravado", async () => {
+    aparelhoComPermissao("denied");
+    render(<LocalVivo><Espia /></LocalVivo>);
+    expect(await screen.findByText("nao-sei|negado")).toBeTruthy();
+    expect(localStorage.getItem(CHAVE_GPS)).toBe("negado");
+  });
+
+  // 🔴 O RAMO DO iPHONE: o Safari só passou a responder `permissions.query`
+  // pra geolocalização em versões recentes — antes disso REJEITA. Sem fonte, a
+  // lembrança é tudo o que há, e o comportamento tem que ser o de antes desta
+  // correção. Se este teste cair, o conserto virou regressão no veículo real.
+  it("a API rejeitando: a lembrança continua mandando", async () => {
+    localStorage.setItem(CHAVE_GPS, "negado");
+    aparelhoComPermissao("erro");
+    render(<LocalVivo><Espia /></LocalVivo>);
+    expect(await screen.findByText("nao-sei|negado")).toBeTruthy();
+    expect(localStorage.getItem(CHAVE_GPS)).toBe("negado");
+  });
+
+  it("sem a API de permissão no navegador: a lembrança continua mandando", async () => {
+    localStorage.setItem(CHAVE_GPS, "negado");
+    vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: vi.fn() } });
+    render(<LocalVivo><Espia /></LocalVivo>);
+    expect(await screen.findByText("nao-sei|negado")).toBeTruthy();
+  });
+});
