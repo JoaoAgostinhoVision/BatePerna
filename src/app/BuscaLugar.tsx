@@ -63,54 +63,65 @@ export default function BuscaLugar() {
 
       {fase === "aberto" && (
         <div className="busca">
-          <input
-            className="busca-campo"
-            type="text"
-            autoFocus
-            placeholder="digite a cidade"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          {/* 🔴 O caminho de VOLTA pro GPS, e ele conserta um beco que já está
-              em produção: com uma cidade escolhida, `soGps` é falso, o toque
-              na pílula abre esta busca, e ela só oferecia outras cidades —
-              `pedirGps` ficava sem chamador nenhum no app.
+          {/* 🔴 O CAMPO E O BOTÃO NA MESMA LINHA, e é GEOMETRIA, não estética.
+              Este painel vive dentro da caixa do mapa, que tem altura FIXA
+              (`MAPA_ALTURA_HOME_PX`, 168px) e `overflow: hidden`. O único
+              irmão elástico aqui é o `.busca-rolo`, então **todo filho direto
+              de 44px é subtraído da lista de cidades**. Foi assim que o botão
+              nasceu comendo a lista: medido em Chrome headless 375×667, o
+              `.busca-rolo` caiu de 70,09px pra 19,70px e o primeiro resultado
+              apareceu cortado a 45%.
 
-              FORA do `.busca-rolo` de propósito, pelo mesmo motivo medido do
-              crédito do GeoNames logo abaixo: o que mora dentro da caixa que
-              rola sai de vista quando a lista de cidades cresce.
+              Lado a lado, os dois custam UMA linha de 44px — a mesma que o
+              campo sozinho custava. O custo mudou de eixo: saiu da ALTURA da
+              lista e foi pra LARGURA do campo (353px → ~277px em 375px). */}
+          <div className="busca-linha">
+            <input
+              className="busca-campo"
+              type="text"
+              autoFocus
+              placeholder="digite a cidade"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            {/* 🔴 O caminho de VOLTA pro GPS, e ele conserta um beco que já
+                estava em produção: com uma cidade escolhida, `soGps` é falso,
+                o toque na pílula abre esta busca, e ela só oferecia outras
+                cidades — `pedirGps` ficava sem chamador nenhum no app.
 
-              Some com o GPS negado — o navegador não pergunta duas vezes, e o
-              botão viraria um que não faz nada. Mesmo argumento do
-              `rotuloPilula`.
+                DENTRO da `.busca-linha` e FORA do `.busca-rolo`: as duas
+                coisas ao mesmo tempo, e cada uma resolve um problema
+                diferente. Fora do rolo, pelo motivo medido do crédito do
+                GeoNames logo abaixo (o que mora na caixa que rola sai de vista
+                quando a lista cresce). Dentro da linha, pelo orçamento de
+                altura — ver o comentário da `.busca-linha` acima.
 
-              🔴 E some também com o CAMPO PREENCHIDO — decisão do dono do app,
-              2026-08-23. MEDIDO em Chrome headless 375×667 com o CSS real: o
-              botão é filho direto de flex do `.busca` (altura fixa 168px), e
-              os 44px dele mais o gap saíam inteiros do orçamento do
-              `.busca-rolo` (70,09px → 19,70px, o primeiro resultado cortado
-              pela metade) sempre que havia lista na tela — e é sempre que há
-              lista que o botão fica ao lado dela, porque a busca só enche com
-              texto digitado. Escondê-lo junto com o texto devolve o
-              `.busca-rolo` inteiro pra lista sem custar nada de layout: quando
-              o botão está na tela a lista está vazia, e quando a lista aparece
-              o botão já saiu. Também limpa o modelo mental — "de onde eu
-              estou" é ALTERNATIVA a buscar, não companheiro da busca.
+                🔴 FICA VISÍVEL ENQUANTO SE DIGITA, e isso é pedido explícito
+                do dono do app depois de usar o app. Uma versão anterior o
+                escondia com o campo preenchido, o que devolvia a altura à
+                lista mas tirava o GPS da mão de quem está no meio da busca.
+                Lado a lado o problema não existe: os dois custam a MESMA linha
+                de 44px que o campo sozinho custava.
 
-              `q.trim() === ""`, não `!q`: é a MESMA pergunta que o efeito de
-              busca já faz logo acima — espaço em branco não é "digitou", e uma
-              fonte só pra essa pergunta evita as duas discordando. */}
-          {gps !== "negado" && q.trim() === "" && (
-            <button
-              className="busca-item"
-              onClick={() => {
-                pedirGps();
-                setFase("fechado");
-              }}
-            >
-              de onde eu estou
-            </button>
-          )}
+                Some só com o GPS negado — o navegador não pergunta duas vezes,
+                e o botão viraria um que não faz nada. Mesmo argumento do
+                `rotuloPilula`.
+
+                O rótulo é `daqui`, e não uma frase: é o vocabulário que a
+                pílula do mapa já usa (`daqui · trocar`), e é o que cabe nos
+                ~69px que sobram sem espremer o campo de digitar. */}
+            {gps !== "negado" && (
+              <button
+                className="busca-item busca-daqui"
+                onClick={() => {
+                  pedirGps();
+                  setFase("fechado");
+                }}
+              >
+                daqui
+              </button>
+            )}
+          </div>
           {/* 🔴 O que ROLA é só esta caixa. O campo fica em cima dela e o
               crédito embaixo, os dois FORA da área de rolagem — ver o
               comentário do crédito logo abaixo. */}

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, cleanup, act, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup, act, fireEvent, within } from "@testing-library/react";
 import BuscaLugar, { ESPERA_MS } from "@/app/BuscaLugar";
 import LocalVivo from "@/app/local";
 import { CHAVE_GPS, CHAVE_LOCAL, CHAVE_SESSAO, MARCA_SESSAO } from "@/lib/local";
@@ -91,7 +91,7 @@ describe("a busca", () => {
   // 🔴 Isto conserta um beco PRÉ-EXISTENTE, não desta rodada: com uma cidade
   // escolhida, `soGps` é falso, o toque na pílula abre a busca, e a busca só
   // oferecia outras cidades. `pedirGps` ficava sem nenhum chamador.
-  it("o painel oferece 'de onde eu estou' e o toque PEDE o GPS", async () => {
+  it("o painel oferece o 'daqui' e o toque PEDE o GPS", async () => {
     const pediu = vi.fn();
     vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: pediu } });
     localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
@@ -101,7 +101,7 @@ describe("a busca", () => {
     render(<LocalVivo><BuscaLugar /></LocalVivo>);
     const pilula = await screen.findByRole("button", { name: /de Gravatá/ });
     await act(async () => { pilula.click(); });
-    const volta = screen.getByRole("button", { name: /de onde eu estou/i });
+    const volta = screen.getByRole("button", { name: /^daqui$/i });
     const antes = pediu.mock.calls.length;
     await act(async () => { volta.click(); });
     expect(pediu.mock.calls.length).toBeGreaterThan(antes);
@@ -112,26 +112,30 @@ describe("a busca", () => {
 
   // Regra da casa (é o mesmo argumento do `rotuloPilula`): negado uma vez, o
   // navegador não pergunta de novo — o item viraria um botão que não faz nada.
-  it("com gps negado, o item 'de onde eu estou' NÃO aparece", async () => {
+  it("com gps negado, o 'daqui' NÃO aparece", async () => {
     await abrir();  // o helper já grava bp.gps = "negado"
-    expect(screen.queryByRole("button", { name: /de onde eu estou/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^daqui$/i })).toBeNull();
     // Não-vacuidade: o painel ESTÁ aberto. Sem esta linha, o teste passa com o
     // componente inteiro apagado — é a família "teste de ausência sem o irmão
     // de presença é meia prova".
     expect(screen.getByRole("textbox")).toBeTruthy();
   });
 
-  // 🔴 POSICIONAL. Até o Critical de 2026-08-23 este teste media a posição com
-  // a LISTA CHEIA — mas essa decisão apagou o próprio botão sempre que há
-  // lista na tela (ver o describe "o botão 'de onde eu estou' e o campo",
-  // abaixo). A posição agora só é observável com o CAMPO VAZIO, que é o único
-  // estado em que o botão existe — e é exatamente o estado em que o
-  // `.busca-rolo` já está montado no DOM (vazio de itens, mas presente), então
-  // a mutação "mover o bloco pra dentro do `.busca-rolo`" continua detectável
-  // sem precisar de lista nem de fetch.
-  it("o 'de onde eu estou' fica FORA da caixa que rola", async () => {
+  // 🔴 POSICIONAL, e com a LISTA CHEIA — que é o cenário em que a posição
+  // importa: é quando a lista cresce que o que mora dentro da caixa que rola
+  // sai de vista (medido em 375×667: 168px visíveis de 344px de conteúdo).
+  //
+  // ⚠️ Uma versão anterior deste teste rodava com o campo VAZIO, porque a
+  // primeira correção do Critical apagava o botão assim que se digitava. O João
+  // usou e pediu o contrário — o botão agora divide a primeira linha com o
+  // campo e fica na tela o tempo todo —, então o cenário forte voltou a ser
+  // possível e é o que se mede aqui.
+  it("o 'daqui' fica FORA da caixa que rola, com a lista cheia", async () => {
     const pediu = vi.fn();
     vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: pediu } });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json([GRAVATA, RECIFE, GRAVATA, RECIFE, GRAVATA]),
+    );
     // 🔴 Uma cidade escolhida É A PRÉ-CONDIÇÃO de o toque ABRIR o painel: com
     // `local` = "não sei" e `gps` = "nunca", `soGps` é true e a pílula PEDE o
     // GPS em vez de abrir. O marcador de sessão vai junto porque, sem ele, a
@@ -144,23 +148,30 @@ describe("a busca", () => {
     render(<LocalVivo><BuscaLugar /></LocalVivo>);
     const pilula = await screen.findByRole("button", { name: /de Gravatá/ });
     await act(async () => { pilula.click(); });
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Gravatá" } });
+    await screen.findAllByText(/Pernambuco/);
 
-    const volta = screen.getByRole("button", { name: /de onde eu estou/i });
+    const volta = screen.getByRole("button", { name: /^daqui$/i });
     expect(volta.closest(".busca-rolo"), "o item voltou pra dentro da caixa que rola").toBeNull();
     expect(volta.closest(".busca"), "o item saiu do painel de busca").not.toBeNull();
   });
 
-  // ——— o botão só existe com o campo VAZIO (decisão do João, 2026-08-23) ———
+  // ——— o botão divide a PRIMEIRA LINHA com o campo (decisão do João, 2026-08-23) ———
   //
-  // 🔴 CRITICAL da revisão: o botão entrava como filho direto de flex do
-  // `.busca` (altura fixa 168px, `overflow: hidden`), e o único irmão elástico
-  // é o `.busca-rolo`. MEDIDO em Chrome headless 375×667 com o CSS real: os
-  // 44px do botão mais o gap saíam INTEIROS do orçamento da lista —
+  // 🔴 CRITICAL da revisão da branch: o botão entrava como filho direto de flex
+  // do `.busca` (altura fixa 168px, `overflow: hidden`), e o único irmão
+  // elástico é o `.busca-rolo`. MEDIDO em Chrome headless 375×667 com o CSS
+  // real: os 44px do botão mais o gap saíam INTEIROS do orçamento da lista —
   // `.busca-rolo` caiu de 70,09px pra 19,70px, e o primeiro resultado aparecia
-  // cortado pela metade (19,70 de 44px, 45%). A correção: o botão só existe
-  // quando não há por que ele competir por espaço com a lista — ou seja, com o
-  // campo vazio.
-  describe("o botão 'de onde eu estou' e o campo", () => {
+  // cortado pela metade (19,70 de 44px, 45%).
+  //
+  // A primeira correção escondeu o botão enquanto se digitava. **O João usou e
+  // pediu o contrário:** ele quer poder ir pro GPS NO MEIO da digitação. A saída
+  // que atende os dois é geométrica — o campo e o botão LADO A LADO custam UMA
+  // linha de 44px, a mesma que o campo sozinho custava, e a lista fica com os
+  // ~70px que sempre teve. O custo caiu na LARGURA do campo (353px → ~277px),
+  // não na altura da lista.
+  describe("o botão 'daqui' e o campo dividem a primeira linha", () => {
     async function abrirComCidadeEscolhida() {
       vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: vi.fn() } });
       localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
@@ -175,38 +186,45 @@ describe("a busca", () => {
 
     it("campo vazio: o botão está lá", async () => {
       await abrirComCidadeEscolhida();
-      expect(screen.getByRole("button", { name: /de onde eu estou/i })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /^daqui$/i })).toBeTruthy();
     });
 
-    it("campo digitado: o botão NÃO está lá", async () => {
+    // 🔴 O PEDIDO DELE, e é o oposto do que a primeira correção fez: com a
+    // lista de cidades na tela, o caminho pro GPS CONTINUA à mão.
+    it("com a lista de cidades na tela, o botão CONTINUA lá", async () => {
       vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([GRAVATA]));
       await abrirComCidadeEscolhida();
       fireEvent.change(screen.getByRole("textbox"), { target: { value: "Gravatá" } });
-      expect(screen.queryByRole("button", { name: /de onde eu estou/i })).toBeNull();
+      await screen.findAllByText(/Pernambuco/);
+      expect(screen.getByRole("button", { name: /^daqui$/i })).toBeTruthy();
     });
 
-    // Sem este teste, um `useState` que só DESLIGA o botão na primeira letra
-    // (e nunca mais o liga) passaria no teste acima sem passar neste.
-    it("digitou e limpou: o botão volta", async () => {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([GRAVATA]));
+    // 🔴 A METADE GEOMÉTRICA, e é ela que impede o Critical de voltar: os dois
+    // no MESMO elemento é o que os faz custar 44px em vez de 88. Sem esta
+    // prova, alguém "arruma" o JSX tirando o botão da linha, o teste de
+    // presença acima continua verde, e a lista volta a 19,70px.
+    it("o campo e o botão estão na MESMA linha — é isso que os faz custar 44px, não 88", async () => {
       await abrirComCidadeEscolhida();
-      const campo = screen.getByRole("textbox");
-      fireEvent.change(campo, { target: { value: "Gravatá" } });
-      expect(screen.queryByRole("button", { name: /de onde eu estou/i })).toBeNull();
-      fireEvent.change(campo, { target: { value: "" } });
-      expect(screen.getByRole("button", { name: /de onde eu estou/i })).toBeTruthy();
+      const linha = document.querySelector(".busca-linha") as HTMLElement | null;
+      expect(linha, "faltou a .busca-linha").not.toBeNull();
+      expect(linha!.querySelector(".busca-campo"), "o campo saiu da linha").not.toBeNull();
+      expect(within(linha!).getByRole("button", { name: /^daqui$/i })).toBeTruthy();
     });
 
     // 🔴 O ORÇAMENTO DE ALTURA, e é o que faltava na suíte inteira — é por isso
     // que o Critical passou por oito revisões. jsdom não mede pixel, então a
     // prova é ESTRUTURAL e ARITMÉTICA: com resultados na tela, o `.busca` tem
-    // que ter EXATAMENTE os filhos que cabem no orçamento (campo + rolo +
-    // crédito) — nenhum irmão de 44px a mais competindo com a lista pelo
+    // que ter EXATAMENTE os filhos que cabem no orçamento (a LINHA do campo +
+    // rolo + crédito) — nenhum irmão de 44px a mais competindo com a lista pelo
     // espaço fixo de 168px do painel.
     //
-    // Medido em Chrome headless 375×667 com o CSS real: sem o botão de volta,
-    // o `.busca-rolo` mediu 70,09px (antes desta rodada) contra 19,70px com o
-    // botão presente — o primeiro resultado (44px) aparecendo cortado a 45%.
+    // Medido em Chrome headless 375×667 com o CSS real, quando o botão era
+    // filho direto: o `.busca-rolo` caiu de 70,09px pra 19,70px, e o primeiro
+    // resultado (44px) apareceu cortado a 45%. Lado a lado dentro da
+    // `.busca-linha`, os dois voltam a custar UMA linha.
+    //
+    // ⚠️ A asserção é a LISTA EXATA de classes, não "não contém o botão": assim
+    // ela pega QUALQUER filho fixo novo que alguém acrescente aqui, não só este.
     it("com lista na tela, o painel tem só os três filhos que cabem no orçamento — nenhum irmão fixo a mais", async () => {
       vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([GRAVATA]));
       await abrirComCidadeEscolhida();
@@ -217,7 +235,106 @@ describe("a busca", () => {
       expect(painel, "painel de busca sumiu").not.toBeNull();
       const filhos = Array.from(painel!.children).map((el) => el.className);
       expect(filhos, "o painel ganhou (ou perdeu) um filho — orçamento de altura mudou")
-        .toEqual(["busca-campo", "busca-rolo", "busca-fonte"]);
+        .toEqual(["busca-linha", "busca-rolo", "busca-fonte"]);
+    });
+
+    // 🔴 O CSS que sustenta a geometria, e ele tem TRÊS metades que só juntas
+    // seguram: a linha não pode encolher (`flex: none`), ela tem que ser flex
+    // (senão o botão cai pra baixo e vira uma segunda linha de 44px), e o campo
+    // tem que poder ENCOLHER — item de flex nasce com `min-width: auto`, que o
+    // proibiria de ficar menor que o conteúdo e empurraria o botão pra fora do
+    // painel de 375px.
+    // 🔴 PROVA DE CASCATA, e ela é de uma espécie que esta suíte NÃO TINHA.
+    //
+    // Todos os outros testes de CSS deste repo leem o ARQUIVO e conferem uma
+    // regra por vez (`regraDe`/`valorDe`). Isso é estruturalmente cego à
+    // interação entre DUAS classes no MESMO elemento: o botão carrega
+    // `busca-item busca-daqui`, e nenhuma leitura de regra isolada diz qual
+    // das duas ganha.
+    //
+    // O defeito que isto pega foi REAL e chegou a ser commitado: escrito como
+    // `.bp .busca-daqui`, o seletor empatava em especificidade com
+    // `.bp .busca-item` (0,2,0 nos dois) e PERDIA por vir antes no arquivo.
+    // Medido em Chrome headless e reproduzido aqui: o botão saía
+    // `display: block`, `width: 100%`, `text-align: left` — tomava a primeira
+    // linha inteira e espremia o campo de digitar até ~24px, só padding e
+    // borda. Era pior que o Critical que esta mudança existe pra corrigir, e
+    // a suíte inteira ficava verde.
+    //
+    // A prova é o DOM de verdade (o componente renderiza) + a folha de estilo
+    // de verdade (o arquivo entra no documento) + o `getComputedStyle` do
+    // jsdom, que resolve especificidade e ordem. Não é o arquivo lido como
+    // texto.
+    // ⚠️ E ESTA PROVA QUASE NASCEU OCA — o tropeço vale escrito. A primeira
+    // versão renderizava como os testes vizinhos, sem ancestral `.bp`. Só que
+    // TODA regra deste arquivo é `.bp .algo`, e o `.bp` mora no `<main>` do
+    // `Moldura`/`page.tsx`, que este teste não monta: nenhuma regra casava,
+    // `getComputedStyle` devolvia o padrão do jsdom, e o `not.toBe("100%")`
+    // passava com **zero CSS aplicado**. Daí a raiz `.bp` explícita abaixo e,
+    // principalmente, a ASSERÇÃO DE NÃO-VACUIDADE: um valor que só pode ter
+    // vindo da folha. Sem ela, esta prova inteira é decoração.
+    it("a cascata deixa o BOTÃO ganhar do item de lista — as duas classes no mesmo elemento", async () => {
+      const folha = document.createElement("style");
+      folha.textContent = readFileSync(path.join(process.cwd(), "src", "app", "home.css"), "utf8");
+      document.head.appendChild(folha);
+      const raiz = document.createElement("main");
+      raiz.className = "bp";
+      document.body.appendChild(raiz);
+      try {
+        localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+          tipo: "escolhido", coord: { lat: -8.2, lng: -35.56 },
+          em: Math.floor(Date.now() / 1000), nome: "Gravatá", regiao: "Pernambuco",
+        }));
+        sessionStorage.setItem(CHAVE_SESSAO, MARCA_SESSAO);
+        vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: vi.fn() } });
+        render(<LocalVivo><BuscaLugar /></LocalVivo>, { container: raiz });
+        const pilula = await screen.findByRole("button", { name: /de Gravatá/ });
+        await act(async () => { pilula.click(); });
+
+        // 🔴 NÃO-VACUIDADE, e ela vem primeiro de propósito: os 16px do campo
+        // só existem na folha (é a regra que impede o Safari de dar zoom ao
+        // focar). Se ela não casou, nada abaixo significa coisa alguma.
+        const campo = screen.getByRole("textbox");
+        expect(getComputedStyle(campo).fontSize, "a folha de estilo NÃO está sendo aplicada — o resto deste teste é vácuo")
+          .toBe("16px");
+
+        // 🔴 OS VALORES POSITIVOS, e não a negação do que o `.busca-item`
+        // imporia. A primeira versão desta prova dizia `not.toBe("100%")`,
+        // `not.toBe("block")`, `not.toBe("left")` — o que prova que o item de
+        // LISTA perdeu, mas **passa com qualquer terceiro valor**: trocar
+        // `width: auto` por `width: 60%` no CSS não seria pego por teste
+        // nenhum do repo. Como os valores certos são conhecidos, afirmá-los é
+        // estritamente mais forte e prova a mesma coisa de quebra — se o
+        // `.busca-item` ganhar a cascata, estes três caem junto.
+        //
+        // (O defeito medido era exatamente os três valores do item de lista:
+        // o botão tomava a primeira linha inteira e espremia o campo até 24px
+        // — medido em Chrome real, não estimado.)
+        const botao = screen.getByRole("button", { name: /^daqui$/i });
+        const lido = getComputedStyle(botao);
+        expect(lido.width, "o botão deixou de encolher ao conteúdo — estica pela linha e esmaga o campo")
+          .toBe("auto");
+        expect(lido.display, "o botão perdeu o display da própria regra").toBe("flex");
+        expect(lido.textAlign, "o botão voltou a alinhar como item de LISTA").toBe("center");
+        // A metade que NÃO pode ser sobrescrita: o alvo de toque de 44px vem
+        // do `.busca-item`, e desfazê-lo por acidente deixaria o botão menor
+        // que o mínimo tocável do resto do app.
+        expect(lido.minHeight, "o alvo de toque de 44px se perdeu").toBe("44px");
+      } finally {
+        folha.remove();
+        raiz.remove();
+      }
+    });
+
+    it("a linha é flex, não encolhe, e o campo pode encolher", () => {
+      const css = semComentarios("home.css");
+      const linha = regraDe(css, ".busca-linha");
+      expect(linha, "faltou a regra .busca-linha").not.toBeNull();
+      expect(valorDe(linha![0], "display"), "a linha parou de ser flex — o botão cai pra baixo").toBe("flex");
+      expect(valorDe(linha![0], "flex"), "a linha passou a encolher").toBe("none");
+      const campo = regraDe(css, ".busca-campo");
+      expect(campo, "faltou a regra .busca-campo").not.toBeNull();
+      expect(valorDe(campo![0], "min-width"), "sem min-width:0 o campo empurra o botão pra fora").toBe("0");
     });
   });
 
