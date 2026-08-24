@@ -5,8 +5,8 @@
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
 **Última parada:** 2026-08-23. ✅ **SEGUNDA RODADA DO REVIEW FECHADA E MERGEADA.**
-`main` em **`8329284`** (merge `--no-ff` de `review-2-celular`, 15 commits). **657/657 em 49
-arquivos**, `tsc` limpo, `npm run build` passa — **os três conferidos por mim em `main` DEPOIS do
+`main` em **`8329284`** (merge `--no-ff` de `review-2-celular`, 15 commits), mais a **rodada curta
+do "daqui"** que veio depois (ver §Z). **659/659 em 49 arquivos**, `tsc` limpo, `npm run build` passa — **os três conferidos por mim em `main` DEPOIS do
 merge**, não relatados por agente. ✅ **NO AR**: deploy `● Ready · Production`, e os **seis
 marcadores conferidos por `curl`** em produção (ver §D).
 
@@ -63,7 +63,7 @@ repo ele apaga o ledger de scratch e o próprio `.claude/`.
 ```
 git branch --show-current  → main
 git status --short         → limpo
-npm test                   → 657/657 em 49 arquivos   ← tudo verde, NÃO há falha esperada
+npm test                   → 659/659 em 49 arquivos   ← tudo verde, NÃO há falha esperada
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
@@ -141,6 +141,18 @@ curl -s $H/ | grep -c 'km em linha reta'                    # 0   — 1º render
 curl -s $H/ | grep -c 'FILTRAR'                             # 1   ✅
 ```
 
+🔴 **E o CSS SERVIDO, que é uma conferência a mais e nasceu de um susto real.** O conserto do
+"daqui" (ver §Z) depende de **ordem de regra** no arquivo — e o Next **reescreve e FUNDE seletores**
+na minificação. Conferido em produção: o minificador juntou `.busca-campo` e `.busca-item` num
+seletor só pras declarações comuns, **mas preservou a ordem e o seletor de 3 classes**.
+
+```bash
+CSS=$(curl -s $H/ | grep -o '/_next/static/css/[^"]*\.css' | sort -u)   # são TRÊS arquivos
+# no que tem as regras da busca: .bp .busca-item{...width:100%...} em 7036
+#                                .bp .busca-linha .busca-daqui{...}    em 7166  ← DEPOIS ✅
+# e zero regras de .busca-item depois da nossa mexendo em width/display/text-align ✅
+```
+
 🔴 **E a conferência que o `vitest` NÃO consegue dar — varrer os chunks servidos.** Não basta rodar
 `grep` no `.next/` local: o que importa é o que o navegador dele baixa. Os **6 chunks** foram
 puxados um a um de produção:
@@ -165,6 +177,31 @@ curl -s $H/rampa-do-pepe | grep -c 'data-bloco="trajeto"'   # 1
 curl -s $H/ | grep -c 'FILTRAR'                             # 1
 # nos chunks: 0 de /puxada|duracaoMax|1h30|formatarDuracao/ e >=1 de /asfalto-esburacado/.
 ```
+
+### §Z — 🆕 A RODADA CURTA DE DEPOIS: o "daqui" ao lado do campo (2026-08-23, mesma sessão)
+
+**Ele usou o app e pediu o oposto da correção do Critical:** queria poder ir pro GPS **no meio da
+digitação**. Está no ar (`main`, merge `--no-ff` de `gps-ao-lado-do-campo`, **659/659**).
+
+O campo e o botão agora dividem a primeira linha, dentro de uma `.busca-linha`. **É geometria, não
+estética:** os dois custam UMA linha de 44px, a mesma que o campo sozinho custava, e a lista fica
+com os ~70px. O custo mudou de eixo — saiu da ALTURA da lista e foi pra LARGURA do campo
+(353px → **265px**, medido em Chrome real em 375; 214px em 320). O rótulo encurtou pra **`daqui`**,
+que é o vocabulário que a pílula já usa.
+
+🔴 **E a primeira tentativa nasceu com um Critical PIOR que o original.** `.bp .busca-daqui` e
+`.bp .busca-item` empatavam em especificidade (0,2,0), e o botão carrega **as duas classes**.
+Empate se resolve por ordem, o item de LISTA vinha depois — então **ele** ganhava: o botão saía
+`display:block; width:100%; text-align:left`, tomava a linha inteira e espremia o campo até
+**24px**. Medido em Chrome real, e o defeito foi reproduzido lá **dígito a dígito** restaurando a
+regra antiga via CSSOM ao vivo.
+
+**Corrigido por DUAS vias, e as duas são necessárias por razões diferentes:**
+- a **especificidade** (`.bp .busca-linha .busca-daqui`, 0,3,0) é o que vale no navegador e
+  sobrevive a alguém reordenar o arquivo — confirmado em Chrome real;
+- a **posição**, depois do `.busca-item`, é o que torna a regra **provável**: 🔴 **medido, o
+  `getComputedStyle` do jsdom resolve este caso por ORDEM e não por especificidade.** Sem a
+  posição, o teste falharia com o CSS certo.
 
 ### 2. Leia, nesta ordem
 
@@ -526,6 +563,39 @@ consertou lógica de aplicação. Quando o revisor rotula "plan-mandated", é li
   (`const { piso: _piso, ...semPiso } = base`), e o revisor mediu que a prova sobrevive (tornar o
   campo obrigatório derruba o teste). **Antes de atualizar uma asserção, leia o NOME do teste que
   a contém.**
+
+### 4c. 🆕 O QUE A RODADA CURTA DO "daqui" ACRESCENTOU — e uma delas é ESPÉCIE DE TESTE NOVA
+
+- 🔴 **PROVA DE CASCATA — a suíte não tinha, e a falta dela deixou 659 testes verdes com o campo de
+  busca inutilizável.** Todos os testes de CSS deste repo leem **UMA regra por vez** do TEXTO do
+  arquivo (`regraDe`/`valorDe`). Isso é **estruturalmente cego** à interação entre duas classes no
+  MESMO elemento: nenhuma leitura isolada diz qual das duas ganha. A prova que faltava é **DOM real
+  do componente + a folha real injetada no documento + `getComputedStyle`** — e o jsdom aguenta.
+  ⚠️ **Com dois limites medidos, e os dois importam:** (1) o jsdom resolve por **ordem**, não por
+  especificidade — então a regra tem que estar posicionada certo pra prova existir; (2) **toda regra
+  deste projeto é `.bp .algo`**, e o `.bp` mora no `<main>` do `Moldura`/`page.tsx` — um teste de
+  componente **não o renderiza**, então sem uma raiz `.bp` explícita **nenhuma regra casa e a prova
+  inteira é vácuo**. Daí a asserção de não-vacuidade obrigatória (um valor que só pode ter vindo da
+  folha), que foi medida caindo.
+- 🔴 **ASSERÇÃO POR NEGAÇÃO É MEIA PROVA — e o argumento é geral.** As três asserções da prova de
+  cascata nasceram como `not.toBe("100%")`, `not.toBe("block")`, `not.toBe("left")`: provavam que o
+  concorrente **perdeu**, mas passam com **qualquer terceiro valor**. Trocar `width: auto` por
+  `width: 60%` não seria pego por teste nenhum do repo. **Quando o valor certo é conhecido, afirme
+  o valor certo** — é estritamente mais forte e prova a negação de quebra. Medido: as três mutações
+  que a negação deixava passar caem com a asserção positiva.
+- 🔴 **MUTAÇÃO QUE QUEBRA A SINTAXE NÃO É MUTAÇÃO — ela produz FALSO SOBREVIVENTE.** A mutação mais
+  importante da rodada (devolver o botão pra fora da linha) reportou **0 falhas** e eu quase a
+  registrei como sobrevivente. Era artefato: eu tinha inserido um `</div>` sem tirar o outro, o JSX
+  ficou malformado, **a suíte nem rodou**, e o parser leu "0 failed". **Toda mutação precisa
+  produzir código VÁLIDO, e o relatório precisa distinguir "rodou e ninguém pegou" de "não rodou".**
+  Irmã da lição da rodada anterior (âncora que não casa), com cara nova.
+- 🔴 **RODE MUTAÇÃO COM A BASE COMMITADA.** Rodei a primeira bateria com o trabalho não commitado, e
+  uma exceção deixou uma mutação aplicada — um `git checkout --` por reflexo teria apagado a
+  implementação inteira. **Commite antes; o `git checkout` do restore só é seguro assim.**
+- 🆕 **O BUNDLE REESCREVE CSS, e conserto que depende de ORDEM precisa ser conferido SERVIDO.** O
+  Next fundiu `.busca-campo` e `.busca-item` num seletor só pras declarações comuns. Neste caso a
+  ordem e o seletor de 3 classes sobreviveram (conferido em produção), mas **a verificação não é
+  opcional** quando a correção depende de posição — ver o §D.
 
 ### 4b. 🔴 A OUTRA FAMÍLIA QUE APARECEU TRÊS VEZES NESTA SESSÃO: comentário que envelhece
 
