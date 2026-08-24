@@ -34,12 +34,28 @@ de virarem código.
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA" — ele volta pra DIZER O QUE ACHOU. Isto é triagem, não retomada.
+# ▶▶ SE O JOÃO DISSER "CONTINUA" — 🔴 DESTA VEZ TEM RETOMADA, E ELA É NOMINAL.
 
-🔴 **NÃO EXISTE NADA PENDENTE DO MEU LADO.** As três rodadas de 2026-08-23 fecharam, mergearam e
-**estão no ar**, conferidas por `curl`, pelos chunks servidos e no navegador. Ele já mandou **três**
-retornos do celular, e **cada um virou uma rodada** — o quarto é o caminho provável, e ele costuma
-chegar como uma frase curta ("mudou nada aqui").
+🔴 **ELE ESTÁ NO MEIO DE RESPONDER O QUESTIONÁRIO DA 2ª FICHA — a Pedra Furada de Venturosa.**
+Foi pedido dele em 2026-08-24 responder **pela conversa**, não editando o `.md`
+("coloque para eu ir respondendo por aqui"). Ele parou no meio e pediu tudo pronto pra próxima
+sessão.
+
+**Retome por `docs/respostas-pedra-furada-WIP.md`** — respostas dele, redações minhas
+aguardando "ok", e o que falta. **A próxima pergunta é a 10, o piso**, junto com o resto do
+bloco 3 (acesso e avisos). O texto das três está no anexo daquele arquivo; não reformule.
+
+⚠️ **NÃO crie `content/fichas/pedra-furada-de-venturosa.json` ainda.** Quatro campos
+obrigatórios estão incompletos, e `loadAll` faz `fichaSchema.parse` que **estoura alto** — um
+JSON pela metade derruba build e suíte.
+
+⚠️ **E não puxe o assunto do questionário como cobrança se ele chegar falando de outra coisa.**
+Ele alterna: já mandou três retornos do celular e cada um virou rodada. Se ele vier com review,
+é triagem primeiro (protocolo abaixo); o questionário espera.
+
+✅ **Fora isso, nada pendente do meu lado.** As três rodadas de 2026-08-23 fecharam, mergearam e
+**estão no ar**, conferidas por `curl`, pelos chunks servidos e no navegador — e **o iPhone foi
+conferido em 2026-08-24** (§P item 1).
 
 🔴 **E TEM UMA PERGUNTA DE PRODUTO ESPERANDO POR ELE — §P item 4** (o painel que nunca abre com
 GPS sem sinal)**.** É um beco **pré-existente**,
@@ -127,10 +143,19 @@ de valor:
    **load-bearing por precaução**, não por medição. As perguntas menores de dedo também seguem sem
    resposta e agora são de baixo valor: barra de km no polegar, teclado do campo numérico, o campo
    de busca a 265px.
-2. 🟠 **`docs/questionario-ficha.md` continua PRONTO pra ele responder** — e é o que mais destrava
-   produto. A pergunta da extensão saiu; a do `piso` foi corrigida (ela mandava procurar uma
-   pergunta que deixou de existir). **A 2ª ficha é o que acende os filtros**, que hoje aparecem e
-   quase não filtram, porque só existe a Rampa.
+2. 🟢 **O QUESTIONÁRIO SAIU DO PAPEL — ele está respondendo, e parou no meio (2026-08-24).**
+   A 2ª ficha é a **Pedra Furada de Venturosa**. Estado, respostas e o que falta em
+   **`docs/respostas-pedra-furada-WIP.md`**; a retomada é a **pergunta 10 (o piso)**.
+   Blocos 1 e 2 fechados (nome, coordenada, nota, promessa, prêmio, voz, rótulo) + `custo` =
+   `gratis`. Faltam `piso`, o resto de `acesso`/`avisos`, quase toda a `condicao`, o
+   `discriminador` inteiro e `modos`.
+   ⚠️ **Ele respondeu PELA CONVERSA, a pedido dele** — o `docs/questionario-ficha.md` continua
+   como está, é a fonte das perguntas, não o lugar das respostas.
+   🔴 **E nasceu uma pergunta de produto dele lá dentro: o app NÃO TEM CAMPO DE HORÁRIO.** O
+   portão da Pedra Furada abre 5h–17h, e isso só pode virar prosa dentro de `acesso` — o carimbo
+   só olha chuva, então às 18h com céu limpo a ficha diz *"hoje o tempo deixa"* com o portão
+   fechado. Mesma família do `SEM INFORMAÇÕES · tome cuidado`: o app afirmando mais do que sabe.
+   **Já foi dito a ele; é rodada nova se ele quiser. Não construa por conta própria.**
 3. 🔴 **DADO NOVO SOBRE O DONO DO APP (2026-08-24), e ele muda como se lê o resto deste item:
    o João BLOQUEIA a localização por padrão no navegador, de propósito** — "às vezes acesso sites
    que pedem muitos acessos". Ele removeu o bloqueio só pra testar e **deixou bloqueado de novo**.
