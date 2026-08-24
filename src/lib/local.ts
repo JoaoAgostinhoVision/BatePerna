@@ -67,6 +67,38 @@ export function lerEstadoGps(bruto: string | null): EstadoGps {
   return bruto === "negado" ? "negado" : "nunca";
 }
 
+/** O que o NAVEGADOR responde sobre a permissão de geolocalização.
+ *  `null` quer dizer "não deu pra perguntar" — a API não existe, ou rejeitou. */
+export type PermissaoGps = "granted" | "denied" | "prompt" | null;
+
+/** Negado de verdade, ou só lembrança velha?
+ *
+ *  🔴 ESTA FUNÇÃO EXISTE POR UM DEFEITO MEDIDO NO CELULAR DO DONO DO APP, em
+ *  produção: `navigator.permissions.query({name:"geolocation"})` respondia
+ *  `granted` e o `bp.gps` guardado dizia `negado`. O app escondia o caminho de
+ *  volta pro GPS — a funcionalidade que ele tinha pedido DUAS vezes — com base
+ *  numa lembrança que o navegador desmentia.
+ *
+ *  A causa era de desenho: `"negado"` era gravado uma única vez, no callback de
+ *  erro `code 1`, e **nenhum ponto do código o apagava ou reescrevia**. Quem
+ *  negasse uma vez ficava marcado pra sempre, e liberar a permissão nas
+ *  configurações não desfazia. **O app usava MEMÓRIA onde existe FONTE.**
+ *
+ *  Agora a fonte manda, e a lembrança é só o que sobra quando não há fonte.
+ *
+ *  ⚠️ O ramo do `null` NÃO é defensivo à toa: o Safari só passou a responder
+ *  `permissions.query` pra geolocalização em versões recentes, e antes disso
+ *  **rejeita**. Neste app isso importa de verdade — o veículo é um PWA
+ *  instalado no iPhone. Sem fonte, o comportamento tem que ser exatamente o de
+ *  antes desta correção, senão o conserto vira regressão em quem não tem a API.
+ *
+ *  Puro de propósito, como o resto deste arquivo: quem chama o navegador é o
+ *  `src/app/local.tsx`. */
+export function estadoGpsEfetivo(lembranca: EstadoGps, permissao: PermissaoGps): EstadoGps {
+  if (permissao === null) return lembranca;
+  return permissao === "denied" ? "negado" : "nunca";
+}
+
 export function coordDe(l: Local): Coord | null {
   return l.tipo === "nao-sei" ? null : l.coord;
 }

@@ -7,9 +7,11 @@ import {
   MARCA_SESSAO,
   NAO_SEI,
   escolhaAindaVale,
+  estadoGpsEfetivo,
   lerEstadoGps,
   lerLocal,
   type EstadoGps,
+  type PermissaoGps,
   type Local,
 } from "@/lib/local";
 
@@ -102,11 +104,46 @@ export default function LocalVivo({ children }: { children: ReactNode }) {
   useEffect(() => {
     let guardado: Local = NAO_SEI;
     let marcador: string | null = null;
+    let lembranca: EstadoGps = "nunca";
     try {
       guardado = lerLocal(localStorage.getItem(CHAVE_LOCAL));
-      setGps(lerEstadoGps(localStorage.getItem(CHAVE_GPS)));
+      lembranca = lerEstadoGps(localStorage.getItem(CHAVE_GPS));
+      setGps(lembranca);
       marcador = sessionStorage.getItem(CHAVE_SESSAO);
     } catch { /* sem armazenamento: segue como "não sei" */ }
+
+    // 🔴 PERGUNTA AO NAVEGADOR, e o que ele responder VENCE a lembrança.
+    //
+    // MEDIDO em produção, no celular do dono do app: a API respondia `granted`
+    // e o `bp.gps` guardado dizia `negado` — o app escondia o caminho de volta
+    // pro GPS (a coisa que ele pediu duas vezes) por causa de uma lembrança que
+    // o navegador desmentia. `"negado"` era gravado uma vez, no callback de
+    // erro `code 1`, e nada no código o desfazia: quem negasse uma vez ficava
+    // marcado pra sempre, e liberar a permissão nas configurações não adiantava.
+    //
+    // A chave velha é APAGADA, não só ignorada — senão ela volta a mandar no
+    // dia em que a API não responder.
+    //
+    // Assíncrono e sem `await` antes do `buscarGps()` abaixo de propósito: a
+    // resposta da permissão não pode atrasar o pedido de posição, que é o que
+    // põe km na tela. Ela chega depois e corrige o rótulo.
+    (async () => {
+      const api = typeof navigator === "undefined" ? undefined : navigator.permissions;
+      if (!api?.query) return;
+      // O Safari só passou a responder isto pra geolocalização em versões
+      // recentes — antes REJEITA. Sem fonte, a lembrança continua mandando, que
+      // é o comportamento de antes desta correção.
+      const permissao = await api
+        .query({ name: "geolocation" as PermissionName })
+        .then((p) => p.state as PermissaoGps)
+        .catch(() => null);
+      const efetivo = estadoGpsEfetivo(lembranca, permissao);
+      setGps(efetivo);
+      try {
+        if (efetivo === "negado") localStorage.setItem(CHAVE_GPS, "negado");
+        else localStorage.removeItem(CHAVE_GPS);
+      } catch { /* aba anônima: vale nesta sessão e pronto */ }
+    })();
     if (guardado.tipo !== "nao-sei") setLocal(guardado);
     // A escolha à mão vence — mas só pela sessão. Decisão do João em
     // 2026-08-23, depois de ver no celular que a cidade não mudava nunca: vale
