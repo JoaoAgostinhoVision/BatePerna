@@ -41,7 +41,8 @@ de virarem código.
 retornos do celular, e **cada um virou uma rodada** — o quarto é o caminho provável, e ele costuma
 chegar como uma frase curta ("mudou nada aqui").
 
-🔴 **E TEM UMA PERGUNTA DE PRODUTO ESPERANDO POR ELE — §P item 3.** É um beco **pré-existente**,
+🔴 **E TEM UMA PERGUNTA DE PRODUTO ESPERANDO POR ELE — §P item 4** (o painel que nunca abre com
+GPS sem sinal)**.** É um beco **pré-existente**,
 não desta rodada, e ele é **irmão do defeito do §Z2** (o app decidindo por lembrança em vez de
 perguntar). **Não conserte por conta própria** — é decisão dele.
 
@@ -117,18 +118,35 @@ barro.
 ✅ **Nada do meu lado.** As três rodadas estão no ar e conferidas. O que sobra é dele, nesta ordem
 de valor:
 
-1. 🟠 **O iPHONE — e agora ele decide uma coisa que nenhum teste alcança.** Nada de três rodadas foi
-   visto em WebKit. 🔴 **A pergunta nova e mais importante: no Safari do iPhone, o
-   `navigator.permissions.query({name:"geolocation"})` RESPONDE ou REJEITA?** É isso que decide se
-   ele cai no caminho novo do §Z2 ou no fallback da lembrança. As outras, acumuladas: a barra de km
-   **arrasta com o polegar**? o campo numérico abre o **teclado certo**? **a barra encolhendo quando
-   o dedo solta em "qualquer" assusta?** o **campo de busca mais estreito** (265px em 375) e o
-   rótulo **"daqui"** funcionam no dedo? e o cartão com **"barro"** cabe na linha a ~360px?
+1. ✅ **O iPHONE FOI CONFERIDO — 2026-08-24, e ele disse "funcionou".** Safari no iPhone, as três
+   rodadas de 2026-08-23 em WebKit. **A pendência que atravessou várias sessões está FECHADA.**
+   ⚠️ **Mas uma pergunta continua sem resposta medida, e não invente que tem:** se o Safari dele
+   **responde** ou **rejeita** o `navigator.permissions.query({name:"geolocation"})`. Ele testou
+   removendo o bloqueio à mão e **bloqueou de novo depois**, então o discriminador (o botão `daqui`
+   aparecer no painel) não chegou a ser lido. O ramo do `null` em `estadoGpsEfetivo` continua
+   **load-bearing por precaução**, não por medição. As perguntas menores de dedo também seguem sem
+   resposta e agora são de baixo valor: barra de km no polegar, teclado do campo numérico, o campo
+   de busca a 265px.
 2. 🟠 **`docs/questionario-ficha.md` continua PRONTO pra ele responder** — e é o que mais destrava
    produto. A pergunta da extensão saiu; a do `piso` foi corrigida (ela mandava procurar uma
    pergunta que deixou de existir). **A 2ª ficha é o que acende os filtros**, que hoje aparecem e
    quase não filtram, porque só existe a Rampa.
-3. 🟠 **UMA PERGUNTA DE PRODUTO, pré-existente — e ela é IRMÃ do defeito do §Z2.** Não conserte por
+3. 🔴 **DADO NOVO SOBRE O DONO DO APP (2026-08-24), e ele muda como se lê o resto deste item:
+   o João BLOQUEIA a localização por padrão no navegador, de propósito** — "às vezes acesso sites
+   que pedem muitos acessos". Ele removeu o bloqueio só pra testar e **deixou bloqueado de novo**.
+   Consequências, e as duas importam:
+   - **O caminho `gps === "negado"` é o NORMAL dele, não a borda.** Pílula `escolher onde estou` →
+     painel de busca → digitar cidade. É por aí que o app vai ser usado na maioria das vezes.
+     **Desenhe pra esse estado primeiro**; o `daqui`/GPS automático é o excepcional.
+   - ✅ **E ELE FECHOU UM ACHADO MEU.** Eu levantei que o app é **mudo** sobre o bloqueio: em
+     `negado` ele troca de caminho em silêncio (`DistanciaDaqui.tsx:37` justifica com *"o navegador
+     não pergunta duas vezes"*, que é verdade sobre o **pop-up** e falsa sobre o **estado** — no
+     iPhone dá pra liberar nos Ajustes). **Decisão dele: não é problema.** O bloqueio é escolha
+     consciente, e avisar "dá pra liberar" seria a insistência que ele não quer. **Não reabra.**
+   - Nota de mecânica, porque salva tempo: o bloqueio dele é `code 1`, que grava `"negado"` — então
+     `soGps` fica **falso** e o painel **abre**. **O beco de baixo não é o caso dele.**
+
+4. 🟠 **UMA PERGUNTA DE PRODUTO, pré-existente — e ela é IRMÃ do defeito do §Z2.** Não conserte por
    conta própria:
    - **Com `local = "nao-sei"` e o GPS respondendo `code 2`/`code 3`** (sem sinal / estourou o
      prazo), `soGps` continua `true`, a pílula **sempre** pede GPS e o painel de busca **nunca
@@ -137,10 +155,10 @@ de valor:
      perguntar), e agora existe a ferramenta pra resolver: com a `permissions` na mão dá pra
      distinguir "nunca perguntou" de "não conseguiu agora". **Vale reavaliar junto.**
    - ✅ **O outro beco desta dupla MORREU no §Z2** (o `bp.gps = "negado"` eterno). Não o procure.
-4. 🟡 **`contarLigados` conta a distância mesmo sem localização** — a linha diz "1 filtro ligado" e
+5. 🟡 **`contarLigados` conta a distância mesmo sem localização** — a linha diz "1 filtro ligado" e
    o painel não desenha o grupo (está atrás do `temLocal &&`). Deferido declarado na spec, mas é
    **o sintoma que ele reclamou no 1º review**, então vale confirmar com ele se ainda incomoda.
-5. 🟡 **Dívida registrada, não bloqueio:** as **11 provas de fonte** que leem o arquivo cru
+6. 🟡 **Dívida registrada, não bloqueio:** as **11 provas de fonte** que leem o arquivo cru
    continuam lá (ver §4). Os dois helpers já existem. É trabalho de minutos.
 
 ### §D — O DEPLOY, e 🔴 O COMANDO DO REGISTRO ESTAVA INCOMPLETO
@@ -268,7 +286,7 @@ estivesse errado, o conserto viraria regressão no único ambiente que importa.
 ✅ **Provado em produção**, com o estado do defeito semeado de novo: lembrança apagada, botão
 aparece, lista com 70px.
 
-🟠 **E isto reabre uma pendência do §P item 3 com peso maior:** o outro beco (o painel que nunca
+🟠 **E isto reabre uma pendência do §P item 4 com peso maior:** o outro beco (o painel que nunca
 abre com `local="nao-sei"` e GPS falhando por `code 2`/`code 3`) é da **mesma família** — o app
 decidindo por lembrança em vez de perguntar. Vale reavaliar com a `permissions` na mão.
 
