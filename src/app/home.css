@@ -320,12 +320,34 @@
   flex: 1; min-height: 0; overflow-y: auto;
   display: flex; flex-direction: column; gap: .4rem;
 }
+/* 🔴 A PRIMEIRA LINHA: o campo e o botão "daqui" lado a lado, e isto é
+   ORÇAMENTO DE ALTURA, não estética. O `.busca` acima é `inset: 0` numa caixa
+   de altura FIXA (168px) com `overflow: hidden`, e o único filho elástico é o
+   `.busca-rolo` — então todo filho direto de 44px sai INTEIRO da lista de
+   cidades. MEDIDO em Chrome headless 375×667 quando o botão era filho direto:
+   o `.busca-rolo` caiu de 70,09px pra 19,70px, e o primeiro resultado (44px)
+   apareceu cortado a 45%. Lado a lado, os dois custam UMA linha.
+   O `flex: none` é o que impede a linha de encolher e devolver o defeito por
+   outra porta. Tem teste lendo esta regra. */
+.bp .busca-linha { display: flex; flex: none; gap: .4rem; }
 /* 16px, não menos: abaixo disso o Safari do iPhone dá zoom sozinho ao focar
-   o campo e a tela salta. Tem teste lendo esta regra — não baixar. */
+   o campo e a tela salta. Tem teste lendo esta regra — não baixar.
+   ⚠️ `min-width: 0` é o que deixa o campo ENCOLHER: item de flex nasce com
+   `min-width: auto`, que o proibiria de ficar menor que o próprio conteúdo e
+   empurraria o botão pra fora do painel de 375px. Tem teste. */
 .bp .busca-campo {
+  flex: 1; min-width: 0;
   font-family: var(--type); font-size: 16px; min-height: 44px;
   border: 1px solid var(--line); border-radius: 10px; padding: .5rem .7rem;
   background: var(--surface-2); color: var(--ink);
+}
+/* O botão herda a caixa do `.busca-item` (borda, raio, os 44px de alvo de
+   toque) e desfaz só o que o item de LISTA quer e o de LINHA não: largura
+   cheia e texto à esquerda. `white-space: nowrap` porque "daqui" quebrando em
+   duas linhas esticaria a linha inteira e comeria a lista pelo outro lado. */
+.bp .busca-daqui {
+  flex: none; width: auto; text-align: center; white-space: nowrap;
+  display: flex; align-items: center;
 }
 .bp .busca-item {
   display: block; width: 100%; text-align: left; min-height: 44px;
