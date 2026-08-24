@@ -7,7 +7,8 @@
 **Última parada:** 2026-08-23. ✅ **SEGUNDA RODADA DO REVIEW FECHADA E MERGEADA.**
 `main` em **`8329284`** (merge `--no-ff` de `review-2-celular`, 15 commits). **657/657 em 49
 arquivos**, `tsc` limpo, `npm run build` passa — **os três conferidos por mim em `main` DEPOIS do
-merge**, não relatados por agente. 🔴 **AINDA NÃO DEPLOYADO** — ver §D.
+merge**, não relatados por agente. ✅ **NO AR**: deploy `● Ready · Production`, e os **seis
+marcadores conferidos por `curl`** em produção (ver §D).
 
 ✅ **AS OITO TASKS FECHARAM**, cada uma com implementador → revisão com dois veredictos → fix
 round quando preciso → re-revisão escopada. Mais a **revisão da branch inteira**, que achou **1
@@ -21,18 +22,17 @@ de virarem código.
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA" — a rodada fechou. Falta O DEPLOY, e é a primeira coisa.
+# ▶▶ SE O JOÃO DISSER "CONTINUA" — ele volta pra DIZER O QUE ACHOU. Isto é triagem, não retomada.
 
-🔴 **NÃO EXISTE TASK PENDENTE, mas EXISTE UM PASSO MEU EM ABERTO: o deploy.** A rodada de
-2026-08-23 mergeou em `main` (`8329284`) e **não foi pro ar** — a sessão acabou antes. **A primeira
-coisa a fazer é perguntar se ele quer deployar agora**, com o comando do §D (que exige
-`--scope bate-perna`) e a conferência por `curl`. Só depois disso o resto.
+🔴 **NÃO EXISTE NADA PENDENTE DO MEU LADO.** A rodada de 2026-08-23 fechou, mergeou
+(`main` `8329284`) e **está no ar**, conferida por `curl`. Ele já mandou dois reviews do celular, e
+cada um virou uma rodada inteira — o terceiro é o caminho provável.
 
-🔴 **E TEM UMA PERGUNTA DE PRODUTO ESPERANDO POR ELE — §P item 3.** A revisão da branch achou dois
-becos **pré-existentes** que não são desta rodada e que ele precisa decidir. Não conserte por
-conta própria.
+🔴 **E TEM DUAS PERGUNTAS DE PRODUTO ESPERANDO POR ELE — §P item 3.** A revisão da branch achou
+dois becos **pré-existentes**, que não são desta rodada. **Não conserte por conta própria** — são
+decisões dele.
 
-Fora isso, o protocolo de triagem de sempre:
+O protocolo de triagem de sempre:
 
 - **Não devolva menu.** Não pergunte "o que você quer fazer agora".
 - **Não pergunte "o que faltou"** — ele já respondeu isso uma vez, e a resposta virou esta rodada
@@ -130,20 +130,33 @@ npx --yes vercel@latest --prod --yes --scope bate-perna
 npx --yes vercel@latest ls --scope bate-perna     # a linha de cima tem que ser ● Ready · Production
 ```
 
-🔴 **A RODADA DE 2026-08-23 NÃO FOI DEPLOYADA.** `main` está em `8329284`, verde nos três, e o que
-está no ar é a rodada anterior. **É o primeiro passo da próxima sessão** — pergunte a ele e rode.
-
-**Conferência em produção pra ESTA rodada (nenhuma rodada ainda):**
+✅ **A RODADA DE 2026-08-23 ESTÁ NO AR** — `● Ready · Production`, e os seis marcadores abaixo
+passaram em produção logo depois do deploy.
 
 ```bash
 H=https://bateperna.vercel.app
-curl -s $H/rampa-do-pepe | grep -c 'class="fatos"'          # 1  — a Rampa AGORA tem piso
-curl -s $H/rampa-do-pepe | grep -o 'barro' | head -1        # barro
-curl -s $H/ | grep -c 'km em linha reta'                    # 0  — 1º render sem localização, SEMPRE
-curl -s $H/ | grep -c 'FILTRAR'                             # 1
-# e nos chunks: 0 de /extensaoKm|formatarExtensao|kmNaTelaExtensao|DIST_MAX_KM|Tamanho da trilha/
-# (a CONTRAÇÃO chegou ao bundle, que é o que o vitest não vê).
+curl -s $H/rampa-do-pepe | grep -c 'class="fatos"'          # 1   — a Rampa AGORA tem piso ✅
+curl -s $H/rampa-do-pepe | grep -o 'barro' | wc -l          # 13  — o dado real na tela ✅
+curl -s $H/ | grep -c 'km em linha reta'                    # 0   — 1º render sem localização ✅
+curl -s $H/ | grep -c 'FILTRAR'                             # 1   ✅
 ```
+
+🔴 **E a conferência que o `vitest` NÃO consegue dar — varrer os chunks servidos.** Não basta rodar
+`grep` no `.next/` local: o que importa é o que o navegador dele baixa. Os **6 chunks** foram
+puxados um a um de produção:
+
+```bash
+CHUNKS=$(curl -s $H/ | grep -o '/_next/static/chunks/[^"]*\.js' | sort -u)
+for c in $CHUNKS; do curl -s "$H$c"; done | \
+  grep -cE 'extensaoKm|formatarExtensao|kmNaTelaExtensao|DIST_MAX_KM|EXT_MAX_KM|Tamanho da trilha'
+# 0 ✅ — a CONTRAÇÃO chegou ao bundle
+for c in $CHUNKS; do curl -s "$H$c"; done | \
+  grep -cE 'de onde eu estou|tetoDistanciaKm|asfalto-esburacado'
+# 4 ✅ — e o vocabulário NOVO chegou junto
+```
+
+⚠️ **As duas metades importam.** Só a primeira prova que o morto sumiu; sem a segunda, um deploy
+que não subiu passaria verde nas duas — nada morto e nada vivo dá zero e zero.
 
 **Conferência da rodada anterior (os seis passaram em 2026-08-21, guardados como história):**
 
