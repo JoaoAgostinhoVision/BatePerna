@@ -213,7 +213,7 @@ describe("o painel", () => {
   // ——— pré-voo: o segundo toque no chip de piso é o ÚNICO jeito de desligar
   // aquele recorte.
   //
-  // As duas faixas de km têm a parada "qualquer"; **o piso não tem chip
+  // A faixa de km tem a parada "qualquer"; **o piso não tem chip
   // equivalente**. Se o `filtros.pisoMinimo === p ? null : p` virar só `p`, a
   // pessoa que tocou "asfalto tapete" por engano fica presa nele — e nenhum
   // outro teste percebe, porque nenhum toca duas vezes no mesmo chip. Herdado
@@ -285,25 +285,28 @@ describe("os chips de piso", () => {
   });
 });
 
-// ——————— as duas faixas de km ———————
+// ——————— a faixa de km ———————
 //
-// Esta é a família de defeito que a emenda do pré-voo (item 2) mandou cobrir
-// por DUAS vias: cada faixa tem que receber o SEU limite, e os limites têm que
-// vir do módulo. As asserções de comportamento estão aqui; a de FONTE está no
-// bloco "o que o jsdom não vê", e as duas são necessárias — em runtime o
+// 🔴 Era "as DUAS faixas de km" até a Task 7 (2026-08-23): a faixa de tamanho
+// da trilha saiu da tela junto com o campo `extensaoKm`. Só a de distância
+// sobrou, e o limite dela hoje tem DUAS origens diferentes — o teto
+// (`tetoDaBarraDistancia`, calculado a partir do acervo) chega pelo PROP
+// `tetoDistanciaKm` (prova logo abaixo, "recebe o TETO que veio de fora"), e
+// o passo (`DIST_PASSO_KM`) continua vindo direto do MÓDULO (prova de FONTE em
+// "o painel não escreve km à mão — o teto vem da prop, o passo do módulo",
+// mais abaixo neste arquivo). As duas provas são necessárias — em runtime o
 // literal e a constante são o mesmo valor.
 //
-// 🔴 E a COSTURA tem DUAS pontas, achado T5-1 da revisão. Os testes de escrita
-// (mexer na faixa grava) deixavam passar verdes duas mutações de LEITURA:
-// `valor={null}` na faixa de distância (o recorte corta de verdade, a linha diz
-// "1 filtro ligado", e a faixa fica em branco dizendo "qualquer") e
-// `valor={filtros.distanciaKm}` na faixa de tamanho (os dois recortes exibindo
-// um número só). O `FaixaKm` é CONTROLADO: a Task 4 provou que ele obedece à
+// 🔴 A COSTURA tinha DUAS pontas enquanto havia duas faixas, achado T5-1 da
+// revisão: os testes de escrita (mexer na faixa grava) deixavam passar verde
+// a mutação de LEITURA `valor={null}` na faixa de distância (o recorte corta
+// de verdade, a linha diz "1 filtro ligado", e a faixa fica em branco dizendo
+// "qualquer"). O `FaixaKm` é CONTROLADO: a Task 4 provou que ele obedece à
 // prop, e provar que o painel a ALIMENTA só é possível aqui. O
 // `"o PRIMEIRO render ignora o que está guardado"` agrava — o painel nasce em
 // branco de propósito, então esta leitura de volta é O mecanismo que faz um
 // recorte guardado reaparecer na tela.
-describe("as faixas de km escrevem e leem, cada uma no seu campo", () => {
+describe("a faixa de km escreve e lê", () => {
   it("a faixa de distância escreve em distanciaKm", async () => {
     semeiaLocal();
     monta();
@@ -329,9 +332,13 @@ describe("as faixas de km escrevem e leem, cada uma no seu campo", () => {
     expect(within(grupo(DISTANCIA)).getByText("até 30 km")).toBeTruthy();
   });
 
-  // Trocar os limites entre as duas faixas é "o filtro se desliga sozinho" com
-  // outra roupa: a de tamanho aceitaria na tela um teto de distância, e o
-  // `lerFiltros` o devolveria `null` na abertura seguinte, sem nada explicando.
+  // O teto vem de FORA (prop `tetoDistanciaKm`, calculada por
+  // `tetoDaBarraDistancia`), não de uma constante do módulo — trocar a prop
+  // por um literal escrito à mão é a mesma família de "o filtro se desliga
+  // sozinho": a tela mostraria um teto que não bate com o que
+  // `tetoDaBarraDistancia` calculou pro acervo, e a barra deixaria de ter uma
+  // parada capaz de alcançar a trilha mais longe. O passo, esse sim, continua
+  // vindo do módulo (`DIST_PASSO_KM`).
   it("a faixa de distância recebe o TETO que veio de fora, e o seu passo", async () => {
     semeiaLocal();
     monta();

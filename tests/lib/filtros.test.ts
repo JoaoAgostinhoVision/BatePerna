@@ -417,12 +417,13 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
 // DAQUI — trocá-lo muda o que o app oferece, sem duas fontes pra discordar e
 // sem nada gritando.
 //
-// 🔴 Eram TRÊS até esta rodada (`DIST_PASSO_KM`, `EXT_MAX_KM`, `EXT_PASSO_KM`).
-// `DIST_MAX_KM` já tinha morrido antes — o teto da distância é dinâmico, vem
-// do acervo, e tem describe próprio ("tetoDaBarraDistancia: o teto vem do
-// acervo"). `EXT_MAX_KM` e `EXT_PASSO_KM` morrem NESTA task (Task 7,
-// 2026-08-23): sem o campo `extensaoKm` no modelo, não sobra recorte pra ter
-// teto nem passo. Só `DIST_PASSO_KM` continua de pé.
+// 🔴 Eram QUATRO até esta rodada (conferido em `a66e0ef`): `DIST_PASSO_KM`,
+// `DIST_MAX_KM`, `EXT_MAX_KM`, `EXT_PASSO_KM`. `DIST_MAX_KM` morreu na Task 5
+// desta MESMA rodada — o teto da distância virou dinâmico, vem do acervo, e
+// tem describe próprio ("tetoDaBarraDistancia: o teto vem do acervo").
+// `EXT_MAX_KM` e `EXT_PASSO_KM` morrem NESTA task (Task 7, 2026-08-23): sem o
+// campo `extensaoKm` no modelo, não sobra recorte pra ter teto nem passo. Só
+// `DIST_PASSO_KM` continua de pé.
 //
 // ⚠️ O lado direito é LITERAL de propósito: derivá-lo de qualquer coisa
 // importada do `filtros.ts` devolveria a asserção pro buraco de onde ela veio.

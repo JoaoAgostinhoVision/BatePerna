@@ -121,17 +121,17 @@ describe("a busca", () => {
     expect(screen.getByRole("textbox")).toBeTruthy();
   });
 
-  // 🔴 POSICIONAL, e é a mesma prova do crédito do GeoNames logo acima, pela
-  // mesma razão medida: o que mora dentro do `.busca-rolo` sai de vista assim
-  // que a lista de cidades cresce (medido em 375×667 com cinco resultados: 168
-  // de 344px visíveis). Este é justamente o item que precisa estar sempre
-  // alcançável.
+  // 🔴 POSICIONAL. Até o Critical de 2026-08-23 este teste media a posição com
+  // a LISTA CHEIA — mas essa decisão apagou o próprio botão sempre que há
+  // lista na tela (ver o describe "o botão 'de onde eu estou' e o campo",
+  // abaixo). A posição agora só é observável com o CAMPO VAZIO, que é o único
+  // estado em que o botão existe — e é exatamente o estado em que o
+  // `.busca-rolo` já está montado no DOM (vazio de itens, mas presente), então
+  // a mutação "mover o bloco pra dentro do `.busca-rolo`" continua detectável
+  // sem precisar de lista nem de fetch.
   it("o 'de onde eu estou' fica FORA da caixa que rola", async () => {
     const pediu = vi.fn();
     vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: pediu } });
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      Response.json([GRAVATA, RECIFE, GRAVATA, RECIFE, GRAVATA]),
-    );
     // 🔴 Uma cidade escolhida É A PRÉ-CONDIÇÃO de o toque ABRIR o painel: com
     // `local` = "não sei" e `gps` = "nunca", `soGps` é true e a pílula PEDE o
     // GPS em vez de abrir. O marcador de sessão vai junto porque, sem ele, a
@@ -144,14 +144,81 @@ describe("a busca", () => {
     render(<LocalVivo><BuscaLugar /></LocalVivo>);
     const pilula = await screen.findByRole("button", { name: /de Gravatá/ });
     await act(async () => { pilula.click(); });
-    // A lista cheia é o cenário que torna a posição observável: é com ela que
-    // o que mora dentro do rolo sai de vista.
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Gravatá" } });
-    await screen.findAllByText(/Pernambuco/);
 
     const volta = screen.getByRole("button", { name: /de onde eu estou/i });
     expect(volta.closest(".busca-rolo"), "o item voltou pra dentro da caixa que rola").toBeNull();
     expect(volta.closest(".busca"), "o item saiu do painel de busca").not.toBeNull();
+  });
+
+  // ——— o botão só existe com o campo VAZIO (decisão do João, 2026-08-23) ———
+  //
+  // 🔴 CRITICAL da revisão: o botão entrava como filho direto de flex do
+  // `.busca` (altura fixa 168px, `overflow: hidden`), e o único irmão elástico
+  // é o `.busca-rolo`. MEDIDO em Chrome headless 375×667 com o CSS real: os
+  // 44px do botão mais o gap saíam INTEIROS do orçamento da lista —
+  // `.busca-rolo` caiu de 70,09px pra 19,70px, e o primeiro resultado aparecia
+  // cortado pela metade (19,70 de 44px, 45%). A correção: o botão só existe
+  // quando não há por que ele competir por espaço com a lista — ou seja, com o
+  // campo vazio.
+  describe("o botão 'de onde eu estou' e o campo", () => {
+    async function abrirComCidadeEscolhida() {
+      vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: vi.fn() } });
+      localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+        tipo: "escolhido", coord: { lat: -8.2, lng: -35.56 },
+        em: Math.floor(Date.now() / 1000), nome: "Gravatá", regiao: "Pernambuco",
+      }));
+      sessionStorage.setItem(CHAVE_SESSAO, MARCA_SESSAO);
+      render(<LocalVivo><BuscaLugar /></LocalVivo>);
+      const pilula = await screen.findByRole("button", { name: /de Gravatá/ });
+      await act(async () => { pilula.click(); });
+    }
+
+    it("campo vazio: o botão está lá", async () => {
+      await abrirComCidadeEscolhida();
+      expect(screen.getByRole("button", { name: /de onde eu estou/i })).toBeTruthy();
+    });
+
+    it("campo digitado: o botão NÃO está lá", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([GRAVATA]));
+      await abrirComCidadeEscolhida();
+      fireEvent.change(screen.getByRole("textbox"), { target: { value: "Gravatá" } });
+      expect(screen.queryByRole("button", { name: /de onde eu estou/i })).toBeNull();
+    });
+
+    // Sem este teste, um `useState` que só DESLIGA o botão na primeira letra
+    // (e nunca mais o liga) passaria no teste acima sem passar neste.
+    it("digitou e limpou: o botão volta", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([GRAVATA]));
+      await abrirComCidadeEscolhida();
+      const campo = screen.getByRole("textbox");
+      fireEvent.change(campo, { target: { value: "Gravatá" } });
+      expect(screen.queryByRole("button", { name: /de onde eu estou/i })).toBeNull();
+      fireEvent.change(campo, { target: { value: "" } });
+      expect(screen.getByRole("button", { name: /de onde eu estou/i })).toBeTruthy();
+    });
+
+    // 🔴 O ORÇAMENTO DE ALTURA, e é o que faltava na suíte inteira — é por isso
+    // que o Critical passou por oito revisões. jsdom não mede pixel, então a
+    // prova é ESTRUTURAL e ARITMÉTICA: com resultados na tela, o `.busca` tem
+    // que ter EXATAMENTE os filhos que cabem no orçamento (campo + rolo +
+    // crédito) — nenhum irmão de 44px a mais competindo com a lista pelo
+    // espaço fixo de 168px do painel.
+    //
+    // Medido em Chrome headless 375×667 com o CSS real: sem o botão de volta,
+    // o `.busca-rolo` mediu 70,09px (antes desta rodada) contra 19,70px com o
+    // botão presente — o primeiro resultado (44px) aparecendo cortado a 45%.
+    it("com lista na tela, o painel tem só os três filhos que cabem no orçamento — nenhum irmão fixo a mais", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json([GRAVATA]));
+      await abrirComCidadeEscolhida();
+      fireEvent.change(screen.getByRole("textbox"), { target: { value: "Gravatá" } });
+      await screen.findAllByText(/Pernambuco/);
+
+      const painel = document.querySelector(".busca");
+      expect(painel, "painel de busca sumiu").not.toBeNull();
+      const filhos = Array.from(painel!.children).map((el) => el.className);
+      expect(filhos, "o painel ganhou (ou perdeu) um filho — orçamento de altura mudou")
+        .toEqual(["busca-campo", "busca-rolo", "busca-fonte"]);
+    });
   });
 
   it("mostra a região de cada resultado — sem ela o dedo acerta o lugar errado", async () => {

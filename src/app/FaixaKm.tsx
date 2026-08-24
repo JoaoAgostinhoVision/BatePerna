@@ -24,13 +24,26 @@ type Props = {
    *  ela sobe `Number(e.target.value)` cru —, e só é honesta porque as paradas
    *  são inteiras. Teto ou passo fracionário fariam km fracionário subir pelo
    *  `onChange`, e o `lerFiltros` recusa fracionário: o filtro se desligaria
-   *  sozinho na abertura seguinte. Quem passa os dois é o painel, das
-   *  constantes de `src/lib/filtros.ts`, que são inteiras. */
+   *  sozinho na abertura seguinte.
+   *
+   *  🔴 Quem GARANTE o inteiro hoje não é mais uma constante: é o
+   *  `Math.ceil(bruto / DIST_PASSO_KM) * DIST_PASSO_KM` dentro de
+   *  `tetoDaBarraDistancia` (`src/lib/filtros.ts`) — o teto virou dinâmico, e é
+   *  esse arredondamento pra cima no passo que mantém a pré-condição. Quem
+   *  passa o `passo`, esse sim, ainda vem de uma constante inteira do mesmo
+   *  módulo (`DIST_PASSO_KM`). */
   max: number;
   /** Granularidade da BARRA, e só dela. NÃO é o piso do intervalo: o piso é 1,
    *  e digitar 4 com passo 5 filtra por 4 km, o que é verdade. Prender o piso
-   *  no passo tornaria o campo indigitável (o `4` viraria `5` no primeiro
-   *  dígito, e `100` seria inalcançável pelo teclado).
+   *  no passo tornaria o campo indigitável: o `4` viraria `5` no primeiro
+   *  dígito, e nenhum número que comece por um dígito abaixo do passo seria
+   *  alcançável pelo teclado, dígito a dígito.
+   *
+   *  🔴 Isto era hipótese enquanto o `max` era fixo — hoje, com o `max`
+   *  dinâmico, o MESMO tipo de truncamento acontece de verdade, só que pelo
+   *  TETO, não pelo piso: medido com o acervo todo perto (teto 30), digitar
+   *  `50` no campo devolve `30` (ver `kmDoTexto` abaixo). O piso continua 1,
+   *  sem esse truncamento — é o teto que prende na hora.
    *
    *  ⚠️ PRÉ-CONDIÇÃO: **inteiro**, e pela mesma razão do `max` acima. */
   passo: number;
@@ -48,10 +61,12 @@ type Props = {
  *  de matá-lo — linha que não faz nada, e teste que a "protegesse" seria
  *  decoração. Pela mesma medição saiu o `txt.trim()`: `Number(" 45 ")` é `45`.
  *
- *  O TETO prende NA HORA porque é ele que carrega a honestidade: `150` na tela
- *  com o filtro cortando em `100` é a tela mentindo sobre o que está
- *  escondendo. O PISO não prende na hora — abaixo dele não há mentira, só um
- *  número menor —, e é por isso que não existe buffer de digitação aqui.
+ *  O TETO prende NA HORA porque é ele que carrega a honestidade: um número
+ *  maior que o teto atual na tela, com o filtro cortando ali mesmo, é a tela
+ *  mentindo sobre o que está escondendo — MEDIDO com o `max` dinâmico: teto
+ *  30, digitar `50` devolve `30`. O PISO não prende na hora — abaixo dele não
+ *  há mentira, só um número menor —, e é por isso que não existe buffer de
+ *  digitação aqui.
  *
  *  🔴 O piso é `< 1`, e o `=` que falta é o que separa este campo do "campo
  *  indigitável": com `<= 1`, digitar `1` esvazia o campo e todo número que
@@ -104,19 +119,24 @@ export default function FaixaKm({ rotulo, valor, max, passo, onChange }: Props) 
         max={qualquer}
         // O `step` é DESENHO, não honestidade — e a versão anterior deste
         // comentário dizia o contrário. Medido na revisão: com `step={1}`,
-        // pedir 101 à barra devolve `null` do mesmo jeito, porque o `n > max`
-        // logo abaixo fecha a porta antes de qualquer coisa sair daqui; nenhum
-        // valor acima do teto escapa, com ou sem `step`. O que o `step` evita é
-        // a barra virar granular de 1 km num trilho onde cada pixel vale meio
-        // quilômetro, com as posições 101–104 sobrando como uns 4px de zona
-        // morta que querem dizer "qualquer".
+        // pedir um valor acima do teto à barra devolve `null` do mesmo jeito,
+        // porque o `n > max` logo abaixo fecha a porta antes de qualquer coisa
+        // sair daqui; nenhum valor acima do teto escapa, com ou sem `step`. O
+        // que o `step` evita é a barra virar granular de 1 km num trilho onde
+        // cada posição acima do teto sobra como zona morta que quer dizer
+        // "qualquer" — 🔴 o `max` agora é dinâmico, então a densidade
+        // (km por pixel do trilho) muda com o acervo: no piso mínimo
+        // (`DIST_TETO_MINIMO_KM`, teto 30), ~0,15 km por pixel — bem mais
+        // granular do que o "meio quilômetro por pixel" de quando o teto era
+        // fixo em 100.
         step={passo}
         value={valor === null ? qualquer : valor}
         aria-label={`${rotulo}: arrastar`}
         // Sem o `aria-valuetext`, quem ouve a tela ouve o NÚMERO da parada
         // extra na posição que quer dizer "qualquer" — `passo` km acima do
-        // teto, que na distância são 105 contra 100 —, e é justamente essa a
-        // mentira que a parada extra existe pra evitar.
+        // teto (o teto agora é dinâmico, então esse número muda com o acervo)
+        // —, e é justamente essa a mentira que a parada extra existe pra
+        // evitar.
         aria-valuetext={leitura}
         onChange={(e) => {
           const n = Number(e.target.value);

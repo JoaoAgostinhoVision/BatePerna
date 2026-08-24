@@ -32,10 +32,10 @@ export const CHAVE_FILTROS = "bp.filtros";
  *  desligando sozinho entre uma abertura e outra do app, sem nada na tela
  *  dizendo por quê.
  *
- *  🔴 A distância NÃO tem mais um teto fixo aqui — `DIST_MAX_KM` morreu numa
- *  rodada passada, decisão do João: "não faz sentido limitar no bate perna". O
- *  teto da barra de distância agora é dinâmico, calculado por
- *  `tetoDaBarraDistancia`.
+ *  🔴 A distância NÃO tem mais um teto fixo aqui — `DIST_MAX_KM` morreu
+ *  NESTA task (Task 5, 2026-08-23), decisão do João: "não faz sentido limitar
+ *  no bate perna". O teto da barra de distância agora é dinâmico, calculado
+ *  por `tetoDaBarraDistancia`.
  *
  *  🔴 `EXT_MAX_KM` e `EXT_PASSO_KM` — o teto e o passo do recorte de tamanho da
  *  trilha — morreram nesta task (Task 7, 2026-08-23) junto com o campo

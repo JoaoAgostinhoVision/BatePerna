@@ -210,6 +210,12 @@ describe("escolhaAindaVale", () => {
   it("gps e 'não sei' NUNCA valem como escolha — nem com marcador, nem frescos", () => {
     const gps: Local = { tipo: "gps", coord: { lat: -8.2, lng: -35.56 }, em: AGORA };
     expect(escolhaAindaVale(gps, AGORA, MARCA_SESSAO)).toBe(false);
+    // 🔴 Esta sub-asserção não tem dono de mutação próprio: `{ tipo: "nao-sei" }`
+    // não tem `em`, então `AGORA - undefined` é `NaN`, e `NaN < VALIDADE_ESCOLHA_S`
+    // é `false` — coincide com o esperado por acidente aritmético, não porque a
+    // cláusula do `tipo` tenha sido exercitada. A cobertura de mutação real desta
+    // linha vem da metade do `gps`, logo acima; esta linha fica como conferência
+    // de FORMA (o `it` continua descrevendo os dois tipos juntos).
     expect(escolhaAindaVale({ tipo: "nao-sei" }, AGORA, MARCA_SESSAO)).toBe(false);
   });
 
