@@ -13,14 +13,13 @@
  *
  *  🔴 A resposta do questionário pra Rampa do Pepê é `barro` — dado do dono do
  *  app: `voz` = "é barro: molhou, não vá", `regra_texto` = "não suba de carro
- *  comum; o barro segura água". O JSON ainda NÃO TRAZ o campo `piso`; enquanto
- *  não trouxer, a Rampa é "piso desconhecido" pro filtro e nunca é escondida
- *  por ele. COMO É O RESTO DA ESTRADA ATÉ LÁ NINGUÉM DISSE. Uma versão
- *  anterior deste comentário afirmava "a estrada até o pé da serra é asfalto
- *  e a subida é barro" — invenção, que a ficha real não sustenta em nenhum
- *  campo, e que daqui se propagou pro questionário que ele lê. Não reponha: a
- *  escala não precisa desse fato, e este projeto não afirma fato de lugar que
- *  o dono não deu.
+ *  comum; o barro segura água". Desde a Task 8 (2026-08-23) o JSON TRAZ o
+ *  campo `piso: "barro"`. COMO É O RESTO DA ESTRADA ATÉ LÁ NINGUÉM DISSE. Uma
+ *  versão anterior deste comentário afirmava "a estrada até o pé da serra é
+ *  asfalto e a subida é barro" — invenção, que a ficha real não sustenta em
+ *  nenhum campo, e que daqui se propagou pro questionário que ele lê. Não
+ *  reponha: a escala não precisa desse fato, e este projeto não afirma fato de
+ *  lugar que o dono não deu.
  *
  *  Puro de propósito, sem zod e sem `node:fs`: client components leem este
  *  módulo direto (é a mesma razão que já exilou `formatarDuracao` pra

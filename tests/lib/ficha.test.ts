@@ -162,19 +162,25 @@ describe("piso", () => {
     }
   });
 
+  // 🔴 Desde a Task 8 (2026-08-23) `base` (a Rampa real) TRAZ `piso: "barro"` —
+  // este teste é sobre o SCHEMA aceitar a ausência do campo, não sobre o
+  // conteúdo de hoje da Rampa, então a fixture apaga o campo à mão em vez de
+  // depender de uma ficha real que não o tenha.
   it("ficha SEM piso valida — é opcional", () => {
-    expect(() => fichaSchema.parse(base)).not.toThrow();
-    const lido = fichaSchema.parse(base);
+    const { piso: _piso, ...semPiso } = base;
+    expect(() => fichaSchema.parse(semPiso)).not.toThrow();
+    const lido = fichaSchema.parse(semPiso);
     expect(lido.piso).toBeUndefined();
   });
 
   // A ficha REAL. Sintética prova a função; só a real prova o conteúdo
-  // (lição 10) — a Rampa de hoje não tem piso, e por ser opcional ela tem que
-  // continuar carregando exatamente como antes.
-  it("a Rampa continua carregando, sem piso", () => {
+  // (lição 10) — desde a Task 8 (2026-08-23) a Rampa carrega com
+  // `piso: "barro"`, dado do João, sustentado pela ficha real em três lugares
+  // (não fixture).
+  it("a Rampa carrega com piso de barro — é dado real, não fixture", () => {
     const f = getFicha("rampa-do-pepe");
     expect(f).not.toBeNull();
-    expect(f!.piso).toBeUndefined();
+    expect(f!.piso).toBe("barro");
   });
 
   // 🔴 PROVA DE FONTE — mesma família do "PISOS_FILTRAVEIS é derivado de PISOS"

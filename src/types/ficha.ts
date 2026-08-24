@@ -42,8 +42,10 @@ export const fichaSchema = z.object({
   discriminador: discriminadorSchema,
   custo: z.object({ tag: z.enum(["gratis", "pago"]), valor: z.string().optional() }),
   // Opcional porque é FATO DE ROTEIRO — quem responde é quem conhece o
-  // lugar, não quem escreve o código. A ficha que existe hoje não o tem, e
-  // obrigatório ele derrubaria o carregamento dela.
+  // lugar, não quem escreve o código. Obrigatório, ele derrubaria o
+  // carregamento de qualquer ficha futura que chegue sem o dado (a Rampa, a
+  // única que existe hoje, TEM o campo desde a Task 8, 2026-08-23 — mas a
+  // opcionalidade não é sobre ela, é sobre a próxima ficha que ainda não tem).
   //
   // A rodada "review do celular" APAGOU daqui `esforco` (quão puxada, sobre o
   // corpo de quem vai) e `duracao`: este app só sabe falar de LUGAR, e quem

@@ -269,9 +269,11 @@ export function passaNoFiltro({
   // o campo) e `piso` (o bloco logo abaixo). Hoje só `piso` sobra.
   //
   // A regra é sobre o CAMPO AUSENTE, não sobre qual ficha o tem hoje: ficha
-  // sem `piso` nunca é escondida por ele, tenha o dado quem tiver. (Não é
-  // "a única ficha real não tem piso" — isso é verdade agora e falso depois da
-  // Task 8, que grava `piso: "barro"` na Rampa; a regra não depende disso.)
+  // sem `piso` nunca é escondida por ele, tenha o dado quem tiver. (Não era
+  // "a única ficha real não tem piso" — isso valia até a Task 8, 2026-08-23,
+  // que gravou `piso: "barro"` na Rampa; a regra nunca dependeu disso, e
+  // continua não dependendo — vale igual pra ficha nova que um dia chegar sem
+  // o campo.)
   //
   // "No mínimo daqui pra cima" na escala de `PISOS` (a ORDEM do array É a
   // escala). Ficha com piso PIOR que o pedido some; ficha sem piso, nunca.

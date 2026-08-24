@@ -9,9 +9,11 @@ vi.mock("@/lib/carimbo-estado", async (real) => ({
   resolverEstado: vi.fn(),
 }));
 
-// Duas fichas sintéticas pros casos do piso. Sintéticas porque o JSON real (a
-// Rampa) não traz o campo — com ele só dá pra provar AUSÊNCIA, e ausência sem
-// o irmão da presença é meia prova.
+// Duas fichas sintéticas pros casos do piso. Sintéticas porque, desde
+// 2026-08-23 (Task 8), o JSON real (a Rampa) traz `piso: "barro"` — e `barro`
+// é justamente o piso cujo formato coincide com o valor cru (ver abaixo), o
+// que o torna inútil pra provar que `rotuloPiso` faz alguma coisa. Pra isso é
+// preciso um piso COM hífen, e a Rampa real não tem — por isso as sintéticas.
 //
 // `piso: "asfalto-esburacado"`, não "barro", é load-bearing e não decorativo:
 // `rotuloPiso("barro")` devolve "barro", e aí chamar a função e mostrar o enum
@@ -200,16 +202,18 @@ describe("o piso no bloco Trajeto (a extensão saiu da tela na Task 6, e do mode
   });
 
   // O teste que fala de PRODUÇÃO: a Rampa vem do JSON de verdade (o mock
-  // acima só intercepta os slugs sintéticos) e hoje não traz o campo.
-  // Consequência, e não defeito: no celular do João esta rodada não muda uma
-  // vírgula da ficha da Rampa. Fixture sintética não provaria isso.
-  it("a Rampa real continua abrindo — e, sem piso no JSON, sem a linha", async () => {
+  // acima só intercepta os slugs sintéticos), que desde 2026-08-23 (Task 8)
+  // traz `piso: "barro"` — dado do João, sustentado pela ficha real em três
+  // lugares. Fixture sintética não provaria isso.
+  it("a Rampa real abre e mostra o piso no Trajeto", async () => {
     const rampa = getFicha("rampa-do-pepe");
-    expect(rampa?.piso).toBeUndefined();
+    expect(rampa?.piso).toBe("barro");
 
     const { container } = await abrir("rampa-do-pepe");
     expect(container.querySelector("h1")?.textContent).toBe("Rampa do Pepê");
-    expect(blocoTrajeto(container).querySelector(".fatos")).toBeNull();
+    const fatos = blocoTrajeto(container).querySelector(".fatos");
+    expect(fatos, "a linha de fatos sumiu do bloco Trajeto").not.toBeNull();
+    expect(fatos!.textContent).toBe("barro");
   });
 
   // A OUTRA metade do par seletor↔DOM: o teste de posição acima prende o DOM

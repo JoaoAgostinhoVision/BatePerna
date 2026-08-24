@@ -153,14 +153,12 @@ describe("a linha de metadados do cartão", () => {
     expect(container.textContent).not.toContain("undefined");
   });
 
-  // O teste que fala de PRODUÇÃO. `ficha` é getFichasComCondicao()[0] sem
-  // override nenhum — o JSON de verdade da Rampa, que não traz `piso` (nem
-  // trazia `esforco`/`duracao`, nem `extensaoKm` — apagado do schema nesta
-  // task, Task 7). Consequência, e não é defeito: com uma ficha só, o cartão
-  // no celular do João não muda uma vírgula nesta rodada. Fixture sintética
-  // não provaria isso.
-  it("a Rampa REAL (sem piso) mostra só distância e custo", async () => {
-    expect(ficha.piso).toBeUndefined();
+  // O teste que fala de PRODUÇÃO. `ficha` é o JSON de verdade da Rampa, que
+  // desde 2026-08-23 traz `piso: "barro"` — dado do João, sustentado pela ficha
+  // real em três lugares. É a primeira vez que o campo criado na rodada
+  // passada aparece na tela dele. Fixture sintética não provaria isso.
+  it("a Rampa REAL mostra distância, o piso de barro e o custo", async () => {
+    expect(ficha.piso).toBe("barro");
     localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
       tipo: "escolhido", coord: { lat: -8.20111, lng: -35.56472 },
       em: 1_800_000_000, nome: "Gravatá", regiao: "Pernambuco",
@@ -170,7 +168,7 @@ describe("a linha de metadados do cartão", () => {
     );
     await screen.findByText(/km em linha reta/);
     const meta = container.querySelector(".cartao-meta")?.textContent ?? "";
-    expect(meta).toBe("~60 km em linha reta · R$ 5 por pessoa");
+    expect(meta).toBe("~60 km em linha reta · barro · R$ 5 por pessoa");
   });
 
   // Ausência de ELEMENTO, não de texto — e é a diferença que importa. Nenhuma

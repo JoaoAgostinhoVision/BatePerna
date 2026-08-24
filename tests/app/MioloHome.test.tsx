@@ -8,7 +8,7 @@ import type { ParFolha } from "@/app/FolhaTrilhas";
 import FiltrosVivos from "@/app/filtros";
 import { LeiturasProvider } from "@/app/leituras";
 import LocalVivo from "@/app/local";
-import { CHAVE_FILTROS, DIST_TETO_MINIMO_KM, SEM_FILTRO } from "@/lib/filtros";
+import { CHAVE_FILTROS, SEM_FILTRO } from "@/lib/filtros";
 import { CHAVE_LOCAL } from "@/lib/local";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import type { Ficha } from "@/types/ficha";
@@ -305,6 +305,20 @@ describe("filtro e agrupamento juntos", () => {
     const { container } = monta([par("a", "fresco", PAGO)]);
     await waitFor(() => expect(container.textContent).toContain("Nenhuma trilha com esses filtros"));
     expect(screen.getByRole("button", { name: /limpar/i })).toBeTruthy();
+  });
+
+  // A consequência que o João aceitou de olhos abertos em 2026-08-23 (dado
+  // real: `piso: "barro"` gravado na Rampa, Task 8): com uma ficha só, e ela
+  // de barro, qualquer chip de piso esvazia a home. É a resposta CERTA —
+  // "no mínimo asfalto esburacado" realmente exclui uma rampa de barro — e a
+  // tela explica em vez de sumir calada.
+  it("com a única trilha de barro, um chip de piso esvazia a home e oferece limpar", async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({
+      ...SEM_FILTRO, pisoMinimo: "asfalto-esburacado",
+    }));
+    const { container } = monta([par("barrenta", "fresco", { piso: "barro" })]);
+    await waitFor(() => expect(container.textContent).toContain("Nenhuma trilha com esses filtros"));
+    expect(screen.getByRole("button", { name: /limpar filtros/i })).toBeTruthy();
   });
 
   it("limpar traz tudo de volta", async () => {

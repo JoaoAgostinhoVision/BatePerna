@@ -53,19 +53,25 @@ describe("sem filtro, tudo passa", () => {
     expect(contarLigados(SEM_FILTRO)).toBe(0);
   });
 
-  // ——— pré-voo 2: o "sem filtro, tudo passa" acima é CEGO pros guardas
-  // `!== null`, porque a ficha base é a Rampa — paga, e sem piso nem extensão
-  // preenchidos. Cada `if` daqui é um E de duas sub-cláusulas, e a que dispara
-  // primeiro esconde a outra:
+  // ——— pré-voo 2: o "sem filtro, tudo passa" acima é CEGO pro guarda
+  // `!== null`, porque nenhum filtro está ligado — SEM_FILTRO tem
+  // `pisoMinimo: null`. O `if` do piso é um E de duas sub-cláusulas, e a que
+  // dispara primeiro esconde a outra:
   //
   //   `filtros.pisoMinimo !== null && ficha.piso && ...`
   //
-  // Apagando o `filtros.pisoMinimo !== null`, a ficha base salva o teste
-  // sozinha (`ficha.piso` é undefined, curto-circuito, passa). Só uma ficha COM
-  // o campo preenchido e NENHUM filtro ligado faz o guarda ser o único a
-  // segurar. Os dois casos moram nos blocos de piso e de extensão, cada um ao
-  // lado da linha que protege. (Os irmãos deles eram `esforco` e `duracao`, os
-  // campos que esta rodada apagou.)
+  // 🔴 Até a Task 8 (2026-08-23) a ficha base (a Rampa) não trazia `piso`, e
+  // apagar o `filtros.pisoMinimo !== null` era salvo pelo curto-circuito
+  // seguinte (`ficha.piso` undefined, passa sem nem chegar no `ordemPiso`).
+  // Com `piso: "barro"` gravado na Rampa, a ficha base TEM o campo agora —
+  // `ficha.piso` é truthy —, então quem seguraria essa mutação sozinho aqui
+  // seria `ordemPiso("barro") < ordemPiso(null)`: `0 < -1` é `false`, e o
+  // guarda continua sem morder, mas por um motivo diferente do que valia antes
+  // desta task. Só uma ficha COM o campo preenchido e NENHUM filtro ligado faz
+  // o guarda `!== null` ser o único a segurar — é o caso que "ficha COM piso
+  // preenchido não some quando o recorte está desligado" (mais abaixo) prova
+  // de propósito. (O irmão deste caso era `extensaoKm`, campo que a Task 7
+  // apagou do modelo — o mesmo apagou o bloco de filtro dele daqui.)
 });
 
 describe('"dá hoje"', () => {
