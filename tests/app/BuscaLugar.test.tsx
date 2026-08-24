@@ -244,6 +244,80 @@ describe("a busca", () => {
     // tem que poder ENCOLHER — item de flex nasce com `min-width: auto`, que o
     // proibiria de ficar menor que o conteúdo e empurraria o botão pra fora do
     // painel de 375px.
+    // 🔴 PROVA DE CASCATA, e ela é de uma espécie que esta suíte NÃO TINHA.
+    //
+    // Todos os outros testes de CSS deste repo leem o ARQUIVO e conferem uma
+    // regra por vez (`regraDe`/`valorDe`). Isso é estruturalmente cego à
+    // interação entre DUAS classes no MESMO elemento: o botão carrega
+    // `busca-item busca-daqui`, e nenhuma leitura de regra isolada diz qual
+    // das duas ganha.
+    //
+    // O defeito que isto pega foi REAL e chegou a ser commitado: escrito como
+    // `.bp .busca-daqui`, o seletor empatava em especificidade com
+    // `.bp .busca-item` (0,2,0 nos dois) e PERDIA por vir antes no arquivo.
+    // Medido em Chrome headless e reproduzido aqui: o botão saía
+    // `display: block`, `width: 100%`, `text-align: left` — tomava a primeira
+    // linha inteira e espremia o campo de digitar até ~24px, só padding e
+    // borda. Era pior que o Critical que esta mudança existe pra corrigir, e
+    // a suíte inteira ficava verde.
+    //
+    // A prova é o DOM de verdade (o componente renderiza) + a folha de estilo
+    // de verdade (o arquivo entra no documento) + o `getComputedStyle` do
+    // jsdom, que resolve especificidade e ordem. Não é o arquivo lido como
+    // texto.
+    // ⚠️ E ESTA PROVA QUASE NASCEU OCA — o tropeço vale escrito. A primeira
+    // versão renderizava como os testes vizinhos, sem ancestral `.bp`. Só que
+    // TODA regra deste arquivo é `.bp .algo`, e o `.bp` mora no `<main>` do
+    // `Moldura`/`page.tsx`, que este teste não monta: nenhuma regra casava,
+    // `getComputedStyle` devolvia o padrão do jsdom, e o `not.toBe("100%")`
+    // passava com **zero CSS aplicado**. Daí a raiz `.bp` explícita abaixo e,
+    // principalmente, a ASSERÇÃO DE NÃO-VACUIDADE: um valor que só pode ter
+    // vindo da folha. Sem ela, esta prova inteira é decoração.
+    it("a cascata deixa o BOTÃO ganhar do item de lista — as duas classes no mesmo elemento", async () => {
+      const folha = document.createElement("style");
+      folha.textContent = readFileSync(path.join(process.cwd(), "src", "app", "home.css"), "utf8");
+      document.head.appendChild(folha);
+      const raiz = document.createElement("main");
+      raiz.className = "bp";
+      document.body.appendChild(raiz);
+      try {
+        localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+          tipo: "escolhido", coord: { lat: -8.2, lng: -35.56 },
+          em: Math.floor(Date.now() / 1000), nome: "Gravatá", regiao: "Pernambuco",
+        }));
+        sessionStorage.setItem(CHAVE_SESSAO, MARCA_SESSAO);
+        vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: vi.fn() } });
+        render(<LocalVivo><BuscaLugar /></LocalVivo>, { container: raiz });
+        const pilula = await screen.findByRole("button", { name: /de Gravatá/ });
+        await act(async () => { pilula.click(); });
+
+        // 🔴 NÃO-VACUIDADE, e ela vem primeiro de propósito: os 16px do campo
+        // só existem na folha (é a regra que impede o Safari de dar zoom ao
+        // focar). Se ela não casou, nada abaixo significa coisa alguma.
+        const campo = screen.getByRole("textbox");
+        expect(getComputedStyle(campo).fontSize, "a folha de estilo NÃO está sendo aplicada — o resto deste teste é vácuo")
+          .toBe("16px");
+
+        // O requisito, escrito contra o que o `.busca-item` IMPORIA se ganhasse
+        // a cascata. Foi exatamente esse o defeito medido: o botão saía com os
+        // três valores do item de LISTA e tomava a primeira linha inteira,
+        // espremendo o campo até ~24px.
+        const botao = screen.getByRole("button", { name: /^daqui$/i });
+        const lido = getComputedStyle(botao);
+        expect(lido.width, "o `.busca-item` ganhou a cascata: o botão estica pela linha e esmaga o campo")
+          .not.toBe("100%");
+        expect(lido.display, "o `.busca-item` ganhou a cascata no display").not.toBe("block");
+        expect(lido.textAlign, "o `.busca-item` ganhou a cascata no alinhamento").not.toBe("left");
+        // A metade que NÃO pode ser sobrescrita: o alvo de toque de 44px vem
+        // do `.busca-item`, e desfazê-lo por acidente deixaria o botão menor
+        // que o mínimo tocável do resto do app.
+        expect(lido.minHeight, "o alvo de toque de 44px se perdeu").toBe("44px");
+      } finally {
+        folha.remove();
+        raiz.remove();
+      }
+    });
+
     it("a linha é flex, não encolhe, e o campo pode encolher", () => {
       const css = semComentarios("home.css");
       const linha = regraDe(css, ".busca-linha");

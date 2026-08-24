@@ -341,20 +341,40 @@
   border: 1px solid var(--line); border-radius: 10px; padding: .5rem .7rem;
   background: var(--surface-2); color: var(--ink);
 }
-/* O botão herda a caixa do `.busca-item` (borda, raio, os 44px de alvo de
-   toque) e desfaz só o que o item de LISTA quer e o de LINHA não: largura
-   cheia e texto à esquerda. `white-space: nowrap` porque "daqui" quebrando em
-   duas linhas esticaria a linha inteira e comeria a lista pelo outro lado. */
-.bp .busca-daqui {
-  flex: none; width: auto; text-align: center; white-space: nowrap;
-  display: flex; align-items: center;
-}
 .bp .busca-item {
   display: block; width: 100%; text-align: left; min-height: 44px;
   border: 1px solid var(--line); border-radius: 10px; padding: .45rem .7rem;
   background: var(--surface-2); color: inherit;
 }
 .bp .busca-item:active { opacity: .7; }
+/* O botão herda a caixa do `.busca-item` (borda, raio, os 44px de alvo de
+   toque) e desfaz só o que o item de LISTA quer e o de LINHA não: largura
+   cheia e texto à esquerda. `white-space: nowrap` porque "daqui" quebrando em
+   duas linhas esticaria a linha inteira e comeria a lista pelo outro lado.
+
+   🔴 ESTE BLOCO GANHA DO `.busca-item` POR DUAS VIAS, e precisa das duas.
+   O defeito que elas corrigem foi medido: escrito como `.bp .busca-daqui`
+   (0,2,0) e posto ANTES do `.bp .busca-item` (0,2,0 também), ele EMPATAVA em
+   especificidade — e o botão carrega **as duas classes ao mesmo tempo**.
+   Empate se resolve por ordem, e o item de LISTA vinha depois: o botão saía
+   `display: block`, `width: 100%`, `text-align: left`, tomava a primeira linha
+   inteira e espremia o campo de digitar até ~24px, só padding e borda.
+
+   • **A especificidade (0,3,0)** é o que vale no NAVEGADOR: ela ganha mesmo
+     que alguém reordene o arquivo.
+   • **A posição, depois do `.busca-item`,** é o que torna a regra PROVÁVEL.
+     ⚠️ Medido: o `getComputedStyle` do jsdom resolve este caso por ORDEM, não
+     por especificidade — com a de 3 classes vindo antes, ele dá a vitória à de
+     2. Ou seja, sem esta posição o teste de cascata falharia mesmo com o CSS
+     certo, e não haveria como provar nada aqui.
+
+   Não escolha uma das duas: a de cima protege o usuário, a de baixo protege o
+   guarda. Tem teste de CASCATA em cima disto — DOM real + esta folha + o
+   `getComputedStyle` —, não leitura de texto de regra. */
+.bp .busca-linha .busca-daqui {
+  flex: none; width: auto; text-align: center; white-space: nowrap;
+  display: flex; align-items: center; justify-content: center;
+}
 .bp .busca-nome { display: block; font-family: var(--serif); font-size: 1rem; font-weight: 600; }
 .bp .busca-reg { display: block; color: var(--ink-soft); font-size: .78rem; }
 .bp .busca-aviso { color: var(--ink-soft); font-size: .85rem; padding: .3rem .1rem; }
