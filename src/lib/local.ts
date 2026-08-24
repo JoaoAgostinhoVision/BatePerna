@@ -71,6 +71,40 @@ export function coordDe(l: Local): Coord | null {
   return l.tipo === "nao-sei" ? null : l.coord;
 }
 
+/** Quanto tempo uma cidade escolhida à mão continua valendo.
+ *
+ *  Decisão do João em 2026-08-23, depois de ver no celular que a cidade não
+ *  mudava nunca: a escolha vale por SESSÃO, e ele pediu cinto E suspensório —
+ *  aba viva **e** no máximo 6h. A de aba sozinha não fecha o PWA do iPhone (o
+ *  app fica SUSPENSO, não fechado, e reabrir amanhã continuaria mostrando a
+ *  cidade de ontem); a de tempo sozinha não fecha "fechei o Safari e abri de
+ *  novo em meia hora". */
+export const VALIDADE_ESCOLHA_S = 6 * 60 * 60;
+
+/** `sessionStorage` é do domínio inteiro, como o `localStorage`. */
+export const CHAVE_SESSAO = "bp.sessao";
+
+/** O valor gravado, escrito UMA vez: quem marca e quem confere leem daqui.
+ *  Duas cópias literais poderiam divergir e a escolha nunca mais valeria. */
+export const MARCA_SESSAO = "1";
+
+/** A cidade escolhida à mão ainda manda? Puro de propósito: quem lê o relógio
+ *  e o `sessionStorage` é o `src/app/local.tsx`.
+ *
+ *  ⚠️ Buraco conhecido, e é do relógio, não do desenho: com o relógio do
+ *  aparelho atrasado, `agoraSeg - em` fica negativo e a escolha continua
+ *  valendo. Não vale código — a saída é a pessoa tocar em "trocar", que é a
+ *  mesma de sempre. */
+export function escolhaAindaVale(
+  local: Local,
+  agoraSeg: number,
+  marcadorDaSessao: string | null,
+): boolean {
+  if (local.tipo !== "escolhido") return false;
+  if (marcadorDaSessao !== MARCA_SESSAO) return false;
+  return agoraSeg - local.em < VALIDADE_ESCOLHA_S;
+}
+
 /** O texto da pílula no canto do mapa — o único lugar de onde a localização
  *  se mexe. */
 export function rotuloPilula(l: Local, gps: EstadoGps): string {

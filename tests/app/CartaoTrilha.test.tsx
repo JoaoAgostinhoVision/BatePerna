@@ -68,13 +68,15 @@ describe("a linha de metadados do cartão", () => {
     expect(meta).toContain("R$ 10");
   });
 
-  // A extensão está aqui de propósito, e é o conserto de uma asserção que
+  // O piso está aqui de propósito, e é o conserto de uma asserção que
   // MASCARAVA um sumiço: antes este teste era só `?.textContent ?? ""` +
   // `not.toContain("R$")` numa ficha gratuita SEM mais nada — e nessa ficha a
   // linha inteira não existe, então a asserção passava com o elemento AUSENTE.
   // É a mesma família do `aria-label` que escondeu a `<legend>` na Task 4.
   // Com a linha sustentada por outra parte, "não tem custo" volta a significar
   // "a linha existe e o custo não está nela".
+  // (Era `extensaoKm` quem sustentava a linha antes da Task 6; a extensão
+  // saiu da tela, então quem sustenta agora é o piso.)
   //
   // O `valor` numa ficha `gratis` não é descuido, é o que faz o teste provar o
   // que o nome promete. O schema PERMITE `{ tag: "gratis", valor: … }`, e uma
@@ -88,37 +90,32 @@ describe("a linha de metadados do cartão", () => {
     const gratis = {
       ...ficha,
       custo: { tag: "gratis" as const, valor: "R$ 5 por pessoa" },
-      extensaoKm: 4.25,
+      piso: "asfalto-esburacado" as const,
     };
     const { container } = render(<CartaoTrilha ficha={gratis} inicial={leitura} />);
     const meta = container.querySelector(".cartao-meta");
     expect(meta).not.toBeNull();
-    expect(meta?.textContent).toBe("4,3 km de trilha");
+    expect(meta?.textContent).toBe("asfalto esburacado");
   });
 
   // O PAYLOAD desta rodada chega aqui. Herdeiro direto do teste que antes
-  // guardava `esforco`/`duracao`: sem ele, os dois campos que o schema ganhou
-  // (`piso`, `extensaoKm`) podiam nunca chegar à tela e nada acusaria — todos
-  // os outros testes desta lista só provam AUSÊNCIA.
+  // guardava `esforco`/`duracao`: sem ele, o campo que o schema ganhou
+  // (`piso`) podia nunca chegar à tela e nada acusaria — todos os outros
+  // testes desta lista só provam AUSÊNCIA.
   //
-  // Três escolhas de exemplo são load-bearing, e nenhuma é decorativa:
+  // Duas escolhas de exemplo são load-bearing, e nenhuma é decorativa:
   //
   // - `piso: "asfalto-esburacado"`, não "barro". `rotuloPiso("barro")` devolve
   //   "barro": com barro, chamar a função e mostrar o enum cru dão a MESMA
   //   string e nenhuma asserção separa as duas versões. Com o hífen, separa.
-  // - `extensaoKm: 4.25`, não 4. `formatarExtensao(4)` e um `${km} km de
-  //   trilha` escrito à mão no cartão também dão a mesma string; 4.25 separa —
-  //   a função arredonda pra uma casa e usa VÍRGULA ("4,3"), a cópia à mão
-  //   mostraria "4.25". É a diferença entre provar o sufixo e provar que quem
-  //   formata é uma função só.
   // - a asserção é da LINHA INTEIRA (`toBe`), não `toContain`. É a única coisa
-  //   aqui que prova a ORDEM — distância · extensão · piso · custo.
-  it("com piso e extensão, os dois aparecem na linha, nesta ordem e já formatados", async () => {
+  //   aqui que prova a ORDEM — distância · piso · custo.
+  it("com piso, ele aparece na linha, já formatado", async () => {
     localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
       tipo: "escolhido", coord: { lat: -8.20111, lng: -35.56472 },
       em: 1_800_000_000, nome: "Gravatá", regiao: "Pernambuco",
     }));
-    const cheia = { ...ficha, piso: "asfalto-esburacado" as const, extensaoKm: 4.25 };
+    const cheia = { ...ficha, piso: "asfalto-esburacado" as const };
     const { container } = render(
       <LocalVivo><CartaoTrilha ficha={cheia} inicial={leitura} /></LocalVivo>,
     );
@@ -127,41 +124,41 @@ describe("a linha de metadados do cartão", () => {
     // O "~60 km" é de Gravatá até o waypoint da Rampa, com o conteúdo real: se
     // a ficha mudar de coordenada este número muda e o teste quebra, que é o
     // comportamento certo — alguém tem que olhar a tela de novo.
-    expect(meta).toBe("~60 km em linha reta · 4,3 km de trilha · asfalto esburacado · R$ 5 por pessoa");
+    expect(meta).toBe("~60 km em linha reta · asfalto esburacado · R$ 5 por pessoa");
   });
 
-  // Não inventar: ficha sem extensão não ganha "0 km de trilha" nem separador
-  // solto. `toBe` e não `not.toContain` de propósito — um `?? 0` pendurado na
-  // chamada sobrevive a um `toContain`, e a um `toBe` não.
-  it("sem extensaoKm, a linha não inventa e não deixa separador solto", () => {
-    const semExtensao = {
-      ...ficha,
-      piso: "asfalto-esburacado" as const,
-      extensaoKm: undefined,
-    };
-    const { container } = render(<CartaoTrilha ficha={semExtensao} inicial={leitura} />);
-    const meta = container.querySelector(".cartao-meta")?.textContent ?? "";
-    expect(meta).toBe("asfalto esburacado · R$ 5 por pessoa");
-  });
+  // 🔴 O teste "o cartão não mostra mais km de trilha, mesmo com o campo na
+  // ficha" morreu aqui (Task 7, 2026-08-23): ele escrevia `extensaoKm: 4.2`
+  // de propósito no fixture pra provar "a tela parou de mostrar" (campo
+  // presente) contra "o dado sumiu" (campo ausente) — distinção que só faz
+  // sentido enquanto o campo existe no schema. Sem `extensaoKm`, ele ficou
+  // EQUIVALENTE ao teste "ficha gratuita não ganha linha de custo" lá em
+  // cima: os dois chegam na mesma asserção final ("asfalto esburacado") pelo
+  // mesmo caminho (gratis + piso "asfalto-esburacado", sem localização). Eles
+  // diferem em dois detalhes — o sobrevivente tem `custo.valor: "R$ 5 por
+  // pessoa"` (o apagado não tinha) e não usa `<LocalVivo>` (o apagado usava)
+  // —, e nenhum dos dois carrega prova que o outro não já carregasse: o
+  // `valor` extra é exatamente o que já faz o sobrevivente mais forte (prova
+  // que `gratis` ignora um `valor` presente, não só que ele fica ausente), e
+  // o `<LocalVivo>` não muda o resultado porque nenhum dos dois grava
+  // localização — preservar os dois seria duplicar sem motivo.
 
   // Herdeiro do antigo "ficha sem esforço/duração não mostra campo vazio",
-  // apontado pros campos novos: sem piso, nem traço nem "undefined" no lugar.
+  // apontado pro campo novo: sem piso, nem traço nem "undefined" no lugar.
   it("sem piso, a linha não inventa e não deixa separador solto", () => {
-    const semPiso = { ...ficha, piso: undefined, extensaoKm: 4.25 };
+    const semPiso = { ...ficha, piso: undefined };
     const { container } = render(<CartaoTrilha ficha={semPiso} inicial={leitura} />);
     const meta = container.querySelector(".cartao-meta")?.textContent ?? "";
-    expect(meta).toBe("4,3 km de trilha · R$ 5 por pessoa");
+    expect(meta).toBe("R$ 5 por pessoa");
     expect(container.textContent).not.toContain("undefined");
   });
 
-  // O teste que fala de PRODUÇÃO. `ficha` é getFichasComCondicao()[0] sem
-  // override nenhum — o JSON de verdade da Rampa, que não traz `piso` nem
-  // `extensaoKm` (nem trazia `esforco`/`duracao`). Consequência, e não é
-  // defeito: com uma ficha só, o cartão no celular do João não muda uma
-  // vírgula nesta rodada. Fixture sintética não provaria isso.
-  it("a Rampa REAL (sem piso, sem extensão) mostra só distância e custo", async () => {
-    expect(ficha.piso).toBeUndefined();
-    expect(ficha.extensaoKm).toBeUndefined();
+  // O teste que fala de PRODUÇÃO. `ficha` é o JSON de verdade da Rampa, que
+  // desde 2026-08-23 traz `piso: "barro"` — dado do João, sustentado pela ficha
+  // real em três lugares. É a primeira vez que o campo criado na rodada
+  // passada aparece na tela dele. Fixture sintética não provaria isso.
+  it("a Rampa REAL mostra distância, o piso de barro e o custo", async () => {
+    expect(ficha.piso).toBe("barro");
     localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
       tipo: "escolhido", coord: { lat: -8.20111, lng: -35.56472 },
       em: 1_800_000_000, nome: "Gravatá", regiao: "Pernambuco",
@@ -171,7 +168,7 @@ describe("a linha de metadados do cartão", () => {
     );
     await screen.findByText(/km em linha reta/);
     const meta = container.querySelector(".cartao-meta")?.textContent ?? "";
-    expect(meta).toBe("~60 km em linha reta · R$ 5 por pessoa");
+    expect(meta).toBe("~60 km em linha reta · barro · R$ 5 por pessoa");
   });
 
   // Ausência de ELEMENTO, não de texto — e é a diferença que importa. Nenhuma
@@ -181,14 +178,13 @@ describe("a linha de metadados do cartão", () => {
   // ficava toda verde). Não é cosmético: `.bp .cartao` é flex com `gap: .2rem`
   // e `.cartao-meta` tem `margin-top: .35rem`, então um span vazio ainda é
   // item de flex e deixa ~0,55rem de folga — um cartão mais alto que os
-  // vizinhos, com nada dentro. Ficha gratuita, sem localização, sem piso e sem
-  // extensão é o caso real que chega lá.
+  // vizinhos, com nada dentro. Ficha gratuita, sem localização e sem piso é o
+  // caso real que chega lá.
   it("sem nada pra mostrar, a linha de metadados não existe", () => {
     const nua = {
       ...ficha,
       custo: { tag: "gratis" as const },
       piso: undefined,
-      extensaoKm: undefined,
     };
     const { container } = render(<CartaoTrilha ficha={nua} inicial={leitura} />);
     expect(container.querySelector(".cartao-meta")).toBeNull();

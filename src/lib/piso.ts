@@ -1,23 +1,25 @@
 /** O piso da VIA — o trecho que se DIRIGE, da estrada principal até onde o
- *  carro para. O que se caminha depois de estacionar não é deste campo; é do
- *  `extensaoKm` (ver `formatarExtensao` em `geo.ts`). O questionário faz o
- *  mesmo corte, com as mesmas palavras, e os dois têm que continuar batendo:
- *  este campo responde "que carro serve", e é isso que o filtro da tela
- *  pergunta.
+ *  carro para. O que se caminha depois de estacionar não é deste campo.
+ *
+ *  🔴 Até a contração de 2026-08-23 (Task 7) esse "o que se caminha" tinha
+ *  nome — `extensaoKm`, formatado em `geo.ts`. O campo saiu do modelo; o
+ *  corte que esta oração descreve (via dirigida × trecho a pé) continua sendo
+ *  o certo, só não há mais o par pra apontar. O questionário faz o mesmo
+ *  corte, com as mesmas palavras, e os dois têm que continuar batendo: este
+ *  campo responde "que carro serve", e é isso que o filtro da tela pergunta.
  *
  *  Dentro dessa via, vale o PIOR trecho — mesmo curto, mesmo sendo o último —
  *  e não a média nem o piso que predomina.
  *
  *  🔴 A resposta do questionário pra Rampa do Pepê é `barro` — dado do dono do
  *  app: `voz` = "é barro: molhou, não vá", `regra_texto` = "não suba de carro
- *  comum; o barro segura água". O JSON ainda NÃO TRAZ o campo `piso`; enquanto
- *  não trouxer, a Rampa é "piso desconhecido" pro filtro e nunca é escondida
- *  por ele. COMO É O RESTO DA ESTRADA ATÉ LÁ NINGUÉM DISSE. Uma versão
- *  anterior deste comentário afirmava "a estrada até o pé da serra é asfalto
- *  e a subida é barro" — invenção, que a ficha real não sustenta em nenhum
- *  campo, e que daqui se propagou pro questionário que ele lê. Não reponha: a
- *  escala não precisa desse fato, e este projeto não afirma fato de lugar que
- *  o dono não deu.
+ *  comum; o barro segura água". Desde a Task 8 (2026-08-23) o JSON TRAZ o
+ *  campo `piso: "barro"`. COMO É O RESTO DA ESTRADA ATÉ LÁ NINGUÉM DISSE. Uma
+ *  versão anterior deste comentário afirmava "a estrada até o pé da serra é
+ *  asfalto e a subida é barro" — invenção, que a ficha real não sustenta em
+ *  nenhum campo, e que daqui se propagou pro questionário que ele lê. Não
+ *  reponha: a escala não precisa desse fato, e este projeto não afirma fato de
+ *  lugar que o dono não deu.
  *
  *  Puro de propósito, sem zod e sem `node:fs`: client components leem este
  *  módulo direto (é a mesma razão que já exilou `formatarDuracao` pra

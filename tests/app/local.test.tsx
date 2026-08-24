@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, cleanup, act } from "@testing-library/react";
 import LocalVivo, { useGps, useLocal, useMexerLocal } from "@/app/local";
-import { CHAVE_GPS, CHAVE_LOCAL, type Local } from "@/lib/local";
+import { CHAVE_GPS, CHAVE_LOCAL, CHAVE_SESSAO, MARCA_SESSAO, VALIDADE_ESCOLHA_S, type Local } from "@/lib/local";
 
 afterEach(() => {
   cleanup();
   localStorage.clear();
+  sessionStorage.clear();
   vi.unstubAllGlobals();
   // Restaura qualquer espião em Storage.prototype (setItem/getItem forçados a
   // estourar) — um espião vazado envenenaria localStorage pros arquivos de
@@ -136,8 +137,10 @@ describe("o GPS", () => {
   //
   // O mock RESPONDE de propósito. Um mock mudo provaria só que nada foi
   // gravado, e não gravar por não ter resposta é outra coisa.
-  it("com cidade escolhida na mão, a montagem não sobrescreve — nem na tela, nem no aparelho", async () => {
-    localStorage.setItem(CHAVE_LOCAL, JSON.stringify(GRAVATA));
+  it("com cidade escolhida na mão E na mesma aba, a montagem não sobrescreve", async () => {
+    const agora = Math.floor(Date.now() / 1000);
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({ ...GRAVATA, em: agora }));
+    sessionStorage.setItem(CHAVE_SESSAO, MARCA_SESSAO);
     const pediu = vi.fn((ok: PositionCallback) =>
       ok({ coords: { latitude: -7, longitude: -34.8 } } as GeolocationPosition),
     );
@@ -145,15 +148,142 @@ describe("o GPS", () => {
     render(<LocalVivo><Espia /></LocalVivo>);
     expect(await screen.findByText("escolhido|nunca")).toBeTruthy();
     await act(async () => {});
-    // Nem chega a PEDIR — e isso é asserção própria, não luxo: disparado, o
-    // navegador exibe o balão de permissão do sistema pra quem já respondeu
-    // essa pergunta na mão.
+    // Nem chega a PEDIR — e isso é asserção própria: disparado, o navegador
+    // exibe o balão de permissão do sistema pra quem já respondeu na mão.
     expect(pediu).not.toHaveBeenCalled();
     expect(screen.getByTestId("espia").textContent).toBe("escolhido|nunca");
     const noAparelho = JSON.parse(localStorage.getItem(CHAVE_LOCAL)!);
     expect(noAparelho.tipo).toBe("escolhido");
     expect(noAparelho.nome).toBe("Gravatá");
-    expect(noAparelho.coord).toEqual(GRAVATA.coord);
+  });
+
+  // ——— a escolha VENCIDA, nos dois eixos, e cada um sozinho ———
+
+  // Aba nova: o `localStorage` sobreviveu, o `sessionStorage` não. É o caso de
+  // fechar o app e abrir de novo.
+  it("cidade escolhida em OUTRA aba: pede o GPS e ele vence", async () => {
+    const agora = Math.floor(Date.now() / 1000);
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({ ...GRAVATA, em: agora }));
+    // sem sessionStorage de propósito
+    aparelhoComGps((ok) =>
+      ok({ coords: { latitude: -7, longitude: -34.8 } } as GeolocationPosition),
+    );
+    render(<LocalVivo><Espia /></LocalVivo>);
+    expect(await screen.findByText("gps|nunca")).toBeTruthy();
+    expect(JSON.parse(localStorage.getItem(CHAVE_LOCAL)!)).toMatchObject({
+      tipo: "gps", coord: { lat: -7, lng: -34.8 },
+    });
+  });
+
+  // Mesma aba, escolha velha: é o PWA do iPhone suspenso desde ontem.
+  it("cidade escolhida há 7h, mesma aba: pede o GPS e ele vence", async () => {
+    const velha = Math.floor(Date.now() / 1000) - (VALIDADE_ESCOLHA_S + 60);
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({ ...GRAVATA, em: velha }));
+    sessionStorage.setItem(CHAVE_SESSAO, MARCA_SESSAO);
+    aparelhoComGps((ok) =>
+      ok({ coords: { latitude: -7, longitude: -34.8 } } as GeolocationPosition),
+    );
+    render(<LocalVivo><Espia /></LocalVivo>);
+    expect(await screen.findByText("gps|nunca")).toBeTruthy();
+  });
+
+  // 🔴 A METADE QUE IMPEDE O PISCA — e ela é a decisão de produto, não
+  // detalhe: vencida a escolha, o que está na tela CONTINUA na tela até o GPS
+  // responder, e se ele não responder, fica. Apagar uma localização boa pra
+  // mostrar "não sei" tiraria da tela um km que estava certo. Precedente já em
+  // produção, escrito em local.tsx no ramo de erro do GPS.
+  it("escolha vencida e GPS que ERRA: a cidade fica, não vira 'não sei'", async () => {
+    const velha = Math.floor(Date.now() / 1000) - (VALIDADE_ESCOLHA_S + 60);
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({ ...GRAVATA, em: velha }));
+    aparelhoComGps((_ok, erro) =>
+      erro({ code: 2, message: "" } as GeolocationPositionError),
+    );
+    render(<LocalVivo><Espia /></LocalVivo>);
+    expect(await screen.findByText("escolhido|nunca")).toBeTruthy();
+    await act(async () => {});
+    expect(screen.getByTestId("espia").textContent).toBe("escolhido|nunca");
+    expect(JSON.parse(localStorage.getItem(CHAVE_LOCAL)!).nome).toBe("Gravatá");
+  });
+
+  // ——— quem escreve o marcador, e quem NÃO escreve ———
+
+  it("escolher uma cidade marca a sessão", async () => {
+    function Botao() {
+      const { escolher } = useMexerLocal();
+      return <button onClick={() => escolher(GRAVATA)}>escolher</button>;
+    }
+    render(<LocalVivo><Botao /><Espia /></LocalVivo>);
+    await act(async () => { screen.getByText("escolher").click(); });
+    expect(sessionStorage.getItem(CHAVE_SESSAO)).toBe(MARCA_SESSAO);
+  });
+
+  // 🔴 A OUTRA DIREÇÃO, e sem ela o guarda `l.tipo === "escolhido"` não tem
+  // dono: o `escolher` é TAMBÉM o caminho de sucesso do GPS. Marcando ali, uma
+  // leitura automática se disfarçaria de escolha manual e sobreviveria 6h como
+  // se a pessoa tivesse digitado a cidade.
+  it("o GPS entrando sozinho NÃO marca a sessão", async () => {
+    aparelhoComGps((ok) =>
+      ok({ coords: { latitude: -7, longitude: -34.8 } } as GeolocationPosition),
+    );
+    render(<LocalVivo><Espia /></LocalVivo>);
+    expect(await screen.findByText("gps|nunca")).toBeTruthy();
+    expect(sessionStorage.getItem(CHAVE_SESSAO)).toBeNull();
+  });
+
+  // O ramo que já está no ar e não pode ter mudado: `tipo: "gps"` guardado
+  // continua pedindo sozinho. Um guarda largo demais mataria em silêncio o
+  // automático que a Task 1 da rodada passada entregou.
+  it("com gps guardado, continua buscando sozinho ao montar — mesmo com marcador de sessão", async () => {
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
+      tipo: "gps", coord: { lat: -8.2, lng: -35.56 }, em: Math.floor(Date.now() / 1000),
+    }));
+    sessionStorage.setItem(CHAVE_SESSAO, MARCA_SESSAO);
+    const pediu = vi.fn();
+    aparelhoComGps(pediu);
+    render(<LocalVivo><Espia /></LocalVivo>);
+    await act(async () => {});
+    expect(pediu).toHaveBeenCalled();
+  });
+
+  // sessionStorage também estoura em aba anônima do Safari. Mesma disciplina
+  // dos outros dois try/catch deste arquivo: a escolha vale em memória e
+  // pronto, sem tela de erro.
+  //
+  // Só o `sessionStorage.setItem` falha — o `localStorage.setItem` funciona
+  // de verdade. Se os dois estourassem juntos, a exceção do `localStorage` —
+  // a PRIMEIRA linha do bloco — já seria pega antes do código chegar na linha
+  // do `sessionStorage`, e o teste provaria proteção nenhuma sobre ELA.
+  //
+  // MEDIDO: `vi.spyOn(sessionStorage, "setItem")` sozinho NÃO intercepta a
+  // chamada — o objeto global do jsdom ignora a propriedade própria e o
+  // `setItem` real segue rodando, sem lançar nada. É preciso espionar
+  // `Storage.prototype` (que os dois compartilham) e usar `this` pra
+  // distinguir QUAL instância chamou, preservando o comportamento real do
+  // `localStorage` via a implementação original capturada antes do mock.
+  //
+  // Chama `escolher` direto (não via clique de botão), mesma razão do teste
+  // irmão logo acima: o despacho sintético de evento do React reporta
+  // exceções de handler como erro global em vez de propagar pro chamador,
+  // mascarando a mutação em vez de provar o guarda.
+  it("sessionStorage que estoura não derruba a montagem", () => {
+    const setItemOriginal = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
+      this: Storage, chave: string, valor: string,
+    ) {
+      if (this === sessionStorage) throw new DOMException("cheio", "QuotaExceededError");
+      return setItemOriginal.call(this, chave, valor);
+    });
+    let escolherCaptado: ((l: Local) => void) | null = null;
+    function Capta() {
+      escolherCaptado = useMexerLocal().escolher;
+      return null;
+    }
+    render(<LocalVivo><Espia /><Capta /></LocalVivo>);
+    act(() => { escolherCaptado!(GRAVATA); });
+    expect(screen.getByTestId("espia").textContent).toBe("escolhido|nunca");
+    // E o localStorage GRAVOU de verdade — não é o caso de os dois terem
+    // falhado juntos.
+    expect(localStorage.getItem(CHAVE_LOCAL)).toContain("Gravatá");
   });
 
   // A direção oposta, e as duas precisam existir juntas: sem nada guardado o
@@ -255,6 +385,10 @@ describe("o GPS", () => {
   // provaria pouco sobre a localização não ser apagada.
   it("erro não apaga a localização que já existia", async () => {
     localStorage.setItem(CHAVE_LOCAL, JSON.stringify(GRAVATA));
+    // Marcador de sessão: sem ele a escolha já não valeria (Task 2 do review
+    // do celular) e a montagem pediria o GPS sozinha, disparando o erro ANTES
+    // do toque — o que não é o que este teste mede.
+    sessionStorage.setItem(CHAVE_SESSAO, MARCA_SESSAO);
     aparelhoComGps((_ok, erro) => erro({ code: 1 } as GeolocationPositionError));
     function Botao() {
       const { pedirGps } = useMexerLocal();
@@ -262,8 +396,9 @@ describe("o GPS", () => {
     }
     render(<LocalVivo><Espia /><Botao /></LocalVivo>);
     // Antes do toque o gps ainda é "nunca": com uma cidade escolhida na mão
-    // guardada, a montagem NÃO pede a posição sozinha (ver o bloco abaixo).
-    // Este teste é sobre o TOQUE, então quem dispara aqui é o botão.
+    // guardada e a sessão viva, a montagem NÃO pede a posição sozinha (ver o
+    // bloco abaixo). Este teste é sobre o TOQUE, então quem dispara aqui é o
+    // botão.
     expect(await screen.findByText("escolhido|nunca")).toBeTruthy();
     await act(async () => { screen.getByText("pedir").click(); });
     expect(await screen.findByText("escolhido|negado")).toBeTruthy();

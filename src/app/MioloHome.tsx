@@ -1,7 +1,7 @@
 "use client";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { faseDe } from "@/lib/carimbo-fase";
-import { passaNoFiltro } from "@/lib/filtros";
+import { passaNoFiltro, tetoDaBarraDistancia } from "@/lib/filtros";
 import { coordDe } from "@/lib/local";
 import FolhaTrilhas, { type ParFolha } from "./FolhaTrilhas";
 import MapaHome from "./MapaHome";
@@ -58,6 +58,10 @@ export default function MioloHome({ pares }: { pares: ParFolha[] }) {
   //      inclusive pros que o filtro escondeu.
   // A consequência é visível e tem teste próprio ("trilha escondida pelo
   // filtro ainda derruba o agrupamento"): não é pra "consertar".
+  //
+  // 🔴 O mesmo motivo — MESMO argumento, outro consumidor — vale pro
+  // `tetoDistanciaKm` logo abaixo: ele também sai de `pares`, nunca de
+  // `visiveis`, porque com as visíveis seria circular (ver o comentário dele).
   const algumVenceu = useAlgumVenceu(pares.map((p) => atual(p).calculadoEm));
   const algumErro = pares.some((p) => atual(p).erro);
   const confia = faseDe({ conferindo: false, erro: algumErro, venceu: algumVenceu, falhou: false }) === "afirmando";
@@ -75,6 +79,21 @@ export default function MioloHome({ pares }: { pares: ParFolha[] }) {
   // (fresco primeiro). Filtrar tira cartões; nunca os embaralha.
   const visiveis = pares.filter((p) =>
     passaNoFiltro({ ficha: p.ficha, leitura: atual(p), filtros, voce, confia }),
+  );
+
+  // 🔴 O TETO DA BARRA SAI DE `pares`, NUNCA de `visiveis`, e é circular do
+  // mesmo jeito que o `confia`: com as visíveis, ligar "até 10 km" esconderia
+  // a trilha mais longe, o teto encolheria, e a barra se reescreveria embaixo
+  // do dedo — o caminho de volta pra 50 km deixaria de existir na tela.
+  //
+  // Ele nasce AQUI porque este é o único escopo que tem as três entradas
+  // juntas: o acervo, a coordenada da pessoa e o recorte ligado. Calculá-lo no
+  // painel obrigaria o painel a fazer conta de km, que é justamente o que a
+  // asserção de fonte de lá protege.
+  const tetoDistanciaKm = tetoDaBarraDistancia(
+    pares.map((p) => p.ficha),
+    voce,
+    filtros.distanciaKm,
   );
 
   // Os três consumidores, todos derivados de `visiveis` — nunca de `pares`.
@@ -98,7 +117,7 @@ export default function MioloHome({ pares }: { pares: ParFolha[] }) {
         fichas={visiveis.map((p) => p.ficha)}
         leituras={Object.fromEntries(visiveis.map((p) => [p.ficha.slug, p.leitura]))}
       />
-      <PainelFiltros visiveis={visiveis.length} />
+      <PainelFiltros visiveis={visiveis.length} tetoDistanciaKm={tetoDistanciaKm} />
       <FolhaTrilhas visiveis={visiveis} confia={confia} />
     </>
   );

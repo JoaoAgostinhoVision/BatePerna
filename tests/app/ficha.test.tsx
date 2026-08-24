@@ -9,21 +9,28 @@ vi.mock("@/lib/carimbo-estado", async (real) => ({
   resolverEstado: vi.fn(),
 }));
 
-// Três fichas sintéticas pros três casos do piso/extensão. Sintéticas porque o
-// JSON real (a Rampa) não traz nenhum dos dois campos — com ele só dá pra
-// provar AUSÊNCIA, e ausência sem o irmão da presença é meia prova.
+// Duas fichas sintéticas pros casos do piso. Sintéticas porque, desde
+// 2026-08-23 (Task 8), o JSON real (a Rampa) traz `piso: "barro"` — e `barro`
+// é justamente o piso cujo formato coincide com o valor cru (ver abaixo), o
+// que o torna inútil pra provar que `rotuloPiso` faz alguma coisa. Pra isso é
+// preciso um piso COM hífen, e a Rampa real não tem — por isso as sintéticas.
 //
-// Duas escolhas de exemplo aqui são load-bearing, e nenhuma é decorativa:
+// `piso: "asfalto-esburacado"`, não "barro", é load-bearing e não decorativo:
+// `rotuloPiso("barro")` devolve "barro", e aí chamar a função e mostrar o enum
+// cru dão a MESMA string — nenhuma asserção separaria as duas versões. Com o
+// hífen, separa.
 //
-// - `piso: "asfalto-esburacado"`, não "barro": `rotuloPiso("barro")` devolve
-//   "barro", e aí chamar a função e mostrar o enum cru dão a MESMA string —
-//   nenhuma asserção separaria as duas versões. Com o hífen, separa.
-// - `extensaoKm: 4.25`, não 4: `formatarExtensao(4)` e um `${km} km de trilha`
-//   escrito à mão dão a mesma string; 4.25 separa, porque a função arredonda
-//   pra uma casa e usa VÍRGULA ("4,3") e a cópia à mão mostraria "4.25".
-//
-// Quem "limpar" esses dois valores deixa a prova oca em silêncio.
-const { COM_FATOS, SEM_FATOS, SO_PISO } = vi.hoisted(() => {
+// 🔴 Havia uma terceira ficha aqui, `COM_FATOS` (piso + `extensaoKm: 4.25`),
+// pra provar "a tela parou de mostrar" (campo presente) contra "o dado sumiu"
+// (campo ausente). A contração desta task (Task 7, 2026-08-23) apagou
+// `extensaoKm` do schema — sem o campo, essa distinção não existe mais pra
+// provar, e `COM_FATOS` virou EQUIVALENTE a `SO_PISO` pra este teste (só o
+// `slug` difere entre as duas; o piso é o mesmo, "asfalto-esburacado", e nem
+// um nem outro tem mais o campo morto). O `slug` não carrega prova nenhuma —
+// nada no bloco de baixo lê ou compara essa string —, então a diferença não
+// separa as duas versões. O teste que usava `COM_FATOS` foi apagado junto —
+// ver a nota abaixo.
+const { SEM_FATOS, SO_PISO } = vi.hoisted(() => {
   const base = {
     slug: "morro-de-teste",
     modos: ["contemplativo"],
@@ -55,12 +62,6 @@ const { COM_FATOS, SEM_FATOS, SO_PISO } = vi.hoisted(() => {
     custo: { tag: "gratis" as const },
   };
   return {
-    COM_FATOS: {
-      ...base,
-      slug: "morro-com-fatos",
-      piso: "asfalto-esburacado",
-      extensaoKm: 4.25,
-    },
     SEM_FATOS: { ...base, slug: "morro-sem-fatos" },
     SO_PISO: { ...base, slug: "morro-so-piso", piso: "asfalto-esburacado" },
   };
@@ -70,7 +71,7 @@ const { COM_FATOS, SEM_FATOS, SO_PISO } = vi.hoisted(() => {
 // JSON de verdade, senão o teste que fala de produção viraria decoração.
 vi.mock("@/lib/ficha", async (real) => {
   const mod = await real<typeof import("@/lib/ficha")>();
-  const sinteticas = [COM_FATOS, SEM_FATOS, SO_PISO] as unknown as TipoFicha[];
+  const sinteticas = [SEM_FATOS, SO_PISO] as unknown as TipoFicha[];
   return {
     ...mod,
     getFicha: (slug: string) => sinteticas.find((f) => f.slug === slug) ?? mod.getFicha(slug),
@@ -169,28 +170,24 @@ describe("a ficha de verdade", () => {
   });
 });
 
-describe("o piso e a extensão no bloco Trajeto", () => {
-  // A asserção é POSICIONAL (`within` no corpo do waypoint, que só existe
-  // dentro do bloco Trajeto), não de existência: um dado de estrada é uma
-  // coisa debaixo do 📍 Trajeto e outra debaixo do 🚗 Acesso ou do ⚠ Avisos.
-  // Movida a linha pro bloco vizinho, o texto continua na página e este teste
-  // tem que cair mesmo assim — e cai também se ela só escorregar pra fora do
-  // `.wp-body` (ver `corpoDoWaypoint`).
-  //
-  // E é a LINHA INTEIRA (`toBe`), não `toContain`: só assim ela prova de uma
-  // vez a ordem (extensão · piso), o formato de cada um e a ausência de
-  // separador solto.
-  it("ficha com piso e extensão mostra os dois dentro do bloco Trajeto", async () => {
-    const { container } = await abrir(COM_FATOS.slug);
-    const fatos = within(corpoDoWaypoint(container)).getByText(/km de trilha/);
-    expect(fatos.textContent).toBe("4,3 km de trilha · asfalto esburacado");
-  });
+describe("o piso no bloco Trajeto (a extensão saiu da tela na Task 6, e do modelo na Task 7)", () => {
+  // 🔴 O teste "a ficha não mostra mais km de trilha, mesmo com o campo
+  // presente" morreu aqui (Task 7, 2026-08-23), com a fixture `COM_FATOS` que
+  // só ele usava. Ele provava "a tela parou de mostrar" (campo presente)
+  // contra "o dado sumiu" (campo ausente) — distinção que só faz sentido
+  // enquanto o campo existe pra estar presente ou ausente. Sem `extensaoKm`
+  // no schema, `COM_FATOS` (piso + extensaoKm) e `SO_PISO` (só piso) ficaram
+  // EQUIVALENTES pra este teste — só o `slug` os distingue, e nada aqui lê ou
+  // compara essa string —, e o teste duplicava exatamente o de baixo ("com
+  // piso, a linha mostra o piso e nada mais"). Preservar as duas seria um
+  // teste redundante fingindo provar algo que não existe mais.
 
-  // O irmão de ausência do teste acima. `toBeNull` no ELEMENTO, e não um
-  // `not.toContain` no texto: um teste de ausência de texto passa também
-  // quando o elemento existe e está vazio — que é exatamente o defeito aqui
-  // (uma linha em branco no meio do bloco).
-  it("ficha sem os dois não mostra linha vazia nem separador solto", async () => {
+  // Ausência de TEXTO mascara o sumiço do elemento: `?.textContent ?? ""`
+  // devolve a mesma string vazia com o span presente-e-vazio e com ele
+  // ausente. Aqui o que se prova é que a extensão não está mais na linha, com
+  // o elemento PRESENTE — por isso o `toBe` da linha inteira, e não um
+  // `not.toContain`.
+  it("ficha sem piso não mostra linha vazia nem separador solto", async () => {
     const { container } = await abrir(SEM_FATOS.slug);
     // Escopado pelo bloco, como o teste da Rampa aqui embaixo — a pergunta é
     // sobre o Trajeto, não sobre a página inteira.
@@ -198,26 +195,25 @@ describe("o piso e a extensão no bloco Trajeto", () => {
     expect(container.textContent).not.toContain("undefined");
   });
 
-  // O caso do meio, que nenhum dos dois acima pega: com um campo só, a linha
-  // aparece com o que tem e sem o " · " pendurado.
-  it("com só um dos dois, a linha mostra o que tem e nada mais", async () => {
+  it("com piso, a linha mostra o piso e nada mais", async () => {
     const { container } = await abrir(SO_PISO.slug);
     const fatos = within(corpoDoWaypoint(container)).getByText(/asfalto/);
     expect(fatos.textContent).toBe("asfalto esburacado");
   });
 
   // O teste que fala de PRODUÇÃO: a Rampa vem do JSON de verdade (o mock
-  // acima só intercepta os slugs sintéticos) e hoje não traz nenhum dos dois
-  // campos. Consequência, e não defeito: no celular do João esta rodada não
-  // muda uma vírgula da ficha da Rampa. Fixture sintética não provaria isso.
-  it("a Rampa real continua abrindo — e, sem os dois campos no JSON, sem a linha", async () => {
+  // acima só intercepta os slugs sintéticos), que desde 2026-08-23 (Task 8)
+  // traz `piso: "barro"` — dado do João, sustentado pela ficha real em três
+  // lugares. Fixture sintética não provaria isso.
+  it("a Rampa real abre e mostra o piso no Trajeto", async () => {
     const rampa = getFicha("rampa-do-pepe");
-    expect(rampa?.piso).toBeUndefined();
-    expect(rampa?.extensaoKm).toBeUndefined();
+    expect(rampa?.piso).toBe("barro");
 
     const { container } = await abrir("rampa-do-pepe");
     expect(container.querySelector("h1")?.textContent).toBe("Rampa do Pepê");
-    expect(blocoTrajeto(container).querySelector(".fatos")).toBeNull();
+    const fatos = blocoTrajeto(container).querySelector(".fatos");
+    expect(fatos, "a linha de fatos sumiu do bloco Trajeto").not.toBeNull();
+    expect(fatos!.textContent).toBe("barro");
   });
 
   // A OUTRA metade do par seletor↔DOM: o teste de posição acima prende o DOM

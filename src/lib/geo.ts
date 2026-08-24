@@ -39,9 +39,11 @@ export function distanciaKm(a: Coord, b: Coord): number {
  *  o que mantém o limiar `km < 1` escrito UMA vez só: quem decide o ramo é esta
  *  função, e o formatador abaixo só descobre qual saiu.
  *
- *  ⚠️ Ela e a irmã `kmNaTelaExtensao` NÃO arredondam igual — ver o comentário
- *  de lá. Uma só não serviria: 12,4 km de distância aparece como "~12" e 12,4
- *  km de trilha aparece como "12,4". */
+ *  🔴 Teve uma irmã, `kmNaTelaExtensao` — apagada na contração de 2026-08-23
+ *  junto com o campo `extensaoKm` do modelo. A razão de o nome ser tão
+ *  específico ("da DISTÂNCIA", não só "da tela") sobrevive sem ela: o
+ *  arredondamento da tela é fonte ÚNICA, e é o que sai daqui que o filtro
+ *  compara — não uma segunda conta escrita à mão em `passaNoFiltro`. */
 export function kmNaTelaDistancia(km: number): number | null {
   if (km < 1) return null;
   // Arredonda pra uma casa ANTES de decidir o ramo: senão um valor como 9,99
@@ -71,47 +73,10 @@ export function formatarDistanciaCurta(km: number): string {
   return formatarDistancia(km).replace(" daqui", "");
 }
 
-/** O NÚMERO QUE A TELA MOSTRA pra uma EXTENSÃO, irmã de `kmNaTelaDistancia` e
- *  com o mesmo contrato: fonte única do arredondamento, `null` quando a tela
- *  não mostra número. A razão inteira está escrita lá em cima.
- *
- *  🔴 E são DUAS funções, não uma, porque as duas telas NÃO arredondam igual: a
- *  distância vira INTEIRA de 10 km pra cima (`~12 km`), a extensão fica sempre
- *  com uma casa (`12,4 km de trilha`). Uma função só teria que escolher um dos
- *  dois e faria uma das telas mentir. Cada uma tem dono na prova de mutação.
- *
- *  O PISO, no molde da irmã. Sem ele, `formatarExtensao(0.04)` devolve "0 km de
- *  trilha" — o app AFIRMANDO zero km de trilha, que é o tipo de mentira que
- *  este projeto não conta. E o valor é alcançável: `extensaoKm` é
- *  `z.number().positive()` (não inteiro) em `src/types/ficha.ts`, e o
- *  questionário CONVIDA o decimal ("pode ter casa decimal: `4` ou `4.2`").
- *
- *  ⚠️ A frase que estava aqui — "nada aqui muda o FILTRO: quem ele compara é o
- *  km cru da ficha" — descrevia o defeito, não a regra. Era exatamente o km cru
- *  que fazia "até 4 km" esconder um cartão dizendo "4 km de trilha" (faixa
- *  medida: 4,00 a 4,05, e um intervalo desses em TODO teto de 1 a 20). Agora o
- *  filtro compara ISTO. */
-export function kmNaTelaExtensao(km: number): number | null {
-  if (km < 1) return null;
-  return Math.round(km * 10) / 10;
-}
-
-/** A extensão da trilha em si (não a distância até ela) — km SÓ IDA, decisão
- *  explícita do dono do app. O sufixo mora AQUI DENTRO, não em cada chamador:
- *  o cartão (Task 6) e a ficha (Task 7) mostram o MESMO número, e foi
- *  exatamente duas formatações escritas em dois lugares que fez a mesma
- *  trilha ter dois km diferentes numa rodada passada (ver o comentário de
- *  `coordDaDistancia` abaixo, mesma família de defeito). Com o sufixo dentro
- *  da função, nenhum chamador tem como deixá-lo cair.
- *
- *  Como a irmã `formatarDistancia`, aqui NÃO se arredonda nada: a conta é toda
- *  de `kmNaTelaExtensao`, e o que sobra é escolher entre "12" e "12,4". */
-export function formatarExtensao(km: number): string {
-  const naTela = kmNaTelaExtensao(km);
-  if (naTela === null) return "menos de 1 km de trilha";
-  const n = Number.isInteger(naTela) ? String(naTela) : naTela.toFixed(1).replace(".", ",");
-  return `${n} km de trilha`;
-}
+// 🔴 `kmNaTelaExtensao` e `formatarExtensao` moravam aqui — apagadas na
+// contração de 2026-08-23 junto com o campo `extensaoKm` do modelo (Task 7).
+// Já estavam sem chamador na tela desde a Task 6 da mesma rodada; agora não
+// sobra nem o campo que elas formatariam.
 
 /** 🔴 O ÚNICO ponto de onde o app mede distância até uma trilha.
  *

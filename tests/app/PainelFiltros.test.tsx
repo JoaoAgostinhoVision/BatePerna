@@ -7,10 +7,7 @@ import FiltrosVivos, { useFiltros, useMexerFiltros } from "@/app/filtros";
 import LocalVivo from "@/app/local";
 import {
   CHAVE_FILTROS,
-  DIST_MAX_KM,
   DIST_PASSO_KM,
-  EXT_MAX_KM,
-  EXT_PASSO_KM,
   SEM_FILTRO,
   type Filtros,
 } from "@/lib/filtros";
@@ -19,8 +16,17 @@ import { CHAVE_LOCAL } from "@/lib/local";
 
 afterEach(() => { cleanup(); localStorage.clear(); });
 
-const monta = (visiveis = 4) =>
-  render(<LocalVivo><FiltrosVivos><PainelFiltros visiveis={visiveis} /></FiltrosVivos></LocalVivo>);
+// Um teto que NÃO é nenhuma constante do módulo e não é redondo: se o painel
+// trocar a prop por uma constante, ou por um número escrito à mão, este valor
+// não aparece na tela.
+const TETO = 45;
+
+const monta = (visiveis = 4, teto = TETO) =>
+  render(
+    <LocalVivo><FiltrosVivos>
+      <PainelFiltros visiveis={visiveis} tetoDistanciaKm={teto} />
+    </FiltrosVivos></LocalVivo>,
+  );
 
 const semeiaLocal = () =>
   localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
@@ -114,24 +120,23 @@ describe("o painel", () => {
     expect(screen.queryByRole("button", { name: /^até 2h$/i })).toBeNull();
   });
 
+  // A faixa saiu por decisão do João em 2026-08-23: "remova o filtro tamanho
+  // da trilha, acho que não está para hoje". Irmã dos testes de Duração e
+  // Esforço logo acima — o que sai da tela tem que ter prova de que saiu.
+  it("não existe mais grupo Tamanho da trilha", async () => {
+    semeiaLocal();
+    monta();
+    await abrir();
+    expect(screen.queryByRole("group", { name: TAMANHO })).toBeNull();
+    // Não-vacuidade: o painel está aberto e tem grupos.
+    expect(screen.getByRole("group", { name: DISTANCIA })).toBeTruthy();
+  });
+
   // Filtro que não tem como filtrar não entra na tela.
   it("sem localização, o grupo Distância daqui não aparece", async () => {
     monta();
     await abrir();
     expect(screen.queryByRole("group", { name: DISTANCIA })).toBeNull();
-  });
-
-  // ——— pré-voo (emenda, item 4): o PAR do teste acima.
-  //
-  // O teste de cima pega o `temLocal &&` sumindo; não pega o EXCESSO.
-  // Embrulhando as DUAS faixas no `temLocal &&`, ele continua verde e o recorte
-  // de tamanho some pra quem está sem GPS — sem nada na tela dizendo por quê, e
-  // sem nenhuma razão: medir o tamanho de uma trilha não depende de onde a
-  // pessoa está.
-  it("sem localização, o grupo Tamanho da trilha CONTINUA aparecendo", async () => {
-    monta();
-    await abrir();
-    expect(screen.getByRole("group", { name: TAMANHO })).toBeTruthy();
   });
 
   it("com localização, o grupo Distância daqui aparece", async () => {
@@ -208,7 +213,7 @@ describe("o painel", () => {
   // ——— pré-voo: o segundo toque no chip de piso é o ÚNICO jeito de desligar
   // aquele recorte.
   //
-  // As duas faixas de km têm a parada "qualquer"; **o piso não tem chip
+  // A faixa de km tem a parada "qualquer"; **o piso não tem chip
   // equivalente**. Se o `filtros.pisoMinimo === p ? null : p` virar só `p`, a
   // pessoa que tocou "asfalto tapete" por engano fica presa nele — e nenhum
   // outro teste percebe, porque nenhum toca duas vezes no mesmo chip. Herdado
@@ -280,25 +285,28 @@ describe("os chips de piso", () => {
   });
 });
 
-// ——————— as duas faixas de km ———————
+// ——————— a faixa de km ———————
 //
-// Esta é a família de defeito que a emenda do pré-voo (item 2) mandou cobrir
-// por DUAS vias: cada faixa tem que receber o SEU limite, e os limites têm que
-// vir do módulo. As asserções de comportamento estão aqui; a de FONTE está no
-// bloco "o que o jsdom não vê", e as duas são necessárias — em runtime o
+// 🔴 Era "as DUAS faixas de km" até a Task 7 (2026-08-23): a faixa de tamanho
+// da trilha saiu da tela junto com o campo `extensaoKm`. Só a de distância
+// sobrou, e o limite dela hoje tem DUAS origens diferentes — o teto
+// (`tetoDaBarraDistancia`, calculado a partir do acervo) chega pelo PROP
+// `tetoDistanciaKm` (prova logo abaixo, "recebe o TETO que veio de fora"), e
+// o passo (`DIST_PASSO_KM`) continua vindo direto do MÓDULO (prova de FONTE em
+// "o painel não escreve km à mão — o teto vem da prop, o passo do módulo",
+// mais abaixo neste arquivo). As duas provas são necessárias — em runtime o
 // literal e a constante são o mesmo valor.
 //
-// 🔴 E a COSTURA tem DUAS pontas, achado T5-1 da revisão. Os testes de escrita
-// (mexer na faixa grava) deixavam passar verdes duas mutações de LEITURA:
-// `valor={null}` na faixa de distância (o recorte corta de verdade, a linha diz
-// "1 filtro ligado", e a faixa fica em branco dizendo "qualquer") e
-// `valor={filtros.distanciaKm}` na faixa de tamanho (os dois recortes exibindo
-// um número só). O `FaixaKm` é CONTROLADO: a Task 4 provou que ele obedece à
+// 🔴 A COSTURA tinha DUAS pontas enquanto havia duas faixas, achado T5-1 da
+// revisão: os testes de escrita (mexer na faixa grava) deixavam passar verde
+// a mutação de LEITURA `valor={null}` na faixa de distância (o recorte corta
+// de verdade, a linha diz "1 filtro ligado", e a faixa fica em branco dizendo
+// "qualquer"). O `FaixaKm` é CONTROLADO: a Task 4 provou que ele obedece à
 // prop, e provar que o painel a ALIMENTA só é possível aqui. O
 // `"o PRIMEIRO render ignora o que está guardado"` agrava — o painel nasce em
 // branco de propósito, então esta leitura de volta é O mecanismo que faz um
 // recorte guardado reaparecer na tela.
-describe("as faixas de km escrevem e leem, cada uma no seu campo", () => {
+describe("a faixa de km escreve e lê", () => {
   it("a faixa de distância escreve em distanciaKm", async () => {
     semeiaLocal();
     monta();
@@ -310,22 +318,11 @@ describe("as faixas de km escrevem e leem, cada uma no seu campo", () => {
       .toMatchObject({ ...SEM_FILTRO, distanciaKm: 30 });
   });
 
-  it("a faixa de tamanho escreve em extensaoMaxKm", async () => {
-    semeiaLocal();
-    monta();
-    await abrir();
-    fireEvent.change(campoDe(TAMANHO), { target: { value: "6" } });
-    // Se ela escrevesse em `distanciaKm`, as duas metades desta asserção caem:
-    // `extensaoMaxKm` continuaria `null` e `distanciaKm` não seria `null`.
-    expect(JSON.parse(localStorage.getItem(CHAVE_FILTROS)!))
-      .toMatchObject({ ...SEM_FILTRO, extensaoMaxKm: 6 });
-  });
-
-  // As duas metades de cada um destes: a faixa dona MOSTRA o número guardado
-  // (barra, campo e o texto de leitura — os três portadores), e a VIZINHA
-  // continua vazia. Sem a segunda metade, uma faixa lendo o campo da outra
-  // passa; sem a primeira, `valor={null}` passa.
-  it("a faixa de distância MOSTRA o recorte guardado, e a de tamanho não herda", async () => {
+  // A METADE que sobrou de "MOSTRA o recorte guardado, e a de tamanho não
+  // herda": a faixa de tamanho saiu da tela na Task 6, então só resta provar
+  // que a de distância mostra o que foi guardado — não há mais vizinha pra
+  // checar que NÃO herdou.
+  it("a faixa de distância MOSTRA o recorte guardado", async () => {
     semeiaLocal();
     localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, distanciaKm: 30 }));
     monta();
@@ -333,37 +330,34 @@ describe("as faixas de km escrevem e leem, cada uma no seu campo", () => {
     expect(campoDe(DISTANCIA).value).toBe("30");
     expect(barraDe(DISTANCIA).value).toBe("30");
     expect(within(grupo(DISTANCIA)).getByText("até 30 km")).toBeTruthy();
-    expect(campoDe(TAMANHO).value).toBe("");
-    expect(within(grupo(TAMANHO)).getByText("qualquer")).toBeTruthy();
   });
 
-  it("a faixa de tamanho MOSTRA o recorte guardado, e a de distância não herda", async () => {
-    semeiaLocal();
-    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, extensaoMaxKm: 6 }));
-    monta();
-    await abrir();
-    expect(campoDe(TAMANHO).value).toBe("6");
-    expect(barraDe(TAMANHO).value).toBe("6");
-    expect(within(grupo(TAMANHO)).getByText("até 6 km")).toBeTruthy();
-    expect(campoDe(DISTANCIA).value).toBe("");
-    expect(within(grupo(DISTANCIA)).getByText("qualquer")).toBeTruthy();
-  });
-
-  // Trocar os limites entre as duas faixas é "o filtro se desliga sozinho" com
-  // outra roupa: a de tamanho aceitaria na tela um teto de distância, e o
-  // `lerFiltros` o devolveria `null` na abertura seguinte, sem nada explicando.
-  it("cada faixa recebe o SEU teto e o SEU passo", async () => {
+  // O teto vem de FORA (prop `tetoDistanciaKm`, calculada por
+  // `tetoDaBarraDistancia`), não de uma constante do módulo — trocar a prop
+  // por um literal escrito à mão é a mesma família de "o filtro se desliga
+  // sozinho": a tela mostraria um teto que não bate com o que
+  // `tetoDaBarraDistancia` calculou pro acervo, e a barra deixaria de ter uma
+  // parada capaz de alcançar a trilha mais longe. O passo, esse sim, continua
+  // vindo do módulo (`DIST_PASSO_KM`).
+  it("a faixa de distância recebe o TETO que veio de fora, e o seu passo", async () => {
     semeiaLocal();
     monta();
     await abrir();
     // O `max` da BARRA é o teto MAIS o passo: a parada extra vale "qualquer"
     // (contrato do FaixaKm). O `max` do CAMPO é o teto cru — é ele que prende.
-    expect(barraDe(DISTANCIA).getAttribute("max")).toBe(String(DIST_MAX_KM + DIST_PASSO_KM));
+    expect(barraDe(DISTANCIA).getAttribute("max")).toBe(String(TETO + DIST_PASSO_KM));
     expect(barraDe(DISTANCIA).getAttribute("step")).toBe(String(DIST_PASSO_KM));
-    expect(campoDe(DISTANCIA).getAttribute("max")).toBe(String(DIST_MAX_KM));
-    expect(barraDe(TAMANHO).getAttribute("max")).toBe(String(EXT_MAX_KM + EXT_PASSO_KM));
-    expect(barraDe(TAMANHO).getAttribute("step")).toBe(String(EXT_PASSO_KM));
-    expect(campoDe(TAMANHO).getAttribute("max")).toBe(String(EXT_MAX_KM));
+    expect(campoDe(DISTANCIA).getAttribute("max")).toBe(String(TETO));
+  });
+
+  // Não-vacuidade do teste acima: com um teto DIFERENTE, a tela muda junto.
+  // Sem esta metade, um painel que ignorasse a prop e usasse uma constante
+  // igual a 45 passaria.
+  it("teto diferente, barra diferente — a prop é lida de verdade", async () => {
+    semeiaLocal();
+    monta(4, 120);
+    await abrir();
+    expect(campoDe(DISTANCIA).getAttribute("max")).toBe("120");
   });
 
   // ——— achado T5-3 da revisão: a emenda item 5 não tinha prova.
@@ -422,25 +416,34 @@ describe("o que o jsdom não vê", () => {
     expect(fonte("page.tsx")).toContain("<FiltrosVivos>");
   });
 
-  // 🔴 A prova de FONTE dos limites, e ela NÃO é redundante com o
-  // "cada faixa recebe o SEU teto" lá de cima. Em runtime `100` e `DIST_MAX_KM`
-  // são o MESMO valor: nenhuma asserção de comportamento distingue a versão que
-  // lê o módulo da que digita o número. Só a fonte distingue — e é a fonte que
-  // garante que, no dia em que o teto mudar em `src/lib/filtros.ts`, a tela
-  // muda junto em vez de aceitar um valor que o `lerFiltros` joga fora.
-  it("o painel lê os quatro limites de @/lib/filtros — nenhum km escrito à mão", () => {
+  // 🔴 A prova de FONTE, e ela NÃO é redundante com a de comportamento acima:
+  // em runtime `45` e `tetoDistanciaKm` são o MESMO valor no render do teste.
+  // Só a fonte separa a versão que lê a prop da que digita um número.
+  it("o painel não escreve km à mão — o teto vem da prop, o passo do módulo", () => {
     const src = fonte("PainelFiltros.tsx");
     const importados = src.match(/import\s*\{([^}]*)\}\s*from\s*"@\/lib\/filtros"/);
     expect(importados, "o painel tem que importar os limites de @/lib/filtros").not.toBeNull();
-    for (const c of ["DIST_MAX_KM", "DIST_PASSO_KM", "EXT_MAX_KM", "EXT_PASSO_KM"]) {
+    for (const c of ["DIST_PASSO_KM"]) {
       expect(importados![1]).toContain(c);
     }
-    // E o outro lado: todo `max=`/`passo=` que o painel passa é uma das quatro
-    // constantes. Sem esta metade, importar os quatro e ainda assim escrever
-    // `max={100}` numa das faixas passaria verde.
+    // 🔴 DIST_MAX_KM não existe mais. Se ele reaparecer aqui, é o teto
+    // inventado voltando.
+    expect(importados![1]).not.toContain("DIST_MAX_KM");
+    // 🔴 EXT_MAX_KM/EXT_PASSO_KM saíram do import na Task 6: a faixa de
+    // tamanho não existe mais na tela, e reimportar as constantes seria o
+    // painel voltando a falar de um recorte que ninguém liga mais aqui.
+    expect(importados![1]).not.toContain("EXT_MAX_KM");
+    expect(importados![1]).not.toContain("EXT_PASSO_KM");
+    // O outro lado: todo `max=`/`passo=` que o painel passa sai do vocabulário
+    // permitido. Sem esta metade, importar tudo e ainda escrever `max={100}`
+    // numa das faixas passaria verde.
     const passados = [...src.matchAll(/\b(?:max|passo)=\{([^}]*)\}/g)].map((m) => m[1]);
-    expect(passados).toHaveLength(4);
-    for (const v of passados) expect(v).toMatch(/^(?:DIST|EXT)_(?:MAX|PASSO)_KM$/);
+    expect(passados).toHaveLength(2);
+    for (const v of passados) {
+      expect(v).toMatch(/^(?:tetoDistanciaKm|DIST_PASSO_KM)$/);
+    }
+    // Anti-vacuidade: sem esta linha, os dois poderiam ser `DIST_PASSO_KM`.
+    expect(passados).toContain("tetoDistanciaKm");
   });
 
   // 🔴 A prova de FONTE dos chips de piso, irmã da de cima e pela MESMA razão.

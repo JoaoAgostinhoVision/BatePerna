@@ -147,9 +147,11 @@ html, body { background: var(--ground); }
 .bp .wp-body .t { font-weight: 650; font-size: .95rem; }
 .bp .wp-body .n { color: var(--ink-soft); font-size: .82rem; font-style: italic; margin-top: .1rem; }
 .bp .wp-body .coord { font-family: var(--type); font-size: .68rem; color: var(--ink-faint); margin-top: .25rem; }
-/* extensão da trilha · piso da via: fatos do lugar, logo abaixo da coordenada
-   e acima da distância daqui. Mais legível que a coordenada (é texto pra ler,
-   não referência técnica) e mais discreto que o nome do waypoint. */
+/* piso da via: fato do lugar, logo abaixo da coordenada e acima da distância
+   daqui. (Até a Task 6 desta rodada também mostrava a extensão da trilha, que
+   saiu da tela por decisão do João em 2026-08-23 — ver CartaoTrilha.tsx e
+   [slug]/page.tsx.) Mais legível que a coordenada (é texto pra ler, não
+   referência técnica) e mais discreto que o nome do waypoint. */
 .bp .wp-body .fatos { font-size: .78rem; color: var(--ink-soft); margin-top: .3rem; }
 .bp .maplink { flex: none; text-decoration: none; font-weight: 650; font-size: .82rem; color: #fff; background: var(--accent); padding: .5rem .8rem; border-radius: 10px; white-space: nowrap; }
 .bp .maplink:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }

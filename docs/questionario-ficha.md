@@ -160,8 +160,8 @@ até onde o carro para — qual é o PIOR trecho? Vale o pior pedaço mesmo que 
 seja curto, e mesmo que ele seja justamente o último: não é a média dos
 trechos, e não é o piso que predomina no caminho. É o pior pedaço que qualquer
 carro precisa passar. (Se depois de estacionar ainda se caminha, essa parte não
-entra aqui — ela é a pergunta seguinte.) Responda com uma destas quatro
-palavras exatamente, sem sinônimo:
+entra neste campo — este questionário não pergunta por ela.) Responda com uma
+destas quatro palavras exatamente, sem sinônimo:
 
 - **barro** — terra que vira lama e segura água quando molha; o pior piso da
   escala.
@@ -186,32 +186,6 @@ trecho você já nomeou.
 
 **Pular é permitido:** sem resposta, a trilha simplesmente nunca é escondida por
 esse filtro — ela aparece pra qualquer piso mínimo que a pessoa escolher.
-
----
-
-## Quantos km — `extensaoKm`
-
-**Pergunta:** quantos quilômetros tem **a trilha em si — o trecho que se cobre
-a pé**, do lugar onde o carro para até o ponto final? **Não conte a estrada de
-carro até lá** (essa é a pergunta de cima, a do piso): aqui é só o que se anda.
-E conte **só a ida** — não conte a volta, mesmo que a volta seja pelo mesmo
-caminho de ida. Responda em número (pode ter casa decimal): `4` ou `4.2`, não
-`4 km` nem "4 km ida e volta". Se não se caminha nada — se o rolê é do carro e
-acabou — deixe em branco.
-
-**Por que importa:** é o outro filtro numérico da tela inicial — quem só quer
-uma caminhada curta pode esconder trilhas com caminhada mais longa que isso. É
-também o número que aparece no cartão da home e na ficha, escrito como
-"N km de trilha". Se aqui entrar a quilometragem da estrada, o cartão passa a
-mostrar dois números em km lado a lado — a distância até a trilha e a "extensão
-da trilha" — os dois querendo dizer "quão longe fica", e o segundo mentindo.
-
-**Exemplo (Rampa):** ainda não medido — você ainda não me passou quanto se
-caminha lá, e eu não vou estimar. Quando passar, o número entra como só ida e
-só o trecho a pé, do jeito que a pergunta pede.
-
-**Pular é permitido:** sem resposta, a trilha simplesmente nunca é escondida por
-esse filtro — ela aparece pra qualquer extensão que a pessoa escolher.
 
 ---
 
@@ -367,15 +341,18 @@ recusa carregar em vez de mostrar algo quebrado. Depois de validado, a ficha nov
 aparece sozinha na home (agrupada por "hoje dá" ou "hoje não dá", junto com o pin no
 mapa) e no acervo em `/trilhas` — sem precisar mexer em mais nada.
 
-`piso` e `extensaoKm` são os dois únicos campos opcionais deste questionário: se você
-pulou uma das duas perguntas acima, a ficha carrega igual, só que essa trilha nunca
-fica escondida pelo filtro correspondente (piso ou extensão) na tela inicial — ela
-aparece pra qualquer valor que a pessoa escolher no filtro.
+`piso` é o único campo opcional deste questionário: se você pulou a pergunta da seção
+"O piso da via", a ficha carrega igual, só que essa trilha nunca fica escondida pelo
+filtro de piso na tela inicial — ela aparece pra qualquer valor que a pessoa escolher
+no filtro.
 
-**Nota pra quem mantém o schema:** duas perguntas antigas, `esforco` (quão puxada é,
-pensando no corpo de quem vai) e `duracao` (quanto tempo dura, em minutos), saíram
-deste questionário — este app só sabe falar do LUGAR, não do corpo de quem vai, e
-`piso` cobre o mesmo papel de filtro. As fichas antigas que já tinham `esforco` e
-`duracao` continuam válidas — o parse não estoura com eles ali —, mas os dois campos
-são **ignorados na leitura**: o schema não os carrega mais, e eles não chegam no
-objeto que o app lê. Não é só o questionário que parou de perguntar.
+**Nota pra quem mantém o schema:** três perguntas antigas saíram deste questionário —
+esforco (quão puxada é, pensando no corpo de quem vai) e duracao (quanto tempo dura,
+em minutos), porque este app só sabe falar do LUGAR, não do corpo de quem vai, e
+`piso` cobre o mesmo papel de filtro; e extensaoKm (quantos km tem a trilha a pé),
+apagada na contração de 2026-08-23 (Task 7) — o recorte de "tamanho da trilha" saiu da
+tela na Task 6 da mesma rodada, e sem tela nem filtro não sobrou o que o campo
+alimentasse. As fichas antigas que já tinham qualquer um dos três continuam válidas —
+o parse não estoura com eles ali —, mas os três campos são **ignorados na leitura**: o
+schema não os carrega mais, e eles não chegam no objeto que o app lê. Não é só o
+questionário que parou de perguntar.

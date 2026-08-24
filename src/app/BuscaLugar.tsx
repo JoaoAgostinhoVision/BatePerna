@@ -71,6 +71,46 @@ export default function BuscaLugar() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
+          {/* 🔴 O caminho de VOLTA pro GPS, e ele conserta um beco que já está
+              em produção: com uma cidade escolhida, `soGps` é falso, o toque
+              na pílula abre esta busca, e ela só oferecia outras cidades —
+              `pedirGps` ficava sem chamador nenhum no app.
+
+              FORA do `.busca-rolo` de propósito, pelo mesmo motivo medido do
+              crédito do GeoNames logo abaixo: o que mora dentro da caixa que
+              rola sai de vista quando a lista de cidades cresce.
+
+              Some com o GPS negado — o navegador não pergunta duas vezes, e o
+              botão viraria um que não faz nada. Mesmo argumento do
+              `rotuloPilula`.
+
+              🔴 E some também com o CAMPO PREENCHIDO — decisão do dono do app,
+              2026-08-23. MEDIDO em Chrome headless 375×667 com o CSS real: o
+              botão é filho direto de flex do `.busca` (altura fixa 168px), e
+              os 44px dele mais o gap saíam inteiros do orçamento do
+              `.busca-rolo` (70,09px → 19,70px, o primeiro resultado cortado
+              pela metade) sempre que havia lista na tela — e é sempre que há
+              lista que o botão fica ao lado dela, porque a busca só enche com
+              texto digitado. Escondê-lo junto com o texto devolve o
+              `.busca-rolo` inteiro pra lista sem custar nada de layout: quando
+              o botão está na tela a lista está vazia, e quando a lista aparece
+              o botão já saiu. Também limpa o modelo mental — "de onde eu
+              estou" é ALTERNATIVA a buscar, não companheiro da busca.
+
+              `q.trim() === ""`, não `!q`: é a MESMA pergunta que o efeito de
+              busca já faz logo acima — espaço em branco não é "digitou", e uma
+              fonte só pra essa pergunta evita as duas discordando. */}
+          {gps !== "negado" && q.trim() === "" && (
+            <button
+              className="busca-item"
+              onClick={() => {
+                pedirGps();
+                setFase("fechado");
+              }}
+            >
+              de onde eu estou
+            </button>
+          )}
           {/* 🔴 O que ROLA é só esta caixa. O campo fica em cima dela e o
               crédito embaixo, os dois FORA da área de rolagem — ver o
               comentário do crédito logo abaixo. */}

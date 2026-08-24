@@ -140,7 +140,15 @@ describe("esforco e duracao saíram do schema", () => {
   });
 });
 
-describe("piso e extensaoKm", () => {
+// 🔴 Era "piso e extensaoKm": o campo `extensaoKm` saiu do schema nesta task
+// (Task 7, 2026-08-23). Os dois testes que só existiam pra validar a
+// positividade dele ("extensaoKm zero ou negativa não valida" e "extensaoKm
+// positivo valida e sobrevive ao parse") morreram junto — não sobra regra de
+// validação pra provar, e `fichaSchema.parse({ ...base, extensaoKm: 0 })`
+// deixaria de estourar (zod descarta chave desconhecida em silêncio), o que
+// faria o primeiro deles falhar por razão errada em vez de simplesmente não
+// existir mais.
+describe("piso", () => {
   const base = JSON.parse(readFileSync(
     path.join(process.cwd(), "content", "fichas", "rampa-do-pepe.json"), "utf8"));
 
@@ -154,31 +162,25 @@ describe("piso e extensaoKm", () => {
     }
   });
 
-  it("ficha SEM piso e SEM extensaoKm valida — os dois são opcionais", () => {
-    expect(() => fichaSchema.parse(base)).not.toThrow();
-    const lido = fichaSchema.parse(base);
+  // 🔴 Desde a Task 8 (2026-08-23) `base` (a Rampa real) TRAZ `piso: "barro"` —
+  // este teste é sobre o SCHEMA aceitar a ausência do campo, não sobre o
+  // conteúdo de hoje da Rampa, então a fixture apaga o campo à mão em vez de
+  // depender de uma ficha real que não o tenha.
+  it("ficha SEM piso valida — é opcional", () => {
+    const { piso: _piso, ...semPiso } = base;
+    expect(() => fichaSchema.parse(semPiso)).not.toThrow();
+    const lido = fichaSchema.parse(semPiso);
     expect(lido.piso).toBeUndefined();
-    expect(lido.extensaoKm).toBeUndefined();
-  });
-
-  it("extensaoKm zero ou negativa não valida", () => {
-    expect(() => fichaSchema.parse({ ...base, extensaoKm: 0 })).toThrow();
-    expect(() => fichaSchema.parse({ ...base, extensaoKm: -4 })).toThrow();
-  });
-
-  it("extensaoKm positivo valida e sobrevive ao parse", () => {
-    const lido = fichaSchema.parse({ ...base, extensaoKm: 4.2 });
-    expect(lido.extensaoKm).toBe(4.2);
   });
 
   // A ficha REAL. Sintética prova a função; só a real prova o conteúdo
-  // (lição 10) — a Rampa de hoje não tem piso nem extensaoKm, e por serem
-  // opcionais ela tem que continuar carregando exatamente como antes.
-  it("a Rampa continua carregando, sem piso e sem extensão", () => {
+  // (lição 10) — desde a Task 8 (2026-08-23) a Rampa carrega com
+  // `piso: "barro"`, dado do João, sustentado pela ficha real em três lugares
+  // (não fixture).
+  it("a Rampa carrega com piso de barro — é dado real, não fixture", () => {
     const f = getFicha("rampa-do-pepe");
     expect(f).not.toBeNull();
-    expect(f!.piso).toBeUndefined();
-    expect(f!.extensaoKm).toBeUndefined();
+    expect(f!.piso).toBe("barro");
   });
 
   // 🔴 PROVA DE FONTE — mesma família do "PISOS_FILTRAVEIS é derivado de PISOS"
