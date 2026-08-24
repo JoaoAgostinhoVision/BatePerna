@@ -1,14 +1,26 @@
 # RESUME — BatePerna (retomar aqui)
 
-> **Este arquivo mora em `docs/RESUME.md` e é versionado.** O ledger da execução vive em
-> `.superpowers/sdd/2026-08-18-review-do-celular/progress.md`, que é **scratch git-ignorado** —
-> um `git clean -fdx` o apaga. O essencial dele está aqui.
+> **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
+> O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
+> método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-**Última parada:** 2026-08-23. ✅ **SEGUNDA RODADA DO REVIEW FECHADA E MERGEADA.**
-`main` em **`8329284`** (merge `--no-ff` de `review-2-celular`, 15 commits), mais a **rodada curta
-do "daqui"** que veio depois (ver §Z). **668/668 em 49 arquivos**, `tsc` limpo, `npm run build` passa — **os três conferidos por mim em `main` DEPOIS do
-merge**, não relatados por agente. ✅ **NO AR**: deploy `● Ready · Production`, e os **seis
-marcadores conferidos por `curl`** em produção (ver §D).
+**Última parada:** 2026-08-23. ✅ **TRÊS RODADAS FECHADAS, MERGEADAS E NO AR, na mesma sessão.**
+`main` em **`0caaf58`**. **668/668 em 49 arquivos**, `tsc` limpo, `npm run build` passa — **os três
+conferidos por mim em `main` DEPOIS de cada merge**, não relatados por agente. Deploy
+`● Ready · Production`.
+
+As três, na ordem em que aconteceram:
+1. **`review-2-celular`** (8 tasks SDD) — a cidade que vence por sessão, o "de onde eu estou", o
+   teto da distância vindo do acervo, `extensaoKm` apagado, e `piso: "barro"` na Rampa. Ver §7.
+2. **`gps-ao-lado-do-campo`** — ele usou e pediu o oposto da correção do Critical: o botão fica
+   visível **enquanto se digita**. Ver §Z.
+3. **`gps-pergunta-em-vez-de-lembrar`** — ele disse *"mudou nada aqui"*, e o diagnóstico achou o
+   defeito mais fundo do dia. Ver §Z2.
+
+🔴 **A verificação desta sessão passou a ter TRÊS camadas, e cada uma pegou o que as outras não
+pegavam:** `curl` nos marcadores de HTML, varredura dos **chunks e do CSS servidos** (o bundle
+reescreve, e um conserto que dependia de ORDEM precisou ser conferido lá), e o **navegador de
+verdade** — que foi onde o §Z2 apareceu e onde ele foi provado consertado.
 
 ✅ **AS OITO TASKS FECHARAM**, cada uma com implementador → revisão com dois veredictos → fix
 round quando preciso → re-revisão escopada. Mais a **revisão da branch inteira**, que achou **1
@@ -24,13 +36,19 @@ de virarem código.
 
 # ▶▶ SE O JOÃO DISSER "CONTINUA" — ele volta pra DIZER O QUE ACHOU. Isto é triagem, não retomada.
 
-🔴 **NÃO EXISTE NADA PENDENTE DO MEU LADO.** A rodada de 2026-08-23 fechou, mergeou
-(`main` `8329284`) e **está no ar**, conferida por `curl`. Ele já mandou dois reviews do celular, e
-cada um virou uma rodada inteira — o terceiro é o caminho provável.
+🔴 **NÃO EXISTE NADA PENDENTE DO MEU LADO.** As três rodadas de 2026-08-23 fecharam, mergearam e
+**estão no ar**, conferidas por `curl`, pelos chunks servidos e no navegador. Ele já mandou **três**
+retornos do celular, e **cada um virou uma rodada** — o quarto é o caminho provável, e ele costuma
+chegar como uma frase curta ("mudou nada aqui").
 
-🔴 **E TEM DUAS PERGUNTAS DE PRODUTO ESPERANDO POR ELE — §P item 3.** A revisão da branch achou
-dois becos **pré-existentes**, que não são desta rodada. **Não conserte por conta própria** — são
-decisões dele.
+🔴 **E TEM UMA PERGUNTA DE PRODUTO ESPERANDO POR ELE — §P item 3.** É um beco **pré-existente**,
+não desta rodada, e ele é **irmão do defeito do §Z2** (o app decidindo por lembrança em vez de
+perguntar). **Não conserte por conta própria** — é decisão dele.
+
+🔴 **E A LIÇÃO DE DIAGNÓSTICO DESTA SESSÃO, porque ela vai se repetir:** quando ele disser que algo
+**não mudou**, **vá ao navegador antes de teorizar.** Da última vez havia três hipóteses plausíveis
+(cache do service worker, painel que não abre, botão escondido) e a resposta saiu em dois comandos
+lendo o estado real — e não era nenhuma das duas primeiras.
 
 O protocolo de triagem de sempre:
 
@@ -96,26 +114,34 @@ barro.
 
 ### §P — O QUE SOBROU
 
-1. 🔴 **O DEPLOY, e é passo MEU, não dele.** A rodada mergeou e **não foi pro ar**. Ver §D.
-2. 🟠 **O iPHONE.** Nada de duas rodadas foi visto em WebKit. O que só ele responde: a barra de km
-   **arrasta com o polegar**? o campo numérico abre o **teclado certo**? **a barra encolhendo
-   quando o dedo solta em "qualquer" assusta?** (o teto é dinâmico agora). E o **cartão com
-   "barro"** junto do `~27 km em linha reta · R$ 5` cabe na linha a ~360px?
-3. 🟠 **DUAS PERGUNTAS DE PRODUTO, achadas pela revisão da branch, e as duas são PRÉ-EXISTENTES —
-   não desta rodada.** Não conserte por conta própria:
-   - **`contarLigados` conta a distância mesmo sem localização.** A linha de resumo diz "1 filtro
-     ligado" e o painel **não desenha o grupo** (ele está atrás do `temLocal &&`). É filtro contado
-     sem chip pra desligar — **exatamente o sintoma que ele reclamou no 1º review** — e está
-     alcançável no celular dele enquanto o GPS não responde, ou se ele negar.
+✅ **Nada do meu lado.** As três rodadas estão no ar e conferidas. O que sobra é dele, nesta ordem
+de valor:
+
+1. 🟠 **O iPHONE — e agora ele decide uma coisa que nenhum teste alcança.** Nada de três rodadas foi
+   visto em WebKit. 🔴 **A pergunta nova e mais importante: no Safari do iPhone, o
+   `navigator.permissions.query({name:"geolocation"})` RESPONDE ou REJEITA?** É isso que decide se
+   ele cai no caminho novo do §Z2 ou no fallback da lembrança. As outras, acumuladas: a barra de km
+   **arrasta com o polegar**? o campo numérico abre o **teclado certo**? **a barra encolhendo quando
+   o dedo solta em "qualquer" assusta?** o **campo de busca mais estreito** (265px em 375) e o
+   rótulo **"daqui"** funcionam no dedo? e o cartão com **"barro"** cabe na linha a ~360px?
+2. 🟠 **`docs/questionario-ficha.md` continua PRONTO pra ele responder** — e é o que mais destrava
+   produto. A pergunta da extensão saiu; a do `piso` foi corrigida (ela mandava procurar uma
+   pergunta que deixou de existir). **A 2ª ficha é o que acende os filtros**, que hoje aparecem e
+   quase não filtram, porque só existe a Rampa.
+3. 🟠 **UMA PERGUNTA DE PRODUTO, pré-existente — e ela é IRMÃ do defeito do §Z2.** Não conserte por
+   conta própria:
    - **Com `local = "nao-sei"` e o GPS respondendo `code 2`/`code 3`** (sem sinal / estourou o
      prazo), `soGps` continua `true`, a pílula **sempre** pede GPS e o painel de busca **nunca
-     abre** — não há caminho pra digitar cidade. O "de onde eu estou" novo **não ajuda**: ele mora
-     dentro do painel que não abre. Só a recusa (`code 1`) está sã.
-4. 🟠 **`docs/questionario-ficha.md` continua PRONTO pra ele responder.** A pergunta da extensão
-   saiu; a do `piso` foi corrigida (ela mandava procurar uma pergunta que deixou de existir). A 2ª
-   ficha continua sendo o que acende os filtros.
-5. 🟠 **Dívida registrada, não bloqueio:** as **11 provas de fonte** que leem o arquivo cru
-   continuam lá (ver §4). Os dois helpers já existem.
+     abre** — não há caminho pra digitar cidade. O "daqui" **não ajuda**: ele mora dentro do painel
+     que não abre. 🔴 **É a mesma família do §Z2** (o app decidindo por lembrança em vez de
+     perguntar), e agora existe a ferramenta pra resolver: com a `permissions` na mão dá pra
+     distinguir "nunca perguntou" de "não conseguiu agora". **Vale reavaliar junto.**
+   - ✅ **O outro beco desta dupla MORREU no §Z2** (o `bp.gps = "negado"` eterno). Não o procure.
+4. 🟡 **`contarLigados` conta a distância mesmo sem localização** — a linha diz "1 filtro ligado" e
+   o painel não desenha o grupo (está atrás do `temLocal &&`). Deferido declarado na spec, mas é
+   **o sintoma que ele reclamou no 1º review**, então vale confirmar com ele se ainda incomoda.
+5. 🟡 **Dívida registrada, não bloqueio:** as **11 provas de fonte** que leem o arquivo cru
+   continuam lá (ver §4). Os dois helpers já existem. É trabalho de minutos.
 
 ### §D — O DEPLOY, e 🔴 O COMANDO DO REGISTRO ESTAVA INCOMPLETO
 
@@ -163,12 +189,25 @@ for c in $CHUNKS; do curl -s "$H$c"; done | \
   grep -cE 'extensaoKm|formatarExtensao|kmNaTelaExtensao|DIST_MAX_KM|EXT_MAX_KM|Tamanho da trilha'
 # 0 ✅ — a CONTRAÇÃO chegou ao bundle
 for c in $CHUNKS; do curl -s "$H$c"; done | \
-  grep -cE 'de onde eu estou|tetoDistanciaKm|asfalto-esburacado'
-# 4 ✅ — e o vocabulário NOVO chegou junto
+  grep -cE 'busca-linha|busca-daqui|tetoDistanciaKm|asfalto-esburacado'
+# >=1 ✅ — e o vocabulário NOVO chegou junto
 ```
 
-⚠️ **As duas metades importam.** Só a primeira prova que o morto sumiu; sem a segunda, um deploy
-que não subiu passaria verde nas duas — nada morto e nada vivo dá zero e zero.
+⚠️ **AS DUAS METADES IMPORTAM, e a segunda quase faltou.** Só a primeira prova que o morto sumiu;
+sem a segunda, **um deploy que não subiu passa verde nas duas** — nada morto e nada vivo também dá
+zero. 🔴 **E o marcador da segunda metade tem que ser ATUALIZADO A CADA RODADA:** o
+`de onde eu estou` que estava escrito aqui virou `daqui` na rodada seguinte, e o comando teria
+começado a mentir em silêncio.
+
+🔴 **A TERCEIRA CAMADA: o NAVEGADOR de verdade.** Foi ela que achou o §Z2, e nenhuma das duas acima
+o alcançaria — o HTML e os chunks estavam **certos**; o defeito era o app decidindo por uma
+lembrança guardada no aparelho. Abrir a produção e ler o estado real leva dois comandos:
+
+```js
+await navigator.permissions.query({ name: "geolocation" })   // o que o NAVEGADOR diz
+localStorage.getItem("bp.gps")                               // o que o APP lembra
+// contradizerem-se ERA o defeito. Depois do §Z2, o app apaga a lembrança sozinho.
+```
 
 **Conferência da rodada anterior (os seis passaram em 2026-08-21, guardados como história):**
 
