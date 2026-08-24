@@ -4,28 +4,35 @@
 > `.superpowers/sdd/2026-08-18-review-do-celular/progress.md`, que é **scratch git-ignorado** —
 > um `git clean -fdx` o apaga. O essencial dele está aqui.
 
-**Última parada:** 2026-08-21. ✅ **RODADA FECHADA, MERGEADA E NO AR.**
-`main` em **`5bfe76e`** (merge `--no-ff` de `review-do-celular`). **662/662 em 49 arquivos**,
-`tsc` limpo, `npm run build` passa — **os três conferidos por mim em `main` DEPOIS do merge**, não
-relatados por agente. Deploy `● Ready · Production`, e os **seis marcadores conferidos por `curl`**
-em produção (ver §D).
+**Última parada:** 2026-08-23. ✅ **SEGUNDA RODADA DO REVIEW FECHADA E MERGEADA.**
+`main` em **`8329284`** (merge `--no-ff` de `review-2-celular`, 15 commits). **657/657 em 49
+arquivos**, `tsc` limpo, `npm run build` passa — **os três conferidos por mim em `main` DEPOIS do
+merge**, não relatados por agente. 🔴 **AINDA NÃO DEPLOYADO** — ver §D.
 
 ✅ **AS OITO TASKS FECHARAM**, cada uma com implementador → revisão com dois veredictos → fix
-round → re-revisão escopada. Mais a **revisão da branch inteira**, que achou **1 Critical, 2
-Important e 2 Minor** — e o Critical era de **JUNÇÃO**, invisível pra revisão de task. **Sétima
-rodada seguida em que ela paga.**
+round quando preciso → re-revisão escopada. Mais a **revisão da branch inteira**, que achou **1
+Critical de JUNÇÃO** — **oitava rodada seguida em que ela paga**.
 
-🔴 **O placar de método, o mesmo há três sessões: NENHUM fix round consertou lógica de
+🔴 **O placar de método, o mesmo há quatro sessões: NENHUM fix round consertou lógica de
 aplicação.** O código dos implementadores chegou certo **oito vezes em oito**. Todos os achados
-foram de **PROVA** e de **COMENTÁRIO** — e vários foram **deles em cima de MIM**, inclusive uma
-frase falsa que eu tinha acabado de escrever neste arquivo.
+foram de **PROVA** e de **COMENTÁRIO**, e a maioria foi **deles em cima de MIM** — inclusive **três
+frases minhas escritas sobre arquivos que eu não tinha aberto**, duas delas pegas no pré-voo antes
+de virarem código.
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA" — ele volta pra DIZER O QUE ACHOU. Isto é triagem, não retomada.
+# ▶▶ SE O JOÃO DISSER "CONTINUA" — a rodada fechou. Falta O DEPLOY, e é a primeira coisa.
 
-🔴 **NÃO EXISTE TASK PENDENTE.** A rodada fechou, mergeou e está no ar. Ele encerrou a sessão de
-2026-08-21 dizendo, com todas as letras: ***"depois eu digo o que achei"***. Então:
+🔴 **NÃO EXISTE TASK PENDENTE, mas EXISTE UM PASSO MEU EM ABERTO: o deploy.** A rodada de
+2026-08-23 mergeou em `main` (`8329284`) e **não foi pro ar** — a sessão acabou antes. **A primeira
+coisa a fazer é perguntar se ele quer deployar agora**, com o comando do §D (que exige
+`--scope bate-perna`) e a conferência por `curl`. Só depois disso o resto.
+
+🔴 **E TEM UMA PERGUNTA DE PRODUTO ESPERANDO POR ELE — §P item 3.** A revisão da branch achou dois
+becos **pré-existentes** que não são desta rodada e que ele precisa decidir. Não conserte por
+conta própria.
+
+Fora isso, o protocolo de triagem de sempre:
 
 - **Não devolva menu.** Não pergunte "o que você quer fazer agora".
 - **Não pergunte "o que faltou"** — ele já respondeu isso uma vez, e a resposta virou esta rodada
@@ -56,43 +63,59 @@ repo ele apaga o ledger de scratch e o próprio `.claude/`.
 ```
 git branch --show-current  → main
 git status --short         → limpo
-npm test                   → 662/662 em 49 arquivos   ← tudo verde, NÃO há falha esperada
+npm test                   → 657/657 em 49 arquivos   ← tudo verde, NÃO há falha esperada
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
 
+⚠️ **A suíte ENCOLHEU de 662 pra 657, e isso é esperado:** a rodada de 2026-08-23 apagou o campo
+`extensaoKm` inteiro. A contagem foi fechada **nome a nome** pela revisão (38 removidos, 1
+acrescentado, 13 renomes, e 10 escondidos dentro de três blocos `it.each`); depois a leva final
+devolveu +4 do guarda de orçamento de altura.
+
 **Os três foram conferidos por mim em `main` depois do merge**, não relatados por agente. Se a
 suíte estiver diferente disso, alguma coisa mudou e vale descobrir o quê antes de seguir.
 
-### §7 — O QUE ESTÁ NO AR AGORA (as três linhas, se ele só disser "continua")
+### §7 — O QUE A RODADA DE 2026-08-23 MUDOU (as quatro linhas, se ele só disser "continua")
 
-1. **O painel de filtros mudou**: os dois recortes de km viraram **barra + campo digitável**, e os
-   chips de piso são a lista dele (paralelepípedo, asfalto esburacado, asfalto tapete).
-2. **O GPS pede sozinho** na 1ª abertura; **e se ele escolher cidade à mão, o app respeita** e não
-   volta pro GPS por conta própria.
-3. **O filtro corta pelo número que está no cartão** — o que aparece como "~30 km" só some no
-   "até 29", nunca no "até 30".
+1. **A cidade escolhida à mão agora vence POR SESSÃO** — aba viva **e** no máximo 6h. Passado
+   isso, a próxima abertura volta a pedir GPS sozinha. E **entrou um "de onde eu estou"** no painel
+   de busca: quem escolheu cidade tem caminho de volta, o que **não existia em produção**.
+2. **O teto de 100 km MORREU.** A barra de distância vai até a **trilha mais longe do acervo**
+   (piso de 30), e o campo aceita qualquer número. Nada de limite inventado.
+3. **`extensaoKm` saiu INTEIRO** — filtro, cartão, ficha, schema, `geo.ts` e questionário.
+   Conferido nos chunks de produção: zero.
+4. **A Rampa tem `piso: "barro"`** — dado dele, sustentado pela ficha real em três lugares. É a
+   **primeira vez que o campo da rodada passada carrega conteúdo de verdade**, e ele aparece no
+   cartão e no bloco 📍 Trajeto.
 
-**E o que NÃO mudou, de propósito:** o cartão em produção está idêntico. A Rampa é a única ficha e
-**não tem `piso` nem `extensaoKm`** — então os filtros novos aparecem e não filtram nada. Isso é
-esperado, está honesto na tela, e acende quando o questionário voltar.
+**Consequência que ele aceitou de olhos abertos:** com **uma ficha só, e ela de barro**, qualquer
+chip de piso **esvazia a home** — e a tela explica, com "Nenhuma trilha com esses filtros" e o
+botão de limpar. É a resposta certa: "no mínimo asfalto esburacado" realmente exclui uma rampa de
+barro.
 
-### §P — O QUE SOBROU, e as três primeiras são SÓ DELE
+### §P — O QUE SOBROU
 
-1. 🟠 **O iPHONE.** Nada desta rodada foi visto em WebKit. O que só ele responde: a barra de km
-   **arrasta com o polegar**? o campo numérico abre o **teclado certo** e não empurra a tela? o
-   painel com **duas** faixas (cada uma provavelmente quebrando em 2 linhas a ~360px) deixa o
-   grupo "Custo" longe da dobra? e o balão do GPS aparece antes ou depois da home pintar?
-2. 🟠 **`docs/questionario-ficha.md` está PRONTO pra ele responder** — e agora vale mais do que
-   nunca: **com uma ficha só, sem `piso` e sem `extensaoKm`, os filtros novos aparecem e não
-   filtram nada.** A 2ª ficha é o que acende a rodada inteira.
-3. 🟠 **Falta um *"de onde eu estou"* no painel de busca** (achado na revisão da branch, e é
-   **pré-existente — já está no ar hoje**): quem escolhe uma cidade à mão fica sem caminho de
-   volta pro GPS. O conserto mínimo é um primeiro item no painel chamando `pedirGps` quando
-   `gps !== "negado"`. **Ninguém inventou essa tela — é decisão dele.**
-4. 🟠 **Dívida técnica registrada, não bloqueio:** **11 provas de fonte** ainda leem o arquivo
-   **cru** e estão sãs **por acidente** — ver a lição da "prova de fonte que lê o comentário" no
-   §4. Os dois helpers já existem. É trabalho de minutos.
+1. 🔴 **O DEPLOY, e é passo MEU, não dele.** A rodada mergeou e **não foi pro ar**. Ver §D.
+2. 🟠 **O iPHONE.** Nada de duas rodadas foi visto em WebKit. O que só ele responde: a barra de km
+   **arrasta com o polegar**? o campo numérico abre o **teclado certo**? **a barra encolhendo
+   quando o dedo solta em "qualquer" assusta?** (o teto é dinâmico agora). E o **cartão com
+   "barro"** junto do `~27 km em linha reta · R$ 5` cabe na linha a ~360px?
+3. 🟠 **DUAS PERGUNTAS DE PRODUTO, achadas pela revisão da branch, e as duas são PRÉ-EXISTENTES —
+   não desta rodada.** Não conserte por conta própria:
+   - **`contarLigados` conta a distância mesmo sem localização.** A linha de resumo diz "1 filtro
+     ligado" e o painel **não desenha o grupo** (ele está atrás do `temLocal &&`). É filtro contado
+     sem chip pra desligar — **exatamente o sintoma que ele reclamou no 1º review** — e está
+     alcançável no celular dele enquanto o GPS não responde, ou se ele negar.
+   - **Com `local = "nao-sei"` e o GPS respondendo `code 2`/`code 3`** (sem sinal / estourou o
+     prazo), `soGps` continua `true`, a pílula **sempre** pede GPS e o painel de busca **nunca
+     abre** — não há caminho pra digitar cidade. O "de onde eu estou" novo **não ajuda**: ele mora
+     dentro do painel que não abre. Só a recusa (`code 1`) está sã.
+4. 🟠 **`docs/questionario-ficha.md` continua PRONTO pra ele responder.** A pergunta da extensão
+   saiu; a do `piso` foi corrigida (ela mandava procurar uma pergunta que deixou de existir). A 2ª
+   ficha continua sendo o que acende os filtros.
+5. 🟠 **Dívida registrada, não bloqueio:** as **11 provas de fonte** que leem o arquivo cru
+   continuam lá (ver §4). Os dois helpers já existem.
 
 ### §D — O DEPLOY, e 🔴 O COMANDO DO REGISTRO ESTAVA INCOMPLETO
 
@@ -107,16 +130,27 @@ npx --yes vercel@latest --prod --yes --scope bate-perna
 npx --yes vercel@latest ls --scope bate-perna     # a linha de cima tem que ser ● Ready · Production
 ```
 
-**Conferência em produção (os seis passaram em 2026-08-21):**
+🔴 **A RODADA DE 2026-08-23 NÃO FOI DEPLOYADA.** `main` está em `8329284`, verde nos três, e o que
+está no ar é a rodada anterior. **É o primeiro passo da próxima sessão** — pergunte a ele e rode.
+
+**Conferência em produção pra ESTA rodada (nenhuma rodada ainda):**
 
 ```bash
 H=https://bateperna.vercel.app
-curl -s $H/rampa-do-pepe | grep -c 'data-bloco="trajeto"'   # 1  — a Task 7 no ar
-curl -s $H/rampa-do-pepe | grep -c 'class="fatos"'          # 0  — a Rampa não tem os campos: honesto
+curl -s $H/rampa-do-pepe | grep -c 'class="fatos"'          # 1  — a Rampa AGORA tem piso
+curl -s $H/rampa-do-pepe | grep -o 'barro' | head -1        # barro
 curl -s $H/ | grep -c 'km em linha reta'                    # 0  — 1º render sem localização, SEMPRE
 curl -s $H/ | grep -c 'FILTRAR'                             # 1
-# e nos chunks: 0 de /puxada|duracaoMax|1h30|formatarDuracao/ (a CONTRAÇÃO chegou ao bundle,
-# que é o que o vitest não vê) e >=1 de /asfalto-esburacado/ (o vocabulário novo chegou).
+# e nos chunks: 0 de /extensaoKm|formatarExtensao|kmNaTelaExtensao|DIST_MAX_KM|Tamanho da trilha/
+# (a CONTRAÇÃO chegou ao bundle, que é o que o vitest não vê).
+```
+
+**Conferência da rodada anterior (os seis passaram em 2026-08-21, guardados como história):**
+
+```bash
+curl -s $H/rampa-do-pepe | grep -c 'data-bloco="trajeto"'   # 1
+curl -s $H/ | grep -c 'FILTRAR'                             # 1
+# nos chunks: 0 de /puxada|duracaoMax|1h30|formatarDuracao/ e >=1 de /asfalto-esburacado/.
 ```
 
 ### 2. Leia, nesta ordem
@@ -420,6 +454,65 @@ consertou lógica de aplicação. Quando o revisor rotula "plan-mandated", é li
   **e** CSS, que é refatoração e não defeito — o próximo leitor ou confia demais, ou "completa" a
   prova com asserção de **nome de classe**, que não deveria existir: nome de classe não é
   comportamento, e travá-lo cobra pedágio de toda renomeação sem comprar segurança.
+
+### 4a. 🆕 O QUE A RODADA DE 2026-08-23 ACRESCENTOU — oito lições, todas medidas
+
+- 🔴 **AS VARREDURAS DE COMENTÁRIO SÃO CEGAS EM CASCATA, e são TRÊS espécies, não uma.** Esta
+  rodada descobriu as duas de baixo do jeito mais caro (achado na revisão), e cada uma é invisível
+  pra anterior:
+  1. **por SÍMBOLO** (`extensaoKm`, `EXT_MAX_KM`), com termos copiados do diff — é a que a rodada
+     passada cravou. **Cega a prosa.** Medido: um comentário falso em `src/app/ficha.css` tinha
+     **zero** ocorrências de símbolo, porque falava *"extensão da trilha"* em português corrido;
+  2. **por PROSA** (`"extens"`, `"km de trilha"`, `"dois números"`) — a varredura em prosa achou
+     **quatro** comentários falsos que a de símbolo não acharia. **Cega a posição.**
+  3. 🆕 **por REFERÊNCIA POSICIONAL** (*"a pergunta seguinte"*, *"a de cima"*, *"as duas acima"*).
+     Não tem símbolo **nem** a palavra-tema, então as duas primeiras passam batido. Quebra sempre
+     que uma seção some. **O caso real doeu no `docs/questionario-ficha.md`**, o arquivo que o
+     João responde à mão: a pergunta do `piso` mandava procurar uma pergunta que a contração tinha
+     apagado. **Toda contração precisa das três, e a de prosa tem que cobrir `.css`, `.md` e
+     `.json`, não só `.ts/.tsx`.**
+- 🔴 **TEMPO VERBAL É PISTA, NÃO CRITÉRIO.** A classificação em três baldes (afirma consumidor
+  desfeito / história / código) foi feita reconhecendo história pelo **verbo no passado** — e por
+  isso deixou passar uma frase **no presente** que afirmava um consumidor já desfeito. **O critério
+  é um só: *isto ainda é verdade depois desta mudança?***
+- 🆕 🔴 **O DEFEITO DE JUNÇÃO GEOMÉTRICO — e é o Critical desta rodada.** Um elemento novo entrou
+  como filho direto de flex do `.busca`, que é `position:absolute; inset:0` numa caixa de **altura
+  FIXA** com `overflow:hidden`. O único irmão elástico é a caixa que rola, então os 44px do
+  elemento **saíram inteiros dela**: `.busca-rolo` de **70,09px → 19,70px**, e o primeiro resultado
+  de busca mostrando 45% de si mesmo. **Três coisas valem guardar:**
+  (a) **nenhuma revisão de task podia ver** — o jsdom não mede pixel, e a prova daquela task é
+  estrutural de propósito; (b) **a asserção que garantia o elemento era a mesma que matava a
+  lista** (`volta.closest(".busca-rolo") === null`); (c) **a suíte inteira não tinha nenhum teste
+  de orçamento de altura** — por isso 50px sumiram passando por oito revisões. O guarda novo
+  compara a **lista exata de classes dos filhos** do painel, então pega **qualquer** filho fixo
+  devolvido ali, não só aquele botão.
+  🔴 **A régua que fica: em caixa de altura FIXA, todo elemento novo é subtraído de alguém. Pergunte
+  DE QUEM antes de acrescentar.**
+- 🆕 **EXCEÇÃO DENTRO DE CLIQUE É MASCARADA PELO REACT.** Um teste que provava um `try/catch`
+  passava **com a proteção removida**: o despacho sintético de evento converte a exceção em
+  "Unhandled Error" global em vez de propagá-la. **Pra provar que algo estoura, chame a função
+  DIRETO, sem `.click()`** — e o arquivo já tinha a convenção certa oitenta linhas acima, num
+  teste irmão cujo comentário descrevia a máscara.
+- 🆕 **`vi.spyOn(sessionStorage, "setItem")` NÃO INTERCEPTA NADA neste jsdom.** É preciso espionar
+  `Storage.prototype` **com checagem de `this`** pra isolar a instância e preservar o
+  `localStorage` real. ⚠️ E o inverso é perigoso: espião largo em `Storage.prototype` já envenenou
+  testes vizinhos aqui.
+- 🆕 **A ASSERÇÃO "ACESSÓRIA" QUE TORNA A ISOLAÇÃO LOAD-BEARING.** Medido por acidente: tirando a
+  checagem de `this`, o teste do `sessionStorage` cai numa asserção sobre **`localStorage`** que
+  ninguém tinha escrito com essa intenção. Ela é o que prova que o espião não vazou. **Antes de
+  "limpar" uma asserção que parece fora do assunto, mute a vizinhança e veja o que ela segura.**
+- 🆕 **CONTABILIDADE DE TESTE: `it.each` ESCONDE N TESTES NUMA LINHA.** A suíte caiu **37** e o
+  diff mostrava líquido **−27**. Os 10 que faltavam estavam em **três** blocos `it.each` em dois
+  arquivos. **Contar linhas `it(` no diff não fecha conta** — só contar nome a nome, rodando a
+  suíte nos dois commits, fecha. E **separe RENOME de REMOÇÃO**: nesta rodada, **13 dos 38
+  "removidos" eram renomes**.
+- 🆕 **ATUALIZAR UM TESTE ≠ DESTRUÍ-LO, e o implementador viu isso melhor que o meu brief.** Eu
+  mandei inverter quatro asserções de `piso`; ele **recusou uma** e estava certo: aquela vivia
+  dentro de `"ficha SEM piso valida — é opcional"`, um teste sobre **opcionalidade do schema**, não
+  sobre o conteúdo da Rampa. Inverter teria matado a prova. Ele derivou um fixture sem o campo
+  (`const { piso: _piso, ...semPiso } = base`), e o revisor mediu que a prova sobrevive (tornar o
+  campo obrigatório derruba o teste). **Antes de atualizar uma asserção, leia o NOME do teste que
+  a contém.**
 
 ### 4b. 🔴 A OUTRA FAMÍLIA QUE APARECEU TRÊS VEZES NESTA SESSÃO: comentário que envelhece
 
