@@ -58,9 +58,30 @@ nova abrindo inteira.
 responde 200 com os degraus, o papel higiênico, os bichos da mata e a frase de meia-volta; a home
 serve **dois cartões**; `/trilhas` lista as duas. 🔴 Sem o `--scope bate-perna`, `Not authorized`.
 
-🆕 **DEPOIS DISSO, na mesma data: o `secaRapido`.** Ele decidiu a dívida da voz da Rampa (bloco
-logo abaixo) e a rodada foi feita: **679/679** (668 + 11), `tsc` limpo, `build` passa, HTML de
-produção local conferido nas DUAS fichas — cada uma com a sua frase. **⚠️ AINDA NÃO DEPLOYADA.**
+🆕 **DEPOIS DISSO, na mesma data: o `secaRapido` — FEITO, COMMITADO (`ab605a8`) E NO AR.** Ele
+decidiu a dívida da voz da Rampa (bloco logo abaixo) e a rodada fechou: **679/679** (668 + 11),
+`tsc` limpo, `build` passa, 11 mutações medidas e todas mortas.
+
+✅ **Deploy `● Ready · Production`, conferido no DOMÍNIO REAL e nos chunks servidos:**
+
+```bash
+H=https://bateperna.vercel.app
+curl -s $H/pedra-furada-de-venturosa | grep -o 'class="reason".\{0,200\}'
+#   …próximas ~2h. Área plana — o chão batido absorve mais que o barro. ✅
+curl -s $H/rampa-do-pepe            | grep -o 'class="reason".\{0,200\}'
+#   …próximas ~3h. Área alta, escorre rápido — a serra firmou.          ✅
+CH=$(curl -s $H/rampa-do-pepe | grep -o '/_next/static/chunks/[^"]*\.js' | sort -u)  # são 7
+for c in $CH; do curl -s "$H$c"; done > /tmp/p.js
+grep -c 'firmou' /tmp/p.js       # 0  ← a geografia FIXA morreu no bundle
+grep -c 'rea alta' /tmp/p.js     # 0  ← idem, sem depender de acento
+grep -c 'secaRapido' /tmp/p.js   # 1  ← e o vocabulário NOVO chegou junto
+grep -c 'Sem chuva nas' /tmp/p.js # 1 ← a linha viva continua lá
+curl -s $H/ | grep -oE '"/(rampa-do-pepe|pedra-furada-de-venturosa)"' | sort -u | wc -l   # 2
+```
+
+🔴 **Repare no `rea alta` e no `Sem chuva nas`: os dois são trechos SEM ACENTO, de propósito.** Ver
+a lição em §4d — com acento os dois lados dão zero e o quadro fica idêntico ao de um deploy que
+não subiu.
 
 ---
 
