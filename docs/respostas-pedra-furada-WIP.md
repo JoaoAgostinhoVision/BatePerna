@@ -16,18 +16,34 @@
 
 **Atualizado em 2026-08-25 (quinta leva):** ✅ **BLOCOS 3 e 4 fechados; bloco 5 quase.**
 
-**Falta MUITO POUCO:**
-1. **desempatar a frase da chuva** — rabo da frase de meia-volta, ou resposta ao `modos`? Ver
-   `modos` abaixo. **Perguntado; não decida sozinho.**
-2. **a etiqueta do `formato`** — o "onde" já está resolvido (ele olha **dirigindo**), falta a
-   palavra. `entrada` é **errado** aqui.
-3. **a fila de "ok"** (abaixo) — e ela é o que separa este arquivo de virar JSON.
+**Falta MUITO POUCO — e é tudo de uma vez só, na "FILA DE OK" logo abaixo.**
+O único campo obrigatório **sem dono** é `modos`. Todo o resto é texto meu esperando o "ok"
+dele, mais três escolhas curtas.
 
-🟠 **E tem uma FILA DE "ok" dele acumulando — não crie o JSON antes de zerá-la.** São textos que
-eu redigi e ele ainda não aprovou: `voz`, `rotulo_escaneio`, `acesso`, `avisos`; mais três
-escolhas dele que nunca vieram: o **`slug`** (`pedra-furada-de-venturosa` vs `pedra-furada`), a
-**confirmação da coordenada convertida** (é de lá que sai todo km da tela), e se os **360
-degraus** entram na `nota`.
+---
+
+## 🔴 A FILA DE "OK" — apresentada a ele inteira em 2026-08-25
+
+**Não crie o JSON antes de zerá-la.** `fichaSchema` aceitaria qualquer string; o que não se
+recupera depois é uma frase minha entrando na ficha como se fosse dele.
+
+| # | campo | estado |
+|---|---|---|
+| 1 | `modos` | ⬜ **sem dono — único obrigatório assim** |
+| 2 | `discriminador.formato` | 🟠 proposta minha: `estrada` (não `entrada`) |
+| 3 | `discriminador.como_ler` | 🟠 redação minha sobre palavras dele |
+| 4 | `acesso` | 🟠 redação minha |
+| 5 | `avisos` | 🟠 redação minha (alívio ANTES do aviso do arco) |
+| 6 | `condicao.ressalva_proxy` | 🟠 redação minha (com a poça dele) |
+| 7 | `voz` | 🟠 redação minha, da 1ª sessão |
+| 8 | `rotulo_escaneio` | 🟠 proposta minha, da 1ª sessão |
+| 9 | `trajeto.waypoints[0].nota` | 🟠 com os 360 degraus; o "confortável" é o ponto duvidoso |
+| 10 | `slug` | ⬜ escolha dele: `pedra-furada-de-venturosa` vs `pedra-furada` |
+| 11 | coordenada convertida | ⬜ confirmação dele — **todo km da tela sai daí** |
+
+⚠️ **O item 9 tem uma linha fina:** *"360 degraus"* é fato de LUGAR e cabe; *"confortável de
+subir"* é julgamento sobre o corpo, e é o tipo de frase que a v4.0 apagou do app junto com
+`esforco`. A palavra é dele — mas ela está do lado de fora da régua, e isso foi dito a ele.
 
 🔴 **E uma decisão de produto dele continua parada:** o filtro de piso vai esconder a Pedra
 Furada de quem pede piso melhor que barro, **mesmo sendo lugar que carro comum alcança** — ver a
@@ -169,7 +185,15 @@ essa frase, os dois avisos juntos — estrutura ruim + cobra na mata — pintam 
 do que ele é. **O aviso do arco precisa nascer colado ao alívio**, senão a ficha assusta quem
 nunca ia subir o arco de todo jeito.
 
-**`avisos` está COMPLETO em conteúdo.** Falta só redigir e ele dar o "ok".
+**Redação proposta (o campo é UMA string, não lista — `src/types/ficha.ts:40`):**
+
+> A estrutura do lugar não é das melhores — leve papel higiênico. Ir embaixo do arco é
+> tranquilo: não tem trilha de fato, é só subir os degraus. Já a trilha que sobe o arco é outra
+> coisa — ela sobe pela mata, e quem não estiver preparado pode dar de cara com cobra e bichos
+> da região.
+
+🔴 **A ordem é deliberada: o alívio vem ANTES do aviso do arco.** Invertida, a seção abre com
+banheiro ruim e fecha com cobra, e a ficha assusta quem nunca ia subir o arco.
 
 ### `condicao` — 🟠 só um dos quatro números
 
@@ -259,38 +283,39 @@ Os dois avisos que acompanhavam a pergunta, **os dois resolvidos**:
   levas antes, que *molhado o chão batido escorrega e dá pra atolar*, então o conteúdo é
   coerente e independente. **Mas o vício de método fica registrado: citar a Rampa dentro da
   pergunta convida o eco.** Nas próximas fichas, pergunte **antes** de mostrar o exemplo.
-- **`permissao_abortar`** = **`Voltar sem ir é decisão, não desperdício.`** — ✅ **PALAVRAS DELE**
-  (2026-08-25). Primeiro ele aprovou a frase da Rampa (*"gostei da afirmação"*); avisei que
-  repetir a mesma linha nas duas únicas fichas vira bordão de app e ofereci uma do lugar
-  (*"Voltar sem subir depois de dirigir até aqui é decisão, não desperdício"*) — e **ele
-  encurtou a minha**. O texto final é edição dele em cima da minha, não a minha aceita.
+- **`permissao_abortar`** = ✅ **FECHADO, palavras dele:**
+
+  > Voltar sem ir é decisão, não desperdício — a chuva pode atrapalhar o caminho do carro e a
+  > experiência.
+
+  Primeiro ele aprovou a frase da Rampa (*"gostei da afirmação"*); avisei que repetir a mesma
+  linha nas duas únicas fichas vira bordão de app e ofereci uma do lugar; **ele encurtou a
+  minha** e emendou o rabo da chuva. O texto é edição dele em cima da minha, não a minha aceita.
   ⚠️ **Não "conserte" a concisão dele.** *"Voltar sem ir"* é seco de propósito.
+  ⚠️ **A ressalva foi feita e ele decidiu contra ela — está encerrada.** Eu avisei que esse rabo
+  **repete o que o carimbo já diz** poucas linhas acima, e perguntei se era frase ou `modos`;
+  ele respondeu **"é a frase"**. **Não reabra** nem "otimize" cortando a repetição depois.
 - **`formato`** — ⬜ **AINDA SEM ETIQUETA, e não invente.** Ele respondeu *"só olhe o barro, de
   resto é ok"* — **conteúdo**, não a etiqueta curta que o campo pede.
   ✅ **Mas o "onde" ficou resolvido:** perguntei se o barro se olha **dirigindo**, sem ponto onde
   parar e decidir (diferente da Rampa, onde se olha **parado na entrada da rampa**), e ele
   respondeu **"ok"** — é assim. **Logo `entrada` é etiqueta ERRADA aqui**, e o `como_ler` não
   pode começar com "na entrada". Falta só a palavra; ela sai fácil agora, mas é dele.
+  🟠 **Proposta minha: `estrada`.** Redação do `como_ler` junto:
+
+  > No trecho de chão batido, olhando da estrada: barro brilhando ou poça d'água = melhor voltar.
   ✅ **O "de resto é ok" resolveu OUTRA pergunta, essa sim:** o **portão** *não* vira checagem
   do discriminador. Fica só em `acesso`, como prosa. **Estava explicitamente na mesa e ele
   descartou** — não reabra.
 
 ## O que NÃO foi perguntado ainda
 
-- **`modos`** — 🟠 **PODE TER SIDO RESPONDIDO, E ESSA É A DÚVIDA.** Na Rampa é `["condicional"]`.
-  Na mesma mensagem em que deu a frase de meia-volta, ele emendou:
-  *"a chuva pode atrapalhar o caminho do carro e a experiência"*.
-  🔴 **Isso tem duas leituras e as duas mudam o que vai pra TELA:**
-  1. **rabo da frase de meia-volta** — a frase vira
-     *"Voltar sem ir é decisão, não desperdício — a chuva pode atrapalhar o caminho do carro e a
-     experiência."* (o travessão na mensagem dele favorece esta leitura);
-  2. **resposta ao `modos`** — a descrição, com as palavras dele, de por que esta trilha é
-     condicional.
-  ✅ **A favor da leitura 2:** o par *carro + experiência* é **exatamente** o par que ele deu como
-  os dois motivos das janelas de 3h e 2h. Ele não introduziu nada novo — reafirmou a mesma
-  estrutura.
-  ⚠️ **A favor de perguntar em vez de escolher:** na leitura 1 o texto vai pro fim da ficha e
-  **repete o que o carimbo já disse** logo acima. **Perguntado a ele em 2026-08-25; não decida.**
+- **`modos`** — ⬜ **AINDA NÃO RESPONDIDO, e agora está confirmado que não foi.**
+  A frase *"a chuva pode atrapalhar o caminho do carro e a experiência"* chegou a parecer
+  resposta ao `modos`, mas **ele disse que era a frase de meia-volta**. Então `modos` segue
+  virgem.
+  🔴 Na Rampa é `["condicional"]`, e a Pedra Furada também tem regra de chuva — **é justamente
+  por ser tão tentador que não se preenche sozinho.** É o **último campo obrigatório sem dono**.
 
 ---
 
