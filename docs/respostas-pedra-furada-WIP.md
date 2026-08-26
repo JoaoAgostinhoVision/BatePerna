@@ -14,14 +14,23 @@
 
 ## ▶ RETOMAR EXATAMENTE AQUI
 
-Faltam **três blocos e meio**. A próxima pergunta é a **10 (o piso)**, junto com o resto do
-bloco 3. O texto das perguntas 8/9/10, do jeito que foi feito a ele, está no fim deste arquivo.
+**Atualizado em 2026-08-25:** ele fechou a **8 (acesso)** e a **10 (piso)**. A próxima é a
+**9 (avisos)**, a única do bloco 3 que sobrou — o texto dela está no anexo, não reformule.
+Depois dela vêm os blocos 4 (condição), 5 (discriminador) e `modos`.
+
+Duas perguntas curtas nasceram da resposta dele de 2026-08-25 e **foram feitas junto com a 9**:
+- **carro comum passa sempre INCLUSIVE molhado?** Ele disse "passa sempre", mas a regra dele é
+  esperar 3h sem chuva — então falta saber se as 3h são pelo **carro** ou pela **pedra/escada**.
+  Isso decide `regra_texto` e `ressalva_proxy` no bloco 4; não suponha.
+- **o filtro de piso vai esconder a Pedra Furada de quem pede piso melhor que barro**, mesmo
+  sendo lugar que carro comum alcança sempre. É consequência de produto, **decisão dele** —
+  ver a seção nova no fim deste arquivo.
 
 | bloco | estado |
 |---|---|
 | 1 — nome, coordenada, nota | ✅ respondido |
 | 2 — promessa, prêmio, voz, rótulo | ✅ respondido (3 redações minhas aguardando o "ok" dele) |
-| 3 — acesso, avisos, **piso** | 🟠 **PAROU AQUI** — metade respondida, o piso não |
+| 3 — acesso, avisos, **piso** | 🟠 acesso ✅ / piso ✅ / **avisos ainda falta** |
 | 4 — condição (chuva) | 🟠 só a janela de passado (3h); faltam 4 coisas |
 | 5 — discriminador | ⬜ nem começou |
 | 6 — custo, modos | 🟢 custo ✅ `gratis`; `modos` não perguntado |
@@ -90,13 +99,19 @@ nem linha de cobrança.
 
 ## O que está PELA METADE
 
-### `acesso` — 🟠 tem o portão, falta o carro
+### `acesso` — ✅ COMPLETO (2026-08-25)
 
 Já dele: **portão aberto das 5h às 17h, todos os dias**; **pode estar fechado quando você
 chegar, e dá pra abrir tranquilamente**.
 
-**Falta:** que tipo de carro serve, e se tem trecho que exige cuidado — carro comum passa
-sempre, ou só em tempo seco?
+Novo, respondendo a pergunta 8: **carro comum passa SEMPRE**, e o **pior trecho é o chão
+batido** — ou seja, **não há trecho pior antes dele**. A pergunta oferecia "sempre, ou só em
+tempo seco?" e ele escolheu **sempre**, com todas as letras.
+
+🔴 **Isto é o oposto da Rampa e a prosa NÃO pode ser copiada de lá.** Na Rampa, `piso: "barro"`
+vem junto de *"não suba de carro comum; o barro segura água"*. Aqui o piso é o mesmo e o carro
+comum passa mesmo assim. **O campo `piso` descreve o CHÃO, não a exigência de veículo** — as
+duas fichas provam isso ao discordarem com o mesmo valor.
 
 ### `avisos` — 🟠 tem dois, falta o resto
 
@@ -115,20 +130,23 @@ e ele mesmo demarcou o limite.
   também**), `limiar_mm`, `coords` da condição (pode ser o mesmo ponto do trajeto, mas é
   pergunta dele: é essa coordenada que planta o pin da home), `regra_texto` e `ressalva_proxy`.
 
-### `piso` — ⬜ A PRÓXIMA PERGUNTA
+### `piso` — ✅ `barro`, CRAVADO POR ELE (2026-08-25)
 
-Ele disse **"estrada de chão batido e plana"**, e *chão batido* **não é** nenhuma das quatro
-palavras da escala. Pela definição da tabela (`barro` = terra que vira lama e segura água), e
-pela regra das 3h dele sugerindo que o piso segura água, **`barro` é o encaixe provável — mas
-quem crava é ele.** Ver [[nao-inventar-fatos-de-roteiros]].
+`"barro"`.
 
-Duas coisas que já foram ditas a ele junto com a pergunta, e que a próxima sessão não precisa
-repetir:
-1. a pergunta é o **pior trecho do caminho inteiro de carro**, não o que predomina — então falta
-   saber se tem coisa pior antes do chão batido;
-2. se a Pedra Furada também for `barro`, **as duas únicas fichas ficam iguais nesse campo** e o
-   filtro de piso vira tudo-ou-nada. Não é razão pra mudar a resposta — é pra ele saber que **o
-   filtro só ganha vida na 3ª ficha**.
+**A palavra é dele, não encaixe meu.** A pergunta foi feita dizendo que *chão batido* não é
+nenhuma das quatro e que **quem crava é ele**; ele respondeu *"chão batido é uma espécie de
+barro mas com areia, pode se enquadrar como o mesmo"*. Ele **classificou** — não aceitou uma
+sugestão minha. Ver [[nao-inventar-fatos-de-roteiros]].
+
+⚠️ **Guarde o "com areia", porque ele não é decoração.** É provavelmente o motivo de o carro
+comum passar sempre aqui e não passar na Rampa: areia dá firmeza onde o barro puro segura água.
+Se um dia a escala de piso ganhar uma quinta palavra, este é o caso que a pede.
+
+Os dois avisos que acompanhavam a pergunta, **os dois resolvidos**:
+1. o pior trecho **é** o chão batido — não há coisa pior antes (ele respondeu junto com a 8);
+2. as duas únicas fichas ficam **iguais** neste campo, então **o filtro de piso só ganha vida
+   na 3ª ficha**. Ele foi avisado disso ANTES de responder e respondeu assim mesmo.
 
 ---
 
@@ -169,6 +187,24 @@ diz *"hoje o tempo deixa"* — e o portão está fechado há uma hora. É a mesm
 
 **Se um portão que fecha decide o rolê tanto quanto a chuva, isso é rodada nova.** Já foi dito a
 ele, com essas palavras, e **está esperando decisão dele — não construa por conta própria.**
+
+---
+
+## 🔴 SEGUNDA PERGUNTA DE PRODUTO — nasceu do `piso` da Pedra Furada (2026-08-25)
+
+**O filtro de piso da home é usado como proxy de "meu carro chega lá?" — e nesta ficha ele
+erraria contra a pessoa.**
+
+O dado agora é: Pedra Furada tem `piso: "barro"` **e** carro comum passando **sempre**. Rampa tem
+`piso: "barro"` **e** carro comum **não** subindo. Mesmo valor, exigências opostas. Quem arrastar
+a barra pedindo piso melhor que barro perde as duas — e perde a Pedra Furada **por engano**,
+porque o carro dele chegava.
+
+**O que NÃO fazer sozinho:** inventar quinta palavra na escala, ou um campo novo de "que carro
+serve". Ver [[nao-inventar-fatos-de-roteiros]] e a regra de que este app só fala de LUGAR.
+
+**Está esperando decisão dele.** Foi dito a ele em 2026-08-25, junto com a pergunta 9. É irmã da
+pergunta do portão (seção acima): as duas são o app afirmando mais do que sabe.
 
 ---
 
