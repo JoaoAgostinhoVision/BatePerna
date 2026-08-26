@@ -16,13 +16,12 @@
 
 **Atualizado em 2026-08-25 (quinta leva):** ✅ **BLOCOS 3 e 4 fechados; bloco 5 quase.**
 
-**Falta, e é pouco:**
-1. **onde ele olha o barro** — dirigindo na estrada de chão batido, ou parado em algum ponto?
-   Decide `formato` e o texto do `como_ler`. **Não escolha `entrada` por espelhamento da Rampa.**
-2. **a frase de meia-volta ser IGUAL à da Rampa** — ele aprovou a da Rampa; com duas fichas só,
-   a frase repetida vira bordão. Foi oferecida a ele a versão do lugar; decisão dele.
-3. **`modos`** — nunca perguntado.
-4. **a fila de "ok"** (abaixo).
+**Falta MUITO POUCO:**
+1. **desempatar a frase da chuva** — rabo da frase de meia-volta, ou resposta ao `modos`? Ver
+   `modos` abaixo. **Perguntado; não decida sozinho.**
+2. **a etiqueta do `formato`** — o "onde" já está resolvido (ele olha **dirigindo**), falta a
+   palavra. `entrada` é **errado** aqui.
+3. **a fila de "ok"** (abaixo) — e ela é o que separa este arquivo de virar JSON.
 
 🟠 **E tem uma FILA DE "ok" dele acumulando — não crie o JSON antes de zerá-la.** São textos que
 eu redigi e ele ainda não aprovou: `voz`, `rotulo_escaneio`, `acesso`, `avisos`; mais três
@@ -260,27 +259,38 @@ Os dois avisos que acompanhavam a pergunta, **os dois resolvidos**:
   levas antes, que *molhado o chão batido escorrega e dá pra atolar*, então o conteúdo é
   coerente e independente. **Mas o vício de método fica registrado: citar a Rampa dentro da
   pergunta convida o eco.** Nas próximas fichas, pergunte **antes** de mostrar o exemplo.
-- **`permissao_abortar`** — 🟠 ele disse *"gostei da afirmação"* sobre a frase da Rampa
-  (`Dar meia-volta aqui é sabedoria, não fracasso.`). **Isso é aprovação de uma frase que já
-  existe em OUTRA ficha**, não uma frase nova. Ver a pergunta aberta logo abaixo.
-- **`formato`** — ⬜ **NÃO RESPONDIDO, e a resposta dele mostrou por quê.** Ele respondeu
-  *"só olhe o barro, de resto é ok"* — isso é **conteúdo**, não a etiqueta curta que o campo
-  pede. Não invente a etiqueta: ela depende de **onde** ele olha (ver abaixo).
+- **`permissao_abortar`** = **`Voltar sem ir é decisão, não desperdício.`** — ✅ **PALAVRAS DELE**
+  (2026-08-25). Primeiro ele aprovou a frase da Rampa (*"gostei da afirmação"*); avisei que
+  repetir a mesma linha nas duas únicas fichas vira bordão de app e ofereci uma do lugar
+  (*"Voltar sem subir depois de dirigir até aqui é decisão, não desperdício"*) — e **ele
+  encurtou a minha**. O texto final é edição dele em cima da minha, não a minha aceita.
+  ⚠️ **Não "conserte" a concisão dele.** *"Voltar sem ir"* é seco de propósito.
+- **`formato`** — ⬜ **AINDA SEM ETIQUETA, e não invente.** Ele respondeu *"só olhe o barro, de
+  resto é ok"* — **conteúdo**, não a etiqueta curta que o campo pede.
+  ✅ **Mas o "onde" ficou resolvido:** perguntei se o barro se olha **dirigindo**, sem ponto onde
+  parar e decidir (diferente da Rampa, onde se olha **parado na entrada da rampa**), e ele
+  respondeu **"ok"** — é assim. **Logo `entrada` é etiqueta ERRADA aqui**, e o `como_ler` não
+  pode começar com "na entrada". Falta só a palavra; ela sai fácil agora, mas é dele.
   ✅ **O "de resto é ok" resolveu OUTRA pergunta, essa sim:** o **portão** *não* vira checagem
   do discriminador. Fica só em `acesso`, como prosa. **Estava explicitamente na mesa e ele
   descartou** — não reabra.
 
-🔴 **O QUE FALTA DESEMPATAR, e não é detalhe de redação:** na Rampa o barro se olha **parado na
-entrada da rampa**. Aqui o barro é a **estrada de chão batido**, que se percorre **dirigindo** —
-não há "entrada" onde parar e decidir. Se for isso, o discriminador desta ficha é lido **no
-caminho**, não num ponto, e é isso que decide (a) o texto do `como_ler` e (b) a etiqueta do
-`formato` (`entrada` seria **errado** aqui).
-
 ## O que NÃO foi perguntado ainda
 
-- **`modos`** — a pergunta mais aberta do questionário. Na Rampa é `["condicional"]`. A Pedra
-  Furada também tem regra de chuva, então `condicional` é tentador — **e é exatamente por isso
-  que não se preenche sozinho.**
+- **`modos`** — 🟠 **PODE TER SIDO RESPONDIDO, E ESSA É A DÚVIDA.** Na Rampa é `["condicional"]`.
+  Na mesma mensagem em que deu a frase de meia-volta, ele emendou:
+  *"a chuva pode atrapalhar o caminho do carro e a experiência"*.
+  🔴 **Isso tem duas leituras e as duas mudam o que vai pra TELA:**
+  1. **rabo da frase de meia-volta** — a frase vira
+     *"Voltar sem ir é decisão, não desperdício — a chuva pode atrapalhar o caminho do carro e a
+     experiência."* (o travessão na mensagem dele favorece esta leitura);
+  2. **resposta ao `modos`** — a descrição, com as palavras dele, de por que esta trilha é
+     condicional.
+  ✅ **A favor da leitura 2:** o par *carro + experiência* é **exatamente** o par que ele deu como
+  os dois motivos das janelas de 3h e 2h. Ele não introduziu nada novo — reafirmou a mesma
+  estrutura.
+  ⚠️ **A favor de perguntar em vez de escolher:** na leitura 1 o texto vai pro fim da ficha e
+  **repete o que o carimbo já disse** logo acima. **Perguntado a ele em 2026-08-25; não decida.**
 
 ---
 
