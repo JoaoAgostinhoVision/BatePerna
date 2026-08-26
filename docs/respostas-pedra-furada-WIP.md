@@ -14,17 +14,21 @@
 
 ## ▶ RETOMAR EXATAMENTE AQUI
 
-**Atualizado em 2026-08-25:** ele fechou a **8 (acesso)** e a **10 (piso)**. A próxima é a
-**9 (avisos)**, a única do bloco 3 que sobrou — o texto dela está no anexo, não reformule.
-Depois dela vêm os blocos 4 (condição), 5 (discriminador) e `modos`.
+**Atualizado em 2026-08-25 (segunda leva):** o **bloco 3 está quase fechado** — 8 (acesso) e 10
+(piso) respondidas, 9 (avisos) respondida **menos o arco**.
 
-Duas perguntas curtas nasceram da resposta dele de 2026-08-25 e **foram feitas junto com a 9**:
-- **carro comum passa sempre INCLUSIVE molhado?** Ele disse "passa sempre", mas a regra dele é
-  esperar 3h sem chuva — então falta saber se as 3h são pelo **carro** ou pela **pedra/escada**.
-  Isso decide `regra_texto` e `ressalva_proxy` no bloco 4; não suponha.
-- **o filtro de piso vai esconder a Pedra Furada de quem pede piso melhor que barro**, mesmo
-  sendo lugar que carro comum alcança sempre. É consequência de produto, **decisão dele** —
-  ver a seção nova no fim deste arquivo.
+**Três coisas estão na mesa com ele agora, e as três foram feitas:**
+1. **a redação de `acesso`** — precisa do "ok" dele, porque o "passa sempre" ganhou ressalva
+   (ver a seção do `acesso`);
+2. **o arco** — o único pedaço da 9 que ele não tocou;
+3. **`janela_previsao_horas`** — a primeira do bloco 4, e a resposta dele sobre visibilidade e
+   céu aberto é exatamente o que a justifica.
+
+Depois disso: o resto do bloco 4, o bloco 5 (discriminador) e `modos`.
+
+🔴 **E uma decisão de produto dele continua parada:** o filtro de piso vai esconder a Pedra
+Furada de quem pede piso melhor que barro, **mesmo sendo lugar que carro comum alcança** — ver a
+seção no fim deste arquivo. Não construa.
 
 | bloco | estado |
 |---|---|
@@ -99,7 +103,7 @@ nem linha de cobrança.
 
 ## O que está PELA METADE
 
-### `acesso` — ✅ COMPLETO (2026-08-25)
+### `acesso` — 🟠 CONTEÚDO COMPLETO, redação aguardando o "ok" dele (2026-08-25)
 
 Já dele: **portão aberto das 5h às 17h, todos os dias**; **pode estar fechado quando você
 chegar, e dá pra abrir tranquilamente**.
@@ -113,22 +117,58 @@ vem junto de *"não suba de carro comum; o barro segura água"*. Aqui o piso é 
 comum passa mesmo assim. **O campo `piso` descreve o CHÃO, não a exigência de veículo** — as
 duas fichas provam isso ao discordarem com o mesmo valor.
 
-### `avisos` — 🟠 tem dois, falta o resto
+🔴 **O "sempre" GANHOU UMA RESSALVA na resposta seguinte (mesma sessão), e ela não é detalhe.**
+Perguntei se o "passa sempre" valia **inclusive molhado**, e ele respondeu que **evitar a chuva
+é justamente pra se precaver com o chão molhado quando for de carro — evitar derrapar e
+atolar**. Ou seja: *sempre* respondia **"que tipo de carro"** (carro comum dá conta, não precisa
+de veículo alto), **não** *"em qualquer condição"*.
+
+⚠️ **Se eu tivesse escrito `acesso` na primeira resposta, a ficha diria "carro comum passa
+sempre" e estaria ERRADA sobre a única condição que o app mede.** O erro não estava na resposta
+dele — a pergunta 8 juntava duas coisas ("que carro serve" e "em que condição") e ele respondeu
+a primeira.
+
+**Redação proposta, aguardando o "ok" dele:**
+
+> Dá pra chegar de carro comum. Se choveu, espera passar umas 3 horas — molhado, o chão batido
+> escorrega e dá pra atolar. O portão fica aberto das 5h às 17h todos os dias; se estiver
+> fechado quando você chegar, dá pra abrir tranquilamente.
+
+### `avisos` — 🟠 tem três, falta SÓ o arco
 
 Já dele: **a estrutura não é muito boa**; e **existe uma trilha mais perigosa, que sobe o arco —
 ele não foi** (*"não sou tão aventureiro"*).
 
-**Falta:** o que mais pode dar errado. E sobre o arco, pedi pra ele avisar **sem falar por
-experiência que não tem** — ver [[nao-inventar-fatos-de-roteiros]]; a régua vale pra ele também,
-e ele mesmo demarcou o limite.
+Novo em 2026-08-25: **é bom levar papel higiênico, o banheiro não é dos melhores.**
+Repare que isto **concretiza** o "estrutura não é muito boa" que já estava lá — não é um quinto
+aviso solto. Na redação, os dois viram **uma** linha; duas linhas dizendo a mesma coisa em graus
+diferentes fazem a seção de avisos parecer maior do que é.
+
+Também novo, e este é **fato de LUGAR sobre a experiência, não sobre o chão**: *"com a chuva a
+experiência pode não ser das melhores, seja por visibilidade ou por ser ao céu aberto"*. Ver
+`condicao` — é o que abre a janela de **previsão**.
+
+**Falta só:** o arco. Pedi pra ele avisar **sem falar por experiência que não tem** — ver
+[[nao-inventar-fatos-de-roteiros]]; a régua vale pra ele também, e **ele mesmo demarcou o
+limite**. A resposta de 2026-08-25 não tocou nesse ponto.
 
 ### `condicao` — 🟠 só um dos quatro números
 
 - `regra.janela_passado_horas` = **3** — de *"é melhor ir se não tiver chovido por 3 horas"*.
   ⚠️ **Diferente da Rampa, que é 6.** Não copie a Rampa por reflexo.
-- **Faltam:** `janela_previsao_horas` (ele só falou do passado — **não suponha que é 3
-  também**), `limiar_mm`, `coords` da condição (pode ser o mesmo ponto do trajeto, mas é
-  pergunta dele: é essa coordenada que planta o pin da home), `regra_texto` e `ressalva_proxy`.
+- **O PORQUÊ das 3h, respondido em 2026-08-25 — e ele tem DOIS motivos, não um:**
+  1. **o carro** — *"se precaver com o chão molhado quando for de carro, evitar derrapar e
+     atolar"*. Este é o motivo do **passado**: o que importa é a chuva que já caiu e deixou o
+     chão molhado.
+  2. **a experiência** — *"com a chuva a experiência pode não ser das melhores, seja por
+     visibilidade ou por ser ao céu aberto"*. Este é motivo de chuva **enquanto você está lá**,
+     e portanto é da **previsão**, não do passado.
+
+  🔴 **Os dois motivos moram em janelas DIFERENTES, e é isso que impede copiar o 3 pra frente.**
+- **Faltam:** `janela_previsao_horas` (o motivo 2 acima é o que a justifica; **não suponha que é
+  3 também** — ele nunca disse número pra frente), `limiar_mm`, `coords` da condição (pode ser o
+  mesmo ponto do trajeto, mas é pergunta dele: é essa coordenada que planta o pin da home),
+  `regra_texto` e `ressalva_proxy`.
 
 ### `piso` — ✅ `barro`, CRAVADO POR ELE (2026-08-25)
 
