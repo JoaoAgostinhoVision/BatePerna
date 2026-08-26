@@ -170,6 +170,40 @@ describe("a ficha de verdade", () => {
   });
 });
 
+// 🔴 A DIREÇÃO DA ALIMENTAÇÃO — a lição do componente controlado, aplicada ao
+// campo novo. `tests/app/Carimbo.test.tsx` prova que o carimbo OBEDECE à prop
+// `secaRapido`; nada lá provaria que `[slug]/page.tsx` a ENTREGA. Com
+// `secaRapido={undefined}` na página, toda aquela suíte fica verde e a linha
+// verde do app perde a explicação em produção — que é o defeito de 2026-08-26
+// só que mudo em vez de mentiroso.
+describe("a frase de relevo atravessa da ficha até a tela", () => {
+  it("a página entrega ao carimbo o que a ficha REAL diz", async () => {
+    const f = getFicha("rampa-do-pepe")!;
+    expect(f.secaRapido, "a Rampa perdeu a frase dela — este teste ficaria oco").toBeTruthy();
+    const { container } = await abrir("rampa-do-pepe");
+    // Montada a partir da própria ficha: ele pode reescrever a frase (e as
+    // janelas de chuva) sem que o teste vire manutenção.
+    expect(container.querySelector(".reason")?.textContent).toBe(
+      `Sem chuva nas últimas ~${f.condicao.regra.janela_passado_horas}h e nada previsto pras ` +
+        `próximas ~${f.condicao.regra.janela_previsao_horas}h. ${f.secaRapido}`,
+    );
+  });
+
+  // O par ortogonal, e ele não é redundante com o de cima: `secaRapido="Área
+  // alta, escorre rápido — a serra firmou."` escrito à mão na página passaria
+  // no teste da Rampa (é a frase dela) e SÓ CAI aqui. Medido.
+  it("ficha sem a frase: a página não põe nenhuma no lugar", async () => {
+    // A fixture sintética não traz o campo — conferido aqui, e não assumido,
+    // pra o dia em que alguém o acrescentar a ela não deixar este teste
+    // passando por outro motivo que não o testado.
+    expect((SEM_FATOS as TipoFicha).secaRapido).toBeUndefined();
+    const { container } = await abrir("morro-sem-fatos");
+    const texto = container.querySelector(".reason")?.textContent;
+    expect(texto).toBeTruthy();
+    expect(texto).toMatch(/nada previsto pras próximas ~\d+h\.$/);
+  });
+});
+
 describe("o piso no bloco Trajeto (a extensão saiu da tela na Task 6, e do modelo na Task 7)", () => {
   // 🔴 O teste "a ficha não mostra mais km de trilha, mesmo com o campo
   // presente" morreu aqui (Task 7, 2026-08-23), com a fixture `COM_FATOS` que

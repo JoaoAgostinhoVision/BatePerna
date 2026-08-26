@@ -20,10 +20,27 @@
 
 **Não construa nenhuma das três por conta própria.**
 
-🔴 **E uma QUARTA, que não é pergunta e sim DÍVIDA, achada depois do deploy:** a frase
-*"Área alta, escorre rápido — a serra firmou"* está **fixa em `src/app/Carimbo.tsx`** e aparece
-na ficha da Pedra Furada, que é **plana**. A voz da Rampa vazou pro código quando o acervo tinha
-uma ficha só. **Levantamento completo e gravidade no `docs/RESUME.md`**, no bloco do topo.
+✅ **A QUARTA — a dívida da voz da Rampa vazada pro código — FECHOU em 2026-08-26, por decisão
+dele.** A frase *"Área alta, escorre rápido — a serra firmou"* estava **fixa em
+`src/app/Carimbo.tsx`** e aparecia na ficha da Pedra Furada, que é **plana**. Ele escolheu, entre
+três saídas, a **frase por ficha**: campo novo `secaRapido`, cada lugar com a sua.
+
+**Procedência do campo novo, e ela é limpa:**
+
+| ficha | `secaRapido` | de quem é a frase |
+|---|---|---|
+| Pedra Furada | *"Área plana — o chão batido absorve mais que o barro."* | 🟢 **dele, palavra por palavra** — digitada por ele em 2026-08-26 |
+| Rampa do Pepê | *"Área alta, escorre rápido — a serra firmou."* | 🟡 redação minha de rodada antiga, **preservada** — era verdadeira sobre a Rampa desde sempre; só estava no lugar errado |
+
+⚠️ **A linha amarela é a que vale reler com ele um dia:** a frase da Rampa nunca foi conferida
+como *palavra dele*, só como *frase verdadeira sobre o lugar dele*. Ela sobreviveu à mudança
+porque a mudança foi de ENDEREÇO, não de texto — mas continua sendo redação minha.
+
+🔴 **O que a decisão dele NÃO cobriu, e segue fixo no código:** o ramo **frio** do mesmo carimbo
+(*"O barro segura água — risco de atolar"*, `Carimbo.tsx`) e as três menções a *"cheque o barro
+no portão"*. Hoje as duas fichas são `barro`, então as quatro linhas são verdadeiras **por
+sorte** — a 3ª ficha com asfalto quebra todas de uma vez. **Não construa: é a mesma família, e a
+saída é a mesma pergunta feita a ele.**
 
 ---
 

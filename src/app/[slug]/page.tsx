@@ -75,7 +75,15 @@ export default async function Ficha({
           <h1>{wp.nome}</h1>
           <p className="promessa">{ficha.promessa}</p>
 
-          <Carimbo estado={estado} erro={erro} calculadoEm={calculadoEm} pass={pass} fut={fut} slug={slug} />
+          <Carimbo
+            estado={estado}
+            erro={erro}
+            calculadoEm={calculadoEm}
+            pass={pass}
+            fut={fut}
+            slug={slug}
+            secaRapido={ficha.secaRapido}
+          />
         </div>
 
         <div className="caveat">

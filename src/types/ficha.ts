@@ -62,6 +62,24 @@ export const fichaSchema = z.object({
   // deste campo. Apagado na contração de 2026-08-23 (Task 7): sem o campo, não
   // sobra recorte de "tamanho da trilha" nem tela que o mostre.
   piso: z.enum(PISOS).optional(),
+  // A meia-frase que explica POR QUE o chão firma neste lugar — o tempero da
+  // linha verde do carimbo, logo depois de "sem chuva nas últimas ~Xh".
+  //
+  // 🔴 Ela nasceu FIXA no `Carimbo.tsx` ("Área alta, escorre rápido — a serra
+  // firmou"), verdadeira enquanto a Rampa era a única ficha do acervo, e virou
+  // MENTIRA no dia em que a Pedra Furada entrou: lá é estrada de chão batido e
+  // PLANA, não há serra. Mesma família do Critical de geografia inventada — o
+  // app afirmando sobre um lugar real coisa que ninguém mediu ali.
+  //
+  // Por que não dá pra derivar de `piso`: as duas fichas de hoje são `barro` e
+  // mesmo assim precisam de frases OPOSTAS. O que separa as duas é o relevo, e
+  // relevo é fato de roteiro — quem responde é quem conhece o lugar.
+  //
+  // Opcional pela mesma razão do `piso`: ficha futura que chegue sem o dado
+  // carrega, e o carimbo simplesmente NÃO diz a segunda oração. Silêncio é a
+  // saída honesta; frase genérica de reserva seria o defeito de volta com
+  // outra roupa.
+  secaRapido: z.string().optional(),
 });
 
 export type Waypoint = z.infer<typeof waypointSchema>;

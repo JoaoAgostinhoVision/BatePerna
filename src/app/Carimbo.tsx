@@ -27,6 +27,7 @@ export default function Carimbo({
   pass,
   fut,
   slug,
+  secaRapido,
 }: {
   estado: Estado;
   erro: boolean;
@@ -34,6 +35,9 @@ export default function Carimbo({
   pass: number;
   fut: number;
   slug: string;
+  /** A meia-frase de relevo da FICHA desta trilha. Opcional: sem ela, a linha
+   *  verde termina no ponto final. Ver `secaRapido` em `src/types/ficha.ts`. */
+  secaRapido?: string;
 }) {
   // A leitura do servidor é só o ponto de partida: daqui pra frente o
   // componente pode trocá-la por uma mais nova. O primeiro render usa
@@ -192,7 +196,9 @@ export default function Carimbo({
         <div className="mark">{marca}</div>
         <div className="sub">{sub}</div>
       </div>
-      <p className="reason">{motivo(fase, sintoma, estadoAtual, calculadoEmAtual, pass, fut)}</p>
+      <p className="reason">
+        {motivo(fase, sintoma, estadoAtual, calculadoEmAtual, pass, fut, secaRapido)}
+      </p>
       <div className="live">
         <span className="pulse"></span>
         <span>{linhaViva}</span>
@@ -237,7 +243,12 @@ function ehLeitura(x: unknown): x is LeituraCarimbo {
 }
 
 /** A frase que explica a marca. A hora só aparece quando existiu leitura: sem
- *  leitura nenhuma, não há hora pra citar. */
+ *  leitura nenhuma, não há hora pra citar.
+ *
+ *  🔴 A segunda oração do ramo "fresco" vem da FICHA (`secaRapido`), não daqui:
+ *  ela fala do relevo de UM lugar, e este componente serve o acervo inteiro.
+ *  Ficha sem o campo termina no ponto final — o app cala em vez de inventar
+ *  serra onde é planície. Ver o comentário do campo em `src/types/ficha.ts`. */
 function motivo(
   fase: Fase,
   sintoma: Sintoma,
@@ -245,6 +256,7 @@ function motivo(
   calculadoEm: number,
   pass: number,
   fut: number,
+  secaRapido?: string,
 ) {
   if (fase === "conferindo") {
     return sintoma === "venceu" ? (
@@ -271,8 +283,8 @@ function motivo(
   }
   return estado === "fresco" ? (
     <>
-      Sem chuva nas últimas <b>~{pass}h</b> e nada previsto pras próximas <b>~{fut}h</b>. Área alta,
-      escorre rápido — a serra firmou.
+      Sem chuva nas últimas <b>~{pass}h</b> e nada previsto pras próximas <b>~{fut}h</b>.
+      {secaRapido ? ` ${secaRapido}` : ""}
     </>
   ) : (
     <>

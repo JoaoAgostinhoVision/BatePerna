@@ -58,47 +58,59 @@ nova abrindo inteira.
 responde 200 com os degraus, o papel higiênico, os bichos da mata e a frase de meia-volta; a home
 serve **dois cartões**; `/trilhas` lista as duas. 🔴 Sem o `--scope bate-perna`, `Not authorized`.
 
+🆕 **DEPOIS DISSO, na mesma data: o `secaRapido`.** Ele decidiu a dívida da voz da Rampa (bloco
+logo abaixo) e a rodada foi feita: **679/679** (668 + 11), `tsc` limpo, `build` passa, HTML de
+produção local conferido nas DUAS fichas — cada uma com a sua frase. **⚠️ AINDA NÃO DEPLOYADA.**
+
 ---
 
-## 🔴🔴 A PRIMEIRA COISA DA PRÓXIMA SESSÃO — A VOZ DA RAMPA VAZOU PRO CÓDIGO
+## ✅ A VOZ DA RAMPA VOLTOU PRA FICHA — decidido e resolvido em 2026-08-26
 
-**Está NO AR agora, e só a 2ª ficha podia revelar.** A ficha da Pedra Furada mostra, hoje:
+**Era a dívida do topo deste arquivo, e ela FECHOU.** A ficha da Pedra Furada mostrava, no ar:
 
 > Sem chuva nas últimas ~3h e nada previsto pras próximas ~2h. **Área alta, escorre rápido — a
 > serra firmou.**
 
-**A frase em negrito é FALSA lá.** O João descreveu a Pedra Furada como *"estrada de chão batido
-e plana"* — não há serra, e "área alta escorre rápido" é a explicação do **barro da Rampa**. A
-frase não vem da ficha: está **fixa no código**, em `src/app/Carimbo.tsx:272-282` (`motivo()`).
+**A frase em negrito era FALSA lá** — o João descreveu a Pedra Furada como *"estrada de chão
+batido e plana"*. Ela estava **fixa no código**, em `Carimbo.tsx` (`motivo()`), verdadeira
+enquanto a Rampa era a única ficha do acervo.
 
-🔴 **É a MESMA FAMÍLIA do Critical de v3.9 (geografia inventada)** — o app afirmando sobre um
-lugar real coisa que ninguém mediu. A diferença é que desta vez a frase não nasceu num documento
-meu: ela nasceu **verdadeira**, escrita pra única ficha que existia, e virou mentira quando o
-acervo cresceu.
+🔴 **MESMA FAMÍLIA do Critical de v3.9 (geografia inventada)** — o app afirmando sobre um lugar
+real coisa que ninguém mediu ali. A diferença é que esta frase não nasceu num documento meu: ela
+nasceu **verdadeira**, e virou mentira quando o acervo cresceu. **É o formato que vai se repetir:
+todo texto fixo escrito quando o acervo era pequeno é uma mentira agendada.**
 
-**O levantamento completo do que está fixo no código e assume a Rampa** (feito em 2026-08-26):
+**A decisão foi DELE**, entre três saídas apresentadas (trocar a frase global / frase por ficha /
+frase genérica): **frase por ficha**. Campo `secaRapido`, opcional, cada lugar com a sua — e a
+Pedra Furada com a frase que **ele digitou**: *"Área plana — o chão batido absorve mais que o
+barro."* A Rampa manteve a dela.
+
+**Como ficou, e o desenho importa:** o `Carimbo` deixou de saber geografia. Ficha **sem** o campo
+termina a linha verde no ponto final — o app **cala em vez de inventar**, que é a mesma régua do
+`piso`. Sem frase genérica de reserva: reserva seria o defeito de volta com outra roupa.
+
+🔴 **O QUE NÃO FOI DECIDIDO E SEGUE FIXO NO CÓDIGO** — o resto do levantamento de 2026-08-26:
 
 | onde | texto | vale pra Pedra Furada? |
 |---|---|---|
-| `Carimbo.tsx:274` | "Área alta, escorre rápido — **a serra firmou**" | ❌ **FALSO** — é plana |
-| `Carimbo.tsx:279` | "O **barro** segura água — risco de atolar" | ✅ por sorte (o piso é barro) |
-| `Carimbo.tsx:259/262/267` | "cheque o **barro** no **portão**" | 🟠 por sorte — **e ele disse que olha DIRIGINDO, não no portão** |
-| `Carimbo.tsx:182`, `SeloTrilha.tsx:32` | "**barro** · dá um tempo" | ✅ por sorte |
-| `Carimbo.tsx:175`, `SeloTrilha.tsx:26` | "Não suba" / "Pode subir" | ✅ genérico o bastante |
+| ~~`Carimbo.tsx:274`~~ | ~~"Área alta… a serra firmou"~~ | ✅ **RESOLVIDO** — virou `secaRapido` na ficha |
+| `Carimbo.tsx` (ramo frio) | "O **barro** segura água — risco de atolar" | ✅ por sorte (o piso é barro) |
+| `Carimbo.tsx` (falhou/erro/venceu) | "cheque o **barro** no **portão**" | 🟠 por sorte — **e ele disse que olha DIRIGINDO, não no portão** |
+| `Carimbo.tsx`, `SeloTrilha.tsx` | "**barro** · dá um tempo" | ✅ por sorte |
+| `Carimbo.tsx`, `SeloTrilha.tsx` | "Não suba" / "Pode subir" | ✅ genérico o bastante |
 
-⚠️ **"Por sorte" é o ponto.** As duas fichas são `barro` — a 3ª ficha com asfalto quebra as
-quatro linhas de uma vez. **A gravidade hoje é BAIXA** (o veredito em si é calculado de dado
-real; o que mente é a frase de tempero), **mas a dívida está identificada e cresce com o
-acervo**.
-
-🔴 **NÃO CONSERTE POR CONTA PRÓPRIA: é copy na VOZ DELE, e a solução é decisão de produto** —
-frase genérica pra todas, campo novo na ficha, ou reaproveitar algum campo que já existe. **Foi
-mostrado a ele em 2026-08-26 e ele não decidiu ainda.**
+⚠️ **"Por sorte" continua sendo o ponto.** As duas fichas são `barro` — **a 3ª ficha com asfalto
+quebra as quatro linhas de uma vez**, e agora existe o molde pronto pra resolver (um campo por
+ficha, como o `secaRapido`). **Não construa por conta própria: é copy na voz dele.**
 
 **A procedência de cada campo está em `docs/respostas-pedra-furada-WIP.md`** — quem escreveu
 cada frase, o que é palavra dele e o que é redação minha aprovada. **Uma única linha vermelha
 lá: `limiar_mm = 0.2`, padrão meu, porque ele disse "não tenho opinião".** É o parafuso a mexer
 se o carimbo dessa ficha ficar sensível demais.
+
+⚠️ **E uma linha AMARELA nova, do `secaRapido`:** a frase da Rampa é **redação minha** de rodada
+antiga, preservada porque a mudança foi de ENDEREÇO, não de texto. A da Pedra Furada é **palavra
+dele**. Nunca foi perguntado a ele se a da Rampa é o jeito que ele diria.
 
 🔴 **A SEGUNDA FICHA ACENDE O QUE ESTAVA APAGADO.** Fatias 2 e 3 eram invisíveis com uma ficha
 só. Agora existem **duas** — e elas já discordam de um jeito útil: **mesmo `piso` (`barro`) e
@@ -157,9 +169,9 @@ repo ele apaga o ledger de scratch e o próprio `.claude/`.
 ```
 git branch --show-current  → main
 git status --short         → limpo
-npm test                   → 668/668 em 49 arquivos   ← tudo verde, NÃO há falha esperada
-                             (o total NÃO mudou com a 2ª ficha: 9 testes caíram e foram
-                              consertados, nenhum acrescentado nem removido)
+npm test                   → 679/679 em 49 arquivos   ← tudo verde, NÃO há falha esperada
+                             (era 668; a 2ª ficha não mudou o total — 9 caíram e foram
+                              consertados. O `secaRapido` de 2026-08-26 acrescentou 11.)
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
@@ -769,6 +781,27 @@ consertou lógica de aplicação. Quando o revisor rotula "plan-mandated", é li
   Next fundiu `.busca-campo` e `.busca-item` num seletor só pras declarações comuns. Neste caso a
   ordem e o seletor de 3 classes sobreviveram (conferido em produção), mas **a verificação não é
   opcional** quando a correção depende de posição — ver o §D.
+
+### 4d. 🆕 O QUE A RODADA DO `secaRapido` ACRESCENTOU (2026-08-26) — três, todas medidas
+
+- 🔴 **TEXTO FIXO ESCRITO COM O ACERVO PEQUENO É MENTIRA AGENDADA — e é uma família, não um caso.**
+  A frase da Rampa dentro do `Carimbo` nasceu **verdadeira** e virou falsa **sem ninguém editar
+  nada**: bastou o acervo crescer. É o inverso da dívida normal (que nasce errada e é tolerada).
+  **A pergunta que a acha: este texto fala de UM lugar, num componente que serve TODOS?** Vale
+  hoje pro ramo frio e pro "cheque o barro no portão", que só estão certos **por sorte** — as duas
+  fichas são `barro`.
+- 🔴 **A SEGUNDA METADE DA VARREDURA DE CHUNKS QUASE MENTIU DE NOVO, e a causa é NOVA: ACENTO.**
+  O §D já avisa que o marcador do "vivo" tem que ser atualizado a cada rodada. Desta vez ele
+  estava **atualizado e ainda assim deu 0**: `grep 'Sem chuva nas últimas'` não casa no bundle
+  porque o minificador **escapa o acento**, enquanto `grep 'Sem chuva nas'` casa. Os dois lados
+  deram zero e o quadro ficou idêntico ao de "o deploy não subiu". 🔴 **Marcador de varredura de
+  bundle: use trecho SEM ACENTO**, e desconfie de zero nos dois lados.
+- 🆕 **A TIRA DE COMENTÁRIOS PRECISA DE GUARDA — o remédio do §4 tem o próprio furo.** A prova de
+  fonte nova tira comentários antes de buscar (o arquivo cita a frase antiga **de propósito**, como
+  história). Medido: com a tira comendo o arquivo inteiro, a asserção de **ausência** passa por
+  vacuidade e a mutação sobrevive. Duas linhas de `toContain` sobre o código que tem que sobreviver
+  fecham — e caem quando a tira exagera. **Toda tira-antes-de-buscar precisa provar que sobrou
+  código.**
 
 ### 4b. 🔴 A OUTRA FAMÍLIA QUE APARECEU TRÊS VEZES NESTA SESSÃO: comentário que envelhece
 

@@ -13,7 +13,7 @@ const AGORA_S = AGORA_MS / 1000;
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(AGORA_MS); });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
-type Props = { estado: "fresco" | "frio"; erro: boolean; calculadoEm: number; pass: number; fut: number; slug: string };
+type Props = { estado: "fresco" | "frio"; erro: boolean; calculadoEm: number; pass: number; fut: number; slug: string; secaRapido?: string };
 
 function montar(props: Partial<Props> = {}) {
   return render(
@@ -456,6 +456,77 @@ describe("Carimbo — o que os quadros commitados mostram", () => {
     expect(quadros.length).toBeGreaterThan(0); // o recorder está mesmo gravando
     expect(quadros).not.toContain("SEM INFORMAÇÕES");
     expect(quadros.at(-1)).toBe("Pode subir");
+  });
+});
+
+// 🔴 O DEFEITO QUE ESTES TESTES TRANCAM (2026-08-26). Até hoje a linha verde
+// terminava com "Área alta, escorre rápido — a serra firmou", escrita FIXA
+// aqui dentro. Era verdade sobre a Rampa, e este componente serve o acervo
+// inteiro: no dia em que a Pedra Furada entrou, o app passou a afirmar serra
+// num lugar plano. Mesma família do Critical de geografia inventada.
+describe("Carimbo — a explicação do relevo vem da FICHA", () => {
+  const PLANA = "Área plana — o chão batido absorve mais que o barro.";
+  const SERRA = "Área alta, escorre rápido — a serra firmou.";
+
+  it("a frase da ficha aparece depois da leitura de chuva", () => {
+    const { container } = montar({ secaRapido: PLANA });
+    expect(container.querySelector(".reason")?.textContent).toBe(
+      `Sem chuva nas últimas ~6h e nada previsto pras próximas ~3h. ${PLANA}`,
+    );
+  });
+
+  // O par que prova que a frase é DA FICHA e não do componente: mesma
+  // montagem, texto diferente. Sem ele, o teste de cima passaria com a frase
+  // fixa de volta no código, desde que fosse esta.
+  it("outra ficha, outra frase — o componente não tem geografia própria", () => {
+    const { container } = montar({ secaRapido: SERRA });
+    expect(container.querySelector(".reason")?.textContent).toBe(
+      `Sem chuva nas últimas ~6h e nada previsto pras próximas ~3h. ${SERRA}`,
+    );
+  });
+
+  // 🔴 Igualdade, não `not.toContain`: a asserção de AUSÊNCIA de texto mascara
+  // o sumiço do elemento (lição da Task 6). Com `toBe` na frase inteira, o
+  // teste cai tanto se alguém puser frase genérica de reserva quanto se a
+  // `.reason` deixar de existir — e o `?.textContent` de um elemento ausente é
+  // `undefined`, que não é igual a string nenhuma.
+  it("ficha SEM a frase termina no ponto final — o app cala em vez de inventar", () => {
+    const { container } = montar();
+    expect(container.querySelector(".reason")?.textContent).toBe(
+      "Sem chuva nas últimas ~6h e nada previsto pras próximas ~3h.",
+    );
+  });
+
+  // A frase explica por que o chão FIRMA. No ramo frio ela seria contradição
+  // ("choveu… o chão batido absorve mais que o barro"), então ela não sai do
+  // ternário. Mutação alvo: mover o `{secaRapido}` pra fora do ramo fresco.
+  it("no ramo frio a frase não aparece — ela explica o chão SECO", () => {
+    const { container } = montar({ estado: "frio", secaRapido: PLANA });
+    const texto = container.querySelector(".reason")?.textContent ?? "";
+    expect(texto).toContain("risco de atolar"); // o ramo frio de verdade, não um vazio
+    expect(texto).not.toContain("chão batido");
+  });
+
+  // PROVA DE FONTE — precedente do `"use client"` e do `z.enum(PISOS)`. Em
+  // runtime, "frase da ficha" e "frase da ficha com a antiga de reserva" são
+  // indistinguíveis enquanto toda ficha do acervo trouxer o campo: os testes
+  // acima passam nas duas versões. Só a fonte separa, e é ela que impede a
+  // geografia de um lugar de voltar a morar no componente que serve todos.
+  it("nenhuma geografia escrita à mão no componente", () => {
+    const src = readFileSync(path.join(process.cwd(), "src", "app", "Carimbo.tsx"), "utf8");
+    // Os comentários deste arquivo CITAM a frase antiga de propósito, pra
+    // contar de onde ela veio — referência histórica legítima, o balde (b) da
+    // Task 8. Sem tirá-los, esta prova falharia com o código certo.
+    const codigo = src.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+    // 🔴 A TIRA PRECISA DE GUARDA, senão o remédio vira o próximo furo: um
+    // regex que comesse o arquivo inteiro deixaria a asserção de AUSÊNCIA
+    // abaixo passar por vacuidade, sempre. Estas duas linhas provam que o
+    // código sobreviveu à tira.
+    expect(codigo, "a tira de comentários comeu o código").toContain("function motivo(");
+    expect(codigo).toContain("secaRapido");
+    expect(codigo, "a frase da Rampa não pode voltar pro código").not.toMatch(
+      /serra|Área alta|área plana/i,
+    );
   });
 });
 

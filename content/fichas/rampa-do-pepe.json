@@ -13,6 +13,7 @@
   "acesso": "Dá pra ir de carro comum — mas só quando não estiver chovendo. Molhado, o risco é atolar.",
   "avisos": "Só de carro comum em tempo seco: com chuva, risco de atolamento — se choveu, remarque pro próximo dia seco. E a vista rende mais com céu aberto — muita nuvem ou nevoeiro atrapalha o que você foi ver.",
   "piso": "barro",
+  "secaRapido": "Área alta, escorre rápido — a serra firmou.",
   "condicao": {
     "coords": { "lat": -7.907889, "lng": -36.019222 },
     "regra": {

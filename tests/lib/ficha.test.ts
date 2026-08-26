@@ -207,6 +207,57 @@ describe("piso", () => {
   });
 });
 
+// 🔴 O campo que nasceu de uma MENTIRA no ar (2026-08-26). A meia-frase "Área
+// alta, escorre rápido — a serra firmou" morava FIXA no `Carimbo.tsx`: era
+// verdade enquanto a Rampa era a única ficha do acervo, e virou falsa no
+// instante em que a Pedra Furada entrou — lá é chão batido e PLANO. Estes
+// testes existem pra que ela não volte pro código.
+describe("secaRapido — a explicação do relevo é da FICHA, não do app", () => {
+  const base = JSON.parse(readFileSync(
+    path.join(process.cwd(), "content", "fichas", "rampa-do-pepe.json"), "utf8"));
+
+  // Opcional pela mesma razão do `piso`: é fato de roteiro. A fixture apaga o
+  // campo à mão em vez de depender de uma ficha real que não o tenha — hoje as
+  // duas têm, e o teste é sobre o SCHEMA, não sobre o acervo de hoje.
+  it("ficha SEM secaRapido valida — é opcional, e o campo fica indefinido", () => {
+    const { secaRapido: _s, ...sem } = base;
+    expect(() => fichaSchema.parse(sem)).not.toThrow();
+    expect(fichaSchema.parse(sem).secaRapido).toBeUndefined();
+  });
+
+  it("secaRapido que não é texto não valida", () => {
+    expect(() => fichaSchema.parse({ ...base, secaRapido: 42 })).toThrow();
+  });
+
+  // As fichas REAIS, por SLUG e nunca por índice — a lição de 2026-08-25, em
+  // que nove testes quebraram porque liam o acervo supondo ficha única.
+  //
+  // A asserção que importa é a ÚLTIMA: as duas frases DISCORDAM. Enquanto
+  // discordarem, nenhuma delas pode estar fixa no componente — ele é um só e
+  // serve as duas. As de presença não são redundantes com ela: `not.toBe`
+  // sozinha morreria se as duas fossem indefinidas, mas passa com uma
+  // indefinida e a outra escrita, que é o meio-caminho a barrar aqui.
+  it("as duas fichas do acervo trazem a sua frase, e elas DISCORDAM", () => {
+    const rampa = getFicha("rampa-do-pepe");
+    const pedra = getFicha("pedra-furada-de-venturosa");
+    expect(rampa).not.toBeNull();
+    expect(pedra).not.toBeNull();
+    expect(rampa!.secaRapido, "a Rampa precisa da frase dela").toBeTruthy();
+    expect(pedra!.secaRapido, "a Pedra Furada precisa da frase dela").toBeTruthy();
+    expect(pedra!.secaRapido).not.toBe(rampa!.secaRapido);
+  });
+
+  // O defeito exato que estava em produção, cravado pelo nome. "Serra" é a
+  // palavra da Rampa; a Pedra Furada é plana, e o João a descreveu como
+  // "estrada de chão batido e plana". Reword-proof: ele pode reescrever a
+  // frase à vontade, só não pode pôr serra onde não tem.
+  it("a frase da Pedra Furada não fala em serra — foi essa a mentira que estava no ar", () => {
+    const pedra = getFicha("pedra-furada-de-venturosa");
+    expect(pedra!.secaRapido).toBeTruthy();
+    expect(pedra!.secaRapido!.toLowerCase()).not.toContain("serra");
+  });
+});
+
 describe("loadAll: slug repetido não pode divergir entre telas", () => {
   it("dois JSONs com o mesmo slug estouram, citando o slug e os dois arquivos", () => {
     const dir = dirSintetico({

@@ -189,6 +189,31 @@ esse filtro — ela aparece pra qualquer piso mínimo que a pessoa escolher.
 
 ---
 
+## Por que o chão firma rápido aqui — `secaRapido`
+
+**Pergunta:** quando faz umas horas que não chove, o que é que faz o chão desse
+lugar estar bom de novo? É o relevo, é o tipo de terra, é sol batendo? Responda
+em **uma frase curta**, do jeito que você diria pra um amigo no telefone.
+
+**Por que importa:** é o final da linha verde do carimbo. A pessoa lê *"sem
+chuva nas últimas ~3h e nada previsto pras próximas ~2h"* — e essa frase é o que
+explica por que isso basta **neste** lugar.
+
+🔴 **Este campo nasceu de uma mentira que ficou no ar** (2026-08-26): a frase da
+Rampa — *"área alta, escorre rápido — a serra firmou"* — estava escrita dentro
+do código, e o app passou a repeti-la na Pedra Furada, que é plana. Por isso ela
+mora na ficha agora: **cada lugar diz o seu, e nenhum lugar fala pelo outro.**
+
+**Exemplo (Rampa):** `Área alta, escorre rápido — a serra firmou.`
+**Exemplo (Pedra Furada):** `Área plana — o chão batido absorve mais que o barro.`
+
+**Pular é permitido:** sem resposta, a linha verde termina no ponto final, depois
+das horas de chuva. Fica mais seca, e continua verdadeira — que é o ponto. **Não
+invente uma explicação de terreno pra preencher o campo:** era exatamente isso
+que estava errado antes.
+
+---
+
 ## Os avisos — `avisos`
 
 **Pergunta:** o que pode dar errado, e o que a pessoa devia saber antes de decidir
@@ -341,10 +366,14 @@ recusa carregar em vez de mostrar algo quebrado. Depois de validado, a ficha nov
 aparece sozinha na home (agrupada por "hoje dá" ou "hoje não dá", junto com o pin no
 mapa) e no acervo em `/trilhas` — sem precisar mexer em mais nada.
 
-`piso` é o único campo opcional deste questionário: se você pulou a pergunta da seção
-"O piso da via", a ficha carrega igual, só que essa trilha nunca fica escondida pelo
-filtro de piso na tela inicial — ela aparece pra qualquer valor que a pessoa escolher
-no filtro.
+**Dois campos são opcionais**, e pular qualquer um dos dois não impede a ficha de
+carregar:
+
+- `piso` — sem ele, essa trilha nunca fica escondida pelo filtro de piso na tela
+  inicial: ela aparece pra qualquer valor que a pessoa escolher no filtro.
+- `secaRapido` — sem ele, a linha verde do carimbo termina nas horas de chuva, sem a
+  meia-frase que explica o terreno. Os dois são **fato de roteiro**: quem responde é
+  quem conhece o lugar, e o app prefere calar a inventar.
 
 **Nota pra quem mantém o schema:** três perguntas antigas saíram deste questionário —
 esforco (quão puxada é, pensando no corpo de quem vai) e duracao (quanto tempo dura,
