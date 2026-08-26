@@ -14,8 +14,15 @@
 
 ## ▶ RETOMAR EXATAMENTE AQUI
 
-**Atualizado em 2026-08-25 (quarta leva):** ✅ **BLOCOS 3 E 4 FECHADOS.** Falta **só o bloco 5
-(`discriminador`)** e **`modos`** — e depois disso a ficha tem todos os campos obrigatórios.
+**Atualizado em 2026-08-25 (quinta leva):** ✅ **BLOCOS 3 e 4 fechados; bloco 5 quase.**
+
+**Falta, e é pouco:**
+1. **onde ele olha o barro** — dirigindo na estrada de chão batido, ou parado em algum ponto?
+   Decide `formato` e o texto do `como_ler`. **Não escolha `entrada` por espelhamento da Rampa.**
+2. **a frase de meia-volta ser IGUAL à da Rampa** — ele aprovou a da Rampa; com duas fichas só,
+   a frase repetida vira bordão. Foi oferecida a ele a versão do lugar; decisão dele.
+3. **`modos`** — nunca perguntado.
+4. **a fila de "ok"** (abaixo).
 
 🟠 **E tem uma FILA DE "ok" dele acumulando — não crie o JSON antes de zerá-la.** São textos que
 eu redigi e ele ainda não aprovou: `voz`, `rotulo_escaneio`, `acesso`, `avisos`; mais três
@@ -33,7 +40,7 @@ seção no fim deste arquivo. Não construa.
 | 2 — promessa, prêmio, voz, rótulo | ✅ respondido (3 redações minhas aguardando o "ok" dele) |
 | 3 — acesso, avisos, **piso** | ✅ completo em conteúdo (redações aguardando "ok") |
 | 4 — condição (chuva) | ✅ completo — 3h/2h dele, coords dele, `limiar_mm` padrão meu |
-| 5 — discriminador | ⬜ **É O QUE FALTA** |
+| 5 — discriminador | 🟠 `como_ler` e `permissao_abortar` ✅ / **`formato` depende de "onde"** |
 | 6 — custo, modos | 🟢 custo ✅ `gratis`; **`modos` ainda não perguntado** |
 
 ---
@@ -241,12 +248,36 @@ Os dois avisos que acompanhavam a pergunta, **os dois resolvidos**:
 
 ---
 
+### `discriminador` — 🟠 respondido em 2026-08-25, com UMA coisa por desempatar
+
+- **`como_ler`** — dele: *"vejo se o barro está brilhando ou tem poça"*.
+  ✅ **A poça é contribuição dele e é o melhor pedaço da resposta:** poça é justamente o que a
+  previsão **não** enxerga (chove 2mm e não empoça; chove 2mm num trecho já saturado e empoça).
+  Ela reforça a `ressalva_proxy` — considere puxá-la pra lá também.
+  🔴 **MAS ATENÇÃO À CONTAMINAÇÃO PELO EXEMPLO.** A pergunta foi feita **citando a Rampa**
+  (*"barro brilhando/pegajoso = não vá"*) e a resposta dele voltou com **as mesmas palavras**
+  mais a poça. Isso **não** invalida a resposta — ele já tinha dito por conta própria, duas
+  levas antes, que *molhado o chão batido escorrega e dá pra atolar*, então o conteúdo é
+  coerente e independente. **Mas o vício de método fica registrado: citar a Rampa dentro da
+  pergunta convida o eco.** Nas próximas fichas, pergunte **antes** de mostrar o exemplo.
+- **`permissao_abortar`** — 🟠 ele disse *"gostei da afirmação"* sobre a frase da Rampa
+  (`Dar meia-volta aqui é sabedoria, não fracasso.`). **Isso é aprovação de uma frase que já
+  existe em OUTRA ficha**, não uma frase nova. Ver a pergunta aberta logo abaixo.
+- **`formato`** — ⬜ **NÃO RESPONDIDO, e a resposta dele mostrou por quê.** Ele respondeu
+  *"só olhe o barro, de resto é ok"* — isso é **conteúdo**, não a etiqueta curta que o campo
+  pede. Não invente a etiqueta: ela depende de **onde** ele olha (ver abaixo).
+  ✅ **O "de resto é ok" resolveu OUTRA pergunta, essa sim:** o **portão** *não* vira checagem
+  do discriminador. Fica só em `acesso`, como prosa. **Estava explicitamente na mesa e ele
+  descartou** — não reabra.
+
+🔴 **O QUE FALTA DESEMPATAR, e não é detalhe de redação:** na Rampa o barro se olha **parado na
+entrada da rampa**. Aqui o barro é a **estrada de chão batido**, que se percorre **dirigindo** —
+não há "entrada" onde parar e decidir. Se for isso, o discriminador desta ficha é lido **no
+caminho**, não num ponto, e é isso que decide (a) o texto do `como_ler` e (b) a etiqueta do
+`formato` (`entrada` seria **errado** aqui).
+
 ## O que NÃO foi perguntado ainda
 
-- **`discriminador`** inteiro (`formato`, `como_ler`, `permissao_abortar`) — bloco 5.
-  🟠 **Candidato já na mão:** *"o portão pode estar fechado, pode abrir tranquilamente"* é uma
-  checagem de entrada, e pode ser `como_ler` em vez de (ou além de) `acesso`. Pergunte, não
-  decida.
 - **`modos`** — a pergunta mais aberta do questionário. Na Rampa é `["condicional"]`. A Pedra
   Furada também tem regra de chuva, então `condicional` é tentador — **e é exatamente por isso
   que não se preenche sozinho.**
