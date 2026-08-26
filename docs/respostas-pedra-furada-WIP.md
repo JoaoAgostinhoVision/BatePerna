@@ -14,11 +14,8 @@
 
 ## ▶ RETOMAR EXATAMENTE AQUI
 
-**Atualizado em 2026-08-25 (terceira leva):** ✅ **BLOCO 3 FECHADO EM CONTEÚDO** (acesso, piso,
-avisos). Bloco 4 tem as **duas janelas** (3 pra trás, 2 pra frente).
-
-**Falta perguntar:** `limiar_mm` e `coords` da condição (as duas foram feitas em 2026-08-25),
-depois `regra_texto` + `ressalva_proxy`, o bloco 5 (`discriminador`) e `modos`.
+**Atualizado em 2026-08-25 (quarta leva):** ✅ **BLOCOS 3 E 4 FECHADOS.** Falta **só o bloco 5
+(`discriminador`)** e **`modos`** — e depois disso a ficha tem todos os campos obrigatórios.
 
 🟠 **E tem uma FILA DE "ok" dele acumulando — não crie o JSON antes de zerá-la.** São textos que
 eu redigi e ele ainda não aprovou: `voz`, `rotulo_escaneio`, `acesso`, `avisos`; mais três
@@ -34,10 +31,10 @@ seção no fim deste arquivo. Não construa.
 |---|---|
 | 1 — nome, coordenada, nota | ✅ respondido |
 | 2 — promessa, prêmio, voz, rótulo | ✅ respondido (3 redações minhas aguardando o "ok" dele) |
-| 3 — acesso, avisos, **piso** | 🟠 acesso ✅ / piso ✅ / **avisos ainda falta** |
-| 4 — condição (chuva) | 🟠 só a janela de passado (3h); faltam 4 coisas |
-| 5 — discriminador | ⬜ nem começou |
-| 6 — custo, modos | 🟢 custo ✅ `gratis`; `modos` não perguntado |
+| 3 — acesso, avisos, **piso** | ✅ completo em conteúdo (redações aguardando "ok") |
+| 4 — condição (chuva) | ✅ completo — 3h/2h dele, coords dele, `limiar_mm` padrão meu |
+| 5 — discriminador | ⬜ **É O QUE FALTA** |
+| 6 — custo, modos | 🟢 custo ✅ `gratis`; **`modos` ainda não perguntado** |
 
 ---
 
@@ -194,9 +191,35 @@ nunca ia subir o arco de todo jeito.
   (`nota` ou `voz`) — e mesmo aí, cuidado: "leva 2h" é sobre o corpo/o passeio, e este app fala
   de LUGAR. Os **360 degraus** passam nesse teste; "leva 2 horas" é mais discutível. **Pergunte,
   não decida.**
-- **Faltam:** `limiar_mm`, `coords` da condição (pode ser o mesmo ponto do trajeto, mas é
-  pergunta dele: é essa coordenada que planta o pin da home), `regra_texto` (documentação, não
-  vai pra tela) e `ressalva_proxy` (vai pra tela, precisa do "ok" dele).
+- `regra.limiar_mm` = **0.2** — 🟠 **PADRÃO MEU, NÃO CRAVADO POR ELE.** Perguntei e ele
+  respondeu *"não tenho opinião"* (2026-08-25). O valor é **herdado da Rampa**, e a pergunta foi
+  feita já dizendo que aqui talvez coubesse folga maior por causa da areia. **Ele não escolheu —
+  ele abriu mão de escolher.** Se um dia o carimbo desta ficha ficar sensível demais (frio com
+  garoa que não molha o chão batido), **este número é o primeiro suspeito**, e mexer nele não
+  contraria dado dele.
+- `condicao.coords` = **as mesmas do trajeto** (`-8.5725`, `-36.825556`) — ✅ **ESCOLHA DELE.**
+  A pergunta oferecia o ponto da **pedra** ou o ponto da **estrada de chão batido** (o trecho que
+  de fato decide o rolê de carro), e ele respondeu **"o ponto da pedra"** (2026-08-25).
+  ⚠️ **O "não tenho opinião" que veio um minuto antes era só do `limiar_mm`** — ele voltou
+  sozinho pra cravar a coordenada. **Não leia o "não tenho opinião" como se cobrisse as duas.**
+  ✅ **Consequência visível:** é esta coordenada que planta o **pin da home**, e o pin cai sobre
+  a pedra — aonde a pessoa vai. O km da tela sai do trajeto e não muda.
+- `regra.tipo` = `"chuva_binaria"` — fixo em toda ficha, não é pergunta (questionário, §condição).
+- `regra_texto` — 🟠 **REDAÇÃO MINHA. É documentação, não vai pra tela** (questionário, §"O texto
+  da regra"), então **não precisa do "ok" dele** — precisa é bater com os números:
+
+  > Choveu nas últimas ~3h OU vem chuva nas próximas ~2h → o chão batido molhado escorrega e dá
+  > pra atolar carro comum; e lá em cima, ao céu aberto, a chuva tira a visibilidade e a vista.
+  > As 2h à frente são o tempo do passeio: subir os degraus, ficar e descer.
+
+  ✅ Confere com `3` / `2` / os dois motivos que ele deu.
+- `ressalva_proxy` — 🟠 **REDAÇÃO MINHA, AGUARDANDO O "OK" DELE. Esta VAI pra tela** (o ⚠ logo
+  abaixo do carimbo):
+
+  > Chuva medida ≠ chão molhado na estrada — a grade do modelo não vê o trecho de chão batido.
+  > Confirme quando pegar a terra.
+
+**`condicao` está COMPLETA** — dois valores dele, dois padrões meus declarados, dois textos meus.
 
 ### `piso` — ✅ `barro`, CRAVADO POR ELE (2026-08-25)
 
