@@ -13,7 +13,17 @@ const RAMPA = { lat: -7.907889, lng: -36.019222 };
 // vale — não um par lat/lng escolhido por quem renderiza. A ficha real da
 // Rampa entra aqui de propósito; a asserção logo abaixo é o que mantém o
 // "~111 km" destes testes ancorado num fato, e não numa lembrança.
-const ficha = getFichasComCondicao()[0];
+// Pelo SLUG, não pelo índice: `[0]` significava "a Rampa" só enquanto o acervo
+// tinha uma ficha. Entrou a Pedra Furada de Venturosa (2026-08-25) e
+// `ordenarPorNome` a pôs na frente — o `[0]` passou a ser outra trilha, e as
+// contas de ~111 km deste arquivo são todas ancoradas na coordenada da Rampa.
+function fichaReal(slug: string) {
+  const f = getFichasComCondicao().find((x) => x.slug === slug);
+  if (!f) throw new Error(`ficha "${slug}" não está em content/fichas — estes testes são sobre ela`);
+  return f;
+}
+
+const ficha = fichaReal("rampa-do-pepe");
 
 describe("a ficha usada nestes testes", () => {
   it("começa na coordenada que as contas de ~111 km assumem", () => {

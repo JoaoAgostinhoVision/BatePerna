@@ -7,7 +7,19 @@ import { getFichasComCondicao } from "@/lib/ficha";
 
 afterEach(() => { cleanup(); localStorage.clear(); });
 
-const ficha = getFichasComCondicao()[0];
+// `getFichasComCondicao()[0]` significava "a Rampa" só enquanto o acervo tinha
+// UMA ficha. Com a segunda (Pedra Furada de Venturosa, 2026-08-25) o índice
+// passou a apontar pra outra trilha — `ordenarPorNome` ordena pelo nome do
+// waypoint, e "Pedra Furada" vem antes de "Rampa do Pepê". O índice dizia ONDE
+// a ficha estava; o slug diz QUAL ficha o teste quer, que é o que os
+// comentários daqui já afirmavam em português ("é a Rampa de verdade").
+function fichaReal(slug: string) {
+  const f = getFichasComCondicao().find((x) => x.slug === slug);
+  if (!f) throw new Error(`ficha "${slug}" não está em content/fichas — estes testes são sobre ela`);
+  return f;
+}
+
+const ficha = fichaReal("rampa-do-pepe");
 const leitura = { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 };
 
 describe("a linha de metadados do cartão", () => {

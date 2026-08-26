@@ -211,8 +211,16 @@ describe("a home", () => {
   // ela mora neste arquivo porque é aqui que a home de verdade é renderizada,
   // com o loader de ficha e o `resolverEstados` já no lugar.
   //
-  // A única ficha real do projeto é PAGA (R$ 5 no portão da Rampa), então "só
-  // grátis" zera a home de verdade: se o filtro chegar, a folha vira o aviso.
+  // 🔴 A PREMISSA DESTE TESTE MORREU COM A SEGUNDA FICHA, e ela era literal:
+  // "a única ficha real do projeto é PAGA (R$ 5 no portão da Rampa), então 'só
+  // grátis' zera a home de verdade". A prova era o ESTADO VAZIO. A Pedra Furada
+  // de Venturosa entrou em 2026-08-25 e é `gratis` — "só grátis" não zera mais
+  // coisa nenhuma, e o teste passaria a afirmar o oposto do que dizia.
+  //
+  // A prova ficou MAIS forte por causa disso, não mais fraca: com duas fichas
+  // de custos diferentes, "só grátis" tem que ESCOLHER, não só esvaziar. Some a
+  // Rampa (paga), fica a Pedra Furada. Sem o provedor, as duas passam e a
+  // asserção que cai nomeia a trilha que não devia estar lá.
   it("a home de verdade embrulha tudo no FiltrosVivos: o filtro guardado recorta sem ninguém embrulhar na mão", async () => {
     vi.useRealTimers();
     vi.mocked(resolverEstados).mockResolvedValue(leituras("fresco"));
@@ -222,8 +230,9 @@ describe("a home", () => {
     // provedor some é uma ASSERÇÃO nomeada, não um erro de query — a lição 15
     // do RESUME ("suíte vermelha não é o mesmo que asserção caindo") pede que a
     // prova de mutação seja legível como asserção.
-    await waitFor(() => expect(container.textContent).toContain("Nenhuma trilha com esses filtros"));
-    expect(container.querySelectorAll(".cartao")).toHaveLength(0);
+    await waitFor(() => expect(container.querySelectorAll(".cartao")).toHaveLength(1));
+    expect(container.textContent).toContain("Pedra Furada de Venturosa");
+    expect(container.textContent).not.toContain("Rampa do Pepê");
   });
 });
 
