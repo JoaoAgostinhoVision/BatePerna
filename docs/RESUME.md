@@ -4,7 +4,18 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-**Última parada:** 2026-08-23. ✅ **TRÊS RODADAS FECHADAS, MERGEADAS E NO AR, na mesma sessão.**
+**Última parada:** 2026-08-25 — **a 2ª ficha existe** (ver o bloco "SE O JOÃO DISSER CONTINUA"
+logo abaixo). Antes dela, o estado de 2026-08-23 descrito no resto deste arquivo continua valendo.
+
+🔴 **A LIÇÃO DE MÉTODO DE 2026-08-25, porque ela vai se repetir na 3ª ficha:** conteúdo novo
+quebrou **nove testes** que liam o **acervo real** supondo uma ficha única — `[0]` querendo
+dizer "a Rampa", uma contagem presa ao tamanho do acervo, e um teste cuja **premissa estava
+escrita no comentário e morreu** ("a única ficha real do projeto é PAGA"). **Nenhum era bug de
+aplicação.** Antes de criar a 3ª ficha, espere isso de novo — e prefira **slug a índice**.
+
+---
+
+**Parada anterior:** 2026-08-23. ✅ **TRÊS RODADAS FECHADAS, MERGEADAS E NO AR, na mesma sessão.**
 `main` em **`0caaf58`**. **668/668 em 49 arquivos**, `tsc` limpo, `npm run build` passa — **os três
 conferidos por mim em `main` DEPOIS de cada merge**, não relatados por agente. Deploy
 `● Ready · Production`.
@@ -34,24 +45,33 @@ de virarem código.
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA" — 🔴 DESTA VEZ TEM RETOMADA, E ELA É NOMINAL.
+# ▶▶ SE O JOÃO DISSER "CONTINUA"
 
-🔴 **ELE ESTÁ NO MEIO DE RESPONDER O QUESTIONÁRIO DA 2ª FICHA — a Pedra Furada de Venturosa.**
-Foi pedido dele em 2026-08-24 responder **pela conversa**, não editando o `.md`
-("coloque para eu ir respondendo por aqui"). Ele parou no meio e pediu tudo pronto pra próxima
-sessão.
+✅ **O QUESTIONÁRIO DA 2ª FICHA ACABOU, E A FICHA EXISTE.**
+`content/fichas/pedra-furada-de-venturosa.json`, criada em **2026-08-25**, commitada em `main`
+(`f597fcf`). **668/668**, `tsc` limpo, `npm run build` passa, e o build de produção foi servido
+e conferido no HTML: home com **dois cartões**, `/trilhas` com as duas, e a página da trilha
+nova abrindo inteira.
 
-**Retome por `docs/respostas-pedra-furada-WIP.md`** — respostas dele, redações minhas
-aguardando "ok", e o que falta. **A próxima pergunta é a 10, o piso**, junto com o resto do
-bloco 3 (acesso e avisos). O texto das três está no anexo daquele arquivo; não reformule.
+🔴 **NÃO FOI DEPLOYADA.** Deploy pede permissão, e ele não pediu. **`vercel --prod --scope
+bate-perna`** — sem o `--scope`, `Not authorized`.
 
-⚠️ **NÃO crie `content/fichas/pedra-furada-de-venturosa.json` ainda.** Quatro campos
-obrigatórios estão incompletos, e `loadAll` faz `fichaSchema.parse` que **estoura alto** — um
-JSON pela metade derruba build e suíte.
+**A procedência de cada campo está em `docs/respostas-pedra-furada-WIP.md`** — quem escreveu
+cada frase, o que é palavra dele e o que é redação minha aprovada. **Uma única linha vermelha
+lá: `limiar_mm = 0.2`, padrão meu, porque ele disse "não tenho opinião".** É o parafuso a mexer
+se o carimbo dessa ficha ficar sensível demais.
 
-⚠️ **E não puxe o assunto do questionário como cobrança se ele chegar falando de outra coisa.**
-Ele alterna: já mandou três retornos do celular e cada um virou rodada. Se ele vier com review,
-é triagem primeiro (protocolo abaixo); o questionário espera.
+🔴 **A SEGUNDA FICHA ACENDE O QUE ESTAVA APAGADO.** Fatias 2 e 3 eram invisíveis com uma ficha
+só. Agora existem **duas** — e elas já discordam de um jeito útil: **mesmo `piso` (`barro`) e
+exigências de carro OPOSTAS** (a Rampa não sobe de carro comum; a Pedra Furada sim).
+
+🔴 **TRÊS PERGUNTAS DE PRODUTO ESPERANDO SÓ ELE** (todas no fim do WIP; **não construa
+nenhuma**): o **portão** que fecha às 17h num app que não tem campo de horário; o **filtro de
+piso** escondendo a Pedra Furada de quem o carro alcança; e **"o passeio leva ~2h"**, fato sem
+campo (`duracao` foi apagado na v4.0 de propósito).
+
+⚠️ **Se ele chegar falando de outra coisa, é triagem primeiro** (protocolo abaixo). Ele alterna:
+já mandou três retornos do celular e cada um virou rodada.
 
 ✅ **Fora isso, nada pendente do meu lado.** As três rodadas de 2026-08-23 fecharam, mergearam e
 **estão no ar**, conferidas por `curl`, pelos chunks servidos e no navegador — e **o iPhone foi
@@ -99,6 +119,8 @@ repo ele apaga o ledger de scratch e o próprio `.claude/`.
 git branch --show-current  → main
 git status --short         → limpo
 npm test                   → 668/668 em 49 arquivos   ← tudo verde, NÃO há falha esperada
+                             (o total NÃO mudou com a 2ª ficha: 9 testes caíram e foram
+                              consertados, nenhum acrescentado nem removido)
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```

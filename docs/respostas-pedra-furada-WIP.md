@@ -1,24 +1,34 @@
-# Respostas da 2ª ficha — Pedra Furada de Venturosa (EM ANDAMENTO)
+# Respostas da 2ª ficha — Pedra Furada de Venturosa ✅ FICHA CRIADA
 
-> **Sessão de 2026-08-24.** O João respondeu o questionário **pela conversa**, não editando o
-> `docs/questionario-ficha.md` — foi pedido dele ("coloque para eu ir respondendo por aqui").
-> Ele parou no meio e pediu tudo pronto pra próxima sessão.
+> **Sessões de 2026-08-24 e 2026-08-25.** O João respondeu o questionário **pela conversa**, não
+> editando o `docs/questionario-ficha.md` — foi pedido dele ("coloque para eu ir respondendo por
+> aqui").
 >
-> 🔴 **NÃO EXISTE `content/fichas/pedra-furada-de-venturosa.json` AINDA, E É DE PROPÓSITO.**
-> O `fichaSchema` exige `acesso`, `avisos`, `condicao` e `discriminador`, e os quatro estão
-> incompletos. `loadAll` faz `fichaSchema.parse` e **estoura alto** (`src/lib/ficha.ts:37`) —
-> um JSON pela metade em `content/fichas/` derruba o build e a suíte. **Só crie o arquivo
-> quando os campos obrigatórios estiverem todos respondidos.**
+> ✅ **`content/fichas/pedra-furada-de-venturosa.json` EXISTE** desde 2026-08-25. Este arquivo
+> deixou de ser fila de trabalho e virou **procedência**: de onde veio cada campo, o que é
+> palavra dele, o que é redação minha aprovada, e **o que é padrão meu que ele não escolheu**
+> (só o `limiar_mm`). Antes de mexer em qualquer texto da ficha, leia aqui de quem é a frase.
 
 ---
 
-## ▶ RETOMAR EXATAMENTE AQUI
+## ▶ O QUE SOBROU (nada bloqueia a ficha)
 
-**Atualizado em 2026-08-25 (quinta leva):** ✅ **BLOCOS 3 e 4 fechados; bloco 5 quase.**
+**Perguntas de produto esperando decisão DELE — as três estão nas seções no fim deste arquivo:**
+1. **o portão que fecha às 17h** e o app não sabe de horário;
+2. **o filtro de piso** escondendo a Pedra Furada de quem o carro alcança;
+3. **"o passeio leva ~2h"** — fato sem campo, e `duracao` foi apagado de propósito na v4.0.
 
-**Falta MUITO POUCO — e é tudo de uma vez só, na "FILA DE OK" logo abaixo.**
-O único campo obrigatório **sem dono** é `modos`. Todo o resto é texto meu esperando o "ok"
-dele, mais três escolhas curtas.
+**Não construa nenhuma das três por conta própria.**
+
+---
+
+## ▶ HISTÓRICO — como cada campo foi decidido
+
+**Encerrado em 2026-08-25:** ✅ **TODOS OS BLOCOS RESPONDIDOS.** `modos` = `["condicional"]`, dele
+— e ele acrescentou a diferença pra Rampa: *"só que a diferença é que não tem rampa, é só o chão
+batido"*. A fila de "ok" foi zerada: itens 2 a 8 aprovados em bloco, o 9 com o *"confortáveis de
+subir"* **incluído a pedido dele** (a régua de "só falar de LUGAR" foi explicada antes; a palavra
+é dele e ele a quis dentro).
 
 ---
 
@@ -27,23 +37,28 @@ dele, mais três escolhas curtas.
 **Não crie o JSON antes de zerá-la.** `fichaSchema` aceitaria qualquer string; o que não se
 recupera depois é uma frase minha entrando na ficha como se fosse dele.
 
-| # | campo | estado |
-|---|---|---|
-| 1 | `modos` | ⬜ **sem dono — único obrigatório assim** |
-| 2 | `discriminador.formato` | 🟠 proposta minha: `estrada` (não `entrada`) |
-| 3 | `discriminador.como_ler` | 🟠 redação minha sobre palavras dele |
-| 4 | `acesso` | 🟠 redação minha |
-| 5 | `avisos` | 🟠 redação minha (alívio ANTES do aviso do arco) |
-| 6 | `condicao.ressalva_proxy` | 🟠 redação minha (com a poça dele) |
-| 7 | `voz` | 🟠 redação minha, da 1ª sessão |
-| 8 | `rotulo_escaneio` | 🟠 proposta minha, da 1ª sessão |
-| 9 | `trajeto.waypoints[0].nota` | 🟠 com os 360 degraus; o "confortável" é o ponto duvidoso |
-| 10 | `slug` | ✅ **`pedra-furada-de-venturosa`** — "o longo" |
-| 11 | coordenada convertida | ✅ **liberada** — "pode seguir" (autorização, não recálculo) |
+✅ **ZERADA em 2026-08-25.** Fica aqui como registro de **de quem é cada frase da ficha** — que é
+o que não se recupera depois de o JSON existir.
 
-🔴 **Ele respondeu só a 10 e a 11 nesta leva. Os itens 1 a 9 continuam abertos** — e o **1
-(`modos`) é o único que é pergunta de verdade**; do 2 ao 9 é texto meu, que um "ok" resolve em
-bloco. **A lista foi reapresentada a ele encolhida**, sem repetir os textos por inteiro.
+| # | campo | de quem é |
+|---|---|---|
+| 1 | `modos` = `["condicional"]` | ✅ **dele** |
+| 2 | `discriminador.formato` = `estrada` | 🔵 minha, aprovada (`entrada` seria espelhar a Rampa) |
+| 3 | `discriminador.como_ler` | 🔵 minha, sobre palavras dele (a **poça** é dele) |
+| 4 | `acesso` | 🔵 minha, aprovada |
+| 5 | `avisos` | 🔵 minha, aprovada — alívio ANTES do aviso do arco |
+| 6 | `condicao.ressalva_proxy` | 🔵 minha, aprovada |
+| 7 | `voz` | 🔵 minha, aprovada |
+| 8 | `rotulo_escaneio` = `Sem chuva há 3h` | 🔵 minha, aprovada |
+| 9 | `waypoints[0].nota` | 🔵 minha + **"confortáveis de subir" é palavra DELE, que ele quis dentro** |
+| 10 | `slug` | ✅ **dele** — "o longo" |
+| 11 | coordenada | 🔵 **conversão minha**, liberada por ele (autorização, não recálculo) |
+| — | `condicao.regra_texto` | 🔵 minha — documentação, nunca vai pra tela |
+| — | `condicao.regra.limiar_mm` = `0.2` | 🔴 **padrão meu — ele disse "não tenho opinião"** |
+
+🔴 **A única linha vermelha da tabela é o `limiar_mm`.** Todo o resto ou é dele, ou é meu **com
+aprovação explícita**. Se um dia alguém precisar afrouxar o carimbo desta ficha, é ali que se
+mexe sem contrariar dado de ninguém.
 
 ⚠️ **O item 9 tem uma linha fina:** *"360 degraus"* é fato de LUGAR e cabe; *"confortável de
 subir"* é julgamento sobre o corpo, e é o tipo de frase que a v4.0 apagou do app junto com
@@ -316,12 +331,13 @@ Os dois avisos que acompanhavam a pergunta, **os dois resolvidos**:
 
 ## O que NÃO foi perguntado ainda
 
-- **`modos`** — ⬜ **AINDA NÃO RESPONDIDO, e agora está confirmado que não foi.**
-  A frase *"a chuva pode atrapalhar o caminho do carro e a experiência"* chegou a parecer
-  resposta ao `modos`, mas **ele disse que era a frase de meia-volta**. Então `modos` segue
-  virgem.
-  🔴 Na Rampa é `["condicional"]`, e a Pedra Furada também tem regra de chuva — **é justamente
-  por ser tão tentador que não se preenche sozinho.** É o **último campo obrigatório sem dono**.
+- **`modos`** = ✅ **`["condicional"]`, dele** (2026-08-25). A pergunta foi feita depois de ele
+  esclarecer que a frase da chuva era da meia-volta, **não** resposta ao `modos` — então o campo
+  chegou a ficar virgem por uma leva, de propósito.
+  🔴 **E a resposta dele não foi só "sim":** *"é sim, só que a diferença é que não tem rampa, é
+  só o chão batido"*. Ele **recusou a cópia** enquanto concordava com a categoria — o modo é o
+  mesmo, o objeto da condição não. É a razão de `como_ler`, `acesso` e `ressalva_proxy` desta
+  ficha não poderem herdar uma palavra da Rampa.
 
 ---
 
