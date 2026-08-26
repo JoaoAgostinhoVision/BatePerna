@@ -38,8 +38,12 @@ recupera depois é uma frase minha entrando na ficha como se fosse dele.
 | 7 | `voz` | 🟠 redação minha, da 1ª sessão |
 | 8 | `rotulo_escaneio` | 🟠 proposta minha, da 1ª sessão |
 | 9 | `trajeto.waypoints[0].nota` | 🟠 com os 360 degraus; o "confortável" é o ponto duvidoso |
-| 10 | `slug` | ⬜ escolha dele: `pedra-furada-de-venturosa` vs `pedra-furada` |
-| 11 | coordenada convertida | ⬜ confirmação dele — **todo km da tela sai daí** |
+| 10 | `slug` | ✅ **`pedra-furada-de-venturosa`** — "o longo" |
+| 11 | coordenada convertida | ✅ **liberada** — "pode seguir" (autorização, não recálculo) |
+
+🔴 **Ele respondeu só a 10 e a 11 nesta leva. Os itens 1 a 9 continuam abertos** — e o **1
+(`modos`) é o único que é pergunta de verdade**; do 2 ao 9 é texto meu, que um "ok" resolve em
+bloco. **A lista foi reapresentada a ele encolhida**, sem repetir os textos por inteiro.
 
 ⚠️ **O item 9 tem uma linha fina:** *"360 degraus"* é fato de LUGAR e cabe; *"confortável de
 subir"* é julgamento sobre o corpo, e é o tipo de frase que a v4.0 apagou do app junto com
@@ -65,11 +69,12 @@ seção no fim deste arquivo. Não construa.
 ### `trajeto.waypoints[0]`
 
 - **nome:** `Pedra Furada de Venturosa`
-- **lat / lng:** `-8.5725` / `-36.825556`
+- **lat / lng:** `-8.5725` / `-36.825556` — ✅ **LIBERADO POR ELE** (2026-08-25: *"pode seguir"*).
   🔴 **Convertido POR MIM** do que ele deu — `8°34'21" S` e `36°49'32" W`. A conta:
   `8 + 34/60 + 21/3600 = 8,5725` e `36 + 49/60 + 32/3600 = 36,825556`; S e W viram negativo.
-  **Ele viu a tabela da conversão e não contestou, mas também não confirmou com todas as
-  letras.** Como é a coordenada de onde sai **todo km da tela**, vale um "confere?" na volta.
+  ⚠️ **"Pode seguir" é AUTORIZAÇÃO, não conferência independente.** Ele não recalculou — ele
+  liberou. A aritmética continua sendo minha, e foi refeita e bate. **Se algum dia o pin cair no
+  lugar errado, o suspeito é esta conversão, não um dado ruim dele.**
 - **nota:** `Chão batido até os pés da pedra — curto e plano.`
   Ele aprovou cortar a comparação com a Rampa ("pode deixar sem a comparação") — a nota vive na
   ficha da Pedra Furada, onde quem lê pode não conhecer a outra.
@@ -77,9 +82,10 @@ seção no fim deste arquivo. Não construa.
 
 ### `slug`
 
-`pedra-furada-de-venturosa` — derivado do nome por mim. Ofereci `pedra-furada` como alternativa
-curta e argumentei que o nome da cidade evita confusão com outras Pedras Furadas do país.
-🟠 **Ele não respondeu qual quer.** Trocar depois de alguém salvar o link quebra o link.
+`pedra-furada-de-venturosa` — ✅ **ESCOLHIDO POR ELE** (2026-08-25: *"o longo"*). Foi oferecido
+`pedra-furada` como alternativa curta, com o argumento de que o nome da cidade evita confusão com
+outras Pedras Furadas do país. **Trocar depois de alguém salvar o link quebra o link** — está
+cravado.
 
 ### `promessa` ✅ ESCOLHIDA POR ELE
 
