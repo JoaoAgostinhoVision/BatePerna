@@ -465,7 +465,7 @@ describe("Carimbo — o que os quadros commitados mostram", () => {
 // inteiro: no dia em que a Pedra Furada entrou, o app passou a afirmar serra
 // num lugar plano. Mesma família do Critical de geografia inventada.
 describe("Carimbo — a explicação do relevo vem da FICHA", () => {
-  const PLANA = "Área plana — o chão batido absorve mais que o barro.";
+  const PLANA = "Área plana — o chão batido retém menos água que o barro.";
   const SERRA = "Área alta, escorre rápido — a serra firmou.";
 
   it("a frase da ficha aparece depois da leitura de chuva", () => {
@@ -498,7 +498,7 @@ describe("Carimbo — a explicação do relevo vem da FICHA", () => {
   });
 
   // A frase explica por que o chão FIRMA. No ramo frio ela seria contradição
-  // ("choveu… o chão batido absorve mais que o barro"), então ela não sai do
+  // ("choveu… o chão batido retém menos água que o barro"), então ela não sai do
   // ternário. Mutação alvo: mover o `{secaRapido}` pra fora do ramo fresco.
   it("no ramo frio a frase não aparece — ela explica o chão SECO", () => {
     const { container } = montar({ estado: "frio", secaRapido: PLANA });

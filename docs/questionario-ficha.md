@@ -205,7 +205,7 @@ do código, e o app passou a repeti-la na Pedra Furada, que é plana. Por isso e
 mora na ficha agora: **cada lugar diz o seu, e nenhum lugar fala pelo outro.**
 
 **Exemplo (Rampa):** `Área alta, escorre rápido — a serra firmou.`
-**Exemplo (Pedra Furada):** `Área plana — o chão batido absorve mais que o barro.`
+**Exemplo (Pedra Furada):** `Área plana — o chão batido retém menos água que o barro.`
 
 **Pular é permitido:** sem resposta, a linha verde termina no ponto final, depois
 das horas de chuva. Fica mais seca, e continua verdadeira — que é o ponto. **Não

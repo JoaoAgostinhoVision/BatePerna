@@ -67,7 +67,7 @@ decidiu a dívida da voz da Rampa (bloco logo abaixo) e a rodada fechou: **679/6
 ```bash
 H=https://bateperna.vercel.app
 curl -s $H/pedra-furada-de-venturosa | grep -o 'class="reason".\{0,200\}'
-#   …próximas ~2h. Área plana — o chão batido absorve mais que o barro. ✅
+#   …próximas ~2h. Área plana — o chão batido retém menos água que o barro. ✅
 curl -s $H/rampa-do-pepe            | grep -o 'class="reason".\{0,200\}'
 #   …próximas ~3h. Área alta, escorre rápido — a serra firmou.          ✅
 CH=$(curl -s $H/rampa-do-pepe | grep -o '/_next/static/chunks/[^"]*\.js' | sort -u)  # são 7
@@ -103,8 +103,15 @@ todo texto fixo escrito quando o acervo era pequeno é uma mentira agendada.**
 
 **A decisão foi DELE**, entre três saídas apresentadas (trocar a frase global / frase por ficha /
 frase genérica): **frase por ficha**. Campo `secaRapido`, opcional, cada lugar com a sua — e a
-Pedra Furada com a frase que **ele digitou**: *"Área plana — o chão batido absorve mais que o
-barro."* A Rampa manteve a dela.
+Pedra Furada com a frase dele: *"Área plana — o chão batido **retém menos água** que o barro."*
+A Rampa manteve a dela.
+
+🔴 **E ela foi AO AR INVERTIDA por uma redação minha, no mesmo dia — ele pegou olhando a tela.**
+Subiu como *"absorve mais que o barro"*, que se lê como **segura mais água**: o oposto do sentido.
+**A lição não é de código — nenhum teste pega isto**, o app estava certíssimo mostrando a frase
+errada. É de PROCEDÊNCIA: a frase veio dele por escrito, eu a tratei como palavra dele e **copiei
+sem ler o que ela afirmava**. Frase curta sobre física de terreno inverte com uma palavra —
+**leia o significado antes de copiar, mesmo quando o texto é dele.** (Ver o WIP.)
 
 **Como ficou, e o desenho importa:** o `Carimbo` deixou de saber geografia. Ficha **sem** o campo
 termina a linha verde no ponto final — o app **cala em vez de inventar**, que é a mesma régua do

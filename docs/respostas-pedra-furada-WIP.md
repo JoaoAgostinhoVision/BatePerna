@@ -29,12 +29,22 @@ três saídas, a **frase por ficha**: campo novo `secaRapido`, cada lugar com a 
 
 | ficha | `secaRapido` | de quem é a frase |
 |---|---|---|
-| Pedra Furada | *"Área plana — o chão batido absorve mais que o barro."* | 🟢 **dele, palavra por palavra** — digitada por ele em 2026-08-26 |
+| Pedra Furada | *"Área plana — o chão batido retém menos água que o barro."* | 🟢 **dele** — e corrigida por ele em 2026-08-26, ver a nota abaixo |
 | Rampa do Pepê | *"Área alta, escorre rápido — a serra firmou."* | 🟡 redação minha de rodada antiga, **preservada** — era verdadeira sobre a Rampa desde sempre; só estava no lugar errado |
 
 ⚠️ **A linha amarela é a que vale reler com ele um dia:** a frase da Rampa nunca foi conferida
 como *palavra dele*, só como *frase verdadeira sobre o lugar dele*. Ela sobreviveu à mudança
 porque a mudança foi de ENDEREÇO, não de texto — mas continua sendo redação minha.
+
+🔴 **E a frase da Pedra Furada chegou ao ar INVERTIDA por uma redação minha — corrigida no mesmo
+dia, por ele.** Ela subiu como *"o chão batido **absorve mais** que o barro"*, que se lê como
+**segura mais água** — o oposto do que ele quis dizer. A palavra dele é **retém menos**. Foi ele
+quem pegou, olhando a tela.
+
+⚠️ **A lição, e ela é de PROCEDÊNCIA, não de código:** a frase veio dele por escrito, então eu a
+tratei como palavra dele e copiei sem ler o que ela AFIRMA. Frase curta sobre física de terreno
+inverte o sentido com uma palavra — **leia o significado antes de copiar, mesmo quando o texto é
+dele.** Nenhum teste pega isto: o app estava certíssimo mostrando a frase errada.
 
 🔴 **O que a decisão dele NÃO cobriu, e segue fixo no código:** o ramo **frio** do mesmo carimbo
 (*"O barro segura água — risco de atolar"*, `Carimbo.tsx`) e as três menções a *"cheque o barro

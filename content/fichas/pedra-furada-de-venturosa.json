@@ -13,7 +13,7 @@
   "acesso": "Dá pra chegar de carro comum. Se choveu, espera passar umas 3 horas — molhado, o chão batido escorrega e dá pra atolar. O portão fica aberto das 5h às 17h todos os dias; se estiver fechado quando você chegar, dá pra abrir tranquilamente.",
   "avisos": "A estrutura do lugar não é das melhores — leve papel higiênico. Ir embaixo do arco é tranquilo: não tem trilha de fato, é só subir os degraus. Já a trilha que sobe o arco é outra coisa — ela sobe pela mata, e quem não estiver preparado pode dar de cara com cobra e bichos da região.",
   "piso": "barro",
-  "secaRapido": "Área plana — o chão batido absorve mais que o barro.",
+  "secaRapido": "Área plana — o chão batido retém menos água que o barro.",
   "condicao": {
     "coords": { "lat": -8.5725, "lng": -36.825556 },
     "regra": {
