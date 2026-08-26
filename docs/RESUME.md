@@ -4,14 +4,23 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-**Última parada:** 2026-08-25 — **a 2ª ficha existe** (ver o bloco "SE O JOÃO DISSER CONTINUA"
-logo abaixo). Antes dela, o estado de 2026-08-23 descrito no resto deste arquivo continua valendo.
+**Última parada:** 2026-08-26 — **a rodada do `secaRapido` fechou, está NO AR e conferida**, e ele
+encerrou a sessão dizendo *"tá ok agora vou seguir outro dia"*. **Nada pendente do meu lado.**
+`main` limpo em **`b0b6fa7`**, **679/679 em 49 arquivos**, `tsc` limpo, `build` passa.
+Ver o bloco "SE O JOÃO DISSER CONTINUA" logo abaixo.
 
-🔴 **A LIÇÃO DE MÉTODO DE 2026-08-25, porque ela vai se repetir na 3ª ficha:** conteúdo novo
-quebrou **nove testes** que liam o **acervo real** supondo uma ficha única — `[0]` querendo
-dizer "a Rampa", uma contagem presa ao tamanho do acervo, e um teste cuja **premissa estava
-escrita no comentário e morreu** ("a única ficha real do projeto é PAGA"). **Nenhum era bug de
-aplicação.** Antes de criar a 3ª ficha, espere isso de novo — e prefira **slug a índice**.
+🔴 **AS DUAS LIÇÕES QUE VÃO SE REPETIR NA 3ª FICHA — leia antes de criá-la:**
+
+1. **De 2026-08-25 — conteúdo novo quebra teste que lê o acervo real.** Nove caíram porque
+   supunham ficha única: `[0]` querendo dizer "a Rampa", contagem presa ao tamanho do acervo, e um
+   teste cuja **premissa estava escrita no comentário e morreu** ("a única ficha real do projeto é
+   PAGA"). **Nenhum era bug de aplicação.** Prefira **slug a índice**.
+2. **De 2026-08-26 — texto FIXO no código escrito quando o acervo era pequeno é MENTIRA
+   AGENDADA.** A frase de relevo da Rampa vivia dentro do `Carimbo` e virou falsa sozinha quando a
+   Pedra Furada entrou. Resolvida (campo `secaRapido`), **mas a família continua viva**: o ramo
+   *molhado* do carimbo e os três *"cheque o barro no portão"* só estão certos **por sorte** —
+   as duas fichas são `barro`. **A 3ª ficha com asfalto quebra as quatro de uma vez.**
+   A pergunta que acha o resto: *este texto fala de UM lugar, num componente que serve TODOS?*
 
 ---
 
@@ -82,6 +91,35 @@ curl -s $H/ | grep -oE '"/(rampa-do-pepe|pedra-furada-de-venturosa)"' | sort -u 
 🔴 **Repare no `rea alta` e no `Sem chuva nas`: os dois são trechos SEM ACENTO, de propósito.** Ver
 a lição em §4d — com acento os dois lados dão zero e o quadro fica idêntico ao de um deploy que
 não subiu.
+
+⚠️ **E a frase da Pedra Furada foi ao ar INVERTIDA, na primeira tentativa.** Subiu como *"absorve
+mais que o barro"* — que se lê como **segura mais água**, o oposto. **Ele pegou olhando a tela**,
+consertado e redeployado no mesmo dia (`b0b6fa7`). Detalhe da lição no bloco da voz da Rampa,
+logo abaixo: **não é bug** — nenhum teste pega, o app estava certíssimo mostrando a frase errada.
+
+---
+
+## ▶ O QUE ESPERA POR ELE — nada do meu lado, quatro coisas do dele
+
+**Em ordem de valor, e NENHUMA deve ser construída por conta própria:**
+
+1. 🔴 **A META DÍVIDA que sobrou da rodada do `secaRapido`** — o ramo **molhado** do carimbo ainda
+   diz, fixo no código, *"O barro segura água — risco de atolar"*, e há três *"cheque o barro no
+   **portão**"*. Certos **por sorte** (as duas fichas são `barro`), **e ele já disse que olha
+   DIRIGINDO, não no portão**. O molde pra resolver já existe: outro campo por ficha, como o
+   `secaRapido`. **É copy na voz dele — a saída é a mesma pergunta de três opções que funcionou.**
+2. 🟠 **As TRÊS perguntas de produto da 2ª ficha**, todas no fim do `docs/respostas-pedra-furada-WIP.md`:
+   o **portão 5h–17h** num app sem campo de horário; o **filtro de piso** escondendo a Pedra Furada
+   de quem o carro alcança; e **"o passeio leva ~2h"**, fato sem campo (`duracao` foi apagado de
+   propósito na v4.0).
+3. 🟠 **O painel que nunca abre com GPS sem sinal** — §P item 4. Beco pré-existente, irmão do §Z2.
+4. 🟡 **A 3ª FICHA**, quando ele quiser. `docs/questionario-ficha.md` está pronto e **já pergunta o
+   `secaRapido`** (o guarda "todo campo do schema tem pergunta" cobrou, em `tests/lib/questionario.test.ts`).
+   Antes de criar: releia as **duas lições** do topo deste arquivo.
+
+⚠️ **Ele alterna, e o padrão é forte:** já mandou **quatro** retornos do celular e **cada um virou
+rodada** — inclusive o último, que foi ele lendo uma frase e vendo o sentido invertido. **Se ele
+chegar falando de outra coisa, é TRIAGEM primeiro** (protocolo mais abaixo), não código.
 
 ---
 
@@ -204,13 +242,14 @@ npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
 
-⚠️ **A suíte ENCOLHEU de 662 pra 657, e isso é esperado:** a rodada de 2026-08-23 apagou o campo
-`extensaoKm` inteiro. A contagem foi fechada **nome a nome** pela revisão (38 removidos, 1
-acrescentado, 13 renomes, e 10 escondidos dentro de três blocos `it.each`); depois a leva final
-devolveu +4 do guarda de orçamento de altura.
-
 **Os três foram conferidos por mim em `main` depois do merge**, não relatados por agente. Se a
 suíte estiver diferente disso, alguma coisa mudou e vale descobrir o quê antes de seguir.
+
+⚠️ **Histórico da contagem, pra ninguém se assustar com ela subindo e descendo:** a rodada de
+2026-08-23 **encolheu** a suíte de 662 pra 657, de propósito — apagou o campo `extensaoKm`
+inteiro, e a contagem foi fechada **nome a nome** pela revisão (38 removidos, 1 acrescentado, 13
+renomes, e 10 escondidos dentro de três blocos `it.each`); depois a leva final devolveu +4 do
+guarda de orçamento de altura, e as rodadas seguintes levaram a 668. O `secaRapido` somou 11.
 
 ### §7 — O QUE A RODADA DE 2026-08-23 MUDOU (as quatro linhas, se ele só disser "continua")
 
@@ -232,8 +271,9 @@ barro.
 
 ### §P — O QUE SOBROU
 
-✅ **Nada do meu lado.** As três rodadas estão no ar e conferidas. O que sobra é dele, nesta ordem
-de valor:
+✅ **Nada do meu lado.** As três rodadas de 2026-08-23, a 2ª ficha e o `secaRapido` estão **no ar e
+conferidos**. O que sobra é dele — o resumo curto está no bloco "▶ O QUE ESPERA POR ELE" lá em
+cima; aqui embaixo é o detalhe de cada item, nesta ordem de valor:
 
 1. ✅ **O iPHONE FOI CONFERIDO — 2026-08-24, e ele disse "funcionou".** Safari no iPhone, as três
    rodadas de 2026-08-23 em WebKit. **A pendência que atravessou várias sessões está FECHADA.**
@@ -244,14 +284,13 @@ de valor:
    **load-bearing por precaução**, não por medição. As perguntas menores de dedo também seguem sem
    resposta e agora são de baixo valor: barra de km no polegar, teclado do campo numérico, o campo
    de busca a 265px.
-2. 🟢 **O QUESTIONÁRIO SAIU DO PAPEL — ele está respondendo, e parou no meio (2026-08-24).**
-   A 2ª ficha é a **Pedra Furada de Venturosa**. Estado, respostas e o que falta em
-   **`docs/respostas-pedra-furada-WIP.md`**; a retomada é a **pergunta 10 (o piso)**.
-   Blocos 1 e 2 fechados (nome, coordenada, nota, promessa, prêmio, voz, rótulo) + `custo` =
-   `gratis`. Faltam `piso`, o resto de `acesso`/`avisos`, quase toda a `condicao`, o
-   `discriminador` inteiro e `modos`.
+2. ✅ **O QUESTIONÁRIO DA 2ª FICHA ACABOU E A FICHA ESTÁ NO AR (2026-08-25/26).** Era aqui que
+   estava a fila de trabalho; ela zerou. A **Pedra Furada de Venturosa** existe, foi deployada e
+   conferida no domínio real, e em 2026-08-26 ganhou o `secaRapido`.
    ⚠️ **Ele respondeu PELA CONVERSA, a pedido dele** — o `docs/questionario-ficha.md` continua
-   como está, é a fonte das perguntas, não o lugar das respostas.
+   como está, é a fonte das perguntas, não o lugar das respostas. O
+   **`docs/respostas-pedra-furada-WIP.md`** deixou de ser fila e virou **PROCEDÊNCIA**: de quem é
+   cada frase. **Leia antes de mexer em qualquer texto da ficha.**
    🔴 **E nasceu uma pergunta de produto dele lá dentro: o app NÃO TEM CAMPO DE HORÁRIO.** O
    portão da Pedra Furada abre 5h–17h, e isso só pode virar prosa dentro de `acesso` — o carimbo
    só olha chuva, então às 18h com céu limpo a ficha diz *"hoje o tempo deixa"* com o portão
