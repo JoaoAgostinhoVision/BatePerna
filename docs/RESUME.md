@@ -53,8 +53,47 @@ de virarem código.
 e conferido no HTML: home com **dois cartões**, `/trilhas` com as duas, e a página da trilha
 nova abrindo inteira.
 
-🔴 **NÃO FOI DEPLOYADA.** Deploy pede permissão, e ele não pediu. **`vercel --prod --scope
-bate-perna`** — sem o `--scope`, `Not authorized`.
+✅ **DEPLOYADA em 2026-08-26** (`vercel --prod --scope bate-perna --yes`, `● Ready`), e conferida
+**no domínio real**, não no status: `https://bateperna.vercel.app/pedra-furada-de-venturosa`
+responde 200 com os degraus, o papel higiênico, os bichos da mata e a frase de meia-volta; a home
+serve **dois cartões**; `/trilhas` lista as duas. 🔴 Sem o `--scope bate-perna`, `Not authorized`.
+
+---
+
+## 🔴🔴 A PRIMEIRA COISA DA PRÓXIMA SESSÃO — A VOZ DA RAMPA VAZOU PRO CÓDIGO
+
+**Está NO AR agora, e só a 2ª ficha podia revelar.** A ficha da Pedra Furada mostra, hoje:
+
+> Sem chuva nas últimas ~3h e nada previsto pras próximas ~2h. **Área alta, escorre rápido — a
+> serra firmou.**
+
+**A frase em negrito é FALSA lá.** O João descreveu a Pedra Furada como *"estrada de chão batido
+e plana"* — não há serra, e "área alta escorre rápido" é a explicação do **barro da Rampa**. A
+frase não vem da ficha: está **fixa no código**, em `src/app/Carimbo.tsx:272-282` (`motivo()`).
+
+🔴 **É a MESMA FAMÍLIA do Critical de v3.9 (geografia inventada)** — o app afirmando sobre um
+lugar real coisa que ninguém mediu. A diferença é que desta vez a frase não nasceu num documento
+meu: ela nasceu **verdadeira**, escrita pra única ficha que existia, e virou mentira quando o
+acervo cresceu.
+
+**O levantamento completo do que está fixo no código e assume a Rampa** (feito em 2026-08-26):
+
+| onde | texto | vale pra Pedra Furada? |
+|---|---|---|
+| `Carimbo.tsx:274` | "Área alta, escorre rápido — **a serra firmou**" | ❌ **FALSO** — é plana |
+| `Carimbo.tsx:279` | "O **barro** segura água — risco de atolar" | ✅ por sorte (o piso é barro) |
+| `Carimbo.tsx:259/262/267` | "cheque o **barro** no **portão**" | 🟠 por sorte — **e ele disse que olha DIRIGINDO, não no portão** |
+| `Carimbo.tsx:182`, `SeloTrilha.tsx:32` | "**barro** · dá um tempo" | ✅ por sorte |
+| `Carimbo.tsx:175`, `SeloTrilha.tsx:26` | "Não suba" / "Pode subir" | ✅ genérico o bastante |
+
+⚠️ **"Por sorte" é o ponto.** As duas fichas são `barro` — a 3ª ficha com asfalto quebra as
+quatro linhas de uma vez. **A gravidade hoje é BAIXA** (o veredito em si é calculado de dado
+real; o que mente é a frase de tempero), **mas a dívida está identificada e cresce com o
+acervo**.
+
+🔴 **NÃO CONSERTE POR CONTA PRÓPRIA: é copy na VOZ DELE, e a solução é decisão de produto** —
+frase genérica pra todas, campo novo na ficha, ou reaproveitar algum campo que já existe. **Foi
+mostrado a ele em 2026-08-26 e ele não decidiu ainda.**
 
 **A procedência de cada campo está em `docs/respostas-pedra-furada-WIP.md`** — quem escreveu
 cada frase, o que é palavra dele e o que é redação minha aprovada. **Uma única linha vermelha

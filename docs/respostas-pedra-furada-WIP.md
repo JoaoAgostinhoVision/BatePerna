@@ -20,6 +20,11 @@
 
 **Não construa nenhuma das três por conta própria.**
 
+🔴 **E uma QUARTA, que não é pergunta e sim DÍVIDA, achada depois do deploy:** a frase
+*"Área alta, escorre rápido — a serra firmou"* está **fixa em `src/app/Carimbo.tsx`** e aparece
+na ficha da Pedra Furada, que é **plana**. A voz da Rampa vazou pro código quando o acervo tinha
+uma ficha só. **Levantamento completo e gravidade no `docs/RESUME.md`**, no bloco do topo.
+
 ---
 
 ## ▶ HISTÓRICO — como cada campo foi decidido
