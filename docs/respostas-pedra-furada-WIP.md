@@ -14,17 +14,17 @@
 
 ## ▶ RETOMAR EXATAMENTE AQUI
 
-**Atualizado em 2026-08-25 (segunda leva):** o **bloco 3 está quase fechado** — 8 (acesso) e 10
-(piso) respondidas, 9 (avisos) respondida **menos o arco**.
+**Atualizado em 2026-08-25 (terceira leva):** ✅ **BLOCO 3 FECHADO EM CONTEÚDO** (acesso, piso,
+avisos). Bloco 4 tem as **duas janelas** (3 pra trás, 2 pra frente).
 
-**Três coisas estão na mesa com ele agora, e as três foram feitas:**
-1. **a redação de `acesso`** — precisa do "ok" dele, porque o "passa sempre" ganhou ressalva
-   (ver a seção do `acesso`);
-2. **o arco** — o único pedaço da 9 que ele não tocou;
-3. **`janela_previsao_horas`** — a primeira do bloco 4, e a resposta dele sobre visibilidade e
-   céu aberto é exatamente o que a justifica.
+**Falta perguntar:** `limiar_mm` e `coords` da condição (as duas foram feitas em 2026-08-25),
+depois `regra_texto` + `ressalva_proxy`, o bloco 5 (`discriminador`) e `modos`.
 
-Depois disso: o resto do bloco 4, o bloco 5 (discriminador) e `modos`.
+🟠 **E tem uma FILA DE "ok" dele acumulando — não crie o JSON antes de zerá-la.** São textos que
+eu redigi e ele ainda não aprovou: `voz`, `rotulo_escaneio`, `acesso`, `avisos`; mais três
+escolhas dele que nunca vieram: o **`slug`** (`pedra-furada-de-venturosa` vs `pedra-furada`), a
+**confirmação da coordenada convertida** (é de lá que sai todo km da tela), e se os **360
+degraus** entram na `nota`.
 
 🔴 **E uma decisão de produto dele continua parada:** o filtro de piso vai esconder a Pedra
 Furada de quem pede piso melhor que barro, **mesmo sendo lugar que carro comum alcança** — ver a
@@ -148,9 +148,25 @@ Também novo, e este é **fato de LUGAR sobre a experiência, não sobre o chão
 experiência pode não ser das melhores, seja por visibilidade ou por ser ao céu aberto"*. Ver
 `condicao` — é o que abre a janela de **previsão**.
 
-**Falta só:** o arco. Pedi pra ele avisar **sem falar por experiência que não tem** — ver
-[[nao-inventar-fatos-de-roteiros]]; a régua vale pra ele também, e **ele mesmo demarcou o
-limite**. A resposta de 2026-08-25 não tocou nesse ponto.
+**O arco, respondido em 2026-08-25 — e respondido DENTRO do limite dele:**
+
+> A trilha do arco precisa subir pela mata; quem não for preparado pode se deparar com cobra e
+> bichos da região. Ir **embaixo** do arco é bem tranquilo — não tem trilha de fato, é só subir
+> os degraus.
+
+✅ **Repare que ele avisou sem falar por experiência que não tem.** "Precisa subir pela mata" é
+observável de baixo; "cobra e bichos da região" é conhecimento do lugar, não relato de subida.
+[[nao-inventar-fatos-de-roteiros]] cumprida por ele mesmo. **Não engorde isso** com detalhe
+técnico de trilha na mata que ninguém mediu.
+
+🔴 **E a segunda metade da frase é o achado: ela não é aviso, é ALÍVIO — e resolve outro campo.**
+*"Embaixo do arco é bem tranquilo, não tem trilha de fato, só subir os degraus"* é a resposta
+que faltava pra `nota` do ponto, e ela **casa com os 360 degraus** (ver "detalhes novos"). Sem
+essa frase, os dois avisos juntos — estrutura ruim + cobra na mata — pintam um lugar mais bravo
+do que ele é. **O aviso do arco precisa nascer colado ao alívio**, senão a ficha assusta quem
+nunca ia subir o arco de todo jeito.
+
+**`avisos` está COMPLETO em conteúdo.** Falta só redigir e ele dar o "ok".
 
 ### `condicao` — 🟠 só um dos quatro números
 
@@ -165,10 +181,22 @@ limite**. A resposta de 2026-08-25 não tocou nesse ponto.
      e portanto é da **previsão**, não do passado.
 
   🔴 **Os dois motivos moram em janelas DIFERENTES, e é isso que impede copiar o 3 pra frente.**
-- **Faltam:** `janela_previsao_horas` (o motivo 2 acima é o que a justifica; **não suponha que é
-  3 também** — ele nunca disse número pra frente), `limiar_mm`, `coords` da condição (pode ser o
-  mesmo ponto do trajeto, mas é pergunta dele: é essa coordenada que planta o pin da home),
-  `regra_texto` e `ressalva_proxy`.
+- `regra.janela_previsao_horas` = **2** — dele, em 2026-08-25: *"acho que 2 horas de previsão,
+  dá tempo de subir, tirar fotos, curtir e descer"*.
+  ✅ **E o "não suponha que é 3" se pagou: ele disse 2, não 3.** As duas janelas desta ficha são
+  **assimétricas** (3 pra trás, 2 pra frente), como as da Rampa também são (6 e 3).
+  🔴 **O raciocínio dele é de outra natureza e vale guardar:** o número pra frente saiu de
+  **quanto tempo o passeio dura** — se chove dentro dessas 2h, você é pego lá em cima. A janela
+  de previsão é *tempo de exposição*, não *antecedência de alerta*. Nenhuma outra ficha foi
+  respondida assim ainda.
+  ⚠️ **Consequência: o "o passeio leva ~2h" é FATO NOVO e não tem campo.** `duracao` foi apagado
+  do schema na v4.0 de propósito. **Não ressuscite o campo.** Se for entrar, entra como prosa
+  (`nota` ou `voz`) — e mesmo aí, cuidado: "leva 2h" é sobre o corpo/o passeio, e este app fala
+  de LUGAR. Os **360 degraus** passam nesse teste; "leva 2 horas" é mais discutível. **Pergunte,
+  não decida.**
+- **Faltam:** `limiar_mm`, `coords` da condição (pode ser o mesmo ponto do trajeto, mas é
+  pergunta dele: é essa coordenada que planta o pin da home), `regra_texto` (documentação, não
+  vai pra tela) e `ressalva_proxy` (vai pra tela, precisa do "ok" dele).
 
 ### `piso` — ✅ `barro`, CRAVADO POR ELE (2026-08-25)
 
@@ -208,6 +236,9 @@ Vieram soltos no fim de uma resposta, e **nenhum tem campo óbvio**. As duas pro
 foram feitas a ele e **ele ainda não respondeu**:
 
 1. **São 360 degraus de escada de pedra, e é confortável subir.** Proposto pra `nota` do ponto.
+   ✅ **Reforçado em 2026-08-25 por conta própria:** *"não tem uma trilha de fato, só subir os
+   degraus"*. Ele voltou ao mesmo fato de outro ângulo, num contexto diferente (falando do
+   arco) — isso é confirmação, não repetição.
    ⚠️ Repare que isto é **fato de LUGAR** (quantos degraus existem), não de corpo — por isso
    cabe neste app mesmo depois de `esforco` ter sido apagado. Se virar frase de esforço
    ("cansativo", "puxado"), saiu do que este app sabe dizer.
