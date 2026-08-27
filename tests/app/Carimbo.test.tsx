@@ -4,6 +4,7 @@ import { Profiler, StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, cleanup, act } from "@testing-library/react";
 import { regraDe, semComentarios, valorDe } from "../css";
+import type { Piso } from "@/lib/piso";
 import Carimbo from "@/app/Carimbo";
 import Moldura from "@/app/Moldura";
 
@@ -13,7 +14,7 @@ const AGORA_S = AGORA_MS / 1000;
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(AGORA_MS); });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
-type Props = { estado: "fresco" | "frio"; erro: boolean; calculadoEm: number; pass: number; fut: number; slug: string; secaRapido?: string };
+type Props = { estado: "fresco" | "frio"; erro: boolean; calculadoEm: number; pass: number; fut: number; slug: string; secaRapido?: string; piso?: Piso };
 
 function montar(props: Partial<Props> = {}) {
   return render(
@@ -500,11 +501,14 @@ describe("Carimbo — a explicação do relevo vem da FICHA", () => {
   // A frase explica por que o chão FIRMA. No ramo frio ela seria contradição
   // ("choveu… o chão batido retém menos água que o barro"), então ela não sai do
   // ternário. Mutação alvo: mover o `{secaRapido}` pra fora do ramo fresco.
-  it("no ramo frio a frase não aparece — ela explica o chão SECO", () => {
-    const { container } = montar({ estado: "frio", secaRapido: PLANA });
-    const texto = container.querySelector(".reason")?.textContent ?? "";
-    expect(texto).toContain("risco de atolar"); // o ramo frio de verdade, não um vazio
-    expect(texto).not.toContain("chão batido");
+  // 🔴 Igualdade na frase inteira, e não `not.toContain("chão batido")`: a
+  // asserção de ausência de texto passaria por vacuidade se a `.reason` sumisse.
+  // Com o `toBe`, o ramo frio de verdade tem que estar lá — e a frase seca, não.
+  it("no ramo frio a frase de relevo não aparece — ela explica o chão SECO", () => {
+    const { container } = montar({ estado: "frio", secaRapido: PLANA, piso: "barro" });
+    expect(container.querySelector(".reason")?.textContent).toBe(
+      "Choveu nas últimas ~6h (ou vem chuva nas próximas ~3h). O barro segura água — risco de atolar.",
+    );
   });
 
   // PROVA DE FONTE — precedente do `"use client"` e do `z.enum(PISOS)`. Em
@@ -527,6 +531,80 @@ describe("Carimbo — a explicação do relevo vem da FICHA", () => {
     expect(codigo, "a frase da Rampa não pode voltar pro código").not.toMatch(
       /serra|Área alta|área plana/i,
     );
+  });
+});
+
+// 🔴 O DEFEITO QUE ESTES TESTES TRANCAM (2026-08-27) — a OUTRA PONTA da mesma
+// frase, e ela sobreviveu à rodada de ontem. O ramo molhado dizia "O barro
+// segura água — risco de atolar", fixo aqui dentro. Estava certo POR SORTE: as
+// duas fichas do acervo são de barro. A 3ª de asfalto faria o app afirmar barro
+// onde não há — a mentira agendada de sempre, num componente que serve todos.
+describe("Carimbo — o que a chuva faz com o chão vem do PISO", () => {
+  const MOLHADO = "Choveu nas últimas ~6h (ou vem chuva nas próximas ~3h).";
+
+  it("com barro, a frase do material entra depois da leitura de chuva", () => {
+    const { container } = montar({ estado: "frio", piso: "barro" });
+    expect(container.querySelector(".reason")?.textContent).toBe(
+      `${MOLHADO} O barro segura água — risco de atolar.`,
+    );
+  });
+
+  // 🔴 ESTE É O TESTE DA RODADA. Ficha de asfalto é o caso que não existe no
+  // acervo hoje e por isso deixou a frase fixa passar dois meses: em runtime,
+  // "frase do piso" e "frase fixa de barro" são indistinguíveis enquanto todo o
+  // acervo for de barro. Só um piso SEM frase separa as duas versões.
+  it("piso sem frase termina no ponto final — o app cala em vez de inventar barro", () => {
+    const { container } = montar({ estado: "frio", piso: "asfalto-tapete" });
+    expect(container.querySelector(".reason")?.textContent).toBe(MOLHADO);
+  });
+
+  // O par ortogonal do de cima: aquele prova que um piso CONHECIDO sem frase
+  // cala; este, que ficha sem piso nenhum cala igual. São dois caminhos
+  // diferentes até o mesmo silêncio, e uma frase de reserva mataria só um.
+  it("ficha sem piso cala do mesmo jeito", () => {
+    const { container } = montar({ estado: "frio" });
+    expect(container.querySelector(".reason")?.textContent).toBe(MOLHADO);
+  });
+
+  // A direção de volta: a frase do material é do ramo MOLHADO. Solta do
+  // ternário, ela apareceria embaixo de "Sem chuva nas últimas ~6h" — o app
+  // avisando de atoleiro num dia seco.
+  it("no ramo seco a frase do material não aparece", () => {
+    const { container } = montar({ estado: "fresco", piso: "barro" });
+    expect(container.querySelector(".reason")?.textContent).toBe(
+      "Sem chuva nas últimas ~6h e nada previsto pras próximas ~3h.",
+    );
+  });
+
+  // Sem leitura, o app devolve a decisão — e a instrução tem que servir a quem
+  // olha DIRIGINDO. Igualdade, não `not.toContain("portão")`: a asserção de
+  // ausência sozinha ficaria verde com a `.reason` sumida.
+  it("sem leitura, manda olhar o chão NO CAMINHO — não no portão", () => {
+    const { container } = montar({ estado: "frio", erro: true });
+    expect(container.querySelector(".reason")?.textContent).toBe(
+      "Não deu pra ler a chuva agora. Na dúvida, cheque o chão no caminho.",
+    );
+  });
+
+  // 🔴 PROVA DE FONTE, e ela cobre o que nenhuma asserção de tela cobre: com as
+  // duas fichas de hoje sendo de barro, a versão certa e a versão com a frase
+  // fixa de reserva pintam a MESMA tela. Só a fonte separa — mesmo precedente
+  // do `"use client"` e do `z.enum(PISOS)`.
+  it("nenhum material escrito à mão no componente", () => {
+    const src = readFileSync(path.join(process.cwd(), "src", "app", "Carimbo.tsx"), "utf8");
+    // Os comentários CITAM a frase antiga de propósito, pra contar de onde ela
+    // veio. A tira precisa de guarda, senão a asserção de ausência abaixo passa
+    // por vacuidade: as duas linhas seguintes provam que o código sobreviveu.
+    const codigo = src.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+    expect(codigo, "a tira de comentários comeu o código").toContain("function motivo(");
+    expect(codigo, "o carimbo parou de perguntar ao piso").toContain("chuvaNoPiso");
+    expect(codigo, "a frase do barro não pode voltar pro código").not.toMatch(
+      /atolar|segura água/i,
+    );
+    // Ele olha o chão DIRIGINDO, não parado no portão (decisão dele,
+    // 2026-08-27). "cheque o barro no portão" errava as duas coisas de uma vez:
+    // supunha o material E o lugar onde a pessoa decide.
+    expect(codigo, "o carimbo voltou a mandar alguém ao portão").not.toMatch(/portão/i);
   });
 });
 

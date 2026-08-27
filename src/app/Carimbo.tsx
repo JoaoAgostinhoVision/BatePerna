@@ -11,6 +11,7 @@ import {
   podeBuscar,
   sintomaDe,
 } from "@/lib/carimbo-fase";
+import { chuvaNoPiso, type Piso } from "@/lib/piso";
 import { carimboVenceu, horaCurtaRecife } from "@/lib/validade";
 import { useAvisarEstado } from "./Moldura";
 
@@ -28,6 +29,7 @@ export default function Carimbo({
   fut,
   slug,
   secaRapido,
+  piso,
 }: {
   estado: Estado;
   erro: boolean;
@@ -38,6 +40,10 @@ export default function Carimbo({
   /** A meia-frase de relevo da FICHA desta trilha. Opcional: sem ela, a linha
    *  verde termina no ponto final. Ver `secaRapido` em `src/types/ficha.ts`. */
   secaRapido?: string;
+  /** O piso da via desta trilha — quem decide o que a CHUVA faz com o chão na
+   *  linha vermelha. Opcional pela mesma razão: sem ele, a linha termina no
+   *  ponto final. Ver `chuvaNoPiso` em `src/lib/piso.ts`. */
+  piso?: Piso;
 }) {
   // A leitura do servidor é só o ponto de partida: daqui pra frente o
   // componente pode trocá-la por uma mais nova. O primeiro render usa
@@ -197,7 +203,7 @@ export default function Carimbo({
         <div className="sub">{sub}</div>
       </div>
       <p className="reason">
-        {motivo(fase, sintoma, estadoAtual, calculadoEmAtual, pass, fut, secaRapido)}
+        {motivo(fase, sintoma, estadoAtual, calculadoEmAtual, pass, fut, secaRapido, piso)}
       </p>
       <div className="live">
         <span className="pulse"></span>
@@ -245,10 +251,20 @@ function ehLeitura(x: unknown): x is LeituraCarimbo {
 /** A frase que explica a marca. A hora só aparece quando existiu leitura: sem
  *  leitura nenhuma, não há hora pra citar.
  *
- *  🔴 A segunda oração do ramo "fresco" vem da FICHA (`secaRapido`), não daqui:
- *  ela fala do relevo de UM lugar, e este componente serve o acervo inteiro.
- *  Ficha sem o campo termina no ponto final — o app cala em vez de inventar
- *  serra onde é planície. Ver o comentário do campo em `src/types/ficha.ts`. */
+ *  🔴 NENHUMA DAS DUAS PONTAS NASCE AQUI, e as duas saíram daqui por defeito.
+ *  A do ramo "fresco" vem da FICHA (`secaRapido`, 2026-08-26): fala do relevo
+ *  de UM lugar, e este componente serve o acervo inteiro. A do ramo "frio" vem
+ *  do PISO (`chuvaNoPiso`, 2026-08-27): fala do MATERIAL, que é o mesmo em
+ *  qualquer lugar — mas "O barro segura água" também estava fixo aqui, e era
+ *  verdade só porque todo o acervo era de barro.
+ *
+ *  Sem o dado, os dois ramos terminam no ponto final: o app cala em vez de
+ *  inventar serra onde é planície, ou barro onde é asfalto. Ver os comentários
+ *  em `src/types/ficha.ts` (`secaRapido`) e `src/lib/piso.ts` (`CHUVA_NO_PISO`).
+ *
+ *  🔴 E os três ramos de falha NÃO MANDAM NINGUÉM AO PORTÃO. Diziam "cheque o
+ *  barro no portão" — duas suposições numa frase só: que o piso é barro, e que
+ *  a pessoa para no portão pra decidir. O dono do app olha DIRIGINDO. */
 function motivo(
   fase: Fase,
   sintoma: Sintoma,
@@ -257,6 +273,7 @@ function motivo(
   pass: number,
   fut: number,
   secaRapido?: string,
+  piso?: Piso,
 ) {
   if (fase === "conferindo") {
     return sintoma === "venceu" ? (
@@ -268,19 +285,20 @@ function motivo(
     );
   }
   if (sintoma === "falhou") {
-    return <>Não deu tempo de ler a chuva. Na dúvida, cheque o barro no portão.</>;
+    return <>Não deu tempo de ler a chuva. Na dúvida, cheque o chão no caminho.</>;
   }
   if (sintoma === "erro") {
-    return <>Não deu pra ler a chuva agora. Na dúvida, cheque o barro no portão.</>;
+    return <>Não deu pra ler a chuva agora. Na dúvida, cheque o chão no caminho.</>;
   }
   if (sintoma === "venceu") {
     return (
       <>
-        Essa leitura é das <b>{horaCurtaRecife(calculadoEm)}</b> e já passou do prazo. O barro muda
-        rápido — cheque no portão antes de decidir.
+        Essa leitura é das <b>{horaCurtaRecife(calculadoEm)}</b> e já passou do prazo. O chão muda
+        rápido — cheque no caminho antes de decidir.
       </>
     );
   }
+  const chuva = chuvaNoPiso(piso);
   return estado === "fresco" ? (
     <>
       Sem chuva nas últimas <b>~{pass}h</b> e nada previsto pras próximas <b>~{fut}h</b>.
@@ -288,8 +306,8 @@ function motivo(
     </>
   ) : (
     <>
-      Choveu nas últimas <b>~{pass}h</b> (ou vem chuva nas próximas <b>~{fut}h</b>). O barro segura
-      água — risco de atolar.
+      Choveu nas últimas <b>~{pass}h</b> (ou vem chuva nas próximas <b>~{fut}h</b>).
+      {chuva ? ` ${chuva}` : ""}
     </>
   );
 }

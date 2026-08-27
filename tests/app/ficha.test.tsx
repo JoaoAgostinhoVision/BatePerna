@@ -84,9 +84,9 @@ const Ficha = (await import("@/app/[slug]/page")).default;
 
 /** Abre a página da ficha DE VERDADE (o server component de [slug]/page.tsx),
  *  sem embrulhar nada à mão — é o ponto de uso, não um componente vizinho. */
-async function abrir(slug: string) {
+async function abrir(slug: string, estado: "fresco" | "frio" = "fresco") {
   vi.mocked(resolverEstado).mockResolvedValue({
-    estado: "fresco",
+    estado,
     erro: false,
     calculadoEm: Math.floor(Date.now() / 1000),
   });
@@ -201,6 +201,35 @@ describe("a frase de relevo atravessa da ficha até a tela", () => {
     const texto = container.querySelector(".reason")?.textContent;
     expect(texto).toBeTruthy();
     expect(texto).toMatch(/nada previsto pras próximas ~\d+h\.$/);
+  });
+});
+
+// 🔴 A MESMA DIREÇÃO DA ALIMENTAÇÃO, pro campo do ramo MOLHADO (2026-08-27).
+// `tests/app/Carimbo.test.tsx` prova que o carimbo obedece à prop `piso`; nada
+// lá provaria que `[slug]/page.tsx` a ENTREGA. Com `piso={undefined}` na página
+// toda aquela suíte fica verde e a linha vermelha perde a explicação em
+// produção — mudo em vez de mentiroso, que é o mesmo defeito de ontem.
+describe("o piso atravessa da ficha até a linha molhada do carimbo", () => {
+  it("a página entrega ao carimbo o piso da ficha REAL", async () => {
+    const f = getFicha("rampa-do-pepe")!;
+    expect(f.piso, "a Rampa perdeu o piso — este teste ficaria oco").toBe("barro");
+    const { container } = await abrir("rampa-do-pepe", "frio");
+    // Montada a partir da própria ficha, como a irmã de cima: as janelas de
+    // chuva podem mudar sem que o teste vire manutenção.
+    expect(container.querySelector(".reason")?.textContent).toBe(
+      `Choveu nas últimas ~${f.condicao.regra.janela_passado_horas}h (ou vem chuva nas ` +
+        `próximas ~${f.condicao.regra.janela_previsao_horas}h). O barro segura água — risco de atolar.`,
+    );
+  });
+
+  // O par ortogonal: `piso="barro"` escrito à mão na página passaria no teste
+  // de cima (é o piso da Rampa) e SÓ CAI aqui.
+  it("ficha sem piso: a página não põe nenhum no lugar", async () => {
+    expect((SEM_FATOS as TipoFicha).piso).toBeUndefined();
+    const { container } = await abrir("morro-sem-fatos", "frio");
+    const texto = container.querySelector(".reason")?.textContent;
+    expect(texto).toBeTruthy();
+    expect(texto).toMatch(/próximas ~\d+h\)\.$/);
   });
 });
 

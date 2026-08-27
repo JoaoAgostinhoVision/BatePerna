@@ -53,3 +53,37 @@ export function ordemPiso(p: Piso): number {
 export function rotuloPiso(p: Piso): string {
   return p.replace(/-/g, " ");
 }
+
+/** O que a CHUVA faz com cada piso — a segunda oração do ramo "choveu" do
+ *  carimbo. Irmã do `secaRapido` da ficha, e o oposto dela por natureza:
+ *  aquela fala de RELEVO (fato de UM lugar, e por isso mora na ficha, escrita
+ *  por quem conhece o lugar), esta fala de MATERIAL (a mesma física em
+ *  qualquer lugar, e por isso mora aqui, escrita uma vez).
+ *
+ *  🔴 POR QUE ELA EXISTE (2026-08-27). A frase vivia FIXA no `Carimbo.tsx`:
+ *  "O barro segura água — risco de atolar", verdadeira enquanto todo o acervo
+ *  era de barro. É a mesma mentira agendada que o `secaRapido` desarmou um dia
+ *  antes — texto escrito quando o acervo era pequeno, num componente que serve
+ *  o acervo INTEIRO. A 3ª ficha com asfalto a tornaria falsa sozinha.
+ *
+ *  🔴 SÓ `barro` TEM FRASE, E ISSO É DE PROPÓSITO. A frase é palavra do dono do
+ *  app (`regra_texto` da Rampa: "o barro segura água"). Escrever aqui o que a
+ *  chuva faz com paralelepípedo ou asfalto seria eu inventando copy que ninguém
+ *  disse — a geografia inventada de volta, vestida de física. Os outros três
+ *  CALAM até ele escrever a frase deles: é uma linha nesta tabela.
+ *
+ *  Ficha SEM `piso` cala pela mesma régua: silêncio é a saída honesta, e frase
+ *  genérica de reserva seria o defeito de volta com outra roupa. */
+const CHUVA_NO_PISO: Partial<Record<Piso, string>> = {
+  barro: "O barro segura água — risco de atolar.",
+};
+
+/** A meia-frase de chuva do piso, ou `undefined` quando não há o que dizer com
+ *  honestidade — piso sem frase, ou ficha sem piso.
+ *
+ *  ⚠️ O `piso ?` é do VERIFICADOR DE TIPOS, não do runtime: indexar a tabela com
+ *  `undefined` já devolveria `undefined`. Nenhum teste separa as duas versões,
+ *  e nenhum deveria fingir que separa. */
+export function chuvaNoPiso(piso?: Piso): string | undefined {
+  return piso ? CHUVA_NO_PISO[piso] : undefined;
+}

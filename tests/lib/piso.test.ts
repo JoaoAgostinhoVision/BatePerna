@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { ordemPiso, PISOS, PISOS_FILTRAVEIS, rotuloPiso } from "@/lib/piso";
+import { chuvaNoPiso, ordemPiso, PISOS, PISOS_FILTRAVEIS, rotuloPiso } from "@/lib/piso";
 
 describe("PISOS: a ordem é a escala", () => {
   // A escala existe pra ser comparada; sem isto, ordemPiso é decoração.
@@ -44,5 +44,42 @@ describe("PISOS: a ordem é a escala", () => {
   it("rotuloPiso troca o hífen por espaço: asfalto-esburacado → 'asfalto esburacado'", () => {
     expect(rotuloPiso("asfalto-esburacado")).toBe("asfalto esburacado");
     expect(rotuloPiso("barro")).toBe("barro");
+  });
+});
+
+// 🔴 O DEFEITO QUE ESTES TESTES TRANCAM (2026-08-27). "O barro segura água —
+// risco de atolar" vivia FIXA no `Carimbo.tsx`, e o carimbo serve o acervo
+// inteiro: bastava entrar uma ficha de asfalto pra o app afirmar barro onde não
+// há. É a mentira agendada do `secaRapido` (2026-08-26) na outra ponta da
+// mesma frase — aquela no ramo seco, esta no molhado.
+describe("chuvaNoPiso: o que a chuva faz com o chão é do MATERIAL, não do app", () => {
+  it("barro tem a frase do dono do app — 'segura água', a palavra dele", () => {
+    expect(chuvaNoPiso("barro")).toBe("O barro segura água — risco de atolar.");
+  });
+
+  // 🔴 Varrido a partir de `PISOS`, nunca de uma lista escrita aqui: no dia em
+  // que um 5º piso entrar na escala, este teste já cobra a decisão em vez de
+  // deixá-lo passar mudo por esquecimento.
+  //
+  // O que ele morde: alguém acrescentar `paralelepipedo: "pedra molhada
+  // escorrega"` à tabela — copy que ninguém disse, a geografia inventada
+  // vestida de física. Só ele cai; os de cima e os de baixo ficam verdes.
+  it.each(PISOS.filter((p) => p !== "barro"))(
+    "%s CALA — ninguém escreveu a frase dele ainda, e inventá-la é o defeito",
+    (p) => {
+      expect(chuvaNoPiso(p)).toBeUndefined();
+    },
+  );
+
+  // A régua do `secaRapido`, aplicada ao piso: sem o dado, silêncio. Frase
+  // genérica de reserva seria o defeito de volta com outra roupa.
+  //
+  // ⚠️ Este caso NÃO separa o `piso ?` da fonte: indexar a tabela com
+  // `undefined` devolve `undefined` do mesmo jeito, e a guarda é do verificador
+  // de tipos. Ele tranca o CONTRATO — quem chamar sem piso recebe silêncio —,
+  // não a linha. Dizer o contrário seria a prova oca da Task 4 de volta.
+  it("ficha sem piso não recebe frase nenhuma", () => {
+    expect(chuvaNoPiso(undefined)).toBeUndefined();
+    expect(chuvaNoPiso()).toBeUndefined();
   });
 });

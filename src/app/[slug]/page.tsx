@@ -83,6 +83,7 @@ export default async function Ficha({
             fut={fut}
             slug={slug}
             secaRapido={ficha.secaRapido}
+            piso={ficha.piso}
           />
         </div>
 
