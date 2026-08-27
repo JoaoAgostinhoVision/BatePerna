@@ -4,11 +4,20 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-**Última parada:** 2026-08-27 — **a META DÍVIDA do carimbo fechou, está NO AR e conferida.**
-A frase do barro saiu do código e virou `chuvaNoPiso`; os três *"cheque o barro no portão"* viraram
-*"cheque o chão no caminho"*. **Nada pendente do meu lado.**
-`main` limpo em **`f982937`**, **692/692 em 49 arquivos**, `tsc` limpo, `build` passa.
+**Última parada:** 2026-08-27 — **a META DÍVIDA do carimbo fechou, e DEPOIS ele achou mais uma
+na mesma família.** Tudo **NO AR e conferido**. A frase do barro virou `chuvaNoPiso`; os três
+*"cheque o barro no portão"* viraram *"cheque o chão no caminho"*; e **"Pode subir"/"Não suba"
+viraram "Pode ir"/"Não vá"** — a palavra supunha ladeira, e a Pedra Furada é plana.
+**Nada pendente do meu lado.**
+`main` limpo em **`8d733af`**, **700/700 em 49 arquivos**, `tsc` limpo, `build` passa.
 Ver o bloco "SE O JOÃO DISSER CONTINUA" logo abaixo.
+
+🔴 **E A LIÇÃO MAIS CARA DO DIA FOI SOBRE O MEU PRÓPRIO LEVANTAMENTO.** A tabela lá embaixo
+("O QUE NÃO FOI DECIDIDO E SEGUE FIXO") existe pra inventariar *que texto fixo está certo só por
+sorte*. Nela, escrito por mim, estava: *"Não suba" / "Pode subir" → ✅ **genérico o bastante***.
+**Não era.** Ele leu e viu em um segundo o que eu tinha carimbado de seguro. **Inventário de
+suposição feito por quem escreveu as suposições é o mais fraco que existe** — quando a lista
+estiver pronta, mostre-a a ele em vez de confiar nos próprios ✅.
 
 🔴 **AS DUAS LIÇÕES QUE VÃO SE REPETIR NA 3ª FICHA — leia antes de criá-la:**
 
@@ -20,7 +29,10 @@ Ver o bloco "SE O JOÃO DISSER CONTINUA" logo abaixo.
    AGENDADA.** A frase de relevo da Rampa vivia dentro do `Carimbo` e virou falsa sozinha quando a
    Pedra Furada entrou. **As duas pontas da frase já fecharam:** o ramo *seco* virou `secaRapido`
    na ficha (26/08), o ramo *molhado* virou `chuvaNoPiso` derivado do `piso` (27/08), e os três
-   *"cheque o barro no portão"* viraram *"cheque o chão no caminho"*.
+   *"cheque o barro no portão"* viraram *"cheque o chão no caminho"*, e **a palavra da decisão
+   parou de supor ladeira** (`marcaDe`: "Pode ir"/"Não vá").
+   🔴 **A terceira delas eu tinha marcado como SEGURA no meu próprio inventário.** Ver a nota
+   vermelha no topo do arquivo: quem escreveu as suposições é o pior auditor delas.
    ⚠️ **Sobrou UM, e por decisão DELE, não por esquecimento:** o selo *"barro · dá um tempo"*
    (`Carimbo.tsx`, `SeloTrilha.tsx`) **fica como está** — ele escolheu isso de olhos abertos em
    27/08, sabendo que **a 3ª ficha de asfalto o quebra**. Não conserte por conta própria; quando
@@ -168,7 +180,7 @@ termina a linha verde no ponto final — o app **cala em vez de inventar**, que 
 | ~~`Carimbo.tsx` (ramo frio)~~ | ~~"O **barro** segura água — risco de atolar"~~ | ✅ **RESOLVIDO 27/08** — virou `chuvaNoPiso`, derivado do `piso` |
 | ~~`Carimbo.tsx` (falhou/erro/venceu)~~ | ~~"cheque o **barro** no **portão**"~~ | ✅ **RESOLVIDO 27/08** — virou "cheque o chão no caminho" |
 | `Carimbo.tsx`, `SeloTrilha.tsx` | "**barro** · dá um tempo" | 🟠 por sorte — **ELE DECIDIU DEIXAR (27/08)** |
-| `Carimbo.tsx`, `SeloTrilha.tsx` | "Não suba" / "Pode subir" | ✅ genérico o bastante |
+| ~~`Carimbo.tsx`, `SeloTrilha.tsx`~~ | ~~"Não suba" / "Pode subir"~~ | 🔴 **EU MARQUEI "genérico o bastante" E ESTAVA ERRADO** — supunha ladeira. **RESOLVIDO 27/08**: virou `marcaDe`, "Pode ir"/"Não vá" |
 
 ⚠️ **A última linha "por sorte" é ESCOLHA, não pendência.** Perguntado em 27/08 com as três saídas
 na mão (derivar do piso / trocar por "molhado" / deixar), ele escolheu **deixar**, sabendo que a
@@ -221,6 +233,52 @@ grep -c 'barro muda'    /tmp/p.js   # 0  ← idem, a terceira frase
 grep -c 'no caminho'    /tmp/p.js   # 1  ← e o vocabulário NOVO chegou junto
 grep -c 'segura '       /tmp/p.js   # 1  ← a frase do barro continua lá, vinda do piso.ts
 ```
+
+---
+
+## ✅ E NA SEQUÊNCIA, A TERCEIRA DA MESMA FAMÍLIA: a palavra parou de supor ladeira
+
+**Ele leu o resumo da rodada acima e respondeu *"eita, tem que mudar o pode subir para pode ir…"*.**
+Commit `8d733af`, **no ar e conferido**. **"Pode subir"/"Não suba" → "Pode ir"/"Não vá"** — o
+`"Não vá"` é palavra dele (a `voz` da Rampa na ficha: *"é barro: molhou, não vá"*), escolhida por
+ele entre três saídas quando eu perguntei pela metade negativa que ele não tinha nomeado.
+
+🔴 **É a MESMA doença pela terceira vez na mesma semana, e a mais bem escondida das três.** Relevo
+(`secaRapido`) e material (`chuvaNoPiso`) *pareciam* fatos de lugar. **"Subir" parecia um verbo.**
+A Rampa do Pepê é ladeira, então a palavra nasceu certa; a Pedra Furada é **plana** — lá o passeio
+é **chegar**. **A pergunta do topo deste arquivo pega até isto**, se for feita palavra por palavra:
+*este texto fala de UM lugar, num componente que serve TODOS?*
+
+🔴 **E A PALAVRA VIROU UMA FONTE SÓ — `marcaDe` em `src/lib/carimbo-fase.ts`.** Ela estava escrita
+à mão nos **dois** componentes (`Carimbo.tsx` e `SeloTrilha.tsx`), então esta troca eram **duas
+edições**, e quem fizesse uma só deixaria a home e a ficha discordando na mesma sessão — irmã do
+defeito histórico da palavra e da cor nascendo de commits diferentes.
+
+⚠️ **O `sub` continua duplicado nos dois, de propósito** — ele não mudou nesta rodada, e o "barro"
+dele é escolha registrada dele. **Quem for mexer nele, traga-o pra `carimbo-fase.ts` junto.**
+
+**Prova:** 8 testes novos, **4 mutações medidas e todas mortas**. 🔴 **A que ensina é a N4:** o selo
+voltando a escrever **à mão as MESMAS palavras** pinta a **mesma tela** — os testes de render
+todos passam — e morre **só na prova de FONTE**. Sem ela, a divergência **futura** entraria verde.
+
+✅ **Conferido no ar, e com sorte de calendário de novo:** as duas fichas estão em estados
+**opostos** agora, então a home mostra as duas palavras ao mesmo tempo e dá pra ver que a ficha e o
+cartão concordam.
+
+```bash
+H=https://bateperna.vercel.app
+curl -s $H/rampa-do-pepe | grep -o 'class="mark">[^<]*'              # Não vá
+curl -s $H/pedra-furada-de-venturosa | grep -o 'class="mark">[^<]*'  # Pode ir
+curl -s $H/ | grep -o 'class="w">[^<]*' | sort -u                    # os dois selos, iguais à ficha
+# nos chunks: 'Pode subir' → 0, 'o suba' → 0 (sem acento), 'Pode ir' → 1
+```
+
+⚠️ **Comentários de `src/` foram atualizados junto** — os que citavam a palavra velha descreviam a
+tela de **hoje** e passariam a mentir. **`docs/` e `_bmad-output/` ficaram INTACTOS de propósito:**
+são registro congelado de rodadas passadas, e reescrevê-los faria a história citar palavra que não
+existia na época.
+
+---
 
 ⚠️ **Repare que `segura` NÃO é discriminador nesta rodada** — a frase não morreu, ela **mudou de
 endereço**, e `piso.ts` entra no mesmo bundle do cliente. Quem separa as versões é a prova de fonte
@@ -294,10 +352,10 @@ repo ele apaga o ledger de scratch e o próprio `.claude/`.
 ```
 git branch --show-current  → main
 git status --short         → limpo
-npm test                   → 692/692 em 49 arquivos   ← tudo verde, NÃO há falha esperada
+npm test                   → 700/700 em 49 arquivos   ← tudo verde, NÃO há falha esperada
                              (era 668; a 2ª ficha não mudou o total — 9 caíram e foram
                               consertados. O `secaRapido` de 26/08 somou 11; o
-                              `chuvaNoPiso` de 27/08 somou 13.)
+                              `chuvaNoPiso` de 27/08 somou 13; o `marcaDe`, +8.)
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
