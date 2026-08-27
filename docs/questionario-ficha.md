@@ -348,12 +348,22 @@ de chegar até lá.
 **Pergunta:** entrar nessa trilha custa alguma coisa? Se custar, quanto, e como é
 cobrado (no portão, antecipado, por pessoa, por carro)?
 
-**Por que importa:** se for pago, aparece duas vezes na ficha: um chip curto com o
-preço no topo da tela, ao lado do nome do app, e uma linha completa perto do fim com
-o valor e onde é cobrado. Se for grátis, nenhuma das duas aparece.
+**E a segunda metade, que é o campo `curto`:** como caberia isso em **três ou quatro
+palavras**, pro chip do topo da tela? O preço mais o *onde* — na sua palavra.
+
+**Por que importa:** se for pago, aparece duas vezes na ficha: o **chip curto**
+(`curto`) no topo, ao lado do nome do app, e a **linha completa** (`valor`) perto do
+fim, com quanto é e como se paga. Se for grátis, nenhuma das duas aparece.
+
+🔴 **Por que `curto` é campo, e não recorte automático do `valor`:** o app montava o
+chip como *preço + "portão"*, com a palavra **escrita no código**. Era verdade na
+Rampa e invenção em qualquer trilha que cobre numa guarita, por Pix ou com alguém na
+estrada. **Nem todo lugar cobra o mesmo valor nem da mesma forma** — então as duas
+coisas vêm daqui. Sem responder, o chip mostra **só o preço**, e o app não diz onde
+se paga em vez de chutar.
 
 **Exemplo (Rampa):** `tag: pago, valor: "R$ 5 por pessoa · cobrado no portão da
-entrada"`
+entrada", curto: "R$ 5 · portão"`
 
 ---
 

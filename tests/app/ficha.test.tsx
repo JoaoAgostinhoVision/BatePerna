@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, within } from "@testing-library/react";
 import { CHAVE_LOCAL } from "@/lib/local";
@@ -30,7 +32,7 @@ vi.mock("@/lib/carimbo-estado", async (real) => ({
 // nada no bloco de baixo lê ou compara essa string —, então a diferença não
 // separa as duas versões. O teste que usava `COM_FATOS` foi apagado junto —
 // ver a nota abaixo.
-const { SEM_FATOS, SO_PISO } = vi.hoisted(() => {
+const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO } = vi.hoisted(() => {
   const base = {
     slug: "morro-de-teste",
     modos: ["contemplativo"],
@@ -64,6 +66,15 @@ const { SEM_FATOS, SO_PISO } = vi.hoisted(() => {
   return {
     SEM_FATOS: { ...base, slug: "morro-sem-fatos" },
     SO_PISO: { ...base, slug: "morro-so-piso", piso: "asfalto-esburacado" },
+    // 🔴 Paga e SEM `custo.curto`, e os dois detalhes são load-bearing: o preço
+    // não é "R$ 5" (a Rampa é), e a cobrança não é num portão. É a única
+    // fixture capaz de separar "o chip vem da ficha" de "o chip é montado no
+    // código" — com uma paga que tivesse curto, as duas versões coincidiriam.
+    PAGO_SEM_CURTO: {
+      ...base,
+      slug: "morro-pago-sem-curto",
+      custo: { tag: "pago" as const, valor: "R$ 9 por carro · na guarita da fazenda" },
+    },
   };
 });
 
@@ -71,7 +82,7 @@ const { SEM_FATOS, SO_PISO } = vi.hoisted(() => {
 // JSON de verdade, senão o teste que fala de produção viraria decoração.
 vi.mock("@/lib/ficha", async (real) => {
   const mod = await real<typeof import("@/lib/ficha")>();
-  const sinteticas = [SEM_FATOS, SO_PISO] as unknown as TipoFicha[];
+  const sinteticas = [SEM_FATOS, SO_PISO, PAGO_SEM_CURTO] as unknown as TipoFicha[];
   return {
     ...mod,
     getFicha: (slug: string) => sinteticas.find((f) => f.slug === slug) ?? mod.getFicha(slug),
@@ -209,6 +220,47 @@ describe("a frase de relevo atravessa da ficha até a tela", () => {
 // lá provaria que `[slug]/page.tsx` a ENTREGA. Com `piso={undefined}` na página
 // toda aquela suíte fica verde e a linha vermelha perde a explicação em
 // produção — mudo em vez de mentiroso, que é o mesmo defeito de ontem.
+// 🔴 O DEFEITO QUE ESTES TESTES TRANCAM (2026-08-27). O chip do topo era
+// montado aqui como `${preço} · portão`, com o "portão" ESCRITO À MÃO — verdade
+// na Rampa, invenção em qualquer trilha paga que cobre numa guarita, por Pix ou
+// com alguém na estrada. E o caminho página→Appbar não tinha teste NENHUM: o
+// `Appbar.test.tsx` passa a string pronta, então nada olhava de onde ela vinha.
+// Decisão dele: *"tem que ser algo personalizável, nem tudo tem o mesmo valor e
+// mesma forma"*.
+describe("o chip do custo vem da FICHA, não do código", () => {
+  const chip = (c: HTMLElement) => c.querySelector(".cost-chip")?.textContent;
+
+  it("a página entrega o que a ficha REAL diz — a palavra dela, não a minha", async () => {
+    const f = getFicha("rampa-do-pepe")!;
+    expect(f.custo.curto, "a Rampa perdeu o chip — este teste ficaria oco").toBeTruthy();
+    const { container } = await abrir("rampa-do-pepe");
+    expect(chip(container)).toBe(f.custo.curto);
+  });
+
+  // 🔴 ESTE É O TESTE DA RODADA. Com a Rampa sozinha, "chip da ficha" e "chip
+  // montado no código" davam a MESMA string — ela cobra R$ 5 num portão. Só uma
+  // ficha paga que cobra de OUTRO jeito separa as duas versões.
+  it("ficha paga sem o campo mostra só o preço — o app não inventa onde se paga", async () => {
+    expect((PAGO_SEM_CURTO as TipoFicha).custo.curto).toBeUndefined();
+    const { container } = await abrir("morro-pago-sem-curto");
+    expect(chip(container)).toBe("R$ 9");
+  });
+
+  it("ficha grátis não tem chip nenhum", async () => {
+    const { container } = await abrir("morro-sem-fatos");
+    expect(container.querySelector(".cost-chip")).toBeNull();
+  });
+
+  // PROVA DE FONTE: enquanto a Rampa for a única paga do acervo, a versão certa
+  // e a versão com o "portão" de volta pintam a MESMA tela. Só a fonte separa.
+  it("nenhum lugar de cobrança escrito à mão na página", async () => {
+    const src = readFileSync(path.join(process.cwd(), "src", "app", "[slug]", "page.tsx"), "utf8");
+    const codigo = src.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+    expect(codigo, "a tira de comentários comeu o código").toContain("chipCusto");
+    expect(codigo, "o portão voltou pro código").not.toMatch(/portão/i);
+  });
+});
+
 describe("o piso atravessa da ficha até a linha molhada do carimbo", () => {
   it("a página entrega ao carimbo o piso da ficha REAL", async () => {
     const f = getFicha("rampa-do-pepe")!;

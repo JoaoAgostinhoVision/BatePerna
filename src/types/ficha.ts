@@ -40,7 +40,24 @@ export const fichaSchema = z.object({
   avisos: z.string(),
   condicao: condicaoSchema,
   discriminador: discriminadorSchema,
-  custo: z.object({ tag: z.enum(["gratis", "pago"]), valor: z.string().optional() }),
+  // `curto` é o CHIP do topo da ficha — a forma curta do custo, na palavra de
+  // quem conhece o lugar.
+  //
+  // 🔴 Ele nasceu porque o chip era montado no código como `${preço} · portão`,
+  // com o "portão" ESCRITO À MÃO (2026-08-27). Verdade na Rampa, que cobra num
+  // portão de verdade — e uma invenção em qualquer trilha paga que cobre numa
+  // guarita, por Pix, ou com um cara na estrada. Decisão dele: *"tem que ser
+  // algo personalizável, nem tudo tem o mesmo valor e mesma forma"* — o VALOR
+  // muda e a FORMA de cobrar muda, então as duas coisas vêm da ficha.
+  //
+  // Opcional pela régua de sempre: ficha paga sem o campo mostra só o preço
+  // extraído de `valor`, e o app **cala sobre onde se paga** em vez de inventar
+  // um portão. Ficha grátis não tem chip nenhum.
+  custo: z.object({
+    tag: z.enum(["gratis", "pago"]),
+    valor: z.string().optional(),
+    curto: z.string().optional(),
+  }),
   // Opcional porque é FATO DE ROTEIRO — quem responde é quem conhece o
   // lugar, não quem escreve o código. Obrigatório, ele derrubaria o
   // carregamento de qualquer ficha futura que chegue sem o dado (a Rampa, a

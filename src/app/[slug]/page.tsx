@@ -36,6 +36,12 @@ export default async function Ficha({
   const precoCurto = ficha.custo.valor?.match(/R\$\s?\d+/)?.[0] ?? "Pago";
   const restoCusto = ficha.custo.valor?.replace(precoCurto, "").replace(/^\s*[·-]?\s*/, "").trim();
 
+  // 🔴 O chip vem da FICHA, não daqui. Ele era `${precoCurto} · portão`, com o
+  // "portão" escrito à mão: verdade na Rampa e invenção em qualquer trilha paga
+  // que cobre de outro jeito. Sem `curto`, mostra só o preço — o app cala sobre
+  // ONDE se paga em vez de supor. Ver `custo.curto` em `src/types/ficha.ts`.
+  const chipCusto = ficha.custo.tag === "pago" ? (ficha.custo.curto ?? precoCurto) : undefined;
+
   // O fato do LUGAR que o cartão da home já mostra, agora também aqui, dentro
   // do bloco Trajeto: que piso tem a via. Formatado pela MESMA função do
   // cartão (`rotuloPiso`) — formatar de novo aqui seria a mesma trilha com
@@ -68,7 +74,7 @@ export default async function Ficha({
   return (
     <Moldura estado={estado}>
       <div className="screen">
-        <Appbar chip={ficha.custo.tag === "pago" ? `${precoCurto} · portão` : undefined} />
+        <Appbar chip={chipCusto} />
 
         <div className="hero">
           <span className="scan">{ficha.rotulo_escaneio}</span>

@@ -258,6 +258,43 @@ describe("secaRapido — a explicação do relevo é da FICHA, não do app", () 
   });
 });
 
+// 🔴 O campo que nasceu de um "portão" ESCRITO NO CÓDIGO (2026-08-27). O chip
+// do topo era montado como `${preço} · portão` — verdade na Rampa e invenção em
+// qualquer trilha paga que cobre de outro jeito. Decisão dele: *"tem que ser
+// algo personalizável, nem tudo tem o mesmo valor e mesma forma"*.
+describe("custo.curto — o chip é da FICHA, não do app", () => {
+  const base = JSON.parse(readFileSync(
+    path.join(process.cwd(), "content", "fichas", "rampa-do-pepe.json"), "utf8"));
+
+  it("ficha paga SEM curto valida — é opcional, e o app mostra só o preço", () => {
+    const { curto: _c, ...custoSem } = base.custo;
+    const sem = { ...base, custo: custoSem };
+    expect(() => fichaSchema.parse(sem)).not.toThrow();
+    expect(fichaSchema.parse(sem).custo.curto).toBeUndefined();
+  });
+
+  it("curto que não é texto não valida", () => {
+    expect(() => fichaSchema.parse({ ...base, custo: { ...base.custo, curto: 5 } })).toThrow();
+  });
+
+  // A ficha REAL, por slug. A Pedra Furada é GRÁTIS, então não entra aqui — e
+  // isso é registro, não esquecimento: hoje só existe uma ficha paga no acervo,
+  // que é justamente por que o "portão" fixo passou despercebido tanto tempo.
+  it("a Rampa traz o chip dela, e ele NÃO repete a linha completa do custo", () => {
+    const rampa = getFicha("rampa-do-pepe")!;
+    expect(rampa.custo.tag).toBe("pago");
+    expect(rampa.custo.curto, "a Rampa precisa do chip dela").toBeTruthy();
+    // Curto é curto: se alguém colar a frase inteira aqui, o chip do topo
+    // estoura a barra. Quatro palavras é o orçamento real da pílula.
+    expect(rampa.custo.curto!.split(/\s+/).length).toBeLessThanOrEqual(4);
+    expect(rampa.custo.curto).not.toBe(rampa.custo.valor);
+  });
+
+  it("a única ficha grátis do acervo não tem chip pra ter", () => {
+    expect(getFicha("pedra-furada-de-venturosa")!.custo.tag).toBe("gratis");
+  });
+});
+
 describe("loadAll: slug repetido não pode divergir entre telas", () => {
   it("dois JSONs com o mesmo slug estouram, citando o slug e os dois arquivos", () => {
     const dir = dirSintetico({
