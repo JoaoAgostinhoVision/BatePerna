@@ -4,12 +4,16 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-**Última parada:** 2026-08-27 — **a META DÍVIDA do carimbo fechou, e DEPOIS ele achou mais uma
-na mesma família.** Tudo **NO AR e conferido**. A frase do barro virou `chuvaNoPiso`; os três
-*"cheque o barro no portão"* viraram *"cheque o chão no caminho"*; e **"Pode subir"/"Não suba"
-viraram "Pode ir"/"Não vá"** — a palavra supunha ladeira, e a Pedra Furada é plana.
+**Última parada:** 2026-08-27 — **QUATRO rodadas encadeadas, todas NO AR e conferidas**, cada uma
+achando a próxima. Todas do mesmo defeito: **texto fixo no código afirmando coisa sobre UM lugar**.
+1. a frase do barro virou `chuvaNoPiso` (derivada do `piso`);
+2. os três *"cheque o barro no portão"* viraram *"cheque o chão no caminho"*;
+3. **"Pode subir"/"Não suba" viraram "Pode ir"/"Não vá"** (`marcaDe`, fonte única) — **ele pegou**;
+4. o **"✓ Fui"** parou de supor portão/subir/barro, e o **chip do custo virou campo da ficha**
+   (`custo.curto`) — **achado pela varredura mecânica, não pelo meu inventário**.
+
 **Nada pendente do meu lado.**
-`main` limpo em **`8d733af`**, **700/700 em 49 arquivos**, `tsc` limpo, `build` passa.
+`main` limpo em **`b8e3c7a`**, **711/711 em 49 arquivos**, `tsc` limpo, `build` passa.
 Ver o bloco "SE O JOÃO DISSER CONTINUA" logo abaixo.
 
 🔴 **E A LIÇÃO MAIS CARA DO DIA FOI SOBRE O MEU PRÓPRIO LEVANTAMENTO.** A tabela lá embaixo
@@ -18,6 +22,13 @@ sorte*. Nela, escrito por mim, estava: *"Não suba" / "Pode subir" → ✅ **gen
 **Não era.** Ele leu e viu em um segundo o que eu tinha carimbado de seguro. **Inventário de
 suposição feito por quem escreveu as suposições é o mais fraco que existe** — quando a lista
 estiver pronta, mostre-a a ele em vez de confiar nos próprios ✅.
+
+🔴 **E O SEGUNDO ERRO DO MESMO INVENTÁRIO FOI DE ESCOPO: ele só olhou `Carimbo.tsx` e
+`SeloTrilha.tsx`.** A varredura de verdade — **todo** texto visível de `src/`, 18 arquivos, feita
+depois — achou os **três mesmos defeitos inteiros** num arquivo que a tabela nunca visitou
+(`ConfirmarFui.tsx`), mais o `· portão` do chip. **Inventário sem varredura mecânica inventaria só
+o que você já suspeitava.** O script está em `scratchpad/varrer.mjs` — extrai literais e texto de
+JSX sem comentários; **rode-o antes de afirmar que a lista está completa.**
 
 🔴 **AS DUAS LIÇÕES QUE VÃO SE REPETIR NA 3ª FICHA — leia antes de criá-la:**
 
@@ -280,6 +291,58 @@ existia na época.
 
 ---
 
+## ✅ A QUARTA: a varredura MECÂNICA, e o arquivo que o inventário nunca visitou
+
+**Ele disse "continua". Em vez de perguntar, eu fiz o que a lição da rodada 3 mandou:** varrer
+**todo** texto visível de `src/` — 18 arquivos, literais e texto de JSX, sem comentários — em vez
+de carimbar de novo o que eu achava seguro. **Script: `scratchpad/varrer.mjs`.** Commit `b8e3c7a`.
+
+🔴 **ACHOU UM ARQUIVO INTEIRO QUE O INVENTÁRIO NÃO OLHOU.** `ConfirmarFui.tsx` — o "✓ Fui", a alça
+de confiança do app — carregava **os três defeitos corrigidos no carimbo no mesmo dia**:
+
+| era | por que estava errado |
+|---|---|
+| *"E no **portão**, como estava?"* | ele decide **dirigindo** |
+| *"Deu pra **subir**"* | ladeira — a Pedra Furada é plana |
+| *"Tava **barro**"* | o material — **e aqui é pior que no selo**: quem volta de uma trilha de asfalto não teria botão que servisse pra reportar |
+
+**Decisão dele: tirar os três de uma vez.** Virou *"E como estava o chão?"* / *"Deu pra ir"* /
+*"Tava ruim"*.
+
+⚠️ **E o placar dizia "N achou barro".** Virou *"N achou o chão ruim"*, com o verbo concordando.
+🔴 **Não é "achou ruim": em português isso lê-se como *não gostei*, que é outra coisa.** Mesma
+lição da frase invertida da Pedra Furada — ler o que a frase AFIRMA antes de escrevê-la.
+
+🔴 **O RÓTULO E O DADO GRAVADO DIVERGEM DE PROPÓSITO.** "Tava ruim" continua mandando
+`tipo: "barro"` — o enum vive na tabela `confirmacoes` e já tem linhas gravadas; trocá-lo é
+**migração de dado**, não troca de copy. **Há teste impedindo que alguém "conserte" isso sem
+querer.**
+
+**E o chip do custo virou campo da ficha.** Era `${preço} · portão`, com o portão escrito à mão.
+**Palavra dele:** *"tem que ser algo personalizável, **nem tudo tem o mesmo valor e mesma
+forma**"*. Campo **`custo.curto`**, opcional: ficha paga sem ele mostra **só o preço**, e o app
+cala sobre onde se paga. A Rampa ganhou `"R$ 5 · portão"` — a mesma tela de antes, mas agora é
+**palavra dela**, e a ficha dela realmente diz *"cobrado no portão da entrada"*.
+
+⚠️ **O caminho `página → Appbar` não tinha teste NENHUM** — o `Appbar.test.tsx` passa a string
+pronta, então nada olhava de onde ela vinha. **Foi esse buraco que deixou o "portão" fixo viver.**
+
+**Prova:** 11 testes novos, **9 mutações medidas e todas mortas**. 🔴 **A que ensina é a P1:** pôr
+o `· portão` de volta no código **não derruba** o teste da Rampa — lá a string coincide, porque ela
+cobra R$ 5 num portão de verdade. **Só uma ficha paga que cobra de OUTRO jeito separa as versões**,
+e ela não existe no acervo: por isso a fixture sintética `PAGO_SEM_CURTO` (R$ 9, na guarita) é
+load-bearing, não decoração.
+
+```bash
+H=https://bateperna.vercel.app
+curl -s $H/rampa-do-pepe | grep -o 'class="cost-chip">[^<]*'   # R$ 5 · portão (agora vindo da ficha)
+curl -s $H/pedra-furada-de-venturosa | grep -c 'cost-chip'     # 0 — grátis não tem chip
+# nos chunks: 'Deu pra subir'/'Tava barro'/'E no port'/'achou barro' → 0
+#             'Deu pra ir'/'Tava ruim'/'o ruim'/'acharam'            → 1
+```
+
+---
+
 ⚠️ **Repare que `segura` NÃO é discriminador nesta rodada** — a frase não morreu, ela **mudou de
 endereço**, e `piso.ts` entra no mesmo bundle do cliente. Quem separa as versões é a prova de fonte
 no `vitest`, não o `grep`. **Um marcador que dá o mesmo número nas duas versões não prova nada.**
@@ -352,10 +415,10 @@ repo ele apaga o ledger de scratch e o próprio `.claude/`.
 ```
 git branch --show-current  → main
 git status --short         → limpo
-npm test                   → 700/700 em 49 arquivos   ← tudo verde, NÃO há falha esperada
+npm test                   → 711/711 em 49 arquivos   ← tudo verde, NÃO há falha esperada
                              (era 668; a 2ª ficha não mudou o total — 9 caíram e foram
-                              consertados. O `secaRapido` de 26/08 somou 11; o
-                              `chuvaNoPiso` de 27/08 somou 13; o `marcaDe`, +8.)
+                              consertados. O `secaRapido` de 26/08 somou 11; e as quatro
+                              rodadas de 27/08 somaram 13 + 8 + 11 = 43.)
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
