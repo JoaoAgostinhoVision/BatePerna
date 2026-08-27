@@ -8,6 +8,7 @@ import {
   type Gatilho,
   type Sintoma,
   faseDe,
+  marcaDe,
   podeBuscar,
   sintomaDe,
 } from "@/lib/carimbo-fase";
@@ -19,7 +20,7 @@ import { useAvisarEstado } from "./Moldura";
  *  coordenada, aviso, o que ler no portão — é verdade parada.
  *
  *  Quando não há leitura, ele não manda: informa que não sabe, devolve a
- *  decisão, e se oferece pra ir buscar de novo. "Não suba" ficou reservado pro
+ *  decisão, e se oferece pra ir buscar de novo. "Não vá" ficou reservado pro
  *  barro que o motor MEDIU. */
 export default function Carimbo({
   estado,
@@ -55,7 +56,7 @@ export default function Carimbo({
 
   // A cor mora no <main> (data-state), fora deste componente: ela pinta o selo
   // E o pin do mapa, que é irmão daqui. Sem avisar a Moldura, uma leitura nova
-  // trocaria a palavra sem trocar a cor — "Não suba" dentro de um selo verde.
+  // trocaria a palavra sem trocar a cor — "Não vá" dentro de um selo verde.
   const avisarEstado = useAvisarEstado();
 
   // Refs, e não estado: os ouvintes são registrados uma vez e leriam um estado
@@ -111,7 +112,7 @@ export default function Carimbo({
       // O corpo é conferido, não assumido: é ele que vira a decisão que a
       // pessoa lê no portão. Um 200 com corpo fora do trio daria `undefined`
       // nos três campos e carimboVenceu(undefined) é NaN >= 1800 → false: a
-      // tela afirmaria "Pode subir" a partir de nada. Corpo inválido é falha.
+      // tela afirmaria "Pode ir" a partir de nada. Corpo inválido é falha.
       if (!ehLeitura(nova)) throw new Error("corpo fora do trio");
       if (geracao.current !== minha || !vivo.current) return;
       // Os quatro num lote só, de propósito. `venceu` é recalculado aqui em vez
@@ -179,11 +180,9 @@ export default function Carimbo({
   const fase = faseDe(situacao);
   const sintoma = sintomaDe(situacao);
 
-  const marca =
-    fase === "conferindo" ? "CONFERINDO…"
-    : fase === "sem-informacoes" ? "SEM INFORMAÇÕES"
-    : estadoAtual === "frio" ? "Não suba"
-    : "Pode subir";
+  // A palavra vem de `marcaDe`, não daqui: é a MESMA do selo do cartão, e
+  // escrita à mão nos dois ela já podia divergir. Ver `carimbo-fase.ts`.
+  const marca = marcaDe(fase, estadoAtual);
 
   const sub =
     fase === "conferindo" ? "lendo a chuva agora"

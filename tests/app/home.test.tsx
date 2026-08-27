@@ -78,7 +78,7 @@ describe("a home", () => {
     vi.mocked(resolverEstados).mockResolvedValue(leituras("fresco"));
     const { container } = render(await Home());
     const selo = container.querySelector(".cartao .selo");
-    expect(selo?.textContent).toContain("Pode subir");
+    expect(selo?.textContent).toContain("Pode ir");
     expect(container.querySelector('.cartao[data-state="fresco"]')).not.toBeNull();
   });
 
@@ -137,21 +137,21 @@ describe("a home", () => {
     expect(ids).toEqual(["seca", "molhada", "instavel"]);
   });
 
-  it("barro medido diz 'Não suba' — a regra tem dois lados, e este é o outro", async () => {
+  it("barro medido diz 'Não vá' — a regra tem dois lados, e este é o outro", async () => {
     // Par do teste "sem leitura informa": aquele prova que frio+erro NÃO diz
-    // "Não suba". Este prova que frio+leitura confiável DIZ. Sem os dois,
-    // apagar o ramo "Não suba" do SeloTrilha deixaria a suíte inteira verde.
+    // "Não vá". Este prova que frio+leitura confiável DIZ. Sem os dois,
+    // apagar o ramo "Não vá" do SeloTrilha deixaria a suíte inteira verde.
     vi.mocked(resolverEstados).mockResolvedValue(leituras("frio", false));
     const { container } = render(await Home());
-    expect(container.textContent).toContain("Não suba");
+    expect(container.textContent).toContain("Não vá");
     expect(container.textContent).not.toContain("SEM INFORMAÇÕES");
   });
 
-  it("sem leitura, informa em vez de mandar — 'Não suba' é só pro barro medido", async () => {
+  it("sem leitura, informa em vez de mandar — 'Não vá' é só pro barro medido", async () => {
     vi.mocked(resolverEstados).mockResolvedValue(leituras("frio", true));
     const { container } = render(await Home());
     expect(container.textContent).toContain("SEM INFORMAÇÕES");
-    expect(container.textContent).not.toContain("Não suba");
+    expect(container.textContent).not.toContain("Não vá");
   });
 
   it("a barra marca que você está na home", async () => {
@@ -167,7 +167,7 @@ describe("a home", () => {
 
   // A palavra e a cor têm que dizer a mesma coisa. Em CSS isso é uma disputa de
   // especificidade, e ela já foi perdida uma vez neste app: a rodada do carimbo
-  // shipou "Não suba" dentro de um selo verde. jsdom não resolve cascata, então
+  // shipou "Não vá" dentro de um selo verde. jsdom não resolve cascata, então
   // o guarda lê a folha — seletor E corpo juntos (mesmo padrão de
   // tests/app/Carimbo.test.tsx), pra não passar só porque o texto do seletor
   // apareceu dentro de um comentário, nem porque a regra ganhou a cascata mas
@@ -257,7 +257,7 @@ describe("SeloTrilha — o relógio da validade", () => {
       </Profiler>,
     );
 
-    expect(quadros[0]).toBe("Pode subir"); // primeiro commit: useVenceu ainda não rodou
+    expect(quadros[0]).toBe("Pode ir"); // primeiro commit: useVenceu ainda não rodou
     // depois do efeito, o mesmo nó já diz a verdade: a leitura venceu
     expect(document.querySelector(".selo .w")?.textContent).toBe("SEM INFORMAÇÕES");
   });

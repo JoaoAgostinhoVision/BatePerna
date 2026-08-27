@@ -55,7 +55,7 @@ describe("HomeViva", () => {
   });
 
   // O corpo torto não pode virar decisão: `carimboVenceu(undefined)` é NaN, e
-  // NaN >= 1800 é false — a tela afirmaria "Pode subir" a partir de nada.
+  // NaN >= 1800 é false — a tela afirmaria "Pode ir" a partir de nada.
   it("corpo fora do formato é descartado, e a leitura velha continua valendo", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ rampa: { estado: "azul" } }))));
     montar({ rampa: VELHA });

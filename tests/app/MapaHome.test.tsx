@@ -121,7 +121,7 @@ describe("MapaHome", () => {
     expect(container.querySelector(`.pin-home[href="#${slug}"]`)?.getAttribute("data-state"))
       .toBe("frio");
     expect(container.querySelector(".cartao")?.getAttribute("data-state")).toBe("frio");
-    expect(container.textContent).toContain("Não suba");
+    expect(container.textContent).toContain("Não vá");
   });
 
   // Mesmo padrão do guarda do .selo em tests/app/home.test.tsx — essa classe

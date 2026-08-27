@@ -1,13 +1,69 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import {
   PISO_AUTO_MS,
   PRAZO_CONFERINDO_MS,
   faseDe,
+  marcaDe,
   podeBuscar,
   sintomaDe,
 } from "@/lib/carimbo-fase";
 
 const OK = { conferindo: false, erro: false, venceu: false, falhou: false };
+
+// 🔴 O DEFEITO QUE ESTES TESTES TRANCAM (2026-08-27). "Pode subir"/"Não suba"
+// supunham LADEIRA em todo lugar do acervo. Era verdade da Rampa do Pepê, e o
+// app repetia na Pedra Furada, que é plana — lá o passeio é chegar, não subir.
+// Terceira vez na mesma semana que texto escrito com o acervo pequeno vira
+// mentira quando ele cresce (as outras duas: `secaRapido`, `chuvaNoPiso`).
+describe("marcaDe: a palavra da decisão, e ela não fala em SUBIR", () => {
+  it("leitura boa e chão seco: 'Pode ir'", () => {
+    expect(marcaDe("afirmando", "fresco")).toBe("Pode ir");
+  });
+
+  it("leitura boa e chão molhado: 'Não vá' — palavra dele, a `voz` da Rampa", () => {
+    expect(marcaDe("afirmando", "frio")).toBe("Não vá");
+  });
+
+  it("sem leitura, informa em vez de mandar — o estado não decide nada", () => {
+    expect(marcaDe("sem-informacoes", "fresco")).toBe("SEM INFORMAÇÕES");
+    expect(marcaDe("sem-informacoes", "frio")).toBe("SEM INFORMAÇÕES");
+  });
+
+  it("conferindo ganha das duas — é o que está acontecendo agora", () => {
+    expect(marcaDe("conferindo", "frio")).toBe("CONFERINDO…");
+  });
+
+  // 🔴 O CERCO, e ele é o que dura. As igualdades acima morrem no dia em que ele
+  // trocar a palavra de novo; esta asserção sobrevive à troca e continua
+  // proibindo a SUPOSIÇÃO — que é o defeito, não a palavra. Vale pros quatro
+  // ramos de uma vez.
+  it("nenhum ramo supõe ladeira", () => {
+    const todas = (["afirmando", "conferindo", "sem-informacoes"] as const).flatMap((f) =>
+      (["fresco", "frio"] as const).map((e) => marcaDe(f, e)),
+    );
+    expect(todas.length).toBe(6); // não passa por vacuidade com a lista vazia
+    for (const m of todas) expect(m).not.toMatch(/sub(a|ir|e)/i);
+  });
+
+  // PROVA DE FONTE: em runtime, "os dois componentes chamam `marcaDe`" e "cada
+  // um escreve a mesma palavra à mão" pintam a MESMA tela — nenhuma asserção de
+  // valor as separa enquanto ninguém editar só um lado. É justamente a divergência
+  // FUTURA que se quer impedir, e ela só se vê na fonte.
+  it("carimbo e selo NÃO escrevem a palavra à mão — os dois perguntam a marcaDe", () => {
+    for (const arq of ["Carimbo.tsx", "SeloTrilha.tsx"]) {
+      const src = readFileSync(path.join(process.cwd(), "src", "app", arq), "utf8");
+      const codigo = src.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+      // A tira precisa de guarda, senão a ausência abaixo passa por vacuidade.
+      expect(codigo, `a tira comeu ${arq}`).toContain("const marca");
+      expect(codigo, `${arq} parou de perguntar a palavra`).toContain("marcaDe(");
+      expect(codigo, `a palavra voltou a ser escrita à mão em ${arq}`).not.toMatch(
+        /Pode ir|Não vá|SEM INFORMAÇÕES/,
+      );
+    }
+  });
+});
 
 describe("faseDe", () => {
   it("leitura boa, o carimbo afirma", () => {

@@ -7,6 +7,7 @@ import { regraDe, semComentarios, valorDe } from "../css";
 import type { Piso } from "@/lib/piso";
 import Carimbo from "@/app/Carimbo";
 import Moldura from "@/app/Moldura";
+import SeloTrilha from "@/app/SeloTrilha";
 
 const AGORA_MS = Date.UTC(2027, 0, 15, 11, 42); // 08h42 em Recife
 const AGORA_S = AGORA_MS / 1000;
@@ -59,7 +60,7 @@ function tocar(container: HTMLElement) {
 describe("Carimbo", () => {
   it("leitura fresca afirma", () => {
     const { container } = montar();
-    expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
   });
 
   it("leitura vencida para de afirmar e devolve a decisão pra você", () => {
@@ -80,9 +81,9 @@ describe("Carimbo", () => {
 
   it("vence sozinho com o app aberto, sem recarregar", () => {
     const { container } = montar({ calculadoEm: AGORA_S });
-    expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
     act(() => { vi.advanceTimersByTime(31 * 60 * 1000); });
-    // Vencido não manda mais "Não suba" — informa que não sabe.
+    // Vencido não manda mais "Não vá" — informa que não sabe.
     expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
   });
 
@@ -90,10 +91,10 @@ describe("Carimbo", () => {
     // O celular passou 4h no bolso. O relógio andou; o setInterval não — o
     // navegador estrangula timer de aba escondida. A reavaliação é imediata
     // (por isso já sai buscando, "CONFERINDO…"); sem resposta, o carimbo
-    // termina dizendo que não sabe — nunca "Pode subir" de novo por conta própria.
+    // termina dizendo que não sabe — nunca "Pode ir" de novo por conta própria.
     const { pendentes } = redeFalsa();
     const { container } = montar({ calculadoEm: AGORA_S });
-    expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
     vi.setSystemTime(AGORA_MS + 4 * 60 * 60 * 1000);
     act(() => { document.dispatchEvent(new Event("visibilitychange")); });
     expect(container.querySelector(".mark")?.textContent).toBe("CONFERINDO…");
@@ -128,7 +129,7 @@ describe("Carimbo", () => {
   });
 
   it("sem leitura e ainda no prazo, o .live não diz que leu — é o caso comum do Open-Meteo fora do ar", () => {
-    // Estava no ar: a ficha dizia "Não suba · sem leitura" e logo abaixo
+    // Estava no ar: a ficha dizia "Não vá · sem leitura" e logo abaixo
     // "lido da chuva agora", com o pulso piscando. Uma contradizia a outra.
     const { container } = montar({ estado: "frio", erro: true });
     const live = container.querySelector(".live")?.textContent ?? "";
@@ -210,7 +211,7 @@ describe("Carimbo — a busca", () => {
         estado: "fresco", erro: false, calculadoEm: Math.floor((AGORA_MS + QUATRO_H_MS) / 1000),
       });
     });
-    expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
   });
 
   it("leitura boa na tela não gasta rede ao voltar", () => {
@@ -235,7 +236,7 @@ describe("Carimbo — a busca", () => {
     await act(async () => {
       pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S });
     });
-    expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
   });
 
   it("rede caída mostra que não deu, com o toque ainda disponível", async () => {
@@ -296,7 +297,7 @@ describe("Carimbo — a busca", () => {
     // rodada de correção no relatório da task.
     const { fetchMock, pendentes } = redeFalsa();
     const { container } = montar({ calculadoEm: AGORA_S });
-    expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
 
     vi.setSystemTime(AGORA_MS + 31 * 60 * 1000);
     act(() => { document.dispatchEvent(new Event("visibilitychange")); });
@@ -334,13 +335,13 @@ describe("Carimbo — a busca", () => {
     await act(async () => {
       pendentes[1].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S });
     });
-    expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
   });
 
   it("200 com corpo fora do trio cai no mesmo tratamento de falha", async () => {
     // Sem conferir o corpo, os três campos viriam `undefined`,
     // carimboVenceu(undefined) daria NaN >= 1800 → false, e a tela afirmaria
-    // "Pode subir" a partir de nada. A invariante mais protegida do projeto é
+    // "Pode ir" a partir de nada. A invariante mais protegida do projeto é
     // justamente essa: nunca afirmar sem leitura.
     const { pendentes } = redeFalsa();
     const { container } = montar({ estado: "frio", erro: true });
@@ -370,7 +371,7 @@ describe("Carimbo — a cor acompanha a leitura que está na tela", () => {
   it("leitura nova troca a palavra E a cor da ficha inteira", async () => {
     // 9h em casa: o servidor leu fresco, selo verde. 11h no portão: a tela
     // volta, a leitura venceu, a busca sai e vem "frio". Sem isto a ficha diria
-    // "Não suba" dentro de um selo VERDE, com o pin do mapa verde junto — e a
+    // "Não vá" dentro de um selo VERDE, com o pin do mapa verde junto — e a
     // cor é o que o motorista lê primeiro.
     const { pendentes } = redeFalsa();
     const { container } = montarNaMoldura({ estado: "fresco", calculadoEm: AGORA_S });
@@ -385,7 +386,7 @@ describe("Carimbo — a cor acompanha a leitura que está na tela", () => {
       });
     });
 
-    expect(container.querySelector(".mark")?.textContent).toBe("Não suba");
+    expect(container.querySelector(".mark")?.textContent).toBe("Não vá");
     expect(moldura?.getAttribute("data-state")).toBe("frio");
   });
 
@@ -432,7 +433,7 @@ describe("Carimbo — o que os quadros commitados mostram", () => {
     // teria chance de pintar. `act` sozinho drena render + efeito num bloco só
     // e esconde exatamente o quadro que este teste procura:
     //   0: CONFERINDO…      1: SEM INFORMAÇÕES (citando a leitura recém-chegada
-    //   como vencida)       2: Pode subir
+    //   como vencida)       2: Pode ir
     const { pendentes } = redeFalsa();
     const quadros: string[] = [];
     const registrar = () => { quadros.push(document.querySelector(".mark")?.textContent ?? ""); };
@@ -456,7 +457,7 @@ describe("Carimbo — o que os quadros commitados mostram", () => {
 
     expect(quadros.length).toBeGreaterThan(0); // o recorder está mesmo gravando
     expect(quadros).not.toContain("SEM INFORMAÇÕES");
-    expect(quadros.at(-1)).toBe("Pode subir");
+    expect(quadros.at(-1)).toBe("Pode ir");
   });
 });
 
@@ -608,6 +609,34 @@ describe("Carimbo — o que a chuva faz com o chão vem do PISO", () => {
   });
 });
 
+// 🔴 A DUPLICAÇÃO QUE ESTE TESTE FECHA (2026-08-27). A palavra estava escrita à
+// mão nos DOIS componentes. Trocar "Pode subir" por "Pode ir" era duas edições,
+// e quem fizesse uma só deixava a home e a ficha discordando na mesma sessão —
+// irmã do defeito histórico "a palavra e a cor nascendo de commits diferentes".
+//
+// A prova de FONTE (em tests/lib/carimbo-fase.test.ts) garante que nenhum dos
+// dois escreve a palavra; este garante o que importa na tela: que o valor que
+// chega nos dois é o MESMO. Uma não substitui a outra — a de fonte não olha a
+// tela, e esta passaria com as duas escrevendo a mesma coisa à mão.
+describe("a ficha e o cartão dizem a MESMA palavra", () => {
+  const leitura = (estado: "fresco" | "frio") => ({ estado, erro: false, calculadoEm: AGORA_S });
+
+  it.each(["fresco", "frio"] as const)("com leitura %s, carimbo e selo não divergem", (estado) => {
+    const carimbo = render(
+      <Carimbo estado={estado} erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" />,
+    ).container.querySelector(".mark")?.textContent;
+    cleanup();
+    const selo = render(<SeloTrilha leitura={leitura(estado)} />).container
+      .querySelector(".w")?.textContent;
+
+    // Truthy antes de comparar: sem isto, dois elementos SUMIDOS dariam
+    // `undefined === undefined` e o teste passaria com a tela vazia.
+    expect(carimbo, "o carimbo perdeu a palavra").toBeTruthy();
+    expect(selo, "o selo perdeu a palavra").toBeTruthy();
+    expect(selo).toBe(carimbo);
+  });
+});
+
 describe("Carimbo — StrictMode e desmontagem", () => {
   it("sob StrictMode (o modo do next dev) a resposta ainda repinta", async () => {
     // StrictMode monta, limpa e monta de novo. Enquanto `vivo` só era derrubado
@@ -626,7 +655,7 @@ describe("Carimbo — StrictMode e desmontagem", () => {
     expect(container.querySelector(".mark")?.textContent).toBe("CONFERINDO…");
 
     await act(async () => { pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S }); });
-    expect(container.querySelector(".mark")?.textContent).toBe("Pode subir");
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
   });
 
   it("desmontado com a busca em voo, a resposta que chega não é aplicada nem estoura", async () => {

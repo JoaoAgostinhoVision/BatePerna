@@ -12,7 +12,7 @@ import { useVenceu } from "./useVenceu";
  *
  *  A COR não tem estado próprio aqui: sai do mesmo contexto que pinta o selo do
  *  cartão. Guardar a leitura localmente seria a segunda fonte de cor, e foi
- *  exatamente isso que uma vez pôs "Não suba" dentro de um selo verde. O único
+ *  exatamente isso que uma vez pôs "Não vá" dentro de um selo verde. O único
  *  estado local é o relógio da validade (useVenceu), que não decide cor de
  *  veredito — decide se ainda há veredito. */
 export default function PinTrilha({

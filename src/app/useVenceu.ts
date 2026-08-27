@@ -7,7 +7,7 @@ import { carimboVenceu } from "@/lib/validade";
  *  **Devolve `false` no primeiro render, sempre.** Não é descuido: é o que faz
  *  o HTML do servidor e o primeiro render do cliente concordarem. Calcular
  *  `Date.now()` durante o render quebraria a hidratação de uma página vinda do
- *  cache do service worker — o servidor gravou "Pode subir" e o cliente, 40
+ *  cache do service worker — o servidor gravou "Pode ir" e o cliente, 40
  *  minutos depois, desenharia "SEM INFORMAÇÕES" no mesmo lugar. É a mesma razão
  *  do `useState(false)` no Carimbo da ficha.
  *

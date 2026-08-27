@@ -12,9 +12,9 @@ import type { Estado } from "@/lib/motor";
  *  estado no selo — de propósito.
  *
  *  Por que um contexto e não só a prop do servidor: quando o Carimbo busca uma
- *  leitura nova no portão, o texto muda ("Pode subir" → "Não suba") e a cor tem
+ *  leitura nova no portão, o texto muda ("Pode ir" → "Não vá") e a cor tem
  *  que ir junto. A cor é o que o motorista lê primeiro; selo verde dizendo
- *  "Não suba" é pior que não dizer nada.
+ *  "Não vá" é pior que não dizer nada.
  *
  *  O `<main>` continua saindo do servidor com a cor certa no primeiro paint —
  *  `useState(estado)` é o valor da prop, então a hidratação bate e quem está

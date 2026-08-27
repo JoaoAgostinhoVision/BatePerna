@@ -87,7 +87,7 @@ describe("FolhaTrilhas", () => {
 
   // O ramo LISO. Quem decide que não dá pra confiar é o `MioloHome` (clima
   // fora do ar, leitura vencida); o que esta folha faz com a resposta é isto:
-  // nenhum cabeçalho, e nenhuma frase de veredito, porque `Não suba` é só pro
+  // nenhum cabeçalho, e nenhuma frase de veredito, porque `Não vá` é só pro
   // barro MEDIDO.
   it("sem poder confiar na leitura, a folha vira lista lisa — e nenhuma frase de veredito aparece", () => {
     const visiveis = [
@@ -101,8 +101,8 @@ describe("FolhaTrilhas", () => {
     expect(container.querySelectorAll(".cartao")).toHaveLength(2);
     expect(container.textContent).not.toContain("Hoje o tempo deixa");
     expect(container.textContent).not.toContain("Hoje não");
-    expect(container.textContent).not.toContain("Não suba");
-    expect(container.textContent).not.toContain("Pode subir");
+    expect(container.textContent).not.toContain("Não vá");
+    expect(container.textContent).not.toContain("Pode ir");
   });
 
   it("todas com leitura confiável — os dois cabeçalhos aparecem, na ordem certa", () => {

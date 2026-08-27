@@ -1,3 +1,5 @@
+import type { Estado } from "@/lib/motor";
+
 /** Quanto tempo o "Conferindo…" pode ficar na tela.
  *
  *  Três segundos, e não os seis do service worker, porque os contextos são
@@ -42,6 +44,33 @@ export function sintomaDe({ erro, venceu, falhou }: Situacao): Sintoma {
   if (erro) return "erro";
   if (venceu) return "venceu";
   return null;
+}
+
+/** A PALAVRA que o app põe na cara da decisão. A mesma no carimbo da ficha e no
+ *  selo do cartão — e por isso mora aqui, no módulo puro que os dois já
+ *  importam, e não escrita à mão em cada um.
+ *
+ *  🔴 ELA ESTAVA DUPLICADA nos dois componentes até 2026-08-27. Duas fontes pro
+ *  mesmo nome é a família que este projeto já pagou várias vezes (a palavra e a
+ *  cor nascendo de commits diferentes; o `aria-label` mascarando o sumiço da
+ *  `<legend>`). Trocar o vocabulário tem que ser UMA edição, não duas que
+ *  alguém pode fazer pela metade.
+ *
+ *  🔴 E A PALAVRA NÃO FALA MAIS EM SUBIR. "Pode ir"/"Não vá" supunham
+ *  ladeira em todo lugar do acervo: verdade na Rampa do Pepê, falsa na Pedra
+ *  Furada, que é **plana** — o passeio lá é chegar, não subir. Mesma família do
+ *  `secaRapido` e do `chuvaNoPiso`, e a terceira vez na mesma semana: texto
+ *  escrito quando o acervo era pequeno, num componente que serve TODOS.
+ *  Decisão dele em 2026-08-27, e o "Não vá" é palavra dele — é a `voz` da
+ *  Rampa na ficha: *"é barro: molhou, não vá"*.
+ *
+ *  ⚠️ O `sub` ("seco · carro comum" / "barro · dá um tempo") continua duplicado
+ *  nos dois componentes, de propósito: ele não mudou nesta rodada, e "barro" ali
+ *  é escolha registrada dele. Quando mexer nele, traga-o pra cá também. */
+export function marcaDe(fase: Fase, estado: Estado): string {
+  if (fase === "conferindo") return "CONFERINDO…";
+  if (fase === "sem-informacoes") return "SEM INFORMAÇÕES";
+  return estado === "frio" ? "Não vá" : "Pode ir";
 }
 
 export type Gatilho = "carregou" | "voltou" | "toque";

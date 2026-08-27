@@ -1,6 +1,6 @@
 "use client";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
-import { faseDe } from "@/lib/carimbo-fase";
+import { faseDe, marcaDe } from "@/lib/carimbo-fase";
 import { useVenceu } from "./useVenceu";
 
 /** O selo de uma trilha no cartão da home. Irmão pequeno do Carimbo da ficha:
@@ -21,10 +21,9 @@ export default function SeloTrilha({ leitura }: { leitura: LeituraCarimbo }) {
   const venceu = useVenceu(leitura.calculadoEm);
   const fase = faseDe({ conferindo: false, erro: leitura.erro, venceu, falhou: false });
 
-  const marca =
-    fase === "sem-informacoes" ? "SEM INFORMAÇÕES"
-    : leitura.estado === "frio" ? "Não suba"
-    : "Pode subir";
+  // A MESMA palavra do carimbo da ficha, da mesma fonte — o selo é o irmão
+  // pequeno, não um segundo vocabulário. Ver `marcaDe` em `carimbo-fase.ts`.
+  const marca = marcaDe(fase, leitura.estado);
 
   const sub =
     fase === "sem-informacoes" ? "tome cuidado"
