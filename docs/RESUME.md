@@ -4,9 +4,10 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-**Última parada:** 2026-08-26 — **a rodada do `secaRapido` fechou, está NO AR e conferida**, e ele
-encerrou a sessão dizendo *"tá ok agora vou seguir outro dia"*. **Nada pendente do meu lado.**
-`main` limpo em **`b0b6fa7`**, **679/679 em 49 arquivos**, `tsc` limpo, `build` passa.
+**Última parada:** 2026-08-27 — **a META DÍVIDA do carimbo fechou, está NO AR e conferida.**
+A frase do barro saiu do código e virou `chuvaNoPiso`; os três *"cheque o barro no portão"* viraram
+*"cheque o chão no caminho"*. **Nada pendente do meu lado.**
+`main` limpo em **`f982937`**, **692/692 em 49 arquivos**, `tsc` limpo, `build` passa.
 Ver o bloco "SE O JOÃO DISSER CONTINUA" logo abaixo.
 
 🔴 **AS DUAS LIÇÕES QUE VÃO SE REPETIR NA 3ª FICHA — leia antes de criá-la:**
@@ -15,12 +16,19 @@ Ver o bloco "SE O JOÃO DISSER CONTINUA" logo abaixo.
    supunham ficha única: `[0]` querendo dizer "a Rampa", contagem presa ao tamanho do acervo, e um
    teste cuja **premissa estava escrita no comentário e morreu** ("a única ficha real do projeto é
    PAGA"). **Nenhum era bug de aplicação.** Prefira **slug a índice**.
-2. **De 2026-08-26 — texto FIXO no código escrito quando o acervo era pequeno é MENTIRA
+2. **De 2026-08-26/27 — texto FIXO no código escrito quando o acervo era pequeno é MENTIRA
    AGENDADA.** A frase de relevo da Rampa vivia dentro do `Carimbo` e virou falsa sozinha quando a
-   Pedra Furada entrou. Resolvida (campo `secaRapido`), **mas a família continua viva**: o ramo
-   *molhado* do carimbo e os três *"cheque o barro no portão"* só estão certos **por sorte** —
-   as duas fichas são `barro`. **A 3ª ficha com asfalto quebra as quatro de uma vez.**
+   Pedra Furada entrou. **As duas pontas da frase já fecharam:** o ramo *seco* virou `secaRapido`
+   na ficha (26/08), o ramo *molhado* virou `chuvaNoPiso` derivado do `piso` (27/08), e os três
+   *"cheque o barro no portão"* viraram *"cheque o chão no caminho"*.
+   ⚠️ **Sobrou UM, e por decisão DELE, não por esquecimento:** o selo *"barro · dá um tempo"*
+   (`Carimbo.tsx`, `SeloTrilha.tsx`) **fica como está** — ele escolheu isso de olhos abertos em
+   27/08, sabendo que **a 3ª ficha de asfalto o quebra**. Não conserte por conta própria; quando
+   a ficha nova chegar, a pergunta se refaz.
    A pergunta que acha o resto: *este texto fala de UM lugar, num componente que serve TODOS?*
+   🔴 **E a régua que separa as duas saídas, porque ela vai voltar:** fato de **LUGAR** (relevo,
+   horário, acesso) mora na **ficha**; fato de **MATERIAL** (o que a chuva faz com barro) mora numa
+   tabela em `lib/`. As duas calam quando não têm o dado — nunca frase genérica de reserva.
 
 ---
 
@@ -103,11 +111,8 @@ logo abaixo: **não é bug** — nenhum teste pega, o app estava certíssimo mos
 
 **Em ordem de valor, e NENHUMA deve ser construída por conta própria:**
 
-1. 🔴 **A META DÍVIDA que sobrou da rodada do `secaRapido`** — o ramo **molhado** do carimbo ainda
-   diz, fixo no código, *"O barro segura água — risco de atolar"*, e há três *"cheque o barro no
-   **portão**"*. Certos **por sorte** (as duas fichas são `barro`), **e ele já disse que olha
-   DIRIGINDO, não no portão**. O molde pra resolver já existe: outro campo por ficha, como o
-   `secaRapido`. **É copy na voz dele — a saída é a mesma pergunta de três opções que funcionou.**
+1. ✅ **A META DÍVIDA do carimbo FECHOU em 2026-08-27** — ver o bloco próprio mais abaixo. O que
+   sobrou dela é **decisão dele, tomada**: o selo *"barro · dá um tempo"* fica.
 2. 🟠 **As TRÊS perguntas de produto da 2ª ficha**, todas no fim do `docs/respostas-pedra-furada-WIP.md`:
    o **portão 5h–17h** num app sem campo de horário; o **filtro de piso** escondendo a Pedra Furada
    de quem o carro alcança; e **"o passeio leva ~2h"**, fato sem campo (`duracao` foi apagado de
@@ -159,15 +164,69 @@ termina a linha verde no ponto final — o app **cala em vez de inventar**, que 
 
 | onde | texto | vale pra Pedra Furada? |
 |---|---|---|
-| ~~`Carimbo.tsx:274`~~ | ~~"Área alta… a serra firmou"~~ | ✅ **RESOLVIDO** — virou `secaRapido` na ficha |
-| `Carimbo.tsx` (ramo frio) | "O **barro** segura água — risco de atolar" | ✅ por sorte (o piso é barro) |
-| `Carimbo.tsx` (falhou/erro/venceu) | "cheque o **barro** no **portão**" | 🟠 por sorte — **e ele disse que olha DIRIGINDO, não no portão** |
-| `Carimbo.tsx`, `SeloTrilha.tsx` | "**barro** · dá um tempo" | ✅ por sorte |
+| ~~`Carimbo.tsx:274`~~ | ~~"Área alta… a serra firmou"~~ | ✅ **RESOLVIDO 26/08** — virou `secaRapido` na ficha |
+| ~~`Carimbo.tsx` (ramo frio)~~ | ~~"O **barro** segura água — risco de atolar"~~ | ✅ **RESOLVIDO 27/08** — virou `chuvaNoPiso`, derivado do `piso` |
+| ~~`Carimbo.tsx` (falhou/erro/venceu)~~ | ~~"cheque o **barro** no **portão**"~~ | ✅ **RESOLVIDO 27/08** — virou "cheque o chão no caminho" |
+| `Carimbo.tsx`, `SeloTrilha.tsx` | "**barro** · dá um tempo" | 🟠 por sorte — **ELE DECIDIU DEIXAR (27/08)** |
 | `Carimbo.tsx`, `SeloTrilha.tsx` | "Não suba" / "Pode subir" | ✅ genérico o bastante |
 
-⚠️ **"Por sorte" continua sendo o ponto.** As duas fichas são `barro` — **a 3ª ficha com asfalto
-quebra as quatro linhas de uma vez**, e agora existe o molde pronto pra resolver (um campo por
-ficha, como o `secaRapido`). **Não construa por conta própria: é copy na voz dele.**
+⚠️ **A última linha "por sorte" é ESCOLHA, não pendência.** Perguntado em 27/08 com as três saídas
+na mão (derivar do piso / trocar por "molhado" / deixar), ele escolheu **deixar**, sabendo que a
+frase só quebra quando entrar ficha de asfalto. **Não reabra por conta própria** — quando a 3ª
+ficha chegar, a pergunta se refaz sozinha.
+
+---
+
+## ✅ E A OUTRA PONTA DA MESMA FRASE FECHOU EM 2026-08-27 — o `chuvaNoPiso`
+
+**Era o item 1 da fila dele, e ela zerou.** Commit `f982937`, **no ar e conferido no domínio real**.
+
+**O que estava errado:** o ramo *molhado* do carimbo dizia, fixo no código, *"O barro segura água —
+risco de atolar"*. Mesma família do `secaRapido`, um dia depois: texto escrito quando o acervo era
+pequeno, num componente que serve o acervo INTEIRO.
+
+🔴 **A DECISÃO DELE SEPAROU AS DUAS PONTAS, e a régua vale além desta rodada.** Perguntado com três
+saídas na mão, ele escolheu **derivar do piso** — e a razão é boa: relevo é fato de **LUGAR** (por
+isso `secaRapido` mora na ficha, escrito por quem conhece o lugar), mas o que a chuva faz com barro
+é fato de **MATERIAL** — a mesma física em qualquer lugar, e por isso mora **uma vez** em
+`src/lib/piso.ts` (`CHUVA_NO_PISO` + `chuvaNoPiso`).
+
+🔴 **SÓ `barro` TEM FRASE, E ISSO É DE PROPÓSITO — não é tabela pela metade.** A frase é palavra
+dele (`regra_texto` da Rampa). Escrever ali o que a chuva faz com paralelepípedo ou asfalto seria
+**eu inventando copy que ninguém disse** — a geografia inventada vestida de física. Os outros três
+**calam** até ele escrever a deles: é **uma linha** na tabela. Ficha sem `piso` cala igual.
+
+**E os três "cheque o barro no portão" viraram "cheque o chão no caminho".** A frase velha errava
+**duas coisas numa só**: supunha o material *e* supunha que ele para no portão pra decidir — e ele
+já disse que **olha dirigindo**. A terceira (*"O barro muda rápido — cheque no portão"*) virou
+*"O chão muda rápido — cheque no caminho"*.
+
+**Prova:** 13 testes novos, **7 mutações medidas e todas mortas**. 🔴 **As duas que importam são
+M5 e M6, e elas caem em testes DIFERENTES** — a página parando de entregar o `piso`, e a página
+cravando `"barro"` em vez de ler a ficha. É a lição do componente controlado aplicada de novo:
+a suíte do `Carimbo` prova que ele OBEDECE à prop, e só a suíte da página prova que ela ALIMENTA.
+A prova de fonte cobre o que a tela não cobre: com as duas fichas de barro, *"frase do piso"* e
+*"frase fixa com reserva"* pintam a MESMA tela.
+
+✅ **Conferido no ar, e com sorte de calendário:** a Rampa estava **frio** na hora do deploy, então
+a frase molhada apareceu de verdade em `https://bateperna.vercel.app/rampa-do-pepe`, vinda do
+`piso` da ficha. Varredura dos 7 chunks servidos, **as duas metades, com marcadores SEM ACENTO**:
+
+```bash
+H=https://bateperna.vercel.app
+CH=$(curl -s $H/rampa-do-pepe | grep -o '/_next/static/chunks/[^"]*\.js' | sort -u)   # são 7
+for c in $CH; do curl -s "$H$c"; done > /tmp/p.js
+grep -c 'barro no port' /tmp/p.js   # 0  ← o portão morreu no bundle
+grep -c 'barro muda'    /tmp/p.js   # 0  ← idem, a terceira frase
+grep -c 'no caminho'    /tmp/p.js   # 1  ← e o vocabulário NOVO chegou junto
+grep -c 'segura '       /tmp/p.js   # 1  ← a frase do barro continua lá, vinda do piso.ts
+```
+
+⚠️ **Repare que `segura` NÃO é discriminador nesta rodada** — a frase não morreu, ela **mudou de
+endereço**, e `piso.ts` entra no mesmo bundle do cliente. Quem separa as versões é a prova de fonte
+no `vitest`, não o `grep`. **Um marcador que dá o mesmo número nas duas versões não prova nada.**
+
+---
 
 **A procedência de cada campo está em `docs/respostas-pedra-furada-WIP.md`** — quem escreveu
 cada frase, o que é palavra dele e o que é redação minha aprovada. **Uma única linha vermelha
@@ -235,9 +294,10 @@ repo ele apaga o ledger de scratch e o próprio `.claude/`.
 ```
 git branch --show-current  → main
 git status --short         → limpo
-npm test                   → 679/679 em 49 arquivos   ← tudo verde, NÃO há falha esperada
+npm test                   → 692/692 em 49 arquivos   ← tudo verde, NÃO há falha esperada
                              (era 668; a 2ª ficha não mudou o total — 9 caíram e foram
-                              consertados. O `secaRapido` de 2026-08-26 acrescentou 11.)
+                              consertados. O `secaRapido` de 26/08 somou 11; o
+                              `chuvaNoPiso` de 27/08 somou 13.)
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
