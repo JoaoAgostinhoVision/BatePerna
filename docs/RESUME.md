@@ -4,9 +4,9 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-**Última parada:** 2026-08-27 — **SEIS rodadas encadeadas, todas NO AR e conferidas.** As quatro
-primeiras foram o mesmo defeito (**texto fixo no código afirmando coisa sobre UM lugar**); as duas
-últimas zeraram a fila de perguntas de produto dele.
+**Última parada:** 2026-08-27 — **SETE rodadas encadeadas, todas NO AR e conferidas, mais a
+preparação da 3ª ficha.** As quatro primeiras foram o mesmo defeito (**texto fixo no código
+afirmando coisa sobre UM lugar**); as três últimas zeraram a fila dele.
 1. a frase do barro virou `chuvaNoPiso` (derivada do `piso`);
 2. os três *"cheque o barro no portão"* viraram *"cheque o chão no caminho"*;
 3. **"Pode subir"/"Não suba" viraram "Pode ir"/"Não vá"** (`marcaDe`, fonte única) — **ele pegou**;
@@ -15,14 +15,16 @@ primeiras foram o mesmo defeito (**texto fixo no código afirmando coisa sobre U
 5. 🆕 **o carimbo passou a olhar A HORA** — campo `horario`, fase `fechado`. O app parou de dizer
    *"Pode ir"* às 18h num lugar que fecha às 17h;
 6. 🆕 **o filtro de piso SAIU da home** (era proxy de "meu carro chega?" e errava), o fato virou
-   campo `carroComum`, e **as ~2h do passeio entraram como prosa** na nota da Pedra Furada.
-
+   campo `carroComum`, e **as ~2h do passeio entraram como prosa** na nota da Pedra Furada;
 7. 🆕 **o beco do GPS sem sinal FECHOU** — estado `falhou`, de sessão. Quem ficava sem sinal não
    tinha caminho nenhum pra dizer onde está.
 
-**Nada pendente do meu lado. 🔴 A fila DELE zerou — as três de produto E o beco.**
-`main` limpo em **`dba9384`**, **750/750 em 50 arquivos**, `tsc` limpo, `build` passa.
-Ver o bloco "SE O JOÃO DISSER CONTINUA" logo abaixo.
+**Nada pendente do meu lado. A fila dele zerou — as três de produto E o beco do GPS.**
+`main` limpo em **`9aa0603`**, **751/751 em 50 arquivos**, `tsc` limpo, `build` passa.
+
+🔴🔴 **ELE JÁ DISSE O QUE VEM: A 3ª FICHA.** *"vamos criar a 3a ficha — amanhã, deixe tudo pronto
+para a próxima sessão"* (2026-08-27, fim da sessão). **Não devolva menu, não pergunte o que fazer:
+abra o bloco "▶▶ A 3ª FICHA" logo abaixo e comece pela primeira pergunta do questionário.**
 
 🔴 **E A LIÇÃO MAIS CARA DO DIA FOI SOBRE O MEU PRÓPRIO LEVANTAMENTO.** A tabela lá embaixo
 ("O QUE NÃO FOI DECIDIDO E SEGUE FIXO") existe pra inventariar *que texto fixo está certo só por
@@ -93,7 +95,65 @@ de virarem código.
 
 ---
 
-# ▶▶ SE O JOÃO DISSER "CONTINUA"
+# ▶▶ A 3ª FICHA — é isto que ele pediu para a próxima sessão
+
+**Ele decidiu no fim de 2026-08-27.** O caminho está preparado, e a preparação foi MEDIDA, não
+suposta: rodei uma **ficha de ensaio no pior caso** (`asfalto-tapete`, `carroComum: false`, sem
+`secaRapido`, sem `horario`, cobrando `R$ 12,50`) contra a suíte e contra a tela, e depois a
+apaguei. O que segue é o que ela mostrou.
+
+### 1. Como conduzir — ele responde PELA CONVERSA
+
+`docs/questionario-ficha.md` é a fonte das perguntas, **não o lugar das respostas** (pedido dele na
+2ª ficha). Pergunte uma seção por vez; anote a procedência num WIP novo, como
+`docs/respostas-pedra-furada-WIP.md` fez. ⚠️ **Não cite a ficha existente DENTRO da pergunta** —
+na 2ª ficha eu citei a Rampa e a resposta voltou com as mesmas palavras. O exemplo entra DEPOIS.
+
+**O questionário já pergunta os quatro campos novos:** `secaRapido`, `custo.curto`, `carroComum`
+e `horario`. Nenhum é obrigatório — ficha sem eles funciona, calada no que não sabe.
+
+### 2. 🔴 O QUE VAI CAIR, medido com a ficha de ensaio (1 teste, e é DE PROPÓSITO)
+
+| o que | por quê |
+|---|---|
+| `tests/app/MapaHome.test.tsx` → *"trilha longe demais: avisa quantas ficaram fora do mapa"* | O número (`2 trilhas fora do mapa`) está **preso ao acervo**, e o comentário dele já avisa que a 3ª ficha o derruba. **É tripwire, não bug — atualize o número e siga.** ⚠️ **NÃO troque por `${fichas.length}`**: asserção escrita contra a própria fonte fica cega ao número. |
+| `tests/lib/ficha.test.ts` → *"enquanto TODAS forem true…"* | **Só se a ficha nova tiver `carroComum: false`.** Aí ele cai de propósito, com a mensagem dizendo o que decidir. |
+
+**Nada mais cai.** As nove quebras da 2ª ficha (2026-08-25) foram consertadas na raiz — os testes
+que liam o acervo por índice passaram a ler por slug.
+
+### 3. 🔴 O QUE MUDA NA TELA SEM NENHUM TESTE ACUSAR — medido, renderizando a ficha de ensaio
+
+Com `piso: "asfalto-tapete"` e `carroComum: false`, a tela disse:
+
+```
+marca  : Pode ir            (ok)
+sub    : seco · carro comum      ← 🔴 a ficha diz que carro comum NÃO chega
+marca  : Não vá             (ok)
+sub    : barro · dá um tempo     ← 🔴 a ficha diz asfalto
+motivo : "Choveu nas últimas ~8h (ou vem chuva nas próximas ~4h)."  ← ✅ CALA, como desenhado
+piso   : asfalto tapete          ← ✅
+```
+
+⚠️ **É A PRIMEIRA PERGUNTA A FAZER A ELE, e antes de escrever a ficha.** Ele decidiu em 27/08
+deixar o `sub` como está, **mas decidiu antes de o `carroComum` existir**. Agora não é mais "certo
+por sorte": é a tela **contradizendo um campo da própria ficha**. O molde pra resolver já existe
+(`chuvaNoPiso`, derivar do `piso`), e a decisão é dele. **Não conserte por conta própria.**
+
+✅ **E o que a rodada do `chuvaNoPiso` desenhou FUNCIONOU:** com piso sem frase, o motivo termina no
+ponto final em vez de inventar barro. O silêncio é a saída, e ela está provada em ficha real nova.
+
+### 4. Depois de criar a ficha
+
+1. `npm test` → conserte o tripwire do mapa (e o do carro, se cair);
+2. `npx tsc --noEmit` e `npm run build`;
+3. deploy: `npx --yes vercel@latest --prod --yes --scope bate-perna` (**sem o `--scope` dá `Not authorized`**);
+4. conferir **no domínio real**: a home com **três** cartões, `/trilhas` com as três, e a ficha nova abrindo inteira;
+5. varredura dos chunks — **marcadores SEM ACENTO**, e **as duas metades** (o que morreu dá 0, o que nasceu dá ≥1).
+
+---
+
+# ▶▶ SE ELE DISSER SÓ "CONTINUA" (protocolo antigo, se ele mudar de assunto)
 
 ✅ **O QUESTIONÁRIO DA 2ª FICHA ACABOU, E A FICHA EXISTE.**
 `content/fichas/pedra-furada-de-venturosa.json`, criada em **2026-08-25**, commitada em `main`
@@ -150,12 +210,8 @@ logo abaixo: **não é bug** — nenhum teste pega, o app estava certíssimo mos
 
 ✅ **O painel que nunca abria com GPS sem sinal (§P item 4) FECHOU em 2026-08-27.** Ver o bloco
 próprio mais abaixo — inclusive o que NÃO foi provado no navegador.
-🟡 **E a 3ª FICHA**, quando ele quiser: `docs/questionario-ficha.md` já pergunta **`carroComum`** e
-**`horario`**, além do `secaRapido` e do `custo.curto`.
-
-⚠️ **Antes de criar a 3ª ficha, releia as duas lições do topo — e repare que ela é a primeira que
-pode ter `carroComum: false`.** Nesse dia, o chip do carro passa a fazer sentido, e há um teste
-em `tests/lib/ficha.test.ts` que **cai de propósito** pra cobrar a decisão.
+🔴 **A 3ª FICHA é o que ele pediu para a próxima sessão** — ver o bloco "▶▶ A 3ª FICHA" no topo
+deste arquivo, com o ensaio já medido.
 
 ---
 
@@ -452,6 +508,32 @@ deploy que não subiu. A lição do acento cobrou de novo, na mesma sessão em q
 
 ---
 
+## ✅ A OITAVA (preparação da 3ª ficha): o ensaio que achou dois defeitos
+
+**Ele encerrou pedindo a 3ª ficha pra amanhã.** Em vez de escrever aviso, MEDI: pus no `content/`
+uma ficha de ensaio no **pior caso** (`asfalto-tapete`, `carroComum: false`, sem `secaRapido`, sem
+`horario`, cobrando `R$ 12,50`), rodei suíte + tela, e apaguei. Commit `9aa0603`.
+
+🔴 **ACHADO 1 — o chip cortava os centavos.** O recorte do preço (`/R\$\s?\d+/`) parava no primeiro
+grupo de dígitos: o chip anunciava **`R$ 12`** num lugar que cobra **`R$ 12,50`**. **O app cobrando
+menos do que o lugar cobra.** Invisível porque a única ficha paga do acervo cobra R$ 5 redondos.
+Consertado, com fixture de centavos.
+
+🔴 **ACHADO 2 — UM GUARDA MEU ERA OCO, e ele tinha UM DIA DE IDADE.** O teste *"enquanto TODAS forem
+true, não há chip pra ter"*, escrito na véspera **exatamente pra avisar quando a 3ª ficha chegasse**,
+varria uma lista de dois slugs escrita à mão — e **PASSOU** com a ficha de ensaio `carroComum:
+false` no acervo. Não tocava no único caso pra que existia. Agora varre o acervo, e foi medido
+caindo. **Guarda que enumera o acervo à mão é cego ao acervo crescer — e lembrete que não dispara é
+pior que nenhum, porque dá sensação de cobertura.**
+
+⚠️ **ACHADO 3, que é DELE e não meu:** com `carroComum: false`, o selo diz *"seco · carro comum"* —
+a tela contradizendo um campo da própria ficha. Ele decidiu deixar o `sub` em 27/08, **mas antes de
+o `carroComum` existir**. Está no topo como a primeira pergunta de amanhã.
+
+**A ficha de ensaio foi APAGADA** — `content/fichas/` tem duas.
+
+---
+
 ## ✅ A SÉTIMA: o beco do GPS sem sinal (`falhou`)
 
 Commit `dba9384`, no ar. **Era o último item da fila dele, e estava em PRODUÇÃO.**
@@ -559,7 +641,7 @@ repo ele apaga o ledger de scratch e o próprio `.claude/`.
 ```
 git branch --show-current  → main
 git status --short         → limpo
-npm test                   → 750/750 em 50 arquivos   ← tudo verde, NÃO há falha esperada
+npm test                   → 751/751 em 50 arquivos   ← tudo verde, NÃO há falha esperada
                              (era 668; a 2ª ficha não mudou o total. `secaRapido` +11;
                               e as SEIS rodadas de 27/08: +13, +8, +11, +36 do horário,
                               e a do filtro FECHOU 15 — 22 removidos contra 7
