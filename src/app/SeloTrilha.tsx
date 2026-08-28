@@ -1,6 +1,7 @@
 "use client";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
-import { faseDe, marcaDe } from "@/lib/carimbo-fase";
+import { faseDe, marcaDe, subDe } from "@/lib/carimbo-fase";
+import { fechadoAgora, rotuloAbertura, type Horario } from "@/lib/horario";
 import { useVenceu } from "./useVenceu";
 
 /** O selo de uma trilha no cartão da home. Irmão pequeno do Carimbo da ficha:
@@ -16,19 +17,29 @@ import { useVenceu } from "./useVenceu";
  *  SSR-ado mesmo sendo client component: o HTML do servidor já sai com a
  *  palavra certa porque `useVenceu` devolve `false` no primeiro render — por
  *  isso o primeiro render do cliente bate com o do servidor e a hidratação
- *  não briga. */
-export default function SeloTrilha({ leitura }: { leitura: LeituraCarimbo }) {
+ *  não briga. **`agora` chega por prop e é `null` no primeiro render pela mesma
+ *  razão**; quem o produz é o `useAgoraRecife`, chamado UMA vez lá em cima, e
+ *  não aqui — um hook por cartão faria o número de hooks variar com o tamanho
+ *  da lista. */
+export default function SeloTrilha({
+  leitura,
+  horario,
+  agora = null,
+}: {
+  leitura: LeituraCarimbo;
+  /** A faixa de horário desta trilha. Sem ela, o selo nunca fecha. */
+  horario?: Horario;
+  /** Minutos desde a meia-noite em Recife, ou `null` antes de o relógio falar. */
+  agora?: number | null;
+}) {
   const venceu = useVenceu(leitura.calculadoEm);
-  const fase = faseDe({ conferindo: false, erro: leitura.erro, venceu, falhou: false });
+  const fechado = fechadoAgora(horario, agora);
+  const fase = faseDe({ conferindo: false, erro: leitura.erro, venceu, falhou: false, fechado });
 
-  // A MESMA palavra do carimbo da ficha, da mesma fonte — o selo é o irmão
-  // pequeno, não um segundo vocabulário. Ver `marcaDe` em `carimbo-fase.ts`.
+  // A MESMA palavra e a MESMA linha de baixo do carimbo da ficha, da mesma
+  // fonte — o selo é o irmão pequeno, não um segundo vocabulário.
   const marca = marcaDe(fase, leitura.estado);
-
-  const sub =
-    fase === "sem-informacoes" ? "tome cuidado"
-    : leitura.estado === "fresco" ? "seco · carro comum"
-    : "barro · dá um tempo";
+  const sub = subDe(fase, leitura.estado, fechado && horario ? rotuloAbertura(horario, agora!) : null);
 
   return (
     <span className="selo" data-fase={fase}>

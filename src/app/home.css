@@ -108,6 +108,9 @@
    [data-state] junto pela mesma razão que o selo: sem isso a regra de fase tem
    especificidade menor e o pin fica verde ao lado de um selo que já parou. */
 .bp .pin-home[data-state][data-fase="sem-informacoes"]::before { background: var(--stop); }
+/* Fechado idem, e pela mesma razão de especificidade: sem o [data-state] junto,
+   o pin fica verde ao lado de um selo que já diz "Fechado agora". */
+.bp .pin-home[data-state][data-fase="fechado"]::before { background: var(--stop); }
 .bp .pin-home:active { opacity: .6; }
 
 /* ---- a linha de filtro e o painel sanfona ----
@@ -263,6 +266,8 @@
    carimbo teve que consertar. Por isso o seletor carrega [data-state] junto:
    sem ele a regra de fase tem especificidade MENOR que a de cima e perde. */
 .bp .cartao[data-state] .selo[data-fase="sem-informacoes"] { --c: var(--stop-ink); --st-bg: var(--stop-bg); }
+/* Fechado, mesma regra e mesma razão do [data-state] no seletor. */
+.bp .cartao[data-state] .selo[data-fase="fechado"] { --c: var(--stop-ink); --st-bg: var(--stop-bg); }
 .bp .selo .w { font-weight: 800; font-size: .8rem; text-transform: uppercase; line-height: 1; }
 .bp .selo .s { font-family: var(--type); font-size: .5rem; letter-spacing: .1em; text-transform: uppercase; margin-top: .18rem; opacity: .85; }
 

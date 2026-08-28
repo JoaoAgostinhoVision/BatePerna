@@ -15,7 +15,7 @@ const AGORA_S = AGORA_MS / 1000;
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(AGORA_MS); });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
-type Props = { estado: "fresco" | "frio"; erro: boolean; calculadoEm: number; pass: number; fut: number; slug: string; secaRapido?: string; piso?: Piso };
+type Props = { estado: "fresco" | "frio"; erro: boolean; calculadoEm: number; pass: number; fut: number; slug: string; secaRapido?: string; piso?: Piso; horario?: { abre: string; fecha: string } };
 
 function montar(props: Partial<Props> = {}) {
   return render(
@@ -634,6 +634,94 @@ describe("a ficha e o cartão dizem a MESMA palavra", () => {
     expect(carimbo, "o carimbo perdeu a palavra").toBeTruthy();
     expect(selo, "o selo perdeu a palavra").toBeTruthy();
     expect(selo).toBe(carimbo);
+  });
+});
+
+// 🔴 O DEFEITO QUE ESTES TESTES TRANCAM (2026-08-27). O carimbo só olhava
+// CHUVA. A Pedra Furada fecha às 17h — às 18h com céu limpo a ficha dizia
+// "Pode ir" com o lugar fechado havia uma hora. Decisão dele: o carimbo passa a
+// olhar a hora.
+//
+// ⚠️ `AGORA_MS` do arquivo é 08h42 em Recife, DENTRO da faixa: por isso nenhum
+// teste acima muda de resposta ao ganhar um horário. Quem quer o fechado move o
+// relógio à mão — e sempre com timer FALSO, senão a suíte passaria de manhã e
+// cairia à noite.
+describe("Carimbo — a hora, e não só a chuva", () => {
+  const PEDRA = { abre: "05:00", fecha: "17:00" };
+
+  // Move o relógio E devolve o instante, porque os dois têm que andar juntos:
+  // na primeira versão deste bloco eu movi só o relógio e deixei a leitura das
+  // 08h42 — ela venceu de verdade, e o teste acusou "SEM INFORMAÇÕES" achando
+  // que era defeito do fechado. Era o app certo e o teste errado.
+  const asHoras = (hRecife: number) => {
+    const ms = Date.UTC(2027, 0, 15, hRecife + 3, 0); // +3 = Recife → UTC
+    vi.setSystemTime(ms);
+    return ms / 1000;
+  };
+
+  it("18h com céu limpo: FECHADO — era isto que dizia 'Pode ir'", () => {
+    const calculadoEm = asHoras(18);
+    const { container } = montar({ horario: PEDRA, calculadoEm });
+    expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    expect(container.querySelector(".sub")?.textContent).toBe("abre amanhã às 5h");
+    expect(container.querySelector(".reason")?.textContent).toBe("Fecha às 17h, abre às 5h.");
+    expect(container.querySelector(".decision")?.getAttribute("data-fase")).toBe("fechado");
+  });
+
+  // O outro lado da mesma moeda, e ele não é redundante: "amanhã" e "hoje" são
+  // a diferença entre perder o dia e só esperar.
+  it("4h da manhã: fechado também, mas abre HOJE", () => {
+    const calculadoEm = asHoras(4);
+    const { container } = montar({ horario: PEDRA, calculadoEm });
+    expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    expect(container.querySelector(".sub")?.textContent).toBe("abre às 5h");
+  });
+
+  it("dentro da faixa, o carimbo volta a falar de chuva", () => {
+    const calculadoEm = asHoras(9);
+    const { container } = montar({ horario: PEDRA, calculadoEm });
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
+    expect(container.querySelector(".decision")?.getAttribute("data-fase")).toBe("afirmando");
+  });
+
+  // 🔴 A PRIORIDADE, na tela e não só na função pura: a leitura das 08h42 lida
+  // às 18h está vencida de verdade, e mesmo assim o que se lê é "Fechado
+  // agora". É o certo — saber que a chuva não foi lida não muda que o lugar
+  // fechou, e "SEM INFORMAÇÕES · tome cuidado" ali convidaria a tentar.
+  it("com leitura VENCIDA e o lugar fechado, quem vence é o fechado", () => {
+    asHoras(18);
+    const { container } = montar({ horario: PEDRA, calculadoEm: AGORA_S });
+    expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+  });
+
+  // 🔴 ESTE É O TESTE QUE PROTEGE A RAMPA. Ninguém disse o horário dela, e ela
+  // não pode passar a fechar por causa desta rodada: sem o campo, o app decide
+  // só pela chuva, exatamente como antes.
+  it("ficha SEM horário nunca fecha, nem às 18h", () => {
+    const calculadoEm = asHoras(18);
+    const { container } = montar({ calculadoEm });
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
+  });
+
+  // Fechado, a linha viva não pode dizer "lido da chuva agora": ela existe pra
+  // afirmar que a leitura é de agora, e com o lugar fechado a leitura de chuva
+  // não é o que decide. Mesma família do pulso ao lado de "SEM INFORMAÇÕES".
+  it("fechado, a linha viva para de falar de chuva", () => {
+    const calculadoEm = asHoras(18);
+    const { container } = montar({ horario: PEDRA, calculadoEm });
+    expect(container.querySelector(".live")?.textContent).toBe("fora do horário de agora");
+  });
+
+  it("o CSS pinta o carimbo fechado de parada, e para o pulso", () => {
+    // A palavra e a COR têm que dizer o mesmo — "Fechado agora" num carimbo
+    // verde é o pin verde ao lado do carimbo frio de volta.
+    const css = semComentarios("ficha.css");
+    const cor = regraDe(css, '.bp .decision[data-fase="fechado"] .stamp');
+    expect(cor, "faltou a regra de cor da fase fechado").not.toBeNull();
+    expect(valorDe(cor![0], "--st-bg")).toBe("var(--stop-bg)");
+    const pulso = regraDe(css, '.bp .decision[data-fase="fechado"] .live .pulse');
+    expect(pulso, "o pulso voltou a pulsar com o lugar fechado").not.toBeNull();
+    expect(valorDe(pulso![0], "animation")).toBe("none");
   });
 });
 

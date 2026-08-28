@@ -14,8 +14,12 @@ export const PRAZO_CONFERINDO_MS = 3_000;
  *  dez chamadas. O toque não obedece a este piso — quem tocou está pedindo. */
 export const PISO_AUTO_MS = 30_000;
 
-/** O que o carimbo está mostrando agora. */
-export type Fase = "afirmando" | "conferindo" | "sem-informacoes";
+/** O que o carimbo está mostrando agora.
+ *
+ *  🔴 `fechado` entrou em 2026-08-27 e é a primeira fase que NÃO fala de chuva.
+ *  Ela existe porque o carimbo dizia "Pode ir" às 18h num lugar que fecha às
+ *  17h. Ver `src/lib/horario.ts`. */
+export type Fase = "afirmando" | "conferindo" | "sem-informacoes" | "fechado";
 
 /** Por que não há leitura. Vira o texto do motivo; `null` quando há leitura. */
 export type Sintoma = "falhou" | "erro" | "venceu" | null;
@@ -29,9 +33,21 @@ export type Situacao = {
   venceu: boolean;
   /** A última busca estourou o prazo de tela ou falhou de vez. */
   falhou: boolean;
+  /** O lugar está fora do horário AGORA.
+   *
+   *  Opcional, e o padrão (`false`) é o certo: ficha sem horário nunca fecha, e
+   *  o primeiro render nunca sabe a hora ainda. Quem responde é `fechadoAgora`
+   *  em `src/lib/horario.ts`. */
+  fechado?: boolean;
 };
 
-export function faseDe({ conferindo, erro, venceu, falhou }: Situacao): Fase {
+/** 🔴 `fechado` GANHA DE TODAS, inclusive de `conferindo`, e isso é a regra e
+ *  não um detalhe de ordem: com o lugar fechado, a chuva não decide nada. Ler
+ *  a chuva enquanto o portão está trancado é uma resposta certa pra pergunta
+ *  errada — e "CONFERINDO…" ali seria o app parecendo ocupado com uma coisa que
+ *  não muda o veredito. */
+export function faseDe({ conferindo, erro, venceu, falhou, fechado }: Situacao): Fase {
+  if (fechado) return "fechado";
   if (conferindo) return "conferindo";
   return erro || venceu || falhou ? "sem-informacoes" : "afirmando";
 }
@@ -64,13 +80,34 @@ export function sintomaDe({ erro, venceu, falhou }: Situacao): Sintoma {
  *  Decisão dele em 2026-08-27, e o "Não vá" é palavra dele — é a `voz` da
  *  Rampa na ficha: *"é barro: molhou, não vá"*.
  *
- *  ⚠️ O `sub` ("seco · carro comum" / "barro · dá um tempo") continua duplicado
- *  nos dois componentes, de propósito: ele não mudou nesta rodada, e "barro" ali
- *  é escolha registrada dele. Quando mexer nele, traga-o pra cá também. */
+ *  ✅ O `sub` mudou-se pra cá em 2026-08-27, quando a fase `fechado` obrigou a
+ *  mexer nele — era a dívida anotada aqui mesmo, e deixá-la de pé teria sido
+ *  escrever o ramo novo à mão nos dois arquivos, que é a coisa exata que este
+ *  bloco existe pra impedir. */
 export function marcaDe(fase: Fase, estado: Estado): string {
+  if (fase === "fechado") return "Fechado agora";
   if (fase === "conferindo") return "CONFERINDO…";
   if (fase === "sem-informacoes") return "SEM INFORMAÇÕES";
   return estado === "frio" ? "Não vá" : "Pode ir";
+}
+
+/** A linha de baixo da marca. Irmã do `marcaDe`, e mora aqui pela mesma razão:
+ *  a ficha e o cartão da home dizem a MESMA coisa.
+ *
+ *  `abertura` só é usada na fase `fechado`, e nela nunca é `null` por
+ *  construção — a fase só existe quando há horário. O `?? ""` não é fallback
+ *  disfarçado: é o app CALANDO se algum dia a construção mudar, em vez de
+ *  inventar um horário que ninguém deu.
+ *
+ *  ⚠️ "barro · dá um tempo" e "seco · carro comum" continuam supondo o material
+ *  e o veículo. **Ele decidiu deixar assim em 2026-08-27**, de olhos abertos,
+ *  sabendo que a 3ª ficha de asfalto quebra os dois. Não é esquecimento — e o
+ *  molde pra resolver já existe (`chuvaNoPiso`). */
+export function subDe(fase: Fase, estado: Estado, abertura: string | null = null): string {
+  if (fase === "fechado") return abertura ?? "";
+  if (fase === "conferindo") return "lendo a chuva agora";
+  if (fase === "sem-informacoes") return "tome cuidado";
+  return estado === "fresco" ? "seco · carro comum" : "barro · dá um tempo";
 }
 
 export type Gatilho = "carregou" | "voltou" | "toque";

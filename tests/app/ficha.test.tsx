@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, within } from "@testing-library/react";
 import { CHAVE_LOCAL } from "@/lib/local";
 import type { Ficha as TipoFicha } from "@/types/ficha";
@@ -258,6 +258,38 @@ describe("o chip do custo vem da FICHA, não do código", () => {
     const codigo = src.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
     expect(codigo, "a tira de comentários comeu o código").toContain("chipCusto");
     expect(codigo, "o portão voltou pro código").not.toMatch(/portão/i);
+  });
+});
+
+// 🔴 A DIREÇÃO DA ALIMENTAÇÃO, pro campo do horário (2026-08-27). O
+// `Carimbo.test.tsx` prova que o carimbo OBEDECE à prop `horario`; nada lá
+// provaria que `[slug]/page.tsx` a ENTREGA. Com `horario={undefined}` na
+// página, toda aquela suíte fica verde e a ficha volta a dizer "Pode ir" às 18h
+// em produção — o defeito inteiro de volta, com os testes passando.
+describe("o horário atravessa da ficha até o carimbo", () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(Date.UTC(2027, 0, 15, 21, 0)); }); // 18h Recife
+  afterEach(() => { vi.useRealTimers(); });
+
+  it("às 18h, a ficha REAL que fecha às 17h diz que está fechada", async () => {
+    const f = getFicha("pedra-furada-de-venturosa")!;
+    expect(f.horario, "a Pedra Furada perdeu o horário — este teste ficaria oco").toBeTruthy();
+    const { container } = await abrir("pedra-furada-de-venturosa");
+    expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    // Montada a partir da própria ficha: ele pode mudar o horário sem que o
+    // teste vire manutenção.
+    expect(container.querySelector(".reason")?.textContent).toBe(
+      `Fecha às ${Number(f.horario!.fecha.slice(0, 2))}h, abre às ${Number(f.horario!.abre.slice(0, 2))}h.`,
+    );
+  });
+
+  // 🔴 O PAR QUE PROTEGE A RAMPA, e ele não é redundante: com `horario` cravado
+  // à mão na página, o teste de cima passaria (é o horário da Pedra Furada) e
+  // SÓ CAI aqui — a Rampa passaria a fechar num horário que ninguém deu.
+  it("a ficha REAL sem horário continua decidindo só pela chuva, às 18h", async () => {
+    const f = getFicha("rampa-do-pepe")!;
+    expect(f.horario, "a Rampa ganhou horário — este par perdeu o sentido").toBeUndefined();
+    const { container } = await abrir("rampa-do-pepe");
+    expect(container.querySelector(".mark")?.textContent).not.toBe("Fechado agora");
   });
 });
 

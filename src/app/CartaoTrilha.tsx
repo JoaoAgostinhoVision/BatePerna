@@ -33,9 +33,15 @@ import { useLocal } from "./local";
 export default function CartaoTrilha({
   ficha,
   inicial,
+  agora = null,
 }: {
   ficha: Ficha;
   inicial: LeituraCarimbo;
+  /** A hora de Recife em minutos, ou `null` no primeiro render. Chega por prop
+   *  e não de um hook daqui: são N cartões, e um hook por cartão faria o número
+   *  de hooks variar com o tamanho da lista. Quem chama `useAgoraRecife` é a
+   *  folha, uma vez só. */
+  agora?: number | null;
 }) {
   const leitura = useLeitura(ficha.slug) ?? inicial;
 
@@ -68,7 +74,7 @@ export default function CartaoTrilha({
     <a id={ficha.slug} className="cartao" data-state={leitura.estado} href={`/${ficha.slug}`}>
       <span className="cartao-topo">
         <span className="cartao-nome">{ficha.trajeto.waypoints[0].nome}</span>
-        <SeloTrilha leitura={leitura} />
+        <SeloTrilha leitura={leitura} horario={ficha.horario} agora={agora} />
       </span>
       <span className="cartao-prom">{ficha.promessa}</span>
       {partes.length > 0 && <span className="cartao-meta">{partes.join(" · ")}</span>}

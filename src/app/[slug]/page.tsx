@@ -90,6 +90,7 @@ export default async function Ficha({
             slug={slug}
             secaRapido={ficha.secaRapido}
             piso={ficha.piso}
+            horario={ficha.horario}
           />
         </div>
 

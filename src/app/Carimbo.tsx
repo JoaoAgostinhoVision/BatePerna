@@ -11,10 +11,13 @@ import {
   marcaDe,
   podeBuscar,
   sintomaDe,
+  subDe,
 } from "@/lib/carimbo-fase";
+import { fechadoAgora, rotuloAbertura, rotuloFaixa, type Horario } from "@/lib/horario";
 import { chuvaNoPiso, type Piso } from "@/lib/piso";
 import { carimboVenceu, horaCurtaRecife } from "@/lib/validade";
 import { useAvisarEstado } from "./Moldura";
+import { useAgoraRecife } from "./useAgoraRecife";
 
 /** O carimbo é a única coisa da ficha que apodrece. Tudo o mais — trajeto,
  *  coordenada, aviso, o que ler no portão — é verdade parada.
@@ -31,6 +34,7 @@ export default function Carimbo({
   slug,
   secaRapido,
   piso,
+  horario,
 }: {
   estado: Estado;
   erro: boolean;
@@ -45,7 +49,14 @@ export default function Carimbo({
    *  linha vermelha. Opcional pela mesma razão: sem ele, a linha termina no
    *  ponto final. Ver `chuvaNoPiso` em `src/lib/piso.ts`. */
   piso?: Piso;
+  /** A faixa de horário desta trilha. Sem ela, o carimbo NUNCA fecha e decide
+   *  só pela chuva, como sempre fez. Ver `src/lib/horario.ts`. */
+  horario?: Horario;
 }) {
+  // O relógio da hora do dia, irmão do relógio da validade logo abaixo.
+  // `null` no primeiro render — a ficha é pré-renderizada em build, então
+  // calcular a hora durante o render brigaria com a hidratação.
+  const agora = useAgoraRecife();
   // A leitura do servidor é só o ponto de partida: daqui pra frente o
   // componente pode trocá-la por uma mais nova. O primeiro render usa
   // exatamente o que veio no HTML, pra a hidratação bater.
@@ -176,22 +187,24 @@ export default function Carimbo({
   }, [tentar]);
 
   const { estado: estadoAtual, erro: erroAtual, calculadoEm: calculadoEmAtual } = leitura;
-  const situacao = { conferindo, erro: erroAtual, venceu, falhou };
+  const fechado = fechadoAgora(horario, agora);
+  const situacao = { conferindo, erro: erroAtual, venceu, falhou, fechado };
   const fase = faseDe(situacao);
   const sintoma = sintomaDe(situacao);
 
-  // A palavra vem de `marcaDe`, não daqui: é a MESMA do selo do cartão, e
-  // escrita à mão nos dois ela já podia divergir. Ver `carimbo-fase.ts`.
+  // A palavra e a linha de baixo vêm de `marcaDe`/`subDe`, não daqui: são as
+  // MESMAS do selo do cartão, e escritas à mão nos dois elas já podiam
+  // divergir. Ver `carimbo-fase.ts`.
   const marca = marcaDe(fase, estadoAtual);
+  const sub = subDe(fase, estadoAtual, fechado && horario ? rotuloAbertura(horario, agora!) : null);
 
-  const sub =
-    fase === "conferindo" ? "lendo a chuva agora"
-    : fase === "sem-informacoes" ? "tome cuidado"
-    : estadoAtual === "fresco" ? "seco · carro comum"
-    : "barro · dá um tempo";
-
+  // 🔴 Fechado, o pulso PARA e a linha viva não fala de chuva. Ela existe pra
+  // dizer "esta leitura é de agora" — e com o lugar fechado a leitura de chuva
+  // não é o que decide nada. Deixá-la pulsando seria o defeito do pulso ao lado
+  // de "SEM INFORMAÇÕES" de volta, com outra roupa.
   const linhaViva =
-    fase === "conferindo" ? "conferindo a chuva agora"
+    fase === "fechado" ? "fora do horário de agora"
+    : fase === "conferindo" ? "conferindo a chuva agora"
     : fase === "sem-informacoes" ? "toque pra conferir"
     : `lido da chuva agora · ${pass}h atrás + ${fut}h à frente`;
 
@@ -202,7 +215,7 @@ export default function Carimbo({
         <div className="sub">{sub}</div>
       </div>
       <p className="reason">
-        {motivo(fase, sintoma, estadoAtual, calculadoEmAtual, pass, fut, secaRapido, piso)}
+        {motivo(fase, sintoma, estadoAtual, calculadoEmAtual, pass, fut, secaRapido, piso, horario)}
       </p>
       <div className="live">
         <span className="pulse"></span>
@@ -273,7 +286,14 @@ function motivo(
   fut: number,
   secaRapido?: string,
   piso?: Piso,
+  horario?: Horario,
 ) {
+  // Primeiro de todos, pela mesma razão que `fechado` ganha em `faseDe`: com o
+  // lugar fechado, contar da chuva é responder a pergunta errada. E a frase diz
+  // as HORAS e mais nada — o nome da coisa que fecha não mora no código.
+  if (fase === "fechado" && horario) {
+    return <>{rotuloFaixa(horario)}</>;
+  }
   if (fase === "conferindo") {
     return sintoma === "venceu" ? (
       <>

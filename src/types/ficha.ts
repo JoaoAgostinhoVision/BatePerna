@@ -97,6 +97,29 @@ export const fichaSchema = z.object({
   // saída honesta; frase genérica de reserva seria o defeito de volta com
   // outra roupa.
   secaRapido: z.string().optional(),
+  // A faixa de horário em que dá pra entrar, hora de Recife.
+  //
+  // 🔴 Ele nasceu de o app AFIRMAR MAIS DO QUE SABE (2026-08-27). O carimbo só
+  // olhava chuva, e a Pedra Furada fecha às 17h: às 18h com céu limpo a ficha
+  // dizia "Pode ir" com o lugar fechado havia uma hora. Mesma família do
+  // `SEM INFORMAÇÕES · tome cuidado` da v3.4 — e a decisão dele foi a mesma de
+  // lá: **quando o app não pode afirmar, ele para de afirmar.**
+  //
+  // Opcional, e a régua é a de sempre: **ficha sem horário NUNCA fecha**. O app
+  // não sabe que aquele lugar tem hora, então não inventa uma. A Rampa do Pepê
+  // é justamente esse caso — ninguém disse o horário dela, e ela segue decidindo
+  // só pela chuva, exatamente como antes.
+  //
+  // ⚠️ O QUE ESTE CAMPO NÃO GUARDA: o NOME da coisa que fecha. Nem "portão",
+  // nem "guarita". Foi esse tipo de palavra que passou o dia 2026-08-27 inteiro
+  // sendo arrancada do código, e a tela diz só as horas. Quando o nome importar,
+  // ele é prosa do `acesso` — ou vira campo, com o `custo.curto` de molde.
+  horario: z
+    .object({
+      abre: z.string().regex(/^\d{2}:\d{2}$/),
+      fecha: z.string().regex(/^\d{2}:\d{2}$/),
+    })
+    .optional(),
 });
 
 export type Waypoint = z.infer<typeof waypointSchema>;

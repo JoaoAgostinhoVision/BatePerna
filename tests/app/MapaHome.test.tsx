@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, cleanup, act, waitFor } from "@testing-library/react";
 import { regraDe, semComentarios, valorDe } from "../css";
 import MapaHome from "@/app/MapaHome";
@@ -144,6 +144,37 @@ describe("MapaHome", () => {
     expect(regra, `faltou a regra ${seletor} no home.css`).not.toBeNull();
     expect(valorDe(regra![0], "background"), "o pin da home parou de parar de afirmar cor de veredito")
       .toBe("var(--stop)");
+  });
+
+  // 🔴 A MESMA CICATRIZ, agora pro horário (2026-08-27). O pin não sabia de
+  // hora: com a trilha fechada, o cartão dizia "Fechado agora" e o pin do mapa
+  // continuava VERDE logo acima — literalmente o defeito que o comentário do
+  // `PinTrilha` conta que já aconteceu uma vez, com outra causa.
+  it("com a trilha fechada, o pin fecha junto com o cartão — uma fonte de cor só", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.UTC(2027, 0, 15, 21, 0)); // 18h em Recife
+    try {
+      const slug = fichas[0].slug;
+      const comHorario = [{ ...fichas[0], horario: { abre: "05:00", fecha: "17:00" } }];
+      const { container } = render(
+        <>
+          <MapaHome fichas={comHorario} leituras={leituras} />
+          <CartaoTrilha ficha={comHorario[0]} inicial={leituras[slug]} agora={18 * 60} />
+        </>,
+      );
+      expect(container.querySelector(`.pin-home[href="#${slug}"]`)?.getAttribute("data-fase"))
+        .toBe("fechado");
+      expect(container.querySelector(".selo")?.getAttribute("data-fase")).toBe("fechado");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a regra de cor da fase fechado existe no pin, e é a de parada", () => {
+    const seletor = '.bp .pin-home[data-state][data-fase="fechado"]::before';
+    const regra = regraDe(semComentarios("home.css"), seletor);
+    expect(regra, `faltou a regra ${seletor} no home.css`).not.toBeNull();
+    expect(valorDe(regra![0], "background")).toBe("var(--stop)");
   });
 });
 

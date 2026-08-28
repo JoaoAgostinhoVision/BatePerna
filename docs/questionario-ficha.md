@@ -367,6 +367,27 @@ entrada", curto: "R$ 5 · portão"`
 
 ---
 
+## O horário — `horario`
+
+**Pergunta:** esse lugar tem hora pra abrir e pra fechar? Se tiver, que horas?
+
+**Por que importa:** 🔴 **é a única coisa além da chuva que o carimbo olha.** Sem
+esse campo, o app decide só pelo tempo — e num lugar que fecha às 17h isso o fazia
+dizer *"Pode ir"* às 18h, com o portão trancado havia uma hora. Respondido, a ficha
+e o cartão da home passam a dizer **"Fechado agora · abre amanhã às 5h"** no lugar
+do veredito de chuva, e a trilha sai do grupo *"Hoje o tempo deixa"*.
+
+**Se não tiver hora, não responda:** ficha sem o campo **nunca fecha**, e segue
+decidindo só pela chuva — que é como a Rampa do Pepê funciona até hoje.
+
+⚠️ **A tela mostra só as HORAS, nunca o nome da coisa que fecha.** Se importar dizer
+que é um portão, uma guarita ou uma cancela, isso é prosa do `acesso` — aqui só
+entram os dois horários.
+
+**Exemplo (Pedra Furada):** `abre: "05:00", fecha: "17:00"`
+
+---
+
 ## O que acontece depois de responder
 
 Cada conjunto de respostas vira um arquivo JSON novo em `content/fichas/` (um arquivo

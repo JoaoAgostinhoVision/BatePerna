@@ -1,6 +1,7 @@
 "use client";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { faseDe } from "@/lib/carimbo-fase";
+import { fechadoAgora, type Horario } from "@/lib/horario";
 import { useLeitura } from "./leituras";
 import { useVenceu } from "./useVenceu";
 
@@ -21,16 +22,30 @@ export default function PinTrilha({
   left,
   top,
   inicial,
+  horario,
+  agora = null,
 }: {
   slug: string;
   nome: string;
   left: number;
   top: number;
   inicial: LeituraCarimbo;
+  /** A faixa de horário desta trilha. Sem ela, o pin nunca fecha. */
+  horario?: Horario;
+  /** A hora de Recife em minutos, ou `null` no primeiro render. Chega por prop
+   *  pela mesma razão que a leitura chega: são N pins, e a fonte tem que ser
+   *  UMA — quem lê o relógio é o `MapaHome`, uma vez só. */
+  agora?: number | null;
 }) {
   const leitura = useLeitura(slug) ?? inicial;
   const venceu = useVenceu(leitura.calculadoEm);
-  const fase = faseDe({ conferindo: false, erro: leitura.erro, venceu, falhou: false });
+  const fase = faseDe({
+    conferindo: false,
+    erro: leitura.erro,
+    venceu,
+    falhou: false,
+    fechado: fechadoAgora(horario, agora),
+  });
 
   return (
     <a

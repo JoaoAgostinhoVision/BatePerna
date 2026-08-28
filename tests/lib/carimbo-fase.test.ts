@@ -8,6 +8,7 @@ import {
   marcaDe,
   podeBuscar,
   sintomaDe,
+  subDe,
 } from "@/lib/carimbo-fase";
 
 const OK = { conferindo: false, erro: false, venceu: false, falhou: false };
@@ -58,10 +59,56 @@ describe("marcaDe: a palavra da decisão, e ela não fala em SUBIR", () => {
       // A tira precisa de guarda, senão a ausência abaixo passa por vacuidade.
       expect(codigo, `a tira comeu ${arq}`).toContain("const marca");
       expect(codigo, `${arq} parou de perguntar a palavra`).toContain("marcaDe(");
+      expect(codigo, `${arq} parou de perguntar a linha de baixo`).toContain("subDe(");
       expect(codigo, `a palavra voltou a ser escrita à mão em ${arq}`).not.toMatch(
-        /Pode ir|Não vá|SEM INFORMAÇÕES/,
+        /Pode ir|Não vá|SEM INFORMAÇÕES|tome cuidado|dá um tempo|carro comum/,
       );
     }
+  });
+});
+
+// 🔴 A FASE QUE NÃO FALA DE CHUVA (2026-08-27). O carimbo dizia "Pode ir" às
+// 18h num lugar que fecha às 17h. Ver `src/lib/horario.ts`.
+describe("a fase fechado", () => {
+  it("fechado GANHA de conferindo — com o lugar fechado a chuva não decide nada", () => {
+    expect(faseDe({ ...OK, conferindo: true, fechado: true })).toBe("fechado");
+  });
+
+  it("fechado ganha também de erro, vencido e falhou", () => {
+    expect(faseDe({ conferindo: false, erro: true, venceu: true, falhou: true, fechado: true }))
+      .toBe("fechado");
+  });
+
+  // O padrão é o comportamento de sempre: ficha sem horário, e primeiro render,
+  // não fecham. Sem isto, toda chamada antiga de `faseDe` mudaria de resposta.
+  it("sem o campo, nada muda — é o app de antes", () => {
+    expect(faseDe(OK)).toBe("afirmando");
+    expect(faseDe({ ...OK, fechado: false })).toBe("afirmando");
+  });
+
+  it("a palavra é 'Fechado agora', e o estado da chuva não a muda", () => {
+    expect(marcaDe("fechado", "fresco")).toBe("Fechado agora");
+    expect(marcaDe("fechado", "frio")).toBe("Fechado agora");
+  });
+
+  it("a linha de baixo é a próxima abertura, que vem de fora", () => {
+    expect(subDe("fechado", "fresco", "abre amanhã às 5h")).toBe("abre amanhã às 5h");
+  });
+
+  // Não é fallback disfarçado: é o app CALANDO. Por construção a fase só existe
+  // com horário, mas se um dia a construção mudar, silêncio é a saída honesta —
+  // inventar "abre cedo" aqui seria o defeito da frase de reserva de volta.
+  it("sem a abertura, cala — não inventa horário", () => {
+    expect(subDe("fechado", "fresco")).toBe("");
+  });
+});
+
+describe("subDe: a linha de baixo, agora de fonte única", () => {
+  it("as quatro linhas de sempre continuam as mesmas", () => {
+    expect(subDe("conferindo", "fresco")).toBe("lendo a chuva agora");
+    expect(subDe("sem-informacoes", "frio")).toBe("tome cuidado");
+    expect(subDe("afirmando", "fresco")).toBe("seco · carro comum");
+    expect(subDe("afirmando", "frio")).toBe("barro · dá um tempo");
   });
 });
 

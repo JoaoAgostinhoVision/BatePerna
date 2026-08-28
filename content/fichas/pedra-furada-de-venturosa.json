@@ -30,5 +30,6 @@
     "como_ler": "No trecho de chão batido, olhando da estrada: barro brilhando ou poça d'água = melhor voltar.",
     "permissao_abortar": "Voltar sem ir é decisão, não desperdício — a chuva pode atrapalhar o caminho do carro e a experiência."
   },
-  "custo": { "tag": "gratis" }
+  "custo": { "tag": "gratis" },
+  "horario": { "abre": "05:00", "fecha": "17:00" }
 }

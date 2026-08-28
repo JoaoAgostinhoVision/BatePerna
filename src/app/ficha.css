@@ -200,6 +200,14 @@ html, body { background: var(--ground); }
    lado de "sem informações" ele desmente o carimbo. Em "conferindo" ele pisca,
    porque ali a leitura ESTÁ sendo buscada agora. */
 .bp .decision[data-fase="sem-informacoes"] .live .pulse { animation: none; }
+/* Fechado é PARADA, e a cor tem que dizer o mesmo que a palavra: "Fechado
+   agora" num carimbo verde seria o pin verde ao lado do carimbo frio de volta.
+   Não é o cinza do "conferindo" — ali o app não sabe; aqui ele sabe, e a
+   resposta é não. */
+.bp .decision[data-fase="fechado"] .stamp { --st-ink: var(--stop-ink); --st-bg: var(--stop-bg); }
+/* E o pulso para pelo mesmo motivo do ramo sem leitura: ele diz "isto é de
+   agora" sobre a CHUVA, e com o lugar fechado a chuva não é o que decide. */
+.bp .decision[data-fase="fechado"] .live .pulse { animation: none; }
 
 /* O carimbo sem informação é o botão de tentar de novo: alvo do tamanho do
    bloco, que a mão suja acerta. <button> traz estilo de formulário junto —

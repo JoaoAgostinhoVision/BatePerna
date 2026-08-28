@@ -2,9 +2,11 @@
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { SEM_FILTRO } from "@/lib/filtros";
+import { fechadoAgora } from "@/lib/horario";
 import CartaoTrilha from "./CartaoTrilha";
 import { useMexerFiltros } from "./filtros";
 import { useLeiturasMapa } from "./leituras";
+import { useAgoraRecife } from "./useAgoraRecife";
 
 export type ParFolha = { ficha: Ficha; leitura: LeituraCarimbo };
 
@@ -55,6 +57,12 @@ export default function FolhaTrilhas({
   // por render, então não há duas respostas possíveis aqui.
   const mapa = useLeiturasMapa();
   const atual = (p: ParFolha): LeituraCarimbo => mapa?.get(p.ficha.slug) ?? p.leitura;
+
+  // UMA chamada pra folha inteira, e ela desce por prop até cada selo. Um
+  // `useAgoraRecife` dentro do `.map()` faria o número de hooks variar com o
+  // tamanho da lista — a mesma partida que o React não deixa jogar e que já
+  // obrigou o `useAlgumVenceu` a existir.
+  const agora = useAgoraRecife();
 
   const mexer = useMexerFiltros();
 
@@ -108,19 +116,26 @@ export default function FolhaTrilhas({
       return (
         <div className="cartoes">
           {visiveis.map((p) => (
-            <CartaoTrilha key={p.ficha.slug} ficha={p.ficha} inicial={p.leitura} />
+            <CartaoTrilha key={p.ficha.slug} ficha={p.ficha} inicial={p.leitura} agora={agora} />
           ))}
         </div>
       );
     }
 
-    const podem = visiveis.filter((p) => atual(p).estado === "fresco");
-    const naoPodem = visiveis.filter((p) => atual(p).estado !== "fresco");
+    // 🔴 FECHADO NÃO ENTRA NO GRUPO DE CIMA, mesmo com o tempo bom — e o
+    // cabeçalho é exatamente por que isso importa. "Hoje o tempo deixa" é uma
+    // AFIRMAÇÃO sobre os cartões embaixo dele: com um cartão dizendo "Fechado
+    // agora" ali, o grupo estaria convidando pra uma coisa que não dá. Mesma
+    // régua do cabeçalho que some quando o filtro esvazia o grupo.
+    const podem = visiveis.filter(
+      (p) => atual(p).estado === "fresco" && !fechadoAgora(p.ficha.horario, agora),
+    );
+    const naoPodem = visiveis.filter((p) => !podem.includes(p));
 
     return (
       <>
-        {grupo("Hoje o tempo deixa", podem)}
-        {grupo("Hoje não", naoPodem)}
+        {grupo("Hoje o tempo deixa", podem, agora)}
+        {grupo("Hoje não", naoPodem, agora)}
       </>
     );
   };
@@ -132,14 +147,14 @@ export default function FolhaTrilhas({
  *  grupo que o filtro esvaziou — o cabeçalho é uma AFIRMAÇÃO sobre o que está
  *  embaixo dele, e sem nada embaixo ele mente. Teste: "grupo esvaziado pelo
  *  filtro perde o cabeçalho". */
-function grupo(titulo: string, lista: ParFolha[]) {
+function grupo(titulo: string, lista: ParFolha[], agora: number | null) {
   if (lista.length === 0) return null;
   return (
     <>
       <div className="grupo-k">{titulo}</div>
       <div className="cartoes">
         {lista.map((p) => (
-          <CartaoTrilha key={p.ficha.slug} ficha={p.ficha} inicial={p.leitura} />
+          <CartaoTrilha key={p.ficha.slug} ficha={p.ficha} inicial={p.leitura} agora={agora} />
         ))}
       </div>
     </>

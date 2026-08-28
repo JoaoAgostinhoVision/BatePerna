@@ -85,6 +85,44 @@ describe("FolhaTrilhas", () => {
     expect(container.querySelector("#molhada")?.getAttribute("data-state")).toBe("fresco");
   });
 
+  // 🔴 O DEFEITO QUE ESTE TESTE TRANCA (2026-08-27). "Hoje o tempo deixa" é uma
+  // AFIRMAÇÃO sobre os cartões embaixo dele. Uma trilha que fecha às 17h, lida
+  // às 18h com o tempo BOM, continuaria caindo ali — o grupo convidando pra uma
+  // coisa que não dá, e o selo logo abaixo dizendo "Fechado agora". É a mesma
+  // régua do cabeçalho que some quando o filtro esvazia o grupo.
+  it("trilha fechada sai do grupo 'Hoje o tempo deixa', mesmo com o tempo bom", () => {
+    vi.setSystemTime(Date.UTC(2027, 0, 15, 21, 0)); // 18h em Recife
+    const AGORA_18 = Math.floor(Date.UTC(2027, 0, 15, 21, 0) / 1000);
+    const fechada = { ...fichaFake("fechada"), horario: { abre: "05:00", fecha: "17:00" } };
+    const aberta = fichaFake("aberta"); // sem horário: nunca fecha
+    const visiveis = [
+      { ficha: fechada, leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_18 } },
+      { ficha: aberta, leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_18 } },
+    ];
+
+    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} />);
+
+    const cabecalhos = Array.from(container.querySelectorAll(".grupo-k")).map((c) => c.textContent);
+    expect(cabecalhos).toEqual(["Hoje o tempo deixa", "Hoje não"]);
+
+    // O par que importa: as DUAS estão frescas, e mesmo assim se separaram. Sem
+    // a `aberta`, "tudo caiu em Hoje não" passaria por qualquer motivo.
+    const doGrupo = (titulo: string) =>
+      Array.from(
+        Array.from(container.querySelectorAll(".grupo-k"))
+          .find((c) => c.textContent === titulo)!
+          .nextElementSibling!.querySelectorAll(".cartao"),
+      ).map((a) => a.getAttribute("id"));
+
+    expect(doGrupo("Hoje o tempo deixa")).toEqual(["aberta"]);
+    expect(doGrupo("Hoje não")).toEqual(["fechada"]);
+
+    // E o cartão diz a mesma coisa que o grupo — é o ponto do arquivo inteiro.
+    expect(container.querySelector("#fechada .selo .w")?.textContent).toBe("Fechado agora");
+    expect(container.querySelector("#fechada .selo .s")?.textContent).toBe("abre amanhã às 5h");
+    expect(container.querySelector("#aberta .selo .w")?.textContent).toBe("Pode ir");
+  });
+
   // O ramo LISO. Quem decide que não dá pra confiar é o `MioloHome` (clima
   // fora do ar, leitura vencida); o que esta folha faz com a resposta é isto:
   // nenhum cabeçalho, e nenhuma frase de veredito, porque `Não vá` é só pro

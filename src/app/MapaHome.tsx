@@ -19,6 +19,7 @@ import { coordDe } from "@/lib/local";
 import { useLocal } from "./local";
 import BuscaLugar from "./BuscaLugar";
 import PinTrilha from "./PinTrilha";
+import { useAgoraRecife } from "./useAgoraRecife";
 
 /** O mapa da home: onde ficam as trilhas de hoje.
  *
@@ -122,6 +123,17 @@ export default function MapaHome({
   // mismatch nenhum — o ref nasce vazio no servidor e no cliente, então o
   // primeiro paint é o mesmo nos dois.
   const ultimo = useRef<{ centro: Coord; z: number } | null>(null);
+
+  // 🔴 AQUI EM CIMA, e não lá embaixo perto dos pins: este componente tem um
+  // `return null` no meio (o guarda do mapa sem pin nenhum), e hook depois de
+  // saída condicional é a partida que o React não deixa jogar. UMA leitura do
+  // relógio pro mapa inteiro, descendo por prop até cada pin — um hook dentro
+  // do `.map()` faria o número de hooks variar com a lista.
+  //
+  // É o que impede o pin de ficar VERDE ao lado de um selo que já diz "Fechado
+  // agora": o defeito que o próprio comentário do `PinTrilha` conta que já
+  // aconteceu uma vez, com outra causa.
+  const agora = useAgoraRecife();
 
   const comLeitura: { ficha: Ficha; leitura: LeituraCarimbo }[] = fichas.flatMap((f) => {
     const leitura = leituras[f.slug];
@@ -232,6 +244,8 @@ export default function MapaHome({
                   left={left}
                   top={top}
                   inicial={leitura}
+                  horario={f.horario}
+                  agora={agora}
                 />
               );
             })}

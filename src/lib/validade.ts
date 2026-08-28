@@ -2,7 +2,10 @@
  *  para de afirmar: a regra da Rampa olha 3h à frente, e previsão vira. */
 export const VALIDADE_S = 30 * 60;
 
-const OFFSET_RECIFE_S = -3 * 3600;
+/** Exportado desde 2026-08-27 porque `horario.ts` precisa do MESMO número:
+ *  repetir `-3 * 3600` lá seria uma segunda fonte pro fuso, e o dia em que
+ *  alguém corrigisse um dos dois o app passaria a ter dois relógios. */
+export const OFFSET_RECIFE_S = -3 * 3600;
 
 /** Epoch em SEGUNDOS nos dois argumentos.
  *  Relógio atrasado do lado do cliente não vence carimbo — na dúvida, vale. */
