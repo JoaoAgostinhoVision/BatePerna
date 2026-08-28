@@ -4,16 +4,21 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-**Última parada:** 2026-08-27 — **QUATRO rodadas encadeadas, todas NO AR e conferidas**, cada uma
-achando a próxima. Todas do mesmo defeito: **texto fixo no código afirmando coisa sobre UM lugar**.
+**Última parada:** 2026-08-27 — **SEIS rodadas encadeadas, todas NO AR e conferidas.** As quatro
+primeiras foram o mesmo defeito (**texto fixo no código afirmando coisa sobre UM lugar**); as duas
+últimas zeraram a fila de perguntas de produto dele.
 1. a frase do barro virou `chuvaNoPiso` (derivada do `piso`);
 2. os três *"cheque o barro no portão"* viraram *"cheque o chão no caminho"*;
 3. **"Pode subir"/"Não suba" viraram "Pode ir"/"Não vá"** (`marcaDe`, fonte única) — **ele pegou**;
 4. o **"✓ Fui"** parou de supor portão/subir/barro, e o **chip do custo virou campo da ficha**
-   (`custo.curto`) — **achado pela varredura mecânica, não pelo meu inventário**.
+   (`custo.curto`) — **achado pela varredura mecânica, não pelo meu inventário**;
+5. 🆕 **o carimbo passou a olhar A HORA** — campo `horario`, fase `fechado`. O app parou de dizer
+   *"Pode ir"* às 18h num lugar que fecha às 17h;
+6. 🆕 **o filtro de piso SAIU da home** (era proxy de "meu carro chega?" e errava), o fato virou
+   campo `carroComum`, e **as ~2h do passeio entraram como prosa** na nota da Pedra Furada.
 
-**Nada pendente do meu lado.**
-`main` limpo em **`b8e3c7a`**, **711/711 em 49 arquivos**, `tsc` limpo, `build` passa.
+**Nada pendente do meu lado. 🔴 A fila de perguntas de produto dele ZEROU.**
+`main` limpo em **`28901e0`**, **739/739 em 50 arquivos**, `tsc` limpo, `build` passa.
 Ver o bloco "SE O JOÃO DISSER CONTINUA" logo abaixo.
 
 🔴 **E A LIÇÃO MAIS CARA DO DIA FOI SOBRE O MEU PRÓPRIO LEVANTAMENTO.** A tabela lá embaixo
@@ -130,7 +135,28 @@ logo abaixo: **não é bug** — nenhum teste pega, o app estava certíssimo mos
 
 ---
 
-## ▶ O QUE ESPERA POR ELE — nada do meu lado, quatro coisas do dele
+## ▶ O QUE ESPERA POR ELE — 🔴 A FILA ZEROU EM 2026-08-27
+
+**As três perguntas de produto da 2ª ficha foram respondidas por ele e as três estão NO AR:**
+
+| pergunta | decisão dele | como ficou |
+|---|---|---|
+| o portão 5h–17h num app sem horário | **o carimbo passa a olhar a hora** | campo `horario`, fase `fechado` |
+| o filtro de piso escondendo a Pedra Furada | **o filtro passa a perguntar do CARRO** | recorte de piso **saiu**; campo `carroComum` gravado; **chip NÃO entrou** |
+| *"o passeio leva ~2h"*, fato sem campo | **entra como prosa, sem campo novo** | na `nota` do waypoint, junto dos 360 degraus |
+
+✅ **O painel que nunca abre com GPS sem sinal (§P item 4) continua aberto** — é o único item de
+produto que sobrou, e é irmão do §Z2.
+🟡 **E a 3ª FICHA**, quando ele quiser: `docs/questionario-ficha.md` já pergunta **`carroComum`** e
+**`horario`**, além do `secaRapido` e do `custo.curto`.
+
+⚠️ **Antes de criar a 3ª ficha, releia as duas lições do topo — e repare que ela é a primeira que
+pode ter `carroComum: false`.** Nesse dia, o chip do carro passa a fazer sentido, e há um teste
+em `tests/lib/ficha.test.ts` que **cai de propósito** pra cobrar a decisão.
+
+---
+
+## ▶ O QUE ESPERAVA POR ELE ANTES DISSO (histórico da mesma sessão)
 
 **Em ordem de valor, e NENHUMA deve ser construída por conta própria:**
 
@@ -343,6 +369,86 @@ curl -s $H/pedra-furada-de-venturosa | grep -c 'cost-chip'     # 0 — grátis n
 
 ---
 
+## ✅ A QUINTA: o carimbo passou a olhar A HORA (`horario`, fase `fechado`)
+
+Commit `d24e2f8`, no ar, **conferido no navegador de verdade às 21h23 de Recife** — a Pedra Furada
+mostrando **FECHADO AGORA · abre amanhã às 5h**, em vermelho, com o pulso parado.
+
+**O defeito:** o carimbo só olhava chuva. Às 18h com céu limpo a ficha dizia *"Pode ir"* com o
+lugar fechado havia uma hora. Mesma família do `SEM INFORMAÇÕES · tome cuidado` da v3.4.
+
+🔴 **`fechado` GANHA DE TODAS as fases, inclusive de `conferindo`** — com o lugar fechado, ler a
+chuva é responder a pergunta errada. **Ficha SEM horário NUNCA fecha** (a Rampa não tem o dado e
+segue decidindo só pela chuva; há teste só pra isso).
+
+⚠️ **NENHUM SUBSTANTIVO DE LUGAR ENTROU JUNTO.** A tela diz *"Fecha às 17h, abre às 5h"* e não
+*"o portão fecha"* — há prova de fonte proibindo portão/guarita/cancela/entrada no módulo. Depois
+de passar o dia arrancando essa palavra do código, ela quase voltou pela porta da frente.
+
+**A ficha, o cartão, o selo, o PIN do mapa e o agrupamento da folha mudaram JUNTOS.** Separar
+deixaria o pin verde ao lado de um selo dizendo "Fechado agora". E *"Hoje o tempo deixa"* é uma
+afirmação sobre os cartões embaixo: fechado sai do grupo **mesmo com o tempo bom**.
+
+🔴 **DUAS LIÇÕES DE MÉTODO, e as duas são sobre o APLICADOR de mutação:**
+1. **Ele leu 14 SOBREVIVENTES de 14** — procurava linhas `×` e o relatório imprime `FAIL` quando
+   são muitos arquivos. **Passou a decidir pelo CÓDIGO DE SAÍDA.** É a espécie "mutação que nem
+   rodou lê 0 falhas" com a causa deslocada pro LEITOR do relatório.
+2. Uma das 14 **quebrava a sintaxe** — não conta, e foi refeita válida.
+
+⚠️ **E antes de escrever teste nenhum, medi a exposição:** com o horário da Pedra Furada nos dois
+extremos (24h aberto / 24h fechado) a suíte fechava **711/711 nos dois**. Não havia flake latente
+— e também não havia cobertura nenhuma. **Suíte verde depois de um campo novo é aviso, não
+notícia boa.**
+
+---
+
+## ✅ A SEXTA: o piso parou de responder por carro — e a premissa da minha pergunta estava errada
+
+Commit `28901e0`, no ar e conferido. **O filtro de piso saiu da home.**
+
+🔴 **E O ERRO QUE ESTA RODADA REGISTRA É MEU, DE NOVO E DA MESMA ESPÉCIE.** Eu perguntei a ele
+citando *"a Rampa não sobe de carro comum"* — frase do **meu** RESUME. A ficha dela diz o
+contrário: *"Dá pra ir de carro comum — mas só quando não estiver chovendo"*. A ressalva é de
+CHUVA, e quem a diz é o carimbo. **Li a ficha real só depois de ele já ter respondido**, e a
+resposta mudou de forma. **Leia a ficha ANTES de formular a pergunta, não depois.**
+
+**Consequência:** o campo `carroComum` entrou (as duas fichas `true`) e o **CHIP NÃO**. Com as duas
+em "sim", um chip *"só onde carro comum chega"* acenderia, contaria na linha de resumo e não
+mudaria a lista — **o defeito exato pelo qual `barro` já tinha sido excluído dos chips de piso.**
+Decisão dele, com as duas fichas na mão. O chip entra no dia da 1ª ficha `false`.
+
+🔴 **A CONTRAÇÃO, contada nome a nome — e foi ela que pegou o estrago:**
+- **22 removidos, 7 acrescentados** (−15). **Cinco dos 22 são RENOMES**, então **17 apagados de
+  verdade**, e os 17 são do recorte de piso, um a um. `PISOS_FILTRAVEIS` e `ordemPiso` saíram de
+  `piso.ts` junto — o piso parou de ser comparado com piso.
+- 🔴 **A PRIMEIRA TENTATIVA APAGOU 10 TESTES QUE EU NÃO QUERIA** ("a faixa de km", "o que o jsdom
+  não vê"): meus cortes por marcador engoliram blocos vizinhos. **A suíte fechou VERDE** — teste
+  apagado não falha. **Só a contagem nome a nome achou.** Arquivo restaurado do HEAD e cortado de
+  novo com âncoras exatas e aborto alto. **Nunca aceite o número da suíte como prova de contração.**
+
+⚠️ **O `pisoMinimo` guardado no celular dele virou fantasma, e é o mais perigoso já deferido:** os
+outros três (`esforco`, `duracaoMax`, `extensaoMaxKm`) só mentiam no contador; **este esconderia as
+DUAS fichas**, sem chip pra desligar e sem botão de limpar. Há teste do contador **e** da ficha
+continuar passando.
+
+🆕 **Um guarda novo, nascido de uma mutação SOBREVIVENTE:** acrescentar ao painel um chip que não
+recorta passava verde. Agora **todo grupo do painel tem que corresponder a um campo de `Filtros`**,
+e cada chip tem que escrever num campo que existe.
+
+```bash
+H=https://bateperna.vercel.app
+curl -s $H/pedra-furada-de-venturosa | grep -o 'O passeio leva umas 2h[^<]*'   # a prosa nova
+CH=$(curl -s $H/ | grep -o '/_next/static/chunks/[^"]*\.js' | sort -u)
+for c in $CH; do curl -s "$H$c"; done > /tmp/t.js
+grep -c 'pisoMinimo' /tmp/t.js; grep -c 'ordemPiso' /tmp/t.js; grep -c 'asfalto' /tmp/t.js  # 0 0 0
+grep -c 'FILTRAR' /tmp/t.js; grep -c 'ratis' /tmp/t.js; grep -c 'Custo' /tmp/t.js           # 1 1 1
+```
+
+⚠️ **`ratis`, `que d`, sem acento** — a metade "vivo" deu **0 com acento** e por um momento pareceu
+deploy que não subiu. A lição do acento cobrou de novo, na mesma sessão em que foi escrita.
+
+---
+
 ⚠️ **Repare que `segura` NÃO é discriminador nesta rodada** — a frase não morreu, ela **mudou de
 endereço**, e `piso.ts` entra no mesmo bundle do cliente. Quem separa as versões é a prova de fonte
 no `vitest`, não o `grep`. **Um marcador que dá o mesmo número nas duas versões não prova nada.**
@@ -415,10 +521,11 @@ repo ele apaga o ledger de scratch e o próprio `.claude/`.
 ```
 git branch --show-current  → main
 git status --short         → limpo
-npm test                   → 711/711 em 49 arquivos   ← tudo verde, NÃO há falha esperada
-                             (era 668; a 2ª ficha não mudou o total — 9 caíram e foram
-                              consertados. O `secaRapido` de 26/08 somou 11; e as quatro
-                              rodadas de 27/08 somaram 13 + 8 + 11 = 43.)
+npm test                   → 739/739 em 50 arquivos   ← tudo verde, NÃO há falha esperada
+                             (era 668; a 2ª ficha não mudou o total. `secaRapido` +11;
+                              e as SEIS rodadas de 27/08: +13, +8, +11, +36 do horário,
+                              e a do filtro FECHOU 15 — 22 removidos contra 7
+                              acrescentados, contados nome a nome; +3 do carroComum.)
 npx tsc --noEmit           → limpo
 npm run build              → passa
 ```
