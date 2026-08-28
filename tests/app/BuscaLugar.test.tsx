@@ -37,6 +37,65 @@ describe("a pílula", () => {
     expect(await screen.findByRole("button", { name: /escolher onde estou/ })).toBeTruthy();
   });
 
+  // 🔴 O BECO QUE ESTE BLOCO FECHA (2026-08-27), e ele estava EM PRODUÇÃO.
+  //
+  // Com `code 2` (sem sinal) ou `code 3` (prazo estourado) o app não gravava
+  // nada: o estado ficava `nunca`, `soGps` seguia `true`, e cada toque na
+  // pílula repedia o GPS — que falhava de novo. **O painel de digitar cidade
+  // NUNCA abria, e o botão "daqui" mora dentro dele.** Quem estivesse sem sinal
+  // ficava sem NENHUM caminho pra dizer onde está.
+  //
+  // Os dois testes são um par e nenhum sozinho prova o conserto: o primeiro é a
+  // saída (o painel abre), o segundo é o preço que NÃO se pagou (quem nunca
+  // pediu continua com o GPS num toque só).
+  describe("o beco do GPS sem sinal", () => {
+    const gpsQueFalha = (code: number) => {
+      const pediu = vi.fn((_ok: unknown, erro: (e: unknown) => void) => erro({ code }));
+      vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: pediu } });
+      return pediu;
+    };
+
+    it.each([2, 3])("depois de um erro code %i, o toque ABRE o painel de cidade", async (code) => {
+      const pediu = gpsQueFalha(code);
+      comLocalVivo();
+      // O `<LocalVivo>` já pede sozinho na montagem (Task 1), e é essa
+      // tentativa que falha — não é preciso tocar em nada pra cair no beco.
+      await act(async () => {});
+      expect(pediu).toHaveBeenCalled();
+      const pilula = await screen.findByRole("button", { name: /escolher onde estou/ });
+      await act(async () => { pilula.click(); });
+      // A saída: o campo de cidade na tela, e o caminho de volta pro GPS junto.
+      expect(screen.getByRole("textbox")).toBeTruthy();
+      expect(screen.getByRole("button", { name: /^daqui$/i })).toBeTruthy();
+    });
+
+    // 🔴 O PREÇO QUE NÃO SE PAGOU, e sem este caso o conserto poderia ser
+    // "a pílula sempre abre o painel" — que fecharia o beco e cobraria DOIS
+    // toques de quem só queria o GPS. O par é o que separa as duas versões.
+    it("sem falha nenhuma, o toque continua PEDINDO o GPS num toque só", async () => {
+      const pediu = vi.fn(); // nunca responde: nem sucesso, nem erro
+      vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition: pediu } });
+      comLocalVivo();
+      await act(async () => {});
+      const pilula = await screen.findByRole("button", { name: /Ver daqui/ });
+      const antes = pediu.mock.calls.length;
+      await act(async () => { pilula.click(); });
+      expect(pediu.mock.calls.length).toBe(antes + 1);
+      expect(screen.queryByRole("textbox"), "o painel abriu quando devia ter pedido o GPS").toBeNull();
+    });
+
+    // A falha é de SESSÃO e não pode virar cicatriz no aparelho: recarregar
+    // tem que voltar a oferecer o GPS. Se `falhou` fosse persistido, um prédio
+    // sem sinal rebaixaria o app pra sempre — o §Z2 com outra causa.
+    it("a falha não sobrevive ao aparelho: nada é gravado", async () => {
+      gpsQueFalha(2);
+      comLocalVivo();
+      await act(async () => {});
+      await screen.findByRole("button", { name: /escolher onde estou/ });
+      expect(localStorage.getItem(CHAVE_GPS)).toBeNull();
+    });
+  });
+
   it("com lugar escolhido, diz o nome dele", async () => {
     localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
       tipo: "escolhido", coord: { lat: -8.2, lng: -35.56 },

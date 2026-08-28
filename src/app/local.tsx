@@ -91,7 +91,16 @@ export default function LocalVivo({ children }: { children: ReactNode }) {
       // abertura. A localização que já existia NÃO é apagada; trocá-la por
       // "não sei" tiraria da tela um km que estava certo.
       (err) => {
-        if (err.code !== 1 /* PERMISSION_DENIED */) return;
+        // 🔴 `code 2`/`code 3` deixavam de gravar QUALQUER coisa até
+        // 2026-08-27, e o estado ficava `nunca`: o `soGps` do `BuscaLugar`
+        // seguia `true` pra sempre, cada toque na pílula repedia o GPS, e o
+        // painel de digitar cidade NUNCA abria. Agora eles marcam `falhou`, que
+        // é de SESSÃO e não vai pro `localStorage` — persistir rebaixaria o app
+        // pra sempre por causa de um prédio sem sinal.
+        if (err.code !== 1 /* PERMISSION_DENIED */) {
+          setGps((atual) => (atual === "negado" ? atual : "falhou"));
+          return;
+        }
         setGps("negado");
         try {
           localStorage.setItem(CHAVE_GPS, "negado");
@@ -137,11 +146,23 @@ export default function LocalVivo({ children }: { children: ReactNode }) {
         .query({ name: "geolocation" as PermissionName })
         .then((p) => p.state as PermissaoGps)
         .catch(() => null);
-      const efetivo = estadoGpsEfetivo(lembranca, permissao);
-      setGps(efetivo);
+      // 🔴 O ESTADO ATUAL, e não a `lembranca` lida na montagem. Esta resposta
+      // é ASSÍNCRONA: o pedido de posição sai antes dela e pode falhar antes
+      // dela chegar. Com a lembrança congelada, um `granted` que chegasse
+      // depois de um `code 2` devolveria o estado pra `nunca` e trancaria o
+      // beco de novo, milissegundos depois de ele abrir. A ordem das linhas de
+      // `estadoGpsEfetivo` é quem decide quem vence.
+      setGps((atual) => estadoGpsEfetivo(atual, permissao));
+      // 🔴 A GRAVAÇÃO OLHA A PERMISSÃO, não o estado calculado, e as duas
+      // coisas deixaram de ser a mesma quando `falhou` entrou. O que se
+      // persiste é a resposta do NAVEGADOR: `denied` grava, qualquer outra
+      // resposta APAGA a chave velha (é o conserto do §Z2 — lembrança que o
+      // navegador desmente não pode voltar a mandar), e sem API não se mexe em
+      // nada. Ler o estado calculado aqui exigiria uma atribuição dentro do
+      // `setGps`, que o StrictMode roda duas vezes.
       try {
-        if (efetivo === "negado") localStorage.setItem(CHAVE_GPS, "negado");
-        else localStorage.removeItem(CHAVE_GPS);
+        if (permissao === "denied") localStorage.setItem(CHAVE_GPS, "negado");
+        else if (permissao !== null) localStorage.removeItem(CHAVE_GPS);
       } catch { /* aba anônima: vale nesta sessão e pronto */ }
     })();
     if (guardado.tipo !== "nao-sei") setLocal(guardado);

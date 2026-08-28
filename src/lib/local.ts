@@ -15,10 +15,22 @@ export type Local =
   | { tipo: "gps"; coord: Coord; em: number }
   | { tipo: "escolhido"; coord: Coord; em: number; nome: string; regiao: string };
 
-/** Se o navegador já negou o GPS uma vez. Não é um `Local`: é sobre a
- *  PERMISSÃO, não sobre a posição — dá pra ter posição escolhida na mão e o
- *  GPS negado ao mesmo tempo. */
-export type EstadoGps = "nunca" | "negado";
+/** Em que pé está o GPS. Não é um `Local`: é sobre a PERMISSÃO e a TENTATIVA,
+ *  não sobre a posição — dá pra ter posição escolhida na mão e o GPS negado ao
+ *  mesmo tempo.
+ *
+ *  🔴 `falhou` entrou em 2026-08-27 e fechou um beco que estava em produção:
+ *  com `code 2` (sem sinal) ou `code 3` (estourou o prazo) **nada era gravado**,
+ *  o estado ficava `nunca`, e o `soGps` do `BuscaLugar` continuava `true` pra
+ *  sempre. Cada toque na pílula repedia o GPS, que falhava de novo: **o painel
+ *  de digitar cidade nunca abria, e o botão "daqui" mora dentro dele.** Quem
+ *  estivesse sem sinal ficava sem NENHUM caminho pra dizer onde está.
+ *
+ *  ⚠️ `falhou` é DE SESSÃO, e isso é a metade que importa: ele NUNCA vai pro
+ *  `localStorage`. Gravá-lo rebaixaria o app pra sempre por causa de um prédio
+ *  sem sinal — é a mesma razão pela qual o callback de erro só persiste o
+ *  `code 1`. `lerEstadoGps` não tem como devolvê-lo. */
+export type EstadoGps = "nunca" | "negado" | "falhou";
 
 /** `localStorage` é do domínio inteiro. Prefixo pra não colidir com nada. */
 export const CHAVE_LOCAL = "bp.local";
@@ -93,10 +105,20 @@ export type PermissaoGps = "granted" | "denied" | "prompt" | null;
  *  antes desta correção, senão o conserto vira regressão em quem não tem a API.
  *
  *  Puro de propósito, como o resto deste arquivo: quem chama o navegador é o
- *  `src/app/local.tsx`. */
+ *  `src/app/local.tsx`.
+ *
+ *  🔴 E A ORDEM DAS QUATRO LINHAS É A REGRA, não arrumação (2026-08-27):
+ *  `denied` vence tudo (é o navegador dizendo não, e é o mais forte que existe);
+ *  depois disso, uma falha DESTA SESSÃO vence `granted`/`prompt`/sem-API —
+ *  senão a resposta da permissão, que chega ASSÍNCRONA, devolveria o estado pra
+ *  `nunca` e trancaria o beco de novo alguns milissegundos depois de ele abrir.
+ *  Por isso quem chama passa o estado ATUAL como `lembranca`, e não o que leu
+ *  do armazenamento na montagem. */
 export function estadoGpsEfetivo(lembranca: EstadoGps, permissao: PermissaoGps): EstadoGps {
+  if (permissao === "denied") return "negado";
+  if (lembranca === "falhou") return "falhou";
   if (permissao === null) return lembranca;
-  return permissao === "denied" ? "negado" : "nunca";
+  return "nunca";
 }
 
 export function coordDe(l: Local): Coord | null {
@@ -145,5 +167,11 @@ export function rotuloPilula(l: Local, gps: EstadoGps): string {
   // Negado uma vez, o navegador não pergunta de novo: continuar oferecendo
   // "Ver daqui" seria um botão que não faz nada. O app não insiste e não pede
   // desculpa — só troca o caminho.
-  return gps === "negado" ? "escolher onde estou" : "Ver daqui";
+  //
+  // 🔴 `falhou` diz a MESMA coisa, por outro motivo, e o rótulo tem que
+  // acompanhar: depois de uma tentativa que não respondeu, o toque passa a
+  // ABRIR O PAINEL em vez de repedir o GPS (ver `soGps` em `BuscaLugar`).
+  // Continuar dizendo "Ver daqui" seria a palavra mentindo sobre o que o dedo
+  // vai fazer — e é justamente esse beco que esta rodada fechou.
+  return gps === "nunca" ? "Ver daqui" : "escolher onde estou";
 }

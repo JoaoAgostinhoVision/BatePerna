@@ -199,9 +199,13 @@ describe("o GPS", () => {
       erro({ code: 2, message: "" } as GeolocationPositionError),
     );
     render(<LocalVivo><Espia /></LocalVivo>);
-    expect(await screen.findByText("escolhido|nunca")).toBeTruthy();
+    // 🔴 `falhou`, e não `nunca`, desde 2026-08-27: `code 2` passou a marcar a
+    // sessão. O que este teste prova continua sendo o outro lado — a CIDADE
+    // não é apagada por um GPS que não respondeu; trocá-la por "não sei"
+    // tiraria da tela um km que estava certo.
+    expect(await screen.findByText("escolhido|falhou")).toBeTruthy();
     await act(async () => {});
-    expect(screen.getByTestId("espia").textContent).toBe("escolhido|nunca");
+    expect(screen.getByTestId("espia").textContent).toBe("escolhido|falhou");
     expect(JSON.parse(localStorage.getItem(CHAVE_LOCAL)!).nome).toBe("Gravatá");
   });
 
@@ -330,7 +334,16 @@ describe("o GPS", () => {
     expect(localStorage.getItem(CHAVE_GPS)).toBe("negado");
   });
 
-  it("erro code 2 (posição indisponível) NÃO grava nada", async () => {
+  // 🔴 O DEFEITO QUE ESTES DOIS TESTES TRANCAM (2026-08-27). Até hoje eles
+  // exigiam que `code 2`/`code 3` não mudassem NADA — e era esse "nada" que
+  // criava o beco: o estado ficava `nunca`, `soGps` seguia `true`, cada toque
+  // na pílula repedia o GPS, e o painel de digitar cidade nunca abria. Quem
+  // estivesse sem sinal ficava sem caminho nenhum pra dizer onde está.
+  //
+  // O contrato agora tem DUAS metades, e as duas importam: marca `falhou` NA
+  // SESSÃO (que é o que abre o painel) e continua sem gravar no APARELHO
+  // (persistir rebaixaria o app pra sempre por causa de um prédio sem sinal).
+  it("erro code 2 (sem sinal) marca 'falhou' na sessão, e não grava no aparelho", async () => {
     aparelhoComGps((_ok, erro) => erro({ code: 2 } as GeolocationPositionError));
     function Botao() {
       const { pedirGps } = useMexerLocal();
@@ -338,11 +351,11 @@ describe("o GPS", () => {
     }
     render(<LocalVivo><Espia /><Botao /></LocalVivo>);
     await act(async () => { screen.getByText("pedir").click(); });
-    expect(screen.getByTestId("espia").textContent).toBe("nao-sei|nunca");
+    expect(screen.getByTestId("espia").textContent).toBe("nao-sei|falhou");
     expect(localStorage.getItem(CHAVE_GPS)).toBeNull();
   });
 
-  it("erro code 3 (timeout) NÃO grava nada", async () => {
+  it("erro code 3 (prazo estourado) marca 'falhou' na sessão, e não grava no aparelho", async () => {
     aparelhoComGps((_ok, erro) => erro({ code: 3 } as GeolocationPositionError));
     function Botao() {
       const { pedirGps } = useMexerLocal();
@@ -350,7 +363,7 @@ describe("o GPS", () => {
     }
     render(<LocalVivo><Espia /><Botao /></LocalVivo>);
     await act(async () => { screen.getByText("pedir").click(); });
-    expect(screen.getByTestId("espia").textContent).toBe("nao-sei|nunca");
+    expect(screen.getByTestId("espia").textContent).toBe("nao-sei|falhou");
     expect(localStorage.getItem(CHAVE_GPS)).toBeNull();
   });
 
@@ -481,6 +494,50 @@ describe("a permissão do navegador vence a lembrança guardada", () => {
     aparelhoComPermissao("erro");
     render(<LocalVivo><Espia /></LocalVivo>);
     expect(await screen.findByText("nao-sei|negado")).toBeTruthy();
+    expect(localStorage.getItem(CHAVE_GPS)).toBe("negado");
+  });
+
+  // 🔴 A CORRIDA, e ela nasceu de uma mutação SOBREVIVENTE (2026-08-27): voltar
+  // o efeito a usar a `lembranca` CONGELADA da montagem passava a suíte inteira
+  // verde. Em produção não passa — a `permissions.query` é assíncrona e o
+  // pedido de posição sai ANTES dela:
+  //
+  //   1. monta, pede posição, dispara a pergunta da permissão;
+  //   2. o GPS falha por `code 2` → estado vira `falhou`, o painel destranca;
+  //   3. a permissão responde `granted` → com a lembrança congelada (`nunca`),
+  //      `estadoGpsEfetivo("nunca", "granted")` devolve `nunca` e TRANCA O BECO
+  //      DE NOVO, milissegundos depois de ele abrir.
+  //
+  // O aparelho aqui embaixo é montado à mão, e não pelo `aparelhoComPermissao`,
+  // porque este caso precisa das duas coisas na MESMA montagem: um GPS que
+  // falha na hora e uma permissão que responde depois.
+  it("GPS falha e a permissão responde 'granted' DEPOIS: a falha desta sessão vence", async () => {
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      geolocation: {
+        getCurrentPosition: vi.fn((_ok: unknown, erro: (e: unknown) => void) => erro({ code: 2 })),
+      },
+      permissions: { query: vi.fn(() => Promise.resolve({ state: "granted" } as PermissionStatus)) },
+    });
+    render(<LocalVivo><Espia /></LocalVivo>);
+    // Espera a promessa da permissão resolver — é ela que atropelaria.
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    expect(screen.getByTestId("espia").textContent).toBe("nao-sei|falhou");
+  });
+
+  // O outro lado, e ele não é redundante: se `falhou` vencesse SEMPRE, o app
+  // deixaria de reconhecer uma negação de verdade que chega depois.
+  it("GPS falha e a permissão responde 'denied' depois: negado vence", async () => {
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      geolocation: {
+        getCurrentPosition: vi.fn((_ok: unknown, erro: (e: unknown) => void) => erro({ code: 2 })),
+      },
+      permissions: { query: vi.fn(() => Promise.resolve({ state: "denied" } as PermissionStatus)) },
+    });
+    render(<LocalVivo><Espia /></LocalVivo>);
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    expect(screen.getByTestId("espia").textContent).toBe("nao-sei|negado");
     expect(localStorage.getItem(CHAVE_GPS)).toBe("negado");
   });
 

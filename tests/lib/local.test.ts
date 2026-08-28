@@ -114,6 +114,14 @@ describe("rotuloPilula: a pílula é o único lugar de onde a localização se m
     expect(rotuloPilula(NAO_SEI, "negado")).toBe("escolher onde estou");
   });
 
+  // 🔴 A PALAVRA TEM QUE DIZER O QUE O DEDO VAI FAZER. Com `falhou`, o toque
+  // passa a ABRIR O PAINEL em vez de repedir o GPS (ver `soGps` no
+  // `BuscaLugar`): continuar dizendo "Ver daqui" seria o rótulo mentindo sobre
+  // a ação — e o beco de 2026-08-27 era exatamente um botão que não fazia nada.
+  it("falhou nesta sessão: troca de caminho, como o negado", () => {
+    expect(rotuloPilula(NAO_SEI, "falhou")).toBe("escolher onde estou");
+  });
+
   // O GPS não devolve nome de cidade. Inventar um seria inventar geografia.
   it("gps: diz 'daqui', sem nome de lugar", () => {
     expect(rotuloPilula(GPS, "nunca")).toBe("daqui · trocar");
@@ -139,6 +147,15 @@ describe("lerEstadoGps", () => {
   });
   it("'negado' se mantém", () => {
     expect(lerEstadoGps("negado")).toBe("negado");
+  });
+
+  // 🔴 A METADE QUE IMPEDE O REMÉDIO DE VIRAR O PRÓXIMO DEFEITO. `falhou` é de
+  // SESSÃO: se ele chegasse ao `localStorage`, um prédio sem sinal rebaixaria o
+  // app PRA SEMPRE — exatamente o que o `bp.gps = "negado"` eterno do §Z2 fez,
+  // com outra causa. Esta é a porta de entrada do que está guardado, e ela não
+  // tem como devolver `falhou`.
+  it("'falhou' NÃO entra pelo armazenamento — é de sessão, e só", () => {
+    expect(lerEstadoGps("falhou")).toBe("nunca");
   });
 });
 
@@ -274,5 +291,25 @@ describe("estadoGpsEfetivo: quem manda é o navegador, não a lembrança", () =>
   it("sem a API de permissão, a lembrança continua mandando", () => {
     expect(estadoGpsEfetivo("negado", null)).toBe("negado");
     expect(estadoGpsEfetivo("nunca", null)).toBe("nunca");
+  });
+
+  // 🔴 O ESTADO `falhou` E A CORRIDA QUE ELE TEM QUE GANHAR (2026-08-27). A
+  // resposta da permissão chega ASSÍNCRONA, e o pedido de posição sai antes
+  // dela: um `granted` chegando depois de um `code 2` devolveria o estado pra
+  // `nunca` e trancaria o beco de novo, milissegundos depois de ele abrir.
+  //
+  // Os três casos abaixo SÃO a ordem das linhas da função, e cada um morde uma
+  // troca de lugar diferente entre elas.
+  it("uma falha DESTA SESSÃO sobrevive ao 'granted' que chega depois", () => {
+    expect(estadoGpsEfetivo("falhou", "granted")).toBe("falhou");
+    expect(estadoGpsEfetivo("falhou", "prompt")).toBe("falhou");
+  });
+
+  it("mas 'denied' vence até a falha — é o navegador dizendo não", () => {
+    expect(estadoGpsEfetivo("falhou", "denied")).toBe("negado");
+  });
+
+  it("sem a API, a falha da sessão também continua valendo", () => {
+    expect(estadoGpsEfetivo("falhou", null)).toBe("falhou");
   });
 });
