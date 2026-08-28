@@ -295,6 +295,54 @@ describe("custo.curto — o chip é da FICHA, não do app", () => {
   });
 });
 
+// 🔴 O campo que nasceu de um PROXY que errava (2026-08-27). O filtro de piso
+// era usado como "meu carro chega lá?" — e as duas fichas reais são `barro` com
+// carro comum chegando nas duas, então quem pedia piso melhor perdia as duas
+// com o carro que tinha. O recorte saiu da tela; o fato virou campo.
+describe("carroComum — a pergunta que o piso respondia errado", () => {
+  const base = JSON.parse(readFileSync(
+    path.join(process.cwd(), "content", "fichas", "rampa-do-pepe.json"), "utf8"));
+
+  it("ficha SEM o campo valida — é opcional, e ausente é SILÊNCIO", () => {
+    const { carroComum: _c, ...sem } = base;
+    expect(() => fichaSchema.parse(sem)).not.toThrow();
+    expect(fichaSchema.parse(sem).carroComum).toBeUndefined();
+  });
+
+  it("carroComum que não é booleano não valida", () => {
+    expect(() => fichaSchema.parse({ ...base, carroComum: "sim" })).toThrow();
+  });
+
+  // 🔴 ESTE É O TESTE QUE REGISTRA O ERRO DE PREMISSA. Antes de escrever o
+  // campo eu ia gravar `false` na Rampa, porque o `RESUME` dizia "a Rampa não
+  // sobe de carro comum". A ficha DELA diz o contrário: *"Dá pra ir de carro
+  // comum — mas só quando não estiver chovendo"*. A ressalva é de CHUVA, e
+  // quem a diz é o carimbo; o campo responde só "o carro chega?".
+  //
+  // Se um dia alguém achar que a Rampa é `false`, é este teste que discorda —
+  // e a asserção do `acesso` é o porquê, no mesmo lugar.
+  it("as DUAS fichas reais dizem que carro comum chega — a ressalva é de chuva, não de veículo", () => {
+    for (const slug of ["rampa-do-pepe", "pedra-furada-de-venturosa"]) {
+      const f = getFicha(slug)!;
+      expect(f.carroComum, `${slug} perdeu o campo`).toBe(true);
+      expect(
+        f.acesso.toLowerCase(),
+        `o acesso de ${slug} deixou de sustentar o carroComum — releia antes de mexer no campo`,
+      ).toContain("carro comum");
+    }
+  });
+
+  // ⚠️ A consequência que ELE aceitou de olhos abertos: com as duas em `true`,
+  // um chip "só onde carro comum chega" acenderia e não mudaria a lista — o
+  // defeito do `barro`. Por isso o campo existe e o chip NÃO. Este teste cai no
+  // dia em que entrar uma ficha `false`, que é exatamente o dia de rever a
+  // decisão — é um lembrete com data, não uma trava.
+  it("enquanto TODAS forem true, não há chip pra ter — o recorte não recortaria", () => {
+    const todas = ["rampa-do-pepe", "pedra-furada-de-venturosa"].map((s) => getFicha(s)!);
+    expect(todas.every((f) => f.carroComum !== false)).toBe(true);
+  });
+});
+
 describe("loadAll: slug repetido não pode divergir entre telas", () => {
   it("dois JSONs com o mesmo slug estouram, citando o slug e os dois arquivos", () => {
     const dir = dirSintetico({

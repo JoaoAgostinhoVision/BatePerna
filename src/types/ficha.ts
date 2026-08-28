@@ -79,6 +79,20 @@ export const fichaSchema = z.object({
   // deste campo. Apagado na contração de 2026-08-23 (Task 7): sem o campo, não
   // sobra recorte de "tamanho da trilha" nem tela que o mostre.
   piso: z.enum(PISOS).optional(),
+  // Carro comum chega até aqui?
+  //
+  // 🔴 Ele existe porque o `piso` estava sendo usado como PROXY disso, e errava
+  // contra a pessoa (2026-08-27). As duas fichas reais são `barro` e têm
+  // exigências OPOSTAS: a Rampa do Pepê não sobe de carro comum; na Pedra
+  // Furada carro comum passa sempre — *"chão batido é barro com areia"*. Mesmo
+  // material, respostas contrárias: o material nunca ia responder isso.
+  //
+  // Booleano, e não escala de veículo: o que ele disse sobre cada lugar foi
+  // sim/não. Uma escala ("carro alto", "4x4") seria fato inventado.
+  //
+  // Opcional pela REGRA DE HONESTIDADE 2: ficha sem o campo NUNCA é escondida
+  // pelo filtro. `false` é uma AFIRMAÇÃO ("não chega"); ausente é silêncio.
+  carroComum: z.boolean().optional(),
   // A meia-frase que explica POR QUE o chão firma neste lugar — o tempero da
   // linha verde do carimbo, logo depois de "sem chuva nas últimas ~Xh".
   //

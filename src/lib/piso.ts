@@ -29,24 +29,18 @@
  *  webpack do Next recusa). `src/types/ficha.ts` monta o `z.enum` A PARTIR de `PISOS` — nunca
  *  o contrário — pra este arquivo continuar sem zod. */
 
-/** A ORDEM do array É A ESCALA, do pior pro melhor. É a única coisa que dá
- *  sentido a `ordemPiso`: não reordene sem entender que está reordenando a
- *  escala inteira, e não insira um piso novo no meio sem decidir onde ele
- *  entra nessa ordem. */
+/** A ORDEM do array é do pior pro melhor, e ela continua valendo como leitura
+ *  humana da lista — o questionário oferece as quatro palavras nesta ordem.
+ *
+ *  🔴 ATÉ 2026-08-27 ELA ERA UMA ESCALA COMPARÁVEL: existiam `ordemPiso` e
+ *  `PISOS_FILTRAVEIS`, e o filtro da home recortava "no mínimo daqui pra cima".
+ *  Os dois saíram junto com aquele recorte — ele respondia a pergunta errada
+ *  ("meu carro chega?") por um proxy que errava. Hoje o piso é FATO EXIBIDO
+ *  (cartão e ficha) e vocabulário do questionário, e nada compara dois pisos.
+ *  Se um dia voltar a comparar, a ordem está aqui pronta. */
 export const PISOS = ["barro", "paralelepipedo", "asfalto-esburacado", "asfalto-tapete"] as const;
 
 export type Piso = (typeof PISOS)[number];
-
-/** DERIVADO de `PISOS` — nunca uma segunda lista escrita à mão (ver o
- *  comentário em `PISOS`). `barro` é o PIOR piso da escala; com o filtro lido
- *  como "no mínimo daqui pra cima", incluir `barro` nas opções filtráveis
- *  não esconderia nenhuma ficha — um filtro aceso que não filtra é o defeito
- *  que esta task existe pra evitar. */
-export const PISOS_FILTRAVEIS = PISOS.slice(1);
-
-export function ordemPiso(p: Piso): number {
-  return PISOS.indexOf(p);
-}
 
 /** "asfalto-esburacado" → "asfalto esburacado". Só o hífen vira espaço; o
  *  resto do texto que aparece na tela decide o resto (maiúscula, ícone etc). */

@@ -1,57 +1,29 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { chuvaNoPiso, ordemPiso, PISOS, PISOS_FILTRAVEIS, rotuloPiso } from "@/lib/piso";
+import { chuvaNoPiso, PISOS, rotuloPiso } from "@/lib/piso";
 
-describe("PISOS: a ordem é a escala", () => {
-  // A escala existe pra ser comparada; sem isto, ordemPiso é decoração.
-  it("a ordem vai do pior pro melhor: barro < paralelepipedo < esburacado < tapete", () => {
-    expect(ordemPiso("barro")).toBeLessThan(ordemPiso("paralelepipedo"));
-    expect(ordemPiso("paralelepipedo")).toBeLessThan(ordemPiso("asfalto-esburacado"));
-    expect(ordemPiso("asfalto-esburacado")).toBeLessThan(ordemPiso("asfalto-tapete"));
-  });
-
-  // Este é o CINTO, e ele cobre uma coisa diferente do teste de fonte abaixo:
-  // ele morde quando `PISOS_FILTRAVEIS` DIVERGE de `PISOS` — por exemplo,
-  // quando alguém acrescenta um quinto piso a `PISOS` e a lista de baixo não
-  // acompanha. Medido: com um 5º piso em `PISOS` e `PISOS_FILTRAVEIS` copiado
-  // à mão com 3 nomes, é este teste que cai.
+describe("PISOS: o vocabulário do piso", () => {
+  // 🔴 A CONTRAÇÃO DE 2026-08-27. Este describe tinha mais três testes, e os
+  // três morreram junto com o que provavam: `ordemPiso` ("a ordem vai do pior
+  // pro melhor") e `PISOS_FILTRAVEIS` (o conteúdo, e a prova de FONTE de que
+  // era derivado). Os dois símbolos existiam pro filtro "piso, no mínimo", que
+  // saiu da tela — o piso parou de ser comparado com piso.
   //
-  // O que ele NÃO pega, também medido: `PISOS_FILTRAVEIS` virando uma lista
-  // literal com exatamente os mesmos 3 nomes — a suíte fecha verde. Por isso
-  // existe o teste de fonte logo abaixo; um não substitui o outro.
-  it("PISOS_FILTRAVEIS tem o mesmo conteúdo de PISOS sem o primeiro", () => {
-    expect(PISOS_FILTRAVEIS).toEqual(PISOS.slice(1));
-    expect(PISOS_FILTRAVEIS.length).toBe(PISOS.length - 1);
-    expect(PISOS_FILTRAVEIS).not.toContain(PISOS[0]);
-  });
-
-  // 🔴 A prova de que é DERIVADO só existe na FONTE. Em runtime, uma lista
-  // derivada e uma lista copiada à mão com o mesmo conteúdo são o MESMO VALOR:
-  // nenhuma asserção sobre o valor distingue as duas, e foi medido — trocando
-  // `PISOS.slice(1)` por `["paralelepipedo", "asfalto-esburacado",
-  // "asfalto-tapete"] as const`, tests/lib/piso.test.ts fechava verde.
-  //
-  // Mesma família dos testes de `"use client"` (tests/app/MapaHome.test.tsx) e
-  // do "a ficha não tem GPS próprio" (tests/app/DistanciaDaqui.test.tsx): o
-  // que precisa morrer é uma FORMA de escrever, e forma só se vê lendo o
-  // arquivo.
-  it("PISOS_FILTRAVEIS é derivado de PISOS na fonte, não uma segunda lista", () => {
-    const fonte = readFileSync(path.join(process.cwd(), "src", "lib", "piso.ts"), "utf8");
-    expect(fonte).toMatch(/PISOS_FILTRAVEIS\s*=\s*PISOS\.slice\(/);
-  });
-
+  // Não foram "movidos" nem "adaptados": provavam uma ESCALA que o app não tem
+  // mais. Mantê-los seria travar código morto, que é o teste que passa verde
+  // sem proteger nada. A ordem do array segue documentada em `piso.ts` pra
+  // quando voltar a importar.
   it("rotuloPiso troca o hífen por espaço: asfalto-esburacado → 'asfalto esburacado'", () => {
     expect(rotuloPiso("asfalto-esburacado")).toBe("asfalto esburacado");
     expect(rotuloPiso("barro")).toBe("barro");
   });
+
+  // O vocabulário em si continua sendo contrato: é ele que o `z.enum` aceita e
+  // o questionário oferece. Quatro palavras, nesta ordem.
+  it("as quatro palavras, na ordem em que o questionário as oferece", () => {
+    expect([...PISOS]).toEqual(["barro", "paralelepipedo", "asfalto-esburacado", "asfalto-tapete"]);
+  });
 });
 
-// 🔴 O DEFEITO QUE ESTES TESTES TRANCAM (2026-08-27). "O barro segura água —
-// risco de atolar" vivia FIXA no `Carimbo.tsx`, e o carimbo serve o acervo
-// inteiro: bastava entrar uma ficha de asfalto pra o app afirmar barro onde não
-// há. É a mentira agendada do `secaRapido` (2026-08-26) na outra ponta da
-// mesma frase — aquela no ramo seco, esta no molhado.
 describe("chuvaNoPiso: o que a chuva faz com o chão é do MATERIAL, não do app", () => {
   it("barro tem a frase do dono do app — 'segura água', a palavra dele", () => {
     expect(chuvaNoPiso("barro")).toBe("O barro segura água — risco de atolar.");

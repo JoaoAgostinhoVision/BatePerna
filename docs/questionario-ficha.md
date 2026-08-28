@@ -367,6 +367,29 @@ entrada", curto: "R$ 5 · portão"`
 
 ---
 
+## O carro — `carroComum`
+
+**Pergunta:** um carro comum chega até lá? (Sim / não. Se a resposta for "sim,
+mas só com o chão seco", ainda é **sim** — a ressalva de chuva quem diz é o carimbo.)
+
+**Por que importa:** é a pergunta que as pessoas fazem de verdade antes de sair.
+🔴 **Ela vivia sendo respondida pelo `piso`, e o piso ERRAVA:** as duas fichas de
+hoje são `barro` e nas duas o carro comum chega — quem filtrasse pedindo piso
+melhor perdia as duas com o carro que tinha. O piso continua na ficha como fato do
+lugar; quem responde por veículo é este campo.
+
+**Sim ou não, e nada de escala:** "carro alto", "4x4", "só moto" seriam categorias
+que ninguém mediu. Se um dia fizerem falta, elas nascem de uma resposta sua, não
+de uma linha de código.
+
+⚠️ **Hoje o campo não filtra nada** — as duas fichas dizem "sim", e um chip que
+acende sem mudar a lista é defeito. Ele passa a filtrar no dia em que chegar uma
+trilha que carro comum não alcança.
+
+**Exemplo (as duas de hoje):** `carroComum: true`
+
+---
+
 ## O horário — `horario`
 
 **Pergunta:** esse lugar tem hora pra abrir e pra fechar? Se tiver, que horas?

@@ -13,7 +13,6 @@ import {
 } from "@/lib/filtros";
 import { getFichasComCondicao } from "@/lib/ficha";
 import { distanciaKm, kmNaTelaDistancia } from "@/lib/geo";
-import { PISOS, PISOS_FILTRAVEIS } from "@/lib/piso";
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 
@@ -53,25 +52,12 @@ describe("sem filtro, tudo passa", () => {
     expect(contarLigados(SEM_FILTRO)).toBe(0);
   });
 
-  // ——— pré-voo 2: o "sem filtro, tudo passa" acima é CEGO pro guarda
-  // `!== null`, porque nenhum filtro está ligado — SEM_FILTRO tem
-  // `pisoMinimo: null`. O `if` do piso é um E de duas sub-cláusulas, e a que
-  // dispara primeiro esconde a outra:
-  //
-  //   `filtros.pisoMinimo !== null && ficha.piso && ...`
-  //
-  // 🔴 Até a Task 8 (2026-08-23) a ficha base (a Rampa) não trazia `piso`, e
-  // apagar o `filtros.pisoMinimo !== null` era salvo pelo curto-circuito
-  // seguinte (`ficha.piso` undefined, passa sem nem chegar no `ordemPiso`).
-  // Com `piso: "barro"` gravado na Rampa, a ficha base TEM o campo agora —
-  // `ficha.piso` é truthy —, então quem seguraria essa mutação sozinho aqui
-  // seria `ordemPiso("barro") < ordemPiso(null)`: `0 < -1` é `false`, e o
-  // guarda continua sem morder, mas por um motivo diferente do que valia antes
-  // desta task. Só uma ficha COM o campo preenchido e NENHUM filtro ligado faz
-  // o guarda `!== null` ser o único a segurar — é o caso que "ficha COM piso
-  // preenchido não some quando o recorte está desligado" (mais abaixo) prova
-  // de propósito. (O irmão deste caso era `extensaoKm`, campo que a Task 7
-  // apagou do modelo — o mesmo apagou o bloco de filtro dele daqui.)
+  // ——— O pré-voo 2 desta rodada escreveu aqui uma nota longa sobre o guarda
+  // `filtros.pisoMinimo !== null` e o curto-circuito que o escondia. Ela saiu
+  // com o recorte, em 2026-08-27. O que sobrevive dela é a régua, e ela vale
+  // pro próximo recorte que chegar: num `E` de duas sub-cláusulas, a que
+  // dispara primeiro ESCONDE a outra — só um caso que passe pela primeira faz
+  // a segunda ser a única a segurar.
 });
 
 describe('"dá hoje"', () => {
@@ -111,11 +97,11 @@ describe('"dá hoje"', () => {
     expect(
       passa({ soGratis: true }, { custo: { tag: "pago", valor: "R$ 5" } }, { confia: false }),
     ).toBe(false);
-    // 🔴 O segundo recorte aqui era `extensaoMaxKm` (a extensão saiu do
-    // modelo nesta rodada, Task 7); o piso ocupa o lugar como o outro recorte
-    // independente do carimbo.
+    // 🔴 O segundo recorte aqui já foi `extensaoMaxKm` (fora do modelo na Task
+    // 7) e depois `pisoMinimo` (fora da tela em 2026-08-27). Hoje o par é o
+    // `distanciaKm`, que é o outro recorte independente do carimbo.
     expect(
-      passa({ pisoMinimo: "asfalto-tapete" }, { piso: "barro" }, { confia: false }),
+      passa({ distanciaKm: 1 }, {}, { confia: false, voce: { lat: 0, lng: 0 } }),
     ).toBe(false);
   });
 });
@@ -256,35 +242,16 @@ describe("custo", () => {
   });
 });
 
-describe("piso da via", () => {
-  // A escala inteira numa pergunta só, porque é ela que dá sentido ao recorte:
-  // "no mínimo daqui pra cima". Com só dois pisos assertados, um `<` trocado
-  // por `<=` passaria batido — e ele esconde justamente o piso PEDIDO, que é a
-  // trilha que a pessoa tinha em mente quando ligou o filtro.
-  it("pisoMinimo 'asfalto-esburacado': esconde barro e paralelepípedo, mostra esburacado e tapete", () => {
-    expect(passa({ pisoMinimo: "asfalto-esburacado" }, { piso: "barro" })).toBe(false);
-    expect(passa({ pisoMinimo: "asfalto-esburacado" }, { piso: "paralelepipedo" })).toBe(false);
-    expect(passa({ pisoMinimo: "asfalto-esburacado" }, { piso: "asfalto-esburacado" })).toBe(true);
-    expect(passa({ pisoMinimo: "asfalto-esburacado" }, { piso: "asfalto-tapete" })).toBe(true);
-  });
-
-  // REGRA DE HONESTIDADE 2. Vale pra ESCALA INTEIRA, inclusive `barro`, que o
-  // `lerFiltros` recusa mas o tipo permite — se um dia ele chegar aqui por
-  // outro caminho, continua não podendo esconder ficha sem o campo.
-  it("ficha SEM piso passa com qualquer pisoMinimo ligado", () => {
-    for (const p of PISOS) expect(passa({ pisoMinimo: p }, { piso: undefined })).toBe(true);
-  });
-
-  // ——— o guarda `filtros.pisoMinimo !== null`, e a prova dele é do `tsc`, não
-  // do vitest: sem o guarda, `ordemPiso(null)` cai em `PISOS.indexOf(null)`,
-  // que devolve -1, e `ordemPiso("barro") < -1` é `false` — a ficha passa do
-  // mesmo jeito (MEDIDO em node). Quem recusa é o `tsc`: `ordemPiso` recebe
-  // `Piso`, não `Piso | null` (lição 13). O caso fica pelo COMPORTAMENTO, que
-  // é o estado normal de quem nunca abriu o painel.
-  it("ficha COM piso preenchido não some quando o recorte está desligado", () => {
-    expect(passa({}, { piso: "barro" })).toBe(true);
-  });
-});
+// 🔴 O describe "piso da via" morreu aqui (2026-08-27), e com ele os TRÊS
+// testes que provavam o recorte "no mínimo daqui pra cima": a escala inteira,
+// a REGRA DE HONESTIDADE 2 aplicada ao piso, e o guarda do recorte desligado.
+// O recorte saiu da tela porque respondia a pergunta errada — quem filtra
+// quer saber se o carro chega, e o piso era um proxy que errava. Sem o
+// recorte, não sobra comportamento pra provar; não há substituto porque o
+// chip do carro NÃO entrou no lugar (as duas fichas respondem "sim", e um chip
+// que não filtra é o defeito que o `barro` já tinha ensinado).
+// A REGRA DE HONESTIDADE 2 continua provada — no bloco do `carroComum` em
+// tests/lib/ficha.test.ts, que é onde o campo mora agora.
 
 // 🔴 O describe "extensão da trilha" morreu aqui (Task 7, 2026-08-23): o
 // campo `extensaoKm` saiu do modelo, `extensaoMaxKm` saiu de `Filtros`, e
@@ -321,10 +288,10 @@ describe("filtros combinados", () => {
   // O objeto é escrito por INTEIRO, sem espalhar `SEM_FILTRO`: espalhando, um
   // campo novo que ninguém ligasse entraria como `null` e o teste continuaria
   // dando 4 sem exercitá-lo. Escrito à mão, o `tsc` cobra o campo novo.
-  it("contarLigados conta os QUATRO campos que sobraram", () => {
+  it("contarLigados conta os TRÊS campos que sobraram", () => {
     expect(contarLigados({
-      distanciaKm: 30, daHoje: true, soGratis: true, pisoMinimo: "asfalto-tapete",
-    })).toBe(4);
+      distanciaKm: 30, daHoje: true, soGratis: true,
+    })).toBe(3);
     expect(contarLigados(SEM_FILTRO)).toBe(0);
   });
 });
@@ -339,12 +306,13 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
   // Um valor fora do conjunto viraria um filtro que esconde tudo pra sempre,
   // e a pessoa não teria como desligar o que não sabe que ligou.
   //
-  // 🔴 `distanciaKm` SAIU deste caso já na rodada passada: sem teto, `999` é um
-  // valor VÁLIDO pra ela (vira filtro inerte, não escondido). E a extensão, que
-  // ainda tinha teto, saiu do modelo NESTA rodada (Task 7) — o único recorte
-  // que sobra com "conjunto fechado" é o piso, um enum de string.
+  // 🔴 NÃO EXISTE MAIS RECORTE DE CONJUNTO FECHADO. `distanciaKm` saiu deste
+  // caso na rodada de 2026-08-23 (sem teto, `999` é VÁLIDO); a extensão saiu do
+  // modelo na Task 7; e o piso — o último enum — saiu da tela em 2026-08-27.
+  // O que sobra são dois booleanos, e "fora do conjunto" pra booleano é
+  // qualquer coisa que não seja `true`.
   it("valor fora do conjunto cai pro padrão daquele recorte", () => {
-    expect(lerFiltros(JSON.stringify({ pisoMinimo: "cascalho" })))
+    expect(lerFiltros(JSON.stringify({ daHoje: "sim", soGratis: 1 })))
       .toEqual(SEM_FILTRO);
   });
   it("preserva o que é válido", () => {
@@ -363,12 +331,11 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
   // contração desta task (Task 7) apagou o campo. O tipo `Filtros` é escrito
   // de propósito, sem espalhar `SEM_FILTRO`, pra o `tsc` cobrar campo novo
   // aqui.
-  it("preserva os QUATRO campos válidos, não só dois", () => {
+  it("preserva os TRÊS campos válidos, não só dois", () => {
     const cheio: Filtros = {
       distanciaKm: 60,
       daHoje: true,
       soGratis: true,
-      pisoMinimo: "asfalto-esburacado",
     };
     expect(lerFiltros(JSON.stringify(cheio))).toEqual(cheio);
   });
@@ -387,7 +354,6 @@ describe("lerFiltros: o que estiver guardado é conferido", () => {
     ["distanciaKm", { distanciaKm: 0 }],
     ["daHoje", { daHoje: "sim" }],
     ["soGratis", { soGratis: "sim" }],
-    ["pisoMinimo", { pisoMinimo: "cascalho" }],
   ])("campo %s fora do conjunto cai pro padrão DELE, sozinho", (_campo, torto) => {
     expect(lerFiltros(JSON.stringify(torto))).toEqual(SEM_FILTRO);
   });
@@ -507,49 +473,21 @@ describe("lerFiltros: os intervalos de km", () => {
   });
 });
 
-describe("lerFiltros: pisoMinimo", () => {
-  it("pisoMinimo 'terra' → null", () => {
-    expect(lerFiltros(JSON.stringify({ pisoMinimo: "terra" })).pisoMinimo).toBe(null);
-  });
-  // 🔴 `barro` é o PIOR piso da escala: aceso, ele não esconde uma ficha
-  // sequer — e o painel não desenha chip de barro, então a linha diria "1
-  // filtro ligado" com a lista idêntica e NENHUM controle na tela capaz de
-  // desligá-lo. Por isso a validação olha `PISOS_FILTRAVEIS`, não `PISOS`.
-  it("pisoMinimo 'barro' → null — é o piso da escala: aceso, contaria como filtro sem chip pra desligar", () => {
-    expect(lerFiltros(JSON.stringify({ pisoMinimo: "barro" })).pisoMinimo).toBe(null);
-  });
-  it("cada piso filtrável sobrevive à releitura, um a um", () => {
-    for (const p of PISOS_FILTRAVEIS) {
-      expect(lerFiltros(JSON.stringify({ pisoMinimo: p })).pisoMinimo).toBe(p);
-    }
-  });
-
-  // 🔴 A prova de FONTE do lado do filtro, terceira da mesma família (as outras
-  // duas estão em tests/lib/ficha.test.ts e tests/app/PainelFiltros.test.tsx).
-  // O teste logo acima ITERA `PISOS_FILTRAVEIS` e por isso é cego ao defeito:
-  // ele confere que cada nome da lista sobrevive, e uma cópia à mão com os
-  // mesmos três nomes o satisfaz igual — foi medido, a suíte inteira fecha verde
-  // com `["paralelepipedo", "asfalto-esburacado", "asfalto-tapete"].some(...)`
-  // aqui. É o mesmo argumento do "derivado na fonte" em tests/lib/piso.test.ts:
-  // em runtime, lista derivada e lista copiada são o MESMO VALOR.
-  //
-  // O que ela protege: no dia em que um piso entrar em `src/lib/piso.ts`, a tela
-  // desenha o chip novo e a validação da releitura tem que aceitá-lo. Com a
-  // cópia à mão, o filtro que a pessoa acabou de tocar volta `null` na abertura
-  // seguinte, sem nada dizendo por quê.
-  //
-  // Dois lados, como as irmãs: importar não obriga a usar, então a segunda
-  // asserção exige que o predicado consulte ELE.
-  it("a validação do piso guardado consulta PISOS_FILTRAVEIS — nenhum piso escrito à mão", () => {
-    const src = readFileSync(path.join(process.cwd(), "src", "lib", "filtros.ts"), "utf8");
-    expect(src, "filtros.ts tem que importar PISOS_FILTRAVEIS de @/lib/piso").toMatch(
-      /import\s*\{[^}]*\bPISOS_FILTRAVEIS\b[^}]*\}\s*from\s*"@\/lib\/piso"/,
-    );
-    expect(src, "o predicado tem que consultar PISOS_FILTRAVEIS").toMatch(
-      /PISOS_FILTRAVEIS\.some\(/,
-    );
-  });
-});
+// 🔴 O describe "lerFiltros: pisoMinimo" morreu aqui (2026-08-27) — QUATRO
+// testes, e vale registrar o que cada um provava, porque nenhum foi movido:
+//   1. piso inválido guardado vira `null`;
+//   2. `barro` guardado vira `null` (aceso, não esconderia nada e não teria
+//      chip pra desligar — a lição que voltou hoje, aplicada ao chip do carro);
+//   3. cada piso filtrável sobrevive à releitura;
+//   4. a PROVA DE FONTE de que a validação consultava `PISOS_FILTRAVEIS`.
+// Os quatro provavam a leitura de um campo que `Filtros` não tem mais.
+// `PISOS_FILTRAVEIS` e `ordemPiso` saíram de `src/lib/piso.ts` na mesma
+// contração — o piso parou de ser comparado com piso.
+//
+// ⚠️ O que NÃO morreu com eles: o `pisoMinimo` guardado no celular DELE agora é
+// um fantasma, e o teste que prova que ele é ignorado está no bloco
+// "filtro fantasma" logo abaixo. Esse é o caso perigoso: ao contrário dos
+// fantasmas de 2026-08-23, este esconde ficha de verdade.
 
 // 🔴 A PROVA DE FONTE DO ARREDONDAMENTO — a quarta desta família no repo, e a
 // que este conserto existe pra instalar.
@@ -690,16 +628,39 @@ describe("lerFiltros: o que já está gravado no celular dele", () => {
 // `limpar filtros` do `FolhaTrilhas` vive dentro do ramo
 // `visiveis.length === 0`, e a lista não fica vazia). Foi exatamente o que
 // ele reclamou no primeiro review do celular.
-describe("lerFiltros: o filtro fantasma da extensão (Task 7)", () => {
+describe("lerFiltros: os filtros fantasmas de todas as contrações", () => {
+  // 🔴 O `pisoMinimo` entrou nesta lista em 2026-08-27 e é O MAIS PERIGOSO DOS
+  // QUATRO. Os outros três (`esforco`, `duracaoMax`, `extensaoMaxKm`) nunca
+  // chegaram a esconder ficha: os campos que eles comparavam não existem mais
+  // em ficha nenhuma, então o dano era o CONTADOR mentindo. O piso não —
+  // `piso: "barro"` está gravado nas DUAS fichas reais, e um `pisoMinimo`
+  // sobrevivente esconderia as duas de vez, sem chip pra desligar e sem botão
+  // de limpar (o `limpar filtros` vive dentro do ramo `visiveis.length === 0`).
+  // A home ficaria VAZIA no celular dele, e nada na tela diria por quê.
   it("o que está guardado no celular dele não acende filtro nenhum", () => {
     const velho = JSON.stringify({
       distanciaKm: 30, extensaoMaxKm: 6, esforco: "media", duracaoMax: 90,
+      pisoMinimo: "asfalto-tapete",
     });
     const lido = lerFiltros(velho);
     expect(contarLigados(lido)).toBe(1); // só a distância, que continua existindo
+    // A lista de chaves é a prova de que o campo morto não voltou pelo objeto:
+    // `contarLigados` sozinho não distingue "não li" de "li e deu falso".
     expect(Object.keys(lido).sort()).toEqual(
-      ["daHoje", "distanciaKm", "pisoMinimo", "soGratis"],
+      ["daHoje", "distanciaKm", "soGratis"],
     );
+  });
+
+  // 🔴 E A METADE QUE FALTAVA: o contador não mentir não basta, a ficha tem
+  // que CONTINUAR NA TELA. Este é o caso que separa "o campo foi ignorado" de
+  // "o campo foi lido e por acaso não escondeu" — e é o único que exercita o
+  // dano real do fantasma do piso.
+  it("com o piso fantasma guardado, a ficha de barro continua passando", () => {
+    const lido = lerFiltros(JSON.stringify({ pisoMinimo: "asfalto-tapete" }));
+    expect(passaNoFiltro({
+      ficha: { ...base, piso: "barro" },
+      leitura: FRESCO, filtros: lido, voce: null, confia: true,
+    })).toBe(true);
   });
 });
 

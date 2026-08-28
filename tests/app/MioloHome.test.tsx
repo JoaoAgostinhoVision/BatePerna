@@ -307,18 +307,24 @@ describe("filtro e agrupamento juntos", () => {
     expect(screen.getByRole("button", { name: /limpar/i })).toBeTruthy();
   });
 
-  // A consequência que o João aceitou de olhos abertos em 2026-08-23 (dado
-  // real: `piso: "barro"` gravado na Rampa, Task 8): com uma ficha só, e ela
-  // de barro, qualquer chip de piso esvazia a home. É a resposta CERTA —
-  // "no mínimo asfalto esburacado" realmente exclui uma rampa de barro — e a
-  // tela explica em vez de sumir calada.
-  it("com a única trilha de barro, um chip de piso esvazia a home e oferece limpar", async () => {
+  // 🔴 A VIRADA DE 2026-08-27, e ela é o resumo da rodada. Este teste provava
+  // que um chip de piso ESVAZIAVA a home — "a consequência que o João aceitou
+  // de olhos abertos" em 2026-08-23. Não era consequência aceitável: o piso
+  // estava sendo usado como proxy de "meu carro chega?", e nas duas fichas
+  // reais o carro chega. Esvaziar a home era o proxy ERRANDO.
+  //
+  // O recorte saiu, e o teste inverteu junto: o piso guardado do celular dele
+  // agora é fantasma, e a trilha de barro CONTINUA NA TELA. É o mesmo cenário,
+  // com a asserção ao contrário — por isso ele fica aqui em vez de morrer.
+  it("com o piso fantasma guardado, a trilha de barro NÃO some mais da home", async () => {
     localStorage.setItem(CHAVE_FILTROS, JSON.stringify({
       ...SEM_FILTRO, pisoMinimo: "asfalto-esburacado",
     }));
     const { container } = monta([par("barrenta", "fresco", { piso: "barro" })]);
-    await waitFor(() => expect(container.textContent).toContain("Nenhuma trilha com esses filtros"));
-    expect(screen.getByRole("button", { name: /limpar filtros/i })).toBeTruthy();
+    await waitFor(() => expect(container.querySelectorAll(".cartao")).toHaveLength(1));
+    expect(container.textContent).not.toContain("Nenhuma trilha com esses filtros");
+    // E a linha de resumo não conta um filtro que não existe mais.
+    expect(container.textContent).not.toContain("filtro ligado");
   });
 
   it("limpar traz tudo de volta", async () => {

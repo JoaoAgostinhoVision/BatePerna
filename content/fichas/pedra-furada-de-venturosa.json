@@ -1,21 +1,32 @@
 {
   "slug": "pedra-furada-de-venturosa",
-  "modos": ["condicional"],
+  "modos": [
+    "condicional"
+  ],
   "rotulo_escaneio": "Sem chuva há 3h",
   "promessa": "Um vão livre natural na pedra, com pinturas rupestres — e a vista lá de cima.",
   "voz": "É estrada de chão batido e plana. Se choveu, espera passar umas 3 horas.",
   "premio": "A vista é espetacular. A pedra é um grande vão livre natural, tem pinturas rupestres e muita história de povos nativos.",
   "trajeto": {
     "waypoints": [
-      { "nome": "Pedra Furada de Venturosa", "lat": -8.5725, "lng": -36.825556, "nota": "Chão batido até os pés da pedra — curto e plano. De lá pra cima são 360 degraus de escada de pedra, confortáveis de subir." }
+      {
+        "nome": "Pedra Furada de Venturosa",
+        "lat": -8.5725,
+        "lng": -36.825556,
+        "nota": "Chão batido até os pés da pedra — curto e plano. De lá pra cima são 360 degraus de escada de pedra, confortáveis de subir. O passeio leva umas 2h: dá tempo de subir, tirar fotos e descer."
+      }
     ]
   },
   "acesso": "Dá pra chegar de carro comum. Se choveu, espera passar umas 3 horas — molhado, o chão batido escorrega e dá pra atolar. O portão fica aberto das 5h às 17h todos os dias; se estiver fechado quando você chegar, dá pra abrir tranquilamente.",
   "avisos": "A estrutura do lugar não é das melhores — leve papel higiênico. Ir embaixo do arco é tranquilo: não tem trilha de fato, é só subir os degraus. Já a trilha que sobe o arco é outra coisa — ela sobe pela mata, e quem não estiver preparado pode dar de cara com cobra e bichos da região.",
   "piso": "barro",
+  "carroComum": true,
   "secaRapido": "Área plana — o chão batido retém menos água que o barro.",
   "condicao": {
-    "coords": { "lat": -8.5725, "lng": -36.825556 },
+    "coords": {
+      "lat": -8.5725,
+      "lng": -36.825556
+    },
     "regra": {
       "tipo": "chuva_binaria",
       "janela_previsao_horas": 2,
@@ -30,6 +41,11 @@
     "como_ler": "No trecho de chão batido, olhando da estrada: barro brilhando ou poça d'água = melhor voltar.",
     "permissao_abortar": "Voltar sem ir é decisão, não desperdício — a chuva pode atrapalhar o caminho do carro e a experiência."
   },
-  "custo": { "tag": "gratis" },
-  "horario": { "abre": "05:00", "fecha": "17:00" }
+  "custo": {
+    "tag": "gratis"
+  },
+  "horario": {
+    "abre": "05:00",
+    "fecha": "17:00"
+  }
 }

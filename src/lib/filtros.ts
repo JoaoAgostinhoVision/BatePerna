@@ -10,7 +10,6 @@ import {
   type Coord,
 } from "@/lib/geo";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
-import { PISOS_FILTRAVEIS, ordemPiso, type Piso } from "@/lib/piso";
 import type { Ficha } from "@/types/ficha";
 
 export type Filtros = {
@@ -21,7 +20,17 @@ export type Filtros = {
   distanciaKm: number | null;
   daHoje: boolean;
   soGratis: boolean;
-  pisoMinimo: Piso | null;
+  // 🔴 AQUI MORAVA `pisoMinimo`, e ele saiu em 2026-08-27 sem substituto na
+  // tela. O recorte de piso RESPONDIA A PERGUNTA ERRADA: ninguém filtra por
+  // material do chão, filtra por "meu carro chega lá?". O piso era o proxy — e
+  // ele errava CONTRA a pessoa, porque as duas fichas reais são `barro` e a
+  // Pedra Furada some de quem pede piso melhor, com o carro que chegava.
+  //
+  // O fato de carro virou campo da FICHA (`carroComum`), mas NÃO virou chip:
+  // as duas fichas respondem "sim", então o chip acenderia, contaria na linha
+  // de resumo e não mudaria a lista — o defeito exato pelo qual `barro` foi
+  // excluído dos chips de piso. Decisão dele, com as duas fichas na mão.
+  // O chip entra no dia em que existir trilha que carro comum não alcança.
 };
 
 export const CHAVE_FILTROS = "bp.filtros";
@@ -95,7 +104,6 @@ export const SEM_FILTRO: Filtros = {
   distanciaKm: null,
   daHoje: false,
   soGratis: false,
-  pisoMinimo: null,
 };
 
 /** Quantos recortes estão ligados — o número da linha de resumo.
@@ -114,7 +122,7 @@ export function contarLigados(f: Filtros): number {
   // procura na tela um controle que a contagem jura não existir; um que sobre
   // é o contrário, e foi o defeito que o dono do app viu no celular (contagem
   // prometendo chip que a tela não desenha).
-  return [f.distanciaKm, f.daHoje, f.soGratis, f.pisoMinimo].filter(
+  return [f.distanciaKm, f.daHoje, f.soGratis].filter(
     (x) => x !== null && x !== false,
   ).length;
 }
@@ -155,16 +163,6 @@ function kmGuardado(v: unknown): number | null {
   return ehInteiro(v) && v >= 1 ? v : null;
 }
 
-/** `PISOS_FILTRAVEIS`, não `PISOS`: `barro` é o piso da escala e, com o filtro
- *  lido como "no mínimo daqui pra cima", aceso ele não esconde NADA — e o
- *  painel não desenha chip de barro, então a linha de resumo diria "1 filtro
- *  ligado" sem nenhum controle na tela capaz de desligá-lo. Predicado, e não
- *  `includes` com cast, pela mesma razão do `ehInteiro`: quem estreita
- *  `unknown` é ele. */
-function ehPisoFiltravel(v: unknown): v is Piso {
-  return PISOS_FILTRAVEIS.some((p) => p === v);
-}
-
 export function lerFiltros(bruto: string | null): Filtros {
   // Este guarda parece redundante pro vitest — sem ele, `JSON.parse("")`
   // estoura e o `catch` logo abaixo devolve SEM_FILTRO do mesmo jeito. Ele
@@ -199,12 +197,15 @@ export function lerFiltros(bruto: string | null): Filtros {
     distanciaKm: kmGuardado(x.distanciaKm),
     daHoje: x.daHoje === true,
     soGratis: x.soGratis === true,
-    pisoMinimo: ehPisoFiltravel(x.pisoMinimo) ? x.pisoMinimo : null,
     // O que está guardado no celular do dono do app tem `esforco`,
-    // `duracaoMax` e (a partir desta task) `extensaoMaxKm` gravados de
-    // verdade, e nenhum dos três é lido aqui — de propósito. Ler um campo que
-    // a tela não desenha mais faria a linha de resumo dizer "1 filtro ligado"
-    // sem nenhum chip pra desligar, que é exatamente o que ele reclamou.
+    // `duracaoMax`, `extensaoMaxKm` e — a partir de 2026-08-27 — `pisoMinimo`
+    // gravados de verdade, e NENHUM deles é lido aqui, de propósito. Ler um
+    // campo que a tela não desenha mais faria a linha de resumo dizer "1 filtro
+    // ligado" sem nenhum chip pra desligar, que é exatamente o que ele
+    // reclamou. 🔴 O `pisoMinimo` é o caso mais perigoso dos quatro: o celular
+    // DELE tem um piso guardado agora, e ele esconde ficha de verdade — o
+    // fantasma não seria só um contador errado, seria trilha sumida sem
+    // controle na tela pra trazer de volta.
     // Chave desconhecida no JSON é ignorada em silêncio: o objeto de saída é
     // montado campo a campo, nunca espalhado do que veio.
   };
@@ -264,33 +265,18 @@ export function passaNoFiltro({
   // REGRA DE HONESTIDADE 2: ficha sem o campo NUNCA é escondida por ele.
   // Sumir por dado que falta é mentira silenciosa.
   //
-  // 🔴 Até esta task (Task 7, 2026-08-23) esta regra tinha DOIS campos
-  // opcionais: `extensaoKm` (com um bloco de filtro inteiro, apagado junto com
-  // o campo) e `piso` (o bloco logo abaixo). Hoje só `piso` sobra.
+  // 🔴 Este bloco já foi de `extensaoKm` (apagado na Task 7 junto com o campo) e
+  // depois de `piso` (apagado em 2026-08-27, quando o recorte passou a
+  // perguntar do CARRO — ver `soCarroComum` em `Filtros`). O campo muda; a
+  // regra é a mesma, e é sobre o CAMPO AUSENTE, não sobre qual ficha o tem hoje.
   //
-  // A regra é sobre o CAMPO AUSENTE, não sobre qual ficha o tem hoje: ficha
-  // sem `piso` nunca é escondida por ele, tenha o dado quem tiver. (Não era
-  // "a única ficha real não tem piso" — isso valia até a Task 8, 2026-08-23,
-  // que gravou `piso: "barro"` na Rampa; a regra nunca dependeu disso, e
-  // continua não dependendo — vale igual pra ficha nova que um dia chegar sem
-  // o campo.)
-  //
-  // "No mínimo daqui pra cima" na escala de `PISOS` (a ORDEM do array É a
-  // escala). Ficha com piso PIOR que o pedido some; ficha sem piso, nunca.
-  //
-  // O `ficha.piso &&` MORDE no vitest: `ordemPiso(undefined)` cai num
-  // `indexOf` e devolve -1, que é MENOR que qualquer piso — sem o `&&`, ficha
-  // sem piso sumiria da home. Já o `!== null` é o caso oposto: `ordemPiso(null)`
-  // também dá -1, `0 < -1` é `false`, e apagá-lo deixa a suíte verde; quem o
-  // segura é o `tsc`. As duas metades foram medidas separadas, porque num E a
-  // primeira esconde a outra.
-  if (
-    filtros.pisoMinimo !== null &&
-    ficha.piso &&
-    ordemPiso(ficha.piso) < ordemPiso(filtros.pisoMinimo)
-  ) {
-    return false;
-  }
+  // ⚠️ HOJE NENHUM CAMPO OPCIONAL DA FICHA RECORTA — a regra fica escrita
+  // porque o próximo recorte que chegar tem que nascer obedecendo a ela, e
+  // porque o `carroComum` (gravado nas fichas desde 2026-08-27) é o candidato
+  // óbvio. Quando ele virar chip: `ficha.carroComum === false`, e NUNCA
+  // `!ficha.carroComum` — o segundo esconderia também a ficha SEM o dado
+  // (`undefined` é falso), que é a mentira silenciosa que a regra proíbe. As
+  // duas versões só se separam numa ficha sem o campo.
 
   return true;
 }

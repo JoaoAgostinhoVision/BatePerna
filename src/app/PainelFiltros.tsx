@@ -6,7 +6,6 @@ import {
   type Filtros,
 } from "@/lib/filtros";
 import { coordDe } from "@/lib/local";
-import { PISOS_FILTRAVEIS, rotuloPiso } from "@/lib/piso";
 import FaixaKm from "./FaixaKm";
 import { useFiltros, useMexerFiltros } from "./filtros";
 import { useLocal } from "./local";
@@ -93,28 +92,17 @@ export default function PainelFiltros({
               onChange={(km) => trocar({ distanciaKm: km })}
             />
           )}
-          {/* A legenda diz "no mínimo" porque sem isso "asfalto tapete" lê como
-              "SÓ asfalto tapete" — e o recorte é "daqui pra cima".
+          {/* 🔴 AQUI MORAVA O RECORTE DE PISO ("Piso, no mínimo", quatro chips),
+              e ele saiu em 2026-08-27 porque RESPONDIA A PERGUNTA ERRADA.
 
-              `PISOS_FILTRAVEIS`, não `PISOS`: `barro` é o pior piso da escala e,
-              aceso, não esconderia nenhuma ficha. Seria um chip que a pessoa
-              liga, a linha de resumo conta, e a lista não muda.
+              Ninguém filtra por piso: filtra por "meu carro chega lá?". O piso
+              era o PROXY dessa pergunta, e proxy que erra esconde trilha por
+              engano — as duas fichas reais são `barro`, e quem arrastasse
+              pedindo piso melhor perdia as DUAS com o carro que chegava em
+              ambas.
 
-              O ternário é a ÚNICA saída deste recorte: não há chip "qualquer"
-              aqui, então quem tocou por engano só desliga tocando de novo. */}
-          <fieldset className="filtro-grupo">
-            <legend>Piso, no mínimo</legend>
-            {PISOS_FILTRAVEIS.map((p) => (
-              <button
-                key={p}
-                className="chip"
-                aria-pressed={filtros.pisoMinimo === p}
-                onClick={() => trocar({ pisoMinimo: filtros.pisoMinimo === p ? null : p })}
-              >
-                {rotuloPiso(p)}
-              </button>
-            ))}
-          </fieldset>
+              Decisão dele: o piso continua na ficha e no cartão como FATO, e
+              para de ser usado como resposta a uma pergunta que não é a dele. */}
           {/* Sem `aria-label` nos fieldsets, aqui e no de cima: o nome do grupo
               sai da `<legend>`, que é o título VISÍVEL. Foi medido na Task 4 —
               com o atributo junto, apagar a legenda deixava a suíte verde,
@@ -125,6 +113,19 @@ export default function PainelFiltros({
             <button className="chip" aria-pressed={filtros.daHoje}
               onClick={() => trocar({ daHoje: !filtros.daHoje })}>só as que dá hoje</button>
           </fieldset>
+          {/* 🔴 E O CHIP DO CARRO NÃO ENTROU NO LUGAR, de propósito — decisão
+              dele em 2026-08-27, depois de eu LER as duas fichas e descobrir que
+              a pergunta que eu ia fazer já tinha a mesma resposta nas duas.
+
+              O `acesso` da Rampa diz "dá pra ir de carro comum — mas só quando
+              não estiver chovendo"; o da Pedra Furada, "dá pra chegar de carro
+              comum. Se choveu, espera umas 3 horas". As duas são SIM, com
+              ressalva de chuva que o carimbo já resolve. Um chip "só onde carro
+              comum chega" acenderia, contaria na linha de resumo e não mudaria
+              a lista — o defeito exato pelo qual `barro` foi excluído dos chips.
+
+              O fato está gravado (`carroComum` na ficha). O chip entra no dia em
+              que existir trilha que carro comum NÃO alcança. */}
           <fieldset className="filtro-grupo">
             <legend>Custo</legend>
             <button className="chip" aria-pressed={filtros.soGratis}

@@ -11,7 +11,6 @@ import {
   SEM_FILTRO,
   type Filtros,
 } from "@/lib/filtros";
-import { PISOS_FILTRAVEIS } from "@/lib/piso";
 import { CHAVE_LOCAL } from "@/lib/local";
 
 afterEach(() => { cleanup(); localStorage.clear(); });
@@ -44,14 +43,20 @@ const DISTANCIA = /^distância daqui$/i;
 const TAMANHO = /^tamanho da trilha$/i;
 // Não ancorado no fim de propósito: é o teste da legenda logo abaixo que exige
 // o "no mínimo". Ancorar aqui faria os dois provarem a mesma coisa.
-const PISO = /^piso/i;
+// Âncora do "o painel abriu/fechou": era o grupo de PISO até 2026-08-27,
+// quando o recorte saiu da tela. `Hoje` é o grupo que sobra sempre — o de
+// distância só aparece com localização.
+const HOJE = /^hoje$/i;
 
 const grupo = (nome: RegExp) => screen.getByRole("group", { name: nome });
 const barraDe = (nome: RegExp) => within(grupo(nome)).getByRole("slider") as HTMLInputElement;
 const campoDe = (nome: RegExp) => within(grupo(nome)).getByRole("spinbutton") as HTMLInputElement;
-// `asfalto-tapete` → `asfalto tapete` pelo `rotuloPiso`. O chip que os testes
-// de clique usam é sempre este, e o VALOR que ele grava traz o hífen de volta.
-const chipPiso = () => screen.getByRole("button", { name: /^asfalto tapete$/i });
+// O chip que os testes de CLIQUE usam. Era o de piso até 2026-08-27; virou o de
+// custo, que é booleano. ⚠️ O que se PERDEU na troca, registrado pra ninguém
+// achar que foi de graça: com o piso, o valor GRAVADO ("asfalto-tapete")
+// diferia do rótulo na tela ("asfalto tapete"), e a asserção separava os dois.
+// Booleano não tem rótulo pra confundir com valor.
+const chipDeClique = () => screen.getByRole("button", { name: /^só grátis$/i });
 
 describe("a linha de resumo", () => {
   it("diz quantas trilhas estão APARECENDO", () => {
@@ -87,11 +92,11 @@ describe("a linha de resumo", () => {
 
 describe("o painel", () => {
   // A sonda destes dois era o grupo `/esforço/i`, que esta task apagou. Ela
-  // passou a ser o grupo de PISO — os testes não são sobre esforço nem sobre
+  // passou a ser o grupo de HOJE — os testes não são sobre esforço nem sobre
   // piso, são sobre a sanfona abrir e fechar; o grupo é só o que se vê dentro.
   it("nasce fechado", () => {
     monta();
-    expect(screen.queryByRole("group", { name: PISO })).toBeNull();
+    expect(screen.queryByRole("group", { name: HOJE })).toBeNull();
   });
 
   it("abre no toque e fecha no toque de novo", async () => {
@@ -99,13 +104,13 @@ describe("o painel", () => {
     const b = screen.getByRole("button", { name: /filtrar/i });
     expect(b.getAttribute("aria-expanded")).toBe("false");
     await act(async () => { b.click(); });
-    expect(screen.getByRole("group", { name: PISO })).toBeTruthy();
+    expect(screen.getByRole("group", { name: HOJE })).toBeTruthy();
     // O `aria-expanded` é o ÚNICO sinal que quem usa leitor de tela recebe de
     // que aquele toque abriu alguma coisa — a sanfona é puramente visual.
     // Apagá-lo não derruba nenhuma outra asserção deste arquivo.
     expect(b.getAttribute("aria-expanded")).toBe("true");
     await act(async () => { b.click(); });
-    expect(screen.queryByRole("group", { name: PISO })).toBeNull();
+    expect(screen.queryByRole("group", { name: HOJE })).toBeNull();
   });
 
   // Os dois recortes que esta rodada aposentou. Sem estas asserções, deixar um
@@ -149,10 +154,9 @@ describe("o painel", () => {
   it("ligar um recorte grava no aparelho", async () => {
     monta();
     await abrir();
-    const c = chipPiso();
+    const c = chipDeClique();
     await act(async () => { c.click(); });
-    // O que é gravado é o VALOR do piso (com hífen), não o rótulo da tela.
-    expect(localStorage.getItem(CHAVE_FILTROS)).toContain("asfalto-tapete");
+    expect(localStorage.getItem(CHAVE_FILTROS)).toContain('"soGratis":true');
     // O `aria-pressed` é o estado do chip. Sem ele o chip só muda de cor, e
     // quem não vê cor não sabe o que está ligado.
     expect(c.getAttribute("aria-pressed")).toBe("true");
@@ -176,11 +180,8 @@ describe("o painel", () => {
     return JSON.parse(localStorage.getItem(CHAVE_FILTROS)!);
   };
 
-  it("o chip de PISO escreve em pisoMinimo", async () => {
-    monta();
-    expect(await abrirEClicar(/^asfalto tapete$/i))
-      .toMatchObject({ ...SEM_FILTRO, pisoMinimo: "asfalto-tapete" });
-  });
+  // 🔴 "o chip de PISO escreve em pisoMinimo" morreu aqui (2026-08-27) com o
+  // recorte que ele provava. Sobraram os dois chips booleanos, abaixo.
 
   it("o chip de HOJE escreve em daHoje", async () => {
     monta();
@@ -199,35 +200,23 @@ describe("o painel", () => {
   // cai, porque todos ligam um recorte só. Na tela: a pessoa liga "só grátis",
   // depois toca num piso, e o "só grátis" se apaga sozinho enquanto ela olha.
   //
-  // Este teste tocava o chip `leve`, que esta task apagou; migrou pro chip de
-  // piso porque é ele quem prova o `trocar`, e não o grupo em que ele mora.
+  // Este teste já tocou o chip `leve` (apagado na Task 2) e o de piso (apagado
+  // em 2026-08-27). O que ele prova é o `trocar`, não o grupo em que o chip
+  // mora — e o par tem que ser de recortes DIFERENTES, senão a mutação passa.
   it("ligar um recorte preserva os que já estavam ligados", async () => {
     localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
     monta();
     await abrir();
-    await act(async () => { chipPiso().click(); });
+    await act(async () => { screen.getByRole("button", { name: /^só as que dá hoje$/i }).click(); });
     const guardado = JSON.parse(localStorage.getItem(CHAVE_FILTROS)!);
-    expect(guardado).toMatchObject({ soGratis: true, pisoMinimo: "asfalto-tapete" });
+    expect(guardado).toMatchObject({ soGratis: true, daHoje: true });
   });
 
-  // ——— pré-voo: o segundo toque no chip de piso é o ÚNICO jeito de desligar
-  // aquele recorte.
-  //
-  // A faixa de km tem a parada "qualquer"; **o piso não tem chip
-  // equivalente**. Se o `filtros.pisoMinimo === p ? null : p` virar só `p`, a
-  // pessoa que tocou "asfalto tapete" por engano fica presa nele — e nenhum
-  // outro teste percebe, porque nenhum toca duas vezes no mesmo chip. Herdado
-  // do grupo Esforço, que tinha exatamente esta forma.
-  it("tocar duas vezes no mesmo chip de piso desliga — é a única saída dele", async () => {
-    monta();
-    await abrir();
-    const c = chipPiso();
-    await act(async () => { c.click(); });
-    expect(c.getAttribute("aria-pressed")).toBe("true");
-    await act(async () => { c.click(); });
-    expect(c.getAttribute("aria-pressed")).toBe("false");
-    expect(JSON.parse(localStorage.getItem(CHAVE_FILTROS)!).pisoMinimo).toBeNull();
-  });
+  // 🔴 "tocar duas vezes no mesmo chip de piso desliga" morreu aqui
+  // (2026-08-27). Ele provava que o ternário `=== p ? null : p` era a ÚNICA
+  // saída daquele recorte, porque o piso não tinha chip "qualquer". Os dois
+  // chips que sobraram são booleanos com `!filtros.x` — alternam por
+  // construção, e o `aria-pressed` já é provado nos testes de clique.
 
   // Mesma regra da localização: o HTML do servidor não tem filtro nenhum.
   it("o PRIMEIRO render ignora o que está guardado", () => {
@@ -243,69 +232,65 @@ describe("o painel", () => {
   });
 });
 
-describe("os chips de piso", () => {
-  // `PISOS_FILTRAVEIS`, não `PISOS`. `barro` é o PIOR piso da escala e o filtro
-  // se lê "no mínimo daqui pra cima": aceso, ele não esconderia ficha nenhuma —
-  // um chip que a pessoa liga, a linha de resumo conta, e a lista não muda.
-  it("o chip 'barro' NÃO aparece — é o piso da escala, e não filtraria nada", async () => {
+// 🔴 O GUARDA QUE FALTAVA, e ele nasceu de uma mutação SOBREVIVENTE
+// (2026-08-27): acrescentar um chip que não recorta nada passava a suíte
+// inteira verde. Era o buraco por onde o `barro` tinha entrado uma vez, e por
+// onde o chip do carro entraria agora se ninguém olhasse.
+//
+// A régua: TODO grupo do painel tem que corresponder a um recorte que existe em
+// `Filtros`. Chip que acende, conta na linha de resumo e não muda a lista é
+// defeito — não é "preparo pro futuro".
+describe("o painel não oferece controle que não recorta", () => {
+  const legendas = () =>
+    Array.from(document.querySelectorAll(".filtro-painel legend")).map((l) => l.textContent);
+
+  it("sem localização, os grupos são exatamente os recortes que existem", async () => {
     monta();
     await abrir();
-    const g = grupo(PISO);
-    expect(within(g).queryByRole("button", { name: /^barro$/i })).toBeNull();
-    // E a contagem, que é a outra metade: sem ela, um chip a mais com outro
-    // nome passaria. O número sai da própria lista filtrável, não de um literal.
-    expect(within(g).getAllByRole("button")).toHaveLength(PISOS_FILTRAVEIS.length);
+    expect(legendas()).toEqual(["Hoje", "Custo"]);
   });
 
-  // O texto do chip passa pelo `rotuloPiso`. Sem esta asserção, trocar
-  // `rotuloPiso(p)` por `p` deixa tudo verde e o chip diz `asfalto-esburacado`,
-  // com hífen, na cara de quem lê.
-  //
-  // 🔴 O piso escolhido TEM hífen, e isso é a escolha inteira: dos três
-  // filtráveis, `paralelepipedo` é o que as duas versões devolvem IGUAL —
-  // `rotuloPiso("paralelepipedo")` é `"paralelepipedo"`, e uma asserção nele
-  // seria oca. Os outros dois (`asfalto-esburacado` e `asfalto-tapete`) servem;
-  // este ficou com o teste por ser o único que nenhum outro teste já usa.
-  // (Uma versão anterior deste comentário dizia "o único que separa". São
-  // dois — e a medição do fix round o desmentiu: com `rotuloPiso(p)` → `p`
-  // caíram seis testes, cinco deles porque o `chipPiso()` procura
-  // `asfalto tapete` e o hífen o quebra.)
-  it("o chip mostra o rótulo sem hífen", async () => {
+  // Com localização entra a distância, e SÓ ela. O par é o que impede o teste
+  // de cima de passar por um painel que simplesmente não desenhou nada.
+  it("com localização, entra a distância e mais nada", async () => {
+    semeiaLocal();
     monta();
     await abrir();
-    expect(within(grupo(PISO)).getByRole("button", { name: /^asfalto esburacado$/i })).toBeTruthy();
+    expect(legendas()).toEqual(["Distância daqui", "Hoje", "Custo"]);
   });
 
-  // Sem o "no mínimo", "asfalto tapete" lê como "SÓ asfalto tapete" — e o
-  // recorte é o contrário: daquele piso pra cima.
-  it("a legenda do piso diz que é MÍNIMO", async () => {
+  // A outra metade, e ela é a que fecha a mutação: cada chip do painel escreve
+  // num campo que `SEM_FILTRO` tem. Um chip novo sem campo cai aqui mesmo que
+  // alguém se lembre de acrescentar a legenda à lista de cima.
+  it("cada chip do painel escreve num campo que existe em Filtros", async () => {
+    semeiaLocal();
     monta();
     await abrir();
-    expect(grupo(PISO).querySelector("legend")?.textContent).toMatch(/no mínimo/i);
+    const chips = Array.from(document.querySelectorAll(".filtro-painel .chip"));
+    expect(chips.length).toBe(2); // anti-vacuidade: os chips estão na tela
+    for (const chip of chips) {
+      await act(async () => { (chip as HTMLElement).click(); });
+    }
+    const guardado = JSON.parse(localStorage.getItem(CHAVE_FILTROS)!);
+    expect(Object.keys(guardado).sort()).toEqual(Object.keys(SEM_FILTRO).sort());
+    // E os dois toques mudaram alguma coisa de verdade — senão um chip inerte
+    // passaria por aqui sem ser notado.
+    expect(guardado).not.toEqual(SEM_FILTRO);
   });
 });
 
-// ——————— a faixa de km ———————
+// 🔴 O describe "os chips de piso" morreu aqui (2026-08-27) — TRÊS testes:
+//   1. o chip `barro` NÃO aparece, e a contagem bate com `PISOS_FILTRAVEIS`;
+//   2. o rótulo passa pelo `rotuloPiso` (senão o chip mostra o hífen);
+//   3. a legenda diz "no mínimo" (sem isso lê-se como "SÓ asfalto tapete").
+// Os três provavam um grupo de chips que não existe mais na tela. A prova de
+// FONTE deles morreu no describe "o que o jsdom não vê", logo abaixo.
 //
-// 🔴 Era "as DUAS faixas de km" até a Task 7 (2026-08-23): a faixa de tamanho
-// da trilha saiu da tela junto com o campo `extensaoKm`. Só a de distância
-// sobrou, e o limite dela hoje tem DUAS origens diferentes — o teto
-// (`tetoDaBarraDistancia`, calculado a partir do acervo) chega pelo PROP
-// `tetoDistanciaKm` (prova logo abaixo, "recebe o TETO que veio de fora"), e
-// o passo (`DIST_PASSO_KM`) continua vindo direto do MÓDULO (prova de FONTE em
-// "o painel não escreve km à mão — o teto vem da prop, o passo do módulo",
-// mais abaixo neste arquivo). As duas provas são necessárias — em runtime o
-// literal e a constante são o mesmo valor.
-//
-// 🔴 A COSTURA tinha DUAS pontas enquanto havia duas faixas, achado T5-1 da
-// revisão: os testes de escrita (mexer na faixa grava) deixavam passar verde
-// a mutação de LEITURA `valor={null}` na faixa de distância (o recorte corta
-// de verdade, a linha diz "1 filtro ligado", e a faixa fica em branco dizendo
-// "qualquer"). O `FaixaKm` é CONTROLADO: a Task 4 provou que ele obedece à
-// prop, e provar que o painel a ALIMENTA só é possível aqui. O
-// `"o PRIMEIRO render ignora o que está guardado"` agrava — o painel nasce em
-// branco de propósito, então esta leitura de volta é O mecanismo que faz um
-// recorte guardado reaparecer na tela.
+// ⚠️ A lição do (1) é a que sobreviveu, e ela DECIDIU esta rodada: um chip que
+// acende, conta na linha de resumo e não muda a lista é defeito. Foi por ela
+// que o chip do carro não entrou no lugar do piso — as duas fichas respondem
+// "sim", então ele seria o `barro` de novo com outro nome.
+
 describe("a faixa de km escreve e lê", () => {
   it("a faixa de distância escreve em distanciaKm", async () => {
     semeiaLocal();
@@ -446,26 +431,10 @@ describe("o que o jsdom não vê", () => {
     expect(passados).toContain("tetoDistanciaKm");
   });
 
-  // 🔴 A prova de FONTE dos chips de piso, irmã da de cima e pela MESMA razão.
-  // Em runtime, `PISOS_FILTRAVEIS.map(...)` e os três nomes escritos à mão
-  // desenham os MESMOS três chips, com os mesmos rótulos e gravando os mesmos
-  // valores: nenhuma asserção sobre a tela separa as duas versões — foi medido,
-  // a suíte inteira fecha verde com a lista à mão. O que a fonte garante é que
-  // um piso novo em `src/lib/piso.ts` vire chip sozinho, em vez de a tela
-  // oferecer um vocabulário e o `lerFiltros` conferir outro — e aí o recorte que
-  // a pessoa acabou de tocar voltar `null` na abertura seguinte, calado.
-  //
-  // Dois lados, como no teste acima: importar não obriga a usar, então a segunda
-  // asserção exige que os chips saiam DELE.
-  it("os chips de piso saem de PISOS_FILTRAVEIS — nenhum piso escrito à mão", () => {
-    const src = fonte("PainelFiltros.tsx");
-    expect(src, "o painel tem que importar PISOS_FILTRAVEIS de @/lib/piso").toMatch(
-      /import\s*\{[^}]*\bPISOS_FILTRAVEIS\b[^}]*\}\s*from\s*"@\/lib\/piso"/,
-    );
-    expect(src, "os chips têm que ser mapeados de PISOS_FILTRAVEIS").toMatch(
-      /PISOS_FILTRAVEIS\.map\(/,
-    );
-  });
+  // 🔴 "os chips de piso saem de PISOS_FILTRAVEIS" morreu aqui (2026-08-27):
+  // não há chips de piso, e `PISOS_FILTRAVEIS` saiu de `src/lib/piso.ts`. A
+  // razão dela continua valendo pras irmãs deste bloco — em runtime uma lista
+  // derivada e uma copiada à mão são o MESMO VALOR, e só a fonte separa.
 });
 
 // ——————— pré-voo: os guardas do armazenamento ———————
@@ -489,15 +458,15 @@ describe("armazenamento que estoura não derruba a home", () => {
     }
   });
 
-  // Tocava o chip `leve`; migrou pro chip de piso junto com o grupo. O que se
-  // prova aqui não é o recorte, é a tela obedecer com a gravação estourando.
+  // Tocou o chip `leve`, depois o de piso, e desde 2026-08-27 o de custo. O que
+  // se prova aqui não é o recorte, é a tela obedecer com a gravação estourando.
   it("escrita que estoura ao ligar um recorte: o filtro vale nesta sessão", async () => {
     monta();
     await abrir();
     const orig = Storage.prototype.setItem;
     Storage.prototype.setItem = () => { throw new Error("QuotaExceededError"); };
     try {
-      const c = chipPiso();
+      const c = chipDeClique();
       await act(async () => { c.click(); });
       // Não gravou, mas a tela obedeceu: o recorte vale enquanto o app estiver
       // aberto. Perder a preferência é aceitável; travar a home não é.
