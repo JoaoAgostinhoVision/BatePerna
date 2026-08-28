@@ -17,8 +17,11 @@ primeiras foram o mesmo defeito (**texto fixo no código afirmando coisa sobre U
 6. 🆕 **o filtro de piso SAIU da home** (era proxy de "meu carro chega?" e errava), o fato virou
    campo `carroComum`, e **as ~2h do passeio entraram como prosa** na nota da Pedra Furada.
 
-**Nada pendente do meu lado. 🔴 A fila de perguntas de produto dele ZEROU.**
-`main` limpo em **`28901e0`**, **739/739 em 50 arquivos**, `tsc` limpo, `build` passa.
+7. 🆕 **o beco do GPS sem sinal FECHOU** — estado `falhou`, de sessão. Quem ficava sem sinal não
+   tinha caminho nenhum pra dizer onde está.
+
+**Nada pendente do meu lado. 🔴 A fila DELE zerou — as três de produto E o beco.**
+`main` limpo em **`dba9384`**, **750/750 em 50 arquivos**, `tsc` limpo, `build` passa.
 Ver o bloco "SE O JOÃO DISSER CONTINUA" logo abaixo.
 
 🔴 **E A LIÇÃO MAIS CARA DO DIA FOI SOBRE O MEU PRÓPRIO LEVANTAMENTO.** A tabela lá embaixo
@@ -145,8 +148,8 @@ logo abaixo: **não é bug** — nenhum teste pega, o app estava certíssimo mos
 | o filtro de piso escondendo a Pedra Furada | **o filtro passa a perguntar do CARRO** | recorte de piso **saiu**; campo `carroComum` gravado; **chip NÃO entrou** |
 | *"o passeio leva ~2h"*, fato sem campo | **entra como prosa, sem campo novo** | na `nota` do waypoint, junto dos 360 degraus |
 
-✅ **O painel que nunca abre com GPS sem sinal (§P item 4) continua aberto** — é o único item de
-produto que sobrou, e é irmão do §Z2.
+✅ **O painel que nunca abria com GPS sem sinal (§P item 4) FECHOU em 2026-08-27.** Ver o bloco
+próprio mais abaixo — inclusive o que NÃO foi provado no navegador.
 🟡 **E a 3ª FICHA**, quando ele quiser: `docs/questionario-ficha.md` já pergunta **`carroComum`** e
 **`horario`**, além do `secaRapido` e do `custo.curto`.
 
@@ -449,6 +452,41 @@ deploy que não subiu. A lição do acento cobrou de novo, na mesma sessão em q
 
 ---
 
+## ✅ A SÉTIMA: o beco do GPS sem sinal (`falhou`)
+
+Commit `dba9384`, no ar. **Era o último item da fila dele, e estava em PRODUÇÃO.**
+
+**O beco:** com `code 2` (sem sinal) ou `code 3` (prazo estourado) o app **não gravava nada**. O
+estado ficava `nunca`, o `soGps` do `BuscaLugar` seguia `true`, e cada toque na pílula repedia o
+GPS — que falhava de novo. **O painel de digitar cidade nunca abria, e o botão "daqui" mora dentro
+dele.** Sem sinal, a pessoa ficava sem NENHUM caminho pra dizer onde está.
+
+**Decisão dele:** falhou uma vez → a pílula passa a abrir o painel. Estado novo `falhou`, e o
+rótulo acompanha (`escolher onde estou`) — **a palavra tem que dizer o que o dedo vai fazer**.
+
+🔴 **`falhou` é DE SESSÃO e nunca vai pro `localStorage`.** Persistir rebaixaria o app pra sempre
+por causa de um prédio sem sinal — é o `bp.gps = "negado"` eterno do §Z2 com outra causa.
+
+🔴 **E O PREÇO QUE NÃO SE PAGOU TEM TESTE PRÓPRIO:** quem nunca pediu continua com o GPS em **um
+toque só**. Sem esse par, *"a pílula sempre abre o painel"* fecharia o beco cobrando dois toques de
+todo mundo — **e passaria verde**.
+
+🔴 **A CORRIDA, achada por uma mutação SOBREVIVENTE.** A `permissions.query` é assíncrona e o
+pedido de posição sai antes dela: com a lembrança congelada da montagem, um `granted` chegando
+depois de um `code 2` devolvia o estado pra `nunca` e **trancava o beco de novo**, milissegundos
+depois de ele abrir. O efeito passou a usar o estado ATUAL, e a **ordem das linhas** de
+`estadoGpsEfetivo` é a regra: `denied` vence tudo; depois dele, a falha da sessão vence
+`granted`/`prompt`/sem-API. Dois testes novos, um por direção. **8 mutações medidas, todas mortas.**
+
+⚠️ **O QUE NÃO FOI PROVADO NO NAVEGADOR — não escreva que foi.** O beco em si **não** foi
+reproduzido em produção: pra isso o GPS teria que falhar **na montagem**, e qualquer patch em
+`getCurrentPosition` é desfeito pelo reload; o Chrome desta máquina concede a localização, então
+cai no caminho `gps`. **Ao vivo ficaram provados o código servido** (`falhou` nos chunks) **e o
+caminho normal**. O beco está coberto por teste e por mutação, não por olho — **se um dia der pra
+abrir o app dele num lugar sem sinal, é a conferência que falta.**
+
+---
+
 ⚠️ **Repare que `segura` NÃO é discriminador nesta rodada** — a frase não morreu, ela **mudou de
 endereço**, e `piso.ts` entra no mesmo bundle do cliente. Quem separa as versões é a prova de fonte
 no `vitest`, não o `grep`. **Um marcador que dá o mesmo número nas duas versões não prova nada.**
@@ -521,7 +559,7 @@ repo ele apaga o ledger de scratch e o próprio `.claude/`.
 ```
 git branch --show-current  → main
 git status --short         → limpo
-npm test                   → 739/739 em 50 arquivos   ← tudo verde, NÃO há falha esperada
+npm test                   → 750/750 em 50 arquivos   ← tudo verde, NÃO há falha esperada
                              (era 668; a 2ª ficha não mudou o total. `secaRapido` +11;
                               e as SEIS rodadas de 27/08: +13, +8, +11, +36 do horário,
                               e a do filtro FECHOU 15 — 22 removidos contra 7
