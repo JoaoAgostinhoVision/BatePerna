@@ -32,7 +32,7 @@ vi.mock("@/lib/carimbo-estado", async (real) => ({
 // nada no bloco de baixo lê ou compara essa string —, então a diferença não
 // separa as duas versões. O teste que usava `COM_FATOS` foi apagado junto —
 // ver a nota abaixo.
-const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO } = vi.hoisted(() => {
+const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS } = vi.hoisted(() => {
   const base = {
     slug: "morro-de-teste",
     modos: ["contemplativo"],
@@ -75,6 +75,16 @@ const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO } = vi.hoisted(() => {
       slug: "morro-pago-sem-curto",
       custo: { tag: "pago" as const, valor: "R$ 9 por carro · na guarita da fazenda" },
     },
+    // 🔴 CENTAVOS, e eles são o ponto desta fixture. Medido em 2026-08-27 com
+    // uma ficha de ensaio: o recorte do preço parava no primeiro grupo de
+    // dígitos e o chip anunciava `R$ 12` num lugar que cobra `R$ 12,50` — o app
+    // errando pra MENOS em dinheiro. A única ficha paga do acervo cobra R$ 5
+    // redondos, e por isso ninguém tinha visto.
+    PAGO_CENTAVOS: {
+      ...base,
+      slug: "morro-pago-centavos",
+      custo: { tag: "pago" as const, valor: "R$ 12,50 por carro · na guarita" },
+    },
   };
 });
 
@@ -82,7 +92,7 @@ const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO } = vi.hoisted(() => {
 // JSON de verdade, senão o teste que fala de produção viraria decoração.
 vi.mock("@/lib/ficha", async (real) => {
   const mod = await real<typeof import("@/lib/ficha")>();
-  const sinteticas = [SEM_FATOS, SO_PISO, PAGO_SEM_CURTO] as unknown as TipoFicha[];
+  const sinteticas = [SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS] as unknown as TipoFicha[];
   return {
     ...mod,
     getFicha: (slug: string) => sinteticas.find((f) => f.slug === slug) ?? mod.getFicha(slug),
@@ -244,6 +254,11 @@ describe("o chip do custo vem da FICHA, não do código", () => {
     expect((PAGO_SEM_CURTO as TipoFicha).custo.curto).toBeUndefined();
     const { container } = await abrir("morro-pago-sem-curto");
     expect(chip(container)).toBe("R$ 9");
+  });
+
+  it("o preço com centavos não é cortado — o chip não pode cobrar menos", async () => {
+    const { container } = await abrir("morro-pago-centavos");
+    expect(chip(container)).toBe("R$ 12,50");
   });
 
   it("ficha grátis não tem chip nenhum", async () => {

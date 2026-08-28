@@ -332,14 +332,28 @@ describe("carroComum — a pergunta que o piso respondia errado", () => {
     }
   });
 
-  // ⚠️ A consequência que ELE aceitou de olhos abertos: com as duas em `true`,
+  // ⚠️ A consequência que ELE aceitou de olhos abertos: com todas em `true`,
   // um chip "só onde carro comum chega" acenderia e não mudaria a lista — o
   // defeito do `barro`. Por isso o campo existe e o chip NÃO. Este teste cai no
   // dia em que entrar uma ficha `false`, que é exatamente o dia de rever a
   // decisão — é um lembrete com data, não uma trava.
+  //
+  // 🔴 VARRE O ACERVO INTEIRO, e não uma lista de slugs escrita à mão. A
+  // primeira versão listava as duas fichas de hoje — MEDIDO em 2026-08-27 com
+  // uma ficha de ensaio `carroComum: false` no `content/`: ela **passava**, e o
+  // lembrete não tocava justamente no caso pra que foi escrito. É a espécie do
+  // "índice significando identidade" (2026-08-25) com outra roupa: **guarda que
+  // enumera o acervo à mão é cego ao acervo crescer.**
   it("enquanto TODAS forem true, não há chip pra ter — o recorte não recortaria", () => {
-    const todas = ["rampa-do-pepe", "pedra-furada-de-venturosa"].map((s) => getFicha(s)!);
-    expect(todas.every((f) => f.carroComum !== false)).toBe(true);
+    const todas = getAllFichas();
+    expect(todas.length, "o acervo sumiu — este lembrete ficaria oco").toBeGreaterThanOrEqual(2);
+    const semCarro = todas.filter((f) => f.carroComum === false).map((f) => f.slug);
+    expect(
+      semCarro,
+      `chegou ficha que carro comum NÃO alcança (${semCarro.join(", ")}) — ` +
+        "o chip do carro passou a filtrar de verdade, e a decisão de 2026-08-27 " +
+        "de não desenhá-lo precisa ser refeita com ele.",
+    ).toEqual([]);
   });
 });
 

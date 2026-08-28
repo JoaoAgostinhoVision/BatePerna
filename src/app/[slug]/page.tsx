@@ -33,7 +33,13 @@ export default async function Ficha({
   const fut = ficha.condicao.regra.janela_previsao_horas;
 
   // Chip/ticket derivados do custo (dado real).
-  const precoCurto = ficha.custo.valor?.match(/R\$\s?\d+/)?.[0] ?? "Pago";
+  // 🔴 OS CENTAVOS SÃO PARTE DO RECORTE, e ficaram de fora até 2026-08-27.
+  // MEDIDO com uma ficha de ensaio cobrando `R$ 12,50`: o regex antigo
+  // (`/R\$\s?\d+/`) casava só `R$ 12` e o chip do topo **anunciava um preço
+  // menor do que o lugar cobra**. Passou despercebido porque a única ficha paga
+  // do acervo cobra R$ 5 redondos. Errar pra menos em dinheiro é a família das
+  // outras mentiras deste app, com a agulha em outro lugar.
+  const precoCurto = ficha.custo.valor?.match(/R\$\s?\d+(?:[.,]\d{2})?/)?.[0] ?? "Pago";
   const restoCusto = ficha.custo.valor?.replace(precoCurto, "").replace(/^\s*[·-]?\s*/, "").trim();
 
   // 🔴 O chip vem da FICHA, não daqui. Ele era `${precoCurto} · portão`, com o
