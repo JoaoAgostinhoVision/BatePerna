@@ -15,8 +15,8 @@ sessão de 02/09 foi só de preparação, e ela **mediu** o que a ficha nova vai
 
 **A cachoeira não é "mais uma ficha". É a primeira ESPÉCIE nova de lugar do acervo**, e a
 medição de 02/09 achou uma coisa que nenhuma preparação anterior tinha visto — ver o achado 🔴 1
-lá embaixo, que é sobre o **motor**, não sobre texto. Nada foi construído: as duas decisões são
-dele.
+lá embaixo, que é sobre o **motor**, não sobre texto. **Nada foi construído** — são QUATRO
+perguntas esperando por ele (a 0 e três achados), e as quatro são decisão dele.
 
 `main` limpo, **751/751 em 50 arquivos**, `tsc` limpo, `build` passa. Nada pendente do meu lado.
 
