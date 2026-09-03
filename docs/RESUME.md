@@ -4,7 +4,25 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-**Última parada:** 2026-08-27 — **SETE rodadas encadeadas, todas NO AR e conferidas, mais a
+🔴🔴🔴 **ÚLTIMA PARADA: 2026-09-02 — ELE JÁ DISSE QUAL É A 3ª FICHA.**
+
+> *"eu não vou conseguir ver isso hoje, deixa tudo pronto para a próxima sessão, só lembre para
+> falar da **cachoeira véu de noiva**"* — João, 2026-09-02.
+
+**Não devolva menu. Não pergunte o que fazer. Abra o bloco "▶▶ A 3ª FICHA: A CACHOEIRA VÉU DE
+NOIVA" logo abaixo e comece pela pergunta 0.** Ele não respondeu nada do questionário ainda — a
+sessão de 02/09 foi só de preparação, e ela **mediu** o que a ficha nova vai encontrar.
+
+**A cachoeira não é "mais uma ficha". É a primeira ESPÉCIE nova de lugar do acervo**, e a
+medição de 02/09 achou uma coisa que nenhuma preparação anterior tinha visto — ver o achado 🔴 1
+lá embaixo, que é sobre o **motor**, não sobre texto. Nada foi construído: as duas decisões são
+dele.
+
+`main` limpo, **751/751 em 50 arquivos**, `tsc` limpo, `build` passa. Nada pendente do meu lado.
+
+---
+
+**Parada anterior:** 2026-08-27 — **SETE rodadas encadeadas, todas NO AR e conferidas, mais a
 preparação da 3ª ficha.** As quatro primeiras foram o mesmo defeito (**texto fixo no código
 afirmando coisa sobre UM lugar**); as três últimas zeraram a fila dele.
 1. a frase do barro virou `chuvaNoPiso` (derivada do `piso`);
@@ -23,8 +41,8 @@ afirmando coisa sobre UM lugar**); as três últimas zeraram a fila dele.
 `main` limpo em **`9aa0603`**, **751/751 em 50 arquivos**, `tsc` limpo, `build` passa.
 
 🔴🔴 **ELE JÁ DISSE O QUE VEM: A 3ª FICHA.** *"vamos criar a 3a ficha — amanhã, deixe tudo pronto
-para a próxima sessão"* (2026-08-27, fim da sessão). **Não devolva menu, não pergunte o que fazer:
-abra o bloco "▶▶ A 3ª FICHA" logo abaixo e comece pela primeira pergunta do questionário.**
+para a próxima sessão"* (2026-08-27, fim da sessão). **Em 2026-09-02 ele disse QUAL: a cachoeira
+Véu de Noiva.** Ver o bloco no topo.
 
 🔴 **E A LIÇÃO MAIS CARA DO DIA FOI SOBRE O MEU PRÓPRIO LEVANTAMENTO.** A tabela lá embaixo
 ("O QUE NÃO FOI DECIDIDO E SEGUE FIXO") existe pra inventariar *que texto fixo está certo só por
@@ -95,12 +113,35 @@ de virarem código.
 
 ---
 
-# ▶▶ A 3ª FICHA — é isto que ele pediu para a próxima sessão
+# ▶▶ A 3ª FICHA: A CACHOEIRA VÉU DE NOIVA
 
-**Ele decidiu no fim de 2026-08-27.** O caminho está preparado, e a preparação foi MEDIDA, não
-suposta: rodei uma **ficha de ensaio no pior caso** (`asfalto-tapete`, `carroComum: false`, sem
-`secaRapido`, sem `horario`, cobrando `R$ 12,50`) contra a suíte e contra a tela, e depois a
-apaguei. O que segue é o que ela mostrou.
+**Ele decidiu no fim de 2026-08-27 que viria uma 3ª ficha, e em 2026-09-02 disse QUAL.** O caminho
+está preparado, e a preparação foi **MEDIDA duas vezes, não suposta**: em 27/08 com uma ficha de
+ensaio de asfalto, e em **02/09 de novo**, com uma ficha de ensaio sintética que junta o pior caso
+(`asfalto-esburacado`, `carroComum: false`, sem `secaRapido`, sem `horario`, cobrando `R$ 12,50`,
+com trecho a pé depois da vaga). As duas foram rodadas contra a suíte e contra a tela e **apagadas**
+— `content/fichas/` tem duas.
+
+🔴 **E A MEDIÇÃO DE 02/09 ACHOU O QUE AS OUTRAS NÃO PODIAM ACHAR, porque não era sobre texto: era
+sobre o MOTOR.** Ver o achado 1. **Cachoeira é a primeira ESPÉCIE nova de lugar do acervo** — as
+duas fichas de hoje são rolê de carro até um ponto, e nas duas a chuva estraga o caminho. A régua
+que separa as três perguntas abaixo é a de sempre, e ela some se você ler rápido: **eu não sei nada
+sobre a cachoeira dele. Todas as três são decisão DELE.**
+
+### 0. 🔴 A PERGUNTA ZERO É *QUAL* VÉU DE NOIVA — e ela não é frescura
+
+**"Véu de Noiva" é um dos nomes de cachoeira mais repetidos do Brasil**: existe mais de uma, em
+estados diferentes. Qual é a dele eu **não sei**, e **não vou supor** — supor fato de lugar é a
+linha vermelha deste projeto. Já custou caro duas vezes: o Critical de geografia inventada da v3.9,
+e o *"a estrada até o pé da serra é asfalto"* que eu escrevi sobre a 1ª ficha e propaguei por quatro
+arquivos até um teste cercar a porta.
+
+**Pergunte literalmente: qual Véu de Noiva, e onde fica?** A resposta que fecha isso é a
+**coordenada** — ela planta o pin e mede TODO km da tela. Peça com calma, abrindo no Google Maps.
+
+⚠️ **E leia o que ele contar ANTES de formular as perguntas 1 e 2 abaixo.** Foi exatamente o
+contrário disso que reorganizou a rodada de 27/08: eu perguntei citando uma frase do meu próprio
+RESUME, a ficha real dizia o oposto, e a resposta dele mudou de forma depois que eu li o dado.
 
 ### 1. Como conduzir — ele responde PELA CONVERSA
 
@@ -112,44 +153,123 @@ na 2ª ficha eu citei a Rampa e a resposta voltou com as mesmas palavras. O exem
 **O questionário já pergunta os quatro campos novos:** `secaRapido`, `custo.curto`, `carroComum`
 e `horario`. Nenhum é obrigatório — ficha sem eles funciona, calada no que não sabe.
 
-### 2. 🔴 O QUE VAI CAIR, medido com a ficha de ensaio (1 teste, e é DE PROPÓSITO)
+✅ **E o papel foi CONSERTADO em 2026-09-02, antes de ser lido pra ele** (commit `89a1415`): a
+seção do `piso` ainda justificava a pergunta com **o filtro que saiu da tela em 27/08**, e a lista
+final ainda dizia *"dois campos são opcionais"* quando já são cinco. Eu ia ler isso pra ele como se
+fosse verdade. 🔴 **O guarda `tests/lib/questionario.test.ts` passa 7/7 antes E depois** — ele prova
+que todo campo TEM pergunta, nunca que a JUSTIFICATIVA da pergunta ainda é verdadeira. **Pergunta
+com razão falsa colhe resposta errada, e nenhum teste vê isso.**
+
+### 2. 🔴 ACHADO 1 (02/09) — O MOTOR SÓ SABE DIZER "CHOVEU → NÃO VÁ", E CACHOEIRA PODE INVERTER ISSO
+
+**É o maior achado de preparação que este projeto já teve, e ele não é de texto.** `avaliar()` em
+`src/lib/motor.ts` tem **uma espécie de regra só** — `chuva_binaria` — e ela é de mão única: chuva
+acima do limiar, atrás ou à frente, devolve `frio`. O `regra.tipo` é `z.literal("chuva_binaria")`
+no schema: **não existe campo, em ficha nenhuma, capaz de dizer que a chuva significa outra coisa
+naquele lugar.**
+
+Nas duas fichas de hoje isso está certo, e por um motivo que elas compartilham sem ninguém ter
+reparado: **as duas são rolê de carro até um ponto, e nas duas a chuva estraga o CAMINHO.** Numa
+cachoeira essa coincidência pode acabar. As três leituras possíveis — **e qual delas vale eu não
+sei, porque é fato do lugar dele**:
+
+| leitura | o que muda |
+|---|---|
+| **(a)** chuva ainda é "não vá", **pelo mesmo motivo** (a via/a trilha molhada) | nada no motor. Muda só o texto, que hoje fala de **atolar carro** |
+| **(b)** chuva é "não vá" por motivo **diferente e mais grave** — volume, correnteza, cabeça d'água | o motor serve, mas o app estaria dando **a razão errada num aviso de segurança**, que é pior que calar |
+| **(c)** chuva é **bom sinal** ali, e quem decide é outra coisa | a regra do app está **invertida para este lugar**, e a ficha não tem como dizer isso |
+
+🔴 **Em (b) e (c) isto deixa de ser rodada de copy e vira rodada de MOTOR — e a porta já está
+aberta de propósito.** O comentário de `avaliar()` diz textualmente *"Generic dispatch on regra.tipo
+leaves room for future rule types"*, e o questionário já traz a nota: *"quando existir uma segunda
+espécie de regra, este documento ganha uma pergunta nova"*. **O lugar está reservado. Não o ocupe
+por conta própria** — apresente as três saídas e deixe ele escolher, como nas cinco vezes que deram
+certo.
+
+⚠️ **E repare no que NÃO se conclui daqui:** eu não estou dizendo que cachoeira fica melhor com
+chuva. Estou dizendo que **o app só sabe uma das três frases**, e que ninguém nunca perguntou qual
+delas vale. A pergunta é honesta; a resposta é dele.
+
+### 3. 🔴 ACHADO 2 (02/09) — o trecho A PÉ não tem onde morar, e na cachoeira ele costuma ser o passeio
+
+O questionário do `piso` diz, com todas as letras: *"Se depois de estacionar ainda se caminha, essa
+parte não entra neste campo — este questionário não pergunta por ela."* E os três campos que
+poderiam guardá-la foram apagados **de propósito**: `esforco` e `duracao` (*"este app só sabe falar
+de LUGAR, não do corpo de quem vai"*) e `extensaoKm` (contração de 23/08, Task 7).
+
+Nas duas fichas de hoje isso não custou nada — a via de carro **é** o passeio. Numa cachoeira o
+normal é o inverso: a via é o meio, e a caminhada é o que a pessoa foi fazer.
+
+**A saída que já existe é PROSA** — na `nota` do waypoint e nos `avisos` —, e foi exatamente o que
+ele escolheu em 27/08 para o *"o passeio leva umas 2h"* da 2ª ficha, **contra** criar campo novo.
+🔴 **Então a pergunta certa não é "criamos um campo?", é: com a prosa basta?** Se bastar, não há
+nada a construir, e essa é a resposta mais provável dado o histórico dele. **Quem decide é ele.**
+
+### 4. 🔴 O QUE VAI CAIR, medido em 02/09 com a ficha de ensaio (2 testes, e os DOIS são de propósito)
 
 | o que | por quê |
 |---|---|
 | `tests/app/MapaHome.test.tsx` → *"trilha longe demais: avisa quantas ficaram fora do mapa"* | O número (`2 trilhas fora do mapa`) está **preso ao acervo**, e o comentário dele já avisa que a 3ª ficha o derruba. **É tripwire, não bug — atualize o número e siga.** ⚠️ **NÃO troque por `${fichas.length}`**: asserção escrita contra a própria fonte fica cega ao número. |
-| `tests/lib/ficha.test.ts` → *"enquanto TODAS forem true…"* | **Só se a ficha nova tiver `carroComum: false`.** Aí ele cai de propósito, com a mensagem dizendo o que decidir. |
+| `tests/lib/ficha.test.ts` → *"enquanto TODAS forem true…"* | **Só se a ficha nova tiver `carroComum: false`.** Cai de propósito, e a mensagem já diz o que decidir. |
 
-**Nada mais cai.** As nove quebras da 2ª ficha (2026-08-25) foram consertadas na raiz — os testes
-que liam o acervo por índice passaram a ler por slug.
+**Nada mais cai — e isto está MEDIDO, não estimado: `48 passed | 2 failed` de 50 arquivos**, com a
+ficha de ensaio no acervo, em 2026-09-02. As nove quebras da 2ª ficha (2026-08-25) foram consertadas
+na raiz: os testes que liam o acervo por índice passaram a ler por slug.
 
-### 3. 🔴 O QUE MUDA NA TELA SEM NENHUM TESTE ACUSAR — medido, renderizando a ficha de ensaio
+✅ **E o guarda do `carroComum` DISPAROU DE VERDADE** — o mesmo que em 27/08 era oco, varria uma
+lista de dois slugs escrita à mão e passava verde no único caso pra que existia. Consertado na
+véspera, ele agora acusa nominalmente: *"chegou ficha que carro comum NÃO alcança
+(ensaio-lugar-inventado)"*. **Lembrete que dispara é a única espécie que serve.**
 
-Com `piso: "asfalto-tapete"` e `carroComum: false`, a tela disse:
+### 5. 🔴 ACHADO 3 — O QUE MUDA NA TELA SEM NENHUM TESTE ACUSAR (medido nas duas vezes)
+
+Renderizando a ficha de ensaio de 02/09 (`asfalto-esburacado`, `carroComum: false`, sem
+`secaRapido`, `R$ 12,50`), a página real disse:
 
 ```
-marca  : Pode ir            (ok)
-sub    : seco · carro comum      ← 🔴 a ficha diz que carro comum NÃO chega
-marca  : Não vá             (ok)
-sub    : barro · dá um tempo     ← 🔴 a ficha diz asfalto
-motivo : "Choveu nas últimas ~8h (ou vem chuva nas próximas ~4h)."  ← ✅ CALA, como desenhado
-piso   : asfalto tapete          ← ✅
+===== FRESCO =====
+marca      : Pode ir                                              ✅
+sub        : seco · carro comum        ← 🔴 a ficha diz que carro comum NÃO chega
+motivo     : Sem chuva nas últimas ~8h e nada previsto pras próximas ~4h.   ✅ CALA
+===== FRIO =====
+marca      : Não vá                                               ✅
+sub        : barro · dá um tempo       ← 🔴 a ficha diz asfalto esburacado
+motivo     : Choveu nas últimas ~8h (ou vem chuva nas próximas ~4h).        ✅ CALA
+chip custo : R$ 12,50 · inventado      ← ✅ os CENTAVOS chegaram inteiros
+fatos      : asfalto esburacado                                   ✅
 ```
 
-⚠️ **É A PRIMEIRA PERGUNTA A FAZER A ELE, e antes de escrever a ficha.** Ele decidiu em 27/08
-deixar o `sub` como está, **mas decidiu antes de o `carroComum` existir**. Agora não é mais "certo
-por sorte": é a tela **contradizendo um campo da própria ficha**. O molde pra resolver já existe
-(`chuvaNoPiso`, derivar do `piso`), e a decisão é dele. **Não conserte por conta própria.**
+⚠️ **É a primeira pergunta a fazer DEPOIS de saber qual é a cachoeira e como se chega nela.** Ele
+decidiu em 27/08 deixar o `sub` como está, **mas decidiu antes de o `carroComum` existir** — e
+decidiu contra uma ficha de asfalto hipotética, não contra uma real na mesa. Agora não é mais
+"certo por sorte": é a tela **contradizendo um campo da própria ficha, duas vezes na mesma linha**.
+O molde pra resolver já existe (`chuvaNoPiso`, derivar do `piso`), e a decisão é dele. **Não
+conserte por conta própria.**
 
-✅ **E o que a rodada do `chuvaNoPiso` desenhou FUNCIONOU:** com piso sem frase, o motivo termina no
-ponto final em vez de inventar barro. O silêncio é a saída, e ela está provada em ficha real nova.
+✅ **Duas coisas que a medição PROVOU funcionando, e não custaram nada:** o `motivo` **cala** com
+piso sem frase e ficha sem `secaRapido` — termina no ponto final em vez de inventar barro; e o
+**chip do custo entrega os centavos** (`R$ 12,50`), que era o defeito consertado na véspera e que
+**a única ficha paga do acervo, cobrando R$ 5 redondos, jamais mostraria.**
 
-### 4. Depois de criar a ficha
+### 6. Depois de criar a ficha
 
 1. `npm test` → conserte o tripwire do mapa (e o do carro, se cair);
 2. `npx tsc --noEmit` e `npm run build`;
-3. deploy: `npx --yes vercel@latest --prod --yes --scope bate-perna` (**sem o `--scope` dá `Not authorized`**);
-4. conferir **no domínio real**: a home com **três** cartões, `/trilhas` com as três, e a ficha nova abrindo inteira;
-5. varredura dos chunks — **marcadores SEM ACENTO**, e **as duas metades** (o que morreu dá 0, o que nasceu dá ≥1).
+3. **rode `node tools/varrer.mjs`** e releia o texto visível com a ficha nova em mente — a pergunta
+   é sempre *este texto fala de UM lugar, num componente que serve TODOS?*;
+4. deploy: `npx --yes vercel@latest --prod --yes --scope bate-perna` (**sem o `--scope` dá `Not authorized`**);
+5. conferir **no domínio real**: a home com **três** cartões, `/trilhas` com as três, e a ficha nova abrindo inteira;
+6. varredura dos chunks — **marcadores SEM ACENTO**, e **as duas metades** (o que morreu dá 0, o que nasceu dá ≥1).
+
+### 7. 🆕 A varredura agora é VERSIONADA — `tools/varrer.mjs` (02/09)
+
+**Ela apontava pro vazio.** Nasceu em `scratchpad/varrer.mjs` — scratch, não versionado — e **sumiu
+com a sessão**, enquanto este arquivo seguia mandando a sessão seguinte rodá-la antes de afirmar
+que o levantamento está completo. **Ferramenta que um documento manda usar não pode morar em
+diretório descartável.** Reescrita com tira-comentários de máquina de estados (regex come string
+que contém `//`, tipo uma URL, e some com meio arquivo), e **rodada em 02/09**: o único texto
+visível que ainda supõe lugar é o `sub` do bloco acima — `barro · dá um tempo` e `seco · carro
+comum`, os dois em `carimbo-fase.ts`, que são **escolha registrada dele**. Nada mais escapou.
 
 ---
 
@@ -198,7 +318,22 @@ logo abaixo: **não é bug** — nenhum teste pega, o app estava certíssimo mos
 
 ---
 
-## ▶ O QUE ESPERA POR ELE — 🔴 A FILA ZEROU EM 2026-08-27
+## ▶ O QUE ESPERA POR ELE — 🔴 TRÊS PERGUNTAS NOVAS, TODAS DA CACHOEIRA (02/09)
+
+**A fila tinha zerado em 27/08. A cachoeira reabriu, e as três nasceram de MEDIÇÃO, não de
+palpite.** Nenhuma se constrói por conta própria; as três estão detalhadas no bloco do topo:
+
+| # | pergunta | onde |
+|---|---|---|
+| **0** | **qual** Véu de Noiva, e onde fica — não sei, e não vou supor | §0 do topo |
+| **1** | numa cachoeira, chuva ainda quer dizer "não vá"? E **pelo mesmo motivo?** O motor só sabe uma frase | §2 do topo (achado 1) |
+| **2** | o trecho **a pé** — a prosa da `nota` basta, como bastou pro "~2h" da 2ª ficha? | §3 do topo (achado 2) |
+| **3** | o `sub` (*"seco · carro comum"* / *"barro · dá um tempo"*) contradizendo a ficha — ele decidiu deixar em 27/08, **antes de o `carroComum` existir** | §5 do topo (achado 3) |
+
+⚠️ **A ordem importa:** a 0 primeiro, e as outras **só depois de ler o que ele contar do lugar**.
+Perguntar antes de ler o dado é o erro registrado em 27/08 (a §SEXTA, logo abaixo).
+
+---
 
 **As três perguntas de produto da 2ª ficha foram respondidas por ele e as três estão NO AR:**
 
@@ -210,8 +345,8 @@ logo abaixo: **não é bug** — nenhum teste pega, o app estava certíssimo mos
 
 ✅ **O painel que nunca abria com GPS sem sinal (§P item 4) FECHOU em 2026-08-27.** Ver o bloco
 próprio mais abaixo — inclusive o que NÃO foi provado no navegador.
-🔴 **A 3ª FICHA é o que ele pediu para a próxima sessão** — ver o bloco "▶▶ A 3ª FICHA" no topo
-deste arquivo, com o ensaio já medido.
+🔴 **A 3ª FICHA É A CACHOEIRA VÉU DE NOIVA** — ver o bloco no topo deste arquivo, com os dois
+ensaios já medidos e as três perguntas prontas.
 
 ---
 
@@ -505,6 +640,41 @@ grep -c 'FILTRAR' /tmp/t.js; grep -c 'ratis' /tmp/t.js; grep -c 'Custo' /tmp/t.j
 
 ⚠️ **`ratis`, `que d`, sem acento** — a metade "vivo" deu **0 com acento** e por um momento pareceu
 deploy que não subiu. A lição do acento cobrou de novo, na mesma sessão em que foi escrita.
+
+---
+
+## ✅ A NONA (2026-09-02): a espécie nova de lugar, e duas ferramentas que mentiam
+
+**Sessão sem código de aplicação e sem ele na tela** — ele avisou que não conseguiria ver, pediu
+tudo pronto pra próxima e nomeou a 3ª ficha: **a cachoeira Véu de Noiva**. Dois commits, os dois só
+de texto e ferramenta: `89a1415` e o desta preparação.
+
+🔴 **O ACHADO QUE VALE A SESSÃO — o motor tem UMA espécie de regra, e cachoeira pode não caber
+nela.** `avaliar()` só sabe `chuva_binaria` → `frio`. As duas fichas de hoje concordam com isso por
+uma coincidência que ninguém tinha nomeado: **as duas são rolê de carro, e nas duas a chuva estraga
+o CAMINHO.** Numa cachoeira a chuva pode significar o oposto, ou a mesma coisa por um motivo bem
+mais grave — e **nenhuma ficha tem como dizer isso.** Detalhe e as três saídas no bloco do topo.
+⚠️ **Isto não foi achado lendo texto** — foi achado perguntando *que espécie de lugar é este?* antes
+de abrir o questionário. As oito rodadas anteriores caçaram **texto** que supunha lugar; esta achou
+o **motor** supondo espécie de lugar. Mesma doença, uma camada abaixo.
+
+🔴 **DUAS FERRAMENTAS MINHAS ESTAVAM MENTINDO, e as duas do mesmo jeito: descreviam um mundo que
+nós mudamos em 27/08.**
+1. **`docs/questionario-ficha.md`** justificava a pergunta do `piso` com **o filtro que saiu da
+   tela**, e listava *"dois campos são opcionais"* quando já são cinco (`carroComum`, `horario` e
+   `custo.curto` nasceram depois da lista e nunca entraram nela). **Eu ia ler isso pra ele hoje,
+   como se fosse verdade.** O guarda `questionario.test.ts` passa **7/7 antes e depois**: ele prova
+   que todo campo TEM pergunta, nunca que a razão da pergunta continua verdadeira. **Pergunta com
+   justificativa falsa colhe resposta errada, e nenhum teste vê isso.**
+2. **`scratchpad/varrer.mjs` NÃO EXISTIA MAIS.** Este arquivo mandava rodá-lo *"antes de afirmar que
+   a lista está completa"*, e ele morava em scratch — sumiu com a sessão que o criou. Recriado
+   como **`tools/varrer.mjs`, versionado**. Rodado: o único texto visível que ainda supõe lugar é o
+   `sub`, que é **escolha registrada dele**. Nada mais escapou.
+
+✅ **E a medição confirmou o conserto da véspera em ficha nova:** o chip entregou **`R$ 12,50`**
+inteiro (o defeito dos centavos), o `motivo` **calou** sem `secaRapido` e sem frase de piso, e o
+guarda do `carroComum` — oco até anteontem — **acusou nominalmente** a ficha de ensaio. Suíte com
+ela no acervo: **48 passed | 2 failed**, exatamente os dois tripwires previstos.
 
 ---
 
