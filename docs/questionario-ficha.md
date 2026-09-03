@@ -169,8 +169,18 @@ destas quatro palavras exatamente, sem sinônimo:
 - **asfalto-esburacado** — é asfalto, mas tem buraco.
 - **asfalto-tapete** — asfalto liso, sem buraco — o melhor piso da escala.
 
-**Por que importa:** é um dos filtros da tela inicial — quem só topa ir de carro
-comum em piso bom pode esconder trilhas com piso pior que isso.
+**Por que importa:** hoje ele faz duas coisas, e nenhuma delas é recortar a
+lista. Aparece escrito na ficha, dentro do bloco do Trajeto; e é dele que sai a
+meia-frase do carimbo que diz o que a chuva faz com esse chão.
+
+🔴 **Até 2026-08-27 ele era um recorte da tela inicial, e esse recorte SAIU.**
+Ele estava respondendo *"meu carro chega até lá?"* por tabela, e errava contra a
+pessoa. Quem responde isso agora é o `carroComum`, lá embaixo. Este campo
+continua na ficha como fato do lugar, e nada mais compara um chão com outro.
+
+⚠️ **E nem toda resposta tem meia-frase de chuva** — só a que você já escreveu.
+As outras calam até você escrever a delas: uma linha, quando quiser. O app
+prefere calar a inventar física de terreno que ninguém mediu.
 
 **Um caso inventado, só pra deixar a regra clara** — este morro não existe, é
 hipotético, não é lugar nenhum e não é nenhuma trilha sua: se a estrada até o
@@ -184,8 +194,9 @@ segura água"*. Como é a estrada nos trechos antes desse, você ainda não me
 disse, e eu não vou supor: pra escolher a palavra basta o pior trecho, e o pior
 trecho você já nomeou.
 
-**Pular é permitido:** sem resposta, a trilha simplesmente nunca é escondida por
-esse filtro — ela aparece pra qualquer piso mínimo que a pessoa escolher.
+**Pular é permitido:** sem resposta, a ficha simplesmente não mostra a linha do
+chão da via, e o carimbo termina sem dizer o que a chuva faz ali. Silêncio — e
+nunca uma frase genérica de reserva no lugar.
 
 ---
 
@@ -420,14 +431,20 @@ recusa carregar em vez de mostrar algo quebrado. Depois de validado, a ficha nov
 aparece sozinha na home (agrupada por "hoje dá" ou "hoje não dá", junto com o pin no
 mapa) e no acervo em `/trilhas` — sem precisar mexer em mais nada.
 
-**Dois campos são opcionais**, e pular qualquer um dos dois não impede a ficha de
-carregar:
+**Cinco respostas são opcionais**, e pular qualquer uma delas não impede a ficha de
+carregar. A régua é a mesma nas cinco — são **fato de roteiro**, quem responde é quem
+conhece o lugar, e onde falta o dado **o app cala em vez de inventar**:
 
-- `piso` — sem ele, essa trilha nunca fica escondida pelo filtro de piso na tela
-  inicial: ela aparece pra qualquer valor que a pessoa escolher no filtro.
+- `piso` — sem ele, a ficha não mostra a linha do chão da via, e o carimbo não diz o
+  que a chuva faz ali.
 - `secaRapido` — sem ele, a linha verde do carimbo termina nas horas de chuva, sem a
-  meia-frase que explica o terreno. Os dois são **fato de roteiro**: quem responde é
-  quem conhece o lugar, e o app prefere calar a inventar.
+  meia-frase que explica o terreno.
+- `carroComum` — sem ele, o app não afirma nada sobre que carro chega. Repare que
+  **"não" é uma afirmação** ("carro comum não chega"); deixar em branco é silêncio, e
+  as duas coisas são diferentes.
+- `horario` — sem ele, a ficha **nunca fecha**, e o carimbo decide só pela chuva.
+- `custo.curto` — numa ficha paga sem ele, o chip do topo mostra **só o preço**, e o
+  app não diz onde se paga.
 
 **Nota pra quem mantém o schema:** três perguntas antigas saíram deste questionário —
 esforco (quão puxada é, pensando no corpo de quem vai) e duracao (quanto tempo dura,

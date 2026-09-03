@@ -5,8 +5,12 @@
  *  nome — `extensaoKm`, formatado em `geo.ts`. O campo saiu do modelo; o
  *  corte que esta oração descreve (via dirigida × trecho a pé) continua sendo
  *  o certo, só não há mais o par pra apontar. O questionário faz o mesmo
- *  corte, com as mesmas palavras, e os dois têm que continuar batendo: este
- *  campo responde "que carro serve", e é isso que o filtro da tela pergunta.
+ *  corte, com as mesmas palavras, e os dois têm que continuar batendo.
+ *
+ *  🔴 O QUE ESTE CAMPO NÃO RESPONDE MAIS: "que carro serve". Ele respondia, por
+ *  proxy, até 2026-08-27 — e errava. Quem responde isso é `carroComum` na
+ *  ficha; o recorte da tela que perguntava por piso saiu junto (ver o
+ *  comentário do `PISOS` logo abaixo).
  *
  *  Dentro dessa via, vale o PIOR trecho — mesmo curto, mesmo sendo o último —
  *  e não a média nem o piso que predomina.
