@@ -298,13 +298,16 @@ describe("MapaHome com a localização da pessoa", () => {
     await findByTestId("voce");
     // 🔴 Este número está PRESO ao acervo real: São Paulo está longe de TODAS
     // as trilhas, então o aviso nomeia todas. Eram 2 em 2026-08-25 (Rampa do
-    // Pepê + Pedra Furada de Venturosa). Uma terceira ficha faz este teste
-    // cair, e isso é o comportamento certo: alguém tem que olhar a tela de
-    // novo, não é bug. Não troque por `${fichas.length}` — asserção escrita
-    // contra a própria fonte é cega ao número, que é justo o que se prova aqui.
+    // Pepê + Pedra Furada de Venturosa) e são 3 desde 2026-09-03, com a
+    // Cachoeira Véu de Noiva (Bonito-PE). Uma ficha nova faz este teste cair,
+    // e isso é o comportamento certo: alguém tem que olhar a tela de novo, não
+    // é bug. **O tripwire disparou como prometido na entrada da 3ª ficha** —
+    // foi o ÚNICO teste a cair das 751, e caiu com a mensagem que já dizia o
+    // que fazer. Não troque por `${fichas.length}` — asserção escrita contra a
+    // própria fonte é cega ao número, que é justo o que se prova aqui.
     // O texto no SINGULAR se prova em "'N fora do mapa' conta só as VISÍVEIS",
     // com fichas sintéticas, onde a contagem não depende do conteúdo.
-    expect(container.querySelector(".mapa-fora")?.textContent).toBe("2 trilhas fora do mapa");
+    expect(container.querySelector(".mapa-fora")?.textContent).toBe("3 trilhas fora do mapa");
   });
 
   it("continua creditando o OpenStreetMap com a localização ligada", async () => {
