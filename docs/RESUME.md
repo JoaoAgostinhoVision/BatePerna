@@ -4,32 +4,39 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-🔴🔴🔴 **ÚLTIMA PARADA: 2026-09-03 — O QUESTIONÁRIO DA 3ª FICHA ANDOU QUASE INTEIRO, E O
-RASCUNHO ESTÁ ESPERANDO A LEITURA DELE.**
+🔴🔴🔴 **ÚLTIMA PARADA: 2026-09-03 — A 3ª FICHA ESTÁ NO AR, E SOBROU UMA PERGUNTA SÓ.**
 
-> *"pode rascunhar o resto que eu leio depois"* — João, 2026-09-03.
+✅ **`content/fichas/veu-de-noiva-de-bonito.json` — Cachoeira Véu de Noiva, Bonito-PE.** Commit
+`4d7bf60`, deployada e **conferida no domínio real**: home com **três** cartões, a ficha abrindo
+inteira, chip `R$ 10 · entrada`, e o carimbo em **frio** com a frase do barro vinda do `piso.ts`.
+**751/751**, `tsc` limpo, `build` passa.
 
-**Se ele disser só "continua": abra `docs/respostas-veu-de-noiva-WIP.md` e leia pra ele os
-4 BURACOS + as 4 perguntas abertas.** Não refaça o questionário do zero — **12 campos já estão
-respondidos por ele**, e repetir a pergunta é o jeito mais rápido de perder a confiança dele.
+## ⏸ A ÚNICA COISA ESPERANDO POR ELE: o rodapé diz **"Agreste"**, e Bonito não é Agreste
 
-**Onde estão as coisas:**
-- **`docs/respostas-veu-de-noiva-WIP.md`** — procedência campo a campo. **É a fonte.**
-- **`docs/rascunho-ficha-veu-de-noiva.json`** — a ficha montada. 🔴 **Mora em `docs/` DE
-  PROPÓSITO:** `loadAll()` só lê `content/fichas/`, então **não está no ar**. Movê-lo publica na
-  home, no mapa e em `/trilhas` — com **prosa minha** onde devia estar a voz dele. **Só depois que
-  ele ler.**
+`src/app/[slug]/page.tsx:175` — `<div className="foot">BatePerna · Agreste · PE</div>`, **texto
+fixo, no componente que serve TODAS as fichas**. As duas primeiras são do Agreste; **Bonito é
+brejo** — e a palavra é **dele**: *"um espetáculo natural do brejo pernambucano"*.
 
-**O que falta, e é só isto:**
-| 🟡 | 4 campos de **voz** preenchidos com **prosa MINHA**, esperando ele aprovar ou trocar | `rotulo_escaneio`, `promessa`, `voz`, `premio` |
-| ⏳ | 4 perguntas abertas | o título ("Véu de Noiva **I**"?), `modos`, o trecho **a pé**, e se rapel/tirolesa entram |
+🔴 **É a espécie de sempre, achada uma hora depois de eu escrever um agente pra caçá-la** — e ela
+escapou da minha varredura porque eu procurei por material e relevo (*barro, portão, subir, serra*)
+e **não por REGIÃO**. `tools/varrer.mjs` a mostrava; meu filtro de leitura é que não.
 
-🔴 **A TRAVA CONTRA PUBLICAR PROSA MINHA COMO VOZ DELE É `_PENDENTE`, DENTRO DO PRÓPRIO JSON.**
-Ele pediu velocidade (*"pode ir seguindo"*), então os buracos viraram propostas — e isso deixou o
-rascunho **parecido com pronto**, que é exatamente como ele viraria ficha por engano. Enquanto
-`_PENDENTE` tiver nome, **não move pra `content/fichas/`**. `tools/conferir-rascunho.mjs`
-imprime `PUBLICAR: ✗` até ele esvaziar. ⚠️ **`voz` é a única frase do app assinada "a voz de quem
-conhece" — aprovar por omissão é o jeito mais fácil de ela deixar de ser dele.**
+**As três saídas, pra ele escolher — nenhuma deve ser construída por conta própria:**
+| | vira |
+|---|---|
+| **(a)** tirar a região | `BatePerna · PE` — o app cala, que é a régua da casa |
+| **(b)** região por ficha | campo novo, molde do `custo.curto` |
+| **(c)** trocar por algo que cubra as três | ex. *"Pernambuco"* — mas é redação minha sobre lugar dele |
+
+**O que eu faria: (a).** Não depende de dado novo, não pode envelhecer errado, e é a única que já é
+a regra escrita do projeto.
+
+**As outras 3 perguntas abertas seguem de pé, e nenhuma bloqueia:** o título (*"Véu de Noiva I"*?,
+já que existe uma II a 5 km), `modos`, e o **trecho a pé** (achado 2 — a web fala em ~590 m/15 min
+pelo Poço Dantas, mas é 🔵 e ele nunca falou dele).
+
+**A procedência campo a campo está em `docs/respostas-veu-de-noiva-WIP.md`** — de quem é cada
+frase. O rascunho de `docs/` foi apagado ao mover.
 
 🔴 **O ACHADO 1 — O DO MOTOR — FECHOU, E A RESPOSTA FOI "NÃO MEXE".** Ele disse que ali a chuva
 estraga **o caminho** (*"a parte de terra é um desafio na chuva, o barro fica pegajoso"*) — é a

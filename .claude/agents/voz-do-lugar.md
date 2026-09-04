@@ -19,6 +19,13 @@ Cinco casos reais, todos do mesmo formato:
 | *"cheque o barro no portão"* (×3) | `Carimbo.tsx` | supunha o material **e** que a pessoa para no portão — ela decide **dirigindo** |
 | *"Pode subir" / "Não suba"* | `Carimbo.tsx`, `SeloTrilha.tsx` | **"subir" parecia um verbo**, era relevo. Na 2ª ficha o passeio é *chegar* |
 | *"E no portão…" / "Deu pra subir" / "Tava barro"* | `ConfirmarFui.tsx` | **arquivo que o inventário manual nunca abriu** |
+| *"BatePerna · **Agreste** · PE"* | `[slug]/page.tsx` (rodapé) | a 3ª ficha é de **Bonito**, que é **brejo**, não Agreste |
+
+🔴 **O sexto escapou de uma varredura feita no mesmo dia, e é a lição mais recente:** eu rodei
+`tools/varrer.mjs` e **filtrei a saída** por material e relevo — *barro, portão, subir, serra,
+asfalto*. A ferramenta mostrou o rodapé; **meu filtro de leitura é que não o mostrou.** Fato de
+lugar tem mais famílias do que a última que mordeu: **material · relevo · estrutura · verbo de
+movimento · REGIÃO · clima · fauna · horário.** Varra a saída inteira, não a sua suspeita.
 
 🔴 O quarto é o que ensina: quem escreveu o levantamento tinha carimbado *"Pode subir"* como
 **"genérico o bastante"**. Não era. **Quem escreveu as suposições é o pior auditor delas** — por
