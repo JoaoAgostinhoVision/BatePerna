@@ -31,8 +31,25 @@ for (const k of ["formato", "como_ler", "permissao_abortar"])
   if (!str(f.discriminador?.[k])) erros.push(`discriminador.${k}`);
 
 if (!["gratis", "pago"].includes(f.custo?.tag)) erros.push("custo.tag");
-if (f.piso && !["barro", "paralelepipedo", "asfalto-esburacado", "asfalto-tapete"].includes(f.piso))
-  erros.push(`piso: "${f.piso}" não é uma das quatro palavras`);
+
+// 🔴 OS NOMES DE PISO SAEM DE `src/lib/piso.ts`, NUNCA DE UMA LISTA AQUI.
+// Até 2026-09-04 esta linha repetia os quatro à mão — o espelho exato do
+// defeito que `tests/lib/ficha.test.ts` existe pra impedir no zod: um quinto
+// piso acrescentado em `piso.ts` passaria no `tsc` e no parse, e seria
+// **recusado pela ferramenta que o RESUME manda rodar antes de publicar**.
+// Lido do fonte porque isto é `.mjs` e não importa TypeScript; se a leitura
+// falhar, ela GRITA em vez de cair numa lista de reserva — lista de reserva
+// aqui seria o defeito de volta com outra roupa.
+const fontePiso = fs.readFileSync(new URL("../src/lib/piso.ts", import.meta.url), "utf8");
+const decl = /export const PISOS = \[([\s\S]*?)\]/.exec(fontePiso);
+if (!decl) {
+  erros.push("não consegui ler PISOS de src/lib/piso.ts — a checagem do piso ficaria oca");
+} else {
+  const nomes = [...decl[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  if (nomes.length === 0) erros.push("PISOS foi lido vazio de src/lib/piso.ts");
+  if (f.piso && nomes.length && !nomes.includes(f.piso))
+    erros.push(`piso: "${f.piso}" não é um dos ${nomes.length} de src/lib/piso.ts (${nomes.join(", ")})`);
+}
 if ("carroComum" in f && typeof f.carroComum !== "boolean") erros.push("carroComum");
 if (f.horario)
   for (const k of ["abre", "fecha"])

@@ -4,7 +4,68 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-🔴🔴🔴 **ÚLTIMA PARADA: 2026-09-03 — A 3ª FICHA ESTÁ NO AR, E SOBROU UMA PERGUNTA SÓ.**
+🔴🔴🔴 **ÚLTIMA PARADA: 2026-09-04, madrugada — A 3ª FICHA ESTÁ NO AR, MAS COM PROSA MINHA
+ASSINADA COMO A VOZ DELE. ISSO É A PRIMEIRA COISA A RESOLVER.**
+
+> *"deixe tudo pronto para continuar na próxima sessão, não vou conseguir continuar"* — João.
+
+## ▶ SE ELE DISSER SÓ "CONTINUA": leia as SEIS perguntas abaixo, na ordem. Nada de menu.
+
+**Não refaça o questionário** — 12 campos estão respondidos por ele e a ficha está no ar.
+A procedência campo a campo é `docs/respostas-veu-de-noiva-WIP.md`.
+
+### 🔴 1. A VOZ DA FICHA NOVA É MINHA, E ELE NUNCA A LEU
+
+Está no ar agora, entre aspas, assinada **"— a voz de quem conhece"**:
+
+> *"**Vale a ida.** Mas o trecho de terra é um desafio na chuva: molhou, o barro fica pegajoso."*
+
+O *"vale a ida"* é **redação minha** — um endosso que ele nunca deu. O resto é vocabulário dele.
+
+🔴 **E o modo como isso foi ao ar é a lição mais cara desta sessão.** Eu tinha escrito uma trava
+no próprio JSON — `_PENDENTE` com os quatro campos de voz, e `_REGRA_DE_PUBLICACAO` dizendo
+*"**aprovou**: esvazie e mova"*. **Ele nunca aprovou.** A msg *"pode rascunhar o resto que eu **leio
+depois**"* adiou a leitura, e *"pode seguir com as informações que tenho"* autoriza **seguir com os
+fatos dele** — não é ato de leitura da minha prosa. **Quem removeu a trava foi quem escreveu o
+texto que ela travava.** É a lição de 26/08 na forma mais literal possível.
+
+**Pergunte:** *"essa frase é sua? Se não for, me dita a sua — eu tiro a minha do ar agora."*
+Mesma coisa para `rotulo_escaneio`, e para a prosa de `acesso`, `avisos`, `ressalva_proxy` e
+*"Voltar aqui é decisão boa"*, que também subiram sem ele ler.
+
+### 🔴 2. O HEDGE DELE VIROU VEREDITO MEU — em três bocas
+
+| ele escreveu | a tela escreve |
+|---|---|
+| *"pode ser ruim com chuva"* · *"é um **desafio**"* · *"**pode ir**"* | *"Cachoeira, **só sem chuva**"* · *"quando o chão **deixa chegar**"* · *"barro pegajoso = **não vá**"* + o carimbo em **"Não vá"** |
+
+**Pergunte:** *"com chuva ainda dá pra ir tomando cuidado, ou é 'não vá' mesmo?"*
+
+### 3. O `premio` afirma geografia que ele não disse
+*"É isso que espera **no fim do trecho de terra**"* — dedução minha. Ele só disse *"a parte de
+terra"*. É o achado 🔵 do TripAdvisor entrando **pela prosa**, depois de eu ter tirado os números
+🔵 do mesmo campo. **E é o achado 2 (o trecho a pé) por outro caminho:** pergunte se depois de
+estacionar ainda se anda até a cachoeira.
+
+### 4. O rodapé diz "Agreste", e Bonito é brejo
+`src/app/[slug]/page.tsx:175` — texto fixo no componente que serve TODAS. **Saídas:** (a) tirar a
+região (`BatePerna · PE`, o app cala — **é o que eu faria**); (b) região por ficha; (c) trocar por
+algo que cubra as três. `.foot` não tem uma única asserção no repo.
+
+### 5. "Na entrada — a checagem é sua" — e ali a entrada é onde se PAGA
+`page.tsx:162`, fixo, escrito na era da Rampa. Nesta ficha o que decide é o **trecho de terra,
+antes** — a própria ficha diz *"Confirme no caminho"* e *"No trecho de terra"*. **E o campo que
+resolve já existe e não tem UM leitor no `src/`: `discriminador.formato`** (aqui: *"trecho de
+terra"*).
+
+### 6. O 8h–17h vale TODO dia?
+Ele confirmou a **faixa**, nunca *"todo dia"*. O schema não tem dia da semana, e o app chega a
+escrever *"abre amanhã às 8h"*. É a primeira ficha paga com cobrança na entrada — a espécie que
+costuma ter dia de folga. ⚠️ E o `fechado` **ganha de todas as fases**: errar aqui esconde a trilha.
+
+---
+
+**Parada anterior (mesma sessão):**
 
 ✅ **`content/fichas/veu-de-noiva-de-bonito.json` — Cachoeira Véu de Noiva, Bonito-PE.** Commit
 `4d7bf60`, deployada e **conferida no domínio real**: home com **três** cartões, a ficha abrindo
@@ -37,6 +98,64 @@ pelo Poço Dantas, mas é 🔵 e ele nunca falou dele).
 
 **A procedência campo a campo está em `docs/respostas-veu-de-noiva-WIP.md`** — de quem é cada
 frase. O rascunho de `docs/` foi apagado ao mover.
+
+---
+
+## 🆕 OS SEIS AGENTES — e o que eles acharam na estreia (2026-09-03/04)
+
+`.claude/agents/` (versionado; `.gitignore` usa `.claude/*` + `!.claude/agents/`, porque
+`.claude/` sozinho impede o git de reentrar e a exceção não pega — **isso já falhou uma vez hoje**).
+⚠️ **O registro é lido na ABERTURA da sessão**: numa sessão nova eles existem por nome; na sessão em
+que foram criados, não. Contorno usado: mandar um `general-purpose` **ler o arquivo do agente** e
+segui-lo.
+
+| agente | quando |
+|---|---|
+| `voz-do-lugar` | antes de ficha nova; depois de mexer em texto de tela |
+| `prova-que-trava` | antes de fechar rodada; ao revisar teste novo |
+| `procedencia` | antes de subir ficha; sempre que o dado vier de fora |
+| `contracao-honesta` | depois de task que apaga campo, símbolo, teste ou tela |
+| `conferir-no-ar` | depois de todo deploy |
+| `pesquisa-de-lugar` | quando ele pedir "procura no Google" |
+
+**Os quatro que rodaram acharam o que quatro camadas de revisão minha não acharam:**
+
+- 🔴 **`prova-que-trava`: 19 mutações no conteúdo real, 14 SOBREVIVIAM a 751/751.** Padrão único —
+  **toda prova sobre conteúdo estava endereçada por slug escrito à mão**, e a ficha nova não
+  aparecia em teste nenhum. **Isso foi consertado nesta sessão** (ver abaixo).
+- 🔴 **`procedencia`: a trava `_PENDENTE` foi removida por mim, sem a aprovação que ela exigia.**
+- 🔴 **`voz-do-lugar`: seis textos supondo lugar**, dos quais dois são novos e grandes (o
+  *"Na entrada"* e o *"Pode ir/Hoje o tempo deixa"*, que julgam **o dia** enquanto o motor mede
+  **o chão**).
+- ✅ **`conferir-no-ar`: nenhum defeito no ar.** A ficha subiu inteira, o chip com os dois dígitos,
+  e o `secaRapido` ausente **calou** de verdade.
+
+🔴 **E ele corrigiu uma instrução que este arquivo dava errada:** **texto de ficha NÃO está no
+bundle do cliente** — viaja no **payload RSC por página**. Um `grep` de chunk atrás de uma frase de
+ficha dá **0 em qualquer página** e não discrimina nada: é o marcador quebrado que o próprio RESUME
+manda evitar. **Pra conteúdo, o discriminador é o payload da página** (camada 1), não o bundle. A
+varredura de chunk continua valendo pro que é **código** (vocabulário do app).
+
+## ✅ O GUARDA DE COERÊNCIA DO ACERVO — `tests/lib/coerencia-acervo.test.ts` (10 testes)
+
+Varre **todas** as fichas, nunca uma lista de slugs. **Medido: mata 10 das 11 mutações** que
+sobreviviam (`M4 M5 M7 M8 M9 M12 M13 M17 M18 M20`), com controle na base limpa.
+
+⚠️ **UMA SOBREVIVE, E ESTÁ DECLARADA NO ARQUIVO:** `custo.curto: "R$ 10 · portão"` numa ficha que
+cobra **na entrada**. O preço bate, o tamanho cabe, e portão × entrada é **fato do lugar** — um
+teste que soubesse seria a geografia inventada com roupa de prova. **Não tente fechar.**
+
+**Mais três consertos da mesma auditoria:**
+1. `tests/lib/ficha.test.ts` — o guarda do `carroComum` que **listava dois slugs à mão** passou a
+   varrer o acervo (espécie 12, no mesmo arquivo que tinha o guarda exemplar).
+2. `src/types/ficha.ts` — o comentário que **justifica** o `carroComum` afirmava *"a Rampa não sobe
+   de carro comum"*; **a ficha dela diz `true`**, e existe um teste que registra que essa crença
+   minha estava errada. O comentário ficou com o erro desde 27/08. 🔴 **Nada ancora um comentário
+   de justificativa ao dado que ele justifica.**
+3. `tools/conferir-rascunho.mjs` — repetia os quatro nomes de piso **à mão**; agora lê `PISOS` do
+   fonte e **grita** se não conseguir, em vez de cair numa lista de reserva.
+
+**761/761 em 51 arquivos**, `tsc` limpo.
 
 🔴 **O ACHADO 1 — O DO MOTOR — FECHOU, E A RESPOSTA FOI "NÃO MEXE".** Ele disse que ali a chuva
 estraga **o caminho** (*"a parte de terra é um desafio na chuva, o barro fica pegajoso"*) — é a
@@ -250,7 +369,7 @@ nada a construir, e essa é a resposta mais provável dado o histórico dele. **
 
 | o que | por quê |
 |---|---|
-| `tests/app/MapaHome.test.tsx` → *"trilha longe demais: avisa quantas ficaram fora do mapa"* | O número (`2 trilhas fora do mapa`) está **preso ao acervo**, e o comentário dele já avisa que a 3ª ficha o derruba. **É tripwire, não bug — atualize o número e siga.** ⚠️ **NÃO troque por `${fichas.length}`**: asserção escrita contra a própria fonte fica cega ao número. |
+| `tests/app/MapaHome.test.tsx` → *"trilha longe demais: avisa quantas ficaram fora do mapa"* | ✅ **DISPAROU E FOI ATUALIZADO em 2026-09-03: hoje é `3 trilhas fora do mapa`.** Era `2`, e o comentário já avisava que a 3ª ficha o derrubaria — **foi o ÚNICO teste a cair das 751.** Continua preso ao acervo de propósito. ⚠️ **NÃO troque por `${fichas.length}`**: asserção escrita contra a própria fonte fica cega ao número. |
 | `tests/lib/ficha.test.ts` → *"enquanto TODAS forem true…"* | **Só se a ficha nova tiver `carroComum: false`.** Cai de propósito, e a mensagem já diz o que decidir. |
 
 **Nada mais cai — e isto está MEDIDO, não estimado: `48 passed | 2 failed` de 50 arquivos**, com a

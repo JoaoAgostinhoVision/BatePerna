@@ -82,10 +82,19 @@ export const fichaSchema = z.object({
   // Carro comum chega até aqui?
   //
   // 🔴 Ele existe porque o `piso` estava sendo usado como PROXY disso, e errava
-  // contra a pessoa (2026-08-27). As duas fichas reais são `barro` e têm
-  // exigências OPOSTAS: a Rampa do Pepê não sobe de carro comum; na Pedra
-  // Furada carro comum passa sempre — *"chão batido é barro com areia"*. Mesmo
-  // material, respostas contrárias: o material nunca ia responder isso.
+  // contra a pessoa (2026-08-27): quem filtrava pedindo piso melhor que barro
+  // perdia TODAS as fichas do acervo — e em todas elas carro comum chega. O
+  // material nunca ia responder "meu carro chega lá?".
+  //
+  // ⚠️ ESTE COMENTÁRIO AFIRMAVA O CONTRÁRIO ATÉ 2026-09-04, e o erro era meu:
+  // dizia *"a Rampa do Pepê não sobe de carro comum"*, frase que eu tinha
+  // escrito no `RESUME` e nunca conferido na ficha. `rampa-do-pepe.json` diz
+  // `carroComum: true` e *"dá pra ir de carro comum — mas só quando não estiver
+  // chovendo"*: a ressalva é de CHUVA, e quem a diz é o carimbo. A correção
+  // entrou no JSON e no teste em 27/08 e **este comentário ficou com o erro**,
+  // justificando o campo com a crença que o campo desmentiu. Achado por
+  // auditoria, não por teste: **nada ancora um comentário de justificativa ao
+  // dado que ele justifica.**
   //
   // Booleano, e não escala de veículo: o que ele disse sobre cada lugar foi
   // sim/não. Uma escala ("carro alto", "4x4") seria fato inventado.

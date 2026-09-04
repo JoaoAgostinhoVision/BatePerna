@@ -321,13 +321,19 @@ describe("carroComum — a pergunta que o piso respondia errado", () => {
   //
   // Se um dia alguém achar que a Rampa é `false`, é este teste que discorda —
   // e a asserção do `acesso` é o porquê, no mesmo lugar.
-  it("as DUAS fichas reais dizem que carro comum chega — a ressalva é de chuva, não de veículo", () => {
-    for (const slug of ["rampa-do-pepe", "pedra-furada-de-venturosa"]) {
-      const f = getFicha(slug)!;
-      expect(f.carroComum, `${slug} perdeu o campo`).toBe(true);
+  // 🔴 VARRIA UMA LISTA DE SLUGS ESCRITA À MÃO até 2026-09-04, e por isso não
+  // enxergou a 3ª ficha: medido, apagar o `carroComum` da Véu de Noiva ou pôr
+  // nela um `acesso` dizendo "só 4x4 alto chega" passava verde. É a espécie 12
+  // ("guarda que enumera o acervo à mão é cego a ele crescer") no arquivo que
+  // tem, dois testes abaixo, o guarda que fez tudo certo. Agora varre o acervo.
+  it("toda ficha que afirma carro comum sustenta o fato no acesso — a ressalva é de chuva, não de veículo", () => {
+    const afirmam = getAllFichas().filter((f) => f.carroComum === true);
+    expect(afirmam.length, "sumiu a ficha que afirma carro comum: este guarda ficaria oco")
+      .toBeGreaterThanOrEqual(2);
+    for (const f of afirmam) {
       expect(
         f.acesso.toLowerCase(),
-        `o acesso de ${slug} deixou de sustentar o carroComum — releia antes de mexer no campo`,
+        `o acesso de ${f.slug} deixou de sustentar o carroComum — releia antes de mexer no campo`,
       ).toContain("carro comum");
     }
   });
