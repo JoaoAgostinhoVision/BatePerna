@@ -21,8 +21,15 @@ respondidos por ele**, e repetir a pergunta é o jeito mais rápido de perder a 
   ele ler.**
 
 **O que falta, e é só isto:**
-| ⬜ | 4 buracos que **só ele** escreve | `rotulo_escaneio`, `promessa`, `voz`, `premio` |
+| 🟡 | 4 campos de **voz** preenchidos com **prosa MINHA**, esperando ele aprovar ou trocar | `rotulo_escaneio`, `promessa`, `voz`, `premio` |
 | ⏳ | 4 perguntas abertas | o título ("Véu de Noiva **I**"?), `modos`, o trecho **a pé**, e se rapel/tirolesa entram |
+
+🔴 **A TRAVA CONTRA PUBLICAR PROSA MINHA COMO VOZ DELE É `_PENDENTE`, DENTRO DO PRÓPRIO JSON.**
+Ele pediu velocidade (*"pode ir seguindo"*), então os buracos viraram propostas — e isso deixou o
+rascunho **parecido com pronto**, que é exatamente como ele viraria ficha por engano. Enquanto
+`_PENDENTE` tiver nome, **não move pra `content/fichas/`**. `tools/conferir-rascunho.mjs`
+imprime `PUBLICAR: ✗` até ele esvaziar. ⚠️ **`voz` é a única frase do app assinada "a voz de quem
+conhece" — aprovar por omissão é o jeito mais fácil de ela deixar de ser dele.**
 
 🔴 **O ACHADO 1 — O DO MOTOR — FECHOU, E A RESPOSTA FOI "NÃO MEXE".** Ele disse que ali a chuva
 estraga **o caminho** (*"a parte de terra é um desafio na chuva, o barro fica pegajoso"*) — é a

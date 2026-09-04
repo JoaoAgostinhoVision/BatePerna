@@ -1,13 +1,15 @@
 {
-  "_LEIA_ISTO": "RASCUNHO — NÃO É FICHA. Mora em docs/ de propósito: loadAll() só lê content/fichas/, então isto NÃO está no ar. Os campos que começam com ⬜ são buracos esperando palavra do João; mover este arquivo pra content/fichas/ com eles assim publicaria os buracos na home. Procedência campo a campo: docs/respostas-veu-de-noiva-WIP.md",
+  "_LEIA_ISTO": "RASCUNHO — NÃO É FICHA. Mora em docs/ de propósito: loadAll() só lê content/fichas/, então isto NÃO está no ar. Procedência campo a campo: docs/respostas-veu-de-noiva-WIP.md",
+  "_PENDENTE": ["rotulo_escaneio", "promessa", "voz", "premio"],
+  "_REGRA_DE_PUBLICACAO": "Enquanto _PENDENTE tiver nome, este arquivo NÃO vai pra content/fichas/. Os quatro campos listados ali estão preenchidos com REDAÇÃO MINHA — proposta pro João aprovar ou trocar, não palavra dele. Publicar assim é assinar a voz dele com texto meu, que é o defeito que agosto inteiro foi gasto arrancando. Aprovou: esvazie _PENDENTE, apague as três chaves com _ e mova.",
 
   "slug": "veu-de-noiva-de-bonito",
   "modos": ["condicional"],
 
-  "rotulo_escaneio": "⬜ 3 ou 4 palavras de relance — sua",
-  "promessa": "⬜ em uma linha: por que alguém pegaria o carro pra ir até lá — sua",
-  "voz": "⬜ o aviso curto que você daria pra um amigo, sem meias palavras — sua",
-  "premio": "⬜ o que ela entrega quando dá certo — sua",
+  "rotulo_escaneio": "Cachoeira, só sem chuva",
+  "promessa": "A maior cachoeira de Bonito — quando o chão do caminho deixa chegar nela.",
+  "voz": "Vale a ida. Mas o trecho de terra é um desafio na chuva: molhou, o barro fica pegajoso.",
+  "premio": "A queda de 32 metros, a maior e a mais procurada de Bonito. E, pra quem quiser mais que olhar, tem rapel e tirolesa ali mesmo.",
 
   "trajeto": {
     "waypoints": [

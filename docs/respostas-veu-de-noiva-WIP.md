@@ -140,7 +140,7 @@ busca, não da página inteira. Mais um motivo pra nada disso virar campo sem el
 `content/fichas/`, então o rascunho **não está no ar**. Movê-lo pra lá publica na home, no mapa e em
 `/trilhas` — com prosa minha assinada como se fosse dele. **Só entra depois que ele ler.**
 
-**Conferido em 2026-09-03** com `scratchpad/conferir-rascunho.mjs`: forma ✓, todos os obrigatórios
+**Conferido em 2026-09-03** com `tools/conferir-rascunho.mjs`: forma ✓, todos os obrigatórios
 presentes, **4 buracos** e `secaRapido` ausente de propósito.
 
 ### Procedência campo a campo
@@ -157,8 +157,39 @@ presentes, **4 buracos** e `secaRapido` ausente de propósito.
 | `condicao.ressalva_proxy` | *"…a grade do modelo não vê esse pedaço. Confirme no caminho."* | 🟡 meu |
 | `discriminador.*` | *"No trecho de terra: barro pegajoso = não vá."* | 🟡 meu, com a palavra **"pegajoso"** dele |
 | `modos` | `["condicional"]` | 🟡 meu — **pergunta aberta**, ver abaixo |
-| `rotulo_escaneio`, `promessa`, `voz`, `premio` | **⬜ buraco visível** | ⏳ **só ele** |
+| `rotulo_escaneio`, `promessa`, `voz`, `premio` | **preenchidos com PROSA MINHA** | 🟡 **proposta, não palavra dele** — ver abaixo |
 | `secaRapido` | **ausente** | ✅ silêncio correto — ele não disse por que o chão firma ali |
+
+### 🔴 OS QUATRO CAMPOS DE VOZ VIRARAM PROPOSTA — e por que isso é perigoso
+
+🟢 **Pedido dele (2026-09-03):** *"eu quero que não fique pedindo acesso o tempo todo, pode ir
+seguindo"*. Então os quatro buracos ⬜ viraram **texto meu**, pra ele **aprovar ou trocar** em vez
+de escrever do zero — é mais rápido pra ele, que é o que ele pediu.
+
+🔴 **Mas isto tornou o rascunho PARECIDO COM PRONTO, e essa é a armadilha.** Buraco visível se
+recusava a ser publicado sozinho; prosa boa não se recusa. Então a trava saiu do texto e virou
+declaração no próprio arquivo: **`_PENDENTE`**, com os quatro nomes, e `_REGRA_DE_PUBLICACAO`
+dizendo o que fazer. `tools/conferir-rascunho.mjs` lê `_PENDENTE` e imprime
+**`PUBLICAR: ✗`** enquanto tiver nome ali — e confere que cada nome citado existe mesmo na ficha,
+senão a trava seria um `_PENDENTE` apontando pro vazio (a espécie "guarda que prova o que não
+importa", do arquivo de lições).
+
+**As quatro propostas, e de onde saiu cada uma:**
+
+| campo | proposta | de que fato ela vive |
+|---|---|---|
+| `voz` | *"Vale a ida. Mas o trecho de terra é um desafio na chuva: molhou, o barro fica pegajoso."* | 🟢 **quase tudo é vocabulário dele** — "desafio na chuva", "o barro fica pegajoso". O *"vale a ida"* é meu |
+| `rotulo_escaneio` | *"Cachoeira, só sem chuva"* | 🟡 meu. **Não copiei o "Só sem chuva" da Rampa cru** — dois cartões com etiqueta idêntica na mesma home não distinguem nada |
+| `promessa` | *"A maior cachoeira de Bonito — quando o chão do caminho deixa chegar nela."* | 🟠 o "maior de Bonito" é **🔵 da web**, dentro do *"o resto ok"* dele |
+| `premio` | *"A queda de 32 metros… tem rapel e tirolesa ali mesmo."* | 🟠 **os dois fatos são 🔵 da web** — 32 m e as atividades |
+
+⚠️ **As duas últimas são as frágeis, e pela razão que esta sessão já provou uma vez:** elas vivem
+de fato da web, e a web **errou o preço pela metade** na primeira coisa que ele conferiu. *"O resto
+ok"* foi um "ok" só, sobre uma lista de seis itens. **Se ele não quiser esses números na tela, o
+caminho honesto é a promessa falar do que ele conhece — o caminho, o chão, a chegada.**
+
+⚠️ **`voz` é o campo mais sensível do app inteiro** — é a única frase assinada *"a voz de quem
+conhece"*. Aprovar por omissão é a forma mais fácil de ela deixar de ser dele.
 
 ### 🔴 Três decisões minhas que ele precisa olhar com atenção
 
