@@ -4,21 +4,48 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-🔴🔴🔴 **ÚLTIMA PARADA: 2026-09-02 — ELE JÁ DISSE QUAL É A 3ª FICHA.**
+🔴🔴🔴 **ÚLTIMA PARADA: 2026-09-03 — O QUESTIONÁRIO DA 3ª FICHA ANDOU QUASE INTEIRO, E O
+RASCUNHO ESTÁ ESPERANDO A LEITURA DELE.**
 
-> *"eu não vou conseguir ver isso hoje, deixa tudo pronto para a próxima sessão, só lembre para
-> falar da **cachoeira véu de noiva**"* — João, 2026-09-02.
+> *"pode rascunhar o resto que eu leio depois"* — João, 2026-09-03.
 
-**Não devolva menu. Não pergunte o que fazer. Abra o bloco "▶▶ A 3ª FICHA: A CACHOEIRA VÉU DE
-NOIVA" logo abaixo e comece pela pergunta 0.** Ele não respondeu nada do questionário ainda — a
-sessão de 02/09 foi só de preparação, e ela **mediu** o que a ficha nova vai encontrar.
+**Se ele disser só "continua": abra `docs/respostas-veu-de-noiva-WIP.md` e leia pra ele os
+4 BURACOS + as 4 perguntas abertas.** Não refaça o questionário do zero — **12 campos já estão
+respondidos por ele**, e repetir a pergunta é o jeito mais rápido de perder a confiança dele.
 
-**A cachoeira não é "mais uma ficha". É a primeira ESPÉCIE nova de lugar do acervo**, e a
-medição de 02/09 achou uma coisa que nenhuma preparação anterior tinha visto — ver o achado 🔴 1
-lá embaixo, que é sobre o **motor**, não sobre texto. **Nada foi construído** — são QUATRO
-perguntas esperando por ele (a 0 e três achados), e as quatro são decisão dele.
+**Onde estão as coisas:**
+- **`docs/respostas-veu-de-noiva-WIP.md`** — procedência campo a campo. **É a fonte.**
+- **`docs/rascunho-ficha-veu-de-noiva.json`** — a ficha montada. 🔴 **Mora em `docs/` DE
+  PROPÓSITO:** `loadAll()` só lê `content/fichas/`, então **não está no ar**. Movê-lo publica na
+  home, no mapa e em `/trilhas` — com **prosa minha** onde devia estar a voz dele. **Só depois que
+  ele ler.**
 
-`main` limpo, **751/751 em 50 arquivos**, `tsc` limpo, `build` passa. Nada pendente do meu lado.
+**O que falta, e é só isto:**
+| ⬜ | 4 buracos que **só ele** escreve | `rotulo_escaneio`, `promessa`, `voz`, `premio` |
+| ⏳ | 4 perguntas abertas | o título ("Véu de Noiva **I**"?), `modos`, o trecho **a pé**, e se rapel/tirolesa entram |
+
+🔴 **O ACHADO 1 — O DO MOTOR — FECHOU, E A RESPOSTA FOI "NÃO MEXE".** Ele disse que ali a chuva
+estraga **o caminho** (*"a parte de terra é um desafio na chuva, o barro fica pegajoso"*) — é a
+leitura **(a)**. `chuva_binaria` serve, `avaliar()` não muda. 🔴 **E a segunda metade da resposta
+é uma INSTRUÇÃO DE SILÊNCIO:** *"a cachoeira não tenho registro de perigo, **não sei opinar**"* —
+então **nada na ficha pode afirmar que a água está boa nem que está perigosa.** Isso está gravado
+dentro do `regra_texto` do rascunho, não só no WIP.
+
+✅ **O achado 3 também morreu:** o piso é `barro`, então o selo *"barro · dá um tempo"* **continua
+verdadeiro** e a pergunta que ia se refazer sozinha não se refaz.
+⏳ **O achado 2 (trecho a pé) é o único dos três ainda de pé** — e a saída provável é **prosa na
+`nota`**, como o *"~2h"* da Pedra Furada.
+
+🔴 **E A LIÇÃO DO DIA FOI SOBRE BUSCAR NO GOOGLE.** Ele pediu (*"procure dados do google, prepare
+pra mim"*), e eu criei uma coluna 🔵 separada, que **nunca vira campo sem ele confirmar**. Pagou na
+primeira rodada: **a web dizia R$ 5 em várias páginas; ele disse R$ 10.** O app estaria mostrando
+**metade do preço** pra quem dirige 120 km — e **nenhum teste pegaria**. Mais duas que a web errou:
+a coordenada que ela deu era **da outra cachoeira, a 5 km** (existem *Véu da Noiva* e *Véu da Noiva
+II* em Bonito), e o *"só sábado e domingo"* também era da outra. **Fonte de fora é rascunho pra ele
+riscar, nunca dado.**
+
+`main` limpo, **751/751 em 50 arquivos**, `tsc` limpo, `build` passa. Nada quebrado — o rascunho
+não toca em código.
 
 ---
 
@@ -323,15 +350,19 @@ logo abaixo: **não é bug** — nenhum teste pega, o app estava certíssimo mos
 **A fila tinha zerado em 27/08. A cachoeira reabriu, e as três nasceram de MEDIÇÃO, não de
 palpite.** Nenhuma se constrói por conta própria; as três estão detalhadas no bloco do topo:
 
-| # | pergunta | onde |
-|---|---|---|
-| **0** | **qual** Véu de Noiva, e onde fica — não sei, e não vou supor | §0 do topo |
-| **1** | numa cachoeira, chuva ainda quer dizer "não vá"? E **pelo mesmo motivo?** O motor só sabe uma frase | §2 do topo (achado 1) |
-| **2** | o trecho **a pé** — a prosa da `nota` basta, como bastou pro "~2h" da 2ª ficha? | §3 do topo (achado 2) |
-| **3** | o `sub` (*"seco · carro comum"* / *"barro · dá um tempo"*) contradizendo a ficha — ele decidiu deixar em 27/08, **antes de o `carroComum` existir** | §5 do topo (achado 3) |
+🔴 **ATUALIZADO EM 2026-09-03 — TRÊS DAS QUATRO FECHARAM NA CONVERSA COM ELE.** A tabela abaixo é o
+estado de hoje; a redação original de cada achado continua nos §§ do topo, como registro.
 
-⚠️ **A ordem importa:** a 0 primeiro, e as outras **só depois de ler o que ele contar do lugar**.
-Perguntar antes de ler o dado é o erro registrado em 27/08 (a §SEXTA, logo abaixo).
+| # | pergunta | estado |
+|---|---|---|
+| **0** | **qual** Véu de Noiva | ✅ **a 1, em Bonito-PE** — coordenada `-8.5431216, -35.7128260`, conferida por ele no Maps |
+| **1** | numa cachoeira, chuva ainda quer dizer "não vá", e **pelo mesmo motivo?** | ✅ **leitura (a): sim, o caminho.** Motor **não muda** — e ele mandou o app **calar** sobre a queda d'água |
+| **2** | o trecho **a pé** — a prosa da `nota` basta? | ⏳ **ÚNICO DE PÉ.** Ele ainda não falou do trecho a pé; o que a web diz (~590 m / ~15 min) é 🔵 |
+| **3** | o `sub` contradizendo a ficha | ✅ **não se aplica** — o piso é `barro`, o selo continua verdadeiro |
+
+⚠️ **A ordem importava, e funcionou:** a 0 primeiro, as outras **só depois de ler o que ele contou
+do lugar**. Foi lendo a resposta dele sobre o barro que a 1 e a 3 se resolveram sozinhas — perguntar
+antes de ler o dado é o erro registrado em 27/08 (a §SEXTA, logo abaixo).
 
 ---
 

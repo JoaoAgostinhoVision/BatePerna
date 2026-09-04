@@ -1,0 +1,60 @@
+{
+  "_LEIA_ISTO": "RASCUNHO — NÃO É FICHA. Mora em docs/ de propósito: loadAll() só lê content/fichas/, então isto NÃO está no ar. Os campos que começam com ⬜ são buracos esperando palavra do João; mover este arquivo pra content/fichas/ com eles assim publicaria os buracos na home. Procedência campo a campo: docs/respostas-veu-de-noiva-WIP.md",
+
+  "slug": "veu-de-noiva-de-bonito",
+  "modos": ["condicional"],
+
+  "rotulo_escaneio": "⬜ 3 ou 4 palavras de relance — sua",
+  "promessa": "⬜ em uma linha: por que alguém pegaria o carro pra ir até lá — sua",
+  "voz": "⬜ o aviso curto que você daria pra um amigo, sem meias palavras — sua",
+  "premio": "⬜ o que ela entrega quando dá certo — sua",
+
+  "trajeto": {
+    "waypoints": [
+      {
+        "nome": "Cachoeira Véu de Noiva",
+        "lat": -8.5431216,
+        "lng": -35.712826
+      }
+    ]
+  },
+
+  "acesso": "Carro comum chega. Mas tem um trecho de terra no caminho, e é ele que manda: com chuva vira um desafio — o barro fica pegajoso.",
+
+  "avisos": "Se choveu, o trecho de terra fica pegajoso — remarque pro próximo dia seco. E repare na hora: fecha às 17h, então chegar tarde é não entrar.",
+
+  "piso": "barro",
+  "carroComum": true,
+
+  "condicao": {
+    "coords": {
+      "lat": -8.5431216,
+      "lng": -35.712826
+    },
+    "regra": {
+      "tipo": "chuva_binaria",
+      "janela_previsao_horas": 3,
+      "janela_passado_horas": 6,
+      "limiar_mm": 0.2
+    },
+    "regra_texto": "Choveu nas últimas ~6h OU vem chuva nas próximas ~3h → não vá: o trecho de terra fica pegajoso. Os três números são os da Rampa do Pepê, herdados por escolha dele em 2026-09-03 (\"acho que pode seguir a regra da chuva da rampa do pepê\") — e por enquanto são palpite, não medição daqui. Nada nesta regra afirma coisa alguma sobre a queda d'água: ele não tem registro de perigo ali e disse que não sabe opinar.",
+    "ressalva_proxy": "Chuva medida ≠ barro no trecho de terra — a grade do modelo não vê esse pedaço. Confirme no caminho."
+  },
+
+  "discriminador": {
+    "formato": "trecho de terra",
+    "como_ler": "No trecho de terra: barro pegajoso = não vá.",
+    "permissao_abortar": "Voltar aqui é decisão boa. A cachoeira fica."
+  },
+
+  "custo": {
+    "tag": "pago",
+    "valor": "R$ 10 por pessoa · pago na entrada",
+    "curto": "R$ 10 · entrada"
+  },
+
+  "horario": {
+    "abre": "08:00",
+    "fecha": "17:00"
+  }
+}
