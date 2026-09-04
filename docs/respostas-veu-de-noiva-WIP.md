@@ -180,13 +180,28 @@ importa", do arquivo de lições).
 |---|---|---|
 | `voz` | *"Vale a ida. Mas o trecho de terra é um desafio na chuva: molhou, o barro fica pegajoso."* | 🟢 **quase tudo é vocabulário dele** — "desafio na chuva", "o barro fica pegajoso". O *"vale a ida"* é meu |
 | `rotulo_escaneio` | *"Cachoeira, só sem chuva"* | 🟡 meu. **Não copiei o "Só sem chuva" da Rampa cru** — dois cartões com etiqueta idêntica na mesma home não distinguem nada |
-| `promessa` | *"A maior cachoeira de Bonito — quando o chão do caminho deixa chegar nela."* | 🟠 o "maior de Bonito" é **🔵 da web**, dentro do *"o resto ok"* dele |
-| `premio` | *"A queda de 32 metros… tem rapel e tirolesa ali mesmo."* | 🟠 **os dois fatos são 🔵 da web** — 32 m e as atividades |
+| `promessa` | *"A maior cachoeira de Bonito — quando o chão do caminho deixa chegar nela."* | 🟢 **o fato é dele agora** (ver abaixo); a oração condicional é minha |
+| `premio` | *"Um espetáculo natural do brejo pernambucano — a maior cachoeira de Bonito. É isso que espera no fim do trecho de terra."* | 🟢 **as duas imagens são dele**; a última oração é minha |
 
-⚠️ **As duas últimas são as frágeis, e pela razão que esta sessão já provou uma vez:** elas vivem
-de fato da web, e a web **errou o preço pela metade** na primeira coisa que ele conferiu. *"O resto
-ok"* foi um "ok" só, sobre uma lista de seis itens. **Se ele não quiser esses números na tela, o
-caminho honesto é a promessa falar do que ele conhece — o caminho, o chão, a chegada.**
+### ✅ AS DUAS FRÁGEIS DEIXARAM DE SER FRÁGEIS — ele deu a frase
+
+🟢 **Palavra dele (2026-09-03):** *"ela é a **maior cachoeira de Bonito** e é um **espetáculo
+natural do brejo pernambucano**"*.
+
+**Antes disso**, `promessa` e `premio` viviam de 🔵: *"a maior de Bonito"* vinha do viajali, e o
+prêmio citava **32 metros** e **rapel/tirolesa**, os dois só da web. Era a parte mais frágil do
+rascunho, e pela razão que esta sessão já tinha provado uma vez — **a mesma web errou o preço pela
+metade.**
+
+🔴 **Os números da web SAÍRAM do `premio`, e isso é de propósito.** *"32 metros"* e
+*"rapel e tirolesa"* não foram confirmados por ele em nenhum momento — cabiam só dentro do *"o
+resto ok"*, que foi um "ok" só sobre uma lista de seis itens. **Fato de tela que vive de fonte
+externa envelhece errado sem ninguém ver.** O que ficou é o que ele disse: *maior cachoeira de
+Bonito* e *espetáculo natural do brejo pernambucano* — duas imagens dele, nenhuma delas um número
+que possa estar desatualizado.
+
+⚠️ **`voz` e `rotulo_escaneio` continuam 100% redação minha.** A `voz` é a única frase do app
+assinada *"a voz de quem conhece"* — e ela é a que mais precisa dele.
 
 ⚠️ **`voz` é o campo mais sensível do app inteiro** — é a única frase assinada *"a voz de quem
 conhece"*. Aprovar por omissão é a forma mais fácil de ela deixar de ser dele.

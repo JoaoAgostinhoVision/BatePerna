@@ -1,6 +1,6 @@
 # Os agentes deste projeto
 
-Cinco análises se repetiram em **toda** rodada do BatePerna. Cada uma virou um agente aqui, com o
+Seis análises se repetiram em **toda** rodada do BatePerna. Cada uma virou um agente aqui, com o
 histórico real dentro — não com boas práticas genéricas. Chame por nome.
 
 | agente | quando | por que existe |
@@ -10,6 +10,7 @@ histórico real dentro — não com boas práticas genéricas. Chame por nome.
 | **`procedencia`** | antes de subir ficha; ao redigir copy; sempre que o dado vier de fora | a linha vermelha. A web disse R$ 5, ele disse R$ 10 — e nenhum teste veria o app cobrando metade |
 | **`contracao-honesta`** | depois de task que apaga campo, símbolo, teste ou tela | uma contração apagou 10 testes fora do alvo **com a suíte verde** |
 | **`conferir-no-ar`** | depois de todo deploy | `● Ready` não prova conteúdo, e marcador com acento dá o mesmo quadro de um deploy que não subiu |
+| **`pesquisa-de-lugar`** | quando ele pedir "procura no Google"; ao preparar ficha nova | a mesma busca que ajudou errou o **preço pela metade**, ofereceu a coordenada de **outra cachoeira a 5 km**, e o horário dela junto |
 
 ## O que os cinco têm em comum, e é de propósito
 
