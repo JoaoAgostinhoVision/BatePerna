@@ -31,12 +31,13 @@ public/fallback-*.js
 /BatePerna/
 
 # Claude Code local tooling (installed skills + machine-specific settings — regenerable)
-.claude/
+# ⚠️ `.claude/*` e NÃO `.claude/`: com o diretório inteiro excluído o git não
+# reentra nele, e a negação abaixo não teria efeito nenhum — silenciosamente.
+.claude/*
 # ...MENOS os agentes: eles não são regeneráveis, carregam o histórico das lições
 # deste projeto, e um doc que manda usar ferramenta não pode apontar pra diretório
 # que some (a lição do tools/varrer.mjs, 2026-09-02).
 !.claude/agents/
-!.claude/agents/**
 
 # Agent-skill tooling auto-instalado por integrações (ex.: Turso via Vercel Marketplace) — regenerável
 .agents/
