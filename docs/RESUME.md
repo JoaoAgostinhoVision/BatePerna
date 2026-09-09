@@ -4,12 +4,85 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-🔴🔴🔴 **ÚLTIMA PARADA: 2026-09-04, madrugada — A 3ª FICHA ESTÁ NO AR, MAS COM PROSA MINHA
-ASSINADA COMO A VOZ DELE. ISSO É A PRIMEIRA COISA A RESOLVER.**
+🟢🟢 **ÚLTIMA PARADA: 2026-09-09 — ELE RESPONDEU 4 DAS 6. QUATRO FECHARAM, DUAS SEGUEM ABERTAS, E
+ELE PEDIU A 4ª FICHA: *"vá para outro destino perto dessa região"*.**
 
-> *"deixe tudo pronto para continuar na próxima sessão, não vou conseguir continuar"* — João.
+> Resposta literal dele: *"eu amei - bonito é brejo - eu amei tua voz - 5 pode ligar - 6 pode
+> seguir - vá para outro destino perto dessa região"*.
 
-## ▶ SE ELE DISSER SÓ "CONTINUA": leia as SEIS perguntas abaixo, na ordem. Nada de menu.
+## ▶ SE ELE DISSER SÓ "CONTINUA": o estado é este. Nada de menu.
+
+### ✅ O QUE FECHOU EM 2026-09-09 (commit `9c1626b`, **ainda NÃO deployado**)
+
+| # | o que era | como fechou |
+|---|---|---|
+| **1** | a `voz` era prosa minha assinada *"a voz de quem conhece"*, nunca lida por ele | 🟢 **"eu amei tua voz"** — aprovada, fica no ar. A trava `_PENDENTE` fechou pelo lado certo, seis dias tarde |
+| **4** | o rodapé dizia *"Agreste"* e Bonito é brejo | 🟢 **"bonito é brejo"** → feita a saída **(a)**, a única que é SUBTRAÇÃO: `BatePerna · PE`, o app cala sobre região |
+| **5** | *"Na entrada — a checagem é sua"*, fixo desde a era da Rampa | 🟢 **"5 pode ligar"** → `discriminador.formato` ganhou seu primeiro leitor no `src/` |
+| **6** | o 8h–17h era leitura minha do *"o resto ok"* | 🟢 **"6 pode seguir"** → resposta à pergunta direta, com a consequência (`fechado` esconde a trilha) escrita na pergunta |
+
+**Prova: 4 testes novos varrendo o ACERVO INTEIRO, 4 mutações medidas e mortas, controle verde.**
+`765/765` em 51 arquivos, `tsc` limpo, `build` passa, `tools/varrer.mjs` rodado.
+
+🔴 **DECLARADO E NÃO COBERTO: o `PE` do rodapé ainda é fixo.** As três fichas são de Pernambuco,
+então é verdade por **conteúdo**, não por desenho — **a próxima mentira agendada**, que dispara com
+uma ficha de outro estado. Um teste que soubesse o estado de cada ficha seria geografia inventada
+com roupa de prova: **não existe campo de estado, e criar um é decisão dele.**
+
+⚠️ **`rotulo_escaneio`, `acesso` e `avisos` continuam prosa minha NÃO citada na resposta dele.**
+*"Eu amei tua voz"* nomeia a `voz`. Ler o elogio como cobertura pros outros três é refazer o
+*"o resto ok"* de 03/09 — **a mesma espécie, uma rodada depois.**
+
+### 🔴 AS DUAS QUE SEGUEM ABERTAS — ele não as tocou, e as duas erram na tela HOJE
+
+**2. O hedge dele virou veredito meu, em três bocas.** *"pode ser ruim com chuva"* → *"Cachoeira,
+**só sem chuva**"*; *"é um **desafio**"* → *"quando o chão **deixa chegar**"*; *"**pode ir**"* →
+carimbo em **"Não vá"**. 🔴 **E a aprovação da `voz` PIOROU isto, não melhorou:** a voz aprovada diz
+***"Vale a ida.** Mas o trecho de terra é um desafio"* — e a tela ao lado dela crava *"só sem
+chuva"*. **Pergunte:** *"com chuva ainda dá pra ir tomando cuidado, ou é 'não vá' mesmo?"*
+
+**3. O `premio` afirma geografia que ele não disse:** *"É isso que espera **no fim do trecho de
+terra**"* — dedução minha; ele só disse *"a parte de terra"*. É o achado 2 (o trecho a pé) por
+outro caminho. **Pergunte:** *"depois de estacionar ainda se anda até a cachoeira?"*
+
+### ▶▶ A 4ª FICHA: ELE PEDIU **OUTRO DESTINO PERTO DA REGIÃO DE BONITO**
+
+**Levantamento 🔵 feito em 09/09 pelo OpenStreetMap (Overpass), a mesma fonte que acertou a
+coordenada da Véu de Noiva enquanto os blogs davam a da cachoeira errada.** Distâncias **medidas**
+a partir da Véu de Noiva, não estimadas:
+
+| 🔵 candidato | distância da Véu | coordenada |
+|---|---|---|
+| Poço Dantas | **115 m** | `-8.5426294, -35.7137445` |
+| Cachoeira Pedra Redonda | **284 m** | `-8.5456034, -35.7122059` |
+| Cachoeira da Gruta | **361 m** | `-8.5462720, -35.7120344` |
+| Cachoeira Barra Azul | **632 m** | `-8.5475909, -35.7092802` |
+| Cachoeira Paraíso | **2,8 km** | `-8.5645236, -35.6994885` |
+| Morro da Primavera (pico) | **15,6 km** | `-8.6205960, -35.8313365` |
+| cachoeira **sem nome** no OSM | **20,5 km** | `-8.6422824, -35.5553715` |
+| Cachoeira de Cuiambuca | **28,6 km** | `-8.6045761, -35.4599956` |
+| Monte Bom Jesus (pico) | **40,8 km** | `-8.2856017, -35.9765246` |
+
+🔴 **A MEDIÇÃO ACHOU UMA PERGUNTA DE PRODUTO QUE NENHUM BLOG ACHARIA: as quatro primeiras estão a
+menos de 640 m da Véu de Noiva** — são o **mesmo complexo** (a "rota das cachoeiras"), mesma
+estrada, mesmo trecho de terra, mesma grade de chuva. Uma ficha pra qualquer uma delas viraria, na
+home, **um cartão praticamente idêntico ao da Véu**: mesma distância do celular (o app mede do
+celular de quem abre), mesmo carimbo, mesmo selo de piso. **Isso é ficha nova ou é `waypoint` da
+ficha que já existe?** O `trajeto.waypoints` é um **array** e hoje toda ficha usa **um** — o
+segundo waypoint nunca foi exercitado. **Decisão dele. Não construa por conta própria.**
+
+⚠️ **E a régua de sempre: quem escolhe o lugar é ELE.** A lista acima é 🔵 — é o que o OSM
+cataloga, não o que ele conhece. **O lugar mais valioso pro app é justamente o que blog nenhum
+lista**, porque é aí que a voz dele é a única fonte que existe.
+
+### ⚠️ PENDÊNCIA OPERACIONAL: o commit `9c1626b` está em `main` e **NÃO foi deployado**.
+`npx --yes vercel@latest --prod --yes --scope bate-perna` (**sem o `--scope` dá `Not authorized`**),
+depois conferir no domínio real: rodapé sem "Agreste" nas três, e o título da checagem mudando de
+ficha pra ficha (`ENTRADA` / `ESTRADA` / `TRECHO DE TERRA`).
+
+---
+
+## ▶ (histórico) AS SEIS PERGUNTAS DE 2026-09-04, na redação original
 
 **Não refaça o questionário** — 12 campos estão respondidos por ele e a ficha está no ar.
 A procedência campo a campo é `docs/respostas-veu-de-noiva-WIP.md`.
