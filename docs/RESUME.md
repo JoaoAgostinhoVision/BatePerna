@@ -75,7 +75,53 @@ segundo waypoint nunca foi exercitado. **Decisão dele. Não construa por conta 
 cataloga, não o que ele conhece. **O lugar mais valioso pro app é justamente o que blog nenhum
 lista**, porque é aí que a voz dele é a única fonte que existe.
 
-### ⚠️ PENDÊNCIA OPERACIONAL: o commit `9c1626b` está em `main` e **NÃO foi deployado**.
+### 🆕 2026-09-09, PARTE 2 — ELE MUDOU O EIXO: *"o mais importante não seria preencher, mas a construção do app de fato"*
+
+**Ele fechou o acervo em três** (*"não queria acrescentar novos pontos não, acho que já está
+suficiente para progredir o app"*) e mandou construir produto. A triagem mediu o código contra as
+decisões **L2–L7** do próprio doc dele (marcadas *fechadas* na v2.1, nunca construídas):
+
+| decisão | estado antes de hoje |
+|---|---|
+| **L5** semáforo co-piloto + ressalva colada · **L7** discriminador equipador | ✅ construídas |
+| **L3** procedência por contraste | ❌ zero ocorrências de nível/procedência/fonte no `src/` |
+| **L4** modo → tom checável | ❌ `modos` está nas 3 fichas e **não tem leitor no `src/`** |
+| **L2** rota-armadilha · **L6** hub de método | ❌ dependem de espécie de roteiro que não existe |
+
+🔴 **A leitura em uma frase, e ela vale pra próxima sessão:** o app construiu **inteiro** o eixo
+*"dá pra ir hoje?"* — motor de chuva ao vivo, decaimento, confirmação, offline, mapa — e **nada** do
+eixo que o doc chama de alma: **o que só sabe quem já foi.**
+
+### ✅ E A L3 FOI CONSTRUÍDA (commit `76e43b2`) — com o desenho ANTES do código
+
+**Artifact com os três tratamentos:** https://claude.ai/code/artifact/8eb6e134-9927-40e4-93cc-6af1c29eb82d
+(fonte versionada em `_bmad-output/planning-artifacts/bateperna-nivel-a-b.html`).
+
+**As três respostas dele:** *"1 agora, 3 depois - preço e horário brilham - ressalva fica"*.
+
+- **Tratamento 1 ("a tinta")** — a tipografia carrega, e **nenhuma palavra nova entra na tela**.
+  Medido com `tools/varrer.mjs`: a única string nova é a interpolação do `rotuloHora`. **O
+  tratamento 3 (a assinatura) está ADIADO, não descartado** — ele disse "3 depois".
+- 🔴 **A assimetria é o desenho inteiro: não existe `[data-nivel="a"]` no repo**, nem markup nem
+  CSS, e há teste nas duas camadas. Marcar os dois lados faria a coordenada parecer credencial.
+- 🔴 **O bloco Trajeto é o único MISTO**, então a marca desce pra FOLHA (a nota e o piso brilham; a
+  coordenada não muda). Marcar o bloco derrama o brilho sobre ela — é a mutação **M2**.
+- **A `.caveat` fica sem classificação nenhuma, por decisão dele** — não é A nem B, é o app
+  admitindo que o Nível A dele falha.
+- 🆕 **O HORÁRIO GANHOU LUGAR NA TELA.** Até hoje ele só aparecia com o lugar **fechado**: quem
+  abria a ficha às 10h nunca sabia que fecha às 17h. **O dado estava na ficha desde 25/08 e mudo na
+  tela.** O tíquete virou `valor || faixa`, e **o acervo real exerce as três combinações sem ficha
+  sintética** — Rampa paga sem horário, Pedra Furada **grátis com horário**, cachoeira com os dois.
+
+**Prova: 10 testes novos, 8 mutações medidas e todas mortas**, controle verde. A que importa é a
+**M8** — a regra nova **empata em especificidade (0,3,1)** com `.bp .sec.premio p`, e empate quem
+ganha é a **ordem no arquivo**: qualquer arrumação de CSS que suba o bloco faz o prêmio parar de
+brilhar, e a única diferença na tela é um `font-size`. ⚠️ **Declarado e não coberto: como a tela
+FICA.** Serif contra sans em 375px é olho — vai no iPhone.
+
+**775/775 em 51 arquivos**, `tsc` limpo, `build` passa.
+
+### ⚠️ PENDÊNCIA OPERACIONAL: **três** commits em `main` e **NADA foi deployado** — `9c1626b`, `074f2ec`, `76e43b2`.
 `npx --yes vercel@latest --prod --yes --scope bate-perna` (**sem o `--scope` dá `Not authorized`**),
 depois conferir no domínio real: rodapé sem "Agreste" nas três, e o título da checagem mudando de
 ficha pra ficha (`ENTRADA` / `ESTRADA` / `TRECHO DE TERRA`).
