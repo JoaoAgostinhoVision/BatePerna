@@ -69,6 +69,28 @@ export default async function Ficha({
     ficha.piso ? rotuloPiso(ficha.piso) : null,
   ].filter(Boolean);
 
+  // 🔴 O título do bloco de checagem PAROU DE SUPOR PORTÃO (decisão dele,
+  // 2026-09-09: "5 pode ligar"). Era `Na entrada — a checagem é sua`, fixo,
+  // escrito na era da Rampa — onde o que decide é mesmo a entrada. Na 3ª ficha
+  // (Véu de Noiva) o que decide é o **trecho de terra, antes**: a própria ficha
+  // já diz "Confirme no caminho" e "No trecho de terra". Texto fixo sobre UM
+  // lugar num componente que serve TODOS, pela enésima vez.
+  //
+  // O campo que resolve já existia e não tinha UM leitor no `src/`:
+  // `discriminador.formato` ("entrada" · "estrada" · "trecho de terra").
+  //
+  // 🔴 E o desenho da frase é load-bearing: o `formato` entra SOZINHO, sem
+  // preposição. "entrada"/"estrada" pedem "na", "trecho de terra" pede "no" —
+  // derivar gênero de string livre é gramática inventada, irmã da geografia
+  // inventada. Aqui não há o que derivar, e `.gate .k` é uppercase no CSS,
+  // então o resultado na tela nem carrega maiúscula pra acertar.
+  //
+  // `formato` é obrigatório no schema, mas string vazia passa: nesse caso a
+  // linha não vira " — a checagem é sua" com travessão órfão. Cala a metade
+  // que não sabe e mantém a que é do app.
+  const formatoGate = ficha.discriminador.formato.trim();
+  const tituloGate = formatoGate ? `${formatoGate} — a checagem é sua` : "A checagem é sua";
+
   // Ressalva: negrito na primeira oração (até o travessão).
   const [ressalvaLead, ...ressalvaResto] = ficha.condicao.ressalva_proxy.split("—");
   const mapa = `https://www.google.com/maps/search/?api=1&query=${wp.lat},${wp.lng}`;
@@ -159,7 +181,7 @@ export default async function Ficha({
         </div>
 
         <div className="gate">
-          <div className="k">Na entrada — a checagem é sua</div>
+          <div className="k">{tituloGate}</div>
           <div className="read">{ficha.discriminador.como_ler}</div>
           <div className="perm">“{ficha.discriminador.permissao_abortar}”</div>
         </div>
@@ -172,7 +194,17 @@ export default async function Ficha({
 
         <ConfirmarFui slug={slug} />
 
-        <div className="foot">BatePerna · Agreste · PE</div>
+        {/* 🔴 "Agreste" SAIU em 2026-09-09. As duas primeiras fichas são do
+            Agreste; Bonito é BREJO — palavra dele: "bonito é brejo", e o
+            "espetáculo natural do brejo pernambucano" do `premio` é dele
+            também. Texto fixo sobre região, no rodapé que serve TODAS.
+            Escapou da varredura de 03/09 porque eu procurei material e relevo
+            (barro, portão, subir, serra) e não REGIÃO.
+            Das três saídas, esta é a única que é SUBTRAÇÃO: o app cala sobre a
+            região em vez de afirmar uma que pode não ser a da ficha aberta. As
+            outras duas (campo `regiao` por ficha; uma palavra que cubra as
+            três) acrescentam afirmação, e essa escolha é dele. */}
+        <div className="foot">BatePerna · PE</div>
       </div>
     </Moldura>
   );

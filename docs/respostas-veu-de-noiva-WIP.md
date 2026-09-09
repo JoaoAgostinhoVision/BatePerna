@@ -206,6 +206,27 @@ assinada *"a voz de quem conhece"* — e ela é a que mais precisa dele.
 ⚠️ **`voz` é o campo mais sensível do app inteiro** — é a única frase assinada *"a voz de quem
 conhece"*. Aprovar por omissão é a forma mais fácil de ela deixar de ser dele.
 
+### ✅ 2026-09-09 — A `voz` FOI LIDA E APROVADA POR ELE. A trava fechou pelo lado certo.
+
+🟢 **Palavra dele:** *"eu amei tua voz"*, em resposta à pergunta literal *"essa frase é sua? Se não
+for, me dita a sua — eu tiro a minha do ar agora"*, com a frase citada inteira na pergunta.
+
+**Então a `voz` muda de marca: 🟡 redação minha → 🟡 redação minha LIDA E APROVADA.** Ela pode
+ficar no ar. O *"Vale a ida"* — o endosso que era meu — agora é endosso dele.
+
+🔴 **O que isto NÃO apaga, e é a lição do arquivo:** a frase esteve **seis dias no ar** assinada
+*"a voz de quem conhece"* **antes** desta linha existir. O desfecho ter sido bom é sorte, não
+método: se ele tivesse dito *"não é isso"*, o app teria passado seis dias colocando na boca dele um
+endosso que ele não deu, sobre um lugar real, pra quem dirige 120 km. **A trava `_PENDENTE` estava
+certa; quem a removeu (eu, que escrevi o texto que ela travava) é que estava errado.** Aprovação
+depois não converte publicação sem aprovação em acerto.
+
+⚠️ **`rotulo_escaneio` (*"Cachoeira, só sem chuva"*) segue 100% meu e NÃO foi citado na resposta
+dele.** *"Eu amei tua voz"* nomeia a `voz`. Ler esse elogio como cobertura pros outros três campos
+de prosa (`rotulo_escaneio`, `acesso`, `avisos`) seria refazer o *"o resto ok"* de 03/09 — a mesma
+espécie, uma rodada depois. Continuam pendentes, e a pergunta 2 (o hedge virando veredito) morde
+justamente o `rotulo_escaneio`.
+
 ### 🔴 Três decisões minhas que ele precisa olhar com atenção
 
 1. **`regra_texto` carrega a própria procedência dentro do texto.** Ele diz, com todas as letras,
@@ -260,6 +281,14 @@ suposição é o pior auditor dela. Então a lista vai aberta, pra ele riscar o 
 | passa pelo **Poço Dantas** antes de chegar | viajali (🔵) |
 | tem rapel e tirolesa no local | vemdeandada (🔵) |
 | tem restaurante, banheiro com chuveiro e estacionamento | viajali (🔵) |
+
+✅ **2026-09-09 — O HORÁRIO VIROU 🟢.** Perguntado literalmente (*"o 8h–17h vale TODO dia? você
+confirmou a faixa, nunca 'todo dia'"*), com a consequência escrita na pergunta (a fase `fechado`
+ganha de todas as outras e **esconde a trilha**), ele respondeu **"6 pode seguir"**. O campo fica
+como está: `abre 08:00`, `fecha 17:00`, todo dia. **Deixa de ser leitura minha do *"o resto ok"* e
+passa a ser resposta à pergunta direta.**
+⚠️ Os outros cinco itens da tabela acima **continuam 🔵** — ele respondeu o horário, que era o que
+a pergunta citava. Nenhum deles está na ficha hoje, e é assim que ficam.
 
 🔴 **O `horario` é o de maior consequência da lista, e por isso ele é o único que eu não gravo sem
 um "sim" explícito:** com o campo preenchido, o carimbo **para de olhar a chuva** e escreve

@@ -100,7 +100,7 @@ vi.mock("@/lib/ficha", async (real) => {
 });
 
 const { resolverEstado } = await import("@/lib/carimbo-estado");
-const { getFicha } = await import("@/lib/ficha");
+const { getFicha, getAllFichas } = await import("@/lib/ficha");
 const Ficha = (await import("@/app/[slug]/page")).default;
 
 /** Abre a página da ficha DE VERDADE (o server component de [slug]/page.tsx),
@@ -405,5 +405,108 @@ describe("o piso no bloco Trajeto (a extensão saiu da tela na Task 6, e do mode
       regraDe(semComentarios("ficha.css"), seletor),
       `faltou a regra ${seletor} no ficha.css`,
     ).not.toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 AS DUAS FRASES DE CHROME QUE FALAVAM DE UM LUGAR SÓ (2026-09-09)
+//
+// Os dois defeitos são o mesmo de sempre — texto FIXO afirmando coisa sobre UM
+// lugar, num componente que serve TODOS —, e os dois escaparam da varredura de
+// 03/09 pelo mesmo motivo: eu procurei material e relevo (barro, portão, subir,
+// serra) e não procurei nem REGIÃO nem ONDE SE CHECA.
+//
+//  1. `Na entrada — a checagem é sua`: verdade na Rampa (é a entrada que
+//     decide), falsa na Véu de Noiva, onde o que decide é o trecho de terra
+//     ANTES — a própria ficha diz "Confirme no caminho".
+//  2. `BatePerna · Agreste · PE`: as duas primeiras fichas são do Agreste;
+//     Bonito é BREJO ("bonito é brejo", palavra dele, 2026-09-09).
+//
+// ⚠️ ESTES TESTES VARREM O ACERVO INTEIRO, nunca uma lista de slugs — é a
+// lição medida em `tests/lib/coerencia-acervo.test.ts`: 14 das 19 mutações
+// sobreviveram a 751/751 porque toda prova de conteúdo estava endereçada por
+// slug escrito à mão, e a ficha nova não aparecia em teste nenhum.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("o chrome da ficha parou de falar de UM lugar", () => {
+  const acervo = getAllFichas();
+  const titulo = (c: HTMLElement) => c.querySelector(".gate .k")?.textContent ?? "";
+  const rodape = (c: HTMLElement) => c.querySelector(".foot")?.textContent ?? "";
+
+  // 🔴 NÃO-VACUIDADE: todo teste abaixo é um laço sobre `acervo`. Com o acervo
+  // vazio os três passariam sem provar nada. O número é cravado à mão e cresce
+  // com o acervo, de propósito — `acervo.length` contra si mesmo é a asserção
+  // escrita contra a própria fonte, cega ao número (a lição do tripwire do
+  // mapa, em tests/app/MapaHome.test.tsx).
+  it("o acervo tem fichas pra varrer — sem isto os laços abaixo passam vazios", () => {
+    expect(acervo.length, "o acervo sumiu: os guardas deste bloco ficariam ocos")
+      .toBeGreaterThanOrEqual(3);
+  });
+
+  it("o título da checagem começa pelo `discriminador.formato` DA FICHA ABERTA", async () => {
+    for (const f of acervo) {
+      cleanup();
+      const { container } = await abrir(f.slug);
+      const t = titulo(container);
+      // `startsWith`, e não `contains`: `Na entrada — a checagem é sua` CONTÉM
+      // "entrada", então um `contains` deixaria o texto fixo velho passar na
+      // ficha da Rampa. Começar pelo campo é o que separa ler da ficha de
+      // repetir a palavra por coincidência.
+      expect(
+        t.toLowerCase().startsWith(f.discriminador.formato.trim().toLowerCase()),
+        `[${f.slug}] o título da checagem ("${t}") não começa pelo formato da ficha ` +
+          `("${f.discriminador.formato}") — a tela voltou a supor onde se checa`,
+      ).toBe(true);
+      // A outra metade continua sendo do app, e é o que dá sentido à frase.
+      expect(t.endsWith("a checagem é sua"), `[${f.slug}] a metade do app sumiu do título`).toBe(true);
+    }
+  });
+
+  // 🔴 O PAR ORTOGONAL, e ele não é redundante: o teste de cima passaria com o
+  // título CONSTANTE se todas as fichas tivessem o mesmo `formato`. Este
+  // prende a variação — títulos diferentes onde os formatos diferem —, que é a
+  // única coisa que prova que a tela lê a ficha em vez de repetir uma palavra.
+  // MEDIDO: hoje o acervo tem "entrada", "estrada" e "trecho de terra".
+  it("fichas com formatos diferentes mostram títulos diferentes", async () => {
+    const formatos = new Set(acervo.map((f) => f.discriminador.formato.trim().toLowerCase()));
+    expect(
+      formatos.size,
+      "todas as fichas têm o mesmo `formato`: este teste ficou oco, e o de cima também",
+    ).toBeGreaterThan(1);
+
+    const titulos = new Set<string>();
+    for (const f of acervo) {
+      cleanup();
+      const { container } = await abrir(f.slug);
+      titulos.add(titulo(container).toLowerCase());
+    }
+    expect(titulos.size, "o título da checagem não varia com a ficha — está fixo no código")
+      .toBe(formatos.size);
+  });
+
+  // 🔴 A ASSERÇÃO É ESTRUTURAL, não a cópia da string: o rodapé tem DUAS
+  // metades separadas por "·", e a do meio — a região — é onde a afirmação
+  // morava. Assim o guarda mata "Agreste" de volta E qualquer outra região
+  // reinserida ("Brejo", "Sertão"), sem eu precisar listar regiões — listar
+  // seria eu afirmando que conheço as do estado dele.
+  //
+  // ⚠️ O QUE ESTE TESTE NÃO COBRE, e está declarado de propósito: o "PE" ainda
+  // é fixo. Todas as três fichas são de Pernambuco hoje, então a frase é
+  // verdadeira por CONTEÚDO, não por desenho — é a próxima mentira agendada,
+  // e ela dispara no dia em que entrar uma ficha de outro estado. Um teste que
+  // soubesse o estado de cada ficha seria geografia inventada com roupa de
+  // prova: não existe campo de estado, e inventar um é decisão dele.
+  it("o rodapé não afirma região nenhuma — em ficha nenhuma", async () => {
+    for (const f of acervo) {
+      cleanup();
+      const { container } = await abrir(f.slug);
+      const r = rodape(container);
+      expect(r, `[${f.slug}] o rodapé sumiu — a ausência de texto não é a prova procurada`)
+        .toBeTruthy();
+      expect(
+        r.split("·").length,
+        `[${f.slug}] o rodapé ("${r}") voltou a ter três metades: a do meio é uma região ` +
+          `afirmada sobre TODAS as fichas`,
+      ).toBe(2);
+    }
   });
 });
