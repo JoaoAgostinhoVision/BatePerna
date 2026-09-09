@@ -114,6 +114,37 @@ html, body { background: var(--ground); }
 .bp .voz { font-family: var(--serif); font-style: italic; font-size: 1.32rem; line-height: 1.4; color: var(--ink); border-left: 3px solid var(--accent); padding-left: 1rem; }
 .bp .voz .who { display: block; font-family: var(--type); font-style: normal; font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin-top: .5rem; }
 
+/* ─── NÍVEL B: o que só sabe quem foi ─────────────────────────────────────
+   Decisão L3 / REQ-12, construída em 2026-09-09. Tratamento "a tinta",
+   escolhido por ele entre três: a TIPOGRAFIA carrega o contraste, e nenhuma
+   caixa, selo ou palavra nova entra na tela. O que é dele vem no serif, no
+   tamanho de quem lê; o que vem de feed continua exatamente como estava.
+
+   🔴 NÃO EXISTE `[data-nivel="a"]` NESTE ARQUIVO, E É O DESENHO INTEIRO.
+   O modelo decidiu "o Nível B brilha, o Nível A é texto plano, SEM ETIQUETA
+   SIMÉTRICA". Uma regra pro A — mesmo uma que só apagasse — faria da
+   coordenada uma credencial, e o que precisa chamar atenção é o que o mapa
+   NÃO dá. A `.coord` (.68rem, --ink-faint) e a `.dist` (.78rem, --ink-soft)
+   já eram planas desde sempre: o A não precisava de nada, faltava era o
+   brilho do B.
+
+   ⚠️ ESPECIFICIDADE, e ela é load-bearing: `.bp .sec[data-nivel="b"] p` empata
+   em (0,3,1) com `.bp .sec.premio p` lá em cima. Empate quem ganha é a ORDEM,
+   então este bloco tem que continuar DEPOIS daquele — mover-me pra cima do
+   `.premio` faz o prêmio parar de brilhar e nada quebra vermelho por si só.
+   O teste do fim de `tests/app/ficha.test.tsx` é quem trava isso.
+
+   O que já brilhava e só foi CLASSIFICADO, sem mudar um pixel: a `.voz`
+   (serif itálico + régua de acento) e o `.gate` (borda tracejada de caderno
+   de campo). Os dois nasceram assim por instinto, antes de a régua existir —
+   são a prova de que esta decisão descreve o app em vez de reformá-lo. */
+.bp .sec[data-nivel="b"] p { font-family: var(--serif); font-size: 1.06rem; color: var(--ink); }
+.bp .sec[data-nivel="b"] .note { color: var(--ink); }
+/* A nota do waypoint e o piso: as duas folhas de Nível B dentro do bloco misto
+   do Trajeto, ao lado da coordenada, que é Nível A e não muda. */
+.bp .wp-body .n[data-nivel="b"] { font-family: var(--serif); font-size: .9rem; color: var(--ink); }
+.bp .wp-body .fatos[data-nivel="b"] { color: var(--ink); font-weight: 650; }
+
 .bp .waypoint { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface-2); }
 /* mapa real: mosaico de tiles do OSM, centrado no waypoint.
    .wp-mapa é fluido; .wp-tiles tem largura fixa de geração e fica centrado,
@@ -176,8 +207,18 @@ html, body { background: var(--ground); }
 .bp .gate .read b { color: var(--stop); }
 .bp .gate .perm { margin-top: .5rem; font-family: var(--serif); font-style: italic; font-size: 1rem; color: var(--ink-soft); }
 
-.bp .ticket { margin: 1.3rem 1.2rem 0; display: flex; align-items: center; gap: .6rem; font-family: var(--type); font-size: .76rem; color: var(--ink-soft); border-top: 1px dashed color-mix(in srgb, var(--ink) 22%, transparent); padding-top: 1rem; }
+.bp .ticket { margin: 1.3rem 1.2rem 0; display: flex; align-items: center; flex-wrap: wrap; gap: .35rem .9rem; font-family: var(--type); font-size: .76rem; color: var(--ink-soft); border-top: 1px dashed color-mix(in srgb, var(--ink) 22%, transparent); padding-top: 1rem; }
 .bp .ticket .price { font-weight: 700; color: var(--accent); font-size: .92rem; }
+/* O tíquete é Nível B (decisão dele, 2026-09-09): preço e horário são
+   conhecimento de quem foi, não catálogo — a web errou o preço pela metade.
+   Aqui o brilho NÃO é o serif: o tíquete é uma linha de dados, e prosa serif
+   num valor e num par de horas seria a fonte errada pro conteúdo certo. O
+   contraste vem da tinta cheia (`--ink` no lugar de `--ink-soft`), que é a
+   mesma promoção que o resto do B recebe.
+   `flex-wrap` porque as duas metades convivem só na ficha que tem as duas, e
+   em tela estreita elas quebram em vez de espremer. */
+.bp .ticket[data-nivel="b"] { color: var(--ink); }
+.bp .ticket .hora { font-weight: 650; }
 
 .bp .confirmar { margin: 1.3rem 1.2rem 0; padding: .9rem 1rem; border-radius: 14px; border: 1px dashed var(--line); text-align: center; color: var(--ink-faint); }
 .bp .confirmar .btn { display: inline-block; font-weight: 650; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 99px; padding: .5rem 1.15rem; margin-bottom: .4rem; }

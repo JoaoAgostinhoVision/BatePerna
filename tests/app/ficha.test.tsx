@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, within } from "@testing-library/react";
 import { CHAVE_LOCAL } from "@/lib/local";
 import type { Ficha as TipoFicha } from "@/types/ficha";
-import { regraDe, semComentarios } from "../css";
+import { regraDe, semComentarios, valorDe } from "../css";
 
 vi.mock("@/lib/carimbo-estado", async (real) => ({
   ...(await real<typeof import("@/lib/carimbo-estado")>()),
@@ -508,5 +508,212 @@ describe("o chrome da ficha parou de falar de UM lugar", () => {
           `afirmada sobre TODAS as fichas`,
       ).toBe(2);
     }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 L3 / REQ-12 — A PROCEDÊNCIA POR CONTRASTE (2026-09-09)
+//
+// A régua é do modelo, não minha: **o Nível B brilha, o Nível A é texto plano,
+// SEM ETIQUETA SIMÉTRICA**. Nível A = o que o mapa e o feed de chuva entregam
+// iguais pra qualquer um; Nível B = o que só sabe quem foi.
+//
+// Ele escolheu o tratamento "a tinta" entre três (2026-09-09): a tipografia
+// carrega o contraste, e **nenhuma palavra nova entra na tela** — foi por isso
+// que ele adiou o tratamento da assinatura ("1 agora, 3 depois").
+//
+// ⚠️ O QUE ESTES TESTES NÃO PROVAM, e está declarado: como a tela FICA. Serif
+// contra sans em 375px é olho, e vai no iPhone. O que eles travam é a
+// classificação (quem é B) e a cadeia CSS que a pinta — as duas coisas que
+// somem em silêncio.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("Nível B brilha, Nível A fica plano", () => {
+  const acervo = getAllFichas();
+  const b = (c: HTMLElement, sel: string) =>
+    c.querySelector<HTMLElement>(sel)?.getAttribute("data-nivel");
+
+  it("o acervo tem fichas pra varrer — sem isto os laços abaixo passam vazios", () => {
+    expect(acervo.length, "o acervo sumiu: os guardas deste bloco ficariam ocos")
+      .toBeGreaterThanOrEqual(3);
+  });
+
+  it("todo campo que só quem foi sabe está marcado — em TODAS as fichas", async () => {
+    for (const f of acervo) {
+      cleanup();
+      const { container } = await abrir(f.slug);
+      const eu = `[${f.slug}]`;
+
+      expect(b(container, ".sec.premio"), `${eu} o prêmio perdeu a marca`).toBe("b");
+      expect(b(container, ".voz"), `${eu} a voz perdeu a marca`).toBe("b");
+      expect(b(container, ".gate"), `${eu} o bloco de checagem perdeu a marca`).toBe("b");
+
+      // Acesso e Avisos endereçados pela ESTRUTURA (as duas `.sec` que contêm
+      // uma `.note`), não pelo texto do rótulo: casar "🚗 Acesso" prenderia o
+      // teste a uma palavra de tela.
+      const comNota = [...container.querySelectorAll<HTMLElement>(".sec")]
+        .filter((s) => s.querySelector(".note"));
+      expect(comNota.length, `${eu} acesso/avisos sumiram — o laço abaixo ficaria oco`).toBe(2);
+      for (const sec of comNota) {
+        expect(sec.getAttribute("data-nivel"), `${eu} uma seção de nota perdeu a marca`).toBe("b");
+      }
+
+      // As folhas do bloco MISTO. A condição é lida da FICHA, então uma ficha
+      // que perdesse o dado não faz o teste passar por ausência: ele deixa de
+      // perguntar junto com o app.
+      if (f.trajeto.waypoints[0].nota) {
+        expect(b(container, ".wp-body .n"), `${eu} a nota do waypoint perdeu a marca`).toBe("b");
+      }
+      if (f.piso) {
+        expect(b(container, ".wp-body .fatos"), `${eu} o piso perdeu a marca`).toBe("b");
+      }
+    }
+  });
+
+  // 🔴 A ASSIMETRIA É O DESENHO INTEIRO, e este é o teste que a trava.
+  // "Sem etiqueta simétrica" não é economia de markup: marcar os dois lados
+  // faria a coordenada parecer uma credencial, quando o que precisa chamar
+  // atenção é justamente o que o mapa NÃO dá.
+  it("o Nível A não recebe etiqueta nenhuma — nem no markup, nem no CSS", async () => {
+    for (const f of acervo) {
+      cleanup();
+      const { container } = await abrir(f.slug);
+      const eu = `[${f.slug}]`;
+
+      expect(
+        container.querySelectorAll('[data-nivel="a"]').length,
+        `${eu} apareceu etiqueta de Nível A: a decisão L3 recusa o par simétrico`,
+      ).toBe(0);
+
+      // A coordenada é o caso-teste do A: é o que o OSM dá igual pra qualquer
+      // um, e mora DENTRO do bloco misto, ao lado de duas folhas B.
+      const coord = container.querySelector<HTMLElement>(".wp-body .coord");
+      expect(coord, `${eu} a coordenada sumiu — a asserção abaixo ficaria vazia`).not.toBeNull();
+      expect(coord!.hasAttribute("data-nivel"), `${eu} a coordenada foi marcada`).toBe(false);
+
+      // 🔴 E o bloco Trajeto INTEIRO não pode ser marcado: ele é misto, e uma
+      // marca nele derramaria o brilho sobre a coordenada — o oposto exato da
+      // decisão. É a mutação mais provável de todas (marcar o bloco é mais
+      // fácil que marcar as folhas) e a que nenhum outro teste aqui pegaria.
+      const trajeto = container.querySelector<HTMLElement>('[data-bloco="trajeto"]');
+      expect(trajeto!.hasAttribute("data-nivel"), `${eu} o bloco misto do Trajeto foi marcado`)
+        .toBe(false);
+
+      // A ressalva do proxy: decisão dele (2026-09-09, "ressalva fica"). Não é
+      // A nem B — é o app admitindo que o Nível A dele falha — e já tem o
+      // destaque azul só dela.
+      const caveat = container.querySelector<HTMLElement>(".caveat");
+      expect(caveat, `${eu} a ressalva sumiu da ficha`).not.toBeNull();
+      expect(caveat!.hasAttribute("data-nivel"), `${eu} a ressalva foi classificada`).toBe(false);
+    }
+  });
+
+  // A outra metade do par DOM↔CSS, no mesmo molde do `.fatos` mais acima: o
+  // teste de cima prende a marca no markup, este prende a cadeia que a pinta.
+  // Sem ele, apagar a regra do ficha.css deixa a suíte verde e o B para de
+  // brilhar na tela — o defeito inteiro de volta, mudo.
+  it("a regra que pinta o B existe no ficha.css, e é o serif", () => {
+    const css = semComentarios("ficha.css");
+    const regra = regraDe(css, '.bp .sec[data-nivel="b"] p');
+    expect(regra, "faltou a regra do Nível B no ficha.css").not.toBeNull();
+    expect(valorDe(regra![0], "font-family")).toBe("var(--serif)");
+    expect(valorDe(regra![0], "color")).toBe("var(--ink)");
+
+    // 🔴 E NÃO PODE EXISTIR REGRA PRO A. Mesma decisão do teste de markup, na
+    // outra camada: uma regra de Nível A, mesmo uma que só apagasse, é a
+    // etiqueta simétrica entrando pelo CSS.
+    expect(
+      regraDe(css, '[data-nivel="a"]'),
+      "apareceu regra de Nível A no ficha.css: a decisão L3 recusa o par simétrico",
+    ).toBeNull();
+  });
+
+  // 🔴 O TESTE DA ORDEM — a fresta que ESTE tratamento criou, e que nada mais
+  // pega. A regra nova empata em especificidade (0,3,1) com `.bp .sec.premio p`,
+  // que já existia; empate quem ganha é a ORDEM no arquivo. Mover o bloco novo
+  // pra cima do `.premio` — coisa que qualquer arrumação de CSS faz sem pensar —
+  // faz o prêmio parar de brilhar, e a única diferença na tela é um `font-size`.
+  it("a regra do B vem DEPOIS da regra do prêmio — o empate é resolvido pela ordem", () => {
+    const css = semComentarios("ficha.css");
+    const iPremio = css.indexOf(".bp .sec.premio p");
+    const iNivel = css.indexOf('.bp .sec[data-nivel="b"] p');
+    expect(iPremio, "sumiu a regra .bp .sec.premio p: este teste ficaria oco").toBeGreaterThan(-1);
+    expect(iNivel, "sumiu a regra do Nível B: este teste ficaria oco").toBeGreaterThan(-1);
+    expect(
+      iNivel,
+      "a regra do Nível B subiu pra ANTES do .premio — empate de especificidade, e o prêmio " +
+        "para de brilhar sem nada ficar vermelho por si só",
+    ).toBeGreaterThan(iPremio);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 O HORÁRIO GANHOU LUGAR NA TELA — e ele e o preço viraram Nível B
+// (decisão dele, 2026-09-09: "preço e horário brilham").
+//
+// Até aqui o horário só aparecia com o lugar FECHADO. Quem abrisse a ficha às
+// 10h nunca ficava sabendo que fecha às 17h: o dado estava na ficha e mudo na
+// tela — e numa viagem de 120 km é ele que decide a ida.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("o tíquete: preço e horário, cada um calando sozinho", () => {
+  const acervo = getAllFichas();
+  const tk = (c: HTMLElement) => c.querySelector<HTMLElement>(".ticket");
+
+  // 🔴 AS TRÊS COMBINAÇÕES SAEM DO ACERVO REAL, e nenhuma ficha sintética foi
+  // precisa: a Rampa é paga SEM horário, a Pedra Furada é grátis COM horário, e
+  // a cachoeira tem os dois. Procuradas por PROPRIEDADE, nunca por slug escrito
+  // à mão — se um dia o acervo perder uma das combinações, o teste fica
+  // vermelho dizendo que o guarda ficou oco, em vez de passar por ausência.
+  const soPreco = acervo.find((f) => f.custo.valor && !f.horario);
+  const soHora = acervo.find((f) => !f.custo.valor && f.horario);
+  const ambos = acervo.find((f) => f.custo.valor && f.horario);
+
+  it("o acervo ainda exerce as três combinações — sem elas os testes abaixo ficam ocos", () => {
+    expect(soPreco, "sumiu do acervo a ficha PAGA SEM HORÁRIO").toBeTruthy();
+    expect(soHora, "sumiu do acervo a ficha GRÁTIS COM HORÁRIO").toBeTruthy();
+    expect(ambos, "sumiu do acervo a ficha com PREÇO E HORÁRIO").toBeTruthy();
+  });
+
+  it("ficha paga sem horário: mostra o preço e cala a hora", async () => {
+    const { container } = await abrir(soPreco!.slug);
+    const linha = tk(container);
+    expect(linha, "o tíquete sumiu da ficha paga").not.toBeNull();
+    expect(linha!.querySelector(".price")).not.toBeNull();
+    expect(
+      linha!.querySelector(".hora"),
+      "apareceu horário numa ficha que não tem o campo — o app inventou uma hora",
+    ).toBeNull();
+  });
+
+  // 🔴 ESTE É O TESTE DA RODADA. Antes de hoje o tíquete só era desenhado com
+  // `custo.valor`, então esta ficha — grátis, com portão que FECHA ÀS 17h — não
+  // mostrava linha nenhuma. O dado estava na ficha desde 2026-08-25 e a tela
+  // era muda justamente onde é de graça e ainda assim dá pra chegar tarde e não
+  // entrar.
+  it("ficha grátis COM horário: o tíquete existe só pela hora", async () => {
+    const { container } = await abrir(soHora!.slug);
+    const linha = tk(container);
+    expect(linha, "ficha grátis com horário voltou a não desenhar o tíquete").not.toBeNull();
+    expect(linha!.querySelector(".price"), "apareceu preço numa ficha grátis").toBeNull();
+    const hora = linha!.querySelector(".hora")!.textContent!;
+    // Derivado à mão, sem chamar `rotuloHora`: asserção escrita com a própria
+    // função que produz o texto ficaria cega ao formato mudar.
+    expect(hora, "o horário foi pra tela no formato cru do JSON").not.toContain(":");
+    expect(hora).toContain(`${Number(soHora!.horario!.abre.split(":")[0])}h`);
+    expect(hora).toContain(`${Number(soHora!.horario!.fecha.split(":")[0])}h`);
+  });
+
+  it("ficha com os dois: as duas metades na mesma linha, e ela é Nível B", async () => {
+    const { container } = await abrir(ambos!.slug);
+    const linha = tk(container)!;
+    expect(linha.querySelector(".price")).not.toBeNull();
+    expect(linha.querySelector(".hora")).not.toBeNull();
+    expect(linha.getAttribute("data-nivel"), "o tíquete perdeu a marca de Nível B").toBe("b");
+  });
+
+  it("sem preço e sem horário: a linha inteira não é desenhada — o app cala", async () => {
+    expect((SEM_FATOS as TipoFicha).custo.valor).toBeUndefined();
+    expect((SEM_FATOS as TipoFicha).horario).toBeUndefined();
+    const { container } = await abrir("morro-sem-fatos");
+    expect(tk(container), "o tíquete foi desenhado vazio numa ficha sem os dois campos").toBeNull();
   });
 });

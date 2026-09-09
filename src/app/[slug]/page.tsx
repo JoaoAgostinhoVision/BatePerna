@@ -2,6 +2,7 @@ import "../ficha.css";
 import { getFicha } from "@/lib/ficha";
 import { resolverEstado } from "@/lib/carimbo-estado";
 import { rotuloPiso } from "@/lib/piso";
+import { rotuloHora } from "@/lib/horario";
 import { notFound } from "next/navigation";
 import ConfirmarFui from "../ConfirmarFui";
 import MapaEstatico from "../MapaEstatico";
@@ -91,6 +92,20 @@ export default async function Ficha({
   const formatoGate = ficha.discriminador.formato.trim();
   const tituloGate = formatoGate ? `${formatoGate} — a checagem é sua` : "A checagem é sua";
 
+  // 🔴 O HORÁRIO GANHOU LUGAR NA TELA (2026-09-09, decisão dele: "preço e
+  // horário brilham"). Até aqui ele só aparecia quando o lugar estava FECHADO —
+  // a fase `fechado` escrevia "abre amanhã às 8h". Quem abrisse a ficha às 10h,
+  // com tudo aberto, nunca ficava sabendo que fecha às 17h: o dado estava na
+  // ficha e mudo na tela. Numa viagem de 120 km isso decide a ida.
+  //
+  // Montado de `rotuloHora` — a ÚNICA forma deste app de escrever hora (a
+  // mesma do `horaCurtaRecife` e do carimbo fechado). Duas formas na mesma
+  // tela seriam a mesma trilha com duas caras. Nenhuma palavra nova entra
+  // aqui: é o dado dele, formatado pela função que já existia.
+  const faixaHorario = ficha.horario
+    ? `${rotuloHora(ficha.horario.abre)}–${rotuloHora(ficha.horario.fecha)}`
+    : null;
+
   // Ressalva: negrito na primeira oração (até o travessão).
   const [ressalvaLead, ...ressalvaResto] = ficha.condicao.ressalva_proxy.split("—");
   const mapa = `https://www.google.com/maps/search/?api=1&query=${wp.lat},${wp.lng}`;
@@ -127,13 +142,36 @@ export default async function Ficha({
           <span><b>{ressalvaLead.trim()}.</b> {ressalvaResto.join("—").trim()}</span>
         </div>
 
+        {/* 🔴 `data-nivel="b"` — A PROCEDÊNCIA POR CONTRASTE (decisão L3 /
+            REQ-12, construída em 2026-09-09).
+
+            A régua, que é do modelo e não minha: **o Nível B brilha, o Nível A
+            é texto plano, SEM ETIQUETA SIMÉTRICA**. Nível A é o que o mapa e o
+            feed de chuva entregam igual pra qualquer um (coordenada, distância,
+            a leitura da chuva); Nível B é o que só sabe quem foi — a voz, o
+            acesso, os avisos, o piso, o que se olha no lugar.
+
+            🔴 POR ISSO SÓ O B É MARCADO, e a assimetria é o desenho, não
+            economia: marcar os dois lados criaria a etiqueta simétrica que a
+            decisão recusa, e faria a coordenada parecer uma credencial. O
+            Nível A não recebe regra nenhuma — ele já É o texto plano.
+
+            O atributo (em vez de uma classe) segue o precedente do
+            `data-bloco="trajeto"` logo abaixo: sem identidade endereçável, "o
+            prêmio brilha" viraria "existe em algum lugar da página", e nenhum
+            teste separaria as duas versões. */}
         <div className="body">
-          <div className="sec premio">
+          <div className="sec premio" data-nivel="b">
             <div className="k">O prêmio</div>
             <p>{ficha.premio}</p>
           </div>
 
-          <div className="voz">
+          {/* A voz já nasceu com o tratamento (serif itálico + régua de acento)
+              — foi o app inventando esta linguagem por instinto, um ano antes
+              de ela ter nome. O atributo aqui não muda um pixel: ele fecha a
+              CLASSIFICAÇÃO, pra o guarda do acervo poder varrer "todo campo B
+              está marcado" sem uma exceção escrita à mão. */}
+          <div className="voz" data-nivel="b">
             “{ficha.voz}”
             <span className="who">— a voz de quem conhece</span>
           </div>
@@ -151,11 +189,18 @@ export default async function Ficha({
                   senão ele congelaria na leitura do servidor. */}
               <MapaEstatico lat={wp.lat} lng={wp.lng} nome={wp.nome} />
               <div className="wp-body">
+                {/* 🔴 O BLOCO TRAJETO É O ÚNICO MISTO DA FICHA, e por isso a
+                    marca desce pra FOLHA em vez de ficar no bloco. Dentro do
+                    mesmo cartão convivem a coordenada e a distância (Nível A:
+                    OSM e o GPS do celular dão iguais) com a nota do waypoint e
+                    o piso (Nível B: só sabe quem dirigiu até lá). Marcar o
+                    bloco inteiro faria a coordenada brilhar junto — o oposto
+                    exato da decisão. */}
                 <div>
                   <div className="t">{wp.nome}</div>
-                  {wp.nota && <div className="n">{wp.nota}</div>}
+                  {wp.nota && <div className="n" data-nivel="b">{wp.nota}</div>}
                   <div className="coord">{wp.lat}, {wp.lng}</div>
-                  {fatosDaVia.length > 0 && <div className="fatos">{fatosDaVia.join(" · ")}</div>}
+                  {fatosDaVia.length > 0 && <div className="fatos" data-nivel="b">{fatosDaVia.join(" · ")}</div>}
                   {/* LocalVivo não desenha nenhum elemento (só Context.Provider
                       por baixo) — envolve só a distância porque é o único
                       consumidor da localização nesta página hoje. Mesma fonte
@@ -169,26 +214,55 @@ export default async function Ficha({
             </div>
           </div>
 
-          <div className="sec">
+          <div className="sec" data-nivel="b">
             <div className="k">🚗 Acesso</div>
             <div className="note"><span className="ic">🚗</span><p>{ficha.acesso}</p></div>
           </div>
 
-          <div className="sec">
+          <div className="sec" data-nivel="b">
             <div className="k">⚠ Avisos</div>
             <div className="note"><span className="ic">⚠</span><p>{ficha.avisos}</p></div>
           </div>
         </div>
 
-        <div className="gate">
+        {/* O bloco de checagem é a OUTRA linguagem que o app já tinha
+            inventado sozinho: borda tracejada de caderno de campo. Como a voz,
+            ele já brilhava antes de a régua existir — a marca só completa a
+            classificação. A `.caveat` logo acima, ao contrário, NÃO leva marca
+            nenhuma e é decisão dele (2026-09-09): ela não é A nem B, é o app
+            admitindo que o Nível A dele falha, e já tem o destaque azul só
+            dela. */}
+        <div className="gate" data-nivel="b">
           <div className="k">{tituloGate}</div>
           <div className="read">{ficha.discriminador.como_ler}</div>
           <div className="perm">“{ficha.discriminador.permissao_abortar}”</div>
         </div>
 
-        {ficha.custo.valor && (
-          <div className="ticket">
-            <span className="price">{precoCurto}</span> {restoCusto}
+        {/* 🔴 O TÍQUETE VIROU NÍVEL B, e não é óbvio por quê — decisão dele em
+            2026-09-09: *"preço e horário brilham"*.
+
+            Preço PARECE dado de catálogo, o tipo de coisa que qualquer site
+            publica. Nesta ficha ele é o contrário disso: a web dizia **R$ 5**
+            em mais de uma página, com cara de fato, e o preço certo (**R$ 10**)
+            veio dele. Se o 🔵 tivesse virado campo, o app anunciaria metade do
+            preço pra quem dirige 120 km — e nenhum teste pegaria. O horário é o
+            mesmo caso.
+
+            🔴 AS DUAS METADES SÃO INDEPENDENTES, e o acervo real prova as três
+            combinações sem precisar de ficha sintética: a Rampa é **paga sem
+            horário**, a Pedra Furada é **grátis com horário** (5h–17h) e a
+            cachoeira tem **os dois**. Por isso o guarda é `valor || faixa`, e
+            não `valor` — prender o horário ao preço o esconderia justamente na
+            ficha grátis cujo portão fecha às 17h. Sem nenhum dos dois, a linha
+            inteira não é desenhada: o app cala, como em todo campo opcional. */}
+        {(ficha.custo.valor || faixaHorario) && (
+          <div className="ticket" data-nivel="b">
+            {ficha.custo.valor && (
+              <span className="tk">
+                <span className="price">{precoCurto}</span> {restoCusto}
+              </span>
+            )}
+            {faixaHorario && <span className="tk hora">{faixaHorario}</span>}
           </div>
         )}
 
