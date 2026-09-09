@@ -1,0 +1,531 @@
+<title>O que só quem foi sabe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+  /* ───────────────────────────────────────────────────────────────
+     Os tokens são os DO APP (src/app/ficha.css), copiados sem mexer.
+     O que está em decisão aqui é onde cai a linha A/B, não a paleta.
+     ─────────────────────────────────────────────────────────────── */
+  :root {
+    --ground: #E7DFD0;
+    --screen: #F8F2E6;
+    --surface-2: #F0E8D8;
+    --ink: #2A2016;
+    --ink-soft: #6A5B47;
+    --ink-faint: #9C8D75;
+    --line: #E2D8C6;
+    --accent: #A5522A;
+    --accent-soft: #EEDDCB;
+    --go: #35774A; --go-ink: #245234; --go-bg: #E2EDE2; --go-line: #B7D3BC;
+    --stop: #BB3B2C; --stop-ink: #8C2A20; --stop-bg: #F4DBD4; --stop-line: #E4B3A9;
+    --rain: #4A6E86; --rain-bg: #E4EDF1;
+    --shadow: 0 1px 2px rgba(42,32,22,.06), 0 14px 40px rgba(42,32,22,.13);
+    --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+    --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+    --type: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --ground: #100D08; --screen: #1B1710; --surface-2: #241E15;
+      --ink: #EFE6D5; --ink-soft: #B0A488; --ink-faint: #7C7157; --line: #2E2719;
+      --accent: #CE7C4B; --accent-soft: #38291B;
+      --go: #5FA877; --go-ink: #8FCBA0; --go-bg: #16271C; --go-line: #2C4735;
+      --stop: #DA6154; --stop-ink: #EBA498; --stop-bg: #2C1712; --stop-line: #57271F;
+      --rain: #79A5BF; --rain-bg: #15242C;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 14px 40px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #100D08; --screen: #1B1710; --surface-2: #241E15;
+    --ink: #EFE6D5; --ink-soft: #B0A488; --ink-faint: #7C7157; --line: #2E2719;
+    --accent: #CE7C4B; --accent-soft: #38291B;
+    --go: #5FA877; --go-ink: #8FCBA0; --go-bg: #16271C; --go-line: #2C4735;
+    --stop: #DA6154; --stop-ink: #EBA498; --stop-bg: #2C1712; --stop-line: #57271F;
+    --rain: #79A5BF; --rain-bg: #15242C;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 14px 40px rgba(0,0,0,.55);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: var(--sans); line-height: 1.55; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 74rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+
+  .eyebrow { font-family: var(--type); font-size: .7rem; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 .7rem; }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(1.9rem, 5vw, 2.9rem);
+    line-height: 1.05; margin: 0 0 .6rem; text-wrap: balance; letter-spacing: -.01em; }
+  .lede { font-size: 1.06rem; color: var(--ink-soft); max-width: 60ch; margin: 0; }
+  .lede b { color: var(--ink); font-weight: 650; }
+
+  h2 { font-family: var(--serif); font-weight: 600; font-size: 1.55rem; line-height: 1.15;
+    margin: 3.2rem 0 .4rem; text-wrap: balance; }
+  h2 + .sub { color: var(--ink-soft); margin: 0 0 1.4rem; max-width: 62ch; font-size: .97rem; }
+
+  hr.rule { border: 0; border-top: 1px solid var(--line); margin: 2.6rem 0 0; }
+
+  /* ── A ESCADA A/B ────────────────────────────────────────────────
+     A própria lista demonstra o princípio: as linhas B recebem o
+     tratamento, as linhas A ficam texto plano. Nenhuma etiqueta
+     simétrica — só o B é marcado. */
+  .ledger { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+  .row { display: grid; grid-template-columns: 1fr; gap: .15rem;
+    padding: .8rem .95rem; border-radius: 12px; }
+  .row .campo { font-family: var(--type); font-size: .68rem; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--ink-faint); }
+  .row .txt { font-size: .97rem; }
+  .row .por { font-size: .84rem; color: var(--ink-soft); margin-top: .2rem; }
+
+  .row.a { background: transparent; border: 1px solid transparent; color: var(--ink-soft); }
+  .row.a .txt { color: var(--ink-soft); }
+
+  .row.b { background: var(--surface-2); border-left: 3px solid var(--accent);
+    border-radius: 4px 12px 12px 4px; }
+  .row.b .campo { color: var(--accent); }
+  .row.b .txt { color: var(--ink); font-family: var(--serif); font-size: 1.05rem; }
+
+  .row.q { border: 1.5px dashed color-mix(in srgb, var(--rain) 55%, var(--line));
+    background: var(--rain-bg); }
+  .row.q .campo { color: var(--rain); }
+
+  .tag { display: inline-block; font-family: var(--type); font-size: .6rem;
+    letter-spacing: .1em; text-transform: uppercase; padding: .15rem .45rem;
+    border-radius: 99px; margin-left: .5rem; vertical-align: .12em; }
+  .tag.dele { background: var(--accent-soft); color: var(--accent); }
+  .tag.duvida { background: color-mix(in srgb, var(--rain) 18%, transparent); color: var(--rain); }
+
+  /* ── OS TRÊS TRATAMENTOS ─────────────────────────────────────── */
+  .decks { display: grid; gap: 2rem; grid-template-columns: 1fr; margin-top: 1.5rem; }
+  @media (min-width: 62rem) { .decks { grid-template-columns: repeat(3, 1fr); gap: 1.5rem; } }
+
+  .deck { display: flex; flex-direction: column; gap: .9rem; min-width: 0; }
+  .deck-head .n { font-family: var(--type); font-size: .68rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--accent); }
+  .deck-head h3 { font-family: var(--serif); font-weight: 600; font-size: 1.25rem;
+    margin: .2rem 0 .3rem; line-height: 1.15; }
+  .deck-head p { margin: 0; font-size: .9rem; color: var(--ink-soft); }
+  .deck-head .custo { margin: .5rem 0 0; font-family: var(--type); font-size: .72rem;
+    color: var(--ink-faint); }
+
+  /* a moldura do celular, igual à .screen do app */
+  .phone { width: 100%; max-width: 23rem; margin: 0 auto; background: var(--screen);
+    border: 1px solid var(--line); border-radius: 22px; overflow: hidden;
+    box-shadow: var(--shadow); font-size: 15px; }
+
+  .appbar { display: flex; align-items: center; justify-content: space-between;
+    padding: .8rem 1rem .7rem; border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: .45rem; font-weight: 750; font-size: .92rem; }
+  .brand .mk { width: 1.35rem; height: 1.35rem; border-radius: 6px; background: var(--accent);
+    color: #fff; display: grid; place-items: center; font-size: .8rem; }
+  .chip { font-family: var(--type); font-size: .64rem; font-weight: 600; color: var(--accent);
+    background: var(--accent-soft); border-radius: 99px; padding: .25rem .55rem; }
+
+  .hero { padding: 1.1rem 1rem 1.05rem; }
+  .scan { display: inline-block; font-family: var(--type); font-size: .65rem; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+  .phone h4 { font-family: var(--serif); font-weight: 600; font-size: 1.6rem; line-height: 1.06;
+    margin: .4rem 0 .1rem; letter-spacing: -.01em; }
+  .promessa { color: var(--ink-soft); font-size: .95rem; font-style: italic; margin: 0; }
+
+  .decision { margin-top: 1rem; background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 14px; padding: 1rem .9rem .85rem; text-align: center; }
+  .stamp { display: inline-block; color: var(--stop-ink); border: 2.5px double var(--stop-ink);
+    border-radius: 8px; padding: .42rem 1rem .46rem; background: var(--stop-bg); }
+  .stamp .mark { font-weight: 800; font-size: 1.45rem; line-height: 1; text-transform: uppercase; }
+  .stamp .sub { font-family: var(--type); font-size: .56rem; letter-spacing: .16em;
+    text-transform: uppercase; margin-top: .28rem; opacity: .85; }
+  .reason { font-size: .9rem; color: var(--ink-soft); margin: .75rem auto 0; }
+  .live { margin-top: .6rem; display: inline-flex; align-items: center; gap: .4rem;
+    font-family: var(--type); font-size: .62rem; color: var(--ink-faint); }
+  .live .pulse { width: .45rem; height: .45rem; border-radius: 50%; background: var(--rain); }
+
+  .caveat { margin: .75rem 1rem 0; display: flex; gap: .5rem; padding: .6rem .75rem;
+    border-radius: 11px; background: var(--rain-bg);
+    border: 1px solid color-mix(in srgb, var(--rain) 22%, transparent);
+    font-size: .82rem; color: var(--ink-soft); }
+  .caveat .ic { color: var(--rain); flex: none; }
+  .caveat b { color: var(--ink); font-weight: 650; }
+
+  .pbody { padding: 1.1rem 1rem .3rem; display: flex; flex-direction: column; gap: 1.05rem; }
+  .sec .k { font-family: var(--type); font-size: .64rem; font-weight: 600; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--ink-faint); margin-bottom: .32rem; }
+  .sec p { margin: 0; font-size: .92rem; }
+
+  .voz { font-family: var(--serif); font-style: italic; font-size: 1.18rem; line-height: 1.4;
+    border-left: 3px solid var(--accent); padding-left: .9rem; }
+  .voz .who { display: block; font-family: var(--type); font-style: normal; font-size: .62rem;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin-top: .45rem; }
+
+  .gate { margin: .3rem 1rem 0; padding: .85rem .95rem; border-radius: 13px;
+    background: var(--surface-2);
+    border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); }
+  .gate .k { font-family: var(--type); font-size: .64rem; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: .4rem; }
+  .gate .read { font-weight: 650; font-size: .95rem; }
+  .gate .perm { margin-top: .45rem; font-family: var(--serif); font-style: italic;
+    font-size: .95rem; color: var(--ink-soft); }
+
+  .foot { text-align: center; padding: 1.1rem; color: var(--ink-faint); font-size: .75rem;
+    font-family: var(--type); }
+
+  /* ── TRATAMENTO 1: A TINTA (tipografia carrega) ───────────────── */
+  .t1 .sec.b p { font-family: var(--serif); font-size: 1.02rem; color: var(--ink); }
+  .t1 .sec.a p { color: var(--ink-soft); font-size: .88rem; }
+  .t1 .sec.a .k { opacity: .75; }
+
+  /* ── TRATAMENTO 2: O PAPEL (material carrega) ─────────────────── */
+  .t2 .sec.b { background: var(--surface-2); border-left: 3px solid var(--accent);
+    border-radius: 3px 11px 11px 3px; padding: .7rem .8rem; }
+  .t2 .sec.b .k { color: var(--accent); }
+  .t2 .sec.a p { color: var(--ink-soft); font-size: .88rem; }
+
+  /* ── TRATAMENTO 3: A ASSINATURA (procedência dita) ────────────── */
+  .t3 .sec.b { border-left: 3px solid var(--accent); padding-left: .85rem; }
+  .t3 .sec.b .k { color: var(--accent); }
+  .t3 .assin { display: block; font-family: var(--type); font-size: .58rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--accent); margin-top: .4rem; }
+  .t3 .sec.a p { color: var(--ink-soft); font-size: .88rem; }
+  .t3 .fonte { display: block; font-family: var(--type); font-size: .58rem; letter-spacing: .06em;
+    color: var(--ink-faint); margin-top: .3rem; }
+
+  .callout { margin-top: 1.6rem; padding: 1.1rem 1.2rem; border-radius: 14px;
+    background: var(--surface-2); border-left: 3px solid var(--accent); }
+  .callout p { margin: 0 0 .6rem; font-size: .97rem; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout b { font-weight: 650; }
+
+  .warn { margin-top: 1.2rem; padding: 1rem 1.15rem; border-radius: 14px;
+    background: var(--rain-bg); border: 1px solid color-mix(in srgb, var(--rain) 25%, transparent); }
+  .warn p { margin: 0 0 .55rem; font-size: .95rem; color: var(--ink-soft); }
+  .warn p:last-child { margin-bottom: 0; }
+  .warn b { color: var(--ink); font-weight: 650; }
+
+  .perg { margin-top: 1rem; display: grid; gap: .6rem; list-style: none; padding: 0; }
+  .perg li { padding: .8rem .95rem; border-radius: 12px; background: var(--surface-2);
+    font-size: .97rem; }
+  .perg li b { color: var(--accent); font-family: var(--type); font-size: .72rem;
+    letter-spacing: .08em; text-transform: uppercase; display: block; margin-bottom: .2rem; }
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">Decisão L3 · REQ-12 · desenho antes do código</p>
+  <h1>O que só quem foi sabe</h1>
+  <p class="lede">
+    A ficha hoje empilha tudo com o mesmo peso: a chuva, que qualquer app de tempo dá; a distância,
+    que o Maps dá — <b>e a sua voz, que não existe em lugar nenhum além dessa tela.</b>
+    O modelo já decidiu como resolver: <b>o Nível B brilha, o Nível A é texto plano, sem etiqueta
+    simétrica.</b> O que falta é você dizer onde cai a linha.
+  </p>
+
+  <hr class="rule">
+
+  <h2>Primeiro: onde eu propus cortar</h2>
+  <p class="sub">
+    Esta lista já está desenhada com o princípio aplicado — as linhas de baixo relevo são Nível A,
+    as marcadas são Nível B. Nenhuma delas leva etiqueta dizendo "Nível A": o que chama atenção é o
+    que o mapa não dá.
+  </p>
+
+  <ul class="ledger">
+
+    <li class="row a">
+      <span class="campo">carimbo de chuva</span>
+      <span class="txt">Não vá · Choveu nas últimas ~6h (ou vem chuva nas próximas ~3h).</span>
+      <span class="por">Open-Meteo. Um app de tempo dá igual.</span>
+    </li>
+
+    <li class="row a">
+      <span class="campo">mapa · coordenada · distância</span>
+      <span class="txt">−8.5431216, −35.712826 · a ~120 km daqui</span>
+      <span class="por">OpenStreetMap e o GPS do celular. O Maps dá igual.</span>
+    </li>
+
+    <li class="row b">
+      <span class="campo">voz <span class="tag dele">dele</span></span>
+      <span class="txt">"Vale a ida. Mas o trecho de terra é um desafio na chuva: molhou, o barro
+        fica pegajoso."</span>
+      <span class="por">Não existe em site nenhum. É o produto.</span>
+    </li>
+
+    <li class="row b">
+      <span class="campo">como ler no lugar <span class="tag dele">dele</span></span>
+      <span class="txt">"No trecho de terra: barro pegajoso = não vá."</span>
+      <span class="por">O discriminador — o que se olha com os próprios olhos.</span>
+    </li>
+
+    <li class="row b">
+      <span class="campo">permissão de voltar <span class="tag dele">dele</span></span>
+      <span class="txt">"Voltar aqui é decisão boa. A cachoeira fica."</span>
+      <span class="por">Ninguém escreve isso num blog de turismo.</span>
+    </li>
+
+    <li class="row b">
+      <span class="campo">acesso · avisos · piso</span>
+      <span class="txt">Carro comum chega, mas tem um trecho de terra no caminho, e é ele que manda.
+        Piso: barro.</span>
+      <span class="por">Fato de estrada. Só sabe quem dirigiu até lá.</span>
+    </li>
+
+    <li class="row q">
+      <span class="campo">a ressalva do proxy <span class="tag duvida">a costura</span></span>
+      <span class="txt">"Chuva medida ≠ barro no trecho de terra — a grade do modelo não vê esse
+        pedaço. Confirme no caminho."</span>
+      <span class="por">É o app admitindo que o Nível A dele é falível. Não é A nem B: é a emenda
+        entre os dois. <b>Fica onde está, em destaque próprio?</b></span>
+    </li>
+
+    <li class="row q">
+      <span class="campo">R$ 10 · entrada <span class="tag duvida">você decide</span></span>
+      <span class="txt">R$ 10 por pessoa, pago na entrada</span>
+      <span class="por"><b>Parece Nível A e não é.</b> A web dizia R$ 5 em várias páginas — quem
+        sabia o preço certo era você. Brilha ou fica plano?</span>
+    </li>
+
+    <li class="row q">
+      <span class="campo">8h às 17h <span class="tag duvida">você decide</span></span>
+      <span class="txt">abre 08:00 · fecha 17:00</span>
+      <span class="por">Mesmo caso do preço: um site publica, mas errado. Mesma resposta que o
+        preço, ou diferente?</span>
+    </li>
+
+  </ul>
+
+  <hr class="rule">
+
+  <h2>Três formas de fazer o B brilhar</h2>
+  <p class="sub">
+    A mesma ficha da Véu de Noiva, com o mesmo conteúdo, nos três tratamentos. O app já inventou
+    esta linguagem duas vezes por instinto — a <b>voz</b> tem a régua de acento, o <b>bloco de
+    checagem</b> tem a borda tracejada de caderno de campo. Os três abaixo são maneiras de aplicar
+    isso ao resto.
+  </p>
+
+  <div class="decks">
+
+    <!-- ─────────── TRATAMENTO 1 ─────────── -->
+    <div class="deck">
+      <div class="deck-head">
+        <span class="n">Tratamento 1</span>
+        <h3>A tinta</h3>
+        <p>Tipografia carrega tudo. O que é seu vem no serif, do tamanho do texto que se lê; o que é
+          de feed encolhe e esmaece. Nenhuma caixa nova, nenhum selo.</p>
+        <p class="custo">Custo: só CSS. Nenhum campo novo.</p>
+      </div>
+
+      <div class="phone t1">
+        <div class="appbar">
+          <span class="brand"><span class="mk">▲</span>BatePerna</span>
+          <span class="chip">R$ 10 · entrada</span>
+        </div>
+        <div class="hero">
+          <span class="scan">Cachoeira, só sem chuva</span>
+          <h4>Cachoeira Véu de Noiva</h4>
+          <p class="promessa">A maior cachoeira de Bonito — quando o chão do caminho deixa chegar
+            nela.</p>
+          <div class="decision">
+            <span class="stamp">
+              <span class="mark">Não vá</span>
+              <span class="sub">barro · dá um tempo</span>
+            </span>
+            <p class="reason">Choveu nas últimas ~6h (ou vem chuva nas próximas ~3h).</p>
+            <span class="live"><span class="pulse"></span>lido da chuva agora</span>
+          </div>
+        </div>
+        <div class="caveat">
+          <span class="ic">⚠</span>
+          <span><b>Chuva medida ≠ barro no trecho de terra.</b> A grade do modelo não vê esse
+            pedaço. Confirme no caminho.</span>
+        </div>
+        <div class="pbody">
+          <div class="sec b">
+            <div class="k">O prêmio</div>
+            <p>Um espetáculo natural do brejo pernambucano — a maior cachoeira de Bonito.</p>
+          </div>
+          <div class="voz">
+            "Vale a ida. Mas o trecho de terra é um desafio na chuva: molhou, o barro fica
+            pegajoso."
+            <span class="who">— a voz de quem conhece</span>
+          </div>
+          <div class="sec a">
+            <div class="k">📍 Trajeto</div>
+            <p>−8,5431216, −35,712826 · barro · a ~120 km daqui</p>
+          </div>
+          <div class="sec b">
+            <div class="k">🚗 Acesso</div>
+            <p>Carro comum chega. Mas tem um trecho de terra no caminho, e é ele que manda: com
+              chuva vira um desafio — o barro fica pegajoso.</p>
+          </div>
+        </div>
+        <div class="gate">
+          <div class="k">Trecho de terra — a checagem é sua</div>
+          <div class="read">No trecho de terra: barro pegajoso = não vá.</div>
+          <div class="perm">"Voltar aqui é decisão boa. A cachoeira fica."</div>
+        </div>
+        <div class="foot">BatePerna · PE</div>
+      </div>
+    </div>
+
+    <!-- ─────────── TRATAMENTO 2 ─────────── -->
+    <div class="deck">
+      <div class="deck-head">
+        <span class="n">Tratamento 2</span>
+        <h3>O papel</h3>
+        <p>O que é seu sai do fundo liso e sobe pra um material próprio, com a régua de acento — a
+          mesma que a voz já tem. O que é de feed fica solto na página, sem moldura.</p>
+        <p class="custo">Custo: só CSS. Mais forte de longe, mais pesado de perto.</p>
+      </div>
+
+      <div class="phone t2">
+        <div class="appbar">
+          <span class="brand"><span class="mk">▲</span>BatePerna</span>
+          <span class="chip">R$ 10 · entrada</span>
+        </div>
+        <div class="hero">
+          <span class="scan">Cachoeira, só sem chuva</span>
+          <h4>Cachoeira Véu de Noiva</h4>
+          <p class="promessa">A maior cachoeira de Bonito — quando o chão do caminho deixa chegar
+            nela.</p>
+          <div class="decision">
+            <span class="stamp">
+              <span class="mark">Não vá</span>
+              <span class="sub">barro · dá um tempo</span>
+            </span>
+            <p class="reason">Choveu nas últimas ~6h (ou vem chuva nas próximas ~3h).</p>
+            <span class="live"><span class="pulse"></span>lido da chuva agora</span>
+          </div>
+        </div>
+        <div class="caveat">
+          <span class="ic">⚠</span>
+          <span><b>Chuva medida ≠ barro no trecho de terra.</b> A grade do modelo não vê esse
+            pedaço. Confirme no caminho.</span>
+        </div>
+        <div class="pbody">
+          <div class="sec b">
+            <div class="k">O prêmio</div>
+            <p>Um espetáculo natural do brejo pernambucano — a maior cachoeira de Bonito.</p>
+          </div>
+          <div class="voz">
+            "Vale a ida. Mas o trecho de terra é um desafio na chuva: molhou, o barro fica
+            pegajoso."
+            <span class="who">— a voz de quem conhece</span>
+          </div>
+          <div class="sec a">
+            <div class="k">📍 Trajeto</div>
+            <p>−8,5431216, −35,712826 · barro · a ~120 km daqui</p>
+          </div>
+          <div class="sec b">
+            <div class="k">🚗 Acesso</div>
+            <p>Carro comum chega. Mas tem um trecho de terra no caminho, e é ele que manda: com
+              chuva vira um desafio — o barro fica pegajoso.</p>
+          </div>
+        </div>
+        <div class="gate">
+          <div class="k">Trecho de terra — a checagem é sua</div>
+          <div class="read">No trecho de terra: barro pegajoso = não vá.</div>
+          <div class="perm">"Voltar aqui é decisão boa. A cachoeira fica."</div>
+        </div>
+        <div class="foot">BatePerna · PE</div>
+      </div>
+    </div>
+
+    <!-- ─────────── TRATAMENTO 3 ─────────── -->
+    <div class="deck">
+      <div class="deck-head">
+        <span class="n">Tratamento 3</span>
+        <h3>A assinatura</h3>
+        <p>Como o 1, mais uma linha curta dizendo <em>de onde veio</em> — e o Nível A ganha a dele
+          também. É o único que fala a procedência em voz alta.</p>
+        <p class="custo">Custo: CSS + decidir a palavra de cada assinatura. <b>É onde eu mais posso
+          errar sozinho.</b></p>
+      </div>
+
+      <div class="phone t3">
+        <div class="appbar">
+          <span class="brand"><span class="mk">▲</span>BatePerna</span>
+          <span class="chip">R$ 10 · entrada</span>
+        </div>
+        <div class="hero">
+          <span class="scan">Cachoeira, só sem chuva</span>
+          <h4>Cachoeira Véu de Noiva</h4>
+          <p class="promessa">A maior cachoeira de Bonito — quando o chão do caminho deixa chegar
+            nela.</p>
+          <div class="decision">
+            <span class="stamp">
+              <span class="mark">Não vá</span>
+              <span class="sub">barro · dá um tempo</span>
+            </span>
+            <p class="reason">Choveu nas últimas ~6h (ou vem chuva nas próximas ~3h).</p>
+            <span class="live"><span class="pulse"></span>lido da chuva agora</span>
+          </div>
+        </div>
+        <div class="caveat">
+          <span class="ic">⚠</span>
+          <span><b>Chuva medida ≠ barro no trecho de terra.</b> A grade do modelo não vê esse
+            pedaço. Confirme no caminho.</span>
+        </div>
+        <div class="pbody">
+          <div class="sec b">
+            <div class="k">O prêmio</div>
+            <p>Um espetáculo natural do brejo pernambucano — a maior cachoeira de Bonito.</p>
+            <span class="assin">quem conhece o lugar</span>
+          </div>
+          <div class="voz">
+            "Vale a ida. Mas o trecho de terra é um desafio na chuva: molhou, o barro fica
+            pegajoso."
+            <span class="who">— a voz de quem conhece</span>
+          </div>
+          <div class="sec a">
+            <div class="k">📍 Trajeto</div>
+            <p>−8,5431216, −35,712826 · barro · a ~120 km daqui</p>
+            <span class="fonte">OpenStreetMap · seu GPS</span>
+          </div>
+          <div class="sec b">
+            <div class="k">🚗 Acesso</div>
+            <p>Carro comum chega. Mas tem um trecho de terra no caminho, e é ele que manda: com
+              chuva vira um desafio — o barro fica pegajoso.</p>
+            <span class="assin">quem já dirigiu até lá</span>
+          </div>
+        </div>
+        <div class="gate">
+          <div class="k">Trecho de terra — a checagem é sua</div>
+          <div class="read">No trecho de terra: barro pegajoso = não vá.</div>
+          <div class="perm">"Voltar aqui é decisão boa. A cachoeira fica."</div>
+        </div>
+        <div class="foot">BatePerna · PE</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="callout">
+    <p><b>O que eu faria: o Tratamento 1.</b> Ele não acrescenta nenhuma palavra minha à tela — só
+      redistribui o peso do que já está lá. Os outros dois acrescentam: o 2 acrescenta moldura, o 3
+      acrescenta <em>texto novo</em> ("quem já dirigiu até lá") que ninguém disse ainda.</p>
+    <p>E os três podem ser feitos em camadas: o 1 primeiro, e o 3 depois, se você quiser a
+      procedência dita em voz alta.</p>
+  </div>
+
+  <div class="warn">
+    <p><b>Uma coisa que este desenho revela e que não é sobre CSS.</b> Repare no que o Nível A
+      ocupa hoje na ficha: o carimbo é o elemento mais alto da tela, e ele é a parte que qualquer
+      app de tempo entrega. O Nível B — a sua voz, o como ler no lugar — vem depois, no rolar.</p>
+    <p>Fazer o B brilhar deixa isso mais visível, não menos. <b>A pergunta de produto que vem atrás
+      é se a ordem da ficha ainda está certa</b> — e essa eu não mexo sem você.</p>
+  </div>
+
+  <hr class="rule">
+
+  <h2>O que preciso de você</h2>
+  <p class="sub">Três respostas curtas e eu construo.</p>
+
+  <ol class="perg">
+    <li><b>1 · o tratamento</b>1, 2 ou 3 — ou "1 agora, 3 depois".</li>
+    <li><b>2 · o preço e o horário</b>São Nível A (plano) ou Nível B (brilha)? Você sabia o preço
+      certo quando a web toda dizia errado — isso é conhecimento de quem foi, ou é só um número?</li>
+    <li><b>3 · a ressalva do proxy</b>Fica como está, no destaque azul próprio? Ela não é A nem B —
+      é o app dizendo que o Nível A dele pode falhar.</li>
+  </ol>
+
+</div>
