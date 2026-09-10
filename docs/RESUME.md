@@ -121,7 +121,34 @@ FICA.** Serif contra sans em 375px é olho — vai no iPhone.
 
 **775/775 em 51 arquivos**, `tsc` limpo, `build` passa.
 
-### ⚠️ PENDÊNCIA OPERACIONAL: **três** commits em `main` e **NADA foi deployado** — `9c1626b`, `074f2ec`, `76e43b2`.
+### ✅ DEPLOYADO E CONFERIDO NO DOMÍNIO REAL — 2026-09-09, 21h37
+
+`● Ready · Production` (`bateperna-lhzj1plm6`). **Mas "Ready" não prova conteúdo**, então as três
+fichas foram conferidas no ar, com marcadores **sem acento**:
+
+| conferido | rampa | pedra furada | véu de noiva |
+|---|---|---|---|
+| HTTP | 200 | 200 | 200 |
+| rodapé | `BatePerna · PE` | idem | idem |
+| ocorrências de `Agreste` | **0** | **0** | **0** |
+| título da checagem | `entrada —` | `estrada —` | `trecho de terra —` |
+| tíquete | `R$ 5 por pessoa` | **`5h–17h`** ← a linha que não existia | `R$ 10 · 8h–17h` |
+| `data-nivel="b"` | 8 | 8 | **7** |
+| `data-nivel="a"` | **0** | **0** | **0** |
+
+**O 7 da Véu de Noiva é CERTO, não falta:** o waypoint dela não tem `nota`, e a marca da nota é
+condicional. O guarda faz a mesma conta lendo a ficha.
+
+**Camada 2 (o CSS servido):** os dois `.css` de produção trazem as quatro regras minificadas
+(`[data-nivel=b] p{font-family:var(--serif)…}`) e **zero** `data-nivel=a`. Home com os 3 cartões.
+
+🔴 **E um marcador meu quase deu falso positivo, o que é a lição de sempre:** `grep -c 'Na entrada'`
+deu **1** na Rampa. Não era o texto fixo velho — é o `discriminador.como_ler` **dela**
+(*"Na entrada da rampa: barro brilhando/pegajoso = não vá"*), dentro de `class="read"`. **Marcador
+que não distingue chrome de conteúdo acusa o inocente.** Conferido pelo contexto antes de concluir.
+
+⏳ **A ÚNICA METADE SEM PROVA: como a tela FICA no celular.** Serif contra sans em 375px é olho —
+falta o iPhone dele.
 `npx --yes vercel@latest --prod --yes --scope bate-perna` (**sem o `--scope` dá `Not authorized`**),
 depois conferir no domínio real: rodapé sem "Agreste" nas três, e o título da checagem mudando de
 ficha pra ficha (`ENTRADA` / `ESTRADA` / `TRECHO DE TERRA`).
