@@ -4,15 +4,86 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-🟢🟢 **ÚLTIMA PARADA: 2026-09-09 — ELE RESPONDEU 4 DAS 6. QUATRO FECHARAM, DUAS SEGUEM ABERTAS, E
-ELE PEDIU A 4ª FICHA: *"vá para outro destino perto dessa região"*.**
+🟢🟢 **ÚLTIMA PARADA: 2026-09-09, noite — O EIXO DO PROJETO MUDOU, E TUDO O QUE FOI FEITO HOJE ESTÁ
+NO AR E CONFERIDO. `main` em `94dd233`, 775/775, `tsc` limpo, build passa, nada pendente de deploy.**
 
-> Resposta literal dele: *"eu amei - bonito é brejo - eu amei tua voz - 5 pode ligar - 6 pode
-> seguir - vá para outro destino perto dessa região"*.
+> *"deixe tudo pronto para continuar depois"* — João, fim da sessão.
 
-## ▶ SE ELE DISSER SÓ "CONTINUA": o estado é este. Nada de menu.
+## ▶ SE ELE DISSER SÓ "CONTINUA": leia as QUATRO abaixo, na ordem. Nada de menu.
 
-### ✅ O QUE FECHOU EM 2026-09-09 (commit `9c1626b`, **ainda NÃO deployado**)
+🔴🔴 **A MUDANÇA DE EIXO É A COISA MAIS IMPORTANTE DESTE ARQUIVO, e ela invalida o plano que este
+topo trazia de manhã.** Ele disse, com todas as letras:
+
+> *"eu não queria acrescentar novos pontos não, acho que já está suficiente para progredir o app"*
+> · *"eu acho que o mais importante no momento não seria preencher, mas a **construção do app de
+> fato**"*
+
+**O ACERVO ESTÁ FECHADO EM TRÊS FICHAS.** Não crie a 4ª, não pesquise lugar novo, não redija copy
+de ficha. O bloco *"A 4ª FICHA"* mais abaixo virou **registro histórico** — está marcado como
+cancelado, e a lista 🔵 de candidatos fica lá só pro caso de ele reabrir.
+
+### ▶ 1. 🟠 AS DUAS PERGUNTAS QUE ELE NÃO RESPONDEU — e as duas erram na tela AGORA
+
+São de 04/09, foram feitas de novo hoje, e ele passou por cima das duas duas vezes. **Não são
+construção: são a tela afirmando coisa que ele não disse.** Pergunte de novo, curtas:
+
+**(a)** *"com chuva ainda dá pra ir tomando cuidado, ou é 'não vá' mesmo?"* — ele escreveu *"pode
+ser ruim com chuva"*, *"é um **desafio**"*, *"carro comum **pode ir**"*; a tela escreve *"Cachoeira,
+**só sem chuva**"* e carimba **"Não vá"**. 🔴 **E a aprovação da `voz` hoje PIOROU isso:** a voz que
+ele aprovou diz ***"Vale a ida.** Mas o trecho de terra é um desafio"* — e o rótulo logo acima dela
+crava o oposto. As duas frases estão na mesma tela, se contradizendo, **no ar**.
+
+**(b)** *"depois de estacionar ainda se anda até a cachoeira?"* — o `premio` termina em *"é isso que
+espera **no fim do trecho de terra**"*, que é **dedução minha**; ele só disse *"a parte de terra"*.
+É o achado 2 (o trecho a pé) por outro caminho. O que a web diz (~590 m / ~15 min pelo Poço Dantas)
+é 🔵 e ele nunca confirmou.
+
+### ▶ 2. ⏳ O IPHONE — a única metade da L3 que nenhuma camada provou
+
+Serif contra sans em 375px é **olho**, não jsdom nem `curl`. Ele ficou de abrir as três fichas no
+celular. **A pergunta certa é:** *a sua voz ganha da chuva quando você rola a ficha?* — que era a
+intenção do tratamento. Se não ganhar, a saída provável **não é mais CSS**: é a ordem da ficha (ver
+o item 4).
+
+### ▶ 3. 🟡 O TRATAMENTO 3 — ADIADO POR ELE, NÃO DESCARTADO
+
+Palavra dele: *"**1 agora, 3 depois**"*. O 3 é **a assinatura**: uma linha curta dizendo de onde veio
+cada coisa (*"quem já dirigiu até lá"* / *"OpenStreetMap · seu GPS"*). O desenho está no artifact,
+pronto. 🔴 **Só que ele acrescenta TEXTO MEU à tela**, e foi exatamente por isso que o 1 veio
+primeiro — as palavras da assinatura têm que ser lidas por ele antes de subir. **Não escreva
+sozinho.**
+
+### ▶ 4. 🔵 O MAPA DO QUE FALTA CONSTRUIR — medido hoje contra o doc DELE
+
+A leitura em uma frase, e ela orienta tudo que vier: **o app construiu inteiro o eixo *"dá pra ir
+hoje?"*** — motor de chuva ao vivo, decaimento, confirmação, offline, mapa — **e quase nada do eixo
+que o doc chama de alma: *o que só sabe quem já foi*.** A L3 de hoje foi o primeiro tijolo desse
+segundo eixo.
+
+| decisão fechada no doc (v2.1) | estado |
+|---|---|
+| **L5** semáforo co-piloto + ressalva colada · **L7** discriminador equipador | ✅ construídas antes de hoje |
+| **L3** procedência por contraste | ✅ **construída hoje** (tratamento 1) |
+| **L4** modo → tom checável pelo sistema | ❌ **o keystone está morto:** `modos` está nas 3 fichas e **não tem um leitor no `src/`** |
+| **L2** rota-armadilha · **L6** hub de método | ❌ dependem de espécie de roteiro que o acervo não tem |
+| **REQ-4** cadeia de waypoints | ❌ o schema aceita N e o código lê **`waypoints[0]` em 5 arquivos** — um 2º ponto some em silêncio |
+
+⚠️ **E as duas armadilhas de escopo, que ele mesmo já resolveu uma vez:** construir a L4 exige ficha
+de **outro modo**, e construir a REQ-4 exige ficha com **cadeia** — as duas são conteúdo, e ele
+acabou de fechar o acervo. **Máquina sem uso é o que o doc dele chama de "construir a máquina em vez
+da costura".** Se ele quiser seguir construindo, a pergunta honesta a fazer é qual eixo, sabendo
+disso — não sair construindo a L4 porque ela é a próxima da lista.
+
+🔴 **UMA PERGUNTA DE PRODUTO NASCEU DO DESENHO DE HOJE, e ela não é de CSS:** o **carimbo é o
+elemento mais alto da ficha, e ele é Nível A** — a parte que qualquer app de tempo entrega. A voz
+dele vem depois, no rolar. Fazer o B brilhar deixou isso **mais** visível. **A ordem da ficha ainda
+está certa?** Levantada com ele hoje, e ele não respondeu. **Não mexa sozinho.**
+
+---
+
+## ▶ O QUE FOI FEITO EM 2026-09-09 (tudo no ar)
+
+### ✅ O QUE FECHOU EM 2026-09-09 (commit `9c1626b`, **deployado e conferido no ar** — ver abaixo)
 
 | # | o que era | como fechou |
 |---|---|---|
@@ -45,7 +116,17 @@ chuva"*. **Pergunte:** *"com chuva ainda dá pra ir tomando cuidado, ou é 'não
 terra**"* — dedução minha; ele só disse *"a parte de terra"*. É o achado 2 (o trecho a pé) por
 outro caminho. **Pergunte:** *"depois de estacionar ainda se anda até a cachoeira?"*
 
-### ▶▶ A 4ª FICHA: ELE PEDIU **OUTRO DESTINO PERTO DA REGIÃO DE BONITO**
+### ~~▶▶ A 4ª FICHA~~ — 🔴 **CANCELADA POR ELE NA MESMA SESSÃO. NÃO EXECUTE ESTE BLOCO.**
+
+**Ele pediu a 4ª ficha às 21h e a cancelou meia hora depois**, ao ver a lista de candidatos:
+*"eu não queria acrescentar novos pontos não, acho que já está suficiente para progredir o app"*.
+**O acervo está fechado em três.** O que segue é **registro**, guardado só porque a pesquisa foi
+feita e medida — se ele reabrir um dia, está pronta e não precisa ser refeita.
+
+⚠️ **E a lição de método é minha:** a pergunta *"qual destino?"* pressupunha que a resposta certa
+era **um destino**. A resposta dele foi que a pergunta estava errada — o app não precisava de mais
+conteúdo, precisava de mais **app**. **Levantamento bem feito sobre a pergunta errada continua sendo
+a pergunta errada.**
 
 **Levantamento 🔵 feito em 09/09 pelo OpenStreetMap (Overpass), a mesma fonte que acertou a
 coordenada da Véu de Noiva enquanto os blogs davam a da cachoeira errada.** Distâncias **medidas**
@@ -218,7 +299,14 @@ costuma ter dia de folga. ⚠️ E o `fechado` **ganha de todas as fases**: erra
 inteira, chip `R$ 10 · entrada`, e o carimbo em **frio** com a frase do barro vinda do `piso.ts`.
 **751/751**, `tsc` limpo, `build` passa.
 
-## ⏸ A ÚNICA COISA ESPERANDO POR ELE: o rodapé diz **"Agreste"**, e Bonito não é Agreste
+## ~~⏸ A ÚNICA COISA ESPERANDO POR ELE: o rodapé diz "Agreste"~~ — ✅ **RESOLVIDO EM 2026-09-09**
+
+> **Ele confirmou o fato (*"bonito é brejo"*) e foi feita a saída (a): `BatePerna · PE`.** No ar e
+> conferido: 0 ocorrências de "Agreste" nas três fichas. O que segue é o registro de como a
+> pergunta foi montada — inclusive as três saídas, porque a régua *"subtração é a única que não
+> acrescenta afirmação"* vai voltar.
+
+### (registro) o texto original da pendência
 
 `src/app/[slug]/page.tsx:175` — `<div className="foot">BatePerna · Agreste · PE</div>`, **texto
 fixo, no componente que serve TODAS as fichas**. As duas primeiras são do Agreste; **Bonito é
