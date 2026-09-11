@@ -135,7 +135,24 @@ html, body { background: var(--ground); }
 .bp .body { padding: 1.35rem 1.2rem .3rem; display: flex; flex-direction: column; gap: 1.3rem; }
 .bp .sec .k { font-family: var(--type); font-size: .68rem; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: .38rem; }
 .bp .sec p { margin: 0; font-size: .98rem; }
-.bp .sec.premio p { font-size: 1.04rem; }
+/* 🔴 O PRÊMIO NÃO TEM MAIS REGRA PRÓPRIA, e é decisão dele: *"arruma o prêmio,
+   apaga a regra morta"* (2026-09-10).
+
+   Havia aqui um `.bp .sec.premio p { font-size: 1.04rem }`, e ele **nunca
+   pintou um pixel**: empatava em especificidade (0,3,1) com
+   `.bp .sec[data-nivel="b"] p` lá embaixo e PERDIA por ordem de arquivo. O
+   "prêmio brilha" era falso desde que a L3 nasceu — prêmio, acesso e avisos
+   sempre tiveram a mesma família, o mesmo tamanho e a mesma cor. A única
+   diferença que a regra protegia era **1,06rem − 1,04rem = 0,32px**, e havia um
+   teste guardando esses 0,32px.
+
+   A saída escolhida foi a de SUBTRAÇÃO: o app para de fingir um destaque que
+   não existe, e o único empate de especificidade do repo some junto. **Nada
+   mudou na tela** — a regra já estava perdendo. O prêmio brilha pela marca de
+   Nível B, igual ao acesso e aos avisos, e é isso que ele é.
+
+   A CLASSE `.premio` continua no JSX: ela não é mais estilo, é ENDEREÇO —
+   `tests/app/ficha.test.tsx` a usa pra provar que o bloco carrega a marca. */
 
 .bp .voz { font-family: var(--serif); font-style: italic; font-size: 1.32rem; line-height: 1.4; color: var(--ink); border-left: 3px solid var(--accent); padding-left: 1rem; }
 .bp .voz .who { display: block; font-family: var(--type); font-style: normal; font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin-top: .5rem; }
@@ -154,11 +171,13 @@ html, body { background: var(--ground); }
    já eram planas desde sempre: o A não precisava de nada, faltava era o
    brilho do B.
 
-   ⚠️ ESPECIFICIDADE, e ela é load-bearing: `.bp .sec[data-nivel="b"] p` empata
-   em (0,3,1) com `.bp .sec.premio p` lá em cima. Empate quem ganha é a ORDEM,
-   então este bloco tem que continuar DEPOIS daquele — mover-me pra cima do
-   `.premio` faz o prêmio parar de brilhar e nada quebra vermelho por si só.
-   O teste do fim de `tests/app/ficha.test.tsx` é quem trava isso.
+   ✅ O EMPATE DE ESPECIFICIDADE ACABOU EM 2026-09-10. Este bloco empatava em
+   (0,3,1) com `.bp .sec.premio p` lá em cima e só ganhava pela ORDEM do
+   arquivo — qualquer arrumação que o subisse apagava o (falso) brilho do
+   prêmio sem nada ficar vermelho. A regra do prêmio foi apagada por decisão
+   dele, e com ela o único par de especificidade empatada do repo. Este bloco
+   agora ganha por especificidade de `.bp .sec p`, e não mais por sorte de
+   posição.
 
    O que já brilhava e só foi CLASSIFICADO, sem mudar um pixel: a `.voz`
    (serif itálico + régua de acento) e o `.gate` (borda tracejada de caderno

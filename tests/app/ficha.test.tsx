@@ -628,22 +628,46 @@ describe("Nível B brilha, Nível A fica plano", () => {
     ).toBeNull();
   });
 
-  // 🔴 O TESTE DA ORDEM — a fresta que ESTE tratamento criou, e que nada mais
-  // pega. A regra nova empata em especificidade (0,3,1) com `.bp .sec.premio p`,
-  // que já existia; empate quem ganha é a ORDEM no arquivo. Mover o bloco novo
-  // pra cima do `.premio` — coisa que qualquer arrumação de CSS faz sem pensar —
-  // faz o prêmio parar de brilhar, e a única diferença na tela é um `font-size`.
-  it("a regra do B vem DEPOIS da regra do prêmio — o empate é resolvido pela ordem", () => {
+  // 🔴 AQUI MORAVA O TESTE DA ORDEM, e ele foi apagado em 2026-09-10 junto com o
+  // que guardava. Ele travava o empate de especificidade (0,3,1) entre
+  // `.bp .sec[data-nivel="b"] p` e `.bp .sec.premio p` — empate que se resolvia
+  // pela ORDEM no arquivo. Acontece que a regra do prêmio **nunca pintou um
+  // pixel**: ela sempre perdeu esse empate. O "prêmio brilha" era falso desde
+  // que a L3 nasceu, e a diferença que o teste protegia era de **0,32px**.
+  //
+  // Decisão dele: *"arruma o prêmio, apaga a regra morta"* — a saída de
+  // SUBTRAÇÃO. **Apagar o teste junto NÃO é perder cobertura**: sem a regra, não
+  // há empate, e o teste passaria a falhar na própria guarda de vacuidade que
+  // ele mesmo carregava (`sumiu a regra .bp .sec.premio p: este teste ficaria
+  // oco`). O que entra no lugar não é o mesmo teste com outra roupa — é a
+  // DECISÃO dele virando guarda.
+  it("o prêmio não tem regra própria de tamanho — ele brilha pela marca, como acesso e avisos", () => {
     const css = semComentarios("ficha.css");
-    const iPremio = css.indexOf(".bp .sec.premio p");
-    const iNivel = css.indexOf('.bp .sec[data-nivel="b"] p');
-    expect(iPremio, "sumiu a regra .bp .sec.premio p: este teste ficaria oco").toBeGreaterThan(-1);
-    expect(iNivel, "sumiu a regra do Nível B: este teste ficaria oco").toBeGreaterThan(-1);
     expect(
-      iNivel,
-      "a regra do Nível B subiu pra ANTES do .premio — empate de especificidade, e o prêmio " +
-        "para de brilhar sem nada ficar vermelho por si só",
-    ).toBeGreaterThan(iPremio);
+      regraDe(css, ".bp .sec.premio p"),
+      "voltou uma regra só pro prêmio: ou ela empata de novo e não pinta nada, " +
+        "ou ela cria um destaque que ele não pediu",
+    ).toBeNull();
+    // Controle: a regra que DE FATO pinta o prêmio continua lá — senão a
+    // ausência acima passaria por vacuidade num arquivo vazio ou renomeado.
+    const nivelB = regraDe(css, '.bp .sec[data-nivel="b"] p');
+    expect(nivelB, "sumiu a regra do Nível B: o prêmio deixaria de brilhar de vez").toBeTruthy();
+    expect(valorDe(nivelB![0], "font-size")).toBe("1.06rem");
+  });
+
+  // 🔴 E O QUE O EMPATE ENSINOU, generalizado: uma regra que PERDE de outra no
+  // mesmo elemento é uma declaração morta que parece viva — e o CSS não avisa.
+  // Este guarda varre os pares que disputam o `p` de um `.sec` e exige que só
+  // exista UM dono de `font-size` ali.
+  it("um dono só de font-size no parágrafo das seções — declaração morta não volta", () => {
+    const css = semComentarios("ficha.css");
+    const donos = [...css.matchAll(/\.bp \.sec[^{,\n]*\bp\s*\{([^}]*)\}/g)].filter((m) =>
+      /font-size:/.test(m[1]),
+    );
+    expect(donos.length, `mais de um dono de font-size: ${donos.map((d) => d[0].split("{")[0])}`).toBe(2);
+    // São DOIS e é o certo: `.bp .sec p` (0,2,1) é o piso, e
+    // `.bp .sec[data-nivel="b"] p` (0,3,1) ganha dele por ESPECIFICIDADE, não
+    // por ordem. Um terceiro em (0,3,1) seria o empate de volta.
   });
 });
 
