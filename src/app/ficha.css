@@ -15,6 +15,11 @@
   --accent-soft: #EEDDCB;
   --go: #35774A; --go-ink: #245234; --go-bg: #E2EDE2; --go-line: #B7D3BC;
   --stop: #BB3B2C; --stop-ink: #8C2A20; --stop-bg: #F4DBD4; --stop-line: #E4B3A9;
+  /* A terceira cor, 2026-09-10. Nem convite nem proibição: o lugar que ele
+     disse que "dá pra ir, com cuidado". Só o nível `cuidado` a usa — `espera`
+     divide o vermelho com `nao-va`, porque "espera 6h" é não-agora. Ver
+     `tomDe` em src/lib/severidade.ts. */
+  --care: #B77A18; --care-ink: #8A5A0E; --care-bg: #F6EBD6; --care-line: #E0C68F;
   --rain: #4A6E86; --rain-bg: #E4EDF1;
   --shadow: 0 1px 2px rgba(42,32,22,.06), 0 14px 40px rgba(42,32,22,.13);
   --shadow-card: 0 1px 2px rgba(42,32,22,.05);
@@ -29,6 +34,7 @@
     --accent: #CE7C4B; --accent-soft: #38291B;
     --go: #5FA877; --go-ink: #8FCBA0; --go-bg: #16271C; --go-line: #2C4735;
     --stop: #DA6154; --stop-ink: #EBA498; --stop-bg: #2C1712; --stop-line: #57271F;
+    --care: #D9A441; --care-ink: #E8C583; --care-bg: #2B2113; --care-line: #574522;
     --rain: #79A5BF; --rain-bg: #15242C;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 14px 40px rgba(0,0,0,.55);
     --shadow-card: 0 1px 2px rgba(0,0,0,.3);
@@ -93,6 +99,7 @@ html, body { background: var(--ground); }
 }
 .bp[data-state="fresco"] .stamp { --st-ink: var(--go-ink); --st-bg: var(--go-bg); }
 .bp[data-state="frio"]   .stamp { --st-ink: var(--stop-ink); --st-bg: var(--stop-bg); }
+.bp[data-state="cuidado"] .stamp { --st-ink: var(--care-ink); --st-bg: var(--care-bg); }
 .bp .stamp .mark { font-family: var(--sans); font-weight: 800; font-size: 1.7rem; line-height: 1; letter-spacing: .01em; text-transform: uppercase; }
 .bp .stamp .sub { font-family: var(--type); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; margin-top: .32rem; opacity: .85; }
 .bp .reason { font-size: .98rem; color: var(--ink-soft); max-width: 32ch; margin: .85rem auto 0; }
@@ -169,6 +176,7 @@ html, body { background: var(--ground); }
    no <span>: com atributo próprio ele guardaria a leitura do servidor e ficaria
    verde ao lado de um selo que já virou vermelho no portão. Uma fonte de cor só. */
 .bp[data-state="frio"] .wp-pin { background: var(--stop); }
+.bp[data-state="cuidado"] .wp-pin { background: var(--care); }
 
 .bp .wp-osm { position: absolute; right: 0; bottom: 0; padding: .25rem .45rem;
   font-family: var(--type); font-size: .64rem; text-decoration: none;

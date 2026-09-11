@@ -9,6 +9,7 @@ import {
 // `piso.ts` é puro de propósito — sem zod e sem `node:fs` — e é por isso que um
 // client component pode lê-lo direto. A razão inteira está escrita lá.
 import { rotuloPiso } from "@/lib/piso";
+import { tomDe, vozDaFicha } from "@/lib/severidade";
 import { coordDe } from "@/lib/local";
 import SeloTrilha from "./SeloTrilha";
 import { useLeitura } from "./leituras";
@@ -71,10 +72,20 @@ export default function CartaoTrilha({
   ].filter(Boolean);
 
   return (
-    <a id={ficha.slug} className="cartao" data-state={leitura.estado} href={`/${ficha.slug}`}>
+    <a
+      id={ficha.slug}
+      className="cartao"
+      data-state={tomDe(leitura.estado, ficha.condicao.severidade)}
+      href={`/${ficha.slug}`}
+    >
       <span className="cartao-topo">
         <span className="cartao-nome">{ficha.trajeto.waypoints[0].nome}</span>
-        <SeloTrilha leitura={leitura} horario={ficha.horario} agora={agora} />
+        <SeloTrilha
+          leitura={leitura}
+          horario={ficha.horario}
+          voz={vozDaFicha(ficha.condicao)}
+          agora={agora}
+        />
       </span>
       <span className="cartao-prom">{ficha.promessa}</span>
       {partes.length > 0 && <span className="cartao-meta">{partes.join(" · ")}</span>}

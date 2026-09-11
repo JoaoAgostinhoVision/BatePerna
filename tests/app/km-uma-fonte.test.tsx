@@ -58,6 +58,7 @@ const { FICHA } = vi.hoisted(() => ({
         janela_passado_horas: 6,
         limiar_mm: 1,
       },
+      severidade: "nao-va",
       regra_texto: "chuva nas últimas 6h ou nas próximas 3h",
       ressalva_proxy: "A leitura é de satélite — confira no lugar.",
     },

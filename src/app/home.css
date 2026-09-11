@@ -104,6 +104,7 @@
 }
 .bp .pin-home[data-state="fresco"]::before { background: var(--go); }
 .bp .pin-home[data-state="frio"]::before { background: var(--stop); }
+.bp .pin-home[data-state="cuidado"]::before { background: var(--care); }
 /* Sem leitura, o pin para de afirmar cor de veredito — igual ao selo. Carrega
    [data-state] junto pela mesma razão que o selo: sem isso a regra de fase tem
    especificidade menor e o pin fica verde ao lado de um selo que já parou. */
@@ -261,6 +262,7 @@
 }
 .bp .cartao[data-state="fresco"] .selo { --c: var(--go-ink); --st-bg: var(--go-bg); }
 .bp .cartao[data-state="frio"] .selo { --c: var(--stop-ink); --st-bg: var(--stop-bg); }
+.bp .cartao[data-state="cuidado"] .selo { --c: var(--care-ink); --st-bg: var(--care-bg); }
 /* A fase TEM que ganhar da cor do estado, como no ficha.css — senão "SEM
    INFORMAÇÕES" sai dentro de um selo verde, que foi o defeito que a rodada do
    carimbo teve que consertar. Por isso o seletor carrega [data-state] junto:

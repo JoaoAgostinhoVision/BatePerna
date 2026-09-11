@@ -12,6 +12,7 @@ import LocalVivo from "@/app/local";
 import { LeiturasProvider } from "@/app/leituras";
 import { getFichasComCondicao } from "@/lib/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+import { falaMolhada } from "@/lib/severidade";
 import { CHAVE_FILTROS, SEM_FILTRO } from "@/lib/filtros";
 import { CHAVE_GPS, CHAVE_LOCAL } from "@/lib/local";
 import type { Ficha } from "@/types/ficha";
@@ -43,6 +44,8 @@ function fichaFake(slug: string): Ficha {
     condicao: {
       coords: { lat: 0, lng: 0 },
       regra: { tipo: "chuva_binaria", janela_previsao_horas: 0, janela_passado_horas: 0, limiar_mm: 0 },
+
+      severidade: "nao-va",
       regra_texto: "",
       ressalva_proxy: "",
     },
@@ -82,7 +85,15 @@ describe("MapaHome", () => {
     );
     const { container } = render(<MapaHome fichas={fichas} leituras={mistas} />);
     const pin = container.querySelector(`.pin-home[href="#${fichas[0].slug}"]`);
-    expect(pin?.getAttribute("data-state")).toBe("frio");
+    // 🔴 NÃO se compara com o literal "frio": desde 2026-09-10 o tom molhado
+    // depende do NÍVEL da ficha, e `fichas[0]` vem do acervo real — cravar a
+    // palavra aqui prenderia este teste à ordem do acervo, e ele quebraria
+    // sozinho na próxima ficha. A pergunta é a contaminação: o pin 0 leu a
+    // leitura MOLHADA dele, e o pin 1 continua com a SECA dele.
+    expect(pin?.getAttribute("data-state")).not.toBe("fresco");
+    expect(
+      container.querySelector(`.pin-home[href="#${fichas[1].slug}"]`)?.getAttribute("data-state"),
+    ).toBe("fresco");
   });
 
   it("carrega tiles do OpenStreetMap", () => {
@@ -118,10 +129,21 @@ describe("MapaHome", () => {
     // As props (`leituras`, `inicial`) dizem "fresco" — é a semente do servidor.
     // O contexto diz "frio". Os três têm que obedecer ao contexto, senão existe
     // mais de uma fonte de cor na tela.
-    expect(container.querySelector(`.pin-home[href="#${slug}"]`)?.getAttribute("data-state"))
-      .toBe("frio");
-    expect(container.querySelector(".cartao")?.getAttribute("data-state")).toBe("frio");
-    expect(container.textContent).toContain("Não vá");
+    // Os três têm que dizer a MESMA coisa, e o que importa aqui é que os três
+    // obedeçam ao contexto — não qual é a palavra. Por isso o pin e o cartão
+    // são comparados ENTRE SI e contra "não é o seco", e a palavra é a que o
+    // nível daquela ficha manda dizer.
+    const tomPin = container.querySelector(`.pin-home[href="#${slug}"]`)?.getAttribute("data-state");
+    const tomCartao = container.querySelector(".cartao")?.getAttribute("data-state");
+    expect(tomPin).toBeTruthy();
+    expect(tomPin).not.toBe("fresco");
+    expect(tomCartao).toBe(tomPin);
+    expect(container.textContent).toContain(
+      falaMolhada(
+        fichas[0].condicao.severidade,
+        fichas[0].condicao.regra.janela_passado_horas,
+      ).marca,
+    );
   });
 
   // Mesmo padrão do guarda do .selo em tests/app/home.test.tsx — essa classe
@@ -215,6 +237,8 @@ describe("MapaHome: o enquadramento usa a janela que a tela mostra, não a caixa
       condicao: {
         coords,
         regra: { tipo: "chuva_binaria", janela_previsao_horas: 0, janela_passado_horas: 0, limiar_mm: 0 },
+
+        severidade: "nao-va",
         regra_texto: "",
         ressalva_proxy: "",
       },

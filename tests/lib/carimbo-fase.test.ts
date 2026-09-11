@@ -13,6 +13,11 @@ import {
 
 const OK = { conferindo: false, erro: false, venceu: false, falhou: false };
 
+/** A voz da RAMPA DO PEPÊ — nível `nao-va`, janela de 6h. É a ficha cuja `voz`
+ *  deu a palavra "Não vá" ao app inteiro até 2026-09-10; aqui ela é UMA das
+ *  três, e as outras duas são provadas em `tests/lib/severidade.test.ts`. */
+const RAMPA = { severidade: "nao-va", horasPassado: 6 } as const;
+
 // 🔴 O DEFEITO QUE ESTES TESTES TRANCAM (2026-08-27). "Pode subir"/"Não suba"
 // supunham LADEIRA em todo lugar do acervo. Era verdade da Rampa do Pepê, e o
 // app repetia na Pedra Furada, que é plana — lá o passeio é chegar, não subir.
@@ -20,20 +25,20 @@ const OK = { conferindo: false, erro: false, venceu: false, falhou: false };
 // mentira quando ele cresce (as outras duas: `secaRapido`, `chuvaNoPiso`).
 describe("marcaDe: a palavra da decisão, e ela não fala em SUBIR", () => {
   it("leitura boa e chão seco: 'Pode ir'", () => {
-    expect(marcaDe("afirmando", "fresco")).toBe("Pode ir");
+    expect(marcaDe("afirmando", "fresco", RAMPA)).toBe("Pode ir");
   });
 
   it("leitura boa e chão molhado: 'Não vá' — palavra dele, a `voz` da Rampa", () => {
-    expect(marcaDe("afirmando", "frio")).toBe("Não vá");
+    expect(marcaDe("afirmando", "frio", RAMPA)).toBe("Não vá");
   });
 
   it("sem leitura, informa em vez de mandar — o estado não decide nada", () => {
-    expect(marcaDe("sem-informacoes", "fresco")).toBe("SEM INFORMAÇÕES");
-    expect(marcaDe("sem-informacoes", "frio")).toBe("SEM INFORMAÇÕES");
+    expect(marcaDe("sem-informacoes", "fresco", RAMPA)).toBe("SEM INFORMAÇÕES");
+    expect(marcaDe("sem-informacoes", "frio", RAMPA)).toBe("SEM INFORMAÇÕES");
   });
 
   it("conferindo ganha das duas — é o que está acontecendo agora", () => {
-    expect(marcaDe("conferindo", "frio")).toBe("CONFERINDO…");
+    expect(marcaDe("conferindo", "frio", RAMPA)).toBe("CONFERINDO…");
   });
 
   // 🔴 O CERCO, e ele é o que dura. As igualdades acima morrem no dia em que ele
@@ -42,7 +47,7 @@ describe("marcaDe: a palavra da decisão, e ela não fala em SUBIR", () => {
   // ramos de uma vez.
   it("nenhum ramo supõe ladeira", () => {
     const todas = (["afirmando", "conferindo", "sem-informacoes"] as const).flatMap((f) =>
-      (["fresco", "frio"] as const).map((e) => marcaDe(f, e)),
+      (["fresco", "frio"] as const).map((e) => marcaDe(f, e, RAMPA)),
     );
     expect(todas.length).toBe(6); // não passa por vacuidade com a lista vazia
     for (const m of todas) expect(m).not.toMatch(/sub(a|ir|e)/i);
@@ -87,28 +92,28 @@ describe("a fase fechado", () => {
   });
 
   it("a palavra é 'Fechado agora', e o estado da chuva não a muda", () => {
-    expect(marcaDe("fechado", "fresco")).toBe("Fechado agora");
-    expect(marcaDe("fechado", "frio")).toBe("Fechado agora");
+    expect(marcaDe("fechado", "fresco", RAMPA)).toBe("Fechado agora");
+    expect(marcaDe("fechado", "frio", RAMPA)).toBe("Fechado agora");
   });
 
   it("a linha de baixo é a próxima abertura, que vem de fora", () => {
-    expect(subDe("fechado", "fresco", "abre amanhã às 5h")).toBe("abre amanhã às 5h");
+    expect(subDe("fechado", "fresco", RAMPA, "abre amanhã às 5h")).toBe("abre amanhã às 5h");
   });
 
   // Não é fallback disfarçado: é o app CALANDO. Por construção a fase só existe
   // com horário, mas se um dia a construção mudar, silêncio é a saída honesta —
   // inventar "abre cedo" aqui seria o defeito da frase de reserva de volta.
   it("sem a abertura, cala — não inventa horário", () => {
-    expect(subDe("fechado", "fresco")).toBe("");
+    expect(subDe("fechado", "fresco", RAMPA)).toBe("");
   });
 });
 
 describe("subDe: a linha de baixo, agora de fonte única", () => {
   it("as quatro linhas de sempre continuam as mesmas", () => {
-    expect(subDe("conferindo", "fresco")).toBe("lendo a chuva agora");
-    expect(subDe("sem-informacoes", "frio")).toBe("tome cuidado");
-    expect(subDe("afirmando", "fresco")).toBe("seco · carro comum");
-    expect(subDe("afirmando", "frio")).toBe("barro · dá um tempo");
+    expect(subDe("conferindo", "fresco", RAMPA)).toBe("lendo a chuva agora");
+    expect(subDe("sem-informacoes", "frio", RAMPA)).toBe("tome cuidado");
+    expect(subDe("afirmando", "fresco", RAMPA)).toBe("seco · carro comum");
+    expect(subDe("afirmando", "frio", RAMPA)).toBe("barro · dá um tempo");
   });
 });
 

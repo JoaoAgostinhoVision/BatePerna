@@ -245,6 +245,7 @@ export default function MapaHome({
                   top={top}
                   inicial={leitura}
                   horario={f.horario}
+                  severidade={f.condicao.severidade}
                   agora={agora}
                 />
               );

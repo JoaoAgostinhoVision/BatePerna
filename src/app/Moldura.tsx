@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Estado } from "@/lib/motor";
+import { tomDe, type Severidade } from "@/lib/severidade";
 
 /** `data-state` no `<main>` é a fonte ÚNICA de cor da ficha: dele saem o selo
  *  (`.bp[data-state] .stamp`) e o pin do mapa (`.bp[data-state] .wp-pin`).
@@ -30,14 +31,20 @@ export function useAvisarEstado() {
 
 export default function Moldura({
   estado,
+  severidade,
   children,
 }: {
   estado: Estado;
+  /** O nível desta trilha. 🔴 A cor deixou de ser o estado cru em 2026-09-10:
+   *  quem responde é `tomDe`, porque uma ficha de nível `cuidado` dizendo "Vá
+   *  com cuidado" dentro de um retângulo VERMELHO é a palavra e a cor
+   *  discordando — o defeito que o bloco acima conta. */
+  severidade: Severidade;
   children: ReactNode;
 }) {
   const [naTela, setNaTela] = useState<Estado>(estado);
   return (
-    <main className="bp" data-state={naTela}>
+    <main className="bp" data-state={tomDe(naTela, severidade)}>
       <Aviso.Provider value={setNaTela}>{children}</Aviso.Provider>
     </main>
   );

@@ -1,4 +1,5 @@
 import type { Estado } from "@/lib/motor";
+import { falaMolhada, type Voz } from "@/lib/severidade";
 
 /** Quanto tempo o "Conferindo…" pode ficar na tela.
  *
@@ -80,15 +81,22 @@ export function sintomaDe({ erro, venceu, falhou }: Situacao): Sintoma {
  *  Decisão dele em 2026-08-27, e o "Não vá" é palavra dele — é a `voz` da
  *  Rampa na ficha: *"é barro: molhou, não vá"*.
  *
+ *  ✅ E EM 2026-09-10 AS PALAVRAS DO RAMO MOLHADO SAÍRAM DAQUI, pela terceira
+ *  vez na mesma família: o bloco acima dizia que "Não vá" é palavra dele — e é,
+ *  mas é a palavra da RAMPA, e este arquivo serve o acervo inteiro. Quem
+ *  responde agora é `falaMolhada` em `src/lib/severidade.ts`, lendo o nível que
+ *  a própria ficha declara. O ramo SECO continua aqui: "Pode ir" e "seco ·
+ *  carro comum" são os mesmos em todo o acervo.
+ *
  *  ✅ O `sub` mudou-se pra cá em 2026-08-27, quando a fase `fechado` obrigou a
  *  mexer nele — era a dívida anotada aqui mesmo, e deixá-la de pé teria sido
  *  escrever o ramo novo à mão nos dois arquivos, que é a coisa exata que este
  *  bloco existe pra impedir. */
-export function marcaDe(fase: Fase, estado: Estado): string {
+export function marcaDe(fase: Fase, estado: Estado, voz: Voz): string {
   if (fase === "fechado") return "Fechado agora";
   if (fase === "conferindo") return "CONFERINDO…";
   if (fase === "sem-informacoes") return "SEM INFORMAÇÕES";
-  return estado === "frio" ? "Não vá" : "Pode ir";
+  return estado === "frio" ? falaMolhada(voz.severidade, voz.horasPassado).marca : "Pode ir";
 }
 
 /** A linha de baixo da marca. Irmã do `marcaDe`, e mora aqui pela mesma razão:
@@ -99,15 +107,23 @@ export function marcaDe(fase: Fase, estado: Estado): string {
  *  disfarçado: é o app CALANDO se algum dia a construção mudar, em vez de
  *  inventar um horário que ninguém deu.
  *
- *  ⚠️ "barro · dá um tempo" e "seco · carro comum" continuam supondo o material
- *  e o veículo. **Ele decidiu deixar assim em 2026-08-27**, de olhos abertos,
- *  sabendo que a 3ª ficha de asfalto quebra os dois. Não é esquecimento — e o
- *  molde pra resolver já existe (`chuvaNoPiso`). */
-export function subDe(fase: Fase, estado: Estado, abertura: string | null = null): string {
+ *  ⚠️ "seco · carro comum" continua supondo o veículo. **Ele decidiu deixar
+ *  assim em 2026-08-27**, de olhos abertos, sabendo que a 3ª ficha de asfalto o
+ *  quebra. Não é esquecimento — e o molde pra resolver já existe
+ *  (`chuvaNoPiso`). A dívida gêmea do ramo molhado ("barro · …") mudou-se pra
+ *  `severidade.ts` junto com as palavras, e continua anotada lá. */
+export function subDe(
+  fase: Fase,
+  estado: Estado,
+  voz: Voz,
+  abertura: string | null = null,
+): string {
   if (fase === "fechado") return abertura ?? "";
   if (fase === "conferindo") return "lendo a chuva agora";
   if (fase === "sem-informacoes") return "tome cuidado";
-  return estado === "fresco" ? "seco · carro comum" : "barro · dá um tempo";
+  return estado === "fresco"
+    ? "seco · carro comum"
+    : falaMolhada(voz.severidade, voz.horasPassado).sub;
 }
 
 export type Gatilho = "carregou" | "voltou" | "toque";

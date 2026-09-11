@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PISOS } from "@/lib/piso";
+import { SEVERIDADES } from "@/lib/severidade";
 
 export const waypointSchema = z.object({
   nome: z.string(),
@@ -18,6 +19,18 @@ export const regraSchema = z.object({
 export const condicaoSchema = z.object({
   coords: z.object({ lat: z.number(), lng: z.number() }),
   regra: regraSchema,
+  // COM QUE FORÇA esta trilha fala quando choveu. A `regra` acima diz SE
+  // choveu; este campo diz o que isso significa AQUI — e são coisas diferentes,
+  // o que o acervo provou em 2026-09-10: as três fichas usam a mesma
+  // `chuva_binaria` e têm três respostas distintas na voz dele ("molhou, não
+  // vá" / "espera passar umas 3 horas" / "dá pra ir com cuidado").
+  //
+  // 🔴 OBRIGATÓRIO, e é o ponto do campo. Opcional com padrão, ficha nova
+  // entraria calada herdando a severidade da Rampa — que é exatamente o defeito
+  // que ele existe pra fechar. Sem ele o schema recusa a ficha, e a pergunta vai
+  // pro dono do lugar antes de ir à tela. As palavras de cada nível moram em
+  // `src/lib/severidade.ts`, nunca aqui.
+  severidade: z.enum(SEVERIDADES),
   regra_texto: z.string(),
   ressalva_proxy: z.string(),
 });

@@ -2,6 +2,7 @@
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { faseDe } from "@/lib/carimbo-fase";
 import { fechadoAgora, type Horario } from "@/lib/horario";
+import { tomDe, type Severidade } from "@/lib/severidade";
 import { useLeitura } from "./leituras";
 import { useVenceu } from "./useVenceu";
 
@@ -23,6 +24,7 @@ export default function PinTrilha({
   top,
   inicial,
   horario,
+  severidade,
   agora = null,
 }: {
   slug: string;
@@ -32,6 +34,9 @@ export default function PinTrilha({
   inicial: LeituraCarimbo;
   /** A faixa de horário desta trilha. Sem ela, o pin nunca fecha. */
   horario?: Horario;
+  /** O nível desta trilha: o pin é pintado pelo TOM, igual ao cartão e ao selo.
+   *  Sem ele o mapa seria a quarta boca a discordar das outras três. */
+  severidade: Severidade;
   /** A hora de Recife em minutos, ou `null` no primeiro render. Chega por prop
    *  pela mesma razão que a leitura chega: são N pins, e a fonte tem que ser
    *  UMA — quem lê o relógio é o `MapaHome`, uma vez só. */
@@ -51,7 +56,7 @@ export default function PinTrilha({
     <a
       className="pin-home"
       href={`#${slug}`}
-      data-state={leitura.estado}
+      data-state={tomDe(leitura.estado, severidade)}
       data-fase={fase}
       style={{ left, top }}
       aria-label={`Ver ${nome}`}

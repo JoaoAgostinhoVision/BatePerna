@@ -33,6 +33,7 @@
       "janela_passado_horas": 3,
       "limiar_mm": 0.2
     },
+    "severidade": "espera",
     "regra_texto": "Choveu nas últimas ~3h OU vem chuva nas próximas ~2h → o chão batido molhado escorrega e dá pra atolar carro comum; e lá em cima, ao céu aberto, a chuva tira a visibilidade e a vista. As 2h à frente são o tempo do passeio: subir os degraus, ficar e descer.",
     "ressalva_proxy": "Chuva medida ≠ chão molhado na estrada — a grade do modelo não vê o trecho de chão batido. Confirme quando pegar a terra."
   },

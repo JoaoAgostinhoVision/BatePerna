@@ -29,6 +29,7 @@ function fichaComNome(nome: string): Ficha {
     condicao: {
       coords: { lat: 0, lng: 0 },
       regra: { tipo: "chuva_binaria", janela_previsao_horas: 0, janela_passado_horas: 0, limiar_mm: 0 },
+      severidade: "nao-va",
       regra_texto: "",
       ressalva_proxy: "",
     },
@@ -93,6 +94,7 @@ function fichaJSON(slug: string, nome = slug): unknown {
     condicao: {
       coords: { lat: 0, lng: 0 },
       regra: { tipo: "chuva_binaria", janela_previsao_horas: 0, janela_passado_horas: 0, limiar_mm: 0 },
+      severidade: "nao-va",
       regra_texto: "",
       ressalva_proxy: "",
     },

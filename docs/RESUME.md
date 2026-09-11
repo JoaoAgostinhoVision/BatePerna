@@ -4,8 +4,9 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-🟢🟢 **ÚLTIMA PARADA: 2026-09-09, noite — O EIXO DO PROJETO MUDOU, E TUDO O QUE FOI FEITO HOJE ESTÁ
-NO AR E CONFERIDO. `main` em `94dd233`, 775/775, `tsc` limpo, build passa, nada pendente de deploy.**
+🟠 **ÚLTIMA PARADA: 2026-09-10 — ELE RESPONDEU A PERGUNTA (a), E ELA VIROU UMA RODADA INTEIRA.
+794/794, `tsc` limpo, build passa. 🔴 NÃO DEPLOYADO: falta uma palavra dele (o cabeçalho do grupo
+da home) e o iPhone.** Ver o bloco **2026-09-10** logo abaixo do índice.
 
 > *"deixe tudo pronto para continuar depois"* — João, fim da sessão.
 
@@ -22,7 +23,16 @@ topo trazia de manhã.** Ele disse, com todas as letras:
 de ficha. O bloco *"A 4ª FICHA"* mais abaixo virou **registro histórico** — está marcado como
 cancelado, e a lista 🔵 de candidatos fica lá só pro caso de ele reabrir.
 
-### ▶ 1. 🟠 AS DUAS PERGUNTAS QUE ELE NÃO RESPONDEU — e as duas erram na tela AGORA
+### ▶ 1. 🟢 A (a) FOI RESPONDIDA EM 10/09 — a (b) segue aberta
+
+🟢 **(a) FECHOU.** Ele respondeu, literal: ***"com chuva dá pra ir sim, com cuidado"***. Isso virou
+a rodada de 10/09 inteira (bloco abaixo): três subtrações na ficha da Véu, o campo
+`condicao.severidade`, a tabela de palavras em `src/lib/severidade.ts`, e a cor. **Falta uma coisa
+só pra fechar: o cabeçalho do grupo da home** — ver o bloco 2026-09-10.
+
+🟠 **(b) CONTINUA ABERTA** (a redação original das duas está preservada abaixo, como registro):
+
+### ▶ 1-bis. 🟠 AS DUAS PERGUNTAS COMO ESTAVAM ATÉ 09/09
 
 São de 04/09, foram feitas de novo hoje, e ele passou por cima das duas duas vezes. **Não são
 construção: são a tela afirmando coisa que ele não disse.** Pergunte de novo, curtas:
@@ -78,6 +88,114 @@ disso — não sair construindo a L4 porque ela é a próxima da lista.
 elemento mais alto da ficha, e ele é Nível A** — a parte que qualquer app de tempo entrega. A voz
 dele vem depois, no rolar. Fazer o B brilhar deixou isso **mais** visível. **A ordem da ficha ainda
 está certa?** Levantada com ele hoje, e ele não respondeu. **Não mexa sozinho.**
+
+---
+
+## ▶ 2026-09-10 — A SEVERIDADE VIROU CAMPO DA FICHA (e quatro agentes novos)
+
+**O que ele pediu, literal:** *"quero que você gere agentes completos que consigam analisar essas
+dúvidas e dar sugestões também, tem coisas que sou leigo"* — e, sobre a pergunta (a):
+***"com chuva dá pra ir sim, com cuidado"***.
+
+### 🔴 O ACHADO QUE A RESPOSTA DELE DESTRAVOU
+
+O carimbo tinha **duas palavras pro acervo inteiro, vindas de bocas diferentes**:
+
+| no ar até 10/09 | de quem era |
+|---|---|
+| `"Não vá"` (a palavra grande) | **`voz` da RAMPA** (*"é barro: molhou, não vá"*) — e escolhida por ele entre três saídas em 27/08. O texto mais bem procedido do app |
+| `"barro · dá um tempo"` (a linha de baixo) | `barro` é o **piso**; *"dá um tempo"* era **paráfrase minha** da `voz` da PEDRA FURADA. A frase não existe em nenhuma fala dele |
+
+E as duas eram aplicadas à **Véu de Noiva**, que tem uma terceira fala. **Três lugares, três
+severidades, uma língua só** — a quarta vez da mesma família (`secaRapido`, `chuvaNoPiso`,
+`discriminador.formato`), uma camada acima: ali era um FATO de um lugar num componente que serve
+todos; aqui era a **VOZ** de um lugar virando a **língua** de todos.
+
+### ✅ O QUE FECHOU
+
+**As três subtrações puras na ficha da Véu** (só cláusula minha sai, nada entra):
+
+| campo | antes | agora |
+|---|---|---|
+| `rotulo_escaneio` | *"Cachoeira, **só sem chuva**"* (cópia da Rampa, que é de outro nível) | `Cachoeira` |
+| `promessa` | *"…Bonito — **quando o chão do caminho deixa chegar nela**."* | `A maior cachoeira de Bonito.` — 100% dele |
+| `avisos` | *"…pegajoso **— remarque pro próximo dia seco**."* | a instrução de cancelar saiu; o fato dele fica inteiro |
+
+⚠️ **Nenhum teste guardava essas três frases** — apagá-las deixou a suíte em 775/775. Fica anotado.
+
+**O mecanismo (saída 2, escolhida por ele — *"pode ir pela 2"*):**
+
+- `condicao.severidade` — **obrigatório** no schema, `nao-va` | `espera` | `cuidado`. Opcional com
+  padrão, ficha nova entraria calada herdando a severidade da Rampa, que é o defeito que o campo
+  existe pra fechar.
+- `src/lib/severidade.ts` — as **palavras** de cada nível, uma vez, no molde do `CHUVA_NO_PISO`.
+  Qual nível é fato do LUGAR e mora na ficha; as palavras moram na tabela.
+- `marcaDe`/`subDe` passaram a receber a `Voz` da ficha. **O ramo SECO não mudou** (*"Pode ir"* /
+  *"seco · carro comum"* são os mesmos em todo o acervo).
+- **A COR**, por decisão dele (*"a cor e o grupo seguem o nível"*): `tomDe` põe o nível `cuidado`
+  num âmbar novo (`--care`, nos dois temas), nos quatro lugares — selo da ficha, pin da ficha, pin
+  da home e selo do cartão. Sem isso a Véu diria *"Vá com cuidado"* dentro de um retângulo
+  **vermelho**.
+
+**As palavras dos três níveis, escolhidas por ele em 10/09 entre três saídas cada:**
+
+| nível | ficha | marca | sub |
+|---|---|---|---|
+| `nao-va` | Rampa do Pepê | `Não vá` | `barro · dá um tempo` |
+| `espera` | Pedra Furada | `Espera {n}h` — **o número vem da FICHA** (3h lá, 6h nas outras) | `barro · dá um tempo` |
+| `cuidado` | Véu de Noiva | `Vá com cuidado` | `molhado · sem pressa` |
+
+🔴 **`Vá com cuidado` / `molhado · sem pressa` é REDAÇÃO MINHA, escolhida por ele de olho aberto** —
+a tabela de procedência estava na opção que ele leu, incluindo que *"Vá"* é imperativo onde ele deu
+permissão, e que *"sem pressa"* **pode estar tecnicamente errado** (em barro pegajoso, devagar demais
+também atola). A alternativa 100% dele era `Dá pra ir` / `com cuidado`, e ele **não** a escolheu.
+**Escolher entre saídas apresentadas é o ato de aprovação deste projeto** — mas se ele disser que
+"sem pressa" está errado pro chão de lá, é uma linha na tabela.
+
+**Prova: 15 testes novos em `tests/lib/severidade.test.ts`, 7 mutações medidas e TODAS mortas**
+(palavra fixa no ramo molhado · `espera` com número fixo · `vozDaFicha` pegando a janela de previsão
+· `tomDe` devolvendo o estado cru · a regra de CSS do selo âmbar sumindo · `severidade` virando
+opcional · a Moldura voltando a pintar com o estado). Controle verde.
+**794/794 em 52 arquivos**, `tsc` limpo, `build` passa, `tools/varrer.mjs` rodado — o vocabulário do
+ramo molhado só existe em `severidade.ts`.
+
+**Dois guardas que crescem com o acervo** (a espécie "guarda que enumera à mão é cego a ele
+crescer"): *toda ficha declara um nível* lê `content/fichas/`, e *o acervo exercita os TRÊS níveis*
+impede a tabela de virar **máquina sem uso** — que é o que o `modos` é hoje.
+
+### 🔴 O QUE FALTA, E O QUE ESTÁ BLOQUEADO NUMA PALAVRA DELE
+
+**1. O CABEÇALHO DO GRUPO DA HOME — a outra metade do que ele escolheu.** O `tres-redacoes`
+rastreou **nove bocas** que dizem "não vá" sobre a Véu num dia de chuva. O nível conserta 7. Sobrou
+`FolhaTrilhas.tsx:130-138`: a home agrupa por `estado === "fresco"` e a Véu cai sob **"Hoje não"**.
+Com o nível valendo, a ficha diz *"Vá com cuidado"* sob um título que diz o contrário.
+🔴 **Um terceiro grupo precisa de NOME, e nome é palavra dele.** Não escreva sozinho.
+
+**2. A `sub` do nível `espera`.** Hoje é `barro · dá um tempo`, herdada — e agora **repete a marca**
+(`Espera 6h` em cima, "dá um tempo" embaixo). Ele não escolheu.
+
+**3. `discriminador.como_ler` e `regra_texto` da Véu** ainda dizem *"= não vá"*. O `como_ler` é o
+discriminador de campo (L7, ligado por ele em 09/09) e pode continuar certo mesmo com a ressalva —
+mas é pergunta, não suposição. O `regra_texto` **não vai à tela**.
+
+**4. O iPhone**, de ontem e de hoje: a L3 em 375px, e agora o âmbar novo ao lado do verde e do
+vermelho.
+
+### ✅ E OS QUATRO AGENTES NOVOS (`.claude/agents/`, README reescrito)
+
+Os seis antigos **acham e calam**. Estes quatro **acham, propõem e recomendam** — porque a dúvida é
+de um domínio em que ele não julga sozinho. Nenhum dos dez tem `Edit` ou `Write`.
+
+| agente | a dúvida |
+|---|---|
+| **`calibrar-veredito`** | a tela grita mais do que ele falou? Separa **PALAVRA × VOCABULÁRIO × MOTOR** |
+| **`olho-de-tela`** | como a tela FICA — e devolve um roteiro de 5 perguntas de sim/não pro celular dele |
+| **`tres-redacoes`** | falta palavra: três redações, a 1ª sempre SUBTRAÇÃO, procedência palavra por palavra |
+| **`escolha-de-produto`** | ordem da ficha, ficha × waypoint, qual eixo — e primeiro pergunta se a pergunta é a certa |
+
+⚠️ **O registro de agentes é lido na ABERTURA da sessão** — agente criado no meio dela não é
+chamável por nome até a próxima.
+
 
 ---
 

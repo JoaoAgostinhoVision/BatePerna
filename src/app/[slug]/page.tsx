@@ -2,6 +2,7 @@ import "../ficha.css";
 import { getFicha } from "@/lib/ficha";
 import { resolverEstado } from "@/lib/carimbo-estado";
 import { rotuloPiso } from "@/lib/piso";
+import { vozDaFicha } from "@/lib/severidade";
 import { rotuloHora } from "@/lib/horario";
 import { notFound } from "next/navigation";
 import ConfirmarFui from "../ConfirmarFui";
@@ -115,7 +116,7 @@ export default async function Ficha({
   // trouxer uma leitura nova do portão. Tudo aqui dentro continua sendo
   // componente de servidor — children atravessa a fronteira sem virar JS.
   return (
-    <Moldura estado={estado}>
+    <Moldura estado={estado} severidade={ficha.condicao.severidade}>
       <div className="screen">
         <Appbar chip={chipCusto} />
 
@@ -133,6 +134,7 @@ export default async function Ficha({
             slug={slug}
             secaRapido={ficha.secaRapido}
             piso={ficha.piso}
+            voz={vozDaFicha(ficha.condicao)}
             horario={ficha.horario}
           />
         </div>

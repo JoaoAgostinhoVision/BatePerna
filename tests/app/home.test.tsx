@@ -50,6 +50,8 @@ function fichaFake(slug: string): Ficha {
     condicao: {
       coords: { lat: 0, lng: 0 },
       regra: { tipo: "chuva_binaria", janela_previsao_horas: 0, janela_passado_horas: 0, limiar_mm: 0 },
+
+      severidade: "nao-va",
       regra_texto: "",
       ressalva_proxy: "",
     },
@@ -253,7 +255,7 @@ describe("SeloTrilha — o relógio da validade", () => {
 
     render(
       <Profiler id="selo" onRender={registrar}>
-        <SeloTrilha leitura={leituraVelha} />
+        <SeloTrilha leitura={leituraVelha} voz={{ severidade: "nao-va", horasPassado: 6 }} />
       </Profiler>,
     );
 

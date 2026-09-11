@@ -14,6 +14,7 @@ import {
   subDe,
 } from "@/lib/carimbo-fase";
 import { fechadoAgora, rotuloAbertura, rotuloFaixa, type Horario } from "@/lib/horario";
+import type { Voz } from "@/lib/severidade";
 import { chuvaNoPiso, type Piso } from "@/lib/piso";
 import { carimboVenceu, horaCurtaRecife } from "@/lib/validade";
 import { useAvisarEstado } from "./Moldura";
@@ -35,6 +36,7 @@ export default function Carimbo({
   secaRapido,
   piso,
   horario,
+  voz,
 }: {
   estado: Estado;
   erro: boolean;
@@ -52,6 +54,11 @@ export default function Carimbo({
   /** A faixa de horário desta trilha. Sem ela, o carimbo NUNCA fecha e decide
    *  só pela chuva, como sempre fez. Ver `src/lib/horario.ts`. */
   horario?: Horario;
+  /** O nível de severidade desta trilha e a janela da própria ficha — é daqui
+   *  que saem as palavras do ramo molhado. Obrigatório de propósito: com
+   *  padrão, uma ficha nova entraria calada herdando a voz da Rampa, que é o
+   *  defeito que `src/lib/severidade.ts` existe pra fechar. */
+  voz: Voz;
 }) {
   // O relógio da hora do dia, irmão do relógio da validade logo abaixo.
   // `null` no primeiro render — a ficha é pré-renderizada em build, então
@@ -195,8 +202,8 @@ export default function Carimbo({
   // A palavra e a linha de baixo vêm de `marcaDe`/`subDe`, não daqui: são as
   // MESMAS do selo do cartão, e escritas à mão nos dois elas já podiam
   // divergir. Ver `carimbo-fase.ts`.
-  const marca = marcaDe(fase, estadoAtual);
-  const sub = subDe(fase, estadoAtual, fechado && horario ? rotuloAbertura(horario, agora!) : null);
+  const marca = marcaDe(fase, estadoAtual, voz);
+  const sub = subDe(fase, estadoAtual, voz, fechado && horario ? rotuloAbertura(horario, agora!) : null);
 
   // 🔴 Fechado, o pulso PARA e a linha viva não fala de chuva. Ela existe pra
   // dizer "esta leitura é de agora" — e com o lugar fechado a leitura de chuva

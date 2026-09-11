@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, cleanup, act } from "@testing-library/react";
 import { regraDe, semComentarios, valorDe } from "../css";
 import type { Piso } from "@/lib/piso";
+import { SEVERIDADES } from "@/lib/severidade";
 import Carimbo from "@/app/Carimbo";
 import Moldura from "@/app/Moldura";
 import SeloTrilha from "@/app/SeloTrilha";
@@ -15,11 +16,17 @@ const AGORA_S = AGORA_MS / 1000;
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(AGORA_MS); });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
+/** A voz da RAMPA DO PEPÊ, que é a ficha que estes testes montam (`slug=
+ *  "rampa-do-pepe"`): nível `nao-va`, janela de 6h. Fixa aqui porque este
+ *  arquivo testa o CARIMBO, não a severidade — quem prova que cada nível fala
+ *  a sua língua é `tests/lib/severidade.test.ts`. */
+const VOZ_RAMPA = { severidade: "nao-va", horasPassado: 6 } as const;
+
 type Props = { estado: "fresco" | "frio"; erro: boolean; calculadoEm: number; pass: number; fut: number; slug: string; secaRapido?: string; piso?: Piso; horario?: { abre: string; fecha: string } };
 
 function montar(props: Partial<Props> = {}) {
   return render(
-    <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" {...props} />,
+    <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} {...props} />,
   );
 }
 
@@ -45,8 +52,8 @@ function redeFalsa() {
 function montarNaMoldura(props: Partial<Props> = {}) {
   const { estado = "fresco" } = props;
   return render(
-    <Moldura estado={estado}>
-      <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" {...props} />
+    <Moldura estado={estado} severidade={VOZ_RAMPA.severidade}>
+      <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} {...props} />
     </Moldura>,
   );
 }
@@ -440,7 +447,7 @@ describe("Carimbo — o que os quadros commitados mostram", () => {
 
     render(
       <Profiler id="carimbo" onRender={registrar}>
-        <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" />
+        <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} />
       </Profiler>,
     );
 
@@ -621,12 +628,22 @@ describe("Carimbo — o que a chuva faz com o chão vem do PISO", () => {
 describe("a ficha e o cartão dizem a MESMA palavra", () => {
   const leitura = (estado: "fresco" | "frio") => ({ estado, erro: false, calculadoEm: AGORA_S });
 
-  it.each(["fresco", "frio"] as const)("com leitura %s, carimbo e selo não divergem", (estado) => {
+  // 🔴 O CRUZAMENTO CRESCEU EM 2026-09-10: não são mais 2 casos, são 2 × 3 — a
+  // palavra agora depende do NÍVEL da ficha, e carimbo e selo leem a mesma voz
+  // por caminhos diferentes (o carimbo por prop da página, o selo pelo
+  // `vozDaFicha` do cartão). Divergir num nível e bater nos outros é
+  // exatamente o que a lista de 2 casos não veria.
+  it.each(
+    (["fresco", "frio"] as const).flatMap((estado) =>
+      SEVERIDADES.map((severidade) => [estado, severidade] as const),
+    ),
+  )("com leitura %s e nível %s, carimbo e selo não divergem", (estado, severidade) => {
+    const voz = { severidade, horasPassado: 6 } as const;
     const carimbo = render(
-      <Carimbo estado={estado} erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" />,
+      <Carimbo estado={estado} erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={voz} />,
     ).container.querySelector(".mark")?.textContent;
     cleanup();
-    const selo = render(<SeloTrilha leitura={leitura(estado)} />).container
+    const selo = render(<SeloTrilha leitura={leitura(estado)} voz={voz} />).container
       .querySelector(".w")?.textContent;
 
     // Truthy antes de comparar: sem isto, dois elementos SUMIDOS dariam
@@ -735,7 +752,7 @@ describe("Carimbo — StrictMode e desmontagem", () => {
     const { pendentes } = redeFalsa();
     const { container } = render(
       <StrictMode>
-        <Carimbo estado="frio" erro={true} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" />
+        <Carimbo estado="frio" erro={true} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} />
       </StrictMode>,
     );
 

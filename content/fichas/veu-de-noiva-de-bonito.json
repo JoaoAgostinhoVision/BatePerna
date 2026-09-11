@@ -1,8 +1,8 @@
 {
   "slug": "veu-de-noiva-de-bonito",
   "modos": ["condicional"],
-  "rotulo_escaneio": "Cachoeira, só sem chuva",
-  "promessa": "A maior cachoeira de Bonito — quando o chão do caminho deixa chegar nela.",
+  "rotulo_escaneio": "Cachoeira",
+  "promessa": "A maior cachoeira de Bonito.",
   "voz": "Vale a ida. Mas o trecho de terra é um desafio na chuva: molhou, o barro fica pegajoso.",
   "premio": "Um espetáculo natural do brejo pernambucano — a maior cachoeira de Bonito. É isso que espera no fim do trecho de terra.",
   "trajeto": {
@@ -15,7 +15,7 @@
     ]
   },
   "acesso": "Carro comum chega. Mas tem um trecho de terra no caminho, e é ele que manda: com chuva vira um desafio — o barro fica pegajoso.",
-  "avisos": "Se choveu, o trecho de terra fica pegajoso — remarque pro próximo dia seco. E repare na hora: fecha às 17h, então chegar tarde é não entrar.",
+  "avisos": "Se choveu, o trecho de terra fica pegajoso. E repare na hora: fecha às 17h, então chegar tarde é não entrar.",
   "piso": "barro",
   "carroComum": true,
   "condicao": {
@@ -29,6 +29,7 @@
       "janela_passado_horas": 6,
       "limiar_mm": 0.2
     },
+    "severidade": "cuidado",
     "regra_texto": "Choveu nas últimas ~6h OU vem chuva nas próximas ~3h → não vá: o trecho de terra fica pegajoso. Os três números são os da Rampa do Pepê, herdados por escolha dele em 2026-09-03 (\"acho que pode seguir a regra da chuva da rampa do pepê\") — e por enquanto são palpite, não medição daqui. Nada nesta regra afirma coisa alguma sobre a queda d'água: ele não tem registro de perigo ali e disse que não sabe opinar.",
     "ressalva_proxy": "Chuva medida ≠ barro no trecho de terra — a grade do modelo não vê esse pedaço. Confirme no caminho."
   },

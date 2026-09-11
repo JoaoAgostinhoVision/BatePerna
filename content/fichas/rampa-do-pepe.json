@@ -33,6 +33,7 @@
       "janela_passado_horas": 6,
       "limiar_mm": 0.2
     },
+    "severidade": "nao-va",
     "regra_texto": "Choveu nas últimas ~6h OU vem chuva nas próximas ~3h → não suba de carro comum; o barro segura água. Área alta, escorre rápido — passou disso, firma.",
     "ressalva_proxy": "Chuva medida ≠ barro na entrada — a grade do modelo não vê a rampa. Confirme na entrada."
   },

@@ -53,6 +53,7 @@ const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS } = vi.hoisted(() => {
         janela_passado_horas: 6,
         limiar_mm: 1,
       },
+      severidade: "nao-va" as const,
       regra_texto: "chuva nas últimas 6h ou nas próximas 3h",
       ressalva_proxy: "A leitura é de satélite — confira no lugar.",
     },
