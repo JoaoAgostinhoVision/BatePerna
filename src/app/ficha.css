@@ -18,8 +18,24 @@
   /* A terceira cor, 2026-09-10. Nem convite nem proibição: o lugar que ele
      disse que "dá pra ir, com cuidado". Só o nível `cuidado` a usa — `espera`
      divide o vermelho com `nao-va`, porque "espera 6h" é não-agora. Ver
-     `tomDe` em src/lib/severidade.ts. */
-  --care: #B77A18; --care-ink: #8A5A0E; --care-bg: #F6EBD6; --care-line: #E0C68F;
+     `tomDe` em src/lib/severidade.ts.
+
+     🔴 OS VALORES FORAM CORRIGIDOS NO MESMO DIA, e o defeito é instrutivo: o
+     primeiro `--care-bg` era #F6EBD6, a **7,0** de distância RGB do
+     `--surface-2` do cartão — contra **17,9** do verde e **14,2** do vermelho.
+     O carimbo âmbar leria como moldura VAZADA ao lado de dois irmãos que leem
+     como caixa pintada. E o `--care-ink` velho punha a linha de baixo
+     (`molhado · sem pressa`) em **3,76:1**, a única das três abaixo de 4,5:1 —
+     justamente onde moram as palavras novas.
+
+     🔴 NINGUÉM PODERIA TER VISTO ISSO OLHANDO A TELA: as três trilhas estavam
+     secas, e o âmbar só aparece com chuva. Ele encontraria sozinho, no celular,
+     na primeira chuva em Bonito, a 120 km de casa. Há teste medindo os dois
+     números em `tests/lib/severidade.test.ts`.
+
+     `--care-line` não voltou: foi definido junto com os outros e **nenhuma
+     regra o consumia** — token morto, contraído no dia em que nasceu. */
+  --care: #B77A18; --care-ink: #71470B; --care-bg: #FCEDC8;
   --rain: #4A6E86; --rain-bg: #E4EDF1;
   --shadow: 0 1px 2px rgba(42,32,22,.06), 0 14px 40px rgba(42,32,22,.13);
   --shadow-card: 0 1px 2px rgba(42,32,22,.05);
@@ -34,7 +50,10 @@
     --accent: #CE7C4B; --accent-soft: #38291B;
     --go: #5FA877; --go-ink: #8FCBA0; --go-bg: #16271C; --go-line: #2C4735;
     --stop: #DA6154; --stop-ink: #EBA498; --stop-bg: #2C1712; --stop-line: #57271F;
-    --care: #D9A441; --care-ink: #E8C583; --care-bg: #2B2113; --care-line: #574522;
+    /* Mesmo conserto no escuro: o fundo velho (#2B2113) estava a 7,9 do
+       `--surface-2` e agora está a 17,4, ao lado dos 18,1 do verde. O `ink`
+       escuro não precisou mudar — já dava 7,2:1 na linha de baixo. */
+    --care: #D9A441; --care-ink: #E8C583; --care-bg: #302209;
     --rain: #79A5BF; --rain-bg: #15242C;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 14px 40px rgba(0,0,0,.55);
     --shadow-card: 0 1px 2px rgba(0,0,0,.3);

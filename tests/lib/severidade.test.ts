@@ -179,6 +179,79 @@ describe("a cor nova existe de verdade no CSS, nos dois temas", () => {
     }
   });
 
+  // 🔴 O DEFEITO QUE ESTES DOIS TRANCAM, e ele foi ao ar em 2026-09-10 sem que
+  // ninguém pudesse vê-lo. O primeiro `--care-bg` (#F6EBD6) estava a **7,0** de
+  // distância RGB do `--surface-2` do cartão, contra 17,9 do verde e 14,2 do
+  // vermelho: o carimbo âmbar leria como **moldura vazada** ao lado de dois
+  // irmãos que leem como caixa pintada. E o `--care-ink` velho punha a linha de
+  // baixo (`molhado · sem pressa`) em **3,76:1**, a única das três abaixo do
+  // mínimo de 4,5:1 — justamente onde moram as palavras novas.
+  //
+  // 🔴 E NENHUM OLHO PODERIA TER PEGO: o âmbar só aparece com chuva, e as três
+  // trilhas estavam secas. Ele encontraria sozinho, no celular, na primeira
+  // chuva, a 120 km de casa. **Cor que só aparece numa condição rara precisa de
+  // prova ARITMÉTICA, porque a revisão visual não alcança.**
+  const tokens = (metade: string): Record<string, string> =>
+    Object.fromEntries(
+      [...metade.matchAll(/(--[a-z0-9-]+):\s*(#[0-9A-Fa-f]{6})/g)].map((m) => [m[1], m[2]]),
+    );
+  const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const distancia = (a: string, b: string) =>
+    Math.hypot(...rgb(a).map((v, i) => v - rgb(b)[i]));
+  const luz = (h: string) => {
+    const [r, g, b] = rgb(h).map((c) => {
+      const x = c / 255;
+      return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const contraste = (a: string, b: string) => {
+    const [x, y] = [luz(a), luz(b)];
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+  };
+  /** A `.sub` do carimbo é desenhada com `opacity: .85` (ficha.css) — medir a
+   *  cor crua mentiria a favor: são 5,01:1 cru contra 3,76:1 na tela. */
+  const sobre = (fg: string, bg: string, o = 0.85) =>
+    "#" +
+    rgb(fg)
+      .map((v, i) => Math.round(v * o + rgb(bg)[i] * (1 - o)).toString(16).padStart(2, "0"))
+      .join("");
+
+  const metades = () => {
+    const ficha = semComentarios("ficha.css");
+    const corte = ficha.indexOf("prefers-color-scheme");
+    return [
+      ["claro", tokens(ficha.slice(0, corte))],
+      ["escuro", tokens(ficha.slice(corte))],
+    ] as const;
+  };
+
+  it("o âmbar se afasta do cartão tanto quanto o verde e o vermelho — não é moldura vazada", () => {
+    for (const [tema, t] of metades()) {
+      const alvo = distancia(t["--care-bg"], t["--surface-2"]);
+      const verde = distancia(t["--go-bg"], t["--surface-2"]);
+      const vermelho = distancia(t["--stop-bg"], t["--surface-2"]);
+      // O piso é o MENOR dos dois irmãos, e não um número que eu escolhi: a
+      // régua é "lê como caixa pintada igual aos outros", e quem define isso é
+      // a paleta que já existe. Se um dia o vermelho se aproximar do cartão,
+      // este teste afrouxa junto — de propósito.
+      expect(alvo, `tema ${tema}: âmbar a ${alvo.toFixed(1)} do cartão`).toBeGreaterThanOrEqual(
+        Math.min(verde, vermelho),
+      );
+    }
+  });
+
+  it("a linha de baixo do carimbo âmbar passa de 4,5:1 — é onde moram as palavras novas", () => {
+    for (const [tema, t] of metades()) {
+      const naTela = contraste(sobre(t["--care-ink"], t["--care-bg"]), t["--care-bg"]);
+      expect(naTela, `tema ${tema}: .sub âmbar em ${naTela.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+      // Controle: a conta acusa de verdade. O valor que foi ao ar (#8A5A0E
+      // sobre #F6EBD6) tem que REPROVAR nesta mesma função — senão ela está
+      // medindo outra coisa e passaria pra sempre.
+      expect(contraste(sobre("#8A5A0E", "#F6EBD6"), "#F6EBD6")).toBeLessThan(4.5);
+    }
+  });
+
   it("o token --care é definido no tema claro E no escuro", () => {
     const ficha = semComentarios("ficha.css");
     const corte = ficha.indexOf("prefers-color-scheme");

@@ -250,6 +250,22 @@
 .bp .cartao-nome { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; line-height: 1.15; }
 .bp .cartao-prom { color: var(--ink-soft); font-size: .85rem; font-style: italic; }
 .bp .cartao-meta { font-family: var(--type); font-size: .68rem; font-weight: 650; color: var(--ink-faint); margin-top: .35rem; }
+/* 🔴 A L3 CHEGA NA HOME (2026-09-10). Até hoje `data-nivel` não aparecia UMA vez
+   neste arquivo: a procedência por contraste foi construída em 09/09 só na ficha
+   aberta, e a primeira tela do app — a que se navega — não distinguia o que o
+   mapa entrega do que só sabe quem foi. Isso não foi decidido; aconteceu.
+
+   O tratamento aqui NÃO é a serif da ficha, e isso é de propósito: a régua do
+   `ficha.css` já usa dois pesos de contraste conforme o elemento — prosa vira
+   serif (`.sec[data-nivel="b"] p`), fato compacto vira só cor e peso
+   (`.fatos[data-nivel="b"]`, `.ticket[data-nivel="b"]`). A linha de meta do
+   cartão é fato compacto a .68rem: serif aqui seria ilegível, e o irmão dela na
+   ficha é justamente o `.fatos`. Mesma régua, mesmo tratamento.
+
+   🔴 E SÓ O B É MARCADO — a assimetria é o desenho inteiro, igual na ficha:
+   marcar o Nível A criaria a etiqueta simétrica que a decisão recusa e faria a
+   distância parecer credencial. Não existe `[data-nivel="a"]` neste repo. */
+.bp .cartao-meta [data-nivel="b"] { color: var(--ink); }
 
 /* O selo repete o vocabulário do carimbo da ficha: mesma borda dupla, mesmas
    cores. A cor sai do [data-state] do cartão — a mesma fonte que pinta o pin —,

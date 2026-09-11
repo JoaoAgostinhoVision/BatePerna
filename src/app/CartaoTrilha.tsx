@@ -49,10 +49,29 @@ export default function CartaoTrilha({
   // A mesma fonte que o mapa: "uma pessoa, uma fonte" também vale aqui — o
   // cartão não chama navigator.geolocation por conta própria, lê o contexto.
   const voce = coordDe(useLocal());
-  const partes = [
+  // 🔴 CADA PEDAÇO CARREGA O SEU NÍVEL, e por isso isto é uma lista de pares e
+  // não de strings (2026-09-10). Até hoje os três viviam num `join(" · ")` —
+  // uma string só, sem identidade endereçável, onde a marca do Nível B não
+  // tinha onde pousar. Mesma razão que fez o `data-bloco="trajeto"` existir na
+  // ficha: sem endereço, "o piso brilha" viraria "existe em algum lugar do
+  // cartão", e nenhum teste separaria as duas versões.
+  //
+  // 🔴 O NÍVEL DE CADA CAMPO NÃO É ESCOLHA DESTA TELA — é a régua da L3, escrita
+  // por extenso em `src/app/[slug]/page.tsx` e decidida por ele: Nível A é o que
+  // o mapa e o feed de chuva entregam igual pra qualquer um; Nível B é o que só
+  // sabe quem foi. A ficha aberta já classificava estes três campos; a HOME os
+  // mostrava todos planos, e ninguém decidiu isso — a L3 parou na ficha por
+  // acidente. **Duas superfícies classificando o mesmo campo de formas
+  // diferentes é a família de defeito que este projeto já pagou três vezes.**
+  const partes: ({ texto: string; nivel?: "b" } | null)[] = [
     // `coordDaDistancia`, nunca `ficha.condicao.coords`: o km do cartão e o km
     // da ficha são a MESMA pergunta, e quem responde é uma função só.
-    voce ? formatarDistanciaCurta(distanciaKm(voce, coordDaDistancia(ficha))) : null,
+    //
+    // SEM marca, e é o desenho: distância é Nível A — o telefone calcula, e isso
+    // não é conhecimento de quem foi. Na ficha ela também não é marcada.
+    voce
+      ? { texto: formatarDistanciaCurta(distanciaKm(voce, coordDaDistancia(ficha))) }
+      : null,
     // A extensão da trilha (`ficha.extensaoKm`) saiu desta linha por decisão
     // do João em 2026-08-23: "remova o filtro tamanho da trilha, acho que não
     // está para hoje". O campo saiu do schema na contração da mesma rodada
@@ -60,16 +79,22 @@ export default function CartaoTrilha({
     // O piso da VIA (fato do lugar), no lugar do antigo `esforco` (fato do
     // corpo de quem vai). `rotuloPiso` troca o hífen do enum por espaço —
     // "asfalto-esburacado" é chave de dado, não texto de tela.
-    ficha.piso ? rotuloPiso(ficha.piso) : null,
+    //
+    // NÍVEL B: a régua da L3 nomeia o piso, com todas as letras, entre "o que só
+    // sabe quem foi". Na ficha ele brilha dentro do `.fatos` do Trajeto.
+    ficha.piso ? { texto: rotuloPiso(ficha.piso), nivel: "b" as const } : null,
     // `custo.valor` é texto livre (schema não garante separador nenhum). O
     // JSON real da Rampa usa " · ", não " — " como um teste antigo supunha —
     // por isso o corte aceita os dois. Sem separador algum, o split não acha
     // nada e devolve a string inteira (index [0]), que é o comportamento
     // certo pra um custo curto como "R$ 10".
     ficha.custo.tag === "pago" && ficha.custo.valor
-      ? ficha.custo.valor.split(/\s[—·]\s/)[0]
+      ? // NÍVEL B por decisão DELE em 2026-09-09, palavra dele: "preço e horário
+        // brilham". Na ficha é o `.ticket`, marcado pela mesma razão.
+        { texto: ficha.custo.valor.split(/\s[—·]\s/)[0], nivel: "b" as const }
       : null,
-  ].filter(Boolean);
+  ];
+  const visiveis = partes.filter((p): p is { texto: string; nivel?: "b" } => p !== null);
 
   return (
     <a
@@ -88,7 +113,20 @@ export default function CartaoTrilha({
         />
       </span>
       <span className="cartao-prom">{ficha.promessa}</span>
-      {partes.length > 0 && <span className="cartao-meta">{partes.join(" · ")}</span>}
+      {/* O separador vive ENTRE os pedaços, e não dentro deles: com o " · "
+          colado no texto de cada um, a marca do Nível B pintaria o ponto
+          também — e o ponto não é conhecimento de ninguém, é pontuação. Por
+          isso ele sai num `<span>` sem marca, e só entre dois pedaços. */}
+      {visiveis.length > 0 && (
+        <span className="cartao-meta">
+          {visiveis.map((p, i) => (
+            <span key={p.texto}>
+              {i > 0 && <span className="sep"> · </span>}
+              <span data-nivel={p.nivel}>{p.texto}</span>
+            </span>
+          ))}
+        </span>
+      )}
     </a>
   );
 }

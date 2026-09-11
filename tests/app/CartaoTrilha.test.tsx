@@ -4,6 +4,7 @@ import CartaoTrilha from "@/app/CartaoTrilha";
 import LocalVivo from "@/app/local";
 import { CHAVE_LOCAL } from "@/lib/local";
 import { getFichasComCondicao } from "@/lib/ficha";
+import { semComentarios } from "../css";
 
 afterEach(() => { cleanup(); localStorage.clear(); });
 
@@ -200,5 +201,89 @@ describe("a linha de metadados do cartão", () => {
     };
     const { container } = render(<CartaoTrilha ficha={nua} inicial={leitura} />);
     expect(container.querySelector(".cartao-meta")).toBeNull();
+  });
+});
+
+// 🔴 A L3 CHEGA NA HOME (2026-09-10), e o que a motivou foi um número: até este
+// dia `data-nivel` aparecia **zero vez** em `home.css`, `CartaoTrilha.tsx`,
+// `SeloTrilha.tsx`, `MapaHome.tsx` e `FolhaTrilhas.tsx`. A procedência por
+// contraste foi construída em 09/09 **só na ficha aberta** — a primeira tela do
+// app, a que se navega, não distinguia o que o mapa entrega do que só sabe quem
+// foi. Ninguém decidiu isso; aconteceu.
+//
+// 🔴 O NÍVEL DE CADA CAMPO NÃO É ESCOLHA DESTA TELA. É a régua escrita em
+// `[slug]/page.tsx`: Nível A é o que o mapa e o feed de chuva entregam igual pra
+// qualquer um; Nível B é o que só sabe quem foi — e a régua **nomeia o piso**.
+// O preço é B por decisão dele em 09/09 ("preço e horário brilham"). A
+// distância é A: o telefone calcula.
+describe("a linha de metadados obedece à mesma régua de nível da ficha", () => {
+  const comLocal = () =>
+    localStorage.setItem(
+      CHAVE_LOCAL,
+      JSON.stringify({
+        tipo: "escolhido", coord: { lat: -8.20111, lng: -35.56472 },
+        em: 1_800_000_000, nome: "Gravatá", regiao: "Pernambuco",
+      }),
+    );
+
+  const meta = (c: HTMLElement) =>
+    Array.from(c.querySelectorAll(".cartao-meta span[data-nivel], .cartao-meta span:not([data-nivel])"))
+      .filter((s) => !s.querySelector("span") && !s.classList.contains("sep"))
+      .map((s) => [s.textContent ?? "", s.getAttribute("data-nivel")] as const);
+
+  it("o piso e o preço brilham; a distância não", async () => {
+    comLocal();
+    // A Rampa é paga E tem piso — exercita os três pedaços de uma vez.
+    const { container } = render(
+      <LocalVivo><CartaoTrilha ficha={fichaReal("rampa-do-pepe")} inicial={leitura} /></LocalVivo>,
+    );
+    await screen.findByText(/km/);
+
+    const pedacos = meta(container);
+    expect(pedacos.length, "os três pedaços têm que existir").toBe(3);
+
+    const nivelDe = (t: string) => pedacos.find(([texto]) => texto.includes(t))?.[1];
+    expect(nivelDe("km"), "a distância é Nível A — o telefone calcula").toBeNull();
+    expect(nivelDe("barro"), "o piso é Nível B — a régua o nomeia").toBe("b");
+    expect(nivelDe("R$"), "o preço é Nível B — decisão dele em 09/09").toBe("b");
+  });
+
+  // 🔴 O separador não é conhecimento de ninguém — é pontuação. Com o " · "
+  // colado no texto de cada pedaço (o `join` que existia até hoje), a marca do
+  // Nível B pintaria o ponto junto.
+  it("o separador fica FORA da marca", () => {
+    const { container } = render(<CartaoTrilha ficha={fichaReal("rampa-do-pepe")} inicial={leitura} />);
+    const seps = Array.from(container.querySelectorAll(".cartao-meta .sep"));
+    expect(seps.length).toBeGreaterThan(0);
+    for (const s of seps) expect(s.getAttribute("data-nivel")).toBeNull();
+    // E o texto visível não mudou de forma: continua "a · b · c".
+    expect(container.querySelector(".cartao-meta")?.textContent).toMatch(/\S · \S/);
+  });
+
+  // 🔴 A ASSIMETRIA É O DESENHO INTEIRO, igual na ficha: marcar o Nível A
+  // criaria a etiqueta simétrica que a decisão recusa e faria a distância
+  // parecer credencial. `[data-nivel="a"]` não existe neste repo, e este guarda
+  // varre os dois arquivos da home pra continuar assim.
+  it("não existe marca de Nível A na home, nem no markup nem no CSS", () => {
+    comLocal();
+    const { container } = render(
+      <LocalVivo><CartaoTrilha ficha={fichaReal("rampa-do-pepe")} inicial={leitura} /></LocalVivo>,
+    );
+    expect(container.querySelectorAll('[data-nivel="a"]')).toHaveLength(0);
+    expect(semComentarios("home.css")).not.toContain('data-nivel="a"');
+    // Controle: o B existe mesmo — senão a ausência do A passa por vacuidade.
+    expect(semComentarios("home.css")).toContain('data-nivel="b"');
+  });
+
+  // O acervo inteiro, não uma ficha: a Pedra Furada é GRÁTIS, então o cartão
+  // dela tem dois pedaços e não três. Guarda que só olha a Rampa é cego a isso.
+  it("vale pro acervo inteiro, e ficha grátis simplesmente tem um pedaço a menos", () => {
+    for (const f of getFichasComCondicao()) {
+      const { container } = render(<CartaoTrilha ficha={f} inicial={leitura} />);
+      for (const [texto, nivel] of meta(container)) {
+        if (f.piso && texto.includes(f.piso.replace(/-/g, " "))) expect(nivel, f.slug).toBe("b");
+      }
+      cleanup();
+    }
   });
 });
