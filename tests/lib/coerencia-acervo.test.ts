@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { getAllFichas } from "@/lib/ficha";
 import { PISOS } from "@/lib/piso";
@@ -239,5 +239,86 @@ describe("coerência do acervo — varre TODAS as fichas, nunca uma lista de slu
       .toContain("precoCurto");
     expect(src, "o regex de preço da página mudou; atualize o PRECO deste arquivo junto")
       .toContain(PRECO.source);
+  });
+});
+
+/** 🔴 O 2º WAYPOINT — a cadeia que o schema aceita e a tela engole em silêncio.
+ *
+ *  `src/types/ficha.ts` declara `waypoints: z.array(...).min(1)`. **Nenhum
+ *  leitor do `src/` lê além do `[0]`**: o cartão da home, o pin do mapa, a
+ *  lista de `/trilhas`, o cabeçalho da ficha e a medição de distância pegam
+ *  todos o primeiro ponto e param ali. Uma ficha com três waypoints carrega,
+ *  valida, passa na suíte — e o app mostra **um**. Os pontos 2 e 3 somem sem
+ *  erro, sem log, sem nada na tela: a espécie "dado que carrega, valida, tem
+ *  teste — e nunca aparece" (2026-09-09), agora com o agravante de que o dado
+ *  seria conteúdo DELE, escrito à mão e perdido calado.
+ *
+ *  ⚠️ Isto **não é um teste de produto**: não decide que o app deve mostrar a
+ *  cadeia nem que não deve. Ele só impede que a decisão seja tomada por
+ *  omissão, no dia em que uma ficha nova tiver dois pontos.
+ *
+ *  🔴 E ele guarda a PRÓPRIA JUSTIFICATIVA, que é a lição de 2026-09-03 ("o
+ *  guarda prova que a pergunta existe, nunca que a justificativa dela ainda é
+ *  verdadeira"): o primeiro teste abaixo mede se o `src/` continua cego ao
+ *  `[1..]`. No dia em que alguém ENSINAR a tela a ler a cadeia, ele fica
+ *  vermelho primeiro — e aí o segundo teste é que deve cair, de propósito e a
+ *  mão, junto com este comentário.
+ */
+describe("o 2º waypoint — o acervo não pode ter cadeia enquanto ninguém a lê", () => {
+  const SRC = path.join(process.cwd(), "src");
+
+  function arquivosDeFonte(dir: string): string[] {
+    return readdirSync(dir).flatMap((entrada) => {
+      const p = path.join(dir, entrada);
+      if (statSync(p).isDirectory()) return arquivosDeFonte(p);
+      return /\.tsx?$/.test(entrada) ? [p] : [];
+    });
+  }
+
+  /** Comentário fora, e pelos dois motivos já pagos neste repositório: o bloco
+   *  de `geo.ts` cita `trajeto.waypoints[0]` em prosa (a espécie "guarda de
+   *  fonte lendo o COMENTÁRIO"), e uma linha comentada com `waypoints[1]`
+   *  acusaria um leitor que não existe. O preço da tira é a espécie
+   *  "tira-de-comentários que come o arquivo" — por isso a contagem abaixo. */
+  const semComentario = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+  const acessos = arquivosDeFonte(SRC).flatMap((f) =>
+    [...semComentario(readFileSync(f, "utf8")).matchAll(/waypoints\s*\[([^\]]*)\]/g)].map((m) => ({
+      arquivo: path.relative(process.cwd(), f).split(path.sep).join("/"),
+      indice: m[1].trim(),
+    })),
+  );
+
+  it("o `src/` continua cego ao waypoint 2 em diante — a premissa do guarda abaixo", () => {
+    // NÃO-VACUIDADE: sem este número, renomear o campo (ou a tira comer o
+    // arquivo) deixa `acessos` vazio e o laço seguinte passa sem ler nada.
+    // Cravado a mão de propósito, como o `fichas.length` no topo.
+    expect(
+      acessos.length,
+      "nenhum acesso a `waypoints[...]` no src/ — ou o campo mudou de nome, ou a " +
+        "tira de comentários comeu os arquivos. O teste abaixo ficaria oco.",
+    ).toBeGreaterThanOrEqual(7);
+
+    const alem = acessos.filter((a) => a.indice !== "0");
+    expect(
+      alem.map((a) => `${a.arquivo} lê waypoints[${a.indice}]`),
+      "alguém ensinou a tela a ler a cadeia de waypoints. Isto é BOA notícia — e " +
+        "significa que o guarda seguinte (o acervo só pode ter 1 ponto por ficha) " +
+        "perdeu a razão de existir e deve cair a mão, junto com o comentário dele.",
+    ).toEqual([]);
+  });
+
+  it("nenhuma ficha do acervo tem 2º waypoint — ele sumiria da tela sem aviso", () => {
+    for (const f of fichas) {
+      const extras = f.trajeto.waypoints.slice(1);
+      expect(
+        extras.map((w) => w.nome),
+        `${f.slug} tem ${f.trajeto.waypoints.length} waypoints e o app mostra só ` +
+          `"${f.trajeto.waypoints[0].nome}". Os pontos acima sumiriam da tela sem ` +
+          "erro nenhum. Antes de acrescentá-los, a cadeia precisa de um lugar pra " +
+          "aparecer — isso é decisão de produto, não conserto de teste.",
+      ).toEqual([]);
+    }
   });
 });
