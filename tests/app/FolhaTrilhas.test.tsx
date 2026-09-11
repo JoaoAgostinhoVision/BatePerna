@@ -213,6 +213,11 @@ describe("o agrupamento pergunta o TOM, não o estado", () => {
     expect(doGrupo(container, "Hoje não")).toEqual(["proibida"]);
     // O do meio é o único que resta, e tem que ter a cuidadosa sozinha.
     const meio = titulos(container)[1]!;
+    // 🔴 A guarda de vacuidade, e ela não é formalidade: com o título vazio o
+    // `.grupo-k` ainda renderiza (uma faixa em branco sobre os cartões), e as
+    // duas desigualdades abaixo passariam — "" não é nenhum dos outros dois.
+    // A tela ficaria com um cabeçalho MUDO e a suíte verde.
+    expect(meio.trim().length).toBeGreaterThan(0);
     expect(meio).not.toBe("Hoje o tempo deixa");
     expect(meio).not.toBe("Hoje não");
     expect(doGrupo(container, meio)).toEqual(["cuidadosa"]);

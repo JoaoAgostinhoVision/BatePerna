@@ -156,20 +156,23 @@ export default function FolhaTrilhas({
   return <div className="folha">{miolo()}</div>;
 }
 
-/** 🟠 O TÍTULO DO GRUPO DO MEIO, E ELE ESTÁ PENDENTE DA PALAVRA DELE.
+/** ✅ O TÍTULO DO GRUPO DO MEIO — **MONTAGEM das palavras dele, e aprovada por
+ *  ele em 2026-09-10.**
  *
- *  O que está aqui é **MONTAGEM**: duas palavras da fala dele de 2026-09-10
- *  (*"com chuva dá pra ir sim, com cuidado"*), recombinadas — não há sílaba
- *  minha. Mas ele escolheu a ESTRUTURA ("um terceiro grupo no meio"), não este
- *  nome: a opção que ele leu dizia, com todas as letras, *"preciso do NOME
- *  dele, e nome é sua palavra"*, e o desenho da opção mostrava `???` no lugar
- *  do título.
+ *  As duas peças saem da mesma frase, dita naquele dia respondendo a uma
+ *  pergunta direta: *"com chuva **dá** pra ir sim, **com cuidado**"*. Não há
+ *  sílaba minha aqui.
  *
- *  🔴 **NÃO SUBIU AO AR COM ESTE VALOR, e não pode subir sem ele citar a
- *  frase.** Prosa minha já foi publicada uma vez neste projeto assinada como a
- *  voz dele, por seis dias, porque quem escreveu o texto foi quem removeu a
- *  trava — ver `docs/RESUME.md` e a memória `trava-removida-por-quem-escreveu`.
- *  *"Pode seguir"* nunca foi *"li e aprovei"*.
+ *  🔴 E O CAMINHO ATÉ A APROVAÇÃO IMPORTA MAIS QUE A FRASE. Ele escolheu a
+ *  ESTRUTURA (*"um terceiro grupo no meio"*) numa rodada, e a opção que ele leu
+ *  dizia, com todas as letras, *"preciso do NOME dele, e nome é sua palavra"* —
+ *  o desenho mostrava `???` no lugar do título. O valor ficou marcado PENDENTE
+ *  neste bloco e **não subiu ao ar** até ele ler a frase escrita e responder
+ *  *"serve, pode subir"*. **Isso é ato de leitura; *"pode seguir"* não é.**
+ *  Prosa minha já foi publicada uma vez neste projeto assinada como a voz dele,
+ *  por seis dias, porque quem escreveu o texto foi quem removeu a trava — ver
+ *  a memória `trava-removida-por-quem-escreveu`. Desta vez a trava fechou pelo
+ *  lado certo, no mesmo dia.
  *
  *  Os outros dois títulos ("Hoje o tempo deixa" / "Hoje não") são anteriores a
  *  esta rodada e não estão em questão aqui. */
