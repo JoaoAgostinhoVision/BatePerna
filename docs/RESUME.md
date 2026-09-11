@@ -341,11 +341,24 @@ conferido no ar: **5** marcas de Nível B nos três cartões (Véu 2, Pedra 1 �
    **perde por ordem de arquivo**; a diferença que o teste M8 protege é de **0,32px**. Hoje prêmio,
    acesso e avisos são idênticos. Ou apaga a regra morta (subtração), ou o prêmio ganha destaque de
    verdade — e qual é decisão dele.
-3. **Um defeito visível HOJE, sem chuva:** depois das 17h a Véu e a Pedra mostram carimbo vermelho
-   *"FECHADO AGORA"* e o **pin do mapa continua VERDE**. O `.wp-pin` não recebe a regra de fase que a
-   home já tem, porque `data-fase` vive no `.decision`, que não é ancestral dele. Conserto ~3 linhas,
-   mas põe um segundo atributo de estado no `<main>` — a família *"dois atributos codificando o mesmo
-   fato"*. **Levantado, não feito.**
+3. ✅ **O PIN VERDE FOI CONSERTADO** (*"conserta o pin verde"* — ele, 10/09). Todo dia depois das
+   17h, sem chuva nenhuma: carimbo **vermelho** dizendo *"Fechado agora"* e o pin do mapa **VERDE**,
+   na mesma tela — **com a suíte em 807/807**. A cor do pin saía só de `data-state`, que responde
+   *"choveu?"*; as fases que NÃO falam de chuva (`fechado`, `sem-informacoes`) não o alcançavam
+   porque `data-fase` vivia no `.decision`, que não é ancestral dele. A home já tratava os dois; a
+   ficha tratava metade.
+
+   A fase subiu pra `Moldura` pelo canal que **já existia** (o Carimbo avisando a moldura), então o
+   **dono continua sendo um só**: o Carimbo calcula, a Moldura carrega, o CSS alcança. ⚠️ **Dois
+   atributos no mesmo elemento não são duas fontes** — eles respondem perguntas diferentes, e o
+   próprio `Moldura.tsx` já dizia isso. O defeito que este projeto pagou (o pulso ao lado de *"SEM
+   INFORMAÇÕES"*) era o contrário: o MESMO fato calculado em dois lugares.
+
+   **Prova: 4 testes novos, 4 mutações mortas.** A que importa é a **M18**: sem o `[data-state]` no
+   seletor, a regra de fase cai pra **(0,2,0)** e PERDE pras regras de estado em **(0,3,0)** — o pin
+   voltaria a ser verde com o teste *"a regra existe"* ainda verde. **811/811**, `tsc` limpo, build
+   passa, **20 mutações medidas e mortas**, no ar e conferido (`data-fase` no `<main>` das três, as
+   duas regras no CSS servido).
 
 ### ⏳ E O ROTEIRO DO CELULAR, que segue pendente
 
