@@ -4,92 +4,93 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-🟢🟢 **ÚLTIMA PARADA: 2026-09-10 — ELE RESPONDEU A PERGUNTA (a), ELA VIROU UMA RODADA INTEIRA, E
-ESTÁ TUDO NO AR E CONFERIDO.** **807/807**, `tsc` limpo, build passa, **16 mutações medidas e
-mortas**, deploy conferido no domínio real.
-⏳ **A única coisa sem prova é o OLHO: o âmbar novo no celular** — e hoje nem dava pra ver no ar,
-porque as três trilhas estão secas. Ver o bloco **2026-09-10** logo abaixo do índice.
+🟢🟢 **ÚLTIMA PARADA: 2026-09-10, fim de sessão — UM DIA LONGO, CINCO RODADAS, TUDO CONFERIDO.**
+**839/839 em 53 arquivos**, `tsc` limpo, `build` passa, **30 mutações medidas e mortas**.
+🟠 **A última rodada (a fila do `✓ Fui`) está COMMITADA E NÃO DEPLOYADA** — ver o item 0 abaixo.
 
-> *"deixe tudo pronto para continuar depois"* — João, fim da sessão.
+> *"faz a fila do ✓ Fui — depois deixa tudo pronto para continuar em outro dia com outra sessão"*
+> — João, fim da sessão.
 
-## ▶ SE ELE DISSER SÓ "CONTINUA": leia as QUATRO abaixo, na ordem. Nada de menu.
+## ▶ SE ELE DISSER SÓ "CONTINUA": leia as CINCO abaixo, na ordem. Nada de menu.
 
-🔴🔴 **A MUDANÇA DE EIXO É A COISA MAIS IMPORTANTE DESTE ARQUIVO, e ela invalida o plano que este
-topo trazia de manhã.** Ele disse, com todas as letras:
+### ▶ 0. 🟠 A PRIMEIRA COISA: falta um deploy
 
-> *"eu não queria acrescentar novos pontos não, acho que já está suficiente para progredir o app"*
-> · *"eu acho que o mais importante no momento não seria preencher, mas a **construção do app de
-> fato**"*
+O commit `519cbf1` (a fila do `✓ Fui` + o placar que parou de afirmar) **não subiu**. Tudo antes
+dele está no ar e conferido. Comando, e o `--scope` não é opcional (sem ele dá `Not authorized`):
 
-**O ACERVO ESTÁ FECHADO EM TRÊS FICHAS.** Não crie a 4ª, não pesquise lugar novo, não redija copy
-de ficha. O bloco *"A 4ª FICHA"* mais abaixo virou **registro histórico** — está marcado como
-cancelado, e a lista 🔵 de candidatos fica lá só pro caso de ele reabrir.
+```
+npx --yes vercel@latest --prod --yes --scope bate-perna
+```
 
-### ▶ 1. 🟢 A (a) FOI RESPONDIDA EM 10/09 — a (b) segue aberta
+Depois, **conferir no domínio real** (`https://bateperna.vercel.app`) — `● Ready` não prova
+conteúdo. Marcadores **sem acento**, sempre: a lição de 09/09 é que `grep` por palavra acentuada dá
+o mesmo quadro de um deploy que não subiu.
 
-🟢 **(a) FECHOU.** Ele respondeu, literal: ***"com chuva dá pra ir sim, com cuidado"***. Isso virou
-a rodada de 10/09 inteira (bloco abaixo): três subtrações na ficha da Véu, o campo
-`condicao.severidade`, a tabela de palavras em `src/lib/severidade.ts`, e a cor. **Falta uma coisa
-só pra fechar: o cabeçalho do grupo da home** — ver o bloco 2026-09-10.
+### ▶ 1. ⏳ O CELULAR — a dívida mais antiga e a única que máquina nenhuma paga
 
-🟠 **(b) CONTINUA ABERTA** (a redação original das duas está preservada abaixo, como registro):
+Três rodadas mexeram na tela e **nenhum olho humano viu**: a serif da L3 (09/09), o âmbar do nível
+`cuidado` e as palavras de três comprimentos no carimbo (10/09). O roteiro, em ordem de rolagem:
 
-### ▶ 1-bis. 🟠 AS DUAS PERGUNTAS COMO ESTAVAM ATÉ 09/09
+1. Sem rolar nada: dá pra ler a palavra **"O prêmio"**?
+2. Rolando: **"O prêmio"** e **"Avisos"** têm a letra do mesmo tamanho, igualzinha?
+3. **A sua voz ganha da chuva quando você rola a ficha?**
+4. Com **`?debug=frio`** no fim do endereço (existe de verdade — `src/lib/carimbo-estado.ts:15`):
+   **"VÁ COM CUIDADO"** cabe numa linha só dentro da moldura?
+5. Nessa mesma tela: a moldura tem **cor por dentro**, ou parece vazia?
 
-São de 04/09, foram feitas de novo hoje, e ele passou por cima das duas duas vezes. **Não são
-construção: são a tela afirmando coisa que ele não disse.** Pergunte de novo, curtas:
+⚠️ As três trilhas estão **secas**, então o âmbar e as palavras novas **não aparecem** no ar sem o
+`?debug=frio`. A home não tem esse atalho: o âmbar do cartão e do pin só na primeira chuva de
+verdade em Bonito.
 
-**(a)** *"com chuva ainda dá pra ir tomando cuidado, ou é 'não vá' mesmo?"* — ele escreveu *"pode
-ser ruim com chuva"*, *"é um **desafio**"*, *"carro comum **pode ir**"*; a tela escreve *"Cachoeira,
-**só sem chuva**"* e carimba **"Não vá"**. 🔴 **E a aprovação da `voz` hoje PIOROU isso:** a voz que
-ele aprovou diz ***"Vale a ida.** Mas o trecho de terra é um desafio"* — e o rótulo logo acima dela
-crava o oposto. As duas frases estão na mesma tela, se contradizendo, **no ar**.
+### ▶ 2. 🔴 DOIS BURACOS DE PROCEDÊNCIA ACHADOS NO FIM DO DIA, e os dois pedem UMA FRASE DELE
 
-**(b)** *"depois de estacionar ainda se anda até a cachoeira?"* — o `premio` termina em *"é isso que
-espera **no fim do trecho de terra**"*, que é **dedução minha**; ele só disse *"a parte de terra"*.
-É o achado 2 (o trecho a pé) por outro caminho. O que a web diz (~590 m / ~15 min pelo Poço Dantas)
-é 🔵 e ele nunca confirmou.
+**(a) A Pedra Furada se contradiz de um dia pro outro, na mesma tela.** No dia seco ela diz, com as
+palavras DELE, que *"o chão batido **retém menos água** que o barro"* (`secaRapido`). No dia de
+chuva ela diz *"**O barro segura água** — risco de atolar"*, porque o `piso` dela é `barro` e essa é
+a frase de MATERIAL (`chuvaNoPiso`, `src/lib/piso.ts`). **O app afirma o oposto sobre o mesmo
+chão, dependendo do tempo.** É a espécie do `voz-do-lugar`: frase de material verdadeira em geral,
+que a palavra dele sobre aquele lugar desmente.
+**Pergunte:** *"num dia de chuva, o que aquele chão batido faz? A frase do barro serve, ou mente?"*
 
-### ▶ 2. ⏳ O IPHONE — a única metade da L3 que nenhuma camada provou
+**(b) A Véu é a única ficha SEM `secaRapido`** — num dia bom o carimbo dela termina no ponto final e
+não diz nada sobre o lugar.
+**Pergunte:** *"num dia seco, o que o trecho de terra da Véu tem de bom — como 'a serra firmou' é
+pra Rampa?"*
 
-Serif contra sans em 375px é **olho**, não jsdom nem `curl`. Ele ficou de abrir as três fichas no
-celular. **A pergunta certa é:** *a sua voz ganha da chuva quando você rola a ficha?* — que era a
-intenção do tratamento. Se não ganhar, a saída provável **não é mais CSS**: é a ordem da ficha (ver
-o item 4).
+### ▶ 3. 🔴 A ORDEM DA FICHA — e agora o argumento é do DOC DELE, não meu
 
-### ▶ 3. 🟡 O TRATAMENTO 3 — ADIADO POR ELE, NÃO DESCARTADO
+O **REQ-1** ordena os campos: *(1) o prêmio … (6) frescor*. O **carimbo é o campo 6**, e a tela o
+põe **acima do campo 1**. Medido pelo `olho-de-tela`: a voz só aparece depois de rolar **1,1 a 1,3
+tela** na Pedra Furada; o carimbo é **27,2px peso 800 maiúsculo em caixa colorida** contra **21,12px
+serif itálico sem caixa**, 460–580px mais abaixo.
+🔴 **E mover blocos quebra ZERO testes** — `.hero` não aparece uma vez em `tests/`. A tela mais
+importante do app pode ser remontada de cabeça pra baixo com a suíte verde.
+**Levantado em 09/09 e em 10/09. Ele não respondeu nenhuma das duas. NÃO MEXA SOZINHO.**
 
-Palavra dele: *"**1 agora, 3 depois**"*. O 3 é **a assinatura**: uma linha curta dizendo de onde veio
-cada coisa (*"quem já dirigiu até lá"* / *"OpenStreetMap · seu GPS"*). O desenho está no artifact,
-pronto. 🔴 **Só que ele acrescenta TEXTO MEU à tela**, e foi exatamente por isso que o 1 veio
-primeiro — as palavras da assinatura têm que ser lidas por ele antes de subir. **Não escreva
-sozinho.**
+### ▶ 4. 🔵 O QUE SOBROU NA MESA, medido por dois agentes em 10/09
 
-### ▶ 4. 🔵 O MAPA DO QUE FALTA CONSTRUIR — medido hoje contra o doc DELE
+🔴 **A leitura em uma frase, e ela vale mais que a lista:** **sete dos dez itens que faltam do doc
+dele esperam por uma ficha que o acervo fechado não tem.** L2, L4, L6, REQ-3, REQ-4, REQ-6 e a
+camada-método do REQ-1 — nenhum destrava sem ele reabrir o acervo. *"Mais funcionalidades"* **não é
+o gargalo**; o gargalo é conteúdo, e a decisão é dele.
 
-A leitura em uma frase, e ela orienta tudo que vier: **o app construiu inteiro o eixo *"dá pra ir
-hoje?"*** — motor de chuva ao vivo, decaimento, confirmação, offline, mapa — **e quase nada do eixo
-que o doc chama de alma: *o que só sabe quem já foi*.** A L3 de hoje foi o primeiro tijolo desse
-segundo eixo.
+O que dá pra construir **sem conteúdo novo e sem palavra dele** (medido, não estimado):
 
-| decisão fechada no doc (v2.1) | estado |
-|---|---|
-| **L5** semáforo co-piloto + ressalva colada · **L7** discriminador equipador | ✅ construídas antes de hoje |
-| **L3** procedência por contraste | ✅ **construída hoje** (tratamento 1) |
-| **L4** modo → tom checável pelo sistema | ❌ **o keystone está morto:** `modos` está nas 3 fichas e **não tem um leitor no `src/`** |
-| **L2** rota-armadilha · **L6** hub de método | ❌ dependem de espécie de roteiro que o acervo não tem |
-| **REQ-4** cadeia de waypoints | ❌ o schema aceita N e o código lê **`waypoints[0]` em 5 arquivos** — um 2º ponto some em silêncio |
+| candidato | custo | o que abre |
+|---|---|---|
+| **Offline sem link morto** 🔴 | `sw.ts` + `cache-rotas.ts` (**30 testes**) | ⚠️ **precisa de decisão dele:** aquecer as 3 fichas na instalação gasta dados do celular dele com o que ele pode nunca abrir |
+| **`/trilhas` mostra mais** | `trilhas/page.tsx` + testes; **CSS zero** (a página já importa os dois) | vira a **3ª superfície** classificando Nível A/B — pede extrair a montagem pra um `lib/` único |
+| **Link compartilhado diz o que é** | `generateMetadata` em `[slug]/page.tsx`, ~10 linhas | hoje as 3 fichas mandam o mesmo cartão genérico no WhatsApp. Abre "e a imagem? e a home?" |
+| **Guarda do 2º waypoint** | ~10 linhas em `tests/lib/coerencia-acervo.test.ts` | **0 arquivos de produto.** Hoje uma ficha com cadeia teria os pontos 2 e 3 **engolidos em silêncio** |
 
-⚠️ **E as duas armadilhas de escopo, que ele mesmo já resolveu uma vez:** construir a L4 exige ficha
-de **outro modo**, e construir a REQ-4 exige ficha com **cadeia** — as duas são conteúdo, e ele
-acabou de fechar o acervo. **Máquina sem uso é o que o doc dele chama de "construir a máquina em vez
-da costura".** Se ele quiser seguir construindo, a pergunta honesta a fazer é qual eixo, sabendo
-disso — não sair construindo a L4 porque ela é a próxima da lista.
+⚠️ **NÃO PROPONHA como "conteúdo dele que já existe":** o `condicao.regra_texto` tem **zero
+leitores** e um agente recomendou publicá-lo — **mas ele é REDAÇÃO MINHA**, e
+`docs/respostas-pedra-furada-WIP.md:291` diz por que ele nunca precisou do "ok" dele: *"é
+documentação, **não vai pra tela**"*. Publicá-lo inverte a troca. **Foi erro meu ter proposto sem
+conferir a procedência primeiro, e ele quase decidiu em cima disso.**
 
-🔴 **UMA PERGUNTA DE PRODUTO NASCEU DO DESENHO DE HOJE, e ela não é de CSS:** o **carimbo é o
-elemento mais alto da ficha, e ele é Nível A** — a parte que qualquer app de tempo entrega. A voz
-dele vem depois, no rolar. Fazer o B brilhar deixou isso **mais** visível. **A ordem da ficha ainda
-está certa?** Levantada com ele hoje, e ele não respondeu. **Não mexa sozinho.**
+⚠️ **E o `regra_texto` da Véu está VELHO** (não vai à tela, então não machuca): termina em
+*"→ não vá"*, que ele desmentiu em 10/09, e carrega duas notas de bastidor minhas.
 
 ---
 
@@ -379,6 +380,76 @@ conferido no ar: **5** marcas de Nível B nos três cartões (Véu 2, Pedra 1 �
 3. **a voz dele ganha da chuva ao rolar?** · 4. com **`?debug=frio`** (existe, conferido em
 `carimbo-estado.ts:15`): **"VÁ COM CUIDADO"** cabe numa linha? · 5. a moldura tem cor por dentro?
 
+
+---
+
+## ▶ 2026-09-10, PARTE 4 — A FILA DO `✓ FUI` (o relato que não se perde sem sinal)
+
+**Pedido dele:** *"faz a fila do ✓ Fui"* — escolhido num menu de quatro, depois de dois agentes
+varrerem o app por ângulos que não se cruzam (o doc × código, e o uso real).
+
+### 🔴 POR QUE ESTA, E NÃO OUTRA
+
+O `✓ Fui` é a **ÚNICA porta** pela qual conhecimento de quem foi entra neste app **sem ele escrever
+uma ficha** — e com o acervo fechado em três, isso importa mais do que parece. E ela se fechava
+exatamente onde a pessoa está quando tem o que contar: **no lugar, sem sinal.** O `catch` do envio
+pintava *"tenta de novo"* e o relato morria ali. Quem volta de 120 km de estrada é justamente quem
+esteve fora de cobertura.
+
+### ✅ O QUE FICOU CONSTRUÍDO
+
+**`src/lib/fila-relato.ts`** — puro, sem zod e sem `node:fs` (client component lê direto, como
+`piso.ts` e `local.ts`), e **com o relógio entrando por parâmetro**: nada ali chama `Date.now()`, o
+que deixa o teste virar o dia sem mexer em timer global.
+
+- guarda o relato quando o POST falha, **ANTES** de pintar a tela de erro — a ordem é o conserto;
+- **um relato por trilha por dia, o último ganha**: quem erra o botão e responde de novo não vira
+  dois, e nenhum contador de `foram` aguenta contar a mesma ida duas vezes sem mentir;
+- **só sai da fila depois que o SERVIDOR aceitou** — remover antes seria perder o relato num 500, o
+  defeito de volta com outra roupa;
+- **corpo inválido é fila VAZIA, nunca relato inventado** (`localStorage` é editável e sobrevive a
+  troca de versão do app) — mesma régua do `ehLeitura` no `Carimbo.tsx`;
+- fila vazia **APAGA a chave** em vez de guardar `"[]"`;
+- **`diaRecife` mudou-se pra lá**: estava escrita à mão dentro do componente e agora dois lugares
+  precisam dela (a chave do "já contou hoje" e o descarte da fila).
+
+**Escoa nos MESMOS gatilhos que o carimbo usa pra reler a chuva** — `visibilitychange` e `pageshow`,
+que é quando o sinal costuma ter voltado.
+
+🔴 **NENHUMA FRASE NOVA ENTROU NA TELA, e é de propósito.** A tela de erro continua verdadeira no
+instante em que aparece (o relato de fato não subiu ainda), e quando a fila escoa a tela vira
+*"Valeu — anotado 🙏"*, que já existia. Uma frase do tipo *"guardei, mando depois"* seria **redação
+minha**, e isso é palavra dele. ⏳ **Fica como pergunta aberta, não como dívida escondida.**
+
+### ✅ E JUNTO, PORQUE É SUBTRAÇÃO E MORA NO MESMO ARQUIVO: o placar parou de afirmar
+
+A condição era `if (!placar || placar.foram === 0)` e os dois casos diziam *"Ninguém contou ainda
+hoje"*. Mas **`placar === null` não é zero** — é *"não perguntei, ou perguntei e não veio resposta"*.
+Na estrada com a rede fora (**o mesmo instante em que a fila entra em ação**) a tela dizia saber que
+ninguém tinha ido. **Não sabia.** Mesma régua do carimbo, que já não manda ninguém a lugar nenhum
+quando a leitura falha. Saiu junto o guarda `if (!placar && fase === "contado")`, que cobria só
+metade do caso e agora está contido — e a prop `fase` do `PlacarLinha` com ele.
+
+### 🔴 A LIÇÃO DE MÉTODO DESTA RODADA, e ela é sobre MIM
+
+**A mutação M30 SOBREVIVEU na primeira medição, e o defeito era do meu teste.** Os corpos podres do
+fixture carregavam `dia: 20000` (um dia de 2024), então quem os rejeitava era o **descarte por dia**,
+não o validador — trocar `cru.filter(ehRelato)` por um `cast` cru deixava a suíte **verde**. O teste
+dizia provar uma coisa e provava outra. Corrigido: **todo corpo podre agora carrega o dia de HOJE**,
+e aí só o validador pode rejeitá-lo. É a espécie *"teste que passa pelo motivo errado"*, e ela só
+apareceu porque a mutação foi medida.
+
+**Prova: 1 lib nova com 19 testes, 8 testes de componente novos, 8 mutações medidas** (7 mortas na
+primeira rodada, a 8ª morta depois do conserto do teste). **839/839 em 53 arquivos**, `tsc` limpo,
+`build` passa.
+
+### ⏳ O QUE FICOU ABERTO NESTA PEÇA, e está no código também
+
+**Relato de ontem é DESCARTADO, não enviado.** O placar do app é do **dia de hoje**
+(`inicioDoDiaRecife`, `src/lib/db.ts`); um relato de ontem subindo hoje seria contado como se a
+pessoa tivesse ido hoje — o app afirmando sobre um dia em que ninguém foi. Guardar o dia de origem e
+mandá-lo junto resolveria, **mas mexe na rota e na tabela `confirmacoes`, que já tem linhas gravadas
+em produção**. É decisão de produto, não de implementação.
 
 ## ▶ O QUE FOI FEITO EM 2026-09-09 (tudo no ar)
 
