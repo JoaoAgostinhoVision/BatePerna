@@ -337,10 +337,23 @@ conferido no ar: **5** marcas de Nível B nos três cartões (Véu 2, Pedra 1 �
    carimbo **é o campo 6** e a tela o põe **acima do campo 1**. Medido: a voz só aparece depois de
    rolar **1,1–1,3 tela** na Pedra Furada. 🔴 **E mover blocos quebra ZERO testes** — a tela mais
    importante do app pode ser remontada de cabeça pra baixo com a suíte verde.
-2. **"O prêmio brilha" é FALSO.** `ficha.css:119` empata em especificidade com a regra do Nível B e
-   **perde por ordem de arquivo**; a diferença que o teste M8 protege é de **0,32px**. Hoje prêmio,
-   acesso e avisos são idênticos. Ou apaga a regra morta (subtração), ou o prêmio ganha destaque de
-   verdade — e qual é decisão dele.
+2. ✅ **O PRÊMIO PAROU DE FINGIR** (*"arruma o prêmio, apaga a regra morta"* — ele, 10/09: a saída de
+   SUBTRAÇÃO). `.bp .sec.premio p { font-size: 1.04rem }` **nunca pintou um pixel** — empatava em
+   (0,3,1) com a regra do Nível B e perdia por ordem de arquivo. O *"prêmio brilha"* era falso desde
+   que a L3 nasceu, e a diferença que o teste M8 guardava era de **0,32px**. **Nada mudou na tela**;
+   o que saiu foi a mentira e o único par de especificidade empatada do repo.
+
+   **Contraído nome a nome:** a regra sai · o teste da ordem sai junto (**apagar não é perder
+   cobertura**: sem a regra não há empate, e ele falharia na própria guarda de vacuidade que
+   carregava) · os **dois comentários** que descreviam o empate foram reescritos, que é a espécie que
+   o `contracao-honesta` existe pra pegar · e a **classe `.premio` FICA no JSX**: não é mais estilo,
+   é **ENDEREÇO** — `ficha.test.tsx:547` a usa pra provar que o bloco carrega a marca.
+
+   No lugar, dois guardas que não são o mesmo teste com outra roupa: **a decisão dele virando
+   guarda** (o prêmio não pode ganhar regra própria de tamanho de novo) e **o generalizado** (um dono
+   só de `font-size` no parágrafo das seções — declaração morta que parece viva é o que o CSS não
+   avisa). **M21 e M22 medidas e mortas. 812/812**, no ar e conferido: regra morta **0** no CSS
+   servido, a do Nível B intacta, a classe no markup.
 3. ✅ **O PIN VERDE FOI CONSERTADO** (*"conserta o pin verde"* — ele, 10/09). Todo dia depois das
    17h, sem chuva nenhuma: carimbo **vermelho** dizendo *"Fechado agora"* e o pin do mapa **VERDE**,
    na mesma tela — **com a suíte em 807/807**. A cor do pin saía só de `data-state`, que responde
