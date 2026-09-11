@@ -54,6 +54,24 @@ describe("falaMolhada: cada trilha fala com a força que a ficha DELA declara", 
     expect(falaMolhada("espera", 6).marca).toContain("6");
   });
 
+  // MUTAÇÃO M11: a `sub` de `espera` voltar a ser "barro · dá um tempo" — a
+  // herança que saiu em 10/09 porque `barro` é MATERIAL (dono: `chuvaNoPiso` em
+  // piso.ts) e "dá um tempo" era paráfrase minha de nenhuma fala literal dele.
+  //
+  // 🔴 A asserção é a REGRA, não a igualdade: a igualdade morre no dia em que
+  // ele trocar a palavra, e a regra sobrevive à troca. `nao-va` fica de fora de
+  // propósito — o "barro" dela é dívida que ele decidiu manter em 2026-08-27,
+  // de olhos abertos, e reabri-la por conta própria é erro.
+  it("os níveis novos não nomeiam MATERIAL — isso tem dono em piso.ts", () => {
+    for (const severidade of ["espera", "cuidado"] as const) {
+      const { marca, sub } = falaMolhada(severidade, 6);
+      expect(`${marca} ${sub}`, severidade).not.toMatch(/barro|asfalto|paralelep/i);
+    }
+    // Controle: a dívida conhecida do `nao-va` continua lá, e este teste sabe
+    // disso — sem esta linha, apagá-la passaria despercebido como "melhoria".
+    expect(falaMolhada("nao-va", 6).sub).toMatch(/barro/);
+  });
+
   // MUTAÇÃO M3: `vozDaFicha` pegar a janela de PREVISÃO em vez da de passado.
   // As duas são números da mesma `regra`, e trocá-las não quebra tipo nenhum.
   it("a voz da ficha carrega a janela de PASSADO, que é a que o nível cita", () => {

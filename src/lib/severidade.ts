@@ -43,8 +43,12 @@ export type Fala = { marca: string; sub: string };
  *    material (⚠️ ver o aviso no fim deste bloco) e *"dá um tempo"* é paráfrase
  *    minha — **mantido por ora, e é o único par deste arquivo ainda pendente da
  *    palavra dele.**
- *  - **`espera`** — `Espera {n}h` é a `voz` da Pedra Furada (*"espera passar
- *    umas 3 horas"*) com o número vindo da FICHA, escolha dele em 2026-09-10.
+ *  - **`espera`** — `Espera {n}h` / `molhado · espera passar` é a `voz` da Pedra
+ *    Furada (*"espera passar umas 3 horas"*) mais `molhado`, palavra dele de
+ *    25/08. **As duas linhas são fala dele, sem uma sílaba minha**, e ele as
+ *    escolheu em 2026-09-10 — a `sub` herdada (`"barro · dá um tempo"`) saiu
+ *    porque `barro` é material com dono em `piso.ts` e *"dá um tempo"* era
+ *    paráfrase minha de nenhuma fala literal. O número vem da FICHA.
  *    🔴 O número NUNCA é literal aqui: são 3h na Pedra Furada e **6h** na Rampa
  *    e na Véu. Escrever "3 horas" nesta tabela mentiria em duas das três fichas
  *    no dia em que nascesse.
@@ -61,7 +65,7 @@ export type Fala = { marca: string; sub: string };
  *  vizinho. */
 const FALA_MOLHADA: Record<Severidade, (horasPassado: number) => Fala> = {
   "nao-va": () => ({ marca: "Não vá", sub: "barro · dá um tempo" }),
-  espera: (h) => ({ marca: `Espera ${h}h`, sub: "barro · dá um tempo" }),
+  espera: (h) => ({ marca: `Espera ${h}h`, sub: "molhado · espera passar" }),
   cuidado: () => ({ marca: "Vá com cuidado", sub: "molhado · sem pressa" }),
 };
 

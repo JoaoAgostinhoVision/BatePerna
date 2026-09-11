@@ -166,3 +166,105 @@ describe("FolhaTrilhas", () => {
     expect(container.querySelectorAll(".cartoes")).toHaveLength(0);
   });
 });
+
+// 🔴 O DEFEITO QUE ESTES TESTES TRANCAM (2026-09-10). Com a severidade valendo,
+// o carimbo da Véu de Noiva passou a dizer "Vá com cuidado" em âmbar — e ela
+// continuava caindo sob o cabeçalho "Hoje não". É a MESMA família do selo verde
+// dizendo "Não vá": um elemento da tela afirmando o contrário do vizinho. A
+// diferença é que este nasceria do mesmo commit, de propósito, e nenhum teste
+// deste arquivo piscou quando o agrupamento mudou de dois grupos pra três.
+describe("o agrupamento pergunta o TOM, não o estado", () => {
+  const titulos = (c: HTMLElement) =>
+    Array.from(c.querySelectorAll(".grupo-k")).map((k) => k.textContent);
+
+  const doGrupo = (c: HTMLElement, titulo: string) =>
+    Array.from(
+      Array.from(c.querySelectorAll(".grupo-k"))
+        .find((k) => k.textContent === titulo)!
+        .nextElementSibling!.querySelectorAll(".cartao"),
+    ).map((a) => a.getAttribute("id"));
+
+  const molhada = (slug: string, severidade: Ficha["condicao"]["severidade"]) => {
+    const f = fichaFake(slug);
+    return {
+      ficha: { ...f, condicao: { ...f.condicao, severidade } },
+      leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_S },
+    };
+  };
+
+  // MUTAÇÃO: voltar o filtro pra `atual(p).estado === "fresco"` / `!podem`. As
+  // três molhadas caem juntas em "Hoje não" e o grupo do meio some.
+  it("molhada de nível `cuidado` NÃO cai sob 'Hoje não' — vai pro grupo do meio", () => {
+    const visiveis = [
+      { ...molhada("cuidadosa", "cuidado") },
+      { ...molhada("proibida", "nao-va") },
+      { ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S } },
+    ];
+
+    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} />);
+
+    // Os três cabeçalhos, NESTA ordem: o que dá, o que dá com ressalva, o que
+    // não dá. A ordem é a leitura de cima pra baixo e faz parte do que se prova.
+    expect(titulos(container)).toHaveLength(3);
+    expect(titulos(container)[0]).toBe("Hoje o tempo deixa");
+    expect(titulos(container)[2]).toBe("Hoje não");
+
+    expect(doGrupo(container, "Hoje o tempo deixa")).toEqual(["seca"]);
+    expect(doGrupo(container, "Hoje não")).toEqual(["proibida"]);
+    // O do meio é o único que resta, e tem que ter a cuidadosa sozinha.
+    const meio = titulos(container)[1]!;
+    expect(meio).not.toBe("Hoje o tempo deixa");
+    expect(meio).not.toBe("Hoje não");
+    expect(doGrupo(container, meio)).toEqual(["cuidadosa"]);
+
+    // E o cartão diz a mesma coisa que o grupo — é o ponto do arquivo inteiro.
+    expect(container.querySelector("#cuidadosa")?.getAttribute("data-state")).toBe("cuidado");
+    expect(container.querySelector("#proibida")?.getAttribute("data-state")).toBe("frio");
+  });
+
+  // 🔴 `espera` divide o vermelho com `nao-va` de propósito (ver `tomDe`): a
+  // pergunta do grupo é "dá pra ir AGORA?", e "espera 6h" é não-agora. Este
+  // teste é o que impede alguém de "consertar" isso por engano.
+  it("molhada de nível `espera` cai sob 'Hoje não', junto com a proibida", () => {
+    const visiveis = [molhada("espereira", "espera"), molhada("proibida", "nao-va")];
+    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} />);
+
+    expect(titulos(container)).toEqual(["Hoje não"]);
+    expect(doGrupo(container, "Hoje não")).toEqual(["espereira", "proibida"]);
+  });
+
+  // FECHADO ganha do nível, pela mesma frase que já o tirava do grupo de cima:
+  // com o portão trancado, o que a chuva permite não decide nada.
+  it("fechada de nível `cuidado` cai sob 'Hoje não', mesmo com o tempo bom", () => {
+    vi.setSystemTime(Date.UTC(2027, 0, 15, 21, 0)); // 18h em Recife
+    const AGORA_18 = Math.floor(Date.UTC(2027, 0, 15, 21, 0) / 1000);
+    const base = fichaFake("fechada");
+    const fechada = {
+      ficha: { ...base, condicao: { ...base.condicao, severidade: "cuidado" as const }, horario: { abre: "05:00", fecha: "17:00" } },
+      leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_18 },
+    };
+    const aberta = { ...molhada("aberta", "cuidado"), leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_18 } };
+
+    const { container } = render(<FolhaTrilhas visiveis={[fechada, aberta]} confia={true} />);
+
+    // O par que importa: as duas são `cuidado` e molhadas, e mesmo assim se
+    // separaram. Sem a `aberta`, "tudo caiu em Hoje não" passaria por qualquer
+    // motivo.
+    expect(titulos(container)).toHaveLength(2);
+    expect(titulos(container)[1]).toBe("Hoje não");
+    expect(doGrupo(container, "Hoje não")).toEqual(["fechada"]);
+    expect(doGrupo(container, titulos(container)[0]!)).toEqual(["aberta"]);
+  });
+
+  // A régua do cabeçalho que some junto com o grupo vazio vale pro novo também:
+  // um título é uma AFIRMAÇÃO sobre o que está embaixo, e sem nada embaixo ele
+  // mente. Sem este teste o grupo do meio poderia nascer sempre.
+  it("sem nenhuma trilha de nível `cuidado`, o grupo do meio não aparece", () => {
+    const visiveis = [
+      molhada("proibida", "nao-va"),
+      { ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S } },
+    ];
+    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} />);
+    expect(titulos(container)).toEqual(["Hoje o tempo deixa", "Hoje não"]);
+  });
+});

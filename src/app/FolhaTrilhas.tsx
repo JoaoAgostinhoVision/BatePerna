@@ -3,6 +3,7 @@ import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { SEM_FILTRO } from "@/lib/filtros";
 import { fechadoAgora } from "@/lib/horario";
+import { tomDe } from "@/lib/severidade";
 import CartaoTrilha from "./CartaoTrilha";
 import { useMexerFiltros } from "./filtros";
 import { useLeiturasMapa } from "./leituras";
@@ -126,15 +127,27 @@ export default function FolhaTrilhas({
     // cabeçalho é exatamente por que isso importa. "Hoje o tempo deixa" é uma
     // AFIRMAÇÃO sobre os cartões embaixo dele: com um cartão dizendo "Fechado
     // agora" ali, o grupo estaria convidando pra uma coisa que não dá. Mesma
-    // régua do cabeçalho que some quando o filtro esvazia o grupo.
-    const podem = visiveis.filter(
-      (p) => atual(p).estado === "fresco" && !fechadoAgora(p.ficha.horario, agora),
-    );
-    const naoPodem = visiveis.filter((p) => !podem.includes(p));
+    // régua do cabeçalho que some quando o filtro esvazia o grupo. Fechado
+    // também não entra no grupo do MEIO, e pela mesma frase.
+    //
+    // 🔴 SÃO TRÊS GRUPOS DESDE 2026-09-10, e o agrupamento pergunta o TOM, não
+    // o estado. Decisão dele (*"a cor e o grupo seguem o nível"*): o carimbo da
+    // Véu de Noiva passou a dizer "Vá com cuidado" em âmbar, e ela continuava
+    // caindo sob "Hoje não" — o título contradizendo o cartão embaixo dele, que
+    // é a mesma família do selo verde dizendo "Não vá".
+    const tomDaqui = (p: ParFolha) =>
+      fechadoAgora(p.ficha.horario, agora)
+        ? "frio"
+        : tomDe(atual(p).estado, p.ficha.condicao.severidade);
+
+    const podem = visiveis.filter((p) => tomDaqui(p) === "fresco");
+    const comCuidado = visiveis.filter((p) => tomDaqui(p) === "cuidado");
+    const naoPodem = visiveis.filter((p) => tomDaqui(p) === "frio");
 
     return (
       <>
         {grupo("Hoje o tempo deixa", podem, agora)}
+        {grupo(TITULO_CUIDADO, comCuidado, agora)}
         {grupo("Hoje não", naoPodem, agora)}
       </>
     );
@@ -142,6 +155,25 @@ export default function FolhaTrilhas({
 
   return <div className="folha">{miolo()}</div>;
 }
+
+/** 🟠 O TÍTULO DO GRUPO DO MEIO, E ELE ESTÁ PENDENTE DA PALAVRA DELE.
+ *
+ *  O que está aqui é **MONTAGEM**: duas palavras da fala dele de 2026-09-10
+ *  (*"com chuva dá pra ir sim, com cuidado"*), recombinadas — não há sílaba
+ *  minha. Mas ele escolheu a ESTRUTURA ("um terceiro grupo no meio"), não este
+ *  nome: a opção que ele leu dizia, com todas as letras, *"preciso do NOME
+ *  dele, e nome é sua palavra"*, e o desenho da opção mostrava `???` no lugar
+ *  do título.
+ *
+ *  🔴 **NÃO SUBIU AO AR COM ESTE VALOR, e não pode subir sem ele citar a
+ *  frase.** Prosa minha já foi publicada uma vez neste projeto assinada como a
+ *  voz dele, por seis dias, porque quem escreveu o texto foi quem removeu a
+ *  trava — ver `docs/RESUME.md` e a memória `trava-removida-por-quem-escreveu`.
+ *  *"Pode seguir"* nunca foi *"li e aprovei"*.
+ *
+ *  Os outros dois títulos ("Hoje o tempo deixa" / "Hoje não") são anteriores a
+ *  esta rodada e não estão em questão aqui. */
+const TITULO_CUIDADO = "Dá, com cuidado";
 
 /** Devolver `null` pra lista vazia é o que faz o cabeçalho sumir junto com o
  *  grupo que o filtro esvaziou — o cabeçalho é uma AFIRMAÇÃO sobre o que está

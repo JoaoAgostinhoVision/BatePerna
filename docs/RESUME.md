@@ -152,12 +152,17 @@ também atola). A alternativa 100% dele era `Dá pra ir` / `com cuidado`, e ele 
 **Escolher entre saídas apresentadas é o ato de aprovação deste projeto** — mas se ele disser que
 "sem pressa" está errado pro chão de lá, é uma linha na tabela.
 
-**Prova: 15 testes novos em `tests/lib/severidade.test.ts`, 7 mutações medidas e TODAS mortas**
+**Prova: 20 testes novos (`tests/lib/severidade.test.ts` + o agrupamento em `FolhaTrilhas.test.tsx`),
+11 mutações medidas e TODAS mortas**
 (palavra fixa no ramo molhado · `espera` com número fixo · `vozDaFicha` pegando a janela de previsão
 · `tomDe` devolvendo o estado cru · a regra de CSS do selo âmbar sumindo · `severidade` virando
 opcional · a Moldura voltando a pintar com o estado). Controle verde.
-**794/794 em 52 arquivos**, `tsc` limpo, `build` passa, `tools/varrer.mjs` rodado — o vocabulário do
+**799/799 em 52 arquivos**, `tsc` limpo, `build` passa, `tools/varrer.mjs` rodado — o vocabulário do
 ramo molhado só existe em `severidade.ts`.
+
+⚠️ **E uma lição de método desta rodada:** quando o agrupamento passou de dois grupos pra três, a
+suíte ficou **794/794 verde** — nenhum teste deste projeto via a home mudar de forma. O buraco só
+apareceu porque a mutação foi medida; a suíte verde não o teria mostrado.
 
 **Dois guardas que crescem com o acervo** (a espécie "guarda que enumera à mão é cego a ele
 crescer"): *toda ficha declara um nível* lê `content/fichas/`, e *o acervo exercita os TRÊS níveis*
@@ -165,14 +170,21 @@ impede a tabela de virar **máquina sem uso** — que é o que o `modos` é hoje
 
 ### 🔴 O QUE FALTA, E O QUE ESTÁ BLOQUEADO NUMA PALAVRA DELE
 
-**1. O CABEÇALHO DO GRUPO DA HOME — a outra metade do que ele escolheu.** O `tres-redacoes`
-rastreou **nove bocas** que dizem "não vá" sobre a Véu num dia de chuva. O nível conserta 7. Sobrou
-`FolhaTrilhas.tsx:130-138`: a home agrupa por `estado === "fresco"` e a Véu cai sob **"Hoje não"**.
-Com o nível valendo, a ficha diz *"Vá com cuidado"* sob um título que diz o contrário.
-🔴 **Um terceiro grupo precisa de NOME, e nome é palavra dele.** Não escreva sozinho.
+**1. 🟠 O TÍTULO DO GRUPO DO MEIO — a ÚNICA coisa que trava o deploy.** A home tem **três grupos**
+desde 10/09 (escolha dele: *"um terceiro grupo no meio"*), o mecanismo está construído e provado, e
+o agrupamento pergunta o TOM em vez do estado. **Mas ele escolheu a ESTRUTURA, não o NOME** — a
+opção que ele leu dizia *"preciso do NOME dele, e nome é sua palavra"*, e o desenho mostrava `???`
+no lugar do título.
 
-**2. A `sub` do nível `espera`.** Hoje é `barro · dá um tempo`, herdada — e agora **repete a marca**
-(`Espera 6h` em cima, "dá um tempo" embaixo). Ele não escolheu.
+🔴 **O que está em `FolhaTrilhas.tsx` é `TITULO_CUIDADO = "Dá, com cuidado"` — MONTAGEM das palavras
+dele de 10/09, marcada como PENDENTE no próprio código, e NÃO DEPLOYADA.** Prosa minha já foi ao ar
+uma vez assinada como a voz dele porque quem escreveu o texto removeu a trava. **Peça a frase; não
+suba com este valor sem ele citá-la.**
+
+**2. ✅ A `sub` do nível `espera` FECHOU.** Ele escolheu `molhado · espera passar` — `molhado` é
+palavra dele de 25/08, `espera passar` é a `voz` da Pedra Furada. **As duas linhas do carimbo desse
+nível são fala dele, sem uma sílaba minha.** A herdada (`barro · dá um tempo`) saiu: `barro` é
+material com dono em `piso.ts`, e *"dá um tempo"* era paráfrase minha de nenhuma fala literal.
 
 **3. `discriminador.como_ler` e `regra_texto` da Véu** ainda dizem *"= não vá"*. O `como_ler` é o
 discriminador de campo (L7, ligado por ele em 09/09) e pode continuar certo mesmo com a ressalva —
