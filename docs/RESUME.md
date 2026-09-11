@@ -4,9 +4,11 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-🟠 **ÚLTIMA PARADA: 2026-09-10 — ELE RESPONDEU A PERGUNTA (a), E ELA VIROU UMA RODADA INTEIRA.
-794/794, `tsc` limpo, build passa. 🔴 NÃO DEPLOYADO: falta uma palavra dele (o cabeçalho do grupo
-da home) e o iPhone.** Ver o bloco **2026-09-10** logo abaixo do índice.
+🟢🟢 **ÚLTIMA PARADA: 2026-09-10 — ELE RESPONDEU A PERGUNTA (a), ELA VIROU UMA RODADA INTEIRA, E
+ESTÁ TUDO NO AR E CONFERIDO.** `main` em `23ff524`, **799/799**, `tsc` limpo, build passa,
+**12 mutações medidas e mortas**, deploy `● Ready · production` conferido no domínio real.
+⏳ **A única coisa sem prova é o OLHO: o âmbar novo no celular** — e hoje nem dava pra ver no ar,
+porque as três trilhas estão secas. Ver o bloco **2026-09-10** logo abaixo do índice.
 
 > *"deixe tudo pronto para continuar depois"* — João, fim da sessão.
 
@@ -168,18 +170,51 @@ apareceu porque a mutação foi medida; a suíte verde não o teria mostrado.
 crescer"): *toda ficha declara um nível* lê `content/fichas/`, e *o acervo exercita os TRÊS níveis*
 impede a tabela de virar **máquina sem uso** — que é o que o `modos` é hoje.
 
-### 🔴 O QUE FALTA, E O QUE ESTÁ BLOQUEADO NUMA PALAVRA DELE
+### ✅ DEPLOYADO E CONFERIDO NO DOMÍNIO REAL — 2026-09-10
 
-**1. 🟠 O TÍTULO DO GRUPO DO MEIO — a ÚNICA coisa que trava o deploy.** A home tem **três grupos**
-desde 10/09 (escolha dele: *"um terceiro grupo no meio"*), o mecanismo está construído e provado, e
-o agrupamento pergunta o TOM em vez do estado. **Mas ele escolheu a ESTRUTURA, não o NOME** — a
-opção que ele leu dizia *"preciso do NOME dele, e nome é sua palavra"*, e o desenho mostrava `???`
-no lugar do título.
+`● Ready · production` (`bateperna-c77u403p4`). **Mas "Ready" não prova conteúdo**, então as três
+fichas, o CSS servido e o bundle foram conferidos no ar, com marcadores **sem acento**:
 
-🔴 **O que está em `FolhaTrilhas.tsx` é `TITULO_CUIDADO = "Dá, com cuidado"` — MONTAGEM das palavras
-dele de 10/09, marcada como PENDENTE no próprio código, e NÃO DEPLOYADA.** Prosa minha já foi ao ar
-uma vez assinada como a voz dele porque quem escreveu o texto removeu a trava. **Peça a frase; não
-suba com este valor sem ele citá-la.**
+| conferido | rampa | pedra furada | véu de noiva |
+|---|---|---|---|
+| HTTP | 200 | 200 | 200 |
+| `scan` (topo) | `Só sem chuva` | `Sem chuva há 3h` | **`Cachoeira`** ← a subtração |
+| `promessa` | (inalterada) | (inalterada) | **`A maior cachoeira de Bonito.`** |
+| ocorrências de `remarque` | 3 (é a ficha DELA, nível `nao-va`) | 0 | **0** ← a subtração |
+| `data-nivel="b"` | 8 | 8 | 7 (certo: o waypoint dela não tem `nota`) |
+
+**Camada 2 — o CSS servido.** As quatro regras do tom novo estão minificadas nos dois bundles:
+`data-state=cuidado` **×2** em cada um (ficha: selo + pin; home: pin + selo do cartão), `var(--care)`
+**×3** em cada, e `--care:` definido **duas vezes** — tema claro e tema escuro.
+
+**Camada 3 — o vocabulário no bundle JS.** No chunk da ficha: `com cuidado` ×1, `sem pressa` ×1,
+`espera passar` ×1, `Espera ` ×1, `Pode ir` ×1. No chunk da home: o título do grupo do meio, no
+**mesmo** chunk que `Hoje o tempo deixa` — uma fonte só.
+
+🔴 **E o marcador foi escolhido SEM ACENTO de propósito, pela lição de 09/09:** a palavra na tela é
+*"**Vá** com cuidado"*, e `grep` por ela daria o mesmo quadro de um deploy que não subiu. O marcador
+usado foi `com cuidado`.
+
+⏳ **O QUE O AR NÃO PÔDE PROVAR HOJE, e é honesto dizer:** as três trilhas estão **secas** agora
+(`data-state="fresco"` nos três cartões, três selos dizendo `Pode ir`, e só o cabeçalho *"Hoje o
+tempo deixa"* na home). **Então o âmbar, as palavras novas e o grupo do meio não aparecem na tela
+hoje** — eles existem no CSS e no bundle, provados ali, e a suíte cobre o comportamento. **A
+primeira chuva em Bonito é o primeiro olho de verdade.** O grupo do meio sumir com a lista vazia é o
+certo, e tem teste próprio.
+
+
+### 🟢 O QUE FECHOU E O QUE SOBROU
+
+**1. ✅ O TÍTULO DO GRUPO DO MEIO FECHOU — e a trava fechou pelo lado CERTO, no mesmo dia.** A home
+tem **três grupos** (escolha dele: *"um terceiro grupo no meio"*) e o agrupamento pergunta o TOM em
+vez do estado. O título é **`Dá, com cuidado`** — montagem das palavras dele de 10/09 (*"com chuva
+**dá** pra ir sim, **com cuidado**"*), sem uma sílaba minha.
+
+🟢 **E o CAMINHO importa mais que a frase.** Ele escolheu a ESTRUTURA numa rodada; o valor ficou
+marcado `PENDENTE` no próprio código e **não subiu ao ar** até ele ler a frase escrita por extenso e
+responder ***"serve, pode subir"***. **Isso é ato de leitura.** Compare com 03/09, quando *"pode
+seguir"* foi lido como aprovação e prosa minha ficou seis dias no ar assinada como a voz dele — ver
+`trava-removida-por-quem-escreveu`. **Desta vez o desfecho bom foi MÉTODO, não sorte.**
 
 **2. ✅ A `sub` do nível `espera` FECHOU.** Ele escolheu `molhado · espera passar` — `molhado` é
 palavra dele de 25/08, `espera passar` é a `voz` da Pedra Furada. **As duas linhas do carimbo desse
