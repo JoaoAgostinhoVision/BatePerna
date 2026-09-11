@@ -6,17 +6,17 @@
 
 🟢🟢 **ÚLTIMA PARADA: 2026-09-10, fim de sessão — UM DIA LONGO, CINCO RODADAS, TUDO CONFERIDO.**
 **839/839 em 53 arquivos**, `tsc` limpo, `build` passa, **30 mutações medidas e mortas**.
-🟠 **A última rodada (a fila do `✓ Fui`) está COMMITADA E NÃO DEPLOYADA** — ver o item 0 abaixo.
+🟢 **TUDO NO AR E CONFERIDO**, inclusive a última rodada (a fila do `✓ Fui`).
 
 > *"faz a fila do ✓ Fui — depois deixa tudo pronto para continuar em outro dia com outra sessão"*
 > — João, fim da sessão.
 
 ## ▶ SE ELE DISSER SÓ "CONTINUA": leia as CINCO abaixo, na ordem. Nada de menu.
 
-### ▶ 0. 🟠 A PRIMEIRA COISA: falta um deploy
+### ▶ 0. ✅ NADA PENDENTE DE DEPLOY — e como conferir quando houver
 
-O commit `519cbf1` (a fila do `✓ Fui` + o placar que parou de afirmar) **não subiu**. Tudo antes
-dele está no ar e conferido. Comando, e o `--scope` não é opcional (sem ele dá `Not authorized`):
+Tudo está no ar. O comando, pra quando fizer falta (**o `--scope` não é opcional** — sem ele dá
+`Not authorized`):
 
 ```
 npx --yes vercel@latest --prod --yes --scope bate-perna
@@ -25,6 +25,12 @@ npx --yes vercel@latest --prod --yes --scope bate-perna
 Depois, **conferir no domínio real** (`https://bateperna.vercel.app`) — `● Ready` não prova
 conteúdo. Marcadores **sem acento**, sempre: a lição de 09/09 é que `grep` por palavra acentuada dá
 o mesmo quadro de um deploy que não subiu.
+
+🟢 **A conferência da última rodada deu uma prova melhor que o teste**, e vale guardar o método: o
+HTML servido da ficha agora sai como `<div class="confirmar"><button class="btn">✓ Fui</button>
+</div>` — **sem elemento de placar nenhum**. Antes de 10/09 essa mesma linha trazia *"Ninguém contou
+ainda hoje"* dentro, porque no primeiro render o placar é `null` e a condição velha tratava *"não
+sei"* como *"sei que é zero"*. **A subtração é visível no que chega no celular**, não só na suíte.
 
 ### ▶ 1. ⏳ O CELULAR — a dívida mais antiga e a única que máquina nenhuma paga
 
