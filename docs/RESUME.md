@@ -4,9 +4,13 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-🟢🟢 **ÚLTIMA PARADA: 2026-09-10, fim de sessão — UM DIA LONGO, CINCO RODADAS, TUDO CONFERIDO.**
-**839/839 em 53 arquivos**, `tsc` limpo, `build` passa, **30 mutações medidas e mortas**.
-🟢 **TUDO NO AR E CONFERIDO**, inclusive a última rodada (a fila do `✓ Fui`).
+🟢🟢 **ÚLTIMA PARADA: 2026-09-11 — uma rodada curta, SÓ DE GUARDA (nada de produto mudou).**
+**841/841 em 53 arquivos**, `tsc` limpo, **3 mutações mortas + 1 controle**. **Zero arquivo de
+produção tocado, então nada a deployar** — o que está no ar continua sendo o de 10/09.
+
+🟢 Antes: **2026-09-10, fim de sessão — UM DIA LONGO, CINCO RODADAS, TUDO CONFERIDO.**
+**839/839**, `build` passa, **30 mutações medidas e mortas**.
+🟢 **TUDO NO AR E CONFERIDO**, inclusive a fila do `✓ Fui`.
 
 > *"faz a fila do ✓ Fui — depois deixa tudo pronto para continuar em outro dia com outra sessão"*
 > — João, fim da sessão.
@@ -87,7 +91,7 @@ O que dá pra construir **sem conteúdo novo e sem palavra dele** (medido, não 
 | **Offline sem link morto** 🔴 | `sw.ts` + `cache-rotas.ts` (**30 testes**) | ⚠️ **precisa de decisão dele:** aquecer as 3 fichas na instalação gasta dados do celular dele com o que ele pode nunca abrir |
 | **`/trilhas` mostra mais** | `trilhas/page.tsx` + testes; **CSS zero** (a página já importa os dois) | vira a **3ª superfície** classificando Nível A/B — pede extrair a montagem pra um `lib/` único |
 | **Link compartilhado diz o que é** | `generateMetadata` em `[slug]/page.tsx`, ~10 linhas | hoje as 3 fichas mandam o mesmo cartão genérico no WhatsApp. Abre "e a imagem? e a home?" |
-| **Guarda do 2º waypoint** | ~10 linhas em `tests/lib/coerencia-acervo.test.ts` | **0 arquivos de produto.** Hoje uma ficha com cadeia teria os pontos 2 e 3 **engolidos em silêncio** |
+| ~~**Guarda do 2º waypoint**~~ ✅ | **FEITO em 11/09** (commit `d575df3`) | 2 testes, 3 mutações mortas + 1 controle. Uma ficha com cadeia agora **trava a suíte** em vez de perder os pontos calada |
 
 ⚠️ **NÃO PROPONHA como "conteúdo dele que já existe":** o `condicao.regra_texto` tem **zero
 leitores** e um agente recomendou publicá-lo — **mas ele é REDAÇÃO MINHA**, e
@@ -97,6 +101,54 @@ conferir a procedência primeiro, e ele quase decidiu em cima disso.**
 
 ⚠️ **E o `regra_texto` da Véu está VELHO** (não vai à tela, então não machuca): termina em
 *"→ não vá"*, que ele desmentiu em 10/09, e carrega duas notas de bastidor minhas.
+
+---
+
+## ▶ 2026-09-11 — O 2º WAYPOINT PAROU DE SUMIR CALADO
+
+**Rodada curta e deliberadamente pequena**, tirada da tabela do bloco ▶ 4: era o único candidato
+com **zero arquivo de produto** e **zero palavra dele** — dá pra fazer sozinho sem inverter a troca.
+
+**O buraco:** `src/types/ficha.ts` declara `waypoints: z.array(...).min(1)`, mas os **sete** acessos
+do `src/` leem todos `[0]` (cartão da home, pin do mapa, lista de `/trilhas`, cabeçalho da ficha,
+e a medição de distância em `geo.ts`). Uma ficha com três pontos **carrega, valida, passa verde — e
+o app mostra um.** Os pontos 2 e 3 somem sem erro, sem log, sem nada na tela. É a espécie *"dado que
+carrega, valida, tem teste — e nunca aparece"*, agravada: o dado seria conteúdo **dele**, escrito à
+mão e perdido calado.
+
+**Dois testes, e o primeiro é o que torna o par honesto** (a lição de 03/09 — *o guarda prova que a
+pergunta existe, nunca que a justificativa dela ainda é verdadeira*):
+
+1. **varre o `src/` e mede se algum leitor foi ensinado a ler `[1..]`.** No dia em que alguém
+   ensinar, **este fica vermelho primeiro**, e a mensagem dele diz que a boa notícia derruba o
+   guarda 2 — à mão, junto com o comentário. O guarda sabe morrer.
+2. **nenhuma ficha do acervo tem 2º waypoint**, com a mensagem mandando a decisão de volta pro
+   produto: *"a cadeia precisa de um lugar pra aparecer — isso é decisão de produto, não conserto
+   de teste"*.
+
+⚠️ **Comentário é tirado antes da varredura**, pelos dois motivos já pagos aqui: o bloco do
+`geo.ts` cita `trajeto.waypoints[0]` em prosa (*guarda de fonte lendo o COMENTÁRIO*), e uma linha
+comentada com `[1]` acusaria um leitor que não existe. **O preço da tira** é a espécie
+*"tira-de-comentários que come o arquivo"* — fechado pela **não-vacuidade (≥ 7 acessos)**, cravada à
+mão como o `fichas.length` do topo do arquivo.
+
+**Mutações medidas — 3 mortas + 1 controle verde:**
+
+| # | mutação | resultado |
+|---|---|---|
+| M1 | 2º waypoint numa ficha real (`rampa-do-pepe`) | 🔴 morta |
+| M2 | `geo.ts` passa a ler `waypoints[1] ?? waypoints[0]` | 🔴 morta — e **pelo teste certo** (o da premissa) |
+| M3 | o campo renomeado: o guarda ficaria oco | 🔴 morta pela não-vacuidade |
+| M4 | **controle:** comentário citando `waypoints[1]` | 🟢 **não acusa** |
+
+⚠️ **Uma lição de método da rodada, e é sobre MEDIR mutação, não sobre o código:** a M3 *"sobreviveu"*
+na primeira tentativa. **Não sobreviveu — a mutação não tinha sido aplicada** (o `replace` não
+casou a string e eu não conferi). Mutação que não aplica é indistinguível de mutação que sobrevive,
+e o resultado bonito é o falso. **Toda mutação daqui pra frente imprime "aplicada" antes de rodar a
+suíte**, senão o número de mortas é ficção.
+
+**841/841 em 53 arquivos**, `tsc` limpo. `build` **não** foi rodado de propósito: nenhum arquivo de
+produção mudou, então não há o que buildar nem o que subir.
 
 ---
 
