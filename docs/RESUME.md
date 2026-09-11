@@ -5,8 +5,8 @@
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
 🟢🟢 **ÚLTIMA PARADA: 2026-09-10 — ELE RESPONDEU A PERGUNTA (a), ELA VIROU UMA RODADA INTEIRA, E
-ESTÁ TUDO NO AR E CONFERIDO.** `main` em `23ff524`, **799/799**, `tsc` limpo, build passa,
-**12 mutações medidas e mortas**, deploy `● Ready · production` conferido no domínio real.
+ESTÁ TUDO NO AR E CONFERIDO.** **801/801**, `tsc` limpo, build passa, **13 mutações medidas e
+mortas**, deploy `● Ready · production` conferido no domínio real.
 ⏳ **A única coisa sem prova é o OLHO: o âmbar novo no celular** — e hoje nem dava pra ver no ar,
 porque as três trilhas estão secas. Ver o bloco **2026-09-10** logo abaixo do índice.
 
@@ -178,7 +178,7 @@ fichas, o CSS servido e o bundle foram conferidos no ar, com marcadores **sem ac
 | conferido | rampa | pedra furada | véu de noiva |
 |---|---|---|---|
 | HTTP | 200 | 200 | 200 |
-| `scan` (topo) | `Só sem chuva` | `Sem chuva há 3h` | **`Cachoeira`** ← a subtração |
+| `scan` (topo) | `Só sem chuva` | `Sem chuva há 3h` | **`Com chuva, com cuidado`** ← ver o bloco abaixo |
 | `promessa` | (inalterada) | (inalterada) | **`A maior cachoeira de Bonito.`** |
 | ocorrências de `remarque` | 3 (é a ficha DELA, nível `nao-va`) | 0 | **0** ← a subtração |
 | `data-nivel="b"` | 8 | 8 | 7 (certo: o waypoint dela não tem `nota`) |
@@ -201,6 +201,38 @@ tempo deixa"* na home). **Então o âmbar, as palavras novas e o grupo do meio n
 hoje** — eles existem no CSS e no bundle, provados ali, e a suíte cobre o comportamento. **A
 primeira chuva em Bonito é o primeiro olho de verdade.** O grupo do meio sumir com a lista vazia é o
 certo, e tem teste próprio.
+
+
+### 🔴 E UM DEFEITO MEU FOI AO AR POR ALGUMAS HORAS — quem viu foi ELE, olhando a tela
+
+A subtração do `rotulo_escaneio` da Véu foi feita **pela metade**. O campo era *"Cachoeira, só sem
+chuva"*; o *"só sem chuva"* era prosa minha contradizendo a fala dele, e eu apaguei **só a
+cláusula**. Sobrou `Cachoeira` — palavra que só existia pra acompanhar o resto — logo acima de um
+`<h1>` que já começa com "Cachoeira":
+
+> **CACHOEIRA**
+> Cachoeira Véu de Noiva
+
+**Nenhum teste olhava os dois elementos JUNTOS** — cada um estava certo sozinho. Mesma família do
+pulso piscando ao lado de *"SEM INFORMAÇÕES"*: o absurdo é a **COMBINAÇÃO**.
+
+**A pergunta dele foi *"deveria ser como os outros, seguindo o padrão"*** — e ao pôr as três lado a
+lado apareceu o alinhamento: **essa linha SEMPRE foi a severidade escrita à mão.** *"Só sem chuva"* é
+uma **proibição**; *"Sem chuva há 3h"* é uma **espera com prazo**; as duas já diziam, na palavra
+dele, exatamente o que o campo `severidade` passou a guardar. A da Véu era a única fora do padrão
+**porque era cópia da Rampa, que é de outro nível**.
+
+✅ **Agora:** `Com chuva, com cuidado` — montagem da fala dele de hoje, **aprovada por ele lendo a
+frase escrita** (*"serve, pode subir"*, o mesmo método do título do grupo). 22 caracteres contra os
+23 que estavam nessa mesma linha de manhã. No ar na ficha **e** em `/trilhas`.
+
+✅ **Guarda novo, lendo o acervo:** nenhum `rotulo_escaneio` começa com a primeira palavra do nome do
+waypoint — com **controle** provando que ele acusa a redação que foi ao ar e **não** acusa as duas
+que são palavra dele. Mutação **M13** (o órfão de volta) medida e morta.
+
+🔴 **A LIÇÃO, e ela é nova:** **subtração feita pela metade deixa órfão.** Apagar a cláusula falsa
+não basta quando o que sobra só existia pra acompanhá-la. Depois de toda subtração, **leia a linha
+inteira em voz alta junto com as vizinhas** — ou passe no `olho-de-tela`, que é exatamente pra isso.
 
 
 ### 🟢 O QUE FECHOU E O QUE SOBROU
