@@ -5,8 +5,8 @@
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
 🟢🟢 **ÚLTIMA PARADA: 2026-09-10 — ELE RESPONDEU A PERGUNTA (a), ELA VIROU UMA RODADA INTEIRA, E
-ESTÁ TUDO NO AR E CONFERIDO.** **801/801**, `tsc` limpo, build passa, **13 mutações medidas e
-mortas**, deploy `● Ready · production` conferido no domínio real.
+ESTÁ TUDO NO AR E CONFERIDO.** **807/807**, `tsc` limpo, build passa, **16 mutações medidas e
+mortas**, deploy conferido no domínio real.
 ⏳ **A única coisa sem prova é o OLHO: o âmbar novo no celular** — e hoje nem dava pra ver no ar,
 porque as três trilhas estão secas. Ver o bloco **2026-09-10** logo abaixo do índice.
 
@@ -277,6 +277,82 @@ chamável por nome até a próxima.
 
 
 ---
+
+---
+
+## ▶ 2026-09-10, PARTE 3 — A L3 CHEGA NA HOME, E O ÂMBAR GANHA MIOLO
+
+**Ele disse *"pode seguir para a melhora do app em si"*** — e dois agentes da família nova mediram o
+app antes de eu escrever uma linha.
+
+### 🔴 O NÚMERO QUE REENQUADROU A PERGUNTA
+
+> **`data-nivel="b"` aparecia ZERO vez na home** — `home.css`, `CartaoTrilha`, `SeloTrilha`,
+> `MapaHome`, `FolhaTrilhas`.
+
+A L3 de 09/09 foi construída **só na ficha aberta**. A primeira tela do app — a que se navega — não
+distinguia o que o mapa entrega do que só sabe quem foi. **Ninguém decidiu isso; aconteceu.**
+
+✅ **Construído:** os três pedaços da linha de meta do cartão saíram de um `join(" · ")` (string só,
+sem identidade endereçável, onde a marca não tinha onde pousar) e viraram pares texto+nível. **Piso**
+e **preço** brilham; a **distância** não (o telefone calcula). O separador fica **fora** da marca —
+ponto é pontuação, não conhecimento de ninguém. O texto visível não mudou.
+
+🔴 **O agente recomendou marcar a `promessa` também, e eu NÃO marquei:** na ficha ela não é Nível B,
+e duas superfícies classificando o mesmo campo de formas diferentes é a família que este projeto já
+pagou três vezes. **Recomendação de agente é entrada, não ordem.**
+
+### 🔴 E UM DEFEITO MEU QUE NINGUÉM PODERIA TER VISTO
+
+| fundo do carimbo | distância RGB do `--surface-2` atrás dele |
+|---|---|
+| verde | 17,9 |
+| vermelho | 14,2 |
+| **âmbar, como subiu de manhã** | **7,0** |
+
+O carimbo `cuidado` leria como **moldura vazada** ao lado de dois irmãos que leem como caixa pintada.
+E o `--care-ink` punha a linha `molhado · sem pressa` em **3,76:1** — a única das três abaixo de
+4,5:1, justo onde moram as palavras novas.
+
+🔴 **NENHUM OLHO PEGARIA: o âmbar só aparece com chuva, e as três trilhas estão secas.** Ele o
+encontraria sozinho, no celular, na primeira chuva em Bonito, a 120 km de casa.
+
+✅ Corrigido nos dois temas (claro `#FCEDC8`/`#71470B`, escuro `#302209`), **com teste medindo
+distância e contraste** e **controle provando que o valor que foi ao ar REPROVA na mesma função**.
+`--care-line` saiu junto: criado de manhã, **nenhuma regra o consumia** — token morto contraído no
+dia em que nasceu.
+
+🔴 **A LIÇÃO, e ela é nova:** **cor (ou texto) que só aparece numa condição rara precisa de prova
+ARITMÉTICA — revisão visual não alcança.** O carimbo molhado é invisível em dia seco; o `fechado` só
+depois das 17h; o `sem-informacoes` só com a rede caindo.
+
+**807/807 em 52 arquivos**, `tsc` limpo, build passa, **16 mutações medidas e mortas**, deployado e
+conferido no ar: **5** marcas de Nível B nos três cartões (Véu 2, Pedra 1 — é grátis —, Rampa 2),
+**zero** `data-nivel="a"`, os quatro tokens novos nos dois temas e **zero** ocorrência de
+`--care-line` no CSS servido.
+
+### 🟠 TRÊS DECISÕES QUE FICARAM COM ELE
+
+1. **O doc DELE discorda da ordem da ficha.** O **REQ-1** ordena *(1) o prêmio … (6) frescor*; o
+   carimbo **é o campo 6** e a tela o põe **acima do campo 1**. Medido: a voz só aparece depois de
+   rolar **1,1–1,3 tela** na Pedra Furada. 🔴 **E mover blocos quebra ZERO testes** — a tela mais
+   importante do app pode ser remontada de cabeça pra baixo com a suíte verde.
+2. **"O prêmio brilha" é FALSO.** `ficha.css:119` empata em especificidade com a regra do Nível B e
+   **perde por ordem de arquivo**; a diferença que o teste M8 protege é de **0,32px**. Hoje prêmio,
+   acesso e avisos são idênticos. Ou apaga a regra morta (subtração), ou o prêmio ganha destaque de
+   verdade — e qual é decisão dele.
+3. **Um defeito visível HOJE, sem chuva:** depois das 17h a Véu e a Pedra mostram carimbo vermelho
+   *"FECHADO AGORA"* e o **pin do mapa continua VERDE**. O `.wp-pin` não recebe a regra de fase que a
+   home já tem, porque `data-fase` vive no `.decision`, que não é ancestral dele. Conserto ~3 linhas,
+   mas põe um segundo atributo de estado no `<main>` — a família *"dois atributos codificando o mesmo
+   fato"*. **Levantado, não feito.**
+
+### ⏳ E O ROTEIRO DO CELULAR, que segue pendente
+
+1. Sem rolar: dá pra ler **"O prêmio"**? · 2. **"O prêmio"** e **"Avisos"** têm a mesma letra? ·
+3. **a voz dele ganha da chuva ao rolar?** · 4. com **`?debug=frio`** (existe, conferido em
+`carimbo-estado.ts:15`): **"VÁ COM CUIDADO"** cabe numa linha? · 5. a moldura tem cor por dentro?
+
 
 ## ▶ O QUE FOI FEITO EM 2026-09-09 (tudo no ar)
 
