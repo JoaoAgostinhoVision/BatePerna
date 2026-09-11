@@ -196,6 +196,19 @@ html, body { background: var(--ground); }
    verde ao lado de um selo que já virou vermelho no portão. Uma fonte de cor só. */
 .bp[data-state="frio"] .wp-pin { background: var(--stop); }
 .bp[data-state="cuidado"] .wp-pin { background: var(--care); }
+/* 🔴 AS FASES QUE NÃO FALAM DE CHUVA, e elas faltavam aqui até 2026-09-10.
+   `data-state` responde "choveu?"; `fechado` e `sem-informacoes` não são
+   respostas sobre chuva, e sem estas duas linhas o pin ficava VERDE ao lado de
+   um carimbo vermelho dizendo "Fechado agora" — todo dia depois das 17h, sem
+   chuva nenhuma. A home já fazia isto (home.css, `.pin-home`); a ficha fazia
+   metade.
+
+   ⚠️ O `[data-state]` no seletor NÃO é enfeite, é ESPECIFICIDADE: sem ele estas
+   regras ficam em (0,2,0) e PERDEM pras regras de estado logo acima, que estão
+   em (0,3,0) — o pin voltaria a ser verde com a suíte inteira verde junto. É a
+   mesma armadilha documentada em `home.css` nas linhas irmãs destas. */
+.bp[data-state][data-fase="sem-informacoes"] .wp-pin { background: var(--stop); }
+.bp[data-state][data-fase="fechado"] .wp-pin { background: var(--stop); }
 
 .bp .wp-osm { position: absolute; right: 0; bottom: 0; padding: .25rem .45rem;
   font-family: var(--type); font-size: .64rem; text-decoration: none;

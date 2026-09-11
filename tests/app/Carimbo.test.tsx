@@ -52,7 +52,7 @@ function redeFalsa() {
 function montarNaMoldura(props: Partial<Props> = {}) {
   const { estado = "fresco" } = props;
   return render(
-    <Moldura estado={estado} severidade={VOZ_RAMPA.severidade}>
+    <Moldura estado={estado} severidade={VOZ_RAMPA.severidade} fase="afirmando">
       <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} {...props} />
     </Moldura>,
   );
@@ -395,6 +395,73 @@ describe("Carimbo — a cor acompanha a leitura que está na tela", () => {
 
     expect(container.querySelector(".mark")?.textContent).toBe("Não vá");
     expect(moldura?.getAttribute("data-state")).toBe("frio");
+  });
+
+  // 🔴 O DEFEITO QUE ESTES QUATRO TRANCAM, e ele acontecia TODO DIA depois das
+  // 17h, sem chuva nenhuma: o carimbo ficava vermelho dizendo "Fechado agora" e
+  // o pin do mapa continuava VERDE. A cor do pin saía só de `data-state`, que
+  // responde "choveu?" — e as fases que NÃO falam de chuva (`fechado`,
+  // `sem-informacoes`) nunca o alcançavam, porque `data-fase` vivia no
+  // `.decision`, que não é ancestral do pin. A home já tratava os dois casos; a
+  // ficha tratava metade. É o mesmo "palavra e cor discordando" que o arquivo
+  // inteiro existe pra impedir, sobrevivendo num canto.
+  //
+  // ⚠️ E a suíte estava VERDE com o defeito de pé: 807/807.
+  it("fechado: a moldura publica a fase, e o pin do mapa a alcança", () => {
+    vi.setSystemTime(Date.UTC(2027, 0, 15, 21, 0)); // 18h em Recife
+    const { container } = montarNaMoldura({
+      estado: "fresco",
+      calculadoEm: Math.floor(Date.UTC(2027, 0, 15, 21, 0) / 1000),
+      horario: { abre: "05:00", fecha: "17:00" },
+    });
+    const moldura = container.querySelector("main.bp");
+
+    // O carimbo já diz "Fechado agora" — é o controle: sem isto, a asserção de
+    // baixo passaria num carimbo que nem entrou na fase.
+    expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    expect(moldura?.getAttribute("data-fase")).toBe("fechado");
+    // 🔴 E o estado NÃO muda: o lugar continua seco. É justamente por isso que
+    // `data-state` sozinho não resolvia — ele está certo e mesmo assim o pin
+    // ficava verde.
+    expect(moldura?.getAttribute("data-state")).toBe("fresco");
+  });
+
+  it("sem leitura: a moldura publica a fase pelo mesmo caminho", async () => {
+    redeFalsa();
+    const { container } = montarNaMoldura({ estado: "fresco", erro: true });
+    await act(async () => {});
+    expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
+    expect(container.querySelector("main.bp")?.getAttribute("data-fase")).toBe("sem-informacoes");
+  });
+
+  it("o CSS alcança o pin nas duas fases que não falam de chuva", () => {
+    const css = semComentarios("ficha.css");
+    for (const fase of ["sem-informacoes", "fechado"]) {
+      const regra = regraDe(css, `.bp[data-state][data-fase="${fase}"] .wp-pin`);
+      expect(regra, `sem regra de pin pra fase ${fase}`).toBeTruthy();
+      expect(valorDe(regra![0], "background")).toBe("var(--stop)");
+    }
+  });
+
+  // 🔴 MUTAÇÃO DE ESPECIFICIDADE, e ela é a que mata em silêncio. Sem o
+  // `[data-state]` no seletor, a regra de fase cai pra (0,2,0) e PERDE pras
+  // regras de estado logo acima — que estão em (0,3,0). O pin voltaria a ser
+  // verde com o teste de cima ainda VERDE, porque a regra existiria.
+  it("a regra de fase do pin ganha da regra de estado — senão ela não faz nada", () => {
+    const css = semComentarios("ficha.css");
+    const esp = (s: string) => [
+      (s.match(/#/g) ?? []).length,
+      (s.match(/\.[a-z-]+|\[[^\]]+\]/g) ?? []).length,
+      (s.match(/(^|\s|>)[a-z]+(?![\w-]*[[.])/g) ?? []).length,
+    ];
+    const fase = '.bp[data-state][data-fase="fechado"] .wp-pin';
+    const estado = '.bp[data-state="cuidado"] .wp-pin';
+    const [a, b] = [esp(fase), esp(estado)];
+    const peso = (e: number[]) => e[0] * 100 + e[1] * 10 + e[2];
+    expect(peso(a), `fase ${a} não ganha de estado ${b}`).toBeGreaterThanOrEqual(peso(b));
+    // Empate em especificidade se resolve por ordem — então, se empatar, a
+    // regra de fase TEM que vir depois. Vale nos dois casos.
+    if (peso(a) === peso(b)) expect(css.indexOf(fase)).toBeGreaterThan(css.indexOf(estado));
   });
 
   it("o CSS pinta o selo a partir do mesmo atributo que a moldura escreve", () => {

@@ -17,7 +17,7 @@ import { fechadoAgora, rotuloAbertura, rotuloFaixa, type Horario } from "@/lib/h
 import type { Voz } from "@/lib/severidade";
 import { chuvaNoPiso, type Piso } from "@/lib/piso";
 import { carimboVenceu, horaCurtaRecife } from "@/lib/validade";
-import { useAvisarEstado } from "./Moldura";
+import { useAvisarMoldura } from "./Moldura";
 import { useAgoraRecife } from "./useAgoraRecife";
 
 /** O carimbo é a única coisa da ficha que apodrece. Tudo o mais — trajeto,
@@ -75,7 +75,7 @@ export default function Carimbo({
   // A cor mora no <main> (data-state), fora deste componente: ela pinta o selo
   // E o pin do mapa, que é irmão daqui. Sem avisar a Moldura, uma leitura nova
   // trocaria a palavra sem trocar a cor — "Não vá" dentro de um selo verde.
-  const avisarEstado = useAvisarEstado();
+  const avisarMoldura = useAvisarMoldura();
 
   // Refs, e não estado: os ouvintes são registrados uma vez e leriam um estado
   // congelado no valor daquele render.
@@ -140,7 +140,7 @@ export default function Carimbo({
       // segue dono do relógio contínuo; este é só o instante da chegada.
       setLeitura(nova);
       setVenceu(carimboVenceu(nova.calculadoEm, Math.floor(Date.now() / 1000)));
-      avisarEstado(nova.estado);
+      avisarMoldura({ estado: nova.estado });
       setFalhou(false);
     } catch {
       if (geracao.current !== minha || !vivo.current) return;
@@ -152,7 +152,7 @@ export default function Carimbo({
         if (vivo.current) setConferindo(false);
       }
     }
-  }, [slug, avisarEstado]);
+  }, [slug, avisarMoldura]);
 
   const tentar = useCallback(
     (gatilho: Gatilho) => {
@@ -198,6 +198,21 @@ export default function Carimbo({
   const situacao = { conferindo, erro: erroAtual, venceu, falhou, fechado };
   const fase = faseDe(situacao);
   const sintoma = sintomaDe(situacao);
+
+  // 🔴 A FASE SOBE PRA MOLDURA, e é o que faz o PIN DO MAPA obedecer ao mesmo
+  // veredito que o carimbo (2026-09-10). Antes dela, a cor do pin saía só de
+  // `data-state`, que fala de chuva — e as fases que NÃO falam de chuva
+  // (`fechado`, `sem-informacoes`) não o alcançavam. Resultado: todo dia depois
+  // das 17h, carimbo vermelho "Fechado agora" e pin VERDE, sem chuva nenhuma.
+  //
+  // Efeito, e não uma chamada durante o render: publicar estado de um
+  // componente enquanto outro renderiza é justamente o que o React proíbe. A
+  // dependência é a `fase` — o efeito só dispara quando ela muda de verdade, e
+  // no primeiro render ela já bate com a que o servidor pintou, então a
+  // hidratação não briga.
+  useEffect(() => {
+    avisarMoldura({ fase });
+  }, [fase, avisarMoldura]);
 
   // A palavra e a linha de baixo vêm de `marcaDe`/`subDe`, não daqui: são as
   // MESMAS do selo do cartão, e escritas à mão nos dois elas já podiam

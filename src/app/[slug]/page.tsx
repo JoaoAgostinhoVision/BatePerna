@@ -3,6 +3,7 @@ import { getFicha } from "@/lib/ficha";
 import { resolverEstado } from "@/lib/carimbo-estado";
 import { rotuloPiso } from "@/lib/piso";
 import { vozDaFicha } from "@/lib/severidade";
+import { faseDe } from "@/lib/carimbo-fase";
 import { rotuloHora } from "@/lib/horario";
 import { notFound } from "next/navigation";
 import ConfirmarFui from "../ConfirmarFui";
@@ -116,7 +117,16 @@ export default async function Ficha({
   // trouxer uma leitura nova do portão. Tudo aqui dentro continua sendo
   // componente de servidor — children atravessa a fronteira sem virar JS.
   return (
-    <Moldura estado={estado} severidade={ficha.condicao.severidade}>
+    <Moldura
+      estado={estado}
+      severidade={ficha.condicao.severidade}
+      // A fase que o SERVIDOR sabe calcular. `conferindo`/`falhou` são do
+      // cliente; `venceu` é falso porque `calculadoEm` é agora; `fechado`
+      // depende do relógio do navegador e por isso é `false` aqui — é a MESMA
+      // conta que o Carimbo faz no primeiro render (`agora` nasce `null`), e
+      // tem que continuar sendo, senão a hidratação briga.
+      fase={faseDe({ conferindo: false, erro, venceu: false, falhou: false })}
+    >
       <div className="screen">
         <Appbar chip={chipCusto} />
 
