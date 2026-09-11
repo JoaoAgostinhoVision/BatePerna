@@ -386,3 +386,49 @@ describe("loadAll: slug repetido não pode divergir entre telas", () => {
     expect(loadAll(dir).map((f) => f.slug)).toEqual(["morro-a", "morro-b"]);
   });
 });
+
+// 🔴 O DEFEITO QUE ESTE GUARDA TRANCA, e ele foi ao AR por algumas horas em
+// 2026-09-10. O `rotulo_escaneio` da Véu de Noiva era "Cachoeira, só sem chuva";
+// o "só sem chuva" era prosa minha que contradizia a fala dele, e eu apaguei
+// SÓ a cláusula. Sobrou "Cachoeira" — uma palavra que só existia pra acompanhar
+// o resto — logo acima de um `<h1>` que já começava com "Cachoeira":
+//
+//     CACHOEIRA
+//     Cachoeira Véu de Noiva
+//
+// Quem viu foi ele, olhando a tela. **Subtração feita pela metade deixa órfão**,
+// e nenhum teste deste projeto olhava os dois elementos JUNTOS — cada um estava
+// certo sozinho. Mesma família do pulso piscando ao lado de "SEM INFORMAÇÕES":
+// o absurdo é a COMBINAÇÃO.
+describe("a linha de relance não repete o título logo abaixo dela", () => {
+  // Lê o acervo, não uma lista de slugs escrita à mão: guarda que enumera é
+  // cego à ficha nova, e é uma das espécies já catalogadas aqui.
+  it("nenhum rotulo_escaneio começa com a primeira palavra do nome do waypoint", () => {
+    const acervo = getFichasComCondicao();
+    expect(acervo.length).toBeGreaterThan(0); // não passa por vacuidade
+
+    const primeira = (s: string) =>
+      s.trim().split(/[\s,;:—-]+/)[0].toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+
+    for (const f of acervo) {
+      expect(
+        primeira(f.rotulo_escaneio),
+        `${f.slug}: "${f.rotulo_escaneio}" repete a abertura de "${f.trajeto.waypoints[0].nome}"`,
+      ).not.toBe(primeira(f.trajeto.waypoints[0].nome));
+    }
+  });
+
+  // Controle: o guarda acusa de verdade. Sem esta linha, um `primeira()` que
+  // devolvesse sempre strings diferentes (um `.split` no separador errado, por
+  // exemplo) deixaria o teste acima verde pra sempre.
+  it("e o guarda ACUSA a redação que foi ao ar — senão ele não guarda nada", () => {
+    const primeira = (s: string) =>
+      s.trim().split(/[\s,;:—-]+/)[0].toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+
+    expect(primeira("Cachoeira")).toBe(primeira("Cachoeira Véu de Noiva"));
+    expect(primeira("Cachoeira, só sem chuva")).toBe(primeira("Cachoeira Véu de Noiva"));
+    // E não acusa o inocente: as duas linhas que são palavra dele passam.
+    expect(primeira("Só sem chuva")).not.toBe(primeira("Rampa do Pepê"));
+    expect(primeira("Com chuva, com cuidado")).not.toBe(primeira("Cachoeira Véu de Noiva"));
+  });
+});
