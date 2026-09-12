@@ -210,6 +210,7 @@ describe("uma trilha, UM km", () => {
       leitura: LEITURA,
       filtros: { ...SEM_FILTRO, distanciaKm: 60 },
       voce: VOCE,
+      fechado: false,
       confia: true,
     });
     // Com o filtro medindo até `condicao.coords` (89 km), esta trilha sumia da
@@ -324,6 +325,7 @@ describe("o número que a tela mostra é o número que o filtro compara", () => 
         leitura: LEITURA,
         filtros: { ...SEM_FILTRO, distanciaKm: tetoDistancia },
         voce: VOCE,
+      fechado: false,
         confia: true,
       }),
       "o filtro escondeu a trilha pelo número que o próprio cartão mostrou",

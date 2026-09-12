@@ -19,8 +19,7 @@ import { coordDe } from "@/lib/local";
 import { useLocal } from "./local";
 import BuscaLugar from "./BuscaLugar";
 import PinTrilha from "./PinTrilha";
-import { aberturaDaFicha } from "@/lib/horario";
-import { useAgoraRecife } from "./useAgoraRecife";
+import { aberturaDaFicha, type Agora } from "@/lib/horario";
 
 /** O mapa da home: onde ficam as trilhas de hoje.
  *
@@ -80,9 +79,18 @@ import { useAgoraRecife } from "./useAgoraRecife";
 export default function MapaHome({
   fichas,
   leituras,
+  agora,
 }: {
   fichas: Ficha[];
   leituras: Record<string, LeituraCarimbo>;
+  /** O relógio de Recife, lido UMA vez lá em cima. Chega por prop desde
+   *  2026-09-12: antes este componente e o irmão dele chamavam
+   *  `useAgoraRecife` cada um por conta própria — dois `setInterval`
+   *  independentes decidindo a MESMA tela. Enquanto ninguém filtrava por
+   *  fechamento ninguém via; com o recorte "dá hoje" olhando a hora, dois
+   *  relógios deixam o cartão sumir da lista num minuto em que o pin ainda o
+   *  mostra. `null` no primeiro render, sempre. */
+  agora: Agora | null;
 }) {
   // Mesma disciplina do page.tsx: o par ficha+leitura só existe se a leitura
   // existir. Fazer o TIPO provar isso — em vez de um `leituras.get(...)!`
@@ -134,7 +142,6 @@ export default function MapaHome({
   // É o que impede o pin de ficar VERDE ao lado de um selo que já diz "Fechado
   // agora": o defeito que o próprio comentário do `PinTrilha` conta que já
   // aconteceu uma vez, com outra causa.
-  const agora = useAgoraRecife();
 
   const comLeitura: { ficha: Ficha; leitura: LeituraCarimbo }[] = fichas.flatMap((f) => {
     const leitura = leituras[f.slug];

@@ -1,10 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import FolhaTrilhas from "@/app/FolhaTrilhas";
+import { agoraRecife } from "@/lib/horario";
 import { LeiturasProvider } from "@/app/leituras";
 import type { Ficha } from "@/types/ficha";
 
 const AGORA_S = Math.floor(Date.UTC(2027, 0, 15, 11, 0) / 1000);
+
+/** 🔴 O RELÓGIO CHEGA POR PROP DESDE 2026-09-12, e este helper o deriva do
+ *  MESMO `Date.now()` falso que cada teste crava. Antes a folha chamava
+ *  `useAgoraRecife` por dentro; o hook subiu pro `MioloHome` porque a home
+ *  tinha DOIS relógios (aqui e no mapa) decidindo a mesma tela — e o recorte
+ *  "dá hoje" passou a depender do fechamento. Derivar aqui, em vez de cravar
+ *  um número, é o que mantém estes testes falando do instante que eles mesmos
+ *  escolheram. */
+const relogio = () => agoraRecife(Math.floor(Date.now() / 1000));
 
 // Mesmo padrão sintético de tests/app/home.test.tsx (fichaFake): só os campos
 // que a folha (e o cartão, por baixo) leem. Não depende do conteúdo real do
@@ -70,7 +80,7 @@ describe("FolhaTrilhas", () => {
 
     const { container } = render(
       <LeiturasProvider value={invertido}>
-        <FolhaTrilhas visiveis={visiveis} confia={true} />
+        <FolhaTrilhas visiveis={visiveis} confia={true} agora={relogio()} />
       </LeiturasProvider>,
     );
 
@@ -102,7 +112,7 @@ describe("FolhaTrilhas", () => {
       { ficha: aberta, leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_18 } },
     ];
 
-    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} />);
+    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} agora={relogio()} />);
 
     const cabecalhos = Array.from(container.querySelectorAll(".grupo-k")).map((c) => c.textContent);
     expect(cabecalhos).toEqual(["Hoje o tempo deixa", "Hoje não"]);
@@ -135,7 +145,7 @@ describe("FolhaTrilhas", () => {
       { ficha: fichaFake("molhada"), leitura: { estado: "frio" as const, erro: true, calculadoEm: AGORA_S } },
     ];
 
-    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={false} />);
+    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={false} agora={relogio()} />);
 
     expect(container.querySelectorAll(".grupo-k")).toHaveLength(0);
     expect(container.querySelectorAll(".cartao")).toHaveLength(2);
@@ -151,7 +161,7 @@ describe("FolhaTrilhas", () => {
       { ficha: fichaFake("molhada"), leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_S } },
     ];
 
-    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} />);
+    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} agora={relogio()} />);
 
     const cabecalhos = Array.from(container.querySelectorAll(".grupo-k")).map((el) => el.textContent);
     expect(cabecalhos).toEqual(["Hoje o tempo deixa", "Hoje não"]);
@@ -160,7 +170,7 @@ describe("FolhaTrilhas", () => {
   // A folha não é mais quem recorta, mas continua sendo quem AVISA. O estado
   // vazio é dela, e ele é o que a §7.4 da spec exige: nunca folha em branco.
   it("lista vazia vira o aviso e o jeito de limpar, não uma folha em branco", () => {
-    const { container } = render(<FolhaTrilhas visiveis={[]} confia={true} />);
+    const { container } = render(<FolhaTrilhas visiveis={[]} confia={true} agora={relogio()} />);
     expect(container.textContent).toContain("Nenhuma trilha com esses filtros");
     expect(container.querySelector(".folha-vazia button")?.textContent).toContain("limpar");
     expect(container.querySelectorAll(".cartoes")).toHaveLength(0);
@@ -201,7 +211,7 @@ describe("o agrupamento pergunta o TOM, não o estado", () => {
       { ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S } },
     ];
 
-    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} />);
+    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} agora={relogio()} />);
 
     // Os três cabeçalhos, NESTA ordem: o que dá, o que dá com ressalva, o que
     // não dá. A ordem é a leitura de cima pra baixo e faz parte do que se prova.
@@ -232,7 +242,7 @@ describe("o agrupamento pergunta o TOM, não o estado", () => {
   // teste é o que impede alguém de "consertar" isso por engano.
   it("molhada de nível `espera` cai sob 'Hoje não', junto com a proibida", () => {
     const visiveis = [molhada("espereira", "espera"), molhada("proibida", "nao-va")];
-    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} />);
+    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} agora={relogio()} />);
 
     expect(titulos(container)).toEqual(["Hoje não"]);
     expect(doGrupo(container, "Hoje não")).toEqual(["espereira", "proibida"]);
@@ -250,7 +260,7 @@ describe("o agrupamento pergunta o TOM, não o estado", () => {
     };
     const aberta = { ...molhada("aberta", "cuidado"), leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_18 } };
 
-    const { container } = render(<FolhaTrilhas visiveis={[fechada, aberta]} confia={true} />);
+    const { container } = render(<FolhaTrilhas visiveis={[fechada, aberta]} confia={true} agora={relogio()} />);
 
     // O par que importa: as duas são `cuidado` e molhadas, e mesmo assim se
     // separaram. Sem a `aberta`, "tudo caiu em Hoje não" passaria por qualquer
@@ -269,7 +279,7 @@ describe("o agrupamento pergunta o TOM, não o estado", () => {
       molhada("proibida", "nao-va"),
       { ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S } },
     ];
-    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} />);
+    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} agora={relogio()} />);
     expect(titulos(container)).toEqual(["Hoje o tempo deixa", "Hoje não"]);
   });
 });

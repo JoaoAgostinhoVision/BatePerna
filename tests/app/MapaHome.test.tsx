@@ -6,6 +6,11 @@ import { regraDe, semComentarios, valorDe } from "../css";
 import MapaHome from "@/app/MapaHome";
 import MioloHome from "@/app/MioloHome";
 import { agoraRecife } from "@/lib/horario";
+
+/** O relógio chega por prop desde 2026-09-12 (o hook subiu pro MioloHome, que é
+ *  o único escopo com tudo junto). Derivado do MESMO Date.now() que cada teste
+ *  crava, pra estas telas continuarem falando do instante que elas escolheram. */
+const relogio = () => agoraRecife(Math.floor(Date.now() / 1000));
 import CartaoTrilha from "@/app/CartaoTrilha";
 import type { ParFolha } from "@/app/FolhaTrilhas";
 import FiltrosVivos from "@/app/filtros";
@@ -62,7 +67,7 @@ const leituras: Record<string, LeituraCarimbo> = Object.fromEntries(
 
 describe("MapaHome", () => {
   it("um pin por trilha, e cada pin é âncora pro cartão dela", () => {
-    const { container } = render(<MapaHome fichas={fichas} leituras={leituras} />);
+    const { container } = render(<MapaHome fichas={fichas} leituras={leituras} agora={relogio()} />);
     const pins = Array.from(container.querySelectorAll(".pin-home"));
     expect(pins).toHaveLength(fichas.length);
     for (const f of fichas) {
@@ -71,7 +76,7 @@ describe("MapaHome", () => {
   });
 
   it("o pin funciona sem JS: é <a href>, não botão", () => {
-    const { container } = render(<MapaHome fichas={fichas} leituras={leituras} />);
+    const { container } = render(<MapaHome fichas={fichas} leituras={leituras} agora={relogio()} />);
     for (const p of container.querySelectorAll(".pin-home")) {
       expect(p.tagName).toBe("A");
     }
@@ -84,7 +89,7 @@ describe("MapaHome", () => {
         { estado: i === 0 ? ("frio" as const) : ("fresco" as const), erro: false, calculadoEm: 1_800_000_000 },
       ]),
     );
-    const { container } = render(<MapaHome fichas={fichas} leituras={mistas} />);
+    const { container } = render(<MapaHome fichas={fichas} leituras={mistas} agora={relogio()} />);
     const pin = container.querySelector(`.pin-home[href="#${fichas[0].slug}"]`);
     // 🔴 NÃO se compara com o literal "frio": desde 2026-09-10 o tom molhado
     // depende do NÍVEL da ficha, e `fichas[0]` vem do acervo real — cravar a
@@ -98,14 +103,14 @@ describe("MapaHome", () => {
   });
 
   it("carrega tiles do OpenStreetMap", () => {
-    const { container } = render(<MapaHome fichas={fichas} leituras={leituras} />);
+    const { container } = render(<MapaHome fichas={fichas} leituras={leituras} agora={relogio()} />);
     const imgs = Array.from(container.querySelectorAll("img"));
     expect(imgs.length).toBeGreaterThan(0);
     expect(imgs[0].getAttribute("src")).toContain("tile.openstreetmap.org");
   });
 
   it("credita o OpenStreetMap — é obrigação de licença, não enfeite", () => {
-    const { container } = render(<MapaHome fichas={fichas} leituras={leituras} />);
+    const { container } = render(<MapaHome fichas={fichas} leituras={leituras} agora={relogio()} />);
     expect(container.textContent).toContain("OpenStreetMap");
   });
 
@@ -123,7 +128,7 @@ describe("MapaHome", () => {
     ]);
     const { container } = render(
       <LeiturasProvider value={nova}>
-        <MapaHome fichas={fichas} leituras={leituras} />
+        <MapaHome fichas={fichas} leituras={leituras} agora={relogio()} />
         <CartaoTrilha ficha={fichas[0]} inicial={leituras[slug]} />
       </LeiturasProvider>,
     );
@@ -189,7 +194,7 @@ describe("MapaHome", () => {
       const instante = agoraRecife(Date.UTC(2027, 0, 15, 21, 0) / 1000);
       const { container } = render(
         <>
-          <MapaHome fichas={comHorario} leituras={leituras} />
+          <MapaHome fichas={comHorario} leituras={leituras} agora={relogio()} />
           <CartaoTrilha ficha={comHorario[0]} inicial={leituras[slug]} agora={instante} />
         </>,
       );
@@ -265,7 +270,7 @@ describe("MapaHome: o enquadramento usa a janela que a tela mostra, não a caixa
       fichas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
     );
 
-    const { container } = render(<MapaHome fichas={fichas} leituras={leituras} />);
+    const { container } = render(<MapaHome fichas={fichas} leituras={leituras} agora={relogio()} />);
     const pins = Array.from(container.querySelectorAll(".pin-home")) as HTMLElement[];
     expect(pins).toHaveLength(2);
 
@@ -294,7 +299,7 @@ describe("MapaHome com a localização da pessoa", () => {
   );
 
   it("sem localização, não desenha o ponto 'você' — e o mapa é o de hoje", () => {
-    const { container } = render(<MapaHome fichas={fichas} leituras={leiturasObj} />);
+    const { container } = render(<MapaHome fichas={fichas} leituras={leiturasObj} agora={relogio()} />);
     expect(container.querySelector(".voce-pin")).toBeNull();
   });
 
@@ -306,13 +311,13 @@ describe("MapaHome com a localização da pessoa", () => {
       tipo: "escolhido", coord: { lat: -8.20111, lng: -35.56472 },
       em: 1_800_000_000, nome: "Gravatá", regiao: "Pernambuco",
     }));
-    const semLocal = render(<MapaHome fichas={fichas} leituras={leiturasObj} />);
+    const semLocal = render(<MapaHome fichas={fichas} leituras={leiturasObj} agora={relogio()} />);
     const tilesAntes = Array.from(semLocal.container.querySelectorAll("img"))
       .map((i) => i.getAttribute("src")).join("|");
     cleanup();
 
     const { container, findByTestId } = render(
-      <LocalVivo><MapaHome fichas={fichas} leituras={leiturasObj} /></LocalVivo>,
+      <LocalVivo><MapaHome fichas={fichas} leituras={leiturasObj} agora={relogio()} /></LocalVivo>,
     );
     await findByTestId("voce");
     const tilesDepois = Array.from(container.querySelectorAll("img"))
@@ -326,7 +331,7 @@ describe("MapaHome com a localização da pessoa", () => {
       em: 1_800_000_000, nome: "São Paulo", regiao: "São Paulo",
     }));
     const { container, findByTestId } = render(
-      <LocalVivo><MapaHome fichas={fichas} leituras={leiturasObj} /></LocalVivo>,
+      <LocalVivo><MapaHome fichas={fichas} leituras={leiturasObj} agora={relogio()} /></LocalVivo>,
     );
     await findByTestId("voce");
     // 🔴 Este número está PRESO ao acervo real: São Paulo está longe de TODAS
@@ -348,7 +353,7 @@ describe("MapaHome com a localização da pessoa", () => {
       tipo: "gps", coord: { lat: -8.2, lng: -35.56 }, em: 1_800_000_000,
     }));
     const { container, findByTestId } = render(
-      <LocalVivo><MapaHome fichas={fichas} leituras={leiturasObj} /></LocalVivo>,
+      <LocalVivo><MapaHome fichas={fichas} leituras={leiturasObj} agora={relogio()} /></LocalVivo>,
     );
     await findByTestId("voce");
     expect(container.textContent).toContain("OpenStreetMap");
@@ -370,7 +375,7 @@ describe("MapaHome com a localização da pessoa", () => {
       em: 1_800_000_000, nome: "São Paulo", regiao: "São Paulo",
     }));
     const { container, findByTestId } = render(
-      <LocalVivo><MapaHome fichas={longe} leituras={dobradas} /></LocalVivo>,
+      <LocalVivo><MapaHome fichas={longe} leituras={dobradas} agora={relogio()} /></LocalVivo>,
     );
     await findByTestId("voce");
     expect(container.querySelector(".mapa-fora")?.textContent).toBe("2 trilhas fora do mapa");
@@ -392,6 +397,7 @@ describe("MapaHome com a localização da pessoa", () => {
     const { container, findByTestId } = render(
       <LocalVivo>
         <MapaHome
+          agora={relogio()}
           fichas={[mesma]}
           leituras={{ mesma: { estado: "fresco", erro: false, calculadoEm: 1_800_000_000 } }}
         />
@@ -457,7 +463,7 @@ describe("MapaHome com a localização da pessoa", () => {
       tres.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
     );
     const { container, findByTestId } = render(
-      <LocalVivo><MapaHome fichas={tres} leituras={leiturasTres} /></LocalVivo>,
+      <LocalVivo><MapaHome fichas={tres} leituras={leiturasTres} agora={relogio()} /></LocalVivo>,
     );
     await findByTestId("voce");
     // Com MAPA_LARGURA_PX no lugar da janela visível, a trilha "meio" passa a
@@ -607,7 +613,7 @@ describe("MapaHome: o filtro zerou a lista", () => {
       duas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
     );
 
-    const antes = render(<MapaHome fichas={duas} leituras={leiturasDuas} />);
+    const antes = render(<MapaHome fichas={duas} leituras={leiturasDuas} agora={relogio()} />);
     const tilesAntes = tilesDe(antes.container);
     expect(tilesAntes.length).toBeGreaterThan(0);
     cleanup();
@@ -630,7 +636,7 @@ describe("MapaHome: o filtro zerou a lista", () => {
   // lembrar. Confundir os dois faria o app desenhar caixa cinza toda vez que a
   // busca de leitura falhasse.
   it("sem NENHUMA leitura o mapa continua sumindo (é outro caso)", () => {
-    const { container } = render(<MapaHome fichas={[fichaFake("orfa")]} leituras={{}} />);
+    const { container } = render(<MapaHome fichas={[fichaFake("orfa")]} leituras={{}} agora={relogio()} />);
     expect(container.innerHTML).toBe("");
   });
 
@@ -638,7 +644,7 @@ describe("MapaHome: o filtro zerou a lista", () => {
   // faltando. Sem quadro anterior nenhum não dá pra desenhar mosaico, mas a
   // moldura fica de pé — a altura não salta e a pílula continua na tela.
   it("sem ficha nenhuma e sem quadro anterior: a moldura fica, sem mosaico", () => {
-    const { container } = render(<MapaHome fichas={[]} leituras={{}} />);
+    const { container } = render(<MapaHome fichas={[]} leituras={{}} agora={relogio()} />);
     expect(container.querySelector(".mapa-home")).not.toBeNull();
     expect(container.querySelectorAll("img")).toHaveLength(0);
     expect(container.querySelector(".mapa-pilula")).not.toBeNull();
@@ -663,6 +669,7 @@ describe("MapaHome: o filtro zerou a lista", () => {
     const uma = fichaEm("uma", -35.56, false);
     const cheio = render(
       <MapaHome
+        agora={relogio()}
         fichas={[uma]}
         leituras={{ uma: { estado: "fresco", erro: false, calculadoEm: 1_800_000_000 } }}
       />,
@@ -671,7 +678,7 @@ describe("MapaHome: o filtro zerou a lista", () => {
     expect(caixaCheia).not.toBeNull();
     cleanup();
 
-    const vazio = render(<MapaHome fichas={[]} leituras={{}} />);
+    const vazio = render(<MapaHome fichas={[]} leituras={{}} agora={relogio()} />);
     const caixaVazia = vazio.container.firstElementChild;
     expect(caixaVazia, "o vazio não desenhou caixa nenhuma: a folha salta 168px").not.toBeNull();
 

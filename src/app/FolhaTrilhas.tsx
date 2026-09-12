@@ -7,7 +7,6 @@ import { tomDe } from "@/lib/severidade";
 import CartaoTrilha from "./CartaoTrilha";
 import { useMexerFiltros } from "./filtros";
 import { useLeiturasMapa } from "./leituras";
-import { useAgoraRecife } from "./useAgoraRecife";
 
 export type ParFolha = { ficha: Ficha; leitura: LeituraCarimbo };
 
@@ -48,9 +47,18 @@ export type ParFolha = { ficha: Ficha; leitura: LeituraCarimbo };
 export default function FolhaTrilhas({
   visiveis,
   confia,
+  agora,
 }: {
   visiveis: ParFolha[];
   confia: boolean;
+  /** O relógio de Recife, lido UMA vez lá em cima. Chega por prop desde
+   *  2026-09-12: antes este componente e o irmão dele chamavam
+   *  `useAgoraRecife` cada um por conta própria — dois `setInterval`
+   *  independentes decidindo a MESMA tela. Enquanto ninguém filtrava por
+   *  fechamento ninguém via; com o recorte "dá hoje" olhando a hora, dois
+   *  relógios deixam o cartão sumir da lista num minuto em que o pin ainda o
+   *  mostra. `null` no primeiro render, sempre. */
+  agora: Agora | null;
 }) {
   // A leitura de AGORA, do mesmo contexto que pinta o selo, o cartão e o pin —
   // "uma trilha, uma fonte". O `MioloHome` lê o MESMO contexto na MESMA passada
@@ -63,7 +71,6 @@ export default function FolhaTrilhas({
   // `useAgoraRecife` dentro do `.map()` faria o número de hooks variar com o
   // tamanho da lista — a mesma partida que o React não deixa jogar e que já
   // obrigou o `useAlgumVenceu` a existir.
-  const agora = useAgoraRecife();
 
   const mexer = useMexerFiltros();
 

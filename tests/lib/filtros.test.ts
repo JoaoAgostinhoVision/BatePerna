@@ -36,6 +36,7 @@ function passa(f: Partial<Filtros>, over: Partial<Ficha> = {}, extra: Partial<{
 }> = {}) {
   return passaNoFiltro({
     ficha: { ...base, ...over },
+    fechado: false,
     leitura: extra.leitura ?? FRESCO,
     filtros: { ...SEM_FILTRO, ...f },
     voce: extra.voce ?? null,
@@ -659,7 +660,7 @@ describe("lerFiltros: os filtros fantasmas de todas as contrações", () => {
     const lido = lerFiltros(JSON.stringify({ pisoMinimo: "asfalto-tapete" }));
     expect(passaNoFiltro({
       ficha: { ...base, piso: "barro" },
-      leitura: FRESCO, filtros: lido, voce: null, confia: true,
+      leitura: FRESCO, filtros: lido, voce: null, confia: true, fechado: false,
     })).toBe(true);
   });
 });
@@ -756,5 +757,117 @@ describe("tetoDaBarraDistancia: o teto vem do acervo, não de um número inventa
     const a = fichaA("a", 0.07), b = fichaA("b", 0.42), c = fichaA("c", 0.2);
     expect(tetoDaBarraDistancia([a, b, c], VOCE, null)).toBe(50);
     expect(tetoDaBarraDistancia([b, c, a], VOCE, null)).toBe(50);
+  });
+});
+
+// 🔴 O DEFEITO QUE ESTE BLOCO TRANCA (2026-09-12). O chip promete, com todas as
+// letras, **"só as que dá hoje"** — e o recorte só consultava a CHUVA. Um lugar
+// seco que não abre hoje passava direto.
+//
+// O caso concreto: a Rampa do Pepê abre sábado e domingo. Numa quarta-feira
+// seca, com o chip ligado, ela ficava na tela — **dentro de uma lista que a
+// pessoa acabou de pedir pra mostrar só o que dá hoje**, com o próprio cartão
+// dela dizendo "FECHADO AGORA" ali do lado. O filtro e o cartão se contradizendo
+// na mesma tela, que é a família do pulso piscando ao lado de "SEM INFORMAÇÕES".
+//
+// É a mesma família do defeito das 18h (2026-08-27): o app respondendo a
+// pergunta da chuva e chamando isso de a pergunta inteira.
+describe("só as que dá hoje: a chuva não é a pergunta inteira", () => {
+  const seca: LeituraCarimbo = { estado: "fresco", erro: false, calculadoEm: 0 };
+  const so = () => ({ ...SEM_FILTRO, daHoje: true });
+
+  const passa = (fechado: boolean, leitura = seca, confia = true) =>
+    passaNoFiltro({
+      ficha: base,
+      leitura,
+      filtros: so(),
+      voce: null,
+      confia,
+      fechado,
+    });
+
+  it("lugar seco e ABERTO passa, como sempre", () => {
+    expect(passa(false)).toBe(true);
+  });
+
+  // 🔴 O CASO EXATO QUE ESTAVA NO AR.
+  it("lugar seco mas FECHADO não passa — o chip promete hoje, não promete chuva", () => {
+    expect(
+      passa(true),
+      "a lista de 'só as que dá hoje' mostraria um cartão dizendo FECHADO AGORA",
+    ).toBe(false);
+  });
+
+  // 🔴 E ESCONDER POR ESTAR FECHADO NÃO DEPENDE DE CONFIAR NA LEITURA, ao
+  // contrário do ramo da chuva. A REGRA DE HONESTIDADE 1 existe porque o app não
+  // pode esconder o que NÃO MEDIU — mas o horário e os dias não são medição de
+  // nada: são fato da ficha mais o relógio. O app SABE que está fechado.
+  it("fechado esconde mesmo sem leitura confiável — isto o app sabe", () => {
+    const semLeitura: LeituraCarimbo = { estado: "frio", erro: true, calculadoEm: 0 };
+    expect(passa(true, semLeitura, false)).toBe(false);
+  });
+
+  // O par que protege a REGRA DE HONESTIDADE 1: sem leitura confiável, a CHUVA
+  // continua sem esconder nada. Este teste cai se alguém "simplificar" o ramo
+  // novo em cima do antigo.
+  it("sem leitura confiável, a chuva continua sem esconder — a regra 1 segue de pé", () => {
+    const semLeitura: LeituraCarimbo = { estado: "frio", erro: true, calculadoEm: 0 };
+    expect(passa(false, semLeitura, false)).toBe(true);
+  });
+
+  // Com o chip DESLIGADO nada disto age: quem não pediu recorte vê tudo,
+  // fechado ou não. O agrupamento é que conta a história, e ele já contava.
+  it("com o chip desligado, fechado não esconde nada", () => {
+    expect(
+      passaNoFiltro({
+        ficha: base,
+        leitura: seca,
+        filtros: SEM_FILTRO,
+        voce: null,
+        confia: true,
+        fechado: true,
+      }),
+    ).toBe(true);
+  });
+});
+
+// 🔴 UM RELÓGIO POR TELA, e este guarda nasceu junto com o recorte acima
+// (2026-09-12). A home tinha DOIS: o ~MapaHome~ e a ~FolhaTrilhas~ chamavam
+// ~useAgoraRecife~ cada um por conta própria, dois ~setInterval~ independentes
+// decidindo a MESMA tela. Enquanto ninguém filtrava por fechamento ninguém via
+// — os dois liam ~Date.now()~ e concordavam quase sempre.
+//
+// Com o "dá hoje" passando a esconder o que está fechado, "quase sempre" virou
+// defeito: na virada de um minuto, o cartão podia sumir da lista enquanto o pin
+// do mapa ainda o desenhava. O hook subiu pro ~MioloHome~, que é o único escopo
+// que tem tudo junto — o mesmo argumento que já governa ~confia~ e
+// ~tetoDistanciaKm~ lá — e os dois filhos passaram a receber por prop.
+describe("um relógio por tela", () => {
+  const semComentario = (s: string) => s.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+  const ler = (...p: string[]) =>
+    semComentario(readFileSync(path.join(process.cwd(), "src", ...p), "utf8"));
+
+  it("os filhos da home NÃO leem o relógio — recebem por prop", () => {
+    for (const arq of [["app", "MapaHome.tsx"], ["app", "FolhaTrilhas.tsx"]]) {
+      const src = ler(...arq);
+      const nome = arq.join("/");
+      // A tira precisa de guarda: sem isto, um regex que comesse o arquivo
+      // deixaria a ausência abaixo passar por vacuidade, sempre.
+      expect(src, "a tira de comentários comeu " + nome).toContain("export default function");
+      expect(
+        src.includes("useAgoraRecife("),
+        nome + " voltou a ter relógio próprio — dois na mesma tela discordam na virada do minuto",
+      ).toBe(false);
+      expect(src, nome + " deixou de receber o relógio por prop").toContain("agora");
+    }
+  });
+
+  it("o MioloHome lê o relógio, e é ele quem decide o recorte", () => {
+    const src = ler("app", "MioloHome.tsx");
+    expect(src, "o MioloHome parou de ler o relógio").toContain("useAgoraRecife(");
+    expect(
+      src,
+      "o recorte parou de perguntar se o lugar está fechado — o chip volta a prometer só chuva",
+    ).toMatch(/fechado:\s*estaFechado/);
   });
 });

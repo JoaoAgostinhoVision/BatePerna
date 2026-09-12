@@ -223,16 +223,38 @@ export function passaNoFiltro({
   filtros,
   voce,
   confia,
+  fechado,
 }: {
   ficha: Ficha;
   leitura: LeituraCarimbo;
   filtros: Filtros;
   voce: Coord | null;
   confia: boolean;
+  /** Este lugar está fechado AGORA — por hora ou por dia da semana.
+   *
+   *  Vem de fora porque quem tem o relógio é a tela (`MioloHome`), e este
+   *  módulo é puro. `false` no primeiro render, antes de o relógio falar: o
+   *  app não esconde por um fechamento que ainda não sabe se existe. */
+  fechado: boolean;
 }): boolean {
   // REGRA DE HONESTIDADE 1: "dá hoje" só esconde o que o motor MEDIU. Sem
   // leitura confiável o recorte fica inerte — esconder o que não se sabe é o
   // app fingindo que sabe, e ele foi construído pra informar, não pra mandar.
+  //
+  // 🔴 E O CHIP PROMETE **HOJE**, NÃO PROMETE CHUVA (2026-09-12). Até hoje este
+  // recorte só consultava o motor, e um lugar SECO que não abre hoje passava
+  // direto: a Rampa do Pepê, numa quarta-feira, dentro de uma lista que a pessoa
+  // acabou de pedir pra mostrar só o que dá — com o cartão dela dizendo
+  // "FECHADO AGORA" ali do lado. O filtro e o cartão se contradizendo na mesma
+  // tela. Mesma família do defeito das 18h (2026-08-27): responder a pergunta da
+  // chuva e chamar isso de a pergunta inteira.
+  //
+  // ⚠️ O RAMO DO FECHADO **NÃO** PASSA PELO `confia`, e a diferença é real: a
+  // REGRA 1 existe porque o app não pode esconder o que não MEDIU — e horário e
+  // dias não são medição de nada, são fato da ficha mais o relógio. Isto o app
+  // sabe. Juntar os dois ramos num `&&` só faria o lugar fechado reaparecer
+  // toda vez que o clima falhasse.
+  if (filtros.daHoje && fechado) return false;
   if (filtros.daHoje && confia && leitura.estado !== "fresco") return false;
 
   // Sem localização o recorte de distância nem aparece na tela. Se chegar

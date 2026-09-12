@@ -4,6 +4,8 @@ import { faseDe } from "@/lib/carimbo-fase";
 import { passaNoFiltro, tetoDaBarraDistancia } from "@/lib/filtros";
 import { coordDe } from "@/lib/local";
 import FolhaTrilhas, { type ParFolha } from "./FolhaTrilhas";
+import { aberturaDaFicha, fechadoAgora } from "@/lib/horario";
+import { useAgoraRecife } from "./useAgoraRecife";
 import MapaHome from "./MapaHome";
 import PainelFiltros from "./PainelFiltros";
 import { useFiltros } from "./filtros";
@@ -69,6 +71,18 @@ export default function MioloHome({ pares }: { pares: ParFolha[] }) {
   const filtros = useFiltros();
   const voce = coordDe(useLocal());
 
+  // 🔴 O RELÓGIO SOBE PRA CÁ EM 2026-09-12, e ele estava em DOIS lugares: o
+  // `MapaHome` e a `FolhaTrilhas` chamavam `useAgoraRecife` cada um por conta
+  // própria, dois `setInterval` independentes na mesma tela. Enquanto ninguém
+  // filtrava por isso ninguém via; com o recorte "dá hoje" passando a olhar o
+  // fechamento, três relógios decidindo a mesma tela seria convite pro cartão
+  // sumir da lista num minuto em que o pin ainda o mostra.
+  //
+  // É o mesmo argumento do `confia` e do `tetoDistanciaKm` logo abaixo: este é
+  // o único escopo que tem tudo junto, então é aqui que a fonte nasce.
+  const agora = useAgoraRecife();
+  const estaFechado = (p: ParFolha) => fechadoAgora(aberturaDaFicha(p.ficha), agora);
+
   // O RECORTE, e ele acontece UMA vez. Filtro, agrupamento e pins saem da
   // MESMA leitura (`atual`), no MESMO escopo, na mesma passada. Separá-los em
   // duas etapas em dois lugares é exatamente como nasceu o Critical da rodada
@@ -78,7 +92,7 @@ export default function MioloHome({ pares }: { pares: ParFolha[] }) {
   // `.filter` preserva a ordem de `pares`, que já chega pronta do servidor
   // (fresco primeiro). Filtrar tira cartões; nunca os embaralha.
   const visiveis = pares.filter((p) =>
-    passaNoFiltro({ ficha: p.ficha, leitura: atual(p), filtros, voce, confia }),
+    passaNoFiltro({ ficha: p.ficha, leitura: atual(p), filtros, voce, confia, fechado: estaFechado(p) }),
   );
 
   // 🔴 O TETO DA BARRA SAI DE `pares`, NUNCA de `visiveis`, e é circular do
@@ -114,11 +128,12 @@ export default function MioloHome({ pares }: { pares: ParFolha[] }) {
   return (
     <>
       <MapaHome
+        agora={agora}
         fichas={visiveis.map((p) => p.ficha)}
         leituras={Object.fromEntries(visiveis.map((p) => [p.ficha.slug, p.leitura]))}
       />
       <PainelFiltros visiveis={visiveis.length} tetoDistanciaKm={tetoDistanciaKm} />
-      <FolhaTrilhas visiveis={visiveis} confia={confia} />
+      <FolhaTrilhas visiveis={visiveis} confia={confia} agora={agora} />
     </>
   );
 }
