@@ -11,21 +11,43 @@
 
 > *"queria continuar na próxima sessão"* — João, fim da sessão.
 
-## ▶ SE ELE DISSER SÓ "CONTINUA": leia as CINCO abaixo, na ordem. Nada de menu.
+## ▶ ELE DIGITOU "CONTINUA"? FAÇA A TAREFA ÚNICA ABAIXO. NÃO PERGUNTE NADA.
 
-### ▶ 0. 🔵 O PRÓXIMO TIJOLO JÁ ESTÁ MEDIDO — comece por ele
+> 🔴 **A regra, e ela vale mais que o resto do arquivo:** *"continua"* significa **construir**, não
+> levantar opções. Não ofereça menu, não peça confirmação pra começar, não abra o dia com pergunta.
+> Ele já disse duas vezes o que quer — *"estás saindo do contexto"* e ***"o foco é o aplicativo"***.
+>
+> **Tudo o que depende dele está na segunda metade deste bloco, marcado ⛔ NÃO É TAREFA.** Não
+> comece por lá, e não transforme nada de lá em pergunta de abertura.
+>
+> Só pare e pergunte se a TAREFA ÚNICA já estiver feita **e conferida no ar** — aí sim, diga o que
+> achou de próximo e siga.
+
+---
+
+## ✅ A TAREFA ÚNICA — os tiles do mapa no aquecimento offline
 
 **O aquecimento offline guarda o HTML da ficha e NÃO guarda os tiles do mapa.** Instalar, sair de
 casa e abrir uma ficha aquecida dá a ficha inteira **com um retângulo em branco** no lugar do mapa —
 e o mapa é justamente o que orienta onde o texto não orienta (é a régua dele: *"sem cidade grande
 conhecida por perto, referência textual falha; mostrar > descrever"*).
 
-**Medido no HTML servido, não estimado:**
+**MEDIDO, não estimado — e o número foi buscado no ar em 12/09:**
 
-| página | tiles distintos no HTML |
-|---|---|
-| uma ficha | **15** |
-| a home | **10** |
+| | tiles distintos | bytes |
+|---|---|---|
+| uma ficha | 15 | ≈ 105 KB |
+| a home | 10 | ≈ 70 KB |
+| **as 3 fichas + a home, sem repetir** | **48** | **≈ 328 KB** |
+
+🔴 **E ESTE NÚMERO MUDA A CONVERSA, ao contrário do último.** O aquecimento das PÁGINAS custou
+**20 KB** e a ressalva de que "gastava os dados dele" estava superdimensionada. Aqui é **16× isso**
+— ainda é menos que uma foto de celular, e é **uma vez só, na instalação**, mas já não é um número
+que se ignora. **A decisão é dele se ele quiser opinar; se não quiser, siga com o plano abaixo e
+conte o número no fim.**
+
+⚠️ **Os 48 são MENOS que 15×3+10 = 55:** os tiles se repetem entre páginas. Quem dedupa é o
+`Set` — não conte duas vezes, e não guarde duas vezes.
 
 **O caminho já está desenhado, e é o mesmo truque que o aquecimento das fichas usa:** os `<img>` dos
 tiles estão **no HTML que o instalador acabou de baixar** — então dá pra extraí-los de lá, do mesmo
@@ -33,16 +55,41 @@ jeito que `fichasDoAcervo` extrai os links. Assim a lista de tiles **não tem co
 página pede**, porque ela É o que a página pede. Ver `src/lib/cache-rotas.ts`.
 
 ⚠️ **Duas coisas a decidir antes de escrever a primeira linha:**
-1. **Quanto isso pesa.** 15 tiles × 3 fichas + 10 da home ≈ 55 tiles. **MEÇA antes** (o custo das
-   páginas foi medido em 20 KB e a ressalva antiga estava superdimensionada por um fator grande —
-   pode acontecer o contrário aqui). O cache `bp-tiles-osm` tem teto de **120 entradas**.
-2. **A política de uso do OSM.** São tiles de terceiro, e baixar em lote na instalação é diferente de
-   baixar navegando. 55 é pouco; **mas confira**, e se for muito, aquecer só os tiles da HOME (10) já
-   resolve a porta de entrada.
+1. ~~**Quanto isso pesa**~~ ✅ **JÁ MEDIDO: 48 tiles, ≈ 328 KB** (tabela acima). O cache
+   `bp-tiles-osm` tem teto de **120 entradas**, então os 48 cabem com folga. Reconfira o número
+   antes de subir — o acervo pode ter crescido.
+2. **A política de uso do OSM.** São tiles de terceiro, e baixar em lote na instalação é diferente
+   de baixar navegando. **48 é pouco** — é o mesmo que uma pessoa buscaria navegando pelas quatro
+   telas —, mas confira a política antes. **Se decidir cortar, corte pela HOME primeiro** (10 tiles,
+   ~70 KB): ela é a porta que sempre abre, e o resto entra navegando.
+
+### 👉 OS PASSOS, na ordem — cada um já tem dono no código
+
+```bash
+# 1. MEDIR primeiro (a lição de 10/09: ressalva sem medição trava rodada à toa)
+curl -s https://bateperna.vercel.app/rampa-do-pepe \
+  | grep -oE 'https://tile\.openstreetmap\.org/[0-9]+/[0-9]+/[0-9]+\.png' | sort -u \
+  | while read u; do curl -s -o /dev/null -w "%{size_download}\n" "$u"; done \
+  | awk '{t+=$1} END {print t" bytes em "NR" tiles"}'
+```
+
+2. **`src/lib/cache-rotas.ts`** — `tilesDoHtml(html)` ao lado de `fichasDoAcervo`, com o mesmo
+   formato: extrai do HTML, dedup, teto próprio. O teto vem do `maxEntries` do `bp-tiles-osm` em
+   `sw.ts` (**120**), e há molde de guarda amarrando os dois números (ver `TETO_AQUECIMENTO`).
+3. **`aquecer()` no mesmo arquivo** — ela já recebe `buscar`/`gravar` injetados e já devolve o que
+   guardou. Os tiles entram lá, **nunca no listener do `sw.ts`** (lição do dia: código no `sw.ts` é
+   código sem prova).
+4. **`tests/lib/cache-rotas.test.ts`** — o molde existe: o `instalador()` falso, o guarda contra o
+   **HTML REAL** que a página rende (é o único que pega o markup mudando), e a não-vacuidade.
+5. **Medir mutação** com o script que **prova que mutou antes de rodar**. Mate pelo menos: o
+   extrator parando de achar tile · o teto sumindo · tile indo pro cache errado · a ficha parando
+   de ser aquecida junto.
+6. **Deploy + as três camadas**, e **abra o navegador**: instale limpo, desligue a rede, abra uma
+   ficha nunca visitada e **veja se o mapa aparece**. É a única prova que vale aqui.
 
 ---
 
-### ▶ 0-BIS. ✅ COMO CONFERIR UM DEPLOY (o comando e as três camadas)
+### 🔒 O RITUAL DE FECHAMENTO — vale pra ESTA tarefa e pra qualquer outra
 
 O `--scope` **não é opcional** — sem ele dá `Not authorized`:
 
@@ -63,7 +110,12 @@ envenenamento do cache pelo `?debug=`. Está contado na seção **2026-09-11/12*
 
 ---
 
-### ▶ 1. ⏳ O CELULAR — a dívida mais antiga e a única que máquina nenhuma paga
+# ⛔ DAQUI PRA BAIXO NÃO É TAREFA — é referência, e é coisa DELE
+
+> **Nada abaixo trava rodada nenhuma, e nada abaixo vira pergunta de abertura.** Está aqui pra ser
+> consultado quando ele tocar no assunto, e pra ninguém refazer o levantamento do zero.
+
+### ⛔ 1. O CELULAR — a dívida mais antiga e a única que máquina nenhuma paga
 
 Três rodadas mexeram na tela e **nenhum olho humano viu**: a serif da L3 (09/09), o âmbar do nível
 `cuidado` e as palavras de três comprimentos no carimbo (10/09). O roteiro, em ordem de rolagem:
@@ -79,7 +131,7 @@ Três rodadas mexeram na tela e **nenhum olho humano viu**: a serif da L3 (09/09
 `?debug=frio`. A home não tem esse atalho: o âmbar do cartão e do pin só na primeira chuva de
 verdade em Bonito.
 
-### ▶ 2. 🔵 DUAS PERGUNTAS DE PRODUTO NA MESA — e NENHUMA trava rodada
+### ⛔ 2. DUAS PERGUNTAS DE PRODUTO — dele, quando ele quiser. NÃO abra o dia com elas
 
 ⚠️ **ELE PEDIU EM 11/09 PRA PARAR DE SER ENTREVISTADO:** *"o principal, não é minhas informações
 agora, **o foco é o aplicativo**"*. As duas abaixo ficam como **opção dele quando quiser**, não
@@ -97,7 +149,7 @@ escrever nada**: o campo vazio já estaria certo, e a saída de subtração est�
 
 ---
 
-### ▶ 2-BIS. ✅ FECHADO EM 11/09 — o que ele respondeu
+### ⛔ 2-BIS. ✅ FECHADO EM 11/09 — o que ele respondeu (histórico, não é pendência)
 
 | pergunta | resposta dele |
 |---|---|
@@ -118,7 +170,7 @@ frase dizendo "isto pode estar mudando".
 
 ---
 
-### ▶ 2-TER. 🔴 O BURACO DE PROCEDÊNCIA ANTIGO (segue de pé, e é dos dois acima)
+### ⛔ 2-TER. O BURACO DE PROCEDÊNCIA ANTIGO (segue de pé, e é dos dois acima)
 
 **(a) A Pedra Furada se contradiz de um dia pro outro, na mesma tela.** No dia seco ela diz, com as
 palavras DELE, que *"o chão batido **retém menos água** que o barro"* (`secaRapido`). No dia de
@@ -133,7 +185,7 @@ não diz nada sobre o lugar.
 **Pergunte:** *"num dia seco, o que o trecho de terra da Véu tem de bom — como 'a serra firmou' é
 pra Rampa?"*
 
-### ▶ 3. 🔴 A ORDEM DA FICHA — e agora o argumento é do DOC DELE, não meu
+### ⛔ 3. A ORDEM DA FICHA — DECISÃO DELE. NÃO MEXA, e não pergunte de novo sem ele tocar no assunto
 
 O **REQ-1** ordena os campos: *(1) o prêmio … (6) frescor*. O **carimbo é o campo 6**, e a tela o
 põe **acima do campo 1**. Medido pelo `olho-de-tela`: a voz só aparece depois de rolar **1,1 a 1,3
@@ -143,7 +195,7 @@ serif itálico sem caixa**, 460–580px mais abaixo.
 importante do app pode ser remontada de cabeça pra baixo com a suíte verde.
 **Levantado em 09/09, 10/09 e 11/09. Ele não respondeu nenhuma das três. NÃO MEXA SOZINHO.**
 
-### ▶ 4. 🔵 O QUE SOBROU NA MESA, medido por dois agentes em 10/09
+### ⛔ 4. (histórico) A LISTA DE CANDIDATOS DE 10/09 — toda consumida em 11/09
 
 🔴 **A leitura em uma frase, e ela vale mais que a lista:** **sete dos dez itens que faltam do doc
 dele esperam por uma ficha que o acervo fechado não tem.** L2, L4, L6, REQ-3, REQ-4, REQ-6 e a
@@ -156,10 +208,10 @@ grande** e isso é lição:
 
 | candidato | estado |
 |---|---|
-| ``Guarda do 2º waypoint`` | ✅ feito (`d575df3`) |
-| ``Offline sem link morto`` | ✅ feito (`5cd1042`). ⚠️ **A ressalva "gasta os dados dele" estava superdimensionada:** as quatro páginas somam **20 KB comprimidos**. Não era decisão dele — era um número que ninguém tinha medido |
-| ```/trilhas` mostra mais`` | ✅ feito (`6f74f7b`), e a montagem foi extraída pro `fatos-da-trilha.ts` como o palpite previa |
-| ``Link compartilhado`` | ✅ feito (`6f83101`). Abriu o que se esperava: o 404 virou urgente **porque agora os links circulam** |
+| ~~Guarda do 2º waypoint~~ | ✅ feito (`d575df3`) |
+| ~~Offline sem link morto~~ | ✅ feito (`5cd1042`). ⚠️ **A ressalva "gasta os dados dele" estava superdimensionada:** as quatro páginas somam **20 KB comprimidos**. Não era decisão dele — era um número que ninguém tinha medido |
+| ~~`/trilhas` mostra mais~~ | ✅ feito (`6f74f7b`), e a montagem foi extraída pro `fatos-da-trilha.ts` como o palpite previa |
+| ~~Link compartilhado~~ | ✅ feito (`6f83101`). Abriu o que se esperava: o 404 virou urgente **porque agora os links circulam** |
 
 🔴 **A LIÇÃO DA TABELA, e ela é pra quem escrever a próxima:** três dos quatro custos estavam bons e
 **um estava errado o suficiente pra ter travado a rodada por meses**. Quando a ressalva for
