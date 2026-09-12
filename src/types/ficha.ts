@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PISOS } from "@/lib/piso";
 import { SEVERIDADES } from "@/lib/severidade";
+import { DIAS } from "@/lib/semana";
 
 export const waypointSchema = z.object({
   nome: z.string(),
@@ -156,6 +157,36 @@ export const fichaSchema = z.object({
       fecha: z.string().regex(/^\d{2}:\d{2}$/),
     })
     .optional(),
+  // OS DIAS DA SEMANA em que da pra entrar.
+  //
+  // 🔴 Ele nasceu do MESMO defeito que o `horario`, num eixo que nao existia
+  // (2026-09-11). A Rampa do Pepe virou "Eco Park" e passou a receber visita
+  // **so aos sabados e domingos** — e como ela nao tem `horario`, numa quarta
+  // seca o app dizia "Pode ir" e mandava a pessoa dirigir 178 km ate um portao
+  // trancado. O app afirmando mais do que sabe, pela terceira vez, e a decisao
+  // e a mesma das outras duas: **quando nao pode afirmar, ele para de afirmar.**
+  //
+  // 🔴 POR QUE NAO MORA DENTRO DE `horario`: a Rampa tem DIA e nao tem HORA.
+  // Ninguem disse a que horas ela abre. Aninhar `dias` no `horario` obrigaria
+  // a inventar um `abre`/`fecha` so pra poder declarar o sabado — geografia
+  // inventada com roupa de schema. Os dois eixos sao independentes: hora sem
+  // dia, dia sem hora, os dois, ou nenhum.
+  //
+  // Opcional pela regua de sempre: **ficha sem `dias` NUNCA fecha por dia.** O
+  // app nao sabe que aquele lugar folga, entao nao inventa uma folga.
+  //
+  // `.min(1)` porque `[]` significaria "nao abre nunca" — uma regra que fecha
+  // todo dia, irma da janela de chuva zerada que `coerencia-acervo` ja barra.
+  // Se um lugar fechou de vez, quem diz isso e a ausencia da ficha.
+  //
+  // ⚠️ A PROCEDENCIA DESTE DADO NA RAMPA E A INTERNET, NAO ELE — autorizada
+  // por ele em 2026-09-11 ("pode atualizar a hora pela internet"), e e o
+  // primeiro campo do acervo cuja fonte nao e a boca do dono do app. Fica dito
+  // aqui e em `docs/pesquisa-externa-2026-09-11.md`.
+  //
+  // Montado a partir de `DIAS`, nunca uma lista repetida aqui — e a ORDEM
+  // daquele array e o indice de `Date.getUTCDay()`. Ver `src/lib/semana.ts`.
+  dias: z.array(z.enum(DIAS)).min(1).optional(),
 });
 
 export type Waypoint = z.infer<typeof waypointSchema>;

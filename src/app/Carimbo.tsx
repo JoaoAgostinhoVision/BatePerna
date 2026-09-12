@@ -13,7 +13,7 @@ import {
   sintomaDe,
   subDe,
 } from "@/lib/carimbo-fase";
-import { fechadoAgora, rotuloAbertura, rotuloFaixa, type Horario } from "@/lib/horario";
+import { fechadoAgora, rotuloAbertura, rotuloFaixa, type Abertura } from "@/lib/horario";
 import type { Voz } from "@/lib/severidade";
 import { chuvaNoPiso, type Piso } from "@/lib/piso";
 import { carimboVenceu, horaCurtaRecife } from "@/lib/validade";
@@ -35,7 +35,7 @@ export default function Carimbo({
   slug,
   secaRapido,
   piso,
-  horario,
+  abertura,
   voz,
 }: {
   estado: Estado;
@@ -53,7 +53,7 @@ export default function Carimbo({
   piso?: Piso;
   /** A faixa de horário desta trilha. Sem ela, o carimbo NUNCA fecha e decide
    *  só pela chuva, como sempre fez. Ver `src/lib/horario.ts`. */
-  horario?: Horario;
+  abertura?: Abertura;
   /** O nível de severidade desta trilha e a janela da própria ficha — é daqui
    *  que saem as palavras do ramo molhado. Obrigatório de propósito: com
    *  padrão, uma ficha nova entraria calada herdando a voz da Rampa, que é o
@@ -194,7 +194,7 @@ export default function Carimbo({
   }, [tentar]);
 
   const { estado: estadoAtual, erro: erroAtual, calculadoEm: calculadoEmAtual } = leitura;
-  const fechado = fechadoAgora(horario, agora);
+  const fechado = fechadoAgora(abertura, agora);
   const situacao = { conferindo, erro: erroAtual, venceu, falhou, fechado };
   const fase = faseDe(situacao);
   const sintoma = sintomaDe(situacao);
@@ -218,7 +218,7 @@ export default function Carimbo({
   // MESMAS do selo do cartão, e escritas à mão nos dois elas já podiam
   // divergir. Ver `carimbo-fase.ts`.
   const marca = marcaDe(fase, estadoAtual, voz);
-  const sub = subDe(fase, estadoAtual, voz, fechado && horario ? rotuloAbertura(horario, agora!) : null);
+  const sub = subDe(fase, estadoAtual, voz, fechado ? rotuloAbertura(abertura!, agora!) : null);
 
   // 🔴 Fechado, o pulso PARA e a linha viva não fala de chuva. Ela existe pra
   // dizer "esta leitura é de agora" — e com o lugar fechado a leitura de chuva
@@ -237,7 +237,7 @@ export default function Carimbo({
         <div className="sub">{sub}</div>
       </div>
       <p className="reason">
-        {motivo(fase, sintoma, estadoAtual, calculadoEmAtual, pass, fut, secaRapido, piso, horario)}
+        {motivo(fase, sintoma, estadoAtual, calculadoEmAtual, pass, fut, secaRapido, piso, abertura)}
       </p>
       <div className="live">
         <span className="pulse"></span>
@@ -308,13 +308,13 @@ function motivo(
   fut: number,
   secaRapido?: string,
   piso?: Piso,
-  horario?: Horario,
+  abertura?: Abertura,
 ) {
   // Primeiro de todos, pela mesma razão que `fechado` ganha em `faseDe`: com o
   // lugar fechado, contar da chuva é responder a pergunta errada. E a frase diz
   // as HORAS e mais nada — o nome da coisa que fecha não mora no código.
-  if (fase === "fechado" && horario) {
-    return <>{rotuloFaixa(horario)}</>;
+  if (fase === "fechado" && abertura) {
+    return <>{rotuloFaixa(abertura)}</>;
   }
   if (fase === "conferindo") {
     return sintoma === "venceu" ? (

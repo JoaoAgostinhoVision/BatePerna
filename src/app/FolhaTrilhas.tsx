@@ -2,7 +2,7 @@
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { SEM_FILTRO } from "@/lib/filtros";
-import { fechadoAgora } from "@/lib/horario";
+import { aberturaDaFicha, fechadoAgora, type Agora } from "@/lib/horario";
 import { tomDe } from "@/lib/severidade";
 import CartaoTrilha from "./CartaoTrilha";
 import { useMexerFiltros } from "./filtros";
@@ -136,7 +136,7 @@ export default function FolhaTrilhas({
     // caindo sob "Hoje não" — o título contradizendo o cartão embaixo dele, que
     // é a mesma família do selo verde dizendo "Não vá".
     const tomDaqui = (p: ParFolha) =>
-      fechadoAgora(p.ficha.horario, agora)
+      fechadoAgora(aberturaDaFicha(p.ficha), agora)
         ? "frio"
         : tomDe(atual(p).estado, p.ficha.condicao.severidade);
 
@@ -182,7 +182,7 @@ const TITULO_CUIDADO = "Dá, com cuidado";
  *  grupo que o filtro esvaziou — o cabeçalho é uma AFIRMAÇÃO sobre o que está
  *  embaixo dele, e sem nada embaixo ele mente. Teste: "grupo esvaziado pelo
  *  filtro perde o cabeçalho". */
-function grupo(titulo: string, lista: ParFolha[], agora: number | null) {
+function grupo(titulo: string, lista: ParFolha[], agora: Agora | null) {
   if (lista.length === 0) return null;
   return (
     <>

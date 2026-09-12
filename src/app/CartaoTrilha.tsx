@@ -9,6 +9,7 @@ import {
 // `piso.ts` é puro de propósito — sem zod e sem `node:fs` — e é por isso que um
 // client component pode lê-lo direto. A razão inteira está escrita lá.
 import { rotuloPiso } from "@/lib/piso";
+import { aberturaDaFicha, type Agora } from "@/lib/horario";
 import { tomDe, vozDaFicha } from "@/lib/severidade";
 import { coordDe } from "@/lib/local";
 import SeloTrilha from "./SeloTrilha";
@@ -42,7 +43,7 @@ export default function CartaoTrilha({
    *  e não de um hook daqui: são N cartões, e um hook por cartão faria o número
    *  de hooks variar com o tamanho da lista. Quem chama `useAgoraRecife` é a
    *  folha, uma vez só. */
-  agora?: number | null;
+  agora?: Agora | null;
 }) {
   const leitura = useLeitura(ficha.slug) ?? inicial;
 
@@ -107,7 +108,7 @@ export default function CartaoTrilha({
         <span className="cartao-nome">{ficha.trajeto.waypoints[0].nome}</span>
         <SeloTrilha
           leitura={leitura}
-          horario={ficha.horario}
+          abertura={aberturaDaFicha(ficha)}
           voz={vozDaFicha(ficha.condicao)}
           agora={agora}
         />

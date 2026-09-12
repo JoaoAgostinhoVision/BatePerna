@@ -1,7 +1,7 @@
 "use client";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { faseDe, marcaDe, subDe } from "@/lib/carimbo-fase";
-import { fechadoAgora, rotuloAbertura, type Horario } from "@/lib/horario";
+import { fechadoAgora, rotuloAbertura, type Abertura, type Agora } from "@/lib/horario";
 import type { Voz } from "@/lib/severidade";
 import { useVenceu } from "./useVenceu";
 
@@ -24,7 +24,7 @@ import { useVenceu } from "./useVenceu";
  *  da lista. */
 export default function SeloTrilha({
   leitura,
-  horario,
+  abertura,
   voz,
   agora = null,
 }: {
@@ -32,19 +32,20 @@ export default function SeloTrilha({
   /** A voz da trilha deste cartão. Mesma fonte do carimbo da ficha — o selo é
    *  o irmão pequeno, não um segundo vocabulário. */
   voz: Voz;
-  /** A faixa de horário desta trilha. Sem ela, o selo nunca fecha. */
-  horario?: Horario;
-  /** Minutos desde a meia-noite em Recife, ou `null` antes de o relógio falar. */
-  agora?: number | null;
+  /** Quando esta trilha abre — hora, dias, ou os dois. Sem ela, o selo nunca
+   *  fecha. Montada por `aberturaDaFicha`, nunca à mão. */
+  abertura?: Abertura;
+  /** O relógio de Recife, ou `null` antes de ele falar. */
+  agora?: Agora | null;
 }) {
   const venceu = useVenceu(leitura.calculadoEm);
-  const fechado = fechadoAgora(horario, agora);
+  const fechado = fechadoAgora(abertura, agora);
   const fase = faseDe({ conferindo: false, erro: leitura.erro, venceu, falhou: false, fechado });
 
   // A MESMA palavra e a MESMA linha de baixo do carimbo da ficha, da mesma
   // fonte — o selo é o irmão pequeno, não um segundo vocabulário.
   const marca = marcaDe(fase, leitura.estado, voz);
-  const sub = subDe(fase, leitura.estado, voz, fechado && horario ? rotuloAbertura(horario, agora!) : null);
+  const sub = subDe(fase, leitura.estado, voz, fechado ? rotuloAbertura(abertura!, agora!) : null);
 
   return (
     <span className="selo" data-fase={fase}>

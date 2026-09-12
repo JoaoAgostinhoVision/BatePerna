@@ -5,6 +5,7 @@ import { render, cleanup, act, waitFor } from "@testing-library/react";
 import { regraDe, semComentarios, valorDe } from "../css";
 import MapaHome from "@/app/MapaHome";
 import MioloHome from "@/app/MioloHome";
+import { agoraRecife } from "@/lib/horario";
 import CartaoTrilha from "@/app/CartaoTrilha";
 import type { ParFolha } from "@/app/FolhaTrilhas";
 import FiltrosVivos from "@/app/filtros";
@@ -178,10 +179,18 @@ describe("MapaHome", () => {
     try {
       const slug = fichas[0].slug;
       const comHorario = [{ ...fichas[0], horario: { abre: "05:00", fecha: "17:00" } }];
+      // 🔴 O RELÓGIO DO CARTÃO SAI DO MESMO INSTANTE QUE O DO MAPA. Desde que a
+      // pergunta ganhou o eixo do DIA (2026-09-11), `agora` carrega hora E dia —
+      // e escrever `18 * 60` à mão aqui deixaria o dia da semana implícito. O
+      // mapa lê o relógio pelo hook; o cartão recebe por prop; se as duas metades
+      // viessem de fontes diferentes, este teste voltaria a comparar duas telas
+      // que não estão no mesmo instante, que é exatamente o que ele existe pra
+      // impedir.
+      const instante = agoraRecife(Date.UTC(2027, 0, 15, 21, 0) / 1000);
       const { container } = render(
         <>
           <MapaHome fichas={comHorario} leituras={leituras} />
-          <CartaoTrilha ficha={comHorario[0]} inicial={leituras[slug]} agora={18 * 60} />
+          <CartaoTrilha ficha={comHorario[0]} inicial={leituras[slug]} agora={instante} />
         </>,
       );
       expect(container.querySelector(`.pin-home[href="#${slug}"]`)?.getAttribute("data-fase"))

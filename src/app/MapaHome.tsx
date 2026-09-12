@@ -19,6 +19,7 @@ import { coordDe } from "@/lib/local";
 import { useLocal } from "./local";
 import BuscaLugar from "./BuscaLugar";
 import PinTrilha from "./PinTrilha";
+import { aberturaDaFicha } from "@/lib/horario";
 import { useAgoraRecife } from "./useAgoraRecife";
 
 /** O mapa da home: onde ficam as trilhas de hoje.
@@ -244,7 +245,7 @@ export default function MapaHome({
                   left={left}
                   top={top}
                   inicial={leitura}
-                  horario={f.horario}
+                  abertura={aberturaDaFicha(f)}
                   severidade={f.condicao.severidade}
                   agora={agora}
                 />

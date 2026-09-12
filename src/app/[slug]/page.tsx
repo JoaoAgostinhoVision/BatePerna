@@ -4,7 +4,7 @@ import { resolverEstado } from "@/lib/carimbo-estado";
 import { rotuloPiso } from "@/lib/piso";
 import { vozDaFicha } from "@/lib/severidade";
 import { faseDe } from "@/lib/carimbo-fase";
-import { rotuloHora } from "@/lib/horario";
+import { aberturaDaFicha, rotuloHora } from "@/lib/horario";
 import { notFound } from "next/navigation";
 import ConfirmarFui from "../ConfirmarFui";
 import MapaEstatico from "../MapaEstatico";
@@ -145,7 +145,7 @@ export default async function Ficha({
             secaRapido={ficha.secaRapido}
             piso={ficha.piso}
             voz={vozDaFicha(ficha.condicao)}
-            horario={ficha.horario}
+            abertura={aberturaDaFicha(ficha)}
           />
         </div>
 

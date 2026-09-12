@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { Profiler, StrictMode } from "react";
@@ -22,7 +23,12 @@ afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
  *  a sua língua é `tests/lib/severidade.test.ts`. */
 const VOZ_RAMPA = { severidade: "nao-va", horasPassado: 6 } as const;
 
-type Props = { estado: "fresco" | "frio"; erro: boolean; calculadoEm: number; pass: number; fut: number; slug: string; secaRapido?: string; piso?: Piso; horario?: { abre: string; fecha: string } };
+// 🔴 DERIVADO DO COMPONENTE, e não escrito à mão (2026-09-11). Esta linha era
+// uma CÓPIA das props do Carimbo, e como toda cópia ela envelheceu em silêncio:
+// já tinha perdido a prop `voz` e, quando `horario` virou `abertura`, o `tsc`
+// acusou o teste em vez do defeito. Uma fonte só — a mesma régua que o
+// `marcaDe` e o `vozDaFicha` seguem no produto.
+type Props = ComponentProps<typeof Carimbo>;
 
 function montar(props: Partial<Props> = {}) {
   return render(
@@ -412,7 +418,7 @@ describe("Carimbo — a cor acompanha a leitura que está na tela", () => {
     const { container } = montarNaMoldura({
       estado: "fresco",
       calculadoEm: Math.floor(Date.UTC(2027, 0, 15, 21, 0) / 1000),
-      horario: { abre: "05:00", fecha: "17:00" },
+      abertura: { horario: { abre: "05:00", fecha: "17:00" } },
     });
     const moldura = container.querySelector("main.bp");
 
@@ -745,7 +751,7 @@ describe("Carimbo — a hora, e não só a chuva", () => {
 
   it("18h com céu limpo: FECHADO — era isto que dizia 'Pode ir'", () => {
     const calculadoEm = asHoras(18);
-    const { container } = montar({ horario: PEDRA, calculadoEm });
+    const { container } = montar({ abertura: { horario: PEDRA }, calculadoEm });
     expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
     expect(container.querySelector(".sub")?.textContent).toBe("abre amanhã às 5h");
     expect(container.querySelector(".reason")?.textContent).toBe("Fecha às 17h, abre às 5h.");
@@ -756,14 +762,14 @@ describe("Carimbo — a hora, e não só a chuva", () => {
   // a diferença entre perder o dia e só esperar.
   it("4h da manhã: fechado também, mas abre HOJE", () => {
     const calculadoEm = asHoras(4);
-    const { container } = montar({ horario: PEDRA, calculadoEm });
+    const { container } = montar({ abertura: { horario: PEDRA }, calculadoEm });
     expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
     expect(container.querySelector(".sub")?.textContent).toBe("abre às 5h");
   });
 
   it("dentro da faixa, o carimbo volta a falar de chuva", () => {
     const calculadoEm = asHoras(9);
-    const { container } = montar({ horario: PEDRA, calculadoEm });
+    const { container } = montar({ abertura: { horario: PEDRA }, calculadoEm });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
     expect(container.querySelector(".decision")?.getAttribute("data-fase")).toBe("afirmando");
   });
@@ -774,7 +780,7 @@ describe("Carimbo — a hora, e não só a chuva", () => {
   // fechou, e "SEM INFORMAÇÕES · tome cuidado" ali convidaria a tentar.
   it("com leitura VENCIDA e o lugar fechado, quem vence é o fechado", () => {
     asHoras(18);
-    const { container } = montar({ horario: PEDRA, calculadoEm: AGORA_S });
+    const { container } = montar({ abertura: { horario: PEDRA }, calculadoEm: AGORA_S });
     expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
   });
 
@@ -792,7 +798,7 @@ describe("Carimbo — a hora, e não só a chuva", () => {
   // não é o que decide. Mesma família do pulso ao lado de "SEM INFORMAÇÕES".
   it("fechado, a linha viva para de falar de chuva", () => {
     const calculadoEm = asHoras(18);
-    const { container } = montar({ horario: PEDRA, calculadoEm });
+    const { container } = montar({ abertura: { horario: PEDRA }, calculadoEm });
     expect(container.querySelector(".live")?.textContent).toBe("fora do horário de agora");
   });
 

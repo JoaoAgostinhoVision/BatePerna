@@ -25,7 +25,20 @@ const { resolverEstados } = await import("@/lib/carimbo-estado");
 const Home = (await import("@/app/page")).default;
 const SeloTrilha = (await import("@/app/SeloTrilha")).default;
 
-const AGORA_S = Math.floor(Date.UTC(2027, 0, 15, 11, 0) / 1000);
+// 🔴 O DIA DA SEMANA DESTE INSTANTE É LOAD-BEARING DESDE 2026-09-11, e antes
+// não era. 16/01/2027 é um SÁBADO — dia em que a Rampa do Pepê abre. Era uma
+// SEXTA até hoje, e a mudança não é gosto: com a Rampa declarando
+// `dias: ["sab","dom"]`, a fase `fechado` ganha de todas as outras, e o selo
+// dela passava a dizer "Fechado agora" em vez do veredito de chuva. Todos os
+// testes deste arquivo que medem a palavra do carimbo viravam **testes de
+// calendário**: passariam no fim de semana e cairiam na segunda.
+//
+// ⚠️ E um deles passaria pelo MOTIVO ERRADO sem cair nunca — "sem leitura,
+// informa em vez de mandar" afirma que "Não vá" NÃO aparece, e num dia útil
+// isso é verdade porque a Rampa está fechada, não porque a leitura falhou. É a
+// espécie do "fixture rejeitado pela guarda ERRADA" (10/09): a asserção certa,
+// verde pelo motivo errado.
+const AGORA_S = Math.floor(Date.UTC(2027, 0, 16, 11, 0) / 1000);
 
 function leituras(estado: "fresco" | "frio", erro = false) {
   return new Map(

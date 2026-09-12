@@ -199,6 +199,17 @@ describe("a ficha de verdade", () => {
 // verde do app perde a explicação em produção — que é o defeito de 2026-08-26
 // só que mudo em vez de mentiroso.
 describe("a frase de relevo atravessa da ficha até a tela", () => {
+  // 🔴 O RELÓGIO É FIXADO NUM SÁBADO, e não é detalhe de conforto (2026-09-11).
+  // A Rampa passou a declarar `dias: ["sab","dom"]`, e a fase `fechado` GANHA
+  // de todas as outras — inclusive da frase de chuva que este bloco mede. Sem
+  // fixar o dia, este teste passava de sexta a domingo e caía de segunda a
+  // sexta: **um teste de calendário disfarçado de teste de relevo**. É a mesma
+  // espécie do "fixture rejeitado pela guarda ERRADA" (10/09): quando o módulo
+  // tem duas guardas em sequência, o caso de uma tem que passar limpo pela
+  // outra.
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(Date.UTC(2027, 0, 16, 15, 0)); }); // sábado, 12h Recife
+  afterEach(() => { vi.useRealTimers(); });
+
   it("a página entrega ao carimbo o que a ficha REAL diz", async () => {
     const f = getFicha("rampa-do-pepe")!;
     expect(f.secaRapido, "a Rampa perdeu a frase dela — este teste ficaria oco").toBeTruthy();
@@ -301,7 +312,8 @@ describe("o horário atravessa da ficha até o carimbo", () => {
   // 🔴 O PAR QUE PROTEGE A RAMPA, e ele não é redundante: com `horario` cravado
   // à mão na página, o teste de cima passaria (é o horário da Pedra Furada) e
   // SÓ CAI aqui — a Rampa passaria a fechar num horário que ninguém deu.
-  it("a ficha REAL sem horário continua decidindo só pela chuva, às 18h", async () => {
+  it("a ficha REAL sem horário não fecha por HORA — nem às 18h de um dia em que abre", async () => {
+    vi.setSystemTime(Date.UTC(2027, 0, 16, 21, 0)); // SÁBADO, 18h em Recife
     const f = getFicha("rampa-do-pepe")!;
     expect(f.horario, "a Rampa ganhou horário — este par perdeu o sentido").toBeUndefined();
     const { container } = await abrir("rampa-do-pepe");
@@ -309,7 +321,54 @@ describe("o horário atravessa da ficha até o carimbo", () => {
   });
 });
 
+// 🔴 O EIXO NOVO (2026-09-11), e o defeito que ele tranca: a Rampa do Pepê
+// recebe visita **só aos sábados e domingos**, e como ela não tem `horario`
+// nenhum o app dizia "Pode ir" numa quarta-feira seca — mandando a pessoa
+// dirigir 178 km até um portão trancado. Mesma família do "Pode ir" às 18h que
+// o bloco de cima tranca, num eixo que o app não tinha.
+describe("o dia da semana atravessa da ficha até o carimbo", () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  // Varre a SEMANA INTEIRA, e não um dia escolhido a dedo: um teste que só
+  // olhasse a quarta passaria com `dias` lido ao contrário (fechado quando
+  // devia abrir), e um que só olhasse o sábado passaria com o campo ignorado.
+  // Os dois lados da régua, nos sete dias.
+  it("a ficha REAL fecha nos cinco dias em que não abre, e só neles", async () => {
+    const f = getFicha("rampa-do-pepe")!;
+    expect(f.dias, "a Rampa perdeu os dias — este teste ficaria oco").toEqual(["sab", "dom"]);
+
+    // 2027-01-17 é um domingo; sete dias a partir dele cobrem a semana toda.
+    const fechados: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      vi.setSystemTime(Date.UTC(2027, 0, 17 + i, 15, 0)); // meio-dia em Recife
+      const { container, unmount } = await abrir("rampa-do-pepe");
+      if (container.querySelector(".mark")?.textContent === "Fechado agora") {
+        fechados.push(["dom", "seg", "ter", "qua", "qui", "sex", "sab"][(i) % 7]);
+      }
+      unmount();
+    }
+    expect(fechados).toEqual(["seg", "ter", "qua", "qui", "sex"]);
+  });
+
+  // A frase do motivo, e ela é a metade que a pessoa lê pra saber QUANDO voltar.
+  // Montada a partir da própria ficha: ele pode mudar os dias sem que o teste
+  // vire manutenção.
+  it("fechada pelo dia, a ficha diz quando abre — não fala de chuva", async () => {
+    vi.setSystemTime(Date.UTC(2027, 0, 20, 15, 0)); // quarta, meio-dia em Recife
+    const { container } = await abrir("rampa-do-pepe");
+    expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    expect(container.querySelector(".sub")?.textContent).toBe("abre sábado");
+    expect(container.querySelector(".reason")?.textContent).toBe("Abre sábado e domingo.");
+  });
+});
+
 describe("o piso atravessa da ficha até a linha molhada do carimbo", () => {
+  // Mesma razão do bloco de relevo acima: sem o sábado, a fase `fechado` come
+  // a frase do piso e este teste vira um teste de calendário.
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(Date.UTC(2027, 0, 16, 15, 0)); }); // sábado, 12h Recife
+  afterEach(() => { vi.useRealTimers(); });
+
   it("a página entrega ao carimbo o piso da ficha REAL", async () => {
     const f = getFicha("rampa-do-pepe")!;
     expect(f.piso, "a Rampa perdeu o piso — este teste ficaria oco").toBe("barro");

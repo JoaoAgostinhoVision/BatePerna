@@ -422,6 +422,39 @@ entram os dois horários.
 
 ---
 
+## Os dias da semana — `dias`
+
+**Pergunta:** esse lugar abre todo dia, ou tem dia que não abre? Se tiver, **em que
+dias ele abre?**
+
+**Por que importa:** é o irmão do `horario` num eixo que o app não tinha até
+2026-09-11 — e o defeito era o mesmo, só que pior. A Rampa do Pepê virou "Eco Park" e
+passou a receber visita **só aos sábados e domingos**; como ela não tem `horario`
+nenhum, numa quarta-feira seca o app dizia *"Pode ir"* e mandava a pessoa dirigir
+178 km até um portão trancado. Respondido, a ficha e o cartão passam a dizer
+**"Fechado agora · abre sábado"**, e a trilha sai do grupo *"Hoje o tempo deixa"*.
+
+**Se abrir todo dia, não responda:** ficha sem o campo **nunca fecha por dia**. O app
+não sabe que aquele lugar folga, então não inventa uma folga.
+
+⚠️ **Este campo é independente do `horario`, de propósito.** Um lugar pode ter dia
+sem hora (a Rampa: ninguém sabe a que horas ela abre), hora sem dia (a Pedra Furada),
+os dois, ou nenhum. Não é preciso inventar um horário pra poder declarar o sábado.
+
+⚠️ **Se o lugar fechou de vez, isto não é o campo.** Uma lista vazia seria uma regra
+que fecha todos os dias; quem diz "fechou de vez" é a ficha sair do acervo.
+
+**As sete palavras aceitas:** `dom` `seg` `ter` `qua` `qui` `sex` `sab`.
+
+**Exemplo (Rampa do Pepê):** `dias: ["sab", "dom"]`
+
+🔵 **A procedência desta resposta na Rampa é a INTERNET, não você** — autorizada por
+você em 2026-09-11 (*"pode atualizar a hora pela internet"*). É o primeiro campo do
+acervo cuja fonte não é a sua boca, e está registrado em
+`docs/pesquisa-externa-2026-09-11.md`. Se estiver errado, quem manda é você.
+
+---
+
 ## O que acontece depois de responder
 
 Cada conjunto de respostas vira um arquivo JSON novo em `content/fichas/` (um arquivo
@@ -431,8 +464,8 @@ recusa carregar em vez de mostrar algo quebrado. Depois de validado, a ficha nov
 aparece sozinha na home (agrupada por "hoje dá" ou "hoje não dá", junto com o pin no
 mapa) e no acervo em `/trilhas` — sem precisar mexer em mais nada.
 
-**Cinco respostas são opcionais**, e pular qualquer uma delas não impede a ficha de
-carregar. A régua é a mesma nas cinco — são **fato de roteiro**, quem responde é quem
+**Seis respostas são opcionais**, e pular qualquer uma delas não impede a ficha de
+carregar. A régua é a mesma nas seis — são **fato de roteiro**, quem responde é quem
 conhece o lugar, e onde falta o dado **o app cala em vez de inventar**:
 
 - `piso` — sem ele, a ficha não mostra a linha do chão da via, e o carimbo não diz o
@@ -442,7 +475,10 @@ conhece o lugar, e onde falta o dado **o app cala em vez de inventar**:
 - `carroComum` — sem ele, o app não afirma nada sobre que carro chega. Repare que
   **"não" é uma afirmação** ("carro comum não chega"); deixar em branco é silêncio, e
   as duas coisas são diferentes.
-- `horario` — sem ele, a ficha **nunca fecha**, e o carimbo decide só pela chuva.
+- `horario` — sem ele, a ficha **nunca fecha** por hora, e o carimbo decide só pela
+  chuva.
+- `dias` — sem ele, a ficha **nunca fecha por dia da semana**: o app não sabe que
+  aquele lugar folga, então não afirma que folgou.
 - `custo.curto` — numa ficha paga sem ele, o chip do topo mostra **só o preço**, e o
   app não diz onde se paga.
 

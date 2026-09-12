@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { getAllFichas } from "@/lib/ficha";
 import { PISOS } from "@/lib/piso";
+import { DIAS } from "@/lib/semana";
 import type { Ficha } from "@/types/ficha";
 
 /** 🔴 POR QUE ESTE ARQUIVO EXISTE — e é uma medição, não uma intuição.
@@ -239,6 +240,63 @@ describe("coerência do acervo — varre TODAS as fichas, nunca uma lista de slu
       .toContain("precoCurto");
     expect(src, "o regex de preço da página mudou; atualize o PRECO deste arquivo junto")
       .toContain(PRECO.source);
+  });
+});
+
+/** 🔴 OS DIAS DA SEMANA — e o único campo do acervo cuja fonte NÃO é ele.
+ *
+ *  `dias` entrou em 2026-09-11, e a resposta da Rampa do Pepê veio da INTERNET,
+ *  com autorização dele (*"pode atualizar a hora pela internet"*). Isso muda o
+ *  que um guarda pode fazer aqui: em todo outro campo, um teste que soubesse o
+ *  dado seria geografia inventada com roupa de prova. **Aqui também** — então
+ *  nada abaixo afirma em QUE dias um lugar abre.
+ *
+ *  O que dá pra provar é a COERÊNCIA, que é a régua deste arquivo inteiro. */
+describe("os dias da semana, no acervo", () => {
+  const comDias = fichas.filter((f) => f.dias?.length);
+
+  // 🔴 NÃO-VACUIDADE: os testes abaixo são laços sobre as fichas que TÊM o
+  // campo. Com zero fichas declarando dias, todos passariam vazios — a espécie
+  // "prova que passa por não ter o que provar". O número é cravado a mão, como
+  // o do topo deste arquivo.
+  it("alguma ficha exercita o campo — senão os guardas abaixo ficam ocos", () => {
+    expect(
+      comDias.length,
+      "nenhuma ficha declara dias: o eixo do dia virou máquina sem uso, que é " +
+        "exatamente o que o `modos` é hoje.",
+    ).toBeGreaterThanOrEqual(1);
+  });
+
+  // Mata: `dias: ["sab","sab"]`, que faz a tela dizer "Abre sábado e sábado.".
+  // E `dias: ["Sab"]`, que o schema pega hoje — mas só porque o enum é montado
+  // a partir de DIAS; no dia em que virar `z.string()`, este guarda continua.
+  it("nenhuma ficha repete um dia nem inventa um nome de dia", () => {
+    for (const f of comDias) {
+      const d = f.dias!;
+      expect(new Set(d).size, f.slug + ": repetiu um dia").toBe(d.length);
+      expect(
+        d.filter((x) => !DIAS.includes(x)),
+        f.slug + ": nome de dia que não existe na escala",
+      ).toEqual([]);
+    }
+  });
+
+  // 🔴 Mata: `dias` com os SETE dias. Declarar a semana inteira é o mesmo que
+  // não declarar nada — e as duas coisas não são iguais no repositório: a ficha
+  // com os sete carrega um dado que nunca muda veredito, e quem ler o JSON acha
+  // que o app está checando algo que ele não checa. Ausente é silêncio, e aqui
+  // o silêncio é o certo — mesma régua do `piso` e do `secaRapido`.
+  //
+  // Irmã da janela de chuva zerada, do outro lado: lá era a regra que nunca
+  // fecha; aqui é a regra que nunca age.
+  it("nenhuma ficha declara a semana inteira — isso é o mesmo que não declarar", () => {
+    for (const f of comDias) {
+      expect(
+        f.dias!.length,
+        f.slug + " declara os sete dias: o campo não muda veredito nenhum e some " +
+          "da ficha sem perda nenhuma.",
+      ).toBeLessThan(7);
+    }
   });
 });
 

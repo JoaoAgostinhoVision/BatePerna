@@ -46,5 +46,9 @@
     "tag": "pago",
     "valor": "R$ 5 por pessoa · cobrado no portão da entrada",
     "curto": "R$ 5 · portão"
-  }
+  },
+  "dias": [
+    "sab",
+    "dom"
+  ]
 }

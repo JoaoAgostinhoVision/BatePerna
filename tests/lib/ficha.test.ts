@@ -150,6 +150,48 @@ describe("esforco e duracao saíram do schema", () => {
 // deixaria de estourar (zod descarta chave desconhecida em silêncio), o que
 // faria o primeiro deles falhar por razão errada em vez de simplesmente não
 // existir mais.
+// 🔴 M13, MEDIDA E SOBREVIVENTE NA PRIMEIRA VARREDURA (2026-09-11): apagar o
+// `.min(1)` do campo `dias` deixava a suite inteira verde. O guarda do acervo
+// nao alcanca isto — ele varre as fichas REAIS, e nenhuma delas tem lista
+// vazia. Quem tem que recusar `dias: []` e o schema, na porta de entrada.
+//
+// E `[]` nao e um detalhe: significa "nao abre em dia nenhum" — uma regra que
+// fecha todos os dias, irma da janela de chuva zerada que `coerencia-acervo`
+// ja barra. Se um lugar fechou de vez, quem diz isso e a ficha sair do acervo.
+describe("dias da semana", () => {
+  const base = JSON.parse(readFileSync(
+    path.join(process.cwd(), "content", "fichas", "rampa-do-pepe.json"), "utf8"));
+
+  it("lista VAZIA nao valida — seria a regra que fecha todo dia", () => {
+    expect(() => fichaSchema.parse({ ...base, dias: [] })).toThrow();
+  });
+
+  it("nome de dia que nao existe na escala nao valida", () => {
+    expect(() => fichaSchema.parse({ ...base, dias: ["sabado"] })).toThrow();
+    expect(() => fichaSchema.parse({ ...base, dias: ["SAB"] })).toThrow();
+  });
+
+  it("aceita as sete palavras da escala", () => {
+    for (const d of ["dom", "seg", "ter", "qua", "qui", "sex", "sab"]) {
+      expect(() => fichaSchema.parse({ ...base, dias: [d] })).not.toThrow();
+    }
+  });
+
+  // A Rampa REAL traz o campo desde 2026-09-11, entao a fixture apaga o campo a
+  // mao — mesmo cuidado do teste de `piso` logo abaixo: este teste e sobre o
+  // SCHEMA aceitar a ausencia, nao sobre o conteudo de hoje da Rampa.
+  it("ficha SEM dias valida — e opcional, e ausente e silencio", () => {
+    const { dias: _dias, ...semDias } = base;
+    expect(() => fichaSchema.parse(semDias)).not.toThrow();
+    expect(fichaSchema.parse(semDias).dias).toBeUndefined();
+  });
+
+  // A ficha REAL. Sintetica prova a funcao; so a real prova o conteudo.
+  it("a Rampa REAL declara sabado e domingo", () => {
+    expect(fichaSchema.parse(base).dias).toEqual(["sab", "dom"]);
+  });
+});
+
 describe("piso", () => {
   const base = JSON.parse(readFileSync(
     path.join(process.cwd(), "content", "fichas", "rampa-do-pepe.json"), "utf8"));

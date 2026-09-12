@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { minutosDoDiaRecife } from "@/lib/horario";
+import { agoraRecife, type Agora } from "@/lib/horario";
 
 /** Que horas são em Recife, em minutos desde a meia-noite — ou `null`.
  *
@@ -23,10 +23,10 @@ import { minutosDoDiaRecife } from "@/lib/horario";
  *  O intervalo é de um minuto porque a unidade da resposta é o minuto — e ele
  *  serve a tela aberta na mão; quem cobre o celular no bolso são os gatilhos de
  *  `visibilitychange`/`pageshow` que o `Carimbo` e o `HomeViva` já registram. */
-export function useAgoraRecife(): number | null {
-  const [agora, setAgora] = useState<number | null>(null);
+export function useAgoraRecife(): Agora | null {
+  const [agora, setAgora] = useState<Agora | null>(null);
   useEffect(() => {
-    const checar = () => setAgora(minutosDoDiaRecife(Math.floor(Date.now() / 1000)));
+    const checar = () => setAgora(agoraRecife(Math.floor(Date.now() / 1000)));
     checar();
     const id = setInterval(checar, 60_000);
     return () => clearInterval(id);
