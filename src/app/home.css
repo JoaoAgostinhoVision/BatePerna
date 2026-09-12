@@ -255,6 +255,11 @@
    `--ink-soft`: é o app contando o que fez, não um alarme — quem grita nesta
    tela seria a coisa errada gritando. */
 .bp .nao-achei { margin: 1.1rem var(--goteira-dir) .2rem var(--goteira-esq); color: var(--ink-soft); font-size: 1.02rem; }
+/* A ação do error.tsx. Mesma pílula do "✓ Fui" (`.confirmar .btn`), e de
+   propósito: é o único outro botão de toque do app, e duas formas de botão em
+   duas telas seriam o mesmo app com duas caras. */
+.bp .quebrou-acao { margin: .2rem var(--goteira-dir) 0 var(--goteira-esq); }
+.bp .quebrou-acao .btn { display: inline-block; font-weight: 650; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 99px; padding: .5rem 1.15rem; background: none; font: inherit; font-weight: 650; cursor: pointer; }
 /* 🔴 A L3 CHEGA NA HOME (2026-09-10). Até hoje `data-nivel` não aparecia UMA vez
    neste arquivo: a procedência por contraste foi construída em 09/09 só na ficha
    aberta, e a primeira tela do app — a que se navega — não distinguia o que o

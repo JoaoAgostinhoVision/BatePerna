@@ -224,8 +224,17 @@ export default function Carimbo({
   // dizer "esta leitura é de agora" — e com o lugar fechado a leitura de chuva
   // não é o que decide nada. Deixá-la pulsando seria o defeito do pulso ao lado
   // de "SEM INFORMAÇÕES" de volta, com outra roupa.
+  //
+  // 🔴 A FRASE MUDOU EM 2026-09-11, e o motivo é o eixo do DIA. Ela dizia "fora
+  // do horário de agora" — escrita quando a única coisa que fechava um lugar
+  // era a HORA. Com a Rampa fechando por ser quarta-feira, "horário" passou a
+  // nomear o eixo errado: ela não está fora de hora nenhuma, está fora do dia.
+  //
+  // E a frase nova faz um trabalho que a antiga não fazia: quem vê vermelho
+  // supõe CHUVA. Dizer que a chuva não decide isto separa "choveu" de "o lugar
+  // está fechado" — duas coisas que levam a decisões diferentes amanhã.
   const linhaViva =
-    fase === "fechado" ? "fora do horário de agora"
+    fase === "fechado" ? "a chuva não decide agora"
     : fase === "conferindo" ? "conferindo a chuva agora"
     : fase === "sem-informacoes" ? "toque pra conferir"
     : `lido da chuva agora · ${pass}h atrás + ${fut}h à frente`;

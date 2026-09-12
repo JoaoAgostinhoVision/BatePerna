@@ -793,13 +793,44 @@ describe("Carimbo — a hora, e não só a chuva", () => {
     expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
   });
 
-  // Fechado, a linha viva não pode dizer "lido da chuva agora": ela existe pra
-  // afirmar que a leitura é de agora, e com o lugar fechado a leitura de chuva
+  // Fechado, a linha viva não pode afirmar leitura de chuva: ela existe pra
+  // dizer "esta leitura é de agora", e com o lugar fechado a leitura de chuva
   // não é o que decide. Mesma família do pulso ao lado de "SEM INFORMAÇÕES".
-  it("fechado, a linha viva para de falar de chuva", () => {
+  it("fechado, a linha viva não afirma leitura de chuva nenhuma", () => {
     const calculadoEm = asHoras(18);
     const { container } = montar({ abertura: { horario: PEDRA }, calculadoEm });
-    expect(container.querySelector(".live")?.textContent).toBe("fora do horário de agora");
+    const viva = container.querySelector(".live")?.textContent ?? "";
+    expect(viva, "sumiu a linha viva").toBeTruthy();
+    expect(viva, "a linha viva voltou a afirmar leitura de chuva").not.toMatch(/lido da chuva/);
+  });
+
+  // 🔴 ESTE PAR NASCEU DE UMA IMPRECISÃO MINHA (2026-09-11). A frase era "fora
+  // do horário de agora", escrita quando a única coisa que fechava um lugar era
+  // a HORA. Com a Rampa fechando por ser quarta-feira, "horário" passou a
+  // nomear o eixo errado — ela não está fora de hora nenhuma, está fora do dia.
+  //
+  // O guarda não crava a frase: crava que ela NÃO NOMEIA EIXO NENHUM. Uma linha
+  // só serve as duas fases, e qualquer palavra de eixo nela mente em metade dos
+  // casos. Cravar a string faria este teste virar manutenção a cada ajuste de
+  // redação, sem travar o defeito.
+  it("a linha viva não nomeia eixo — a mesma frase serve quem fecha por hora e por dia", () => {
+    const calculadoEm = asHoras(18);
+    const porHora = montar({ abertura: { horario: PEDRA }, calculadoEm });
+    const porDia = montar({ abertura: { dias: ["sab"] }, calculadoEm });
+
+    const a = porHora.container.querySelector(".live")?.textContent ?? "";
+    const b = porDia.container.querySelector(".live")?.textContent ?? "";
+
+    // Controle: as duas fases realmente aconteceram. Sem isto, duas telas que
+    // nem entraram em "fechado" teriam a mesma linha e o teste passaria oco.
+    expect(porHora.container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    expect(porDia.container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+
+    expect(b, "a linha viva mudou entre os dois eixos — é uma frase só").toBe(a);
+    expect(a, "a linha viva voltou a nomear a HORA, e ela também fecha por dia")
+      .not.toMatch(/horário|hora/i);
+    expect(a, "a linha viva passou a nomear o DIA, e ela também fecha por hora")
+      .not.toMatch(/dia|semana/i);
   });
 
   it("o CSS pinta o carimbo fechado de parada, e para o pulso", () => {
