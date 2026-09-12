@@ -4,44 +4,64 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-🟢🟢 **ÚLTIMA PARADA: 2026-09-11 — TRÊS RODADAS: um guarda, uma pesquisa e um EIXO NOVO no app.**
-**884/884 em 54 arquivos**, `tsc` limpo, `build` passa, **13 mutações medidas e mortas + controle**.
-🟢 **NO AR E CONFERIDO NO NAVEGADOR DE VERDADE** — sexta 21h32, a Rampa dizendo
-**"FECHADO AGORA · abre amanhã"** e **"Abre sábado e domingo."** no domínio real.
+🟢🟢 **ÚLTIMA PARADA: 2026-09-11/12 — O DIA MAIS LONGO ATÉ AQUI. OITO RODADAS, TUDO NO AR.**
+**950/950 em 58 arquivos**, `tsc` limpo, `build` passa, **cerca de 60 mutações medidas** no dia.
+🟢 **NADA PENDENTE DE DEPLOY.** Tudo conferido no domínio real, e três coisas conferidas
+**no navegador de verdade** (o service worker, o 404 e o envenenamento de cache).
 
-🟢 Antes: **2026-09-10, fim de sessão — UM DIA LONGO, CINCO RODADAS, TUDO CONFERIDO.**
-**839/839**, `build` passa, **30 mutações medidas e mortas**.
-🟢 **TUDO NO AR E CONFERIDO**, inclusive a fila do `✓ Fui`.
-
-> *"faz a fila do ✓ Fui — depois deixa tudo pronto para continuar em outro dia com outra sessão"*
-> — João, fim da sessão.
+> *"queria continuar na próxima sessão"* — João, fim da sessão.
 
 ## ▶ SE ELE DISSER SÓ "CONTINUA": leia as CINCO abaixo, na ordem. Nada de menu.
 
-### ▶ 0. ✅ NADA PENDENTE DE DEPLOY — e como conferir quando houver
+### ▶ 0. 🔵 O PRÓXIMO TIJOLO JÁ ESTÁ MEDIDO — comece por ele
 
-🟢 **O DEPLOY DE 11/09 FOI CONFERIDO NAS TRÊS CAMADAS**, e a terceira foi a que provou:
-o HTML pré-renderizado **não pode** mostrar "Fechado agora" (o `useAgoraRecife` devolve `null` no
-primeiro render, de propósito), o bundle tinha o vocabulário novo (`domingo` ×1, `Fechado agora`
-×1, num chunk só), e **só o navegador de verdade mostrou a tela**. Guarde isto: **numa tela que
-depende do relógio do cliente, camada 1 e 2 não bastam — tem que abrir.**
+**O aquecimento offline guarda o HTML da ficha e NÃO guarda os tiles do mapa.** Instalar, sair de
+casa e abrir uma ficha aquecida dá a ficha inteira **com um retângulo em branco** no lugar do mapa —
+e o mapa é justamente o que orienta onde o texto não orienta (é a régua dele: *"sem cidade grande
+conhecida por perto, referência textual falha; mostrar > descrever"*).
 
-Tudo está no ar. O comando, pra quando fizer falta (**o `--scope` não é opcional** — sem ele dá
-`Not authorized`):
+**Medido no HTML servido, não estimado:**
+
+| página | tiles distintos no HTML |
+|---|---|
+| uma ficha | **15** |
+| a home | **10** |
+
+**O caminho já está desenhado, e é o mesmo truque que o aquecimento das fichas usa:** os `<img>` dos
+tiles estão **no HTML que o instalador acabou de baixar** — então dá pra extraí-los de lá, do mesmo
+jeito que `fichasDoAcervo` extrai os links. Assim a lista de tiles **não tem como discordar do que a
+página pede**, porque ela É o que a página pede. Ver `src/lib/cache-rotas.ts`.
+
+⚠️ **Duas coisas a decidir antes de escrever a primeira linha:**
+1. **Quanto isso pesa.** 15 tiles × 3 fichas + 10 da home ≈ 55 tiles. **MEÇA antes** (o custo das
+   páginas foi medido em 20 KB e a ressalva antiga estava superdimensionada por um fator grande —
+   pode acontecer o contrário aqui). O cache `bp-tiles-osm` tem teto de **120 entradas**.
+2. **A política de uso do OSM.** São tiles de terceiro, e baixar em lote na instalação é diferente de
+   baixar navegando. 55 é pouco; **mas confira**, e se for muito, aquecer só os tiles da HOME (10) já
+   resolve a porta de entrada.
+
+---
+
+### ▶ 0-BIS. ✅ COMO CONFERIR UM DEPLOY (o comando e as três camadas)
+
+O `--scope` **não é opcional** — sem ele dá `Not authorized`:
 
 ```
 npx --yes vercel@latest --prod --yes --scope bate-perna
 ```
 
-Depois, **conferir no domínio real** (`https://bateperna.vercel.app`) — `● Ready` não prova
-conteúdo. Marcadores **sem acento**, sempre: a lição de 09/09 é que `grep` por palavra acentuada dá
-o mesmo quadro de um deploy que não subiu.
+Depois, **conferir no domínio real** (`https://bateperna.vercel.app`) — `● Ready` não prova conteúdo.
+Marcadores **sem acento**, sempre (lição de 09/09).
 
-🟢 **A conferência da última rodada deu uma prova melhor que o teste**, e vale guardar o método: o
-HTML servido da ficha agora sai como `<div class="confirmar"><button class="btn">✓ Fui</button>
-</div>` — **sem elemento de placar nenhum**. Antes de 10/09 essa mesma linha trazia *"Ninguém contou
-ainda hoje"* dentro, porque no primeiro render o placar é `null` e a condição velha tratava *"não
-sei"* como *"sei que é zero"*. **A subtração é visível no que chega no celular**, não só na suíte.
+🔴 **E A LIÇÃO NOVA DE 11/09, que vale mais que o comando:** numa tela que depende do **relógio do
+cliente**, as camadas 1 e 2 **não bastam**. O HTML pré-renderizado da Rampa dizia *"Pode ir"* — e
+estava CERTO, porque o `useAgoraRecife` devolve `null` no primeiro render, de propósito. Só o
+navegador de verdade mostrou **"FECHADO AGORA · abre amanhã"**. **Tem que abrir.**
+
+🔴 **E abrir o navegador achou o pior defeito do dia**, que teste nenhum teria achado — o
+envenenamento do cache pelo `?debug=`. Está contado na seção **2026-09-11/12**, mais abaixo.
+
+---
 
 ### ▶ 1. ⏳ O CELULAR — a dívida mais antiga e a única que máquina nenhuma paga
 
@@ -130,14 +150,22 @@ dele esperam por uma ficha que o acervo fechado não tem.** L2, L4, L6, REQ-3, R
 camada-método do REQ-1 — nenhum destrava sem ele reabrir o acervo. *"Mais funcionalidades"* **não é
 o gargalo**; o gargalo é conteúdo, e a decisão é dele.
 
-O que dá pra construir **sem conteúdo novo e sem palavra dele** (medido, não estimado):
+✅ **ESTA LISTA ACABOU EM 11/09 — OS QUATRO CANDIDATOS ESTÃO FEITOS.** Fica registrada riscada
+porque a *leitura* acima continua valendo, e porque uma das ressalvas estava **errada por um fator
+grande** e isso é lição:
 
-| candidato | custo | o que abre |
-|---|---|---|
-| **Offline sem link morto** 🔴 | `sw.ts` + `cache-rotas.ts` (**30 testes**) | ⚠️ **precisa de decisão dele:** aquecer as 3 fichas na instalação gasta dados do celular dele com o que ele pode nunca abrir |
-| **`/trilhas` mostra mais** | `trilhas/page.tsx` + testes; **CSS zero** (a página já importa os dois) | vira a **3ª superfície** classificando Nível A/B — pede extrair a montagem pra um `lib/` único |
-| **Link compartilhado diz o que é** | `generateMetadata` em `[slug]/page.tsx`, ~10 linhas | hoje as 3 fichas mandam o mesmo cartão genérico no WhatsApp. Abre "e a imagem? e a home?" |
-| ~~**Guarda do 2º waypoint**~~ ✅ | **FEITO em 11/09** (commit `d575df3`) | 2 testes, 3 mutações mortas + 1 controle. Uma ficha com cadeia agora **trava a suíte** em vez de perder os pontos calada |
+| candidato | estado |
+|---|---|
+| ``Guarda do 2º waypoint`` | ✅ feito (`d575df3`) |
+| ``Offline sem link morto`` | ✅ feito (`5cd1042`). ⚠️ **A ressalva "gasta os dados dele" estava superdimensionada:** as quatro páginas somam **20 KB comprimidos**. Não era decisão dele — era um número que ninguém tinha medido |
+| ```/trilhas` mostra mais`` | ✅ feito (`6f74f7b`), e a montagem foi extraída pro `fatos-da-trilha.ts` como o palpite previa |
+| ``Link compartilhado`` | ✅ feito (`6f83101`). Abriu o que se esperava: o 404 virou urgente **porque agora os links circulam** |
+
+🔴 **A LIÇÃO DA TABELA, e ela é pra quem escrever a próxima:** três dos quatro custos estavam bons e
+**um estava errado o suficiente pra ter travado a rodada por meses**. Quando a ressalva for
+"gasta recurso dele", **meça antes de escrever a ressalva.**
+
+**O próximo candidato medido está no bloco ▶ 0, no topo: os tiles do mapa no aquecimento.**
 
 ⚠️ **NÃO PROPONHA como "conteúdo dele que já existe":** o `condicao.regra_texto` tem **zero
 leitores** e um agente recomendou publicá-lo — **mas ele é REDAÇÃO MINHA**, e
@@ -147,6 +175,65 @@ conferir a procedência primeiro, e ele quase decidiu em cima disso.**
 
 ⚠️ **E o `regra_texto` da Véu está VELHO** (não vai à tela, então não machuca): termina em
 *"→ não vá"*, que ele desmentiu em 10/09, e carrega duas notas de bastidor minhas.
+
+---
+
+## ▶ 2026-09-11/12 — OITO RODADAS: o app aprendeu a fechar, a circular e a não mentir
+
+**O recado que orientou o dia inteiro, literal:** *"o principal, não é minhas informações agora,
+**o foco é o aplicativo**"*. E antes disso: *"estou vendo que estás saindo do contexto"* — ele
+estava certo, eu estava escrevendo documento em vez de construir. **Na próxima sessão: construa.**
+
+### O QUE SUBIU (em ordem, tudo no ar e conferido)
+
+| # | o que | o defeito que fechou |
+|---|---|---|
+| 1 | **guarda do 2º waypoint** | ficha com cadeia perderia os pontos 2 e 3 **em silêncio** |
+| 2 | **`condicao.dias` + `src/lib/semana.ts`** | a Rampa abre **só sáb/dom** e o app dizia "Pode ir" na quarta |
+| 3 | **`generateMetadata` na ficha** | as três mandavam o **mesmo cartão** no WhatsApp |
+| 4 | **`/trilhas` mostra os fatos permanentes** + `fatos-da-trilha.ts` | o regime do lugar só aparecia abrindo a ficha num dia fechado |
+| 5 | **aquecimento das fichas na instalação** | offline a porta abria numa **sala de links mortos** |
+| 6 | **`not-found.tsx`** | slug errado = *"This page could not be found"*, em inglês, **sem saída** |
+| 7 | **`error.tsx` + a linha viva** | erro de render = beco; e a linha dizia "horário" num fechamento por **dia** |
+| 8 | **`?debug=` nunca vira memória** + **o filtro "dá hoje"** | ver os dois blocos abaixo |
+
+### 🔴 OS DOIS DEFEITOS QUE MAIS DOERAM, e os dois eram o app AFIRMANDO FALSO
+
+**(a) Uma visita a `?debug=fresco` envenenava o cache — MEDIDO NO NAVEGADOR.** A ficha da Véu
+estava guardada com o estado real (`cuidado`, "Vá com cuidado"). **Uma** visita reescreveu a cópia
+**sob a URL LIMPA** — e o ponteiro da última ficha junto — com um **"Pode ir"**. A partir dali,
+offline, aquela trilha dizia que dava pra ir. A causa: `chaveDeFicha` tira a query de propósito (o
+`?fbclid=` do WhatsApp), e tirava TODA query — inclusive a que muda o conteúdo.
+
+**(b) O chip "só as que dá hoje" só consultava a CHUVA.** Numa quarta seca a Rampa ficava na lista
+que a pessoa pediu pra mostrar só o que dá, **com o cartão dela dizendo "FECHADO AGORA" ali do
+lado**. E consertar isso desenterrou outro: **a home tinha DOIS relógios** (mapa e folha, cada um
+com seu `useAgoraRecife`). O hook subiu pro `MioloHome`.
+
+### 🔴 AS LIÇÕES DE MÉTODO DO DIA — são cinco, e nenhuma é sobre código
+
+1. **Mutação que NÃO FOI APLICADA é indistinguível de mutação que sobreviveu.** As duas dão verde.
+   Uma diz "o teste é oco", a outra "a medição falhou" — e errar pro lado bonito **infla o número
+   de mortas** que vai pro commit. **Todo script de mutação agora prova que mutou antes de rodar.**
+2. **Abrir o navegador acha o que teste nenhum acha.** O envenenamento do cache não tinha como cair
+   numa suíte: ele mora na conversa entre o service worker e o servidor. Foi visto, não deduzido.
+3. **Código que mora no `sw.ts` é código sem prova** — o arquivo não é importável em teste (arrasta
+   o serwist). Duas mutações sobreviveram por isso; a orquestração mudou-se pro `cache-rotas.ts`
+   com a IO injetada, no molde do `resolverNavegacao` que já estava lá.
+4. **Teste que renderiza conteúdo real vira teste de CALENDÁRIO quando entra um eixo de tempo.**
+   Com `dias` na Rampa, meia dúzia de testes passaria no fim de semana e cairia na segunda — e um
+   deles ficaria verde **pelo motivo errado**. Relógios fixados, com o porquê ao lado.
+5. **Guarda que fica vermelho numa mudança inofensiva ainda é guarda vivo.** O de "as duas telas
+   leem a MESMA montagem" acusou quando a lista virou componente. Estava certo; o alvo é que tinha
+   se movido. **O que não serve é o guarda verde apontando pra um arquivo que não faz mais nada.**
+
+### ⚠️ TRÊS FRASES MINHAS FORAM AO AR HOJE — ele aprovou as três, mas são minhas
+
+`"Não achei essa trilha."` (404) · `"Alguma coisa quebrou aqui."` + `"Tentar de novo"` (erro) ·
+`"a chuva não decide agora"` (a linha viva do carimbo fechado). As três são **chrome** e não
+afirmam nada sobre lugar nenhum — a do 404 foi escolhida contra *"essa trilha não existe"*, que
+seria afirmação sobre o mundo. Ele leu e disse *"pode seguir"*. **Se alguma soar errada, é uma
+linha.**
 
 ---
 
