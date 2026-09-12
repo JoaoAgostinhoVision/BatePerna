@@ -16,6 +16,7 @@ import {
   resolverNavegacao,
   aquecer,
   fichasDoAcervo,
+  PARAM_DEBUG,
   TETO_AQUECIMENTO,
 } from "@/lib/cache-rotas";
 
@@ -522,5 +523,99 @@ describe("aquecer: a instalação guarda a lista E o que ela lista", () => {
     expect([...i.buscado].sort()).toEqual([
       "/rampa-do-pepe", "/trilhas", "/veu-de-noiva-de-bonito",
     ]);
+  });
+});
+
+// 🔴 O DEFEITO QUE ESTE BLOCO TRANCA, e ele foi MEDIDO NO NAVEGADOR, não
+// imaginado (2026-09-11). A ficha da Véu de Noiva estava guardada com o estado
+// real — ~cuidado~, "Vá com cuidado". **Uma** visita a
+// ~/veu-de-noiva-de-bonito?debug=fresco~ reescreveu a cópia guardada SOB A URL
+// LIMPA, e o ponteiro da última ficha junto, com um **"Pode ir"**. A partir
+// dali, offline, aquela trilha dizia que dava pra ir.
+//
+// A causa é uma boa decisão encontrando outra: ~chaveDeFicha~ tira a query de
+// propósito (o ~?fbclid=~ que o WhatsApp cola nos links), e ela tira TODA
+// query — inclusive a que muda o conteúdo.
+//
+// É a linha vermelha do projeto: o app afirmando falso sobre um lugar real, no
+// lugar onde ninguém olha.
+describe("estado forçado nunca vira memória", () => {
+  const URL_FICHA = "https://bateperna.vercel.app/veu-de-noiva-de-bonito";
+
+  const navegar = (url: string, ok = true) =>
+    resolverNavegacao({
+      url,
+      buscarRede: async () => new Response("corpo", { status: ok ? 200 : 500 }),
+      buscarCache: async () => null,
+    });
+
+  it("navegação limpa grava, como sempre", async () => {
+    const { gravarEm } = await navegar(URL_FICHA);
+    expect(gravarEm).toEqual([URL_FICHA, CHAVE_ULTIMA]);
+  });
+
+  // 🔴 O CASO EXATO QUE ESTAVA NO AR.
+  it("navegação com estado forçado NÃO grava — nem sob a URL limpa, nem no ponteiro", async () => {
+    const { gravarEm } = await navegar(URL_FICHA + "?debug=fresco");
+    expect(
+      gravarEm,
+      "o estado forçado foi parar no cache, e mentiria offline por tempo indeterminado",
+    ).toEqual([]);
+  });
+
+  // Mas SERVE: ele precisa ver o que forçou. Não gravar não é não mostrar.
+  it("e ainda assim serve a página — ele precisa ver o que pediu", async () => {
+    const { resposta } = await navegar(URL_FICHA + "?debug=frio");
+    expect(resposta?.status, "a navegação forçada parou de responder").toBe(200);
+  });
+
+  // 🔴 CONSERVADOR DE PROPÓSITO: qualquer valor no parâmetro basta. Amarrar a
+  // regra aos valores de hoje ("fresco"/"frio") deixaria o guarda cego ao dia
+  // em que um valor novo aparecer — e aí o envenenamento volta calado.
+  it("qualquer valor no parâmetro basta, e não só os de hoje", async () => {
+    for (const v of ["fresco", "frio", "", "qualquercoisa"]) {
+      const { gravarEm } = await navegar(URL_FICHA + "?debug=" + v);
+      expect(gravarEm, "valor " + JSON.stringify(v) + " passou").toEqual([]);
+    }
+  });
+
+  // O par que impede o remédio de virar doença: o ~?fbclid=~ do WhatsApp
+  // continua sendo ruído, e link compartilhado tem que continuar guardando.
+  // Esta é a razão pela qual ~chaveDeFicha~ tira a query, e ela segue valendo.
+  it("query que NÃO é a do debug continua gravando — o link do WhatsApp", async () => {
+    const { gravarEm } = await navegar(URL_FICHA + "?fbclid=XYZ&utm_source=zap");
+    expect(gravarEm, "o link compartilhado parou de ser guardado").toEqual([URL_FICHA, CHAVE_ULTIMA]);
+  });
+
+  it("a home nunca grava, com ou sem estado forçado — ela é veredito do momento", async () => {
+    for (const u of ["https://bateperna.vercel.app/", "https://bateperna.vercel.app/?debug=fresco"]) {
+      expect((await navegar(u)).gravarEm).toEqual([]);
+    }
+  });
+
+  // 🔴 O NOME DO PARÂMETRO MORA EM DOIS ARQUIVOS — aqui e em quem o lê na
+  // página — e este guarda é o preço disso. Sem ele, renomear o parâmetro na
+  // página deixaria o service worker cego: o estado forçado voltaria a ser
+  // guardado, em silêncio, e a suíte ficaria verde.
+  it("o nome do parâmetro é o mesmo que a página realmente lê", () => {
+    const pagina = readFileSync(
+      path.join(process.cwd(), "src", "app", "[slug]", "page.tsx"), "utf8",
+    ).replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+    expect(pagina, "a tira de comentários comeu a página").toContain("searchParams");
+    expect(
+      pagina,
+      "a página deixou de ler o parâmetro com este nome — o service worker ficou cego",
+    ).toContain(PARAM_DEBUG + "?:");
+  });
+
+  // E o outro lado: o módulo que decide o estado forçado tem que reconhecer os
+  // valores que o guarda protege. Se ele parar de aceitar qualquer um, a
+  // proteção continua certa — mas o atalho DELE morreu, e isso tem que doer.
+  it("o atalho dele continua existindo — senão a proteção guarda uma porta murada", () => {
+    const motor = readFileSync(
+      path.join(process.cwd(), "src", "lib", "carimbo-estado.ts"), "utf8",
+    ).replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+    expect(motor, "a tira comeu o arquivo").toContain("resolverEstado");
+    expect(motor, "o atalho de conferir no celular sumiu").toMatch(/debug === "(fresco|frio)"/);
   });
 });

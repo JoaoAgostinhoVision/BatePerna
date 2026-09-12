@@ -48,6 +48,38 @@ export interface Resolucao {
   gravarEm: string[];
 }
 
+/** O NOME DO PARÂMETRO QUE FORÇA O ESTADO DO CARIMBO.
+ *
+ *  Ele é ferramenta dele — `?debug=frio` é como se confere no celular uma cor
+ *  que só aparece na primeira chuva. Mora aqui porque quem precisa saber que a
+ *  navegação é forçada é o service worker, e `carimbo-estado.ts` (que a lê)
+ *  arrasta o motor e o clima, que não podem entrar no bundle do worker. Há
+ *  teste amarrando os dois nomes. */
+export const PARAM_DEBUG = "debug";
+
+/** Esta navegação carrega um estado FORÇADO?
+ *
+ *  🔴 O DEFEITO QUE ISTO FECHA, medido no navegador em 2026-09-11. A ficha da
+ *  Véu estava guardada com o estado real (`cuidado`, "Vá com cuidado"). **Uma**
+ *  visita a `/veu-de-noiva-de-bonito?debug=fresco` reescreveu a cópia guardada
+ *  **sob a URL LIMPA** — e o ponteiro da última ficha junto — com um "Pode ir".
+ *  A partir dali, offline, aquela trilha dizia que dava pra ir. Numa serra sem
+ *  sinal, o app mandando subir num barro molhado.
+ *
+ *  A causa é uma boa decisão encontrando outra: `chaveDeFicha` tira a query de
+ *  propósito (link do WhatsApp chega com `?fbclid=` colado, e sem isso cada
+ *  compartilhamento viraria entrada nova). Só que ela tira TODA query — e a do
+ *  debug não é ruído de rede social, é conteúdo diferente.
+ *
+ *  A saída é a mais conservadora: **presença do parâmetro basta pra não
+ *  gravar.** Um `?debug=qualquercoisa` hoje não força estado nenhum e seria
+ *  seguro guardar — mas amarrar a regra aos valores de hoje deixaria o guarda
+ *  cego ao dia em que um valor novo aparecer. Servir continua servindo: ele
+ *  precisa VER o que forçou. O que não pode é isso virar memória. */
+export function ehNavegacaoForcada(url: string): boolean {
+  return new URL(url).searchParams.has(PARAM_DEBUG);
+}
+
 export function ehTileOsm(url: string): boolean {
   return new URL(url).hostname === "tile.openstreetmap.org";
 }
@@ -194,7 +226,12 @@ export async function resolverNavegacao({
     return { resposta: guardada ?? daRede, gravarEm: [] };
   }
 
-  if (daRede?.ok) return { resposta: daRede, gravarEm: chavesDeGravacao(url) };
+  // 🔴 ESTADO FORÇADO NUNCA VIRA MEMÓRIA. Ver `ehNavegacaoForcada`: servir,
+  // sim — ele precisa ver o que pediu. Gravar, nunca: a cópia iria parar sob a
+  // URL limpa e mentiria offline por tempo indeterminado.
+  if (daRede?.ok) {
+    return { resposta: daRede, gravarEm: ehNavegacaoForcada(url) ? [] : chavesDeGravacao(url) };
+  }
 
   // Rede caiu ou respondeu errado. Sem cópia desta ficha, devolve o erro de
   // verdade — inventar "sem rede" esconderia um 404.
