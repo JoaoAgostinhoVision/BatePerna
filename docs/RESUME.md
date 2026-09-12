@@ -4,9 +4,10 @@
 > O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
 > método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-🟢🟢 **ÚLTIMA PARADA: 2026-09-11 — uma rodada curta, SÓ DE GUARDA (nada de produto mudou).**
-**841/841 em 53 arquivos**, `tsc` limpo, **3 mutações mortas + 1 controle**. **Zero arquivo de
-produção tocado, então nada a deployar** — o que está no ar continua sendo o de 10/09.
+🟢🟢 **ÚLTIMA PARADA: 2026-09-11 — TRÊS RODADAS: um guarda, uma pesquisa e um EIXO NOVO no app.**
+**884/884 em 54 arquivos**, `tsc` limpo, `build` passa, **13 mutações medidas e mortas + controle**.
+🟢 **NO AR E CONFERIDO NO NAVEGADOR DE VERDADE** — sexta 21h32, a Rampa dizendo
+**"FECHADO AGORA · abre amanhã"** e **"Abre sábado e domingo."** no domínio real.
 
 🟢 Antes: **2026-09-10, fim de sessão — UM DIA LONGO, CINCO RODADAS, TUDO CONFERIDO.**
 **839/839**, `build` passa, **30 mutações medidas e mortas**.
@@ -18,6 +19,12 @@ produção tocado, então nada a deployar** — o que está no ar continua sendo
 ## ▶ SE ELE DISSER SÓ "CONTINUA": leia as CINCO abaixo, na ordem. Nada de menu.
 
 ### ▶ 0. ✅ NADA PENDENTE DE DEPLOY — e como conferir quando houver
+
+🟢 **O DEPLOY DE 11/09 FOI CONFERIDO NAS TRÊS CAMADAS**, e a terceira foi a que provou:
+o HTML pré-renderizado **não pode** mostrar "Fechado agora" (o `useAgoraRecife` devolve `null` no
+primeiro render, de propósito), o bundle tinha o vocabulário novo (`domingo` ×1, `Fechado agora`
+×1, num chunk só), e **só o navegador de verdade mostrou a tela**. Guarde isto: **numa tela que
+depende do relógio do cliente, camada 1 e 2 não bastam — tem que abrir.**
 
 Tudo está no ar. O comando, pra quando fizer falta (**o `--scope` não é opcional** — sem ele dá
 `Not authorized`):
@@ -52,7 +59,46 @@ Três rodadas mexeram na tela e **nenhum olho humano viu**: a serif da L3 (09/09
 `?debug=frio`. A home não tem esse atalho: o âmbar do cartão e do pin só na primeira chuva de
 verdade em Bonito.
 
-### ▶ 2. 🔴 DOIS BURACOS DE PROCEDÊNCIA ACHADOS NO FIM DO DIA, e os dois pedem UMA FRASE DELE
+### ▶ 2. 🔵 DUAS PERGUNTAS DE PRODUTO NA MESA — e NENHUMA trava rodada
+
+⚠️ **ELE PEDIU EM 11/09 PRA PARAR DE SER ENTREVISTADO:** *"o principal, não é minhas informações
+agora, **o foco é o aplicativo**"*. As duas abaixo ficam como **opção dele quando quiser**, não
+como pendência. **Não as reabra no começo da sessão.**
+
+**(a) "Chão batido" pode virar um valor da escala de piso?** A `PISOS` tem quatro valores e
+**nenhum pra estrada de terra não-argilosa** — a Pedra Furada virou `barro` por ser a única opção
+não pavimentada, e é esse rótulo que faz a tela dizer *"O barro segura água"* num chão que a
+própria ficha descreve como chão batido. **A contradição é da escala, não dele** (medido, ver
+`docs/pesquisa-externa-2026-09-11.md`). A frase de chuva do piso novo já é palavra dele: *"molhado,
+o chão batido escorrega e dá pra atolar"*.
+
+**(b) O trecho de terra da Véu firma rápido, ou fica pesado?** — e **"fica pesado" significa não
+escrever nada**: o campo vazio já estaria certo, e a saída de subtração está à vista.
+
+---
+
+### ▶ 2-BIS. ✅ FECHADO EM 11/09 — o que ele respondeu
+
+| pergunta | resposta dele |
+|---|---|
+| a Rampa é barro ou já tem asfalto? | ***"a rampa ainda é de barro"*** — a fonte de 2014 estava velha |
+| o portão da Pedra Furada: 5h ou 7h? | ***"a pedra furada pode seguir o meu mesmo"*** — 5h, dele |
+| a Rampa abre a semana toda? | *"pode atualizar a hora pela internet"* → `dias: ["sab","dom"]` |
+
+🔴 **E A FRASE QUE EXPLICA A PESQUISA INTEIRA, e é dele:** ***"a rampa está em reforma, por isso
+acho que as coisas tão mudando"***. Os sinais que eu tinha tratado como **conflito entre fontes**
+(o guia de 2014 dizendo "fase final de pavimentação", o CNPJ novo, a marca "Eco Park", os sáb/dom)
+**não são fontes discordando — são o mesmo lugar mudando ao longo de dez anos.**
+
+⚠️ *"acho que as coisas tão mudando"* é **hedge, e não virou veredito meu**: o app não diz uma
+palavra sobre reforma. O que é FATO dele é *"a rampa está em reforma"*.
+🔵 **A consequência é do app:** o `dias` da Rampa é, por definição dele, **dado em movimento**. Se
+ela reabrir com outro regime, **é uma linha no JSON** — e o app não tem (nem deve inventar) uma
+frase dizendo "isto pode estar mudando".
+
+---
+
+### ▶ 2-TER. 🔴 O BURACO DE PROCEDÊNCIA ANTIGO (segue de pé, e é dos dois acima)
 
 **(a) A Pedra Furada se contradiz de um dia pro outro, na mesma tela.** No dia seco ela diz, com as
 palavras DELE, que *"o chão batido **retém menos água** que o barro"* (`secaRapido`). No dia de
@@ -75,7 +121,7 @@ tela** na Pedra Furada; o carimbo é **27,2px peso 800 maiúsculo em caixa color
 serif itálico sem caixa**, 460–580px mais abaixo.
 🔴 **E mover blocos quebra ZERO testes** — `.hero` não aparece uma vez em `tests/`. A tela mais
 importante do app pode ser remontada de cabeça pra baixo com a suíte verde.
-**Levantado em 09/09 e em 10/09. Ele não respondeu nenhuma das duas. NÃO MEXA SOZINHO.**
+**Levantado em 09/09, 10/09 e 11/09. Ele não respondeu nenhuma das três. NÃO MEXA SOZINHO.**
 
 ### ▶ 4. 🔵 O QUE SOBROU NA MESA, medido por dois agentes em 10/09
 

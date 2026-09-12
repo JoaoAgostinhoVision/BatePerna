@@ -10,6 +10,32 @@
 
 ---
 
+## 0. ✅ AS RESPOSTAS DELE — 2026-09-11, no mesmo dia
+
+> 🔴 **E A FRASE QUE EXPLICA O RESTO, e é dele:** ***"a rampa está em reforma, por isso acho que
+> as coisas tão mudando"***.
+>
+> Isso reorganiza a pesquisa inteira. Os sinais que eu tinha tratado como **conflito entre fontes**
+> — o guia de 2014 dizendo "fase final de pavimentação", o CNPJ novo, a marca "Eco Park", os
+> sábados e domingos — não são fontes discordando. São **o mesmo lugar mudando ao longo de dez
+> anos**, e ele sabe disso porque conhece o lugar.
+>
+> ⚠️ **"acho que as coisas tão mudando" é HEDGE, e não vira veredito meu.** O que é FATO DELE aqui
+> é *"a rampa está em reforma"*. Nada disso foi à tela: o app não diz uma palavra sobre reforma.
+
+| pergunta | resposta dele | o que foi feito |
+|---|---|---|
+| 1. A Rampa abre a semana toda ou só sáb/dom? | *"pode atualizar a hora pela internet"* | ✅ `dias: ["sab","dom"]` entrou na ficha, com a procedência declarada |
+| 2. A subida da serra é barro ou já tem asfalto? | ***"a rampa ainda é de barro"*** | ✅ nada muda — `piso: barro` confirmado por ele, a fonte de 2014 estava velha |
+| 3. "Chão batido" vira valor da escala de piso? | — | ⏳ **não respondida.** Continua na mesa |
+| 4. O trecho de terra da Véu firma rápido? | — | ⏳ **não respondida.** Continua na mesa |
+| 5. O portão da Pedra Furada: 5h ou 7h? | ***"a pedra furada pode seguir o meu mesmo"*** | ✅ nada muda — a ficha fica com **5h**, palavra dele ganhando do site |
+
+🔵 **A consequência da reforma, e ela é do app, não dele:** o `dias` da Rampa é, por definição
+dele, **um dado em movimento**. O app não tem como dizer "isto pode estar mudando", e inventar essa
+frase seria prosa minha sobre um lugar real. Fica anotado: **se a Rampa reabrir com outro regime,
+é uma linha no JSON.**
+
 ## 1. A contradição da Pedra Furada — a pergunta antiga era ruim, e dá pra provar
 
 **A pergunta que estava na mesa:** *"num dia de chuva, o que aquele chão batido faz? A frase do
@@ -157,16 +183,20 @@ começo ao fim, ou já tem trecho asfaltado?*
 
 ---
 
-## 6. AS CINCO PERGUNTAS, em ordem de consequência
+## 6. O QUE SOBROU DAS CINCO PERGUNTAS
 
-1. 🔴 **A Rampa abre a semana toda, ou só sábado e domingo?** (hoje o app manda a pessoa numa
-   quarta)
-2. 🟡 **A subida da serra até a rampa é barro do começo ao fim, ou já tem asfalto?**
-3. 🔵 **"Chão batido" vira um valor da escala de piso?** (fecha a contradição da Pedra Furada com
-   palavra dele que já existe)
-4. 🔵 **O trecho de terra da Véu firma rápido, ou fica pesado?** — e "fica pesado" significa **não
-   escrever nada**
-5. 🟡 **O portão da Pedra Furada abre às 5h (você) ou às 7h (os sites)?**
+✅ Três fechadas em 11/09 (ver o bloco 0). **Duas continuam na mesa, e as duas são de PRODUTO, não
+de logística** — nenhuma delas impede o app de funcionar hoje:
+
+1. 🔵 **"Chão batido" vira um valor da escala de piso?** Fecha a contradição da Pedra Furada, e a
+   frase de chuva do piso novo já é palavra dele: *"molhado, o chão batido escorrega e dá pra
+   atolar"*.
+2. 🔵 **O trecho de terra da Véu firma rápido, ou fica pesado?** — e **"fica pesado" significa não
+   escrever nada**: a ficha continua calada, de propósito.
+
+⚠️ **Ele pediu em 11/09 pra parar de ser entrevistado:** *"o principal, não é minhas informações
+agora, o foco é o aplicativo"*. As duas acima ficam registradas **como opção dele quando quiser** —
+não como pergunta pendente que trava rodada nenhuma.
 
 ---
 
