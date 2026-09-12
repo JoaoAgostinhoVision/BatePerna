@@ -2,7 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "BatePerna",
+  /** MOLDE, e não um título fixo: a aba da ficha passa a dizer
+   *  "Rampa do Pepê · BatePerna" em vez de só "BatePerna". O `default` é o que
+   *  aparece em toda tela que NÃO declara título — home, /trilhas, 404. */
+  title: { default: "BatePerna", template: "%s · BatePerna" },
   description: "Aventura pela via segura.",
   icons: {
     icon: "/icones/192",

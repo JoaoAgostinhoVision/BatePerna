@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import "../ficha.css";
 import { getFicha } from "@/lib/ficha";
 import { resolverEstado } from "@/lib/carimbo-estado";
@@ -16,6 +17,54 @@ import Moldura from "../Moldura";
 
 // Compute-on-load: nada de cache estático, o estado é a chuva de agora.
 export const dynamic = "force-dynamic";
+
+/** O CARTÃO QUE O LINK DESTA TRILHA MOSTRA quando alguém manda no WhatsApp.
+ *
+ *  🔴 POR QUE ISTO EXISTE (2026-09-11). As três fichas mandavam o MESMO cartão:
+ *  "BatePerna — Aventura pela via segura.", o título e a descrição do
+ *  `layout.tsx`, iguais pra todo mundo. Quem recebia três links do app recebia
+ *  três cartões idênticos e não sabia qual trilha era qual — o app apagando a
+ *  diferença entre lugares bem no lugar onde ele é passado adiante.
+ *
+ *  🔴 E CADA PALAVRA DAQUI JÁ É DELE, sem uma sílaba minha: o título é o nome
+ *  do waypoint e a descrição é a `promessa` — as duas já na tela da ficha e no
+ *  cartão da home. **Nada é redigido aqui.** Escrever uma frase nova de
+ *  divulgação seria prosa minha sobre um lugar real, saindo do app pra fora
+ *  sem ninguém ver — a superfície mais difícil de auditar que este projeto tem.
+ *
+ *  ⚠️ NADA DE CARIMBO NO CARTÃO. A tentação é mandar "Pode ir" / "Fechado
+ *  agora" junto, e seria mentira agendada: o cartão do WhatsApp é **congelado
+ *  no momento em que o link é buscado** e fica no histórico da conversa pra
+ *  sempre. Um "Pode ir" de terça-feira lido no sábado é exatamente o defeito
+ *  que o decaimento e o `useVenceu` existem pra impedir dentro do app.
+ *
+ *  Sem imagem de propósito: gerar uma exigiria escolher o que ela mostra, e
+ *  isso é decisão dele. Sem ela o WhatsApp mostra o cartão só com texto, que é
+ *  honesto. */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const ficha = getFicha(slug);
+  if (!ficha) return {}; // 404 herda o título do layout
+
+  const nome = ficha.trajeto.waypoints[0].nome;
+  return {
+    title: nome,
+    description: ficha.promessa,
+    openGraph: {
+      // O template do layout não alcança o openGraph — lá o título é montado
+      // aqui, inteiro, ou o cartão sairia sem a marca.
+      title: `${nome} · BatePerna`,
+      description: ficha.promessa,
+      type: "article",
+      locale: "pt_BR",
+    },
+    twitter: { card: "summary", title: `${nome} · BatePerna`, description: ficha.promessa },
+  };
+}
 
 export default async function Ficha({
   params,
