@@ -109,7 +109,7 @@ describe("as duas telas leem a MESMA montagem", () => {
     readFileSync(path.join(process.cwd(), "src", ...p), "utf8").replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
 
   const cartao = fonte(["app", "CartaoTrilha.tsx"]);
-  const lista = fonte(["app", "trilhas", "page.tsx"]);
+  const lista = fonte(["app", "ListaDoAcervo.tsx"]);
 
   it("as duas chamam fatosDaTrilha — e a tira de comentários não comeu os arquivos", () => {
     expect(cartao, "a tira comeu o CartaoTrilha").toContain("export default function");
@@ -118,9 +118,32 @@ describe("as duas telas leem a MESMA montagem", () => {
     expect(lista, "a lista do acervo parou de usar a montagem única").toContain("fatosDaTrilha(");
   });
 
-  // Mata: remontar a linha à mão em qualquer uma das duas. Os nomes abaixo são
-  // os campos que a montagem tira da ficha — nenhum deles deve ser lido
-  // diretamente por uma tela que já recebe os fatos prontos.
+  // 🔴 ESTE TESTE MUDOU DE ALVO EM 2026-09-11, e o jeito como isso aconteceu
+  // vale mais que o teste: a lista do acervo mudou-se de `trilhas/page.tsx`
+  // pro componente `ListaDoAcervo` (o `not-found` passou a precisar dela), e
+  // o guarda ficou VERMELHO na hora, dizendo que a página tinha parado de usar
+  // a montagem única. Era verdade e era inofensivo — ela delega. Guarda que
+  // acusa mudança inofensiva ainda é guarda vivo; o que não serve é o que fica
+  // verde apontando pra um arquivo que não faz mais nada.
+  //
+  // Agora ele guarda as TRÊS: quem monta (o componente e o cartão) e quem
+  // delega (as duas páginas que mostram o acervo).
+  it("as páginas do acervo DELEGAM — nenhuma delas remonta a lista por conta própria", () => {
+    for (const caminho of [["app", "trilhas", "page.tsx"], ["app", "not-found.tsx"]]) {
+      const src = fonte(caminho);
+      const nome = caminho.join("/");
+      expect(src, `a tira comeu ${nome}`).toContain("export default function");
+      expect(src, `${nome} parou de usar a lista única`).toContain("<ListaDoAcervo");
+      expect(
+        src.includes("lista-item"),
+        `${nome} voltou a desenhar a lista por conta própria`,
+      ).toBe(false);
+    }
+  });
+
+  // Mata: remontar a linha à mão em qualquer uma das duas que MONTAM. Os nomes
+  // abaixo são os campos que a montagem tira da ficha — nenhum deles deve ser
+  // lido diretamente por uma tela que já recebe os fatos prontos.
   it("nenhuma das duas remonta a linha à mão", () => {
     for (const [nome, src] of [["o cartão da home", cartao], ["a lista do acervo", lista]] as const) {
       for (const campo of ["rotuloPiso", "custo.valor", "rotuloDias", "rotuloFaixaCurta"]) {
