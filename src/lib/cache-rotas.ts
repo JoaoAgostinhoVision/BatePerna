@@ -74,7 +74,7 @@ export function ehNavegacaoNossa(pathname: string): boolean {
  *  Link compartilhado no WhatsApp ou no Instagram chega com ?fbclid=... colado.
  *  Guardar com a query faria cada compartilhamento virar entrada nova — e, pior,
  *  o mesmo morro com outro parâmetro daria "não encontrado" offline. */
-function chaveDeFicha(url: string): string {
+export function chaveDeFicha(url: string): string {
   const u = new URL(url);
   u.search = "";
   u.hash = "";
@@ -104,6 +104,36 @@ export function comPrazo<T>(promessa: Promise<T>, ms: number, aoEstourar: T): Pr
  *  abre. É a mesma entrada que planoDaRaiz procura, de propósito: aquecer uma
  *  coisa e procurar outra seria trabalho jogado fora. */
 export const AQUECIMENTO: AlvoCache = { chave: "/trilhas", cache: CACHE_PAGINAS };
+
+/** 🔴 QUANTAS FICHAS CABEM NO AQUECIMENTO, e o número não é meu: é o
+ *  `maxEntries` do `CacheExpiration` que governa o `CACHE_ULTIMA_FICHA` em
+ *  `sw.ts`. Aquecer mais fichas do que o cache guarda faria a instalação
+ *  baixar páginas pra despejá-las na linha seguinte — trabalho e dados
+ *  gastos por nada, e o pior tipo: invisível.
+ *
+ *  Há teste cravando os dois números juntos; se um mudar sem o outro, ele cai. */
+export const TETO_AQUECIMENTO = 12;
+
+/** As fichas que existem, lidas da PÁGINA DO ACERVO que o instalador acabou de
+ *  baixar.
+ *
+ *  🔴 POR QUE DAQUI, E NÃO DE UMA LISTA: o service worker não pode ler
+ *  `content/fichas/` (nada de `node:fs` no bundle do worker), e gerar um
+ *  arquivo de slugs no build criaria uma SEGUNDA fonte do acervo — a espécie
+ *  "guarda que enumera o acervo à mão é cego a ele crescer", que este projeto
+ *  já pagou. Lendo os links da própria `/trilhas`, a lista de aquecimento
+ *  **não tem como discordar do que a tela mostra**: ela É o que a tela mostra.
+ *
+ *  Cada candidato ainda passa por `ehCaminhoDeFicha` — o HTML tem outros
+ *  `href` (a barra de navegação, o ícone), e aquecer "/" seria gravar veredito
+ *  de chuva, que é a coisa que `resolverNavegacao` recusa em todos os ramos. */
+export function fichasDoAcervo(html: string): string[] {
+  const vistos = new Set<string>();
+  for (const [, caminho] of html.matchAll(/href="(\/[^"#?]*)"/g)) {
+    if (ehCaminhoDeFicha(caminho)) vistos.add(caminho);
+  }
+  return [...vistos].slice(0, TETO_AQUECIMENTO);
+}
 
 /** Onde procurar quando "/" abre sem rede.
  *
@@ -170,4 +200,59 @@ export async function resolverNavegacao({
   // verdade — inventar "sem rede" esconderia um 404.
   const guardada = await buscarCache(alvoDaFicha(url));
   return { resposta: guardada ?? daRede, gravarEm: [] };
+}
+
+/** A IO que o aquecimento precisa, entregue por quem chama. Mesmo desenho do
+ *  `PedidoNavegacao`: este módulo decide, o service worker toca em `fetch` e
+ *  em `caches`. */
+export interface PedidoAquecimento {
+  /** Busca uma página. null = não veio nada, e o aquecimento segue sem ela. */
+  buscar: (caminho: string) => Promise<Response | null>;
+  /** Grava uma resposta sob uma chave, num cache nomeado. */
+  gravar: (alvo: AlvoCache, resposta: Response) => Promise<void>;
+  /** A origem do app, pra montar a chave absoluta das fichas. */
+  origem: string;
+}
+
+/** O AQUECIMENTO INTEIRO: a lista do acervo mais as fichas que ela lista.
+ *
+ *  🔴 POR QUE ISTO MORA AQUI, e não solto dentro do `install` do sw.ts: a
+ *  primeira versão desta rodada (2026-09-11) pôs a orquestração no listener, e
+ *  a medição de mutação mostrou o buraco — **apagar a busca das fichas, ou
+ *  gravá-las também sob CHAVE_ULTIMA, deixava a suíte inteira verde.** O
+ *  `sw.ts` não é importável em teste (arrasta o serwist), então tudo que mora
+ *  lá é código sem prova. Mesma razão pela qual `resolverNavegacao` já existia
+ *  neste arquivo em vez de dentro do listener de `fetch`.
+ *
+ *  Devolve os caminhos guardados, em ordem, pra quem chama poder contar.
+ *
+ *  ⚠️ NUNCA GRAVA SOB `CHAVE_ULTIMA`, e é a linha que mais importa aqui:
+ *  aquecer não é abrir. O ponteiro da última ficha é memória do que a PESSOA
+ *  escolheu ver, e enchê-lo na instalação faria "/" offline abrir numa trilha
+ *  que ninguém pediu — `planoDaRaiz` o consulta.
+ *
+ *  Cada ficha falha sozinha: sem rede pra uma delas, as outras continuam. */
+export async function aquecer({ buscar, gravar, origem }: PedidoAquecimento): Promise<string[]> {
+  const pagina = await buscar(AQUECIMENTO.chave);
+  if (!pagina) return [];
+
+  // Clonar ANTES de ler o corpo: o texto abaixo o consome, e o que vai pro
+  // cache tem que ser a resposta inteira.
+  const paraCache = pagina.clone();
+  const html = await pagina.text().catch(() => "");
+  await gravar(AQUECIMENTO, paraCache);
+
+  const guardadas: string[] = [];
+  await Promise.allSettled(
+    fichasDoAcervo(html).map(async (caminho) => {
+      const r = await buscar(caminho);
+      if (!r) return;
+      await gravar(
+        { chave: chaveDeFicha(new URL(caminho, origem).href), cache: CACHE_ULTIMA_FICHA },
+        r,
+      );
+      guardadas.push(caminho);
+    }),
+  );
+  return guardadas;
 }

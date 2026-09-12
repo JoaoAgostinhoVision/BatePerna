@@ -14,6 +14,7 @@ import {
   CACHE_PAGINAS,
   CACHE_ULTIMA_FICHA,
   PRAZO_REDE_MS,
+  aquecer,
   comPrazo,
   ehNavegacaoNossa,
   ehTileOsm,
@@ -116,13 +117,42 @@ function guardar(evento: FetchEvent, chaves: string[], resposta: Response): void
 /** Instalar o app e sair de casa sem nunca ter navegado dava tela de erro do
  *  navegador na serra — em standalone, sem barra de URL, um beco. Uma cópia da
  *  lista na instalação garante que a porta abre. Falhar aqui não pode impedir
- *  a instalação: sem rede neste instante, segue-se sem a cópia. */
+ *  a instalação: sem rede neste instante, segue-se sem a cópia.
+ *
+ *  🔴 E DESDE 2026-09-11 AS FICHAS VÊM JUNTO, porque a porta abria numa sala de
+ *  links mortos: o acervo listava as três trilhas e **nenhuma delas abria** sem
+ *  rede, a não ser a que já tivesse sido visitada. Guardar a lista do que existe
+ *  e nada do que ela lista é meio caminho — e meio caminho, na serra, é o mesmo
+ *  que nada.
+ *
+ *  ⚠️ O CUSTO FOI MEDIDO, NÃO ESTIMADO (2026-09-11): as quatro páginas somam
+ *  **20 KB comprimidos** no ar. O JS e o CSS já estavam no precache do build,
+ *  então isto é só o HTML. Uma ressalva antiga dizia que aquecer as fichas
+ *  "gasta os dados dele" — gasta menos que uma foto pequena, e é o que faz o
+ *  app funcionar onde ele foi feito pra funcionar.
+ *
+ *  A lista sai da PRÓPRIA `/trilhas` recém-baixada, e não de um arquivo gerado:
+ *  assim ela não tem como discordar do que a tela mostra. Ver `fichasDoAcervo`.
+ *
+ *  Cada ficha falha sozinha: `allSettled`, e sem rede pra uma delas as outras
+ *  continuam. Nada aqui pode impedir a instalação. */
 self.addEventListener("install", (evento) => {
   evento.waitUntil(
     (async () => {
-      const resposta = await fetch(AQUECIMENTO.chave, { cache: "no-store" }).catch(() => null);
-      if (!resposta?.ok) return;
-      await (await caches.open(AQUECIMENTO.cache)).put(AQUECIMENTO.chave, resposta);
+      await aquecer({
+        origem: self.location.origin,
+        buscar: async (caminho) => {
+          const r = await fetch(caminho, { cache: "no-store" }).catch(() => null);
+          return r?.ok ? r : null;
+        },
+        gravar: async ({ chave, cache: nome }, resposta) => {
+          await (await caches.open(nome)).put(chave, resposta);
+          // Só o cache das fichas tem relógio próprio; o das páginas é
+          // governado pelo ExpirationPlugin da estratégia lá em cima.
+          if (nome === CACHE_ULTIMA_FICHA) await validadeDasFichas.updateTimestamp(chave);
+        },
+      });
+      await validadeDasFichas.expireEntries();
     })().catch(() => undefined),
   );
 });
