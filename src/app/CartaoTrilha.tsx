@@ -1,14 +1,7 @@
 "use client";
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
-import {
-  coordDaDistancia,
-  distanciaKm,
-  formatarDistanciaCurta,
-} from "@/lib/geo";
-// `piso.ts` é puro de propósito — sem zod e sem `node:fs` — e é por isso que um
-// client component pode lê-lo direto. A razão inteira está escrita lá.
-import { rotuloPiso } from "@/lib/piso";
+import { fatosDaTrilha } from "@/lib/fatos-da-trilha";
 import { aberturaDaFicha, type Agora } from "@/lib/horario";
 import { tomDe, vozDaFicha } from "@/lib/severidade";
 import { coordDe } from "@/lib/local";
@@ -50,52 +43,17 @@ export default function CartaoTrilha({
   // A mesma fonte que o mapa: "uma pessoa, uma fonte" também vale aqui — o
   // cartão não chama navigator.geolocation por conta própria, lê o contexto.
   const voce = coordDe(useLocal());
-  // 🔴 CADA PEDAÇO CARREGA O SEU NÍVEL, e por isso isto é uma lista de pares e
-  // não de strings (2026-09-10). Até hoje os três viviam num `join(" · ")` —
-  // uma string só, sem identidade endereçável, onde a marca do Nível B não
-  // tinha onde pousar. Mesma razão que fez o `data-bloco="trajeto"` existir na
-  // ficha: sem endereço, "o piso brilha" viraria "existe em algum lugar do
-  // cartão", e nenhum teste separaria as duas versões.
+  // 🔴 A MONTAGEM MORA EM `src/lib/fatos-da-trilha.ts` DESDE 2026-09-11, e não
+  // mais aqui. Ela vivia neste componente, e `/trilhas` mostrava outra coisa;
+  // no dia em que a lista do acervo passasse a mostrar os mesmos fatos, seriam
+  // duas telas classificando o mesmo campo por conta própria — inclusive o
+  // NÍVEL de cada um, que é a régua da L3 e decisão dele, não desta tela.
   //
-  // 🔴 O NÍVEL DE CADA CAMPO NÃO É ESCOLHA DESTA TELA — é a régua da L3, escrita
-  // por extenso em `src/app/[slug]/page.tsx` e decidida por ele: Nível A é o que
-  // o mapa e o feed de chuva entregam igual pra qualquer um; Nível B é o que só
-  // sabe quem foi. A ficha aberta já classificava estes três campos; a HOME os
-  // mostrava todos planos, e ninguém decidiu isso — a L3 parou na ficha por
-  // acidente. **Duas superfícies classificando o mesmo campo de formas
-  // diferentes é a família de defeito que este projeto já pagou três vezes.**
-  const partes: ({ texto: string; nivel?: "b" } | null)[] = [
-    // `coordDaDistancia`, nunca `ficha.condicao.coords`: o km do cartão e o km
-    // da ficha são a MESMA pergunta, e quem responde é uma função só.
-    //
-    // SEM marca, e é o desenho: distância é Nível A — o telefone calcula, e isso
-    // não é conhecimento de quem foi. Na ficha ela também não é marcada.
-    voce
-      ? { texto: formatarDistanciaCurta(distanciaKm(voce, coordDaDistancia(ficha))) }
-      : null,
-    // A extensão da trilha (`ficha.extensaoKm`) saiu desta linha por decisão
-    // do João em 2026-08-23: "remova o filtro tamanho da trilha, acho que não
-    // está para hoje". O campo saiu do schema na contração da mesma rodada
-    // (Task 7) — não existe mais nada aqui pra esta tela ler.
-    // O piso da VIA (fato do lugar), no lugar do antigo `esforco` (fato do
-    // corpo de quem vai). `rotuloPiso` troca o hífen do enum por espaço —
-    // "asfalto-esburacado" é chave de dado, não texto de tela.
-    //
-    // NÍVEL B: a régua da L3 nomeia o piso, com todas as letras, entre "o que só
-    // sabe quem foi". Na ficha ele brilha dentro do `.fatos` do Trajeto.
-    ficha.piso ? { texto: rotuloPiso(ficha.piso), nivel: "b" as const } : null,
-    // `custo.valor` é texto livre (schema não garante separador nenhum). O
-    // JSON real da Rampa usa " · ", não " — " como um teste antigo supunha —
-    // por isso o corte aceita os dois. Sem separador algum, o split não acha
-    // nada e devolve a string inteira (index [0]), que é o comportamento
-    // certo pra um custo curto como "R$ 10".
-    ficha.custo.tag === "pago" && ficha.custo.valor
-      ? // NÍVEL B por decisão DELE em 2026-09-09, palavra dele: "preço e horário
-        // brilham". Na ficha é o `.ticket`, marcado pela mesma razão.
-        { texto: ficha.custo.valor.split(/\s[—·]\s/)[0], nivel: "b" as const }
-      : null,
-  ];
-  const visiveis = partes.filter((p): p is { texto: string; nivel?: "b" } => p !== null);
+  // `comAbertura` fica falso aqui de propósito: o selo logo acima já diz
+  // "Fechado agora · abre amanhã" quando importa, e repetir os dias alongaria
+  // uma linha que já quebra em duas no celular. Na lista do acervo, onde não há
+  // selo nenhum, ele é verdadeiro. A razão inteira está escrita lá.
+  const visiveis = fatosDaTrilha(ficha, { voce });
 
   return (
     <a

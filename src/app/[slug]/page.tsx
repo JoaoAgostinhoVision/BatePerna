@@ -5,7 +5,8 @@ import { resolverEstado } from "@/lib/carimbo-estado";
 import { rotuloPiso } from "@/lib/piso";
 import { vozDaFicha } from "@/lib/severidade";
 import { faseDe } from "@/lib/carimbo-fase";
-import { aberturaDaFicha, rotuloHora } from "@/lib/horario";
+import { aberturaDaFicha, rotuloFaixaCurta } from "@/lib/horario";
+import { rotuloDias } from "@/lib/semana";
 import { notFound } from "next/navigation";
 import ConfirmarFui from "../ConfirmarFui";
 import MapaEstatico from "../MapaEstatico";
@@ -153,9 +154,14 @@ export default async function Ficha({
   // mesma do `horaCurtaRecife` e do carimbo fechado). Duas formas na mesma
   // tela seriam a mesma trilha com duas caras. Nenhuma palavra nova entra
   // aqui: é o dado dele, formatado pela função que já existia.
-  const faixaHorario = ficha.horario
-    ? `${rotuloHora(ficha.horario.abre)}–${rotuloHora(ficha.horario.fecha)}`
-    : null;
+  const faixaHorario = ficha.horario ? rotuloFaixaCurta(ficha.horario) : null;
+  // 🔴 OS DIAS ENTRAM NO TICKET (2026-09-11), e sem isto havia um buraco: a
+  // Rampa só abre sábado e domingo, e num SÁBADO a ficha dela não dizia isso em
+  // lugar nenhum — o carimbo só fala quando está fechado, e no sábado ele diz
+  // "Pode ir". Quem abrisse a ficha no fim de semana nunca descobriria o regime
+  // do lugar. É fato PERMANENTE, e fato permanente mora no ticket, junto do
+  // preço e da hora — que é onde ele decidiu que as duas coisas brilham.
+  const faixaDias = ficha.dias?.length ? rotuloDias(ficha.dias) : null;
 
   // Ressalva: negrito na primeira oração (até o travessão).
   const [ressalvaLead, ...ressalvaResto] = ficha.condicao.ressalva_proxy.split("—");
@@ -316,13 +322,14 @@ export default async function Ficha({
             não `valor` — prender o horário ao preço o esconderia justamente na
             ficha grátis cujo portão fecha às 17h. Sem nenhum dos dois, a linha
             inteira não é desenhada: o app cala, como em todo campo opcional. */}
-        {(ficha.custo.valor || faixaHorario) && (
+        {(ficha.custo.valor || faixaHorario || faixaDias) && (
           <div className="ticket" data-nivel="b">
             {ficha.custo.valor && (
               <span className="tk">
                 <span className="price">{precoCurto}</span> {restoCusto}
               </span>
             )}
+            {faixaDias && <span className="tk dias">{faixaDias}</span>}
             {faixaHorario && <span className="tk hora">{faixaHorario}</span>}
           </div>
         )}

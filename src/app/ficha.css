@@ -277,7 +277,14 @@ html, body { background: var(--ground); }
    `flex-wrap` porque as duas metades convivem só na ficha que tem as duas, e
    em tela estreita elas quebram em vez de espremer. */
 .bp .ticket[data-nivel="b"] { color: var(--ink); }
-.bp .ticket .hora { font-weight: 650; }
+/* 🔴 `.dias` E `.hora` SÃO CLASSES DIFERENTES PRA FATOS DIFERENTES (2026-09-11),
+   e não é purismo: a primeira versão pôs os dias dentro de `.hora`, e o guarda
+   "ficha paga sem horário cala a hora" ficou vermelho na hora — a Rampa tem
+   dias e NÃO tem horário, e a tela passou a afirmar que tinha. Dois fatos com
+   o mesmo endereço é a espécie "índice significando identidade": nenhum teste
+   consegue separar os dois depois. O peso é o mesmo porque o brilho é o mesmo
+   Nível B; o que não pode ser o mesmo é o NOME. */
+.bp .ticket .hora, .bp .ticket .dias { font-weight: 650; }
 
 .bp .confirmar { margin: 1.3rem 1.2rem 0; padding: .9rem 1rem; border-radius: 14px; border: 1px dashed var(--line); text-align: center; color: var(--ink-faint); }
 .bp .confirmar .btn { display: inline-block; font-weight: 650; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 99px; padding: .5rem 1.15rem; margin-bottom: .4rem; }

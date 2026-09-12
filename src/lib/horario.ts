@@ -124,6 +124,17 @@ export function rotuloHora(hhmm: string): string {
   return Number(m) === 0 ? `${Number(h)}h` : `${Number(h)}h${m}`;
 }
 
+/** "5h–17h" — a faixa compacta, pro ticket da ficha e pra lista do acervo.
+ *
+ *  🔴 Ela vivia ESCRITA À MÃO dentro de `[slug]/page.tsx` (`${rotuloHora(abre)}–${rotuloHora(fecha)}`),
+ *  e ali era a única tela que a mostrava. Com `/trilhas` passando a mostrá-la
+ *  também (2026-09-11), duas montagens da mesma string seriam duas telas
+ *  podendo escrever a mesma faixa de formas diferentes — a família de sempre.
+ *  O travessão é o EN DASH, e é o que separa uma faixa de uma subtração. */
+export function rotuloFaixaCurta(horario: Horario): string {
+  return `${rotuloHora(horario.abre)}–${rotuloHora(horario.fecha)}`;
+}
+
 /** A linha de baixo do carimbo fechado: "abre às 5h", "abre amanhã às 5h",
  *  "abre sábado", "abre amanhã".
  *

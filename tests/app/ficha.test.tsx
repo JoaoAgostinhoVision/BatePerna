@@ -757,6 +757,58 @@ describe("o tíquete: preço e horário, cada um calando sozinho", () => {
     expect(ambos, "sumiu do acervo a ficha com PREÇO E HORÁRIO").toBeTruthy();
   });
 
+  // 🔴 T7, MEDIDA E SOBREVIVENTE NA PRIMEIRA VARREDURA (2026-09-11): apagar a
+  // linha dos dias do tíquete deixava a suíte inteira verde — e o buraco que
+  // ela fecha é o que motivou a rodada. A Rampa só abre sábado e domingo, e o
+  // carimbo SÓ FALA QUANDO ESTÁ FECHADO: num sábado ele diz "Pode ir", e o
+  // regime do lugar não aparecia em canto nenhum da ficha.
+  //
+  // O relógio é fixado num SÁBADO de propósito: é o dia em que o carimbo NÃO
+  // avisa, e portanto o único em que o tíquete é a prova. Num dia útil este
+  // teste passaria pelo motivo errado — o "Fechado agora" cobriria a ausência.
+  it("num dia em que ABRE, o tíquete ainda diz quais são os dias", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.UTC(2027, 0, 16, 15, 0)); // sábado, 12h em Recife
+    try {
+      const comDias = acervo.find((f) => f.dias?.length);
+      expect(comDias, "sumiu do acervo a ficha com DIAS — este guarda ficaria oco").toBeTruthy();
+
+      const { container } = await abrir(comDias!.slug);
+      // Controle: no sábado o carimbo realmente não avisa nada. Sem isto, o
+      // teste abaixo passaria numa tela que gritava "Fechado agora".
+      expect(
+        container.querySelector(".mark")?.textContent,
+        "o relógio caiu num dia fechado — o carimbo cobriria a ausência do tíquete",
+      ).not.toBe("Fechado agora");
+
+      const dias = container.querySelector(".ticket .dias");
+      expect(dias, "a ficha não diz em que dias o lugar abre").not.toBeNull();
+      // Montado a partir da própria ficha: ele pode mudar os dias sem que o
+      // teste vire manutenção.
+      for (const d of comDias!.dias!) {
+        const nome = { dom: "domingo", seg: "segunda", ter: "terça", qua: "quarta",
+                       qui: "quinta", sex: "sexta", sab: "sábado" }[d];
+        expect(dias!.textContent, `sumiu "${nome}" do tíquete`).toContain(nome);
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // 🔴 O PAR ORTOGONAL, e ele não é redundante: com `.dias` desenhado sempre,
+  // o teste de cima passaria e SÓ CAI aqui — uma ficha sem o campo passaria a
+  // exibir uma linha vazia, que é o app afirmando ter um regime que ninguém
+  // deu. Mesma régua do `.hora`.
+  it("ficha sem dias não desenha a linha de dias — ausente é silêncio", async () => {
+    const semDias = acervo.find((f) => !f.dias?.length);
+    expect(semDias, "todas as fichas têm dias — este par perdeu o sentido").toBeTruthy();
+    const { container } = await abrir(semDias!.slug);
+    expect(
+      container.querySelector(".ticket .dias"),
+      "apareceu linha de dias numa ficha que não tem o campo — o app inventou um regime",
+    ).toBeNull();
+  });
+
   it("ficha paga sem horário: mostra o preço e cala a hora", async () => {
     const { container } = await abrir(soPreco!.slug);
     const linha = tk(container);

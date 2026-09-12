@@ -101,9 +101,19 @@ export function formatarDistanciaCurta(km: number): string {
  *  contração). O `import type` daqui some na compilação, então nada de zod
  *  entra no bundle.
  *
- *  Recebe a FICHA inteira de propósito. Se recebesse uma `Coord`, cada chamador
- *  voltaria a escolher qual das duas passar — que é exatamente o defeito. */
-export function coordDaDistancia(ficha: Ficha): Coord {
+ *  Recebe a TRILHA de propósito, e não uma `Coord`: com uma `Coord` cada
+ *  chamador voltaria a escolher qual das duas passar — que é exatamente o
+ *  defeito que esta função existe pra fechar.
+ *
+ *  ⚠️ ESTRUTURAL desde 2026-09-11, e a propriedade acima continua de pé: quem
+ *  chama passa a trilha, não um ponto. O que a assinatura deixou de exigir é a
+ *  `Ficha` INTEIRA — `fatos-da-trilha.ts` trabalha com a forma compacta, pelo
+ *  mesmo motivo que `vozDaFicha` e `aberturaDaFicha` recebem estrutura: manter
+ *  esses módulos longe do zod, que `CartaoTrilha` (client component) não pode
+ *  arrastar pro bundle. */
+export function coordDaDistancia(ficha: {
+  trajeto: { waypoints: readonly { lat: number; lng: number }[] };
+}): Coord {
   const inicio = ficha.trajeto.waypoints[0];
   return { lat: inicio.lat, lng: inicio.lng };
 }
