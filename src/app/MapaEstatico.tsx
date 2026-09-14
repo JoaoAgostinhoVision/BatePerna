@@ -33,6 +33,21 @@ export default function MapaEstatico({
 
   return (
     <div className="wp-mapa" style={{ height: MAPA_ALTURA_PX }}>
+      {/* 🔴 O QUE APARECE QUANDO O MAPA NÃO APARECE (2026-09-13).
+          Ficha AQUECIDA na instalação e nunca aberta chega à serra com o texto
+          inteiro e um retângulo vazio no lugar do mapa — o `bp-tiles-osm` só
+          tem o que a pessoa já viu, e a Tile Usage Policy do OSM proíbe
+          baixá-los antes (ver `ehTileOsm`). Sem esta linha o que sobrava na
+          tela era um PIN BOIANDO NUM RETÂNGULO VAZIO: um alfinete marcando
+          nada, com cara de mapa que carregou.
+
+          Fica ANTES do mosaico de propósito, e não é enfeite de ordem: os
+          tiles são <img> opacos e `.wp-tiles` é transparente, então quando
+          eles pintam esta linha some por baixo deles — sem uma linha de JS.
+          O mapa é server component justamente pra não ter JS; detectar
+          `onError` custaria virar client component, e isso é caro demais pra
+          um recado. */}
+      <p className="wp-sem-mapa">Sem o mapa, vale a coordenada abaixo.</p>
       <div
         className="wp-tiles"
         role="img"

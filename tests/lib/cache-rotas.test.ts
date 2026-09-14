@@ -524,6 +524,60 @@ describe("aquecer: a instalação guarda a lista E o que ela lista", () => {
       "/rampa-do-pepe", "/trilhas", "/veu-de-noiva-de-bonito",
     ]);
   });
+
+  // 🔴 A TAREFA QUE MORREU AQUI, E O GUARDA QUE IMPEDE ELA DE RESSUSCITAR
+  // (2026-09-13). O plano da rodada era guardar os tiles do mapa junto com as
+  // fichas: sem eles, instalar, sair de casa e abrir uma ficha AQUECIDA dá a
+  // ficha inteira com um retângulo vazio no lugar do mapa — e o mapa é o que
+  // orienta onde o texto não orienta.
+  //
+  // O desenho estava pronto (extrair os `<img>` do HTML que o instalador acabou
+  // de baixar, igual `fichasDoAcervo` faz com os links) e o CUSTO FOI MEDIDO NO
+  // AR: **38 tiles ≈ 259 KB** pelas 3 fichas — 48 ≈ 328 KB se a home entrasse,
+  // e a home não compartilha NENHUM tile com as fichas. Cabia nas 120 entradas
+  // do `bp-tiles-osm` com folga.
+  //
+  // A Tile Usage Policy do OSM (operations.osmfoundation.org/policies/tiles/,
+  // lida em 2026-09-13) fecha a porta, e fecha pelo PADRÃO, não pelo volume:
+  //
+  //   "You must not: Bulk download ('scrape') tiles OR OFFER PREFETCH FEATURES."
+  //   "Bulk downloading is any PRE-EMPTIVE FETCHING OF TILES OTHER THAN THOSE A
+  //    USER IS ACTIVELY VIEWING."
+  //   "OFFLINE USE IS NOT PERMITTED on tile.openstreetmap.org."
+  //   Não permitido: "any 'download for offline' button OR BACKGROUND JOB THAT
+  //    FETCHES TILES A USER IS NOT CURRENTLY VIEWING."
+  //
+  // O `install` do service worker buscando 38 tiles é, ao pé da letra, um
+  // background job buscando tile que ninguém está olhando. "São só 38" não é
+  // defesa: não há faixa de tolerância na política, e a sanção declarada é
+  // bloqueio SEM AVISO — o mapa sumiria pra todo mundo, online inclusive, pra
+  // ganhar mapa offline de uma ficha nunca aberta. Troca ruim.
+  //
+  // ✅ O que a MESMA política permite continua de pé e já está no ar: o
+  // `CacheFirst` do `bp-tiles-osm` ("re-visits served from your local cache").
+  // Ficha ABERTA uma vez mantém o mapa offline. O buraco restante é a ficha
+  // aquecida e nunca aberta — e a saída dele não é baixar tile escondido, é o
+  // mapa DIZER que não tem mapa (ver MapaEstatico e `.wp-sem-mapa`).
+  //
+  // Este teste é a única coisa que impede a próxima sessão de ler o plano velho
+  // e implementá-lo sem reler a política.
+  it("o aquecimento NUNCA busca tile — a política do OSM proíbe prefetch", async () => {
+    const i = instalador({ "/trilhas": ACERVO, "/rampa-do-pepe": "r", "/veu-de-noiva-de-bonito": "v" });
+    await aquecer(i.pedido);
+    const tiles = i.buscado.filter((c) => c.includes("tile.openstreetmap.org") || /\/\d+\/\d+\/\d+\.png$/.test(c));
+    expect(
+      tiles,
+      "o aquecimento voltou a buscar tile: isso é prefetch, e a política do OSM manda bloquear sem aviso",
+    ).toEqual([]);
+  });
+
+  // O par do de cima, e sem ele aquele seria vácuo: prova que o instalador
+  // BUSCA alguma coisa. Um `aquecer` que não busca nada passaria naquele.
+  it("e mesmo assim busca as páginas — o guarda acima não é vácuo", async () => {
+    const i = instalador({ "/trilhas": ACERVO, "/rampa-do-pepe": "r", "/veu-de-noiva-de-bonito": "v" });
+    await aquecer(i.pedido);
+    expect(i.buscado.length).toBeGreaterThan(1);
+  });
 });
 
 // 🔴 O DEFEITO QUE ESTE BLOCO TRANCA, e ele foi MEDIDO NO NAVEGADOR, não

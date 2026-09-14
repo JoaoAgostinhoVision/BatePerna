@@ -229,6 +229,26 @@ html, body { background: var(--ground); }
 .bp[data-state][data-fase="sem-informacoes"] .wp-pin { background: var(--stop); }
 .bp[data-state][data-fase="fechado"] .wp-pin { background: var(--stop); }
 
+/* 🔴 O RECADO DE BAIXO DO MAPA — ele fica VISÍVEL quando os tiles não pintam.
+   z-index 0 + vir antes do mosaico no DOM = os <img> opacos o cobrem quando
+   carregam. `.wp-tiles` NÃO pode ganhar background: seria ele quem esconderia
+   este recado para sempre, e o defeito voltaria com a suíte verde.
+   bottom: 1.7rem tira ele de cima do crédito do OSM (canto inferior direito).
+
+   🔴 CENTRADO POR left:50% + translateX(-50%), e NÃO por `margin: 0 auto` —
+   isto foi MEDIDO NO NAVEGADOR em 2026-09-13, não deduzido. Com
+   `left:0; right:0; max-width:300px; margin:0 auto` o Chrome resolveu as duas
+   margens em 0px e o recado ficou COLADO NA ESQUERDA da caixa (o clamp do
+   max-width não re-roda o cálculo das margens automáticas). E centrar não é
+   estética: `.wp-tiles` tem 480px fixos centrados dentro de uma `.wp-mapa`
+   fluida, então só o que está CENTRADO fica garantidamente dentro da faixa dos
+   tiles. Encostado numa borda, o recado vaza pra fora do mosaico assim que a
+   tela passa de 480px — e passa a aparecer POR CIMA de um mapa que carregou.
+   Daí também o `width: min(300px, 100%)` amarrado a MAPA_LARGURA_PX por teste. */
+.bp .wp-sem-mapa { position: absolute; z-index: 0; left: 50%; transform: translateX(-50%);
+  bottom: 1.7rem; width: min(300px, 100%); padding: 0 .6rem; text-align: center;
+  font-family: var(--type); font-size: .78rem; line-height: 1.3; color: var(--ink-soft); }
+
 .bp .wp-osm { position: absolute; right: 0; bottom: 0; padding: .25rem .45rem;
   font-family: var(--type); font-size: .64rem; text-decoration: none;
   color: var(--ink-soft); background: color-mix(in srgb, var(--screen) 78%, transparent);

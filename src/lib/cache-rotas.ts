@@ -80,6 +80,15 @@ export function ehNavegacaoForcada(url: string): boolean {
   return new URL(url).searchParams.has(PARAM_DEBUG);
 }
 
+/** É um tile do mapa?
+ *
+ *  🔴 SERVE SÓ PRA A ESTRATÉGIA DE RE-VISITA em `sw.ts`, e nunca pra aquecer.
+ *  A Tile Usage Policy do OSM proíbe "prefetch features" e "any background job
+ *  that fetches tiles a user is not currently viewing" — pelo PADRÃO, não pelo
+ *  volume. Guardar o que a pessoa JÁ VIU é a outra metade da mesma política, e
+ *  essa é permitida. A razão inteira, com as citações e o custo medido, está no
+ *  guarda que trava isto: "o aquecimento NUNCA busca tile", em
+ *  tests/lib/cache-rotas.test.ts. */
 export function ehTileOsm(url: string): boolean {
   return new URL(url).hostname === "tile.openstreetmap.org";
 }

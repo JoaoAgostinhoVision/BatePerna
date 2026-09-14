@@ -1,15 +1,16 @@
 # RESUME — BatePerna (retomar aqui)
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
-> O ledger de execução da rodada de 2026-08-23 era scratch git-ignorado e **já foi apagado** (o
-> método manda apagá-lo quando a revisão final fecha); o essencial dele está aqui embaixo.
 
-🟢🟢 **ÚLTIMA PARADA: 2026-09-11/12 — O DIA MAIS LONGO ATÉ AQUI. OITO RODADAS, TUDO NO AR.**
-**950/950 em 58 arquivos**, `tsc` limpo, `build` passa, **cerca de 60 mutações medidas** no dia.
-🟢 **NADA PENDENTE DE DEPLOY.** Tudo conferido no domínio real, e três coisas conferidas
-**no navegador de verdade** (o service worker, o 404 e o envenenamento de cache).
+🟢🟢 **ÚLTIMA PARADA: 2026-09-13.** **958/958 em 58 arquivos**, `tsc` limpo, `build` passa,
+**10 mutações medidas, 10 mortas**. 🟢 **NADA PENDENTE DE DEPLOY** — no ar e conferido nas três
+camadas, inclusive **no navegador de verdade**, as duas metades do comportamento novo.
 
-> *"queria continuar na próxima sessão"* — João, fim da sessão.
+🔴 **A TAREFA ÚNICA DE ONTEM MORREU NA CHECAGEM QUE ELA MESMA MANDOU FAZER.** O plano era guardar
+os tiles do mapa no aquecimento offline; o passo 2 dizia *"confira a política do OSM antes"*.
+Conferi. **A política proíbe.** O que subiu no lugar está logo abaixo, e a decisão que sobrou é dele.
+
+---
 
 ## ▶ ELE DIGITOU "CONTINUA"? FAÇA A TAREFA ÚNICA ABAIXO. NÃO PERGUNTE NADA.
 
@@ -17,79 +18,123 @@
 > levantar opções. Não ofereça menu, não peça confirmação pra começar, não abra o dia com pergunta.
 > Ele já disse duas vezes o que quer — *"estás saindo do contexto"* e ***"o foco é o aplicativo"***.
 >
-> **Tudo o que depende dele está na segunda metade deste bloco, marcado ⛔ NÃO É TAREFA.** Não
-> comece por lá, e não transforme nada de lá em pergunta de abertura.
->
-> Só pare e pergunte se a TAREFA ÚNICA já estiver feita **e conferida no ar** — aí sim, diga o que
-> achou de próximo e siga.
+> **Tudo o que depende dele está marcado ⛔ NÃO É TAREFA.** Não comece por lá, e não transforme
+> nada de lá em pergunta de abertura.
 
 ---
 
-## ✅ A TAREFA ÚNICA — os tiles do mapa no aquecimento offline
+## ☠️ O QUE MORREU EM 13/09 — os tiles no aquecimento offline
 
-**O aquecimento offline guarda o HTML da ficha e NÃO guarda os tiles do mapa.** Instalar, sair de
-casa e abrir uma ficha aquecida dá a ficha inteira **com um retângulo em branco** no lugar do mapa —
-e o mapa é justamente o que orienta onde o texto não orienta (é a régua dele: *"sem cidade grande
-conhecida por perto, referência textual falha; mostrar > descrever"*).
+**A tarefa:** o instalador guarda o HTML da ficha e não guarda os tiles, então instalar, sair de
+casa e abrir uma ficha **aquecida e nunca aberta** dá a ficha inteira com o mapa vazio.
 
-**MEDIDO, não estimado — e o número foi buscado no ar em 12/09:**
+**Medido no ar, e o número é melhor que o de ontem:**
 
 | | tiles distintos | bytes |
 |---|---|---|
-| uma ficha | 15 | ≈ 105 KB |
+| uma ficha | 15 (a Pedra Furada, 8) | ≈ 105 KB |
 | a home | 10 | ≈ 70 KB |
-| **as 3 fichas + a home, sem repetir** | **48** | **≈ 328 KB** |
+| **as 3 fichas, sem repetir** | **38** | **≈ 259 KB** |
+| as 3 fichas + a home | 48 | ≈ 328 KB |
 
-🔴 **E ESTE NÚMERO MUDA A CONVERSA, ao contrário do último.** O aquecimento das PÁGINAS custou
-**20 KB** e a ressalva de que "gastava os dados dele" estava superdimensionada. Aqui é **16× isso**
-— ainda é menos que uma foto de celular, e é **uma vez só, na instalação**, mas já não é um número
-que se ignora. **A decisão é dele se ele quiser opinar; se não quiser, siga com o plano abaixo e
-conte o número no fim.**
+⚠️ **E a home não compartilha NENHUM tile com as fichas** (38 + 10 = 48, sem sobreposição) — e
+offline a home **nunca rende**: `planoDaRaiz` serve `/trilhas`, que tem **0 tiles**. Os 70 KB dela
+seriam baixados pra ninguém ver. Isso já cortava a home antes de qualquer política.
 
-⚠️ **Os 48 são MENOS que 15×3+10 = 55:** os tiles se repetem entre páginas. Quem dedupa é o
-`Set` — não conte duas vezes, e não guarde duas vezes.
+### 🔴 E aí a política cortou o resto
 
-**O caminho já está desenhado, e é o mesmo truque que o aquecimento das fichas usa:** os `<img>` dos
-tiles estão **no HTML que o instalador acabou de baixar** — então dá pra extraí-los de lá, do mesmo
-jeito que `fichasDoAcervo` extrai os links. Assim a lista de tiles **não tem como discordar do que a
-página pede**, porque ela É o que a página pede. Ver `src/lib/cache-rotas.ts`.
+[Tile Usage Policy do OSM](https://operations.osmfoundation.org/policies/tiles/), lida em 13/09.
+Ela proíbe pelo **PADRÃO**, não pelo volume:
 
-⚠️ **Duas coisas a decidir antes de escrever a primeira linha:**
-1. ~~**Quanto isso pesa**~~ ✅ **JÁ MEDIDO: 48 tiles, ≈ 328 KB** (tabela acima). O cache
-   `bp-tiles-osm` tem teto de **120 entradas**, então os 48 cabem com folga. Reconfira o número
-   antes de subir — o acervo pode ter crescido.
-2. **A política de uso do OSM.** São tiles de terceiro, e baixar em lote na instalação é diferente
-   de baixar navegando. **48 é pouco** — é o mesmo que uma pessoa buscaria navegando pelas quatro
-   telas —, mas confira a política antes. **Se decidir cortar, corte pela HOME primeiro** (10 tiles,
-   ~70 KB): ela é a porta que sempre abre, e o resto entra navegando.
+> "You must not: Bulk download ('scrape') tiles **or offer prefetch features**."
+>
+> "Bulk downloading is any **pre-emptive fetching of tiles other than those a user is actively
+> viewing**."
+>
+> "**Offline use is not permitted on tile.openstreetmap.org.**"
+>
+> Não permitido: "any 'download for offline' button **or background job that fetches tiles a user
+> is not currently viewing**."
 
-### 👉 OS PASSOS, na ordem — cada um já tem dono no código
+O `install` do service worker buscando 38 tiles é, ao pé da letra, **um background job buscando
+tile que ninguém está olhando**. *"São só 38"* não é defesa: não há faixa de tolerância no texto, e
+a sanção declarada é **bloqueio sem aviso** — o mapa sumiria pra todo mundo, **online inclusive**,
+pra ganhar mapa offline de uma ficha nunca aberta. Troca ruim.
 
-```bash
-# 1. MEDIR primeiro (a lição de 10/09: ressalva sem medição trava rodada à toa)
-curl -s https://bateperna.vercel.app/rampa-do-pepe \
-  | grep -oE 'https://tile\.openstreetmap\.org/[0-9]+/[0-9]+/[0-9]+\.png' | sort -u \
-  | while read u; do curl -s -o /dev/null -w "%{size_download}\n" "$u"; done \
-  | awk '{t+=$1} END {print t" bytes em "NR" tiles"}'
-```
+✅ **O que a MESMA política permite continua de pé e já estava no ar:** o `CacheFirst` do
+`bp-tiles-osm` — *"re-visits served from your local cache"*. **Ficha que ele ABRIU uma vez mantém o
+mapa offline.** O buraco é só a ficha aquecida e nunca aberta.
 
-2. **`src/lib/cache-rotas.ts`** — `tilesDoHtml(html)` ao lado de `fichasDoAcervo`, com o mesmo
-   formato: extrai do HTML, dedup, teto próprio. O teto vem do `maxEntries` do `bp-tiles-osm` em
-   `sw.ts` (**120**), e há molde de guarda amarrando os dois números (ver `TETO_AQUECIMENTO`).
-3. **`aquecer()` no mesmo arquivo** — ela já recebe `buscar`/`gravar` injetados e já devolve o que
-   guardou. Os tiles entram lá, **nunca no listener do `sw.ts`** (lição do dia: código no `sw.ts` é
-   código sem prova).
-4. **`tests/lib/cache-rotas.test.ts`** — o molde existe: o `instalador()` falso, o guarda contra o
-   **HTML REAL** que a página rende (é o único que pega o markup mudando), e a não-vacuidade.
-5. **Medir mutação** com o script que **prova que mutou antes de rodar**. Mate pelo menos: o
-   extrator parando de achar tile · o teto sumindo · tile indo pro cache errado · a ficha parando
-   de ser aquecida junto.
-6. **Deploy + as três camadas**, e **abra o navegador**: instale limpo, desligue a rede, abra uma
-   ficha nunca visitada e **veja se o mapa aparece**. É a única prova que vale aqui.
+**Onde isso está travado pra não ressuscitar:** o guarda *"o aquecimento NUNCA busca tile"* em
+`tests/lib/cache-rotas.test.ts`, com as citações inteiras, mais o doc de `ehTileOsm`. Sem ele, a
+próxima sessão lê um plano velho e implementa sem reler a política.
 
 ---
 
-### 🔒 O RITUAL DE FECHAMENTO — vale pra ESTA tarefa e pra qualquer outra
+## ✅ O QUE SUBIU NO LUGAR — o mapa dizendo que não tem mapa
+
+O que sobrava na tela era **um pin verde boiando num retângulo vazio**: alfinete marcando nada, com
+cara de mapa que carregou. Agora sobra uma linha:
+
+> **Sem o mapa, vale a coordenada abaixo.**
+
+E ela é verdadeira: a coordenada, a nota do waypoint e o "Abrir no mapa" estão logo ali embaixo.
+
+**Como funciona sem uma linha de JS** (o mapa é server component de propósito, e virar client
+component só pra ouvir `onError` é caro demais pra um recado): o `<p>` fica **antes** do mosaico no
+DOM, com `z-index: 0`. Os tiles são `<img>` **opacos** e `.wp-tiles` é **transparente** — quando
+eles pintam, o recado some por baixo deles. Quando não pintam, ele aparece.
+
+🔴 **E abrir o navegador achou um defeito que a suíte não acharia** (de novo): a primeira versão
+centrava com `left:0; right:0; max-width:300px; margin:0 auto`, e **o Chrome resolveu as duas
+margens em 0px** — no ar, o recado ficou **colado na esquerda**. O clamp do `max-width` não re-roda
+o cálculo das margens automáticas. Não é estética: `.wp-tiles` tem 480px fixos **centrados** dentro
+de uma `.wp-mapa` fluida, então **só o que está centrado fica garantidamente dentro da faixa dos
+tiles** — encostado numa borda, o recado vaza pra fora do mosaico e passa a aparecer **por cima de
+um mapa que carregou**, em todo mundo, o tempo todo. Corrigido com `left:50%` + `translateX(-50%)`,
+e os dois lados viraram guarda.
+
+**As 10 mutações medidas, todas mortas:** o recado sumindo · o recado passando pra depois do
+mosaico · `.wp-tiles` ganhando `background` · ganhando `background-color` · o `z-index` subindo ·
+o `margin:0 auto` voltando · o `translateX` sumindo · o recado ficando mais largo que a faixa ·
+o aquecimento voltando a buscar tile · o aquecimento não buscando nada (a vacuidade do anterior).
+
+**Conferido no navegador, as duas metades:** com os 15 tiles carregados o recado está **centrado na
+faixa, dentro dela, e coberto por `IMG` nos quatro cantos**; com os 15 quebrados ele **aparece,
+centrado e legível**.
+
+---
+
+## ✅ A TAREFA ÚNICA DA PRÓXIMA VEZ
+
+🔴 **Antes dela, leia o ⛔ 0 logo abaixo** — a decisão dele sobre a FONTE dos tiles pode mudar o que
+vale a pena fazer no mapa. Se ele não tocar no assunto, **não pergunte: faça a tarefa abaixo.**
+
+**`trajeto.waypoints[1..]` — o dado que carrega, valida, tem teste e NUNCA aparece na tela.**
+
+O schema aceita `waypoints` com N entradas (`src/types/ficha.ts`, `.min(1)`), e **todo lugar do
+`src/` lê só `waypoints[0]`** — `CartaoTrilha`, `ListaDoAcervo`, `MapaHome`, `[slug]/page.tsx`,
+`ficha.ts`, `geo.ts`. As 3 fichas têm exatamente 1 waypoint cada. É a espécie já catalogada, e é
+justamente o eixo que a medição de 09/09 apontou como vazio: **"o que só sabe quem já foi"**.
+
+⚠️ **O QUE TRAVA, E POR ISSO A TAREFA NÃO É "RENDERIZAR" E SIM "PERGUNTAR":** waypoint novo é
+**fato novo sobre lugar real**, e isso só vem dele. O acervo está **FECHADO em 3 fichas** e a regra
+segue: **não criar ficha nem pesquisar lugar novo.** Então a tarefa é, nesta ordem:
+
+1. **Medir primeiro, sem escrever código:** confirmar nome a nome que `waypoints[1..]` é morto no
+   `src/` e que nenhum teste finge o contrário. Se estiver vivo em algum canto, a tarefa muda e é
+   isso que se reporta.
+2. **Levar a ele UMA pergunta concreta, com a ficha na mão** — não um questionário: *"na Rampa do
+   Pepê, tem algum ponto no caminho que você marcaria além do começo da trilha?"*. Uma ficha, uma
+   pergunta. Ele já disse que odeia menu.
+3. **Só depois construir**, com a palavra dele, e com a régua de procedência de sempre.
+
+Se ele não responder, **a saída de SUBTRAÇÃO é a sua**: `.min(1)` vira `.length(1)` e o campo para
+de prometer o que o app não entrega. Essa não precisa dele.
+
+---
+
+### 🔒 O RITUAL DE FECHAMENTO — vale pra qualquer tarefa
 
 O `--scope` **não é opcional** — sem ele dá `Not authorized`:
 
@@ -97,18 +142,38 @@ O `--scope` **não é opcional** — sem ele dá `Not authorized`:
 npx --yes vercel@latest --prod --yes --scope bate-perna
 ```
 
-Depois, **conferir no domínio real** (`https://bateperna.vercel.app`) — `● Ready` não prova conteúdo.
-Marcadores **sem acento**, sempre (lição de 09/09).
+Depois, **conferir no domínio real** (`https://bateperna.vercel.app`) — `● Ready` não prova
+conteúdo. Marcadores **sem acento**, sempre (lição de 09/09).
 
-🔴 **E A LIÇÃO NOVA DE 11/09, que vale mais que o comando:** numa tela que depende do **relógio do
-cliente**, as camadas 1 e 2 **não bastam**. O HTML pré-renderizado da Rampa dizia *"Pode ir"* — e
-estava CERTO, porque o `useAgoraRecife` devolve `null` no primeiro render, de propósito. Só o
-navegador de verdade mostrou **"FECHADO AGORA · abre amanhã"**. **Tem que abrir.**
-
-🔴 **E abrir o navegador achou o pior defeito do dia**, que teste nenhum teria achado — o
-envenenamento do cache pelo `?debug=`. Está contado na seção **2026-09-11/12**, mais abaixo.
+🔴 **E A LIÇÃO QUE JÁ COBROU TRÊS VEZES:** as camadas 1 e 2 **não bastam**. O HTML pré-renderizado
+mentiu sobre o carimbo (11/09), o cache mentiu sobre o estado (11/09), e o CSS mentiu sobre a
+posição do recado (13/09) — **as três só apareceram no navegador aberto.** **Tem que abrir.**
 
 ---
+
+# ⛔ 0. A DECISÃO QUE SOBROU, E ELA É DELE — a FONTE dos tiles
+
+> **Não abra a sessão com isto.** Está aqui pra quando ele tocar no assunto, e pra ninguém refazer
+> o levantamento.
+
+O mapa offline numa ficha nunca aberta **não é alcançável com `tile.openstreetmap.org`**. Ponto.
+Mudar isso é mudar de fonte, e as três saídas reais são:
+
+| saída | o que custa | o que ganha |
+|---|---|---|
+| **Ficar como está** (recomendada por ora) | zero | ficha visitada já mantém o mapa; a nunca aberta mostra o recado e a coordenada. Honesto, e é o único caminho que não gasta nada |
+| **Servidor próprio de tiles** | infra de verdade (render, armazenamento, custo mensal) pra um acervo de **3 fichas** | prefetch liberado, mapa offline completo |
+| **Trocar de provedor / vetorial empacotável** | pesquisa + provavelmente plano pago; o `MapaEstatico` e o `bp-tiles-osm` mudam junto | prefetch liberado onde o provedor permitir |
+
+**Minha recomendação: ficar como está.** Montar infra de tiles pra 3 fichas é o oposto do que ele
+pediu em 09/09 (*"o mais importante não seria preencher, mas a construção do app de fato"*). Se o
+acervo crescer muito, a conta muda.
+
+⚠️ **O que ele precisa VER no celular quando tocar nisso:** offline, o Chrome desenha os **ícones
+de imagem quebrada** nos 15 tiles — linhas finas e uns quadradinhos. O recado aparece por cima
+disso e funciona, mas o conjunto tem cara de página quebrada. **Esconder esses ícones exige JS**
+(não dá pra selecionar `<img>` que falhou por CSS), e o mapa é server component de propósito. Fica
+aqui como custo conhecido, não como pendência.
 
 # ⛔ DAQUI PRA BAIXO NÃO É TAREFA — é referência, e é coisa DELE
 
