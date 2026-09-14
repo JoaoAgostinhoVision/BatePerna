@@ -2,152 +2,133 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🟢🟢 **ÚLTIMA PARADA: 2026-09-13.** **958/958 em 58 arquivos**, `tsc` limpo, `build` passa,
-**10 mutações medidas, 10 mortas**. 🟢 **NADA PENDENTE DE DEPLOY** — no ar e conferido nas três
-camadas, inclusive **no navegador de verdade**, as duas metades do comportamento novo.
+🟡 **ÚLTIMA PARADA: 2026-09-13, segunda metade. O EIXO MUDOU, a pedido dele: `acesso de usuários`.**
+Uma rodada fechada (os tiles / o mapa honesto) e **uma rodada EM ANDAMENTO, no meio da execução** —
+2 de 11 tarefas. Ele encerrou com *"eu quero continuar na próxima, deixe tudo pronto"*.
 
-🔴 **A TAREFA ÚNICA DE ONTEM MORREU NA CHECAGEM QUE ELA MESMA MANDOU FAZER.** O plano era guardar
-os tiles do mapa no aquecimento offline; o passo 2 dizia *"confira a política do OSM antes"*.
-Conferi. **A política proíbe.** O que subiu no lugar está logo abaixo, e a decisão que sobrou é dele.
-
----
-
-## ▶ ELE DIGITOU "CONTINUA"? FAÇA A TAREFA ÚNICA ABAIXO. NÃO PERGUNTE NADA.
-
-> 🔴 **A regra, e ela vale mais que o resto do arquivo:** *"continua"* significa **construir**, não
-> levantar opções. Não ofereça menu, não peça confirmação pra começar, não abra o dia com pergunta.
-> Ele já disse duas vezes o que quer — *"estás saindo do contexto"* e ***"o foco é o aplicativo"***.
->
-> **Tudo o que depende dele está marcado ⛔ NÃO É TAREFA.** Não comece por lá, e não transforme
-> nada de lá em pergunta de abertura.
+🔴 **NÃO ESTAMOS EM `main`.** A branch é **`admin-porta-e-aviso`**. Nada disso foi ao ar, e **nada
+deve ir ao ar** até o plano fechar — a porta de admin pela metade é pior que porta nenhuma.
 
 ---
 
-## ☠️ O QUE MORREU EM 13/09 — os tiles no aquecimento offline
+## ▶ ELE DIGITOU "CONTINUA"? NÃO COMECE DO ZERO — HÁ UMA EXECUÇÃO NO MEIO.
 
-**A tarefa:** o instalador guarda o HTML da ficha e não guarda os tiles, então instalar, sair de
-casa e abrir uma ficha **aquecida e nunca aberta** dá a ficha inteira com o mapa vazio.
+> 🔴 **A regra de sempre:** *"continua"* significa **construir**, não levantar opções. Sem menu, sem
+> pergunta de abertura. Ele já disse duas vezes: *"estás saindo do contexto"* / ***"o foco é o
+> aplicativo"***.
 
-**Medido no ar, e o número é melhor que o de ontem:**
+**O que fazer, na ordem, sem perguntar nada:**
 
-| | tiles distintos | bytes |
+1. `git checkout admin-porta-e-aviso` (confira que está lá; **não** trabalhe em `main`).
+2. Leia o **ledger**: `.superpowers/sdd/2026-09-13-acesso-de-admin-porta-e-aviso/progress.md`.
+   Ele é o mapa de recuperação — as tarefas com a linha `Task N: complete` estão FEITAS.
+   **Não redespache tarefa completa.** Retome na primeira sem essa linha.
+3. Leia o **plano**: `docs/superpowers/plans/2026-09-13-acesso-de-admin-porta-e-aviso.md`.
+   E a **spec** que ele argumenta: `docs/superpowers/specs/2026-09-13-acesso-de-admin-design.md`.
+4. Continue pelo método que ele escolheu: **subagent-driven-development** (`superpowers`), um
+   subagente por tarefa, revisão entre elas, mutação medida em cada uma.
+
+⚠️ **Confira `git status` antes de qualquer coisa.** A sessão terminou com um *fix round* em
+andamento; se houver arquivo modificado e não commitado, é dele — leia o diff antes de mexer.
+
+---
+
+## 📍 ONDE A EXECUÇÃO PAROU
+
+| tarefa | estado |
+|---|---|
+| 1 — `src/lib/admin-sessao.ts`, o módulo puro da sessão | ✅ **completa**, revisão limpa (`4ef3bfa`) |
+| 2 — `/admin` fora dos dois caminhos de cache | 🟡 **fix round 1/5 em andamento** (`b4ff398` + conserto) |
+| 3 a 11 | ⬜ não começadas — briefs já gerados no workspace |
+
+**Os 11 briefs já estão gerados** em `.superpowers/sdd/2026-09-13-acesso-de-admin-porta-e-aviso/`
+(`task-N-brief.md`). Não precisa regerar.
+
+### O que a Task 2 estava consertando quando a sessão acabou
+
+O revisor achou — e eu conferi no `node_modules` — que **tirar `/admin` da NOSSA estratégia de cache
+não impede que ele seja guardado**: ele cai no catch-all do `defaultCache` do serwist
+(`sameOrigin && !pathname.startsWith("/api/")` → `NetworkFirst`, cache `"others"`) e é guardado do
+mesmo jeito. O defeito era do **plano**, não do implementador.
+
+⚠️ **E o pior detalhe:** em desenvolvimento o `defaultCache` é um `NetworkOnly` só. **Este defeito
+não existe na máquina dele** — só nasce no bundle de produção, no celular.
+
+**O conserto pedido:** uma rota nossa que reclame `/admin` **antes** do spread `...defaultCache`,
+espelhando o que `nuncaCachear` já faz com `/api/`. E como o mecanismo é **ordem de registro** num
+arquivo que teste nenhum importa, a ordem tem que ser provada por **guarda de fonte** — com mutação
+que move a rota pra baixo do spread e confirma que o guarda fica vermelho.
+
+---
+
+## 🧭 O QUE ESTA RODADA É, EM UMA TELA
+
+Ele pediu **"acesso de usuários"** e, na conversa, isso se separou em **dois sistemas diferentes**:
+
+| | **conta de admin** | **conta de usuário** |
 |---|---|---|
-| uma ficha | 15 (a Pedra Furada, 8) | ≈ 105 KB |
-| a home | 10 | ≈ 70 KB |
-| **as 3 fichas, sem repetir** | **38** | **≈ 259 KB** |
-| as 3 fichas + a home | 48 | ≈ 328 KB |
+| quantas pessoas | 1 (ele) | muitas |
+| obrigatória? | pra ele, sim | **não** — *"seria algo não necessário para usar"* |
+| pra quê | editar ficha, corrigir carimbo, publicar aviso — do celular | levar os dados pra outro celular + *"recursos que serão implementados futuramente"* |
+| risco se vazar | **o app inteiro** | os dados de uma pessoa |
 
-⚠️ **E a home não compartilha NENHUM tile com as fichas** (38 + 10 = 48, sem sobreposição) — e
-offline a home **nunca rende**: `planoDaRaiz` serve `/trilhas`, que tem **0 tiles**. Os 70 KB dela
-seriam baixados pra ninguém ver. Isso já cortava a home antes de qualquer política.
+**Só a conta de admin está sendo construída.** A de usuário (com login social, que foi o pedido
+dele) fica pra quando os "recursos futuros" tiverem nome — hoje ela não teria o que guardar.
 
-### 🔴 E aí a política cortou o resto
-
-[Tile Usage Policy do OSM](https://operations.osmfoundation.org/policies/tiles/), lida em 13/09.
-Ela proíbe pelo **PADRÃO**, não pelo volume:
-
-> "You must not: Bulk download ('scrape') tiles **or offer prefetch features**."
->
-> "Bulk downloading is any **pre-emptive fetching of tiles other than those a user is actively
-> viewing**."
->
-> "**Offline use is not permitted on tile.openstreetmap.org.**"
->
-> Não permitido: "any 'download for offline' button **or background job that fetches tiles a user
-> is not currently viewing**."
-
-O `install` do service worker buscando 38 tiles é, ao pé da letra, **um background job buscando
-tile que ninguém está olhando**. *"São só 38"* não é defesa: não há faixa de tolerância no texto, e
-a sanção declarada é **bloqueio sem aviso** — o mapa sumiria pra todo mundo, **online inclusive**,
-pra ganhar mapa offline de uma ficha nunca aberta. Troca ruim.
-
-✅ **O que a MESMA política permite continua de pé e já estava no ar:** o `CacheFirst` do
-`bp-tiles-osm` — *"re-visits served from your local cache"*. **Ficha que ele ABRIU uma vez mantém o
-mapa offline.** O buraco é só a ficha aquecida e nunca aberta.
-
-**Onde isso está travado pra não ressuscitar:** o guarda *"o aquecimento NUNCA busca tile"* em
-`tests/lib/cache-rotas.test.ts`, com as citações inteiras, mais o doc de `ehTileOsm`. Sem ele, a
-próxima sessão lê um plano velho e implementa sem reler a política.
+**A arquitetura sai da régua que o projeto já tem**, no `nuncaCachear`: *"o resto da ficha é verdade
+parada; o placar não é."* O que apodrece (aviso, carimbo) vai pro **Turso** e é instantâneo; verdade
+parada (texto de ficha) vira **commit autorado por ele**, versionado, ~2min. É isso que faz a
+procedência deixar de ser disciplina minha e virar `git blame`.
 
 ---
 
-## ✅ O QUE SUBIU NO LUGAR — o mapa dizendo que não tem mapa
+## 🚦 O QUE ESTÁ ESPERANDO DECISÃO DELE (não abra o dia com isto)
 
-O que sobrava na tela era **um pin verde boiando num retângulo vazio**: alfinete marcando nada, com
-cara de mapa que carregou. Agora sobra uma linha:
-
-> **Sem o mapa, vale a coordenada abaixo.**
-
-E ela é verdadeira: a coordenada, a nota do waypoint e o "Abrir no mapa" estão logo ali embaixo.
-
-**Como funciona sem uma linha de JS** (o mapa é server component de propósito, e virar client
-component só pra ouvir `onError` é caro demais pra um recado): o `<p>` fica **antes** do mosaico no
-DOM, com `z-index: 0`. Os tiles são `<img>` **opacos** e `.wp-tiles` é **transparente** — quando
-eles pintam, o recado some por baixo deles. Quando não pintam, ele aparece.
-
-🔴 **E abrir o navegador achou um defeito que a suíte não acharia** (de novo): a primeira versão
-centrava com `left:0; right:0; max-width:300px; margin:0 auto`, e **o Chrome resolveu as duas
-margens em 0px** — no ar, o recado ficou **colado na esquerda**. O clamp do `max-width` não re-roda
-o cálculo das margens automáticas. Não é estética: `.wp-tiles` tem 480px fixos **centrados** dentro
-de uma `.wp-mapa` fluida, então **só o que está centrado fica garantidamente dentro da faixa dos
-tiles** — encostado numa borda, o recado vaza pra fora do mosaico e passa a aparecer **por cima de
-um mapa que carregou**, em todo mundo, o tempo todo. Corrigido com `left:50%` + `translateX(-50%)`,
-e os dois lados viraram guarda.
-
-**As 10 mutações medidas, todas mortas:** o recado sumindo · o recado passando pra depois do
-mosaico · `.wp-tiles` ganhando `background` · ganhando `background-color` · o `z-index` subindo ·
-o `margin:0 auto` voltando · o `translateX` sumindo · o recado ficando mais largo que a faixa ·
-o aquecimento voltando a buscar tile · o aquecimento não buscando nada (a vacuidade do anterior).
-
-**Conferido no navegador, as duas metades:** com os 15 tiles carregados o recado está **centrado na
-faixa, dentro dela, e coberto por `IMG` nos quatro cantos**; com os 15 quebrados ele **aparece,
-centrado e legível**.
+1. **`ADMIN_SENHA` e `ADMIN_SEGREDO`** — ele cria e põe no Vercel, com as próprias mãos. **Nada
+   disso bloqueia a construção:** a porta falha fechada, então o código sobe com o admin
+   simplesmente não existindo. Ele liga quando quiser.
+2. **Token do GitHub** de escopo mínimo — só na etapa 4 (editar ficha), que não está neste plano.
+3. **Limite de tentativas por IP** — deixei de fora de propósito (senha de 24+ caracteres já cobre).
+4. **"Criar ficha nova pelo app"** — é a etapa 6, fora deste plano, e colide com a regra dele de
+   09/09 (acervo fechado em 3).
 
 ---
 
-## ✅ A TAREFA ÚNICA DA PRÓXIMA VEZ
+## ✅ A OUTRA RODADA DO DIA, JÁ FECHADA E NO AR (13/09, primeira metade)
 
-🔴 **Antes dela, leia o ⛔ 0 logo abaixo** — a decisão dele sobre a FONTE dos tiles pode mudar o que
-vale a pena fazer no mapa. Se ele não tocar no assunto, **não pergunte: faça a tarefa abaixo.**
+**A tarefa dos tiles no aquecimento offline MORREU na checagem que ela mesma mandou fazer.** A
+[Tile Usage Policy do OSM](https://operations.osmfoundation.org/policies/tiles/) proíbe *"prefetch
+features"* e *"any background job that fetches tiles a user is not currently viewing"* — **pelo
+padrão, não pelo volume**, com sanção de bloqueio sem aviso. Medido antes de desistir: **38 tiles ≈
+259 KB** pelas 3 fichas (a home não compartilha nenhum tile com elas, e offline nunca rende).
 
-**`trajeto.waypoints[1..]` — o dado que carrega, valida, tem teste e NUNCA aparece na tela.**
+**Subiu no lugar:** o mapa dizendo que não tem mapa — *"Sem o mapa, vale a coordenada abaixo."* —
+sem uma linha de JS. Antes sobrava um pin verde boiando num retângulo vazio. **958/958**, 10
+mutações medidas e mortas, no ar e conferido no navegador nas duas metades.
 
-O schema aceita `waypoints` com N entradas (`src/types/ficha.ts`, `.min(1)`), e **todo lugar do
-`src/` lê só `waypoints[0]`** — `CartaoTrilha`, `ListaDoAcervo`, `MapaHome`, `[slug]/page.tsx`,
-`ficha.ts`, `geo.ts`. As 3 fichas têm exatamente 1 waypoint cada. É a espécie já catalogada, e é
-justamente o eixo que a medição de 09/09 apontou como vazio: **"o que só sabe quem já foi"**.
+🔴 **E o navegador achou o que a suíte não acha, de novo:** `margin: 0 auto` com `max-width` fez o
+Chrome resolver as duas margens em **0px** — no ar, o recado colado na esquerda, vazando pra fora da
+faixa dos tiles e ameaçando aparecer **por cima de um mapa que carregou**. Corrigido com
+`left:50%` + `translateX(-50%)`, e os dois lados viraram guarda.
 
-⚠️ **O QUE TRAVA, E POR ISSO A TAREFA NÃO É "RENDERIZAR" E SIM "PERGUNTAR":** waypoint novo é
-**fato novo sobre lugar real**, e isso só vem dele. O acervo está **FECHADO em 3 fichas** e a regra
-segue: **não criar ficha nem pesquisar lugar novo.** Então a tarefa é, nesta ordem:
-
-1. **Medir primeiro, sem escrever código:** confirmar nome a nome que `waypoints[1..]` é morto no
-   `src/` e que nenhum teste finge o contrário. Se estiver vivo em algum canto, a tarefa muda e é
-   isso que se reporta.
-2. **Levar a ele UMA pergunta concreta, com a ficha na mão** — não um questionário: *"na Rampa do
-   Pepê, tem algum ponto no caminho que você marcaria além do começo da trilha?"*. Uma ficha, uma
-   pergunta. Ele já disse que odeia menu.
-3. **Só depois construir**, com a palavra dele, e com a régua de procedência de sempre.
-
-Se ele não responder, **a saída de SUBTRAÇÃO é a sua**: `.min(1)` vira `.length(1)` e o campo para
-de prometer o que o app não entrega. Essa não precisa dele.
+O guarda que impede a tarefa dos tiles de ressuscitar mora em `tests/lib/cache-rotas.test.ts`, com
+as citações da política inteiras.
 
 ---
 
 ### 🔒 O RITUAL DE FECHAMENTO — vale pra qualquer tarefa
 
-O `--scope` **não é opcional** — sem ele dá `Not authorized`:
-
 ```
 npx --yes vercel@latest --prod --yes --scope bate-perna
 ```
 
-Depois, **conferir no domínio real** (`https://bateperna.vercel.app`) — `● Ready` não prova
-conteúdo. Marcadores **sem acento**, sempre (lição de 09/09).
+O `--scope` **não é opcional**. Depois, conferir no domínio real — `● Ready` não prova conteúdo.
+Marcadores **sem acento**, sempre.
 
-🔴 **E A LIÇÃO QUE JÁ COBROU TRÊS VEZES:** as camadas 1 e 2 **não bastam**. O HTML pré-renderizado
-mentiu sobre o carimbo (11/09), o cache mentiu sobre o estado (11/09), e o CSS mentiu sobre a
-posição do recado (13/09) — **as três só apareceram no navegador aberto.** **Tem que abrir.**
+🔴 **E A LIÇÃO QUE JÁ COBROU QUATRO VEZES:** as camadas 1 e 2 **não bastam**. O HTML pré-renderizado
+mentiu sobre o carimbo (11/09), o cache mentiu sobre o estado (11/09), o CSS mentiu sobre a posição
+do recado (13/09) — e agora o `defaultCache` do serwist guardaria o painel de admin sem nenhum teste
+reclamar (13/09), num caminho que **nem existe em desenvolvimento**. **Tem que abrir.**
 
 ---
 
