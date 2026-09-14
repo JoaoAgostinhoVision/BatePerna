@@ -19,6 +19,7 @@ import {
   ehNavegacaoNossa,
   ehTileOsm,
   nuncaCachear,
+  podeGuardarPagina,
   resolverNavegacao,
 } from "@/lib/cache-rotas";
 
@@ -64,8 +65,11 @@ const serwist = new Serwist({
       // As outras páginas (hoje só /trilhas): rede primeiro, cache como rede de
       // segurança. As fichas e a "/" NÃO passam por aqui — quem responde por
       // elas é o listener lá embaixo, e respondWith para a propagação do evento
-      // antes de o roteador do serwist ver qualquer coisa.
-      matcher: ({ request }) => request.mode === "navigate",
+      // antes de o roteador do serwist ver qualquer coisa. O painel de admin
+      // também não: podeGuardarPagina o exclui, porque ele não é parte do app
+      // offline (ver o comentário na própria função, em cache-rotas.ts).
+      matcher: ({ request, url }) =>
+        request.mode === "navigate" && podeGuardarPagina(url.pathname),
       handler: new NetworkFirst({
         cacheName: CACHE_PAGINAS,
         networkTimeoutSeconds: PRAZO_REDE_MS / 1000,

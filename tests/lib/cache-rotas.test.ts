@@ -13,6 +13,7 @@ import {
   ehTileOsm,
   nuncaCachear,
   planoDaRaiz,
+  podeGuardarPagina,
   resolverNavegacao,
   aquecer,
   fichasDoAcervo,
@@ -91,6 +92,21 @@ describe("ehNavegacaoNossa", () => {
     // ok, e a busca no cache acha o ponteiro — a URL responderia com o corpo da
     // última ficha aberta. É a mesma classe de defeito que fechamos offline.
     expect(ehNavegacaoNossa(CHAVE_ULTIMA)).toBe(false);
+  });
+});
+
+describe("podeGuardarPagina", () => {
+  // 🔴 O painel nao e parte do app offline. Guardar tela de admin no celular
+  // e superficie de risco sem nada em troca — offline ele nao funciona mesmo,
+  // porque toda acao dele e uma escrita no servidor.
+  it("o painel de admin nunca e guardado", () => {
+    expect(podeGuardarPagina("/admin")).toBe(false);
+    expect(podeGuardarPagina("/admin/qualquer-coisa")).toBe(false);
+  });
+
+  it("e as paginas de verdade continuam sendo", () => {
+    expect(podeGuardarPagina("/trilhas")).toBe(true);
+    expect(podeGuardarPagina("/")).toBe(true);
   });
 });
 

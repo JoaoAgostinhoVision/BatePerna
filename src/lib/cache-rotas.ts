@@ -99,6 +99,17 @@ export function nuncaCachear(url: string): boolean {
   return new URL(url).pathname.startsWith("/api/");
 }
 
+/** Esta navegação pode virar cópia guardada?
+ *
+ *  🔴 O PAINEL NÃO. Ele não é parte do app offline — toda ação dele é uma
+ *  escrita no servidor, então guardado ele só existe pra enganar. E tela de
+ *  admin parada no cache de um celular é superfície de risco sem contrapartida.
+ *  `RESERVADOS` já o tirou do listener das fichas; isto o tira da estratégia
+ *  genérica de navegação do serwist, que é o outro caminho. */
+export function podeGuardarPagina(pathname: string): boolean {
+  return !pathname.startsWith("/admin");
+}
+
 /** As navegações que o service worker resolve por conta própria: as fichas e
  *  a "/". O resto (a lista, os ícones) fica com as estratégias do serwist. */
 export function ehNavegacaoNossa(pathname: string): boolean {
