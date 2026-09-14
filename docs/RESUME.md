@@ -44,6 +44,37 @@ andamento; se houver arquivo modificado e não commitado, é dele — leia o dif
 **Os 11 briefs já estão gerados** em `.superpowers/sdd/2026-09-13-acesso-de-admin-porta-e-aviso/`
 (`task-N-brief.md`). Não precisa regerar.
 
+### 🔴 O PRÓXIMO PASSO, LITERAL — a re-revisão da Task 2
+
+> ⚠️ **Isto está repetido aqui de propósito.** O ledger mora em `.superpowers/`, que é
+> **git-ignored** — um `git clean -fdx` o apaga. Este arquivo é versionado; ele sobrevive.
+
+O conserto do fix round 1 está **aplicado e commitado** (`cc37a3d`), mas a **re-revisão escopada
+não rodou**. É por ela que se começa:
+
+```bash
+SDD="C:/Users/joao/.claude/plugins/cache/claude-plugins-official/superpowers/6.3.0/skills/subagent-driven-development"
+bash "$SDD/scripts/review-package"   docs/superpowers/plans/2026-09-13-acesso-de-admin-porta-e-aviso.md b4ff398 cc37a3d
+```
+
+`FIX_BASE = b4ff398` (o head que a primeira revisão viu), `HEAD = cc37a3d`. Despachar
+`re-review-prompt.md` com o pacote, o brief `task-2-brief.md`, o report `task-2-report.md` e **o
+achado aberto, por extenso**:
+
+> `sw.ts`: excluir `/admin` da nossa `NetworkFirst` **não impede o cache** — o evento cai no
+> `...defaultCache` do serwist, cujo catch-all (`sameOrigin && !pathname.startsWith("/api/")`,
+> `node_modules/@serwist/next/dist/index.worker.mjs:197`) o guarda no cache `"others"`. A rota que
+> reclama `/admin` tem de estar registrada **antes** do spread, e a **ordem** tem de ser provada por
+> guarda de **fonte**, porque `sw.ts` não é importável em teste.
+
+- **ADDRESSED** → fechar a Task 2 no ledger e seguir pra **Task 3** (brief já gerado).
+- **NOT ADDRESSED** → fix round 2/5, retomando o mesmo implementador.
+
+⚠️ **Uma ressalva honesta do implementador, que continua de pé:** o `sw.ts` segue **sem verificação
+em navegador de verdade**. As provas são de texto-fonte e do matcher do `defaultCache` isolado.
+Quando a porta de admin estiver inteira, isto precisa ser aberto no navegador — é o caminho onde
+este projeto já achou três defeitos que teste nenhum acharia.
+
 ### O que a Task 2 estava consertando quando a sessão acabou
 
 O revisor achou — e eu conferi no `node_modules` — que **tirar `/admin` da NOSSA estratégia de cache
