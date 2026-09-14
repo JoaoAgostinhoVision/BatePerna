@@ -46,6 +46,25 @@ const serwist = new Serwist({
       handler: new NetworkOnly(),
     },
     {
+      // 🔴 Nada sob /admin pode virar cache -- em NENHUM cache, nem só na
+      // navegação. Excluir o painel da NOSSA estratégia (podeGuardarPagina, na
+      // rota abaixo) não bastava: request.mode !== "navigate" (uma chamada de
+      // API do próprio painel, por exemplo) não passa por ehNavegacaoNossa nem
+      // pela rota de baixo, e cai direto no catch-all "others" do spread do
+      // serwist logo abaixo -- que é `sameOrigin && !pathname.startsWith("/api/")`,
+      // e /admin bate nele igual a qualquer outra página. Achado em revisão
+      // (2026-09-13): o painel acabava guardado do mesmo jeito, só que sob
+      // outro nome de cache.
+      //
+      // A ordem AQUI é a defesa inteira: serwist casa em ordem de registro,
+      // primeira rota que bater ganha. Por isso esta entra antes do spread --
+      // mesma lógica do nuncaCachear pra /api/, uma linha acima. Há teste
+      // lendo o ARQUIVO pra travar essa ordem (sw.ts não é importável), em
+      // tests/app/sw.test.ts.
+      matcher: ({ url }) => url.pathname.startsWith("/admin"),
+      handler: new NetworkOnly(),
+    },
+    {
       // Tiles do mapa: o que já foi visto continua aparecendo na estrada.
       matcher: ({ url }) => ehTileOsm(url.href),
       handler: new CacheFirst({
@@ -66,8 +85,10 @@ const serwist = new Serwist({
       // segurança. As fichas e a "/" NÃO passam por aqui — quem responde por
       // elas é o listener lá embaixo, e respondWith para a propagação do evento
       // antes de o roteador do serwist ver qualquer coisa. O painel de admin
-      // também não: podeGuardarPagina o exclui, porque ele não é parte do app
-      // offline (ver o comentário na própria função, em cache-rotas.ts).
+      // também não bate aqui na prática (a rota dele, acima, já o intercepta
+      // antes) — mas podeGuardarPagina fica como segunda trava, porque ele não
+      // é parte do app offline (ver o comentário na própria função, em
+      // cache-rotas.ts).
       matcher: ({ request, url }) =>
         request.mode === "navigate" && podeGuardarPagina(url.pathname),
       handler: new NetworkFirst({
