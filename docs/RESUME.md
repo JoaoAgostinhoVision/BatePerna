@@ -2,9 +2,10 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🟡 **ÚLTIMA PARADA: 2026-09-13, segunda metade. O EIXO MUDOU, a pedido dele: `acesso de usuários`.**
-Uma rodada fechada (os tiles / o mapa honesto) e **uma rodada EM ANDAMENTO, no meio da execução** —
-2 de 11 tarefas. Ele encerrou com *"eu quero continuar na próxima, deixe tudo pronto"*.
+🟡 **ÚLTIMA PARADA: 2026-09-15.** O eixo segue `acesso de usuários`. A execução da branch `admin-porta-e-aviso` está **no meio**: Tasks 1, 2 e 3 completas; a 4 em andamento; 5 a 11 não começadas.
+A rodada dos tiles / do mapa honesto (13/09, primeira metade) está fechada e no ar. Esta, não:
+**nada da porta de admin foi ao ar.** Em 13/09 ele encerrou com *"eu quero continuar na próxima,
+deixe tudo pronto"*, e em 15/09 abriu com *"continua"*.
 
 🔴 **NÃO ESTAMOS EM `main`.** A branch é **`admin-porta-e-aviso`**. Nada disso foi ao ar, e **nada
 deve ir ao ar** até o plano fechar — a porta de admin pela metade é pior que porta nenhuma.
@@ -35,60 +36,50 @@ andamento; se houver arquivo modificado e não commitado, é dele — leia o dif
 
 ## 📍 ONDE A EXECUÇÃO PAROU
 
+> **Atualizado em 2026-09-15.** A sessão de 15/09 retomou pelo bloco acima e a execução andou.
+
 | tarefa | estado |
 |---|---|
 | 1 — `src/lib/admin-sessao.ts`, o módulo puro da sessão | ✅ **completa**, revisão limpa (`4ef3bfa`) |
-| 2 — `/admin` fora dos dois caminhos de cache | 🟡 **fix round 1/5 em andamento** (`b4ff398` + conserto) |
-| 3 a 11 | ⬜ não começadas — briefs já gerados no workspace |
+| 2 — `/admin` fora dos dois caminhos de cache | ✅ **completa** após 1 fix round (`b4ff398`..`cc37a3d`) |
+| 3 — `src/lib/admin-config.ts`, ligado/desligado/ausente | ✅ **completa** após 1 fix round de EVIDÊNCIA (`2b57c34`) |
+| 4 — entrar e sair (as duas rotas + `admin-guarda.ts`) | 🟡 **implementador despachado** em 15/09 |
+| 5 a 11 | ⬜ não começadas — briefs já gerados no workspace |
 
 **Os 11 briefs já estão gerados** em `.superpowers/sdd/2026-09-13-acesso-de-admin-porta-e-aviso/`
 (`task-N-brief.md`). Não precisa regerar.
 
-### 🔴 O PRÓXIMO PASSO, LITERAL — a re-revisão da Task 2
+### 🔴 O PRÓXIMO PASSO, LITERAL
 
-> ⚠️ **Isto está repetido aqui de propósito.** O ledger mora em `.superpowers/`, que é
-> **git-ignored** — um `git clean -fdx` o apaga. Este arquivo é versionado; ele sobrevive.
+> ⚠️ **Repetido aqui de propósito.** O ledger mora em `.superpowers/`, que é **git-ignored** — um
+> `git clean -fdx` o apaga. Este arquivo é versionado; ele sobrevive.
 
-O conserto do fix round 1 está **aplicado e commitado** (`cc37a3d`), mas a **re-revisão escopada
-não rodou**. É por ela que se começa:
+Leia o ledger (`…/progress.md`) e retome na primeira tarefa **sem** a linha `Task N: complete`.
+O ciclo de cada uma: despachar implementador com o brief → revisão escopada → fix round se houver
+achado Critical/Important → `Task N: complete`. Nunca redespache tarefa completa.
 
-```bash
-SDD="C:/Users/joao/.claude/plugins/cache/claude-plugins-official/superpowers/6.3.0/skills/subagent-driven-development"
-bash "$SDD/scripts/review-package"   docs/superpowers/plans/2026-09-13-acesso-de-admin-porta-e-aviso.md b4ff398 cc37a3d
-```
+### ⚠️ O QUE A SESSÃO DE 15/09 DESCOBRIU E VOCÊ PRECISA SABER
 
-`FIX_BASE = b4ff398` (o head que a primeira revisão viu), `HEAD = cc37a3d`. Despachar
-`re-review-prompt.md` com o pacote, o brief `task-2-brief.md`, o report `task-2-report.md` e **o
-achado aberto, por extenso**:
+**1. A suíte estava vermelha por código que não é nosso.** Existe uma pasta `/BatePerna/`
+**git-ignored** dentro do repositório (apareceu em 14/09) — outro projeto, com jest e supabase. O
+glob padrão do vitest (`**/*.test.*`) varria o repo inteiro e coletava os testes dela, que importam
+módulos que este app não tem. Travei o glob em `tests/**` (`vitest.config.ts`, commit `df7d885`),
+depois de conferir que os 60 arquivos de teste deste app moram todos em `tests/`. **Se um teste
+nosso nascer fora de `tests/` um dia, ele deixa de rodar calado** — é o lado ruim de errar aqui.
 
-> `sw.ts`: excluir `/admin` da nossa `NetworkFirst` **não impede o cache** — o evento cai no
-> `...defaultCache` do serwist, cujo catch-all (`sameOrigin && !pathname.startsWith("/api/")`,
-> `node_modules/@serwist/next/dist/index.worker.mjs:197`) o guarda no cache `"others"`. A rota que
-> reclama `/admin` tem de estar registrada **antes** do spread, e a **ordem** tem de ser provada por
-> guarda de **fonte**, porque `sw.ts` não é importável em teste.
+**2. A espécie "guarda de fonte casando a ocorrência errada" já apareceu TRÊS vezes** neste plano
+(Task 1: `toContain("timingSafeEqual")` casava o import; Task 2: `...defaultCache` escrito dentro
+de um comentário do próprio código novo). Todo guarda de fonte novo mira o **ponto de chamada
+exato** e prova por mutação que fica vermelho.
 
-- **ADDRESSED** → fechar a Task 2 no ledger e seguir pra **Task 3** (brief já gerado).
-- **NOT ADDRESSED** → fix round 2/5, retomando o mesmo implementador.
+**3. Relatório de mutação sem `diff -u` colado não é prova.** A Task 3 voltou em fix round só por
+isso: a tabela dizia "Diff Confirmed: Yes" sem colar diff nenhum. Mutação que não foi aplicada e
+mutação que sobreviveu dão o mesmo verde.
 
-⚠️ **Uma ressalva honesta do implementador, que continua de pé:** o `sw.ts` segue **sem verificação
-em navegador de verdade**. As provas são de texto-fonte e do matcher do `defaultCache` isolado.
-Quando a porta de admin estiver inteira, isto precisa ser aberto no navegador — é o caminho onde
-este projeto já achou três defeitos que teste nenhum acharia.
-
-### O que a Task 2 estava consertando quando a sessão acabou
-
-O revisor achou — e eu conferi no `node_modules` — que **tirar `/admin` da NOSSA estratégia de cache
-não impede que ele seja guardado**: ele cai no catch-all do `defaultCache` do serwist
-(`sameOrigin && !pathname.startsWith("/api/")` → `NetworkFirst`, cache `"others"`) e é guardado do
-mesmo jeito. O defeito era do **plano**, não do implementador.
-
-⚠️ **E o pior detalhe:** em desenvolvimento o `defaultCache` é um `NetworkOnly` só. **Este defeito
-não existe na máquina dele** — só nasce no bundle de produção, no celular.
-
-**O conserto pedido:** uma rota nossa que reclame `/admin` **antes** do spread `...defaultCache`,
-espelhando o que `nuncaCachear` já faz com `/api/`. E como o mecanismo é **ordem de registro** num
-arquivo que teste nenhum importa, a ordem tem que ser provada por **guarda de fonte** — com mutação
-que move a rota pra baixo do spread e confirma que o guarda fica vermelho.
+⚠️ **Uma ressalva honesta que continua de pé:** o `sw.ts` segue **sem verificação em navegador de
+verdade**. As provas são de texto-fonte e do matcher do `defaultCache` isolado. Quando a porta de
+admin estiver inteira, isto precisa ser aberto no navegador — é o caminho onde este projeto já achou
+três defeitos que teste nenhum acharia.
 
 ---
 
