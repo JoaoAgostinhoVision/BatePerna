@@ -1,14 +1,21 @@
-import { COOKIE_ADMIN } from "@/lib/admin-guarda";
+import { lerConfigAdmin } from "@/lib/admin-config";
+import { cookieDeSessao } from "@/lib/admin-guarda";
 
 export const dynamic = "force-dynamic";
 
-/** Sair sempre funciona, inclusive com o painel desligado: apagar um cookie
- *  não revela nada e não pode depender de configuração. */
+/** Falha fechada também na saída: com o painel desligado, /sair não pode
+ *  responder diferente de /entrar. O que vazaria não é o cookie — apagar um
+ *  cookie que talvez nem exista não revela nada por si só — é o STATUS CODE:
+ *  um 200 aqui contra o 404 do resto de /api/admin/* já denuncia "existe uma
+ *  feature de admin aqui", exatamente o que "falha fechada, sempre" esconde. */
 export async function POST(): Promise<Response> {
+  const cfg = lerConfigAdmin(process.env);
+  if (!cfg.ligado) return new Response("", { status: 404 });
+
   return new Response("", {
     status: 200,
     headers: {
-      "set-cookie": `${COOKIE_ADMIN}=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`,
+      "set-cookie": cookieDeSessao("", 0),
       "cache-control": "no-store",
     },
   });

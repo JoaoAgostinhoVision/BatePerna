@@ -87,4 +87,26 @@ describe("POST /api/admin/sair", () => {
     expect(cookie).toContain(`${COOKIE_ADMIN}=;`);
     expect(cookie).toContain("Max-Age=0");
   });
+
+  // 🔴 FALHA FECHADA, também aqui. Com o painel desligado, /sair devolver 200
+  // enquanto /entrar devolve 404 é um sinal observável: a diferença de status
+  // já denuncia "existe uma feature de admin aqui", o que a regra "falha
+  // fechada, sempre" existe pra esconder. Não é o cookie que vaza — é o code.
+  it("sem ADMIN_SENHA configurada, /sair também é 404", async () => {
+    vi.stubEnv("ADMIN_SENHA", "");
+    vi.resetModules();
+    const { POST } = await import("@/app/api/admin/sair/route");
+    const res = await POST();
+    expect(res.status).toBe(404);
+    expect(res.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("com ADMIN_SENHA curta, /sair também é 404 — o painel está desligado", async () => {
+    vi.stubEnv("ADMIN_SENHA", "curta");
+    vi.resetModules();
+    const { POST } = await import("@/app/api/admin/sair/route");
+    const res = await POST();
+    expect(res.status).toBe(404);
+    expect(res.headers.get("set-cookie")).toBeNull();
+  });
 });
