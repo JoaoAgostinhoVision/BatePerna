@@ -1,0 +1,9 @@
+/* src/app/admin/admin.css — estilo próprio, isolado do `.bp`. O painel não é o
+   app: ele não precisa da tipografia da ficha nem herda o tema do carimbo. */
+.adm { max-width: 30rem; margin: 0 auto; padding: 1.5rem 1rem; font-family: system-ui, sans-serif; }
+.adm h1 { font-size: 1.3rem; margin-bottom: 1rem; }
+.adm-porta { display: grid; gap: .6rem; }
+.adm-rotulo { font-size: .85rem; }
+.adm-porta input { padding: .6rem; font-size: 1rem; border: 1px solid #999; border-radius: 8px; }
+.adm-porta button { padding: .7rem; font-size: 1rem; border-radius: 8px; }
+.adm-erro { color: #b3261e; font-size: .9rem; }
