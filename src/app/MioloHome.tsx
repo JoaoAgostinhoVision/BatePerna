@@ -66,7 +66,23 @@ export default function MioloHome({ pares }: { pares: ParFolha[] }) {
   // `visiveis`, porque com as visíveis seria circular (ver o comentário dele).
   const algumVenceu = useAlgumVenceu(pares.map((p) => atual(p).calculadoEm));
   const algumErro = pares.some((p) => atual(p).erro);
-  const confia = faseDe({ conferindo: false, erro: algumErro, venceu: algumVenceu, falhou: false }) === "afirmando";
+  // 🔴 `fechadoPeloDono: false` LITERAL, e é o certo — igual ao `conferindo` e
+  // ao `falhou` da mesma linha. Esta chamada não é a fase de UM lugar: é a
+  // pergunta "dá pra confiar na leitura de chuva do LOTE?", e o dono ter
+  // fechado um morro não estraga a leitura de chuva de nenhum. Passar aqui um
+  // "algum foi fechado pelo dono" faria `faseDe` devolver "fechado" e
+  // derrubaria o agrupamento da home INTEIRA por causa de um lugar — o irmão
+  // do defeito das duas contas que este componente existe pra impedir. O
+  // fechado de cada lugar mora no selo e no pin daquele lugar (`SeloTrilha`,
+  // `PinTrilha`), que é onde ele decide alguma coisa.
+  const confia =
+    faseDe({
+      conferindo: false,
+      erro: algumErro,
+      venceu: algumVenceu,
+      falhou: false,
+      fechadoPeloDono: false,
+    }) === "afirmando";
 
   const filtros = useFiltros();
   const voce = coordDe(useLocal());

@@ -1,5 +1,6 @@
 "use client";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+import { fechadoPeloDono } from "@/lib/aviso";
 import { faseDe } from "@/lib/carimbo-fase";
 import { fechadoAgora, type Abertura, type Agora } from "@/lib/horario";
 import { tomDe, type Severidade } from "@/lib/severidade";
@@ -51,6 +52,7 @@ export default function PinTrilha({
     venceu,
     falhou: false,
     fechado: fechadoAgora(abertura, agora),
+    fechadoPeloDono: fechadoPeloDono(leitura.aviso),
   });
 
   return (

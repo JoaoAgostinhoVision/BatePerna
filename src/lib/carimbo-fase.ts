@@ -40,15 +40,30 @@ export type Situacao = {
    *  o primeiro render nunca sabe a hora ainda. Quem responde é `fechadoAgora`
    *  em `src/lib/horario.ts`. */
   fechado?: boolean;
+  /** O DONO disse que está fechado, e não o calendário.
+   *
+   *  🔴 OBRIGATÓRIO, e é o ponto do campo. `fechado` (acima) é opcional porque
+   *  o primeiro render não sabe a hora ainda. Este não tem essa desculpa: ele
+   *  vem do servidor junto com a leitura. Opcional, esquecer um dos CINCO
+   *  pontos que montam `Situacao` passaria em silêncio — e o lugar apareceria
+   *  ABERTO na tela com o dono tendo dito que está fechado. Obrigatório, o
+   *  `tsc` é o guarda, sem grep e sem disciplina. */
+  fechadoPeloDono: boolean;
 };
 
 /** 🔴 `fechado` GANHA DE TODAS, inclusive de `conferindo`, e isso é a regra e
  *  não um detalhe de ordem: com o lugar fechado, a chuva não decide nada. Ler
  *  a chuva enquanto o portão está trancado é uma resposta certa pra pergunta
  *  errada — e "CONFERINDO…" ali seria o app parecendo ocupado com uma coisa que
- *  não muda o veredito. */
-export function faseDe({ conferindo, erro, venceu, falhou, fechado }: Situacao): Fase {
-  if (fechado) return "fechado";
+ *  não muda o veredito.
+ *
+ *  ✅ E EM 2026-09-15 O DONO PASSOU A FECHAR TAMBÉM. `fechadoPeloDono` é a
+ *  palavra dele ("a rampa está em reforma"), e ela entra POR AQUI e não pelo
+ *  estado: o motor só responde `fresco | frio`, então "em reforma" virando
+ *  `frio` faria o app dizer "não vá" com as palavras da CHUVA. Ver
+ *  `fechadoPeloDono` em `src/lib/aviso.ts`. */
+export function faseDe({ conferindo, erro, venceu, falhou, fechado, fechadoPeloDono }: Situacao): Fase {
+  if (fechado || fechadoPeloDono) return "fechado";
   if (conferindo) return "conferindo";
   return erro || venceu || falhou ? "sem-informacoes" : "afirmando";
 }
@@ -134,10 +149,29 @@ export type Gatilho = "carregou" | "voltou" | "toque";
  *  tentar, do servidor, milissegundos atrás. E página recém-renderizada nunca
  *  está vencida — `calculadoEm` é agora —, então na prática este gatilho só
  *  dispara pra página vinda do cache do service worker, que é exatamente onde
- *  buscar é o certo. */
+ *  buscar é o certo.
+ *
+ *  🔴 `fechadoPeloDono` ENTRA NO `Omit` PELA MESMA RAZÃO QUE `falhou` JÁ
+ *  ESTAVA LÁ, e isto NÃO é o campo virando opcional. A regra deste `Omit` é
+ *  uma só: campo OBRIGATÓRIO de `Situacao` que esta função não usa e para o
+ *  qual os chamadores dela não têm valor nenhum a dar. O `HomeViva` pergunta
+ *  "vale buscar a chuva de N trilhas?" — não existe um "o dono fechou" de N
+ *  trilhas, e inventar um `false` ali ensinaria o próximo leitor que o campo é
+ *  decorativo.
+ *
+ *  O guarda que o campo existe pra ser continua inteiro: quem monta uma `Fase`
+ *  (`faseDe`, `sintomaDe`) não escapa dele, e é a `Fase` que vai pra tela. Esta
+ *  função devolve um booleano sobre IR BUSCAR, e nunca uma palavra que alguém
+ *  lê. (Repare que `fechado` também é ignorado aqui, e sempre foi: com ou sem
+ *  portão trancado, uma leitura vencida continua tendo que ser renovada.) */
 export function podeBuscar(
   gatilho: Gatilho,
-  { erro, venceu, conferindo, desdeUltimaMs }: Omit<Situacao, "falhou"> & { desdeUltimaMs: number },
+  {
+    erro,
+    venceu,
+    conferindo,
+    desdeUltimaMs,
+  }: Omit<Situacao, "falhou" | "fechadoPeloDono"> & { desdeUltimaMs: number },
 ): boolean {
   if (conferindo) return false;
   if (gatilho === "toque") return true;

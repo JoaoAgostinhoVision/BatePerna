@@ -66,16 +66,16 @@ describe("FolhaTrilhas", () => {
     // `page.tsx` montou: a classificação de quando a página nasceu no servidor
     // — seca fresco, molhada frio.
     const visiveis = [
-      { ficha: seca, leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S } },
-      { ficha: molhada, leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_S } },
+      { ficha: seca, leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S, aviso: null } },
+      { ficha: molhada, leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_S, aviso: null } },
     ];
     // O contexto (a leitura de AGORA, publicada depois) inverteu: seca virou
     // frio, molhada virou fresco. É literalmente o defeito do portão: o
     // servidor rotulou de um jeito, o clima mudou, e o cabeçalho tem que
     // acompanhar — não ficar preso ao que o servidor escreveu.
     const invertido = new Map([
-      ["seca", { estado: "frio" as const, erro: false, calculadoEm: AGORA_S }],
-      ["molhada", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S }],
+      ["seca", { estado: "frio" as const, erro: false, calculadoEm: AGORA_S, aviso: null }],
+      ["molhada", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S, aviso: null }],
     ]);
 
     const { container } = render(
@@ -108,8 +108,8 @@ describe("FolhaTrilhas", () => {
     const fechada = { ...fichaFake("fechada"), horario: { abre: "05:00", fecha: "17:00" } };
     const aberta = fichaFake("aberta"); // sem horário: nunca fecha
     const visiveis = [
-      { ficha: fechada, leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_18 } },
-      { ficha: aberta, leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_18 } },
+      { ficha: fechada, leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_18, aviso: null } },
+      { ficha: aberta, leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_18, aviso: null } },
     ];
 
     const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} agora={relogio()} />);
@@ -141,8 +141,8 @@ describe("FolhaTrilhas", () => {
   // barro MEDIDO.
   it("sem poder confiar na leitura, a folha vira lista lisa — e nenhuma frase de veredito aparece", () => {
     const visiveis = [
-      { ficha: fichaFake("seca"), leitura: { estado: "frio" as const, erro: true, calculadoEm: AGORA_S } },
-      { ficha: fichaFake("molhada"), leitura: { estado: "frio" as const, erro: true, calculadoEm: AGORA_S } },
+      { ficha: fichaFake("seca"), leitura: { estado: "frio" as const, erro: true, calculadoEm: AGORA_S, aviso: null } },
+      { ficha: fichaFake("molhada"), leitura: { estado: "frio" as const, erro: true, calculadoEm: AGORA_S, aviso: null } },
     ];
 
     const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={false} agora={relogio()} />);
@@ -157,8 +157,8 @@ describe("FolhaTrilhas", () => {
 
   it("todas com leitura confiável — os dois cabeçalhos aparecem, na ordem certa", () => {
     const visiveis = [
-      { ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S } },
-      { ficha: fichaFake("molhada"), leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_S } },
+      { ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S, aviso: null } },
+      { ficha: fichaFake("molhada"), leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_S, aviso: null } },
     ];
 
     const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} agora={relogio()} />);
@@ -198,7 +198,7 @@ describe("o agrupamento pergunta o TOM, não o estado", () => {
     const f = fichaFake(slug);
     return {
       ficha: { ...f, condicao: { ...f.condicao, severidade } },
-      leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_S },
+      leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_S, aviso: null },
     };
   };
 
@@ -208,7 +208,7 @@ describe("o agrupamento pergunta o TOM, não o estado", () => {
     const visiveis = [
       { ...molhada("cuidadosa", "cuidado") },
       { ...molhada("proibida", "nao-va") },
-      { ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S } },
+      { ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S, aviso: null } },
     ];
 
     const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} agora={relogio()} />);
@@ -256,9 +256,9 @@ describe("o agrupamento pergunta o TOM, não o estado", () => {
     const base = fichaFake("fechada");
     const fechada = {
       ficha: { ...base, condicao: { ...base.condicao, severidade: "cuidado" as const }, horario: { abre: "05:00", fecha: "17:00" } },
-      leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_18 },
+      leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_18, aviso: null },
     };
-    const aberta = { ...molhada("aberta", "cuidado"), leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_18 } };
+    const aberta = { ...molhada("aberta", "cuidado"), leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_18, aviso: null } };
 
     const { container } = render(<FolhaTrilhas visiveis={[fechada, aberta]} confia={true} agora={relogio()} />);
 
@@ -277,7 +277,7 @@ describe("o agrupamento pergunta o TOM, não o estado", () => {
   it("sem nenhuma trilha de nível `cuidado`, o grupo do meio não aparece", () => {
     const visiveis = [
       molhada("proibida", "nao-va"),
-      { ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S } },
+      { ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S, aviso: null } },
     ];
     const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} agora={relogio()} />);
     expect(titulos(container)).toEqual(["Hoje o tempo deixa", "Hoje não"]);

@@ -11,7 +11,7 @@ import {
   subDe,
 } from "@/lib/carimbo-fase";
 
-const OK = { conferindo: false, erro: false, venceu: false, falhou: false };
+const OK = { conferindo: false, erro: false, venceu: false, falhou: false, fechadoPeloDono: false };
 
 /** A voz da RAMPA DO PEPÊ — nível `nao-va`, janela de 6h. É a ficha cuja `voz`
  *  deu a palavra "Não vá" ao app inteiro até 2026-09-10; aqui ela é UMA das
@@ -80,7 +80,7 @@ describe("a fase fechado", () => {
   });
 
   it("fechado ganha também de erro, vencido e falhou", () => {
-    expect(faseDe({ conferindo: false, erro: true, venceu: true, falhou: true, fechado: true }))
+    expect(faseDe({ conferindo: false, erro: true, venceu: true, falhou: true, fechado: true, fechadoPeloDono: false }))
       .toBe("fechado");
   });
 
@@ -123,7 +123,7 @@ describe("faseDe", () => {
   });
 
   it("conferindo ganha de tudo — é o que está acontecendo agora", () => {
-    expect(faseDe({ conferindo: true, erro: true, venceu: true, falhou: true }))
+    expect(faseDe({ conferindo: true, erro: true, venceu: true, falhou: true, fechadoPeloDono: false }))
       .toBe("conferindo");
   });
 

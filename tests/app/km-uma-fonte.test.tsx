@@ -101,7 +101,7 @@ const CartaoTrilha = (await import("@/app/CartaoTrilha")).default;
 const LocalVivo = (await import("@/app/local")).default;
 const PaginaDaFicha = (await import("@/app/[slug]/page")).default;
 
-const LEITURA = { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 };
+const LEITURA = { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000, aviso: null };
 
 function guardarLocal() {
   localStorage.setItem(
@@ -134,7 +134,7 @@ async function asDuasTelas() {
   vi.mocked(resolverEstado).mockResolvedValue({
     estado: "fresco",
     erro: false,
-    calculadoEm: Math.floor(Date.now() / 1000),
+    calculadoEm: Math.floor(Date.now() / 1000), aviso: null
   });
 
   const cartao = render(
@@ -181,7 +181,7 @@ describe("uma trilha, UM km", () => {
     vi.mocked(resolverEstado).mockResolvedValue({
       estado: "fresco",
       erro: false,
-      calculadoEm: Math.floor(Date.now() / 1000),
+      calculadoEm: Math.floor(Date.now() / 1000), aviso: null
     });
 
     const cartao = render(

@@ -21,7 +21,7 @@ function fichaReal(slug: string) {
 }
 
 const ficha = fichaReal("rampa-do-pepe");
-const leitura = { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 };
+const leitura = { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000, aviso: null };
 
 describe("a linha de metadados do cartão", () => {
   it("sem localização, não inventa km", () => {

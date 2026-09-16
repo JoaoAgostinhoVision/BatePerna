@@ -42,7 +42,7 @@ const AGORA_S = Math.floor(Date.UTC(2027, 0, 16, 11, 0) / 1000);
 
 function leituras(estado: "fresco" | "frio", erro = false) {
   return new Map(
-    getFichasComCondicao().map((f) => [f.slug, { estado, erro, calculadoEm: AGORA_S }]),
+    getFichasComCondicao().map((f) => [f.slug, { estado, erro, calculadoEm: AGORA_S, aviso: null }]),
   );
 }
 
@@ -107,8 +107,8 @@ describe("a home", () => {
     vi.mocked(getFichasComCondicao).mockReturnValueOnce([seca, molhada]);
     vi.mocked(resolverEstados).mockResolvedValue(
       new Map([
-        ["seca", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S }],
-        ["molhada", { estado: "frio" as const, erro: false, calculadoEm: AGORA_S }],
+        ["seca", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S, aviso: null }],
+        ["molhada", { estado: "frio" as const, erro: false, calculadoEm: AGORA_S, aviso: null }],
       ]),
     );
 
@@ -137,11 +137,11 @@ describe("a home", () => {
     vi.mocked(getFichasComCondicao).mockReturnValueOnce([molhada, seca, instavel]);
     vi.mocked(resolverEstados).mockResolvedValue(
       new Map([
-        ["molhada", { estado: "frio" as const, erro: false, calculadoEm: AGORA_S }],
-        ["seca", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S }],
+        ["molhada", { estado: "frio" as const, erro: false, calculadoEm: AGORA_S, aviso: null }],
+        ["seca", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S, aviso: null }],
         // erro:true em qualquer par derruba `confia` (ver MioloHome.tsx) —
         // é o que tira os cabeçalhos e força o caminho que não reordena.
-        ["instavel", { estado: "frio" as const, erro: true, calculadoEm: AGORA_S }],
+        ["instavel", { estado: "frio" as const, erro: true, calculadoEm: AGORA_S, aviso: null }],
       ]),
     );
 
@@ -260,7 +260,7 @@ describe("SeloTrilha — o relógio da validade", () => {
     // worker) mostrariam. `render()` sozinho já drena o efeito — perguntar
     // ao DOM depois dele já responde com o valor CORRIGIDO, escondendo
     // justamente o quadro que este teste precisa provar.
-    const leituraVelha = { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S - 40 * 60 };
+    const leituraVelha = { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S - 40 * 60, aviso: null };
     const quadros: string[] = [];
     const registrar = () => {
       quadros.push(document.querySelector(".selo .w")?.textContent ?? "");

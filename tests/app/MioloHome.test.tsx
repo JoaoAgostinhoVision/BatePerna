@@ -48,7 +48,7 @@ const agoraSeg = () => Math.floor(Date.now() / 1000);
 
 const par = (slug: string, estado: "fresco" | "frio", over: Partial<Ficha> = {}): ParFolha => ({
   ficha: { ...fichaFake(slug), ...over },
-  leitura: { estado, erro: false, calculadoEm: agoraSeg() },
+  leitura: { estado, erro: false, calculadoEm: agoraSeg(), aviso: null },
 });
 
 /** A home inteira menos a moldura: é assim que o `page.tsx` monta o miolo.
@@ -129,7 +129,7 @@ describe("MioloHome: pins, contagem e cartões saem de UMA lista só", () => {
 
     // A leitura de AGORA chega e derruba uma delas.
     const nova = new Map(semente);
-    nova.set("abelha", { estado: "frio", erro: false, calculadoEm: agoraSeg() });
+    nova.set("abelha", { estado: "frio", erro: false, calculadoEm: agoraSeg(), aviso: null });
     rerender(<Tela pares={todas} vivas={nova} />);
 
     const cartoes = cartoesNaTela(container);
@@ -162,7 +162,7 @@ describe("MioloHome: pins, contagem e cartões saem de UMA lista só", () => {
 
     // A chuva parou na abelha: a leitura de AGORA a promove de volta.
     const nova = new Map(semente);
-    nova.set("abelha", { estado: "fresco", erro: false, calculadoEm: agoraSeg() });
+    nova.set("abelha", { estado: "fresco", erro: false, calculadoEm: agoraSeg(), aviso: null });
     rerender(<Tela pares={todas} vivas={nova} />);
 
     const cartoes = cartoesNaTela(container);
@@ -216,7 +216,7 @@ describe("MioloHome: pins, contagem e cartões saem de UMA lista só", () => {
       // Esta some da tela (é paga) — mas a leitura dela está com erro.
       {
         ficha: { ...fichaFake("caro"), ...PAGO },
-        leitura: { estado: "frio", erro: true, calculadoEm: agoraSeg() },
+        leitura: { estado: "frio", erro: true, calculadoEm: agoraSeg(), aviso: null },
       },
       par("gratis", "fresco"),
     ];
@@ -356,7 +356,7 @@ describe("filtro e agrupamento juntos", () => {
   // vias no fim é o que fecha o eixo.
   it("sem leitura confiável, continua sem cabeçalho — e o filtro 'dá hoje' fica inerte", async () => {
     localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, daHoje: true }));
-    const vencido = { estado: "frio" as const, erro: false, calculadoEm: agoraSeg() - 99_999 };
+    const vencido = { estado: "frio" as const, erro: false, calculadoEm: agoraSeg() - 99_999, aviso: null };
     const { container } = monta([
       { ficha: fichaFake("a"), leitura: vencido },
       par("b", "fresco"),
@@ -378,7 +378,7 @@ describe("filtro e agrupamento juntos", () => {
   // a MESMA lista e a mutação passaria despercebida.
   it("sem leitura confiável, os OUTROS recortes continuam recortando", async () => {
     localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
-    const vencido = { estado: "frio" as const, erro: false, calculadoEm: agoraSeg() - 99_999 };
+    const vencido = { estado: "frio" as const, erro: false, calculadoEm: agoraSeg() - 99_999, aviso: null };
     const { container } = monta([
       { ficha: fichaFake("a"), leitura: vencido },
       par("b", "fresco", PAGO),
@@ -397,7 +397,7 @@ describe("filtro e agrupamento juntos", () => {
   // filtra mais.
   it("filtro que zera a lista avisa TAMBÉM quando não dá pra confiar no carimbo", async () => {
     localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
-    const vencido = { estado: "frio" as const, erro: false, calculadoEm: agoraSeg() - 99_999 };
+    const vencido = { estado: "frio" as const, erro: false, calculadoEm: agoraSeg() - 99_999, aviso: null };
     const { container } = monta([
       { ficha: { ...fichaFake("a"), ...PAGO }, leitura: vencido },
     ]);
@@ -456,7 +456,7 @@ describe("filtro e agrupamento juntos", () => {
       par("abelha", "fresco"),
       par("caro", "fresco", PAGO), // sai no filtro
       // leitura vencida: derruba `confia` e joga tudo no ramo liso
-      { ficha: fichaFake("morro"), leitura: { estado: "frio", erro: false, calculadoEm: agoraSeg() - 99_999 } },
+      { ficha: fichaFake("morro"), leitura: { estado: "frio", erro: false, calculadoEm: agoraSeg() - 99_999, aviso: null } },
     ]);
     await waitFor(() => {
       expect(container.querySelectorAll(".grupo-k")).toHaveLength(0); // confirma: ramo liso
@@ -596,7 +596,7 @@ describe("MioloHome: de onde `confia` sai", () => {
   afterEach(() => { vi.useRealTimers(); });
 
   it("a leitura vence sozinha, sem nenhuma requisição — e os cabeçalhos somem", () => {
-    const pares = [{ ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S } }];
+    const pares = [{ ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S, aviso: null } }];
 
     const { container } = render(<MioloHome pares={pares} />);
     expect(container.querySelector(".grupo-k")?.textContent).toBe("Hoje o tempo deixa");
@@ -613,8 +613,8 @@ describe("MioloHome: de onde `confia` sai", () => {
   // promete mais do que mede, que esta branch já corrigiu noutro arquivo.
   it("clima fora do ar — erro em qualquer uma — e nenhuma frase de veredito aparece", () => {
     const pares = [
-      { ficha: fichaFake("seca"), leitura: { estado: "frio" as const, erro: true, calculadoEm: AGORA_S } },
-      { ficha: fichaFake("molhada"), leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_S } },
+      { ficha: fichaFake("seca"), leitura: { estado: "frio" as const, erro: true, calculadoEm: AGORA_S, aviso: null } },
+      { ficha: fichaFake("molhada"), leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_S, aviso: null } },
     ];
 
     const { container } = render(<MioloHome pares={pares} />);
@@ -629,7 +629,7 @@ describe("MioloHome: de onde `confia` sai", () => {
     // COMMIT antes dos efeitos passivos, que é o único jeito honesto de ver o
     // que o HTML do servidor (e o primeiro paint do cliente) mostrariam.
     const pares = [
-      { ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S - 40 * 60 } },
+      { ficha: fichaFake("seca"), leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S - 40 * 60, aviso: null } },
     ];
     const quadros: string[] = [];
     const registrar = () => {
@@ -662,7 +662,7 @@ describe("o teto da barra de distância", () => {
     }));
   const parEm = (slug: string, graus: number): ParFolha => ({
     ficha: { ...fichaFake(slug), trajeto: { waypoints: [{ nome: slug, lat: -8 + graus, lng: -35 }] } },
-    leitura: { estado: "fresco", erro: false, calculadoEm: agoraSeg() },
+    leitura: { estado: "fresco", erro: false, calculadoEm: agoraSeg(), aviso: null },
   });
   const maxDoCampo = () =>
     (screen.getByRole("spinbutton", { name: /distância daqui: km/i }) as HTMLInputElement)

@@ -32,7 +32,7 @@ type Props = ComponentProps<typeof Carimbo>;
 
 function montar(props: Partial<Props> = {}) {
   return render(
-    <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} {...props} />,
+    <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} {...props} />,
   );
 }
 
@@ -59,7 +59,7 @@ function montarNaMoldura(props: Partial<Props> = {}) {
   const { estado = "fresco" } = props;
   return render(
     <Moldura estado={estado} severidade={VOZ_RAMPA.severidade} fase="afirmando">
-      <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} {...props} />
+      <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} {...props} />
     </Moldura>,
   );
 }
@@ -77,23 +77,23 @@ describe("Carimbo", () => {
   });
 
   it("leitura vencida para de afirmar e devolve a decisão pra você", () => {
-    const { container } = montar({ calculadoEm: AGORA_S - 40 * 60 });
+    const { container } = montar({ calculadoEm: AGORA_S - 40 * 60, aviso: null });
     expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
     expect(container.querySelector(".sub")?.textContent).toBe("tome cuidado");
   });
 
   it("vencida, diz de que hora era a leitura", () => {
-    const { container } = montar({ calculadoEm: AGORA_S - 40 * 60 }); // 08h02
+    const { container } = montar({ calculadoEm: AGORA_S - 40 * 60, aviso: null }); // 08h02
     expect(container.textContent).toContain("8h02");
   });
 
   it("vencida, marca a fase pro CSS pintar de parada mesmo com estado fresco", () => {
-    const { container } = montar({ calculadoEm: AGORA_S - 40 * 60 });
+    const { container } = montar({ calculadoEm: AGORA_S - 40 * 60, aviso: null });
     expect(container.querySelector(".decision")?.getAttribute("data-fase")).toBe("sem-informacoes");
   });
 
   it("vence sozinho com o app aberto, sem recarregar", () => {
-    const { container } = montar({ calculadoEm: AGORA_S });
+    const { container } = montar({ calculadoEm: AGORA_S, aviso: null });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
     act(() => { vi.advanceTimersByTime(31 * 60 * 1000); });
     // Vencido não manda mais "Não vá" — informa que não sabe.
@@ -106,7 +106,7 @@ describe("Carimbo", () => {
     // (por isso já sai buscando, "CONFERINDO…"); sem resposta, o carimbo
     // termina dizendo que não sabe — nunca "Pode ir" de novo por conta própria.
     const { pendentes } = redeFalsa();
-    const { container } = montar({ calculadoEm: AGORA_S });
+    const { container } = montar({ calculadoEm: AGORA_S, aviso: null });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
     vi.setSystemTime(AGORA_MS + 4 * 60 * 60 * 1000);
     act(() => { document.dispatchEvent(new Event("visibilitychange")); });
@@ -117,7 +117,7 @@ describe("Carimbo", () => {
 
   it("volta do cache do navegador (pageshow) também reavalia", async () => {
     const { pendentes } = redeFalsa();
-    const { container } = montar({ calculadoEm: AGORA_S });
+    const { container } = montar({ calculadoEm: AGORA_S, aviso: null });
     vi.setSystemTime(AGORA_MS + 4 * 60 * 60 * 1000);
     act(() => { window.dispatchEvent(new Event("pageshow")); });
     expect(container.querySelector(".mark")?.textContent).toBe("CONFERINDO…");
@@ -126,7 +126,7 @@ describe("Carimbo", () => {
   });
 
   it("desmontado, não deixa ouvinte pra trás", () => {
-    const { unmount } = montar({ calculadoEm: AGORA_S });
+    const { unmount } = montar({ calculadoEm: AGORA_S, aviso: null });
     unmount();
     vi.setSystemTime(AGORA_MS + 4 * 60 * 60 * 1000);
     // Sem a limpeza, o setVenceu de um componente morto reclamaria aqui.
@@ -176,7 +176,7 @@ describe("Carimbo", () => {
   it("vencida com erro, não inventa que houve leitura", () => {
     // erro=true: calculadoEm é o instante da tentativa falha, não de uma leitura —
     // vencido ou não, o motivo e o .live não podem citar uma hora de leitura que não existiu.
-    const { container } = montar({ estado: "frio", erro: true, calculadoEm: AGORA_S - 40 * 60 }); // 08h02
+    const { container } = montar({ estado: "frio", erro: true, calculadoEm: AGORA_S - 40 * 60, aviso: null }); // 08h02
     expect(container.querySelector(".reason")?.textContent).toContain("Não deu pra ler a chuva agora");
     expect(container.querySelector(".reason")?.textContent).not.toContain("8h02");
     expect(container.querySelector(".live")?.textContent).not.toContain("vencida");
@@ -209,7 +209,7 @@ describe("Carimbo — a busca", () => {
 
   it("volta pra tela com leitura vencida e busca a de agora", async () => {
     const { fetchMock, pendentes } = redeFalsa();
-    const { container } = montar({ calculadoEm: AGORA_S });
+    const { container } = montar({ calculadoEm: AGORA_S, aviso: null });
     vi.setSystemTime(AGORA_MS + QUATRO_H_MS);
 
     act(() => { document.dispatchEvent(new Event("visibilitychange")); });
@@ -221,7 +221,7 @@ describe("Carimbo — a busca", () => {
 
     await act(async () => {
       pendentes[0].ok({
-        estado: "fresco", erro: false, calculadoEm: Math.floor((AGORA_MS + QUATRO_H_MS) / 1000),
+        estado: "fresco", erro: false, calculadoEm: Math.floor((AGORA_MS + QUATRO_H_MS) / 1000), aviso: null
       });
     });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
@@ -229,7 +229,7 @@ describe("Carimbo — a busca", () => {
 
   it("leitura boa na tela não gasta rede ao voltar", () => {
     const { fetchMock } = redeFalsa();
-    montar({ calculadoEm: AGORA_S });
+    montar({ calculadoEm: AGORA_S, aviso: null });
     act(() => { document.dispatchEvent(new Event("visibilitychange")); });
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -247,7 +247,7 @@ describe("Carimbo — a busca", () => {
 
     // A requisição não foi cancelada: aos 7s ela chega e ainda vale.
     await act(async () => {
-      pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S });
+      pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null });
     });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
   });
@@ -271,7 +271,7 @@ describe("Carimbo — a busca", () => {
 
   it("o piso de 30s segura a segunda busca automática, mas não o toque", async () => {
     const { fetchMock, pendentes } = redeFalsa();
-    const { container } = montar({ estado: "frio", erro: true, calculadoEm: AGORA_S });
+    const { container } = montar({ estado: "frio", erro: true, calculadoEm: AGORA_S, aviso: null });
 
     act(() => { document.dispatchEvent(new Event("visibilitychange")); });
     await act(async () => { pendentes[0].falhar(); });
@@ -289,7 +289,7 @@ describe("Carimbo — a busca", () => {
     // pageshow dispara em todo carregamento. Retentar aqui trocaria a mensagem
     // honesta por 3s de "Conferindo…" em toda abertura, durante uma queda.
     const { fetchMock } = redeFalsa();
-    montar({ estado: "frio", erro: true, calculadoEm: AGORA_S });
+    montar({ estado: "frio", erro: true, calculadoEm: AGORA_S, aviso: null });
     act(() => { window.dispatchEvent(new Event("pageshow")); });
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -309,7 +309,7 @@ describe("Carimbo — a busca", () => {
     // a tela final. Ver o comentário na própria linha, em Carimbo.tsx, e a
     // rodada de correção no relatório da task.
     const { fetchMock, pendentes } = redeFalsa();
-    const { container } = montar({ calculadoEm: AGORA_S });
+    const { container } = montar({ calculadoEm: AGORA_S, aviso: null });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
 
     vi.setSystemTime(AGORA_MS + 31 * 60 * 1000);
@@ -340,19 +340,19 @@ describe("Carimbo — a busca", () => {
     // A 1ª (a mais velha) responde agora, com uma leitura fresca — mas geração
     // velha: tem que ser descartada, sem tirar o "Conferindo…" da 2ª da tela.
     await act(async () => {
-      pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S - 999 });
+      pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S - 999, aviso: null });
     });
     expect(container.querySelector(".mark")?.textContent).toBe("CONFERINDO…");
 
     // A 2ª (a que vale) responde — essa sim repinta.
     await act(async () => {
-      pendentes[1].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S });
+      pendentes[1].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null });
     });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
   });
 
-  it("200 com corpo fora do trio cai no mesmo tratamento de falha", async () => {
-    // Sem conferir o corpo, os três campos viriam `undefined`,
+  it("200 com corpo fora da forma da leitura cai no mesmo tratamento de falha", async () => {
+    // Sem conferir o corpo, os campos viriam `undefined`,
     // carimboVenceu(undefined) daria NaN >= 1800 → false, e a tela afirmaria
     // "Pode ir" a partir de nada. A invariante mais protegida do projeto é
     // justamente essa: nunca afirmar sem leitura.
@@ -364,6 +364,21 @@ describe("Carimbo — a busca", () => {
 
     expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
     expect(container.querySelector("button.decision")).not.toBeNull();
+  });
+
+  // 🔴 CORPO SEM A CHAVE `aviso` É CORPO DE SERVIDOR VELHO, e é por isso que o
+  // campo é `Aviso | null` e não opcional. Aceitá-lo daria `undefined` em
+  // `leitura.aviso`, `fechadoPeloDono` diria `false`, e a tela mostraria ABERTO
+  // um lugar sobre o qual o dono pode ter dito "está em reforma" — o app
+  // afirmando por cima da palavra dele. Descartado, a leitura anterior fica.
+  it("200 com os campos de sempre mas SEM a chave aviso também é descartado", async () => {
+    const { pendentes } = redeFalsa();
+    const { container } = montar({ estado: "frio", erro: true });
+
+    tocar(container);
+    await act(async () => { pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S }); });
+
+    expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
   });
 
   it("corpo que nem é JSON também", async () => {
@@ -387,7 +402,7 @@ describe("Carimbo — a cor acompanha a leitura que está na tela", () => {
     // "Não vá" dentro de um selo VERDE, com o pin do mapa verde junto — e a
     // cor é o que o motorista lê primeiro.
     const { pendentes } = redeFalsa();
-    const { container } = montarNaMoldura({ estado: "fresco", calculadoEm: AGORA_S });
+    const { container } = montarNaMoldura({ estado: "fresco", calculadoEm: AGORA_S, aviso: null });
     const moldura = container.querySelector("main.bp");
     expect(moldura?.getAttribute("data-state")).toBe("fresco"); // o que o servidor pintou
 
@@ -395,7 +410,7 @@ describe("Carimbo — a cor acompanha a leitura que está na tela", () => {
     act(() => { document.dispatchEvent(new Event("visibilitychange")); });
     await act(async () => {
       pendentes[0].ok({
-        estado: "frio", erro: false, calculadoEm: Math.floor((AGORA_MS + QUATRO_H_MS) / 1000),
+        estado: "frio", erro: false, calculadoEm: Math.floor((AGORA_MS + QUATRO_H_MS) / 1000), aviso: null
       });
     });
 
@@ -493,7 +508,7 @@ describe("Carimbo — a cor acompanha a leitura que está na tela", () => {
     // Busca que falha não é leitura nova: a cor do servidor continua valendo,
     // e quem avisa que não há informação é a fase (que pinta o selo de parada).
     const { pendentes } = redeFalsa();
-    const { container } = montarNaMoldura({ estado: "fresco", calculadoEm: AGORA_S });
+    const { container } = montarNaMoldura({ estado: "fresco", calculadoEm: AGORA_S, aviso: null });
 
     vi.setSystemTime(AGORA_MS + QUATRO_H_MS);
     act(() => { document.dispatchEvent(new Event("visibilitychange")); });
@@ -520,7 +535,7 @@ describe("Carimbo — o que os quadros commitados mostram", () => {
 
     render(
       <Profiler id="carimbo" onRender={registrar}>
-        <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} />
+        <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} />
       </Profiler>,
     );
 
@@ -531,7 +546,7 @@ describe("Carimbo — o que os quadros commitados mostram", () => {
     quadros.length = 0; // só interessam os quadros a partir da resposta
     await act(async () => {
       pendentes[0].ok({
-        estado: "fresco", erro: false, calculadoEm: Math.floor((AGORA_MS + QUATRO_H_MS) / 1000),
+        estado: "fresco", erro: false, calculadoEm: Math.floor((AGORA_MS + QUATRO_H_MS) / 1000), aviso: null
       });
     });
 
@@ -699,7 +714,7 @@ describe("Carimbo — o que a chuva faz com o chão vem do PISO", () => {
 // chega nos dois é o MESMO. Uma não substitui a outra — a de fonte não olha a
 // tela, e esta passaria com as duas escrevendo a mesma coisa à mão.
 describe("a ficha e o cartão dizem a MESMA palavra", () => {
-  const leitura = (estado: "fresco" | "frio") => ({ estado, erro: false, calculadoEm: AGORA_S });
+  const leitura = (estado: "fresco" | "frio") => ({ estado, erro: false, calculadoEm: AGORA_S, aviso: null });
 
   // 🔴 O CRUZAMENTO CRESCEU EM 2026-09-10: não são mais 2 casos, são 2 × 3 — a
   // palavra agora depende do NÍVEL da ficha, e carimbo e selo leem a mesma voz
@@ -713,7 +728,7 @@ describe("a ficha e o cartão dizem a MESMA palavra", () => {
   )("com leitura %s e nível %s, carimbo e selo não divergem", (estado, severidade) => {
     const voz = { severidade, horasPassado: 6 } as const;
     const carimbo = render(
-      <Carimbo estado={estado} erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={voz} />,
+      <Carimbo estado={estado} erro={false} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="rampa-do-pepe" voz={voz} />,
     ).container.querySelector(".mark")?.textContent;
     cleanup();
     const selo = render(<SeloTrilha leitura={leitura(estado)} voz={voz} />).container
@@ -780,7 +795,7 @@ describe("Carimbo — a hora, e não só a chuva", () => {
   // fechou, e "SEM INFORMAÇÕES · tome cuidado" ali convidaria a tentar.
   it("com leitura VENCIDA e o lugar fechado, quem vence é o fechado", () => {
     asHoras(18);
-    const { container } = montar({ abertura: { horario: PEDRA }, calculadoEm: AGORA_S });
+    const { container } = montar({ abertura: { horario: PEDRA }, calculadoEm: AGORA_S, aviso: null });
     expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
   });
 
@@ -856,14 +871,14 @@ describe("Carimbo — StrictMode e desmontagem", () => {
     const { pendentes } = redeFalsa();
     const { container } = render(
       <StrictMode>
-        <Carimbo estado="frio" erro={true} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} />
+        <Carimbo estado="frio" erro={true} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} />
       </StrictMode>,
     );
 
     tocar(container);
     expect(container.querySelector(".mark")?.textContent).toBe("CONFERINDO…");
 
-    await act(async () => { pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S }); });
+    await act(async () => { pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null }); });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
   });
 
@@ -877,7 +892,7 @@ describe("Carimbo — StrictMode e desmontagem", () => {
 
     tocar(container);
     unmount();
-    await act(async () => { pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S }); });
+    await act(async () => { pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null }); });
 
     expect(document.querySelector(".mark")).toBeNull();
     expect(gritou).not.toHaveBeenCalled();

@@ -28,8 +28,8 @@ vi.mock("@/lib/geo", async (original) => {
 
 const base = getFichasComCondicao()[0];
 const RAMPA = base.condicao.coords;
-const FRESCO: LeituraCarimbo = { estado: "fresco", erro: false, calculadoEm: 1_800_000_000 };
-const FRIO: LeituraCarimbo = { estado: "frio", erro: false, calculadoEm: 1_800_000_000 };
+const FRESCO: LeituraCarimbo = { estado: "fresco", erro: false, calculadoEm: 1_800_000_000, aviso: null };
+const FRIO: LeituraCarimbo = { estado: "frio", erro: false, calculadoEm: 1_800_000_000, aviso: null };
 
 function passa(f: Partial<Filtros>, over: Partial<Ficha> = {}, extra: Partial<{
   leitura: LeituraCarimbo; voce: { lat: number; lng: number } | null; confia: boolean;
@@ -773,7 +773,7 @@ describe("tetoDaBarraDistancia: o teto vem do acervo, não de um número inventa
 // É a mesma família do defeito das 18h (2026-08-27): o app respondendo a
 // pergunta da chuva e chamando isso de a pergunta inteira.
 describe("só as que dá hoje: a chuva não é a pergunta inteira", () => {
-  const seca: LeituraCarimbo = { estado: "fresco", erro: false, calculadoEm: 0 };
+  const seca: LeituraCarimbo = { estado: "fresco", erro: false, calculadoEm: 0, aviso: null };
   const so = () => ({ ...SEM_FILTRO, daHoje: true });
 
   const passa = (fechado: boolean, leitura = seca, confia = true) =>
@@ -803,7 +803,7 @@ describe("só as que dá hoje: a chuva não é a pergunta inteira", () => {
   // pode esconder o que NÃO MEDIU — mas o horário e os dias não são medição de
   // nada: são fato da ficha mais o relógio. O app SABE que está fechado.
   it("fechado esconde mesmo sem leitura confiável — isto o app sabe", () => {
-    const semLeitura: LeituraCarimbo = { estado: "frio", erro: true, calculadoEm: 0 };
+    const semLeitura: LeituraCarimbo = { estado: "frio", erro: true, calculadoEm: 0, aviso: null };
     expect(passa(true, semLeitura, false)).toBe(false);
   });
 
@@ -811,7 +811,7 @@ describe("só as que dá hoje: a chuva não é a pergunta inteira", () => {
   // continua sem esconder nada. Este teste cai se alguém "simplificar" o ramo
   // novo em cima do antigo.
   it("sem leitura confiável, a chuva continua sem esconder — a regra 1 segue de pé", () => {
-    const semLeitura: LeituraCarimbo = { estado: "frio", erro: true, calculadoEm: 0 };
+    const semLeitura: LeituraCarimbo = { estado: "frio", erro: true, calculadoEm: 0, aviso: null };
     expect(passa(false, semLeitura, false)).toBe(true);
   });
 

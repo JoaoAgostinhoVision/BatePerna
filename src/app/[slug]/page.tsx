@@ -5,6 +5,7 @@ import { resolverEstado } from "@/lib/carimbo-estado";
 import { rotuloPiso } from "@/lib/piso";
 import { vozDaFicha } from "@/lib/severidade";
 import { faseDe } from "@/lib/carimbo-fase";
+import { fechadoPeloDono } from "@/lib/aviso";
 import { aberturaDaFicha, rotuloFaixaCurta } from "@/lib/horario";
 import { rotuloDias } from "@/lib/semana";
 import { notFound } from "next/navigation";
@@ -79,7 +80,7 @@ export default async function Ficha({
   if (!ficha) notFound();
 
   const { debug } = await searchParams;
-  const { estado, erro, calculadoEm } = await resolverEstado(ficha, debug);
+  const { estado, erro, calculadoEm, aviso } = await resolverEstado(ficha, debug);
 
   const wp = ficha.trajeto.waypoints[0];
   const pass = ficha.condicao.regra.janela_passado_horas;
@@ -180,7 +181,18 @@ export default async function Ficha({
       // depende do relógio do navegador e por isso é `false` aqui — é a MESMA
       // conta que o Carimbo faz no primeiro render (`agora` nasce `null`), e
       // tem que continuar sendo, senão a hidratação briga.
-      fase={faseDe({ conferindo: false, erro, venceu: false, falhou: false })}
+      // `fechadoPeloDono` VAI DE VERDADE, e não `false` como o `fechado` logo
+      // acima: ele não depende do relógio do navegador — vem do servidor junto
+      // com a leitura, e o `Carimbo` calcula o MESMO no primeiro render, a
+      // partir da mesma prop. Mandar `false` aqui pintaria a moldura de aberto
+      // por um quadro num lugar que o dono fechou.
+      fase={faseDe({
+        conferindo: false,
+        erro,
+        venceu: false,
+        falhou: false,
+        fechadoPeloDono: fechadoPeloDono(aviso),
+      })}
     >
       <div className="screen">
         <Appbar chip={chipCusto} />
@@ -194,6 +206,7 @@ export default async function Ficha({
             estado={estado}
             erro={erro}
             calculadoEm={calculadoEm}
+            aviso={aviso}
             pass={pass}
             fut={fut}
             slug={slug}

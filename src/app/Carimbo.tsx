@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Estado } from "@/lib/motor";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+import { fechadoPeloDono, type Aviso } from "@/lib/aviso";
 import {
   PRAZO_CONFERINDO_MS,
   type Fase,
@@ -30,6 +31,7 @@ export default function Carimbo({
   estado,
   erro,
   calculadoEm,
+  aviso,
   pass,
   fut,
   slug,
@@ -41,6 +43,10 @@ export default function Carimbo({
   estado: Estado;
   erro: boolean;
   calculadoEm: number;
+  /** A palavra do dono sobre este lugar, se houver uma valendo. Chega junto com
+   *  a leitura do servidor e é o ponto de partida, igual aos três de cima: a
+   *  busca do portão pode trazer outra. */
+  aviso: Aviso | null;
   pass: number;
   fut: number;
   slug: string;
@@ -67,7 +73,7 @@ export default function Carimbo({
   // A leitura do servidor é só o ponto de partida: daqui pra frente o
   // componente pode trocá-la por uma mais nova. O primeiro render usa
   // exatamente o que veio no HTML, pra a hidratação bater.
-  const [leitura, setLeitura] = useState<LeituraCarimbo>({ estado, erro, calculadoEm });
+  const [leitura, setLeitura] = useState<LeituraCarimbo>({ estado, erro, calculadoEm, aviso });
   const [venceu, setVenceu] = useState(false);
   const [conferindo, setConferindo] = useState(false);
   const [falhou, setFalhou] = useState(false);
@@ -128,10 +134,10 @@ export default function Carimbo({
       if (!res.ok) throw new Error(String(res.status));
       const nova: unknown = await res.json();
       // O corpo é conferido, não assumido: é ele que vira a decisão que a
-      // pessoa lê no portão. Um 200 com corpo fora do trio daria `undefined`
-      // nos três campos e carimboVenceu(undefined) é NaN >= 1800 → false: a
+      // pessoa lê no portão. Um 200 com corpo fora da forma daria `undefined`
+      // nos campos e carimboVenceu(undefined) é NaN >= 1800 → false: a
       // tela afirmaria "Pode ir" a partir de nada. Corpo inválido é falha.
-      if (!ehLeitura(nova)) throw new Error("corpo fora do trio");
+      if (!ehLeitura(nova)) throw new Error("corpo fora da forma da leitura");
       if (geracao.current !== minha || !vivo.current) return;
       // Os quatro num lote só, de propósito. `venceu` é recalculado aqui em vez
       // de esperar o efeito [leitura.calculadoEm]: efeito passivo roda em tarefa
@@ -195,7 +201,14 @@ export default function Carimbo({
 
   const { estado: estadoAtual, erro: erroAtual, calculadoEm: calculadoEmAtual } = leitura;
   const fechado = fechadoAgora(abertura, agora);
-  const situacao = { conferindo, erro: erroAtual, venceu, falhou, fechado };
+  const situacao = {
+    conferindo,
+    erro: erroAtual,
+    venceu,
+    falhou,
+    fechado,
+    fechadoPeloDono: fechadoPeloDono(leitura.aviso),
+  };
   const fase = faseDe(situacao);
   const sintoma = sintomaDe(situacao);
 
@@ -274,7 +287,7 @@ export default function Carimbo({
   );
 }
 
-/** O corpo da rota é o trio, ou não é leitura nenhuma.
+/** O corpo da rota tem a forma de `LeituraCarimbo`, ou não é leitura nenhuma.
  *
  *  Mora aqui, e não em `carimbo-estado.ts` junto do tipo, porque aquele módulo
  *  puxa o motor e o fetch da chuva — importá-lo em runtime daqui arrastaria o
@@ -282,12 +295,19 @@ export default function Carimbo({
  *  compilação e pode continuar vindo de lá. */
 function ehLeitura(x: unknown): x is LeituraCarimbo {
   if (typeof x !== "object" || x === null) return false;
-  const { estado, erro, calculadoEm } = x as Record<string, unknown>;
+  const { estado, erro, calculadoEm, aviso } = x as Record<string, unknown>;
   return (
     (estado === "fresco" || estado === "frio") &&
     typeof erro === "boolean" &&
     typeof calculadoEm === "number" &&
-    Number.isFinite(calculadoEm)
+    Number.isFinite(calculadoEm) &&
+    // 🔴 A CHAVE `aviso` É EXIGIDA, e é por isso que ela é `Aviso | null` em vez
+    // de opcional. `undefined` reprova nas duas metades desta linha: corpo sem
+    // a chave é corpo de uma versão VELHA do servidor, e aceitá-lo como "sem
+    // aviso" apagaria da tela um aviso que talvez exista — o app afirmando
+    // aberto por cima da palavra do dono. Reprovado, a tela mantém a leitura
+    // anterior, que ao menos se reconhece vencida.
+    (aviso === null || typeof aviso === "object")
   );
 }
 

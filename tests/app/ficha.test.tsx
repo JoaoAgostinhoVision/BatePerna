@@ -110,7 +110,7 @@ async function abrir(slug: string, estado: "fresco" | "frio" = "fresco") {
   vi.mocked(resolverEstado).mockResolvedValue({
     estado,
     erro: false,
-    calculadoEm: Math.floor(Date.now() / 1000),
+    calculadoEm: Math.floor(Date.now() / 1000), aviso: null
   });
   return render(
     await Ficha({
@@ -168,7 +168,7 @@ describe("a ficha de verdade", () => {
     vi.mocked(resolverEstado).mockResolvedValue({
       estado: "fresco",
       erro: false,
-      calculadoEm: Math.floor(Date.now() / 1000),
+      calculadoEm: Math.floor(Date.now() / 1000), aviso: null
     });
     localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
       tipo: "escolhido",

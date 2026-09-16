@@ -1,5 +1,6 @@
 "use client";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+import { fechadoPeloDono } from "@/lib/aviso";
 import { faseDe, marcaDe, subDe } from "@/lib/carimbo-fase";
 import { fechadoAgora, rotuloAbertura, type Abertura, type Agora } from "@/lib/horario";
 import type { Voz } from "@/lib/severidade";
@@ -40,7 +41,14 @@ export default function SeloTrilha({
 }) {
   const venceu = useVenceu(leitura.calculadoEm);
   const fechado = fechadoAgora(abertura, agora);
-  const fase = faseDe({ conferindo: false, erro: leitura.erro, venceu, falhou: false, fechado });
+  const fase = faseDe({
+    conferindo: false,
+    erro: leitura.erro,
+    venceu,
+    falhou: false,
+    fechado,
+    fechadoPeloDono: fechadoPeloDono(leitura.aviso),
+  });
 
   // A MESMA palavra e a MESMA linha de baixo do carimbo da ficha, da mesma
   // fonte — o selo é o irmão pequeno, não um segundo vocabulário.
