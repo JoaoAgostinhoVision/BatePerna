@@ -2,13 +2,16 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🟡 **ÚLTIMA PARADA: 2026-09-15.** O eixo segue `acesso de usuários`. A execução da branch `admin-porta-e-aviso` está **no meio**: Tasks 1, 2 e 3 completas; a 4 em andamento; 5 a 11 não começadas.
-A rodada dos tiles / do mapa honesto (13/09, primeira metade) está fechada e no ar. Esta, não:
-**nada da porta de admin foi ao ar.** Em 13/09 ele encerrou com *"eu quero continuar na próxima,
-deixe tudo pronto"*, e em 15/09 abriu com *"continua"*.
+🟡 **ÚLTIMA PARADA: 2026-09-15, fim da sessão.** O eixo segue `acesso de usuários`. Ele abriu com
+*"continua"* e encerrou com ***"preciso continuar na próxima, deixe tudo pronto"***.
+
+A execução da branch `admin-porta-e-aviso` andou de **2 para 8 tarefas fechadas** (as 7 e 8 valem
+por uma: compartilham commit por desenho). Nasceu uma **tarefa nova, a 8-bis**, de um achado de
+revisão — e é por ela que se começa.
 
 🔴 **NÃO ESTAMOS EM `main`.** A branch é **`admin-porta-e-aviso`**. Nada disso foi ao ar, e **nada
-deve ir ao ar** até o plano fechar — a porta de admin pela metade é pior que porta nenhuma.
+deve ir ao ar** até o plano fechar — a porta de admin pela metade é pior que porta nenhuma, e há
+**duas travas de deploy** listadas abaixo.
 
 ---
 
@@ -29,57 +32,102 @@ deve ir ao ar** até o plano fechar — a porta de admin pela metade é pior que
 4. Continue pelo método que ele escolheu: **subagent-driven-development** (`superpowers`), um
    subagente por tarefa, revisão entre elas, mutação medida em cada uma.
 
-⚠️ **Confira `git status` antes de qualquer coisa.** A sessão terminou com um *fix round* em
-andamento; se houver arquivo modificado e não commitado, é dele — leia o diff antes de mexer.
+5. A **8-bis não tem brief** — o dispatch dela se escreve na hora, a partir do achado que está
+   por extenso logo abaixo. As 9, 10 e 11 têm brief gerado; use `scripts/task-brief` só se faltar.
+
+⚠️ **Confira `git status` antes de qualquer coisa.** A sessão de 15/09 terminou **limpa** — nenhum
+fix round em andamento, nenhum subagente vivo. Se houver arquivo modificado e não commitado, ele
+não é meu: leia o diff antes de mexer.
 
 ---
 
 ## 📍 ONDE A EXECUÇÃO PAROU
 
-> **Atualizado em 2026-09-15.** A sessão de 15/09 retomou pelo bloco acima e a execução andou.
+> **Atualizado em 2026-09-15, fim da sessão.** Ele encerrou com *"preciso continuar na próxima,
+> deixe tudo pronto"* — a mesma frase de 13/09. **Nenhum subagente ficou rodando.** Working tree
+> limpo, tudo commitado, nada no ar.
 
 | tarefa | estado |
 |---|---|
-| 1 — `src/lib/admin-sessao.ts`, o módulo puro da sessão | ✅ **completa**, revisão limpa (`4ef3bfa`) |
-| 2 — `/admin` fora dos dois caminhos de cache | ✅ **completa** após 1 fix round (`b4ff398`..`cc37a3d`) |
-| 3 — `src/lib/admin-config.ts`, ligado/desligado/ausente | ✅ **completa** após 1 fix round de EVIDÊNCIA (`2b57c34`) |
-| 4 — entrar e sair (as duas rotas + `admin-guarda.ts`) | 🟡 **implementador despachado** em 15/09 |
-| 5 a 11 | ⬜ não começadas — briefs já gerados no workspace |
+| 1 — `src/lib/admin-sessao.ts`, o módulo puro da sessão | ✅ completa (`4ef3bfa`) |
+| 2 — `/admin` fora dos dois caminhos de cache | ✅ completa, 1 fix round (`cc37a3d`) |
+| 3 — `src/lib/admin-config.ts`, ligado/desligado/ausente | ✅ completa, 1 fix round de EVIDÊNCIA (`2b57c34`) |
+| 4 — entrar e sair (rotas + `admin-guarda.ts`) | ✅ completa, 1 fix round (`7d5687e`) |
+| 5 — a tela da porta (`/admin`, `CaixaDeSenha`, `admin.css`) | ✅ completa (`d419012`) |
+| 6 — a tabela `avisos`, append-only | ✅ completa (`a54d3a3`) |
+| **7+8** — `aplicarAviso` + o aviso entra na leitura (1 commit, por desenho) | ✅ completas, 1 fix round (`3433d01`) |
+| **8-bis** — 🔴 **NOVA, criada por mim nesta sessão. É a próxima.** | ⬜ não começada |
+| 9 — a rota que publica e retira | ⬜ não começada — brief gerado |
+| 10 — o painel | ⬜ não começada — brief gerado |
+| 11 — o aviso na ficha | ⬜ não começada — brief gerado |
 
-**Os 11 briefs já estão gerados** em `.superpowers/sdd/2026-09-13-acesso-de-admin-porta-e-aviso/`
-(`task-N-brief.md`). Não precisa regerar.
+**Suíte: 1028/1028 em 65 arquivos**, `tsc` limpo, `npm run build` 8/8. Nove commits nesta sessão.
 
-### 🔴 O PRÓXIMO PASSO, LITERAL
+---
+
+### ▶ O PRÓXIMO PASSO, LITERAL — a Task 8-bis
 
 > ⚠️ **Repetido aqui de propósito.** O ledger mora em `.superpowers/`, que é **git-ignored** — um
 > `git clean -fdx` o apaga. Este arquivo é versionado; ele sobrevive.
 
-Leia o ledger (`…/progress.md`) e retome na primeira tarefa **sem** a linha `Task N: complete`.
-O ciclo de cada uma: despachar implementador com o brief → revisão escopada → fix round se houver
-achado Critical/Important → `Task N: complete`. Nunca redespache tarefa completa.
+**Não existe brief pra ela** (nenhum brief do plano lista esses arquivos) — o dispatch se escreve na
+hora, a partir do achado abaixo, que veio da revisão das Tasks 7+8 e está **verbatim**:
 
-### ⚠️ O QUE A SESSÃO DE 15/09 DESCOBRIU E VOCÊ PRECISA SABER
+> **`src/app/FolhaTrilhas.tsx:145-148` e `src/app/MioloHome.tsx:100,111` — o agrupamento e o chip
+> "só as que dá hoje" são cegos ao fechado do dono.** `tomDaqui` e `estaFechado` chamam só
+> `fechadoAgora(...)`. Um lugar seco que o dono fechou cai sob **"Hoje o tempo deixa"** com o selo
+> vermelho "Fechado agora" dentro dele — exatamente o que o comentário de `FolhaTrilhas.tsx:133-138`
+> proíbe por escrito ("o grupo estaria convidando pra uma coisa que não dá") — e sobrevive ao chip
+> "só as que dá hoje" (`filtros.ts:257`), que é a **reincidência literal do defeito de 11/09**
+> travado em `tests/lib/filtros.test.ts:775-785`. `page.tsx:44` também o ordena como fresco.
 
-**1. A suíte estava vermelha por código que não é nosso.** Existe uma pasta `/BatePerna/`
-**git-ignored** dentro do repositório (apareceu em 14/09) — outro projeto, com jest e supabase. O
-glob padrão do vitest (`**/*.test.*`) varria o repo inteiro e coletava os testes dela, que importam
-módulos que este app não tem. Travei o glob em `tests/**` (`vitest.config.ts`, commit `df7d885`),
-depois de conferir que os 60 arquivos de teste deste app moram todos em `tests/`. **Se um teste
-nosso nascer fora de `tests/` um dia, ele deixa de rodar calado** — é o lado ruim de errar aqui.
+Depois dela: **Task 9 → 10 → 11**, pelos briefs já gerados, e então o final review.
 
-**2. A espécie "guarda de fonte casando a ocorrência errada" já apareceu TRÊS vezes** neste plano
-(Task 1: `toContain("timingSafeEqual")` casava o import; Task 2: `...defaultCache` escrito dentro
-de um comentário do próprio código novo). Todo guarda de fonte novo mira o **ponto de chamada
-exato** e prova por mutação que fica vermelho.
+### 🔴 DUAS TRAVAS DE DEPLOY — nada sobe sem elas
+
+1. **A Task 11 é obrigatória antes de qualquer deploy.** Hoje, com um aviso `fechado`, o carimbo diz
+   "Fechado agora" e **o texto do dono não aparece em lugar nenhum** — a explicação só nasce no
+   `AvisoDoDono` da Task 11. (Decisão minha: o `motivo` se **cala** em vez de inventar frase; copy
+   de tela é escolha dele, não redação minha.)
+2. **A tabela `avisos` só nasce em produção quando alguém rodar**
+   `npx dotenv -e .env.local -- tsx scripts/apply-schema.ts`. Sem isso, a primeira publicação de
+   aviso dá erro.
+
+### ⚠️ O QUE ESTA SESSÃO APRENDEU — e que vale mais que o código
+
+**1. A suíte estava vermelha por código que não é nosso.** Uma pasta `/BatePerna/` **git-ignored**
+apareceu aqui dentro em 14/09 (outro projeto, com jest e supabase) e o glob padrão do vitest
+(`**/*.test.*`) coletava os testes dela. Travei o glob em `tests/**` (`df7d885`). **Se um teste
+nosso nascer fora de `tests/` um dia, ele deixa de rodar calado.**
+
+**2. A espécie "guarda de fonte casando a ocorrência errada" apareceu CINCO vezes neste plano.** A
+quinta foi a primeira em que o remédio veio **antes** do defeito: exigi o guarda no dispatch, e o
+implementador provou no mesmo run que a versão ingênua (`toContain("fechadoPeloDono")`) passaria com
+a mutação aplicada — sobram 4 ocorrências da palavra no arquivo. **Guarda de fonte mira o ponto de
+declaração/chamada exato, e prova por mutação que fica vermelho.**
 
 **3. Relatório de mutação sem `diff -u` colado não é prova.** A Task 3 voltou em fix round só por
-isso: a tabela dizia "Diff Confirmed: Yes" sem colar diff nenhum. Mutação que não foi aplicada e
-mutação que sobreviveu dão o mesmo verde.
+isso.
 
-⚠️ **Uma ressalva honesta que continua de pé:** o `sw.ts` segue **sem verificação em navegador de
-verdade**. As provas são de texto-fonte e do matcher do `defaultCache` isolado. Quando a porta de
-admin estiver inteira, isto precisa ser aberto no navegador — é o caminho onde este projeto já achou
-três defeitos que teste nenhum acharia.
+**4. Varredura por PALAVRA é mais fraca que varredura por AFIRMAÇÃO.** Procurar "onde aparece a
+palavra X" achou 1 comentário mentiroso; perguntar *"que afirmação deste arquivo deixou de ser
+verdadeira?"* achou **cinco** — a pior sendo `subDe` em `carimbo-fase.ts`, que dizia "a fase só
+existe quando há horário", premissa que o próprio commit matou.
+
+**5. 🔴 Alegação de relatório de implementador precisa da mesma auditoria que código — e eu falhei
+nisso.** O implementador relatou ter achado "uma segunda metade do mesmo defeito" (o fechado-do-dono
+caindo no ramo da chuva), **eu contei isso a ele antes de mandar auditar**, e a re-revisão mostrou
+que a alegação era **inflada**: aquela metade não existia no commit anterior — a frase da chuva só
+vira alcançável *dentro do mutante*. O bom: a afirmação inflada ficou só no relatório; os
+comentários do código descrevem só o defeito verdadeiro.
+
+**6. O `tsc` achou um arquivo que eu não sabia que existia.** Dei ao implementador uma lista de
+cinco pontos e mandei não confiar nela — o compilador apontou nove erros em seis arquivos,
+incluindo `HomeViva.tsx`.
+
+⚠️ **A dívida de navegador continua de pé e cresceu:** o `sw.ts` nunca foi aberto num navegador de
+verdade, e agora **cinco telas** mudaram sem que olho nenhum as visse em 375px. É o caminho onde
+este projeto já achou três defeitos que teste nenhum acharia.
 
 ---
 
