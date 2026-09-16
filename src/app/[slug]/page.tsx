@@ -17,7 +17,9 @@ import Carimbo from "../Carimbo";
 import LocalVivo from "../local";
 import Moldura from "../Moldura";
 
-// Compute-on-load: nada de cache estático, o estado é a chuva de agora.
+// Compute-on-load: nada de cache estático. O estado é a chuva de agora, e o
+// aviso do dono é a palavra dele de agora — as duas apodrecem, e nenhuma das
+// duas pode ser lida do build.
 export const dynamic = "force-dynamic";
 
 /** O CARTÃO QUE O LINK DESTA TRILHA MOSTRA quando alguém manda no WhatsApp.

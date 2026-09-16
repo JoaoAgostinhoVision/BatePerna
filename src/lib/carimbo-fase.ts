@@ -117,10 +117,14 @@ export function marcaDe(fase: Fase, estado: Estado, voz: Voz): string {
 /** A linha de baixo da marca. Irmã do `marcaDe`, e mora aqui pela mesma razão:
  *  a ficha e o cartão da home dizem a MESMA coisa.
  *
- *  `abertura` só é usada na fase `fechado`, e nela nunca é `null` por
- *  construção — a fase só existe quando há horário. O `?? ""` não é fallback
- *  disfarçado: é o app CALANDO se algum dia a construção mudar, em vez de
- *  inventar um horário que ninguém deu.
+ *  🔴 O `?? ""` DEIXOU DE SER HIPÓTESE EM 2026-09-15, e este bloco dizia o
+ *  contrário. Ele dizia que na fase `fechado` a `abertura` nunca é `null` "por
+ *  construção — a fase só existe quando há horário". Isso valia enquanto só o
+ *  calendário fechava; com o DONO fechando ("a rampa está em reforma"), a fase
+ *  `fechado` acontece em ficha SEM horário nenhum, e o ramo de baixo passa a
+ *  rodar de verdade. O comportamento é o certo e não muda: o app CALA em vez de
+ *  inventar um horário que ninguém deu. Quem diz por que fechou é o
+ *  `AvisoDoDono`, com a frase do dono, e não esta função.
  *
  *  ⚠️ "seco · carro comum" continua supondo o veículo. **Ele decidiu deixar
  *  assim em 2026-08-27**, de olhos abertos, sabendo que a 3ª ficha de asfalto o

@@ -22,7 +22,12 @@ import { useAvisarMoldura } from "./Moldura";
 import { useAgoraRecife } from "./useAgoraRecife";
 
 /** O carimbo é a única coisa da ficha que apodrece. Tudo o mais — trajeto,
- *  coordenada, aviso, o que ler no portão — é verdade parada.
+ *  coordenada, os `avisos` da ficha, o que ler no portão — é verdade parada.
+ *
+ *  ⚠️ "aviso" virou duas coisas em 2026-09-15, e esta lista fala de UMA. Os
+ *  `avisos` da FICHA são texto parado, escrito uma vez. O `aviso` do DONO
+ *  (`src/lib/aviso.ts`) tem prazo, vem do banco junto com a leitura e viaja
+ *  DENTRO do carimbo — esse apodrece, e é por isso que ele mora aqui.
  *
  *  Quando não há leitura, ele não manda: informa que não sabe, devolve a
  *  decisão, e se oferece pra ir buscar de novo. "Não vá" ficou reservado pro
@@ -259,7 +264,21 @@ export default function Carimbo({
         <div className="sub">{sub}</div>
       </div>
       <p className="reason">
-        {motivo(fase, sintoma, estadoAtual, calculadoEmAtual, pass, fut, secaRapido, piso, abertura)}
+        {/* 🔴 `fechado ? abertura : undefined`, E ISSO É A CORREÇÃO INTEIRA. O
+            `motivo` não pode decidir pela truthiness de `abertura`: ela vem de
+            `aberturaDaFicha`, que devolve SEMPRE um objeto. Quem sabe se foi o
+            CALENDÁRIO que fechou é esta linha, que tem o `fechado` na mão. */}
+        {motivo(
+          fase,
+          sintoma,
+          estadoAtual,
+          calculadoEmAtual,
+          pass,
+          fut,
+          secaRapido,
+          piso,
+          fechado ? abertura : undefined,
+        )}
       </p>
       <div className="live">
         <span className="pulse"></span>
@@ -337,13 +356,29 @@ function motivo(
   fut: number,
   secaRapido?: string,
   piso?: Piso,
-  abertura?: Abertura,
+  /** A faixa do calendário SÓ quando foi ELE que fechou o lugar agora —
+   *  `undefined` em qualquer outro caso. Não é a `abertura` da ficha, e o nome
+   *  é diferente de propósito: ver o bloco 🔴 do ramo `fechado` logo abaixo. */
+  aberturaQueFechou?: Abertura,
 ) {
   // Primeiro de todos, pela mesma razão que `fechado` ganha em `faseDe`: com o
   // lugar fechado, contar da chuva é responder a pergunta errada. E a frase diz
   // as HORAS e mais nada — o nome da coisa que fecha não mora no código.
-  if (fase === "fechado" && abertura) {
-    return <>{rotuloFaixa(abertura)}</>;
+  //
+  // 🔴 E QUEM FECHOU DECIDE SE HÁ FRASE (2026-09-15). Este ramo testava
+  // `fase === "fechado" && abertura`, e era seguro enquanto `fechado` só podia
+  // vir do calendário. Com o DONO podendo fechar ("a rampa está em reforma"),
+  // deixou de ser: `abertura` é sempre truthy (vem de `aberturaDaFicha`), então
+  // a tela carimbava "Fechado agora" e explicava com uma faixa de horário que
+  // naquele instante dizia o CONTRÁRIO — causa falsa, a linha vermelha deste
+  // projeto, no eixo do calendário em vez do da chuva.
+  //
+  // Fechou o dono, o motivo SE CALA, e isso é subtração e não esquecimento:
+  // inventar frase aqui seria copy nova indo pra tela sem ele ter lido. O texto
+  // verdadeiro é o que o DONO escreveu, e quem o desenha é o `AvisoDoDono`.
+  // Incompleto é o lado certo pra errar; falso nunca é.
+  if (fase === "fechado") {
+    return aberturaQueFechou ? <>{rotuloFaixa(aberturaQueFechou)}</> : null;
   }
   if (fase === "conferindo") {
     return sintoma === "venceu" ? (

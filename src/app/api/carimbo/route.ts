@@ -7,7 +7,13 @@ export const dynamic = "force-dynamic";
  *
  *  Existe porque o carimbo apodrece e o resto da ficha não: quando você volta
  *  pro app no portão, é isto que busca a resposta de agora em vez de o app dar
- *  de ombros. Só-clima — não toca o banco, igual à página. */
+ *  de ombros.
+ *
+ *  ✅ E DESDE 2026-09-15 ELA TOCA O BANCO, igual à página — as duas chamam o
+ *  mesmo `resolverEstado`, que lê o aviso do dono antes de responder. A linha
+ *  daqui dizia "só-clima, não toca o banco", e a frase envelheceu no mesmo
+ *  commit em que o aviso entrou na leitura. Continua valendo o que importa: a
+ *  rota e a página são a MESMA função, e por isso não podem divergir. */
 export async function GET(req: Request): Promise<Response> {
   const slug = new URL(req.url).searchParams.get("slug");
   const ficha = slug ? getFicha(slug) : null;

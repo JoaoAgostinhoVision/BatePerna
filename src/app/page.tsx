@@ -10,8 +10,11 @@ import HomeViva from "./HomeViva";
 import LocalVivo from "./local";
 import MioloHome from "./MioloHome";
 
-// Compute-on-load: o veredito é a chuva de agora. Página estática congelaria
-// `calculadoEm` no build e TODO visitante receberia carimbo já vencido.
+// Compute-on-load: o veredito é a chuva de agora — e, desde 2026-09-15, a
+// palavra do dono de agora também. Página estática congelaria `calculadoEm` no
+// build e TODO visitante receberia carimbo já vencido; e congelaria junto um
+// aviso publicado depois do build, que é a coisa que ele acabou de escrever
+// justamente porque é urgente.
 export const dynamic = "force-dynamic";
 
 /** A home: "o que dá pra fazer hoje".
