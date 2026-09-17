@@ -7,3 +7,20 @@
 .adm-porta input { padding: .6rem; font-size: 1rem; border: 1px solid #999; border-radius: 8px; }
 .adm-porta button { padding: .7rem; font-size: 1rem; border-radius: 8px; }
 .adm-erro { color: #b3261e; font-size: .9rem; }
+
+/* O painel: uma seção por ficha, tudo isolado do `.bp` — mesma razão do
+   resto deste arquivo. */
+.adm-painel { display: grid; gap: 1.2rem; }
+.adm-ficha { display: grid; gap: .5rem; padding: 1rem; border: 1px solid #ccc; border-radius: 10px; }
+/* 🔴 "Abre destacando o que vence em breve" — o destaque é a borda mudando
+   de cor, não sumir nem reordenar a seção. */
+.adm-ficha[data-vence-em-breve] { border-color: #b3261e; }
+.adm-ficha h2 { font-size: 1.05rem; margin: 0; }
+.adm-motor { font-size: .85rem; color: #555; margin: 0; }
+.adm-vigente { display: grid; gap: .3rem; padding: .6rem; background: #f4f0e6; border-radius: 8px; }
+.adm-vigente-texto { margin: 0; }
+.adm-vigente-meta { margin: 0; font-size: .8rem; color: #777; }
+.adm-rotulo { display: grid; gap: .3rem; font-size: .85rem; }
+.adm-rotulo textarea, .adm-rotulo select { padding: .5rem; font-size: .95rem; border: 1px solid #999; border-radius: 8px; }
+.adm-consequencia { font-size: .85rem; font-style: italic; margin: 0; }
+.adm-ficha button { padding: .6rem; font-size: .95rem; border-radius: 8px; }

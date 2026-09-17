@@ -23,6 +23,7 @@ const nextConfig = {
     "/api/carimbos": ["./content/**/*"],
     "/api/cron/motor": ["./content/**/*"],
     "/api/admin/aviso": ["./content/**/*"],
+    "/admin": ["./content/**/*"],
   },
 };
 
