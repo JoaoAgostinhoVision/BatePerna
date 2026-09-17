@@ -2,20 +2,21 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🟡 **ÚLTIMA PARADA: 2026-09-15, fim da sessão.** O eixo segue `acesso de usuários`. Ele abriu com
-*"continua"* e encerrou com ***"preciso continuar na próxima, deixe tudo pronto"***.
+🟡 **ÚLTIMA PARADA: 2026-09-16, fim da sessão.** O eixo segue `acesso de usuários`. Ele abriu com
+*"continua"* e encerrou com ***"quero continuar outro dia, deixe tudo pronto"***.
 
-A execução da branch `admin-porta-e-aviso` andou de **2 para 8 tarefas fechadas** (as 7 e 8 valem
-por uma: compartilham commit por desenho). Nasceu uma **tarefa nova, a 8-bis**, de um achado de
-revisão — e é por ela que se começa.
+**As 12 tarefas do plano estão FECHADAS** (1–11 mais a 8-bis), **o final review da branch inteira
+RODOU** (veredito: *"With fixes"* — 1 Critical, 6 Important) e **a onda de fix dos 6 achados está
+APLICADA e commitada** (`050dfd6..1fd4a1f`). O que falta é **uma coisa só**: a **re-revisão
+escopada dessa onda**. Depois dela, o plano fecha.
 
-🔴 **NÃO ESTAMOS EM `main`.** A branch é **`admin-porta-e-aviso`**. Nada disso foi ao ar, e **nada
-deve ir ao ar** até o plano fechar — a porta de admin pela metade é pior que porta nenhuma, e há
-**duas travas de deploy** listadas abaixo.
+🔴 **NÃO ESTAMOS EM `main`.** A branch é **`admin-porta-e-aviso`**, 28 commits à frente de `main`.
+**Nada disso foi ao ar, e nada deve ir ao ar** até a re-revisão fechar e as travas de deploy abaixo
+serem cumpridas — e o deploy é decisão DELE, não minha.
 
 ---
 
-## ▶ ELE DIGITOU "CONTINUA"? NÃO COMECE DO ZERO — HÁ UMA EXECUÇÃO NO MEIO.
+## ▶ ELE DIGITOU "CONTINUA"? NÃO COMECE DO ZERO — FALTA UM PASSO SÓ.
 
 > 🔴 **A regra de sempre:** *"continua"* significa **construir**, não levantar opções. Sem menu, sem
 > pergunta de abertura. Ele já disse duas vezes: *"estás saindo do contexto"* / ***"o foco é o
@@ -23,111 +24,121 @@ deve ir ao ar** até o plano fechar — a porta de admin pela metade é pior que
 
 **O que fazer, na ordem, sem perguntar nada:**
 
-1. `git checkout admin-porta-e-aviso` (confira que está lá; **não** trabalhe em `main`).
-2. Leia o **ledger**: `.superpowers/sdd/2026-09-13-acesso-de-admin-porta-e-aviso/progress.md`.
-   Ele é o mapa de recuperação — as tarefas com a linha `Task N: complete` estão FEITAS.
-   **Não redespache tarefa completa.** Retome na primeira sem essa linha.
-3. Leia o **plano**: `docs/superpowers/plans/2026-09-13-acesso-de-admin-porta-e-aviso.md`.
-   E a **spec** que ele argumenta: `docs/superpowers/specs/2026-09-13-acesso-de-admin-design.md`.
-4. Continue pelo método que ele escolheu: **subagent-driven-development** (`superpowers`), um
-   subagente por tarefa, revisão entre elas, mutação medida em cada uma.
+1. `git checkout admin-porta-e-aviso`; `git status` tem que estar **limpo** (a sessão de 16/09
+   terminou limpa, 1110/1110, `tsc` limpo, build verde — conferido por mim, não só relatado).
+2. Carregar `superpowers:subagent-driven-development` e ler o **ledger**:
+   `.superpowers/sdd/2026-09-13-acesso-de-admin-porta-e-aviso/progress.md` (últimas ~15 linhas).
+3. **Despachar a re-revisão escopada da onda de fix** (`re-review-prompt.md` da skill, modelo
+   sonnet — o diff toca vocabulário central), com:
+   - a lista de achados: `<workspace>/final-rereview-findings.md` (já escrita, inclusive o que o
+     fixer fez ALÉM da ruling e que a re-revisão precisa julgar);
+   - o relatório do fixer: `<workspace>/final-fix-report.md`;
+   - o pacote: `<workspace>/review-428696a..1fd4a1f.diff` (já gerado).
+4. Se **tudo ADDRESSED e sem quebra nova** → apagar o workspace `.superpowers/sdd/2026-09-13-…/`
+   e seguir `superpowers:finishing-a-development-branch` (ele decide: merge em `main` / PR / deixar).
+   Se **sobrar achado** → adjudicar com ruling no ledger (não há segunda onda), e apresentar a ele.
+5. **Só então** falar de deploy — ver as travas abaixo.
 
-5. A **8-bis não tem brief** — o dispatch dela se escreve na hora, a partir do achado que está
-   por extenso logo abaixo. As 9, 10 e 11 têm brief gerado; use `scripts/task-brief` só se faltar.
-
-⚠️ **Confira `git status` antes de qualquer coisa.** A sessão de 15/09 terminou **limpa** — nenhum
-fix round em andamento, nenhum subagente vivo. Se houver arquivo modificado e não commitado, ele
-não é meu: leia o diff antes de mexer.
+⚠️ Se o ledger em `.superpowers/` tiver sumido (`git clean -fdx` apaga; é git-ignored), o essencial
+está neste arquivo e em `git log 428696a..HEAD`: os 5 commits da onda são os achados C1+I2, I1,
+I3, I4, I6, nesta ordem.
 
 ---
 
 ## 📍 ONDE A EXECUÇÃO PAROU
 
-> **Atualizado em 2026-09-15, fim da sessão.** Ele encerrou com *"preciso continuar na próxima,
-> deixe tudo pronto"* — a mesma frase de 13/09. **Nenhum subagente ficou rodando.** Working tree
-> limpo, tudo commitado, nada no ar.
+> **Atualizado em 2026-09-16, fim da sessão.** Nenhum subagente ficou rodando. Working tree limpo.
 
 | tarefa | estado |
 |---|---|
-| 1 — `src/lib/admin-sessao.ts`, o módulo puro da sessão | ✅ completa (`4ef3bfa`) |
-| 2 — `/admin` fora dos dois caminhos de cache | ✅ completa, 1 fix round (`cc37a3d`) |
-| 3 — `src/lib/admin-config.ts`, ligado/desligado/ausente | ✅ completa, 1 fix round de EVIDÊNCIA (`2b57c34`) |
-| 4 — entrar e sair (rotas + `admin-guarda.ts`) | ✅ completa, 1 fix round (`7d5687e`) |
-| 5 — a tela da porta (`/admin`, `CaixaDeSenha`, `admin.css`) | ✅ completa (`d419012`) |
-| 6 — a tabela `avisos`, append-only | ✅ completa (`a54d3a3`) |
-| **7+8** — `aplicarAviso` + o aviso entra na leitura (1 commit, por desenho) | ✅ completas, 1 fix round (`3433d01`) |
-| **8-bis** — 🔴 **NOVA, criada por mim nesta sessão. É a próxima.** | ⬜ não começada |
-| 9 — a rota que publica e retira | ⬜ não começada — brief gerado |
-| 10 — o painel | ⬜ não começada — brief gerado |
-| 11 — o aviso na ficha | ⬜ não começada — brief gerado |
+| 1 a 7+8 | ✅ completas em 13–15/09 (`git log`) |
+| **8-bis** — a home enxerga o fechado do dono | ✅ completa, 1 fix round (`042d5e0..ab6a599`) |
+| 9 — a rota que publica e retira | ✅ completa, 1 fix round (`ab6a599..8e10202`) |
+| 10 — o painel | ✅ completa, **2** fix rounds (`8e10202..eb0b50f`) |
+| 11 — o aviso na ficha | ✅ completa, review limpa (`eb0b50f..428696a`) |
+| **final review** (opus, branch inteira, 23 commits) | ✅ rodou — *With fixes* |
+| **onda de fix** (C1, I1, I2, I3, I4, I6) | ✅ aplicada (`050dfd6..1fd4a1f`), 9 mutações com `diff -u` |
+| **re-revisão escopada da onda** | 🔴 **NÃO RODOU — é o próximo passo** |
 
-**Suíte: 1028/1028 em 65 arquivos**, `tsc` limpo, `npm run build` 8/8. Nove commits nesta sessão.
+**Suíte: 1110/1110 em 69 arquivos**, `tsc` limpo, `npm run build` verde. 16 commits nesta sessão.
 
----
+### 🔴 O QUE O FINAL REVIEW ACHOU — e que a onda consertou (a re-revisão confirma)
 
-### ▶ O PRÓXIMO PASSO, LITERAL — a Task 8-bis
+- **C1 (Crítico, a linha vermelha):** a Rampa numa **quarta** com o dono dizendo "em reforma"
+  mostrava **"FECHADO AGORA / abre sábado"** no cartão da home e "Abre sábado e domingo." na ficha.
+  A minha ruling de 15/09 ("fechou o dono, o motivo se cala") só cobria o calendário **aberto** —
+  **o ponto cego era meu, não do implementador.** Ruling nova: **o dono ganha do calendário como
+  ganha do motor** — a linha "abre …" só sai quando `fechado && !fechadoPeloDono`.
+- **I2:** um aviso `fechado` numa página em cache offline sobrevivia ao próprio `venceEm` pra sempre.
+  Agora `fechadoPeloDono(aviso, agoraS)` só vale enquanto `venceEm > agoraS` (relógio do cliente;
+  `null` no 1º render vale como antes). **Limite honesto, agora escrito na spec:** retirada
+  ANTECIPADA só chega ao cliente na próxima busca ao `/api/carimbo`.
+- **I1:** Turso pendurado segurava ficha/home/`/api/carimbo(s)` — caminhos que antes desta branch
+  nem tocavam o banco. `comPrazo` de 2 s no aviso.
+- **I3:** o `/admin` ligado e sem cookie não tinha teste provando que mostra a caixa e NÃO o painel.
+- **I4:** a spec dizia "senha curta desliga, **com motivo explícito na tela**" — inconsistente com a
+  própria regra de falha fechada. Ruling: **falha fechada vence**; o motivo vai pro `console.warn`
+  do servidor (`senha-curta` / `sem-segredo`, nunca `ausente`), nunca pra tela pública.
+- **I6:** o guarda do `sw.test` provava a ORDEM da rota `/admin`, não o HANDLER `NetworkOnly`.
 
-> ⚠️ **Repetido aqui de propósito.** O ledger mora em `.superpowers/`, que é **git-ignored** — um
-> `git clean -fdx` o apaga. Este arquivo é versionado; ele sobrevive.
+**O fixer fez três coisas ALÉM da ruling** — a re-revisão tem que julgar: `Promise.all` de aviso +
+clima em `resolverEstado(s)` (era minor deferido); duas linhas da spec reescritas pra bater com I4;
+três fixtures com `venceEm: 0` corrigidos. E deixou **uma decisão de produto pra ele**: o
+`AvisoDoDono` ainda mostra o **texto** de um aviso `fechado` vencido até a próxima busca (só o
+efeito some) — esconder o bloco é uma linha.
 
-**Não existe brief pra ela** (nenhum brief do plano lista esses arquivos) — o dispatch se escreve na
-hora, a partir do achado abaixo, que veio da revisão das Tasks 7+8 e está **verbatim**:
+### 🔴 TRAVAS DE DEPLOY — nada sobe sem elas
 
-> **`src/app/FolhaTrilhas.tsx:145-148` e `src/app/MioloHome.tsx:100,111` — o agrupamento e o chip
-> "só as que dá hoje" são cegos ao fechado do dono.** `tomDaqui` e `estaFechado` chamam só
-> `fechadoAgora(...)`. Um lugar seco que o dono fechou cai sob **"Hoje o tempo deixa"** com o selo
-> vermelho "Fechado agora" dentro dele — exatamente o que o comentário de `FolhaTrilhas.tsx:133-138`
-> proíbe por escrito ("o grupo estaria convidando pra uma coisa que não dá") — e sobrevive ao chip
-> "só as que dá hoje" (`filtros.ts:257`), que é a **reincidência literal do defeito de 11/09**
-> travado em `tests/lib/filtros.test.ts:775-785`. `page.tsx:44` também o ordena como fresco.
+1. **A re-revisão da onda** (passo 3 acima).
+2. **A tabela `avisos` só nasce em produção com** `npx dotenv -e .env.local -- tsx scripts/apply-schema.ts`.
+   O final review confirmou: deployar ANTES disso **não derruba nada** (`lerAviso(s)` engole o erro
+   e a ficha/home seguem sem aviso) — mas a primeira publicação daria erro.
+3. **`ADMIN_SENHA` (≥ 24 chars) e `ADMIN_SEGREDO` no Vercel**, com as mãos dele. Sem elas o admin
+   é 404 e nada mais muda (confirmado pelo final review).
+4. Depois de subir: `conferir-no-ar` **abrindo o navegador** — o painel em 375px, o `sw.ts`, a
+   hidratação do relógio novo. **Nenhuma dessas telas foi vista por olho humano.**
 
-Depois dela: **Task 9 → 10 → 11**, pelos briefs já gerados, e então o final review.
+### 📋 COPY DE TELA QUE EU ESCREVI E ELE AINDA NÃO LEU
 
-### 🔴 DUAS TRAVAS DE DEPLOY — nada sobe sem elas
+O painel (`PainelAdmin.tsx`) e o bloco do aviso (`AvisoDoDono.tsx`) têm strings minhas — a lista
+completa está na seção "strings" de `<workspace>/task-10-report.md` e `task-11-report.md`
+(se o workspace sumir: `grep -n '"' src/app/admin/PainelAdmin.tsx src/app/AvisoDoDono.tsx`).
+Palavra de tela é escolha dele; é tela de admin (só ele vê), mas vale a leitura antes do deploy.
 
-1. **A Task 11 é obrigatória antes de qualquer deploy.** Hoje, com um aviso `fechado`, o carimbo diz
-   "Fechado agora" e **o texto do dono não aparece em lugar nenhum** — a explicação só nasce no
-   `AvisoDoDono` da Task 11. (Decisão minha: o `motivo` se **cala** em vez de inventar frase; copy
-   de tela é escolha dele, não redação minha.)
-2. **A tabela `avisos` só nasce em produção quando alguém rodar**
-   `npx dotenv -e .env.local -- tsx scripts/apply-schema.ts`. Sem isso, a primeira publicação de
-   aviso dá erro.
+### ⚠️ O QUE ESTA SESSÃO APRENDEU
 
-### ⚠️ O QUE ESTA SESSÃO APRENDEU — e que vale mais que o código
+**1. Previsão de brief é hipótese, não fato — quatro vezes hoje.** Task 9 M3 (`<=`→`<` só difere
+no instante exato; o brief testava `agora - 1`), Task 10 M2 (nenhum teste do brief selecionava
+`frio`), Task 11 M3 e M4 (`textContent === ""` aceita caixa vazia; nenhum fixture caía em "há 1
+dia"). Todas previam "MORRE" e sobreviveriam. A regra *"se sobreviver, escreva o teste que mata
+NESTA tarefa"* pegou as quatro.
 
-**1. A suíte estava vermelha por código que não é nosso.** Uma pasta `/BatePerna/` **git-ignored**
-apareceu aqui dentro em 14/09 (outro projeto, com jest e supabase) e o glob padrão do vitest
-(`**/*.test.*`) coletava os testes dela. Travei o glob em `tests/**` (`df7d885`). **Se um teste
-nosso nascer fora de `tests/` um dia, ele deixa de rodar calado.**
+**2. O risco que eu NOMEIO no dispatch do revisor é o que ele acha.** Na Task 10 escrevi *"confira
+se 'Não vá' é literal num componente que serve as 3 fichas"* — e era: a voz da Rampa virando a
+língua de todas, de novo, em arquivo novo, no MESMO commit em que a função vizinha acertou. Nomear
+o risco não é pré-julgar o veredito.
 
-**2. A espécie "guarda de fonte casando a ocorrência errada" apareceu CINCO vezes neste plano.** A
-quinta foi a primeira em que o remédio veio **antes** do defeito: exigi o guarda no dispatch, e o
-implementador provou no mesmo run que a versão ingênua (`toContain("fechadoPeloDono")`) passaria com
-a mutação aplicada — sobram 4 ocorrências da palavra no arquivo. **Guarda de fonte mira o ponto de
-declaração/chamada exato, e prova por mutação que fica vermelho.**
+**3. A frase falsa pode ser MINHA.** Na Task 10 mandei omitir o calendário "porque o servidor não
+tem relógio de tela" — falso (`agora` chega por prop, `horario.ts` tem as funções puras). O
+re-revisor pegou o comentário; a correção foi corrigir a **ruling**, não o implementador. E o C1
+do final review é a mesma coisa uma camada acima: a ruling de 15/09 só cobria metade da interseção.
 
-**3. Relatório de mutação sem `diff -u` colado não é prova.** A Task 3 voltou em fix round só por
-isso.
+**4. O brief da Task 10 não tinha como cumprir a spec.** "Botão de tirar" exige `DELETE ?id=N`, e
+o `Aviso` que chega ao painel viaja **sem id** por desenho. O painel lê `avisosVigentes` por fora.
+Conferir interface no código real ANTES do dispatch achou isso; ler o brief não acharia.
 
-**4. Varredura por PALAVRA é mais fraca que varredura por AFIRMAÇÃO.** Procurar "onde aparece a
-palavra X" achou 1 comentário mentiroso; perguntar *"que afirmação deste arquivo deixou de ser
-verdadeira?"* achou **cinco** — a pior sendo `subDe` em `carimbo-fase.ts`, que dizia "a fase só
-existe quando há horário", premissa que o próprio commit matou.
+**5. Mutação que não aplica por CRLF fica verde** — o fixer viu o `diff -u` vazio e refez. É a
+espécie de 11/09 ("mutação não aplicada é indistinguível de sobrevivente") e o remédio funcionou.
 
-**5. 🔴 Alegação de relatório de implementador precisa da mesma auditoria que código — e eu falhei
-nisso.** O implementador relatou ter achado "uma segunda metade do mesmo defeito" (o fechado-do-dono
-caindo no ramo da chuva), **eu contei isso a ele antes de mandar auditar**, e a re-revisão mostrou
-que a alegação era **inflada**: aquela metade não existia no commit anterior — a frase da chuva só
-vira alcançável *dentro do mutante*. O bom: a afirmação inflada ficou só no relatório; os
-comentários do código descrevem só o defeito verdadeiro.
+**6. O guarda de tracing pegou DUAS rotas novas** (`/api/admin/aviso` e `/admin`) lendo `content/`
+via fs — sem ele, produção não acharia as fichas. Guarda que já existia, fazendo o trabalho.
 
-**6. O `tsc` achou um arquivo que eu não sabia que existia.** Dei ao implementador uma lista de
-cinco pontos e mandei não confiar nela — o compilador apontou nove erros em seis arquivos,
-incluindo `HomeViva.tsx`.
+**7. O bloco do aviso mora DENTRO do `Carimbo`, não no `page.tsx`** — o brief o punha no servidor,
+mas o `Carimbo` troca a leitura (aviso incluso) a cada busca; um aviso retirado ficaria na tela.
+Uma fonte por pergunta, de novo.
 
-⚠️ **A dívida de navegador continua de pé e cresceu:** o `sw.ts` nunca foi aberto num navegador de
-verdade, e agora **cinco telas** mudaram sem que olho nenhum as visse em 375px. É o caminho onde
-este projeto já achou três defeitos que teste nenhum acharia.
+⚠️ **A dívida de navegador continua e cresceu:** `sw.ts`, o painel de admin, o bloco do aviso na
+ficha, o relógio `epochS` dentro de `Agora` — nada visto em 375px.
 
 ---
 
