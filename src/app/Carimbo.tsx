@@ -207,13 +207,17 @@ export default function Carimbo({
 
   const { estado: estadoAtual, erro: erroAtual, calculadoEm: calculadoEmAtual } = leitura;
   const fechado = fechadoAgora(abertura, agora);
+  // O relógio do dono é o MESMO `agora` do calendário (`epochS` viaja dentro
+  // dele): `null` no primeiro render, e aí o aviso vale como chegou — a mesma
+  // conta que a página fez no servidor, senão a hidratação briga.
+  const doDono = fechadoPeloDono(leitura.aviso, agora?.epochS ?? null);
   const situacao = {
     conferindo,
     erro: erroAtual,
     venceu,
     falhou,
     fechado,
-    fechadoPeloDono: fechadoPeloDono(leitura.aviso),
+    fechadoPeloDono: doDono,
   };
   const fase = faseDe(situacao);
   const sintoma = sintomaDe(situacao);
@@ -236,8 +240,18 @@ export default function Carimbo({
   // A palavra e a linha de baixo vêm de `marcaDe`/`subDe`, não daqui: são as
   // MESMAS do selo do cartão, e escritas à mão nos dois elas já podiam
   // divergir. Ver `carimbo-fase.ts`.
+  //
+  // 🔴 `fechado && !doDono` NAS DUAS LINHAS ABAIXO (a `sub` aqui e a
+  // `aberturaQueFechou` do `motivo`), e não só `fechado` (2026-09-16). A ruling
+  // "fechou o dono, o motivo se cala" só tinha sido medida com o calendário
+  // ABERTO: a Rampa numa quarta, com "em reforma" valendo, ainda saía
+  // "Fechado agora / Abre sábado e domingo." com o recado do dono logo abaixo
+  // — duas afirmações, e a do calendário é FALSA enquanto o aviso vale. O dono
+  // ganha do calendário como ganha do motor; a frase do calendário só sai
+  // quando foi ELE que fechou.
+  const calendarioFechou = fechado && !doDono;
   const marca = marcaDe(fase, estadoAtual, voz);
-  const sub = subDe(fase, estadoAtual, voz, fechado ? rotuloAbertura(abertura!, agora!) : null);
+  const sub = subDe(fase, estadoAtual, voz, calendarioFechou ? rotuloAbertura(abertura!, agora!) : null);
 
   // 🔴 Fechado, o pulso PARA e a linha viva não fala de chuva. Ela existe pra
   // dizer "esta leitura é de agora" — e com o lugar fechado a leitura de chuva
@@ -265,10 +279,12 @@ export default function Carimbo({
         <div className="sub">{sub}</div>
       </div>
       <p className="reason">
-        {/* 🔴 `fechado ? abertura : undefined`, E ISSO É A CORREÇÃO INTEIRA. O
-            `motivo` não pode decidir pela truthiness de `abertura`: ela vem de
-            `aberturaDaFicha`, que devolve SEMPRE um objeto. Quem sabe se foi o
-            CALENDÁRIO que fechou é esta linha, que tem o `fechado` na mão. */}
+        {/* 🔴 `calendarioFechou ? abertura : undefined`, E ISSO É A CORREÇÃO
+            INTEIRA. O `motivo` não pode decidir pela truthiness de `abertura`:
+            ela vem de `aberturaDaFicha`, que devolve SEMPRE um objeto. Quem
+            sabe se foi o CALENDÁRIO que fechou é esta linha — e "o calendário
+            fechou" é `fechado && !doDono`, não `fechado`: com o dono fechando
+            junto, a frase dele é a verdadeira e a do calendário se cala. */}
         {motivo(
           fase,
           sintoma,
@@ -278,7 +294,7 @@ export default function Carimbo({
           fut,
           secaRapido,
           piso,
-          fechado ? abertura : undefined,
+          calendarioFechou ? abertura : undefined,
         )}
       </p>
       <div className="live">
@@ -314,15 +330,18 @@ export default function Carimbo({
   // aviso morto enquanto o carimbo já mudou de ideia — a família
   // "cabeçalho × cartão" que este projeto já pagou três vezes.
   //
-  // `agora`: `calculadoEmAtual` (o instante da própria leitura), não
-  // `Date.now()`. `Date.now()` durante o render de um client component briga
-  // com a hidratação (o servidor e o navegador calculariam datas diferentes);
-  // `calculadoEmAtual` é o mesmo dos dois lados e fica no máximo ~30min atrás
-  // do relógio de parede, o que não muda um "há N dias".
+  // `agora`: o relógio do CLIENTE (`agora.epochS`, o mesmo que decide o
+  // calendário e o prazo do aviso), e `calculadoEmAtual` só enquanto ele não
+  // falou — o primeiro render. `Date.now()` durante o render de um client
+  // component briga com a hidratação (o servidor e o navegador calculariam
+  // datas diferentes); `calculadoEmAtual` é o mesmo dos dois lados, e por isso
+  // o HTML do servidor já sai com a data. Depois disso o relógio de tela
+  // assume: uma ficha aberta do cache dias depois não pode dizer "publicado
+  // hoje" com a data congelada no instante da leitura (2026-09-16).
   return (
     <>
       {decisao}
-      <AvisoDoDono aviso={leitura.aviso} agora={calculadoEmAtual} />
+      <AvisoDoDono aviso={leitura.aviso} agora={agora?.epochS ?? calculadoEmAtual} />
     </>
   );
 }

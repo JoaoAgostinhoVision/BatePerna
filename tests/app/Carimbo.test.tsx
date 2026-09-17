@@ -844,6 +844,98 @@ describe("Carimbo — a hora, e não só a chuva", () => {
     ).toBe("");
   });
 
+  // 🔴 O PONTO CEGO DA RULING "fechou o dono, o motivo se cala" (revisão
+  // final, 2026-09-16 — C1). O teste acima só media o calendário ABERTO. Com
+  // os DOIS fechando — a Rampa numa QUARTA, com "a rampa está em reforma"
+  // valendo — a tela saía
+  //
+  //     Fechado agora
+  //     Abre sábado e domingo.
+  //     a rampa está em reforma
+  //
+  // duas afirmações, e a do calendário é FALSA enquanto o aviso vale: não abre
+  // sábado nenhum. O dono ganha do calendário como ganha do motor. O teste de
+  // regressão é o `it.each("fechado %s, a frase do calendário continua saindo")`
+  // logo abaixo — fechou SÓ o calendário, a frase continua.
+  it("o dono fecha JUNTO com o calendário, e a frase do calendário se cala — nas duas linhas", () => {
+    // 2027-01-13 é uma quarta-feira; 9h em Recife = 12h UTC. A Rampa REAL abre
+    // só sábado e domingo (ver content/), e é o dia que o calendário fecha.
+    const QUARTA_MS = Date.UTC(2027, 0, 13, 12, 0);
+    vi.setSystemTime(QUARTA_MS);
+    const calculadoEm = QUARTA_MS / 1000;
+    const abertura = { dias: ["sab", "dom"] } as const;
+    const emReformaDesdeOntem = {
+      ...EM_REFORMA,
+      criadoEm: calculadoEm - 86_400,
+      venceEm: calculadoEm + 7 * 86_400,
+    };
+
+    // CONTROLE DA PREMISSA: sem o aviso, o calendário fecha SOZINHO e a frase
+    // dele SAI. Sem esta metade, um calendário aberto por engano no fixture
+    // faria a asserção de ausência passar pelo motivo errado.
+    const soCalendario = montar({ abertura, calculadoEm });
+    expect(soCalendario.container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    expect(soCalendario.container.querySelector(".sub")?.textContent).toBe("abre sábado");
+    expect(soCalendario.container.querySelector(".reason")?.textContent).toBe("Abre sábado e domingo.");
+    cleanup();
+
+    const { container } = montar({ abertura, calculadoEm, aviso: emReformaDesdeOntem });
+
+    // O que TEM que estar lá — a fase, o elemento, o recado do dono.
+    expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    expect(container.querySelector(".decision")?.getAttribute("data-fase")).toBe("fechado");
+    expect(container.querySelector(".reason"), "a <p class=reason> sumiu da tela").not.toBeNull();
+    expect(container.querySelector(".sub"), "a linha de baixo sumiu da tela").not.toBeNull();
+    expect(container.querySelector(".aviso-dono")?.textContent).toContain(EM_REFORMA.texto);
+
+    // E o que NÃO pode: "abre sábado" / "Abre sábado e domingo." — as duas
+    // linhas que o calendário escreve, e que mentem enquanto o dono fecha.
+    expect(
+      container.querySelector(".sub")?.textContent,
+      "a linha de baixo voltou a prometer o dia do calendário por cima do fechado do DONO",
+    ).toBe("");
+    expect(
+      container.querySelector(".reason")?.textContent,
+      "o motivo voltou a explicar o fechado do DONO com o calendário",
+    ).toBe("");
+  });
+
+  // 🔴 I2 DA REVISÃO FINAL (2026-09-16): o `fechado` do dono tem PRAZO, e a
+  // tela aberta obedece a ele. Antes, `fechadoPeloDono` não olhava `venceEm`
+  // e nenhuma superfície do cliente olhava: uma ficha em cache, aberta dias
+  // depois, degradava a chuva pra "SEM INFORMAÇÕES" aos 30 min e mantinha o
+  // "Fechado agora" do dono pra sempre. O relógio que decide é o MESMO do
+  // calendário (`useAgoraRecife`, `epochS` dentro de `Agora`), e bate a cada
+  // minuto — por isso o avanço abaixo cruza o tique de 60 s.
+  it("o fechado do dono VENCE sozinho com o app aberto, no prazo que o dono deu", () => {
+    const venceDaquiAPouco = { ...EM_REFORMA, venceEm: AGORA_S + 10 };
+    const { container } = montar({ calculadoEm: AGORA_S, aviso: venceDaquiAPouco });
+    expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    expect(container.querySelector(".decision")?.getAttribute("data-fase")).toBe("fechado");
+
+    // 11 s: o prazo passou, mas o relógio de tela só bate no minuto — ainda
+    // fechado. Este meio é controle: prova que é o TIQUE que reavalia, e não
+    // um render por acaso.
+    act(() => { vi.advanceTimersByTime(11_000); });
+    expect(container.querySelector(".decision")?.getAttribute("data-fase")).toBe("fechado");
+
+    // Cruzou o tique de 60 s: o prazo do dono venceu, o lugar volta à chuva.
+    act(() => { vi.advanceTimersByTime(60_000); });
+    expect(container.querySelector(".decision")?.getAttribute("data-fase")).toBe("afirmando");
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
+  });
+
+  // O mesmo relógio, no "publicado há N dias": congelado em `calculadoEm`, uma
+  // ficha aberta do cache dizia "publicado hoje" pra sempre.
+  it("o 'publicado há N dias' anda com o relógio de tela, não com a hora da leitura", () => {
+    const aviso = { ...EM_REFORMA, criadoEm: AGORA_S - 86_400, venceEm: AGORA_S + 30 * 86_400 };
+    const { container } = montar({ calculadoEm: AGORA_S, aviso });
+    expect(container.querySelector(".aviso-dono-quando")?.textContent).toBe("publicado há 1 dia");
+
+    act(() => { vi.advanceTimersByTime(2 * 86_400 * 1000); });
+    expect(container.querySelector(".aviso-dono-quando")?.textContent).toBe("publicado há 3 dias");
+  });
+
   // 🔴 TASK 11 — o bloco lê a leitura VIVA, não a prop do servidor. O carimbo
   // troca `leitura` (aviso incluso) a cada busca ao /api/carimbo; se
   // `AvisoDoDono` lesse a prop `aviso` em vez de `leitura.aviso`, um aviso

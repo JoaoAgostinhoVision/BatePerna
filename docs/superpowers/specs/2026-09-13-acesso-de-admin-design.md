@@ -239,6 +239,10 @@ O aviso viaja pelo `/api/carimbo` e `/api/carimbos`, junto com o carimbo — ent
 validade offline que o carimbo já tem**. Quem abriu a ficha depois do aviso publicado o leva
 guardado; quem abriu antes, não. Não dá pra fazer melhor sem mentir sobre frescor.
 
+Um aviso `fechado` guardado offline vale até o próprio `venceEm` — o relógio do celular o
+encerra sozinho no prazo que o dono deu; já uma retirada ANTECIPADA só alcança o celular na
+próxima busca ao `/api/carimbo` que der certo.
+
 ### Como se prova
 
 - `aplicarAviso` com cada um dos quatro efeitos, e o motor perdendo em todos

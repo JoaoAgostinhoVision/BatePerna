@@ -32,7 +32,7 @@ export default function CartaoTrilha({
 }: {
   ficha: Ficha;
   inicial: LeituraCarimbo;
-  /** A hora de Recife em minutos, ou `null` no primeiro render. Chega por prop
+  /** O relógio de Recife (`Agora`), ou `null` no primeiro render. Chega por prop
    *  e não de um hook daqui: são N cartões, e um hook por cartão faria o número
    *  de hooks variar com o tamanho da lista. Quem chama `useAgoraRecife` é a
    *  folha, uma vez só. */

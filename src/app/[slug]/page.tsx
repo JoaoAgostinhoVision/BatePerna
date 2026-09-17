@@ -188,12 +188,17 @@ export default async function Ficha({
       // com a leitura, e o `Carimbo` calcula o MESMO no primeiro render, a
       // partir da mesma prop. Mandar `false` aqui pintaria a moldura de aberto
       // por um quadro num lugar que o dono fechou.
+      //
+      // O relógio vai `null` de propósito: é a conta do primeiro render do
+      // `Carimbo` (`agora` nasce `null` lá), e tem que ser a MESMA, senão a
+      // hidratação briga. E é honesto: o `aviso` acabou de sair de
+      // `avisoVigente`, que já comparou `vence_em > agora` em SQL neste instante.
       fase={faseDe({
         conferindo: false,
         erro,
         venceu: false,
         falhou: false,
-        fechadoPeloDono: fechadoPeloDono(aviso),
+        fechadoPeloDono: fechadoPeloDono(aviso, null),
       })}
     >
       <div className="screen">

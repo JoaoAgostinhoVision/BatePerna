@@ -307,7 +307,10 @@ describe("filtro e agrupamento juntos", () => {
         estado: "fresco",
         erro: false,
         calculadoEm: agoraSeg(),
-        aviso: { texto: "em reforma", efeito: "fechado", criadoEm: 0, venceEm: 0 },
+        // `venceEm` no FUTURO: desde 2026-09-16 o fechado do dono só vale até o
+        // próprio prazo, e `venceEm: 0` aqui era um aviso já vencido posando de
+        // vigente — o fixture rejeitado pela guarda ERRADA.
+        aviso: { texto: "em reforma", efeito: "fechado", criadoEm: agoraSeg() - 3600, venceEm: agoraSeg() + 86_400 },
       },
     };
     const { container } = monta([emReforma, par("seca", "fresco")]);

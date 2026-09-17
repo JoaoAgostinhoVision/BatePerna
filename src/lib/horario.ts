@@ -40,14 +40,22 @@ import {
 } from "./semana";
 import { fechadoPeloDono, type Aviso } from "./aviso";
 
-/** O relógio de Recife inteiro: que horas são E que dia da semana é.
+/** O relógio de Recife inteiro: que horas são, que dia da semana é — e o
+ *  INSTANTE de onde os dois saíram.
  *
  *  🔴 UM OBJETO, E NÃO DOIS VALORES SOLTOS, e a razão é a meia-noite. Com dois
  *  relógios independentes — um pra hora, outro pro dia — existe um instante em
  *  que um já virou e o outro não, e a tela afirma "fechado, abre amanhã" sobre
  *  um dia que já é hoje. É a mesma regra que fez `Voz` ser um objeto em
- *  `severidade.ts`: dois campos que só fazem sentido juntos viajam juntos. */
-export type Agora = { minutos: number; dia: number };
+ *  `severidade.ts`: dois campos que só fazem sentido juntos viajam juntos.
+ *
+ *  `epochS` (2026-09-16) é o terceiro campo pela MESMA regra: o prazo do aviso
+ *  do dono (`fechadoPeloDono` em `aviso.ts`) precisa do relógio em segundos, e
+ *  a saída preguiçosa seria um TERCEIRO hook de minuto em cada componente
+ *  (`useVenceu`, `useAgoraRecife` e mais um), três `Date.now()` decidindo a
+ *  mesma tela. O instante já era lido aqui, uma vez; ele só passa a viajar
+ *  junto. */
+export type Agora = { minutos: number; dia: number; epochS: number };
 
 /** TUDO que uma ficha diz sobre quando dá pra entrar. Os dois campos são
  *  independentes: hora sem dia (Pedra Furada, Véu de Noiva), dia sem hora
@@ -68,9 +76,10 @@ export function minutosDoDiaRecife(epochS: number): number {
 }
 
 /** O relógio inteiro a partir de um instante. UMA leitura do `Date` produz os
- *  dois campos — é isto que garante que hora e dia nunca discordem. */
+ *  dois campos (e carrega o próprio instante) — é isto que garante que hora e
+ *  dia nunca discordem, nem do prazo do aviso. */
 export function agoraRecife(epochS: number): Agora {
-  return { minutos: minutosDoDiaRecife(epochS), dia: diaDaSemanaRecife(epochS) };
+  return { minutos: minutosDoDiaRecife(epochS), dia: diaDaSemanaRecife(epochS), epochS };
 }
 
 /** Está fora da faixa de HORAS agora? Metade da pergunta — quem responde a
@@ -125,13 +134,15 @@ export function fechadoAgora(abertura: Abertura | undefined, agora: Agora | null
  *  de esquecer a segunda causa nos dois.
  *
  *  Com `agora === null` o calendário responde `false` (não se esconde pelo que
- *  não se sabe); o dono responde pelo aviso mesmo assim. */
+ *  não se sabe); o dono responde pelo aviso mesmo assim — e, com o relógio na
+ *  mão, só enquanto o aviso não venceu (`epochS` é o mesmo instante de onde
+ *  saíram a hora e o dia; ver `fechadoPeloDono`). */
 export function fechadoHoje(
   abertura: Abertura | undefined,
   aviso: Aviso | null | undefined,
   agora: Agora | null,
 ): boolean {
-  return fechadoAgora(abertura, agora) || fechadoPeloDono(aviso);
+  return fechadoAgora(abertura, agora) || fechadoPeloDono(aviso, agora?.epochS ?? null);
 }
 
 /** A próxima abertura é HOJE ainda, ou só amanhã? Só faz sentido quando já se

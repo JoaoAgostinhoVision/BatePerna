@@ -18,15 +18,31 @@ export function daLinha(l: AvisoLinha): Aviso {
   return { texto: l.texto, efeito: l.efeito, criadoEm: l.criado_em, venceEm: l.vence_em };
 }
 
-/** O lugar está fechado porque o DONO disse, não porque o calendário disse.
+/** O lugar está fechado porque o DONO disse, não porque o calendário disse —
+ *  e só ENQUANTO o próprio aviso vale.
  *
  *  🔴 POR QUE `fechado` NÃO É ESTADO: o motor só responde `fresco | frio` — ele
  *  só sabe de chuva. Transformar "em reforma" em `frio` faria o app dizer "não
  *  vá" **com as palavras da chuva** (`falaMolhada`), atribuindo ao tempo uma
  *  coisa que é obra. O app afirmando causa falsa é a linha vermelha deste
- *  projeto. Quem lê isto é `faseDe`, pelo campo `fechadoPeloDono`. */
-export function fechadoPeloDono(aviso: Aviso | null | undefined): boolean {
-  return aviso?.efeito === "fechado";
+ *  projeto. Quem lê isto é `faseDe`, pelo campo `fechadoPeloDono`.
+ *
+ *  🔴 O RELÓGIO ENTROU EM 2026-09-16, pela revisão final da branch. O servidor
+ *  só entrega aviso vigente (`avisoVigente`, `vence_em > agora` em SQL), mas a
+ *  ficha e a home vivem em cache no celular: aberta offline dias depois, a
+ *  parte da CHUVA já sabia envelhecer ("SEM INFORMAÇÕES" aos 30 min) e o
+ *  `fechado` do dono não — sobrevivia ao próprio prazo pra sempre. Agora ele
+ *  vale enquanto `venceEm > agoraS`, o MESMO `>` estrito da SQL: no instante
+ *  exato do prazo, já venceu, e as duas pontas decidem de um jeito só.
+ *
+ *  `agoraS === null` é o primeiro render, antes de o relógio do cliente falar
+ *  (ver `useAgoraRecife`): o aviso vale como chegou, porque chegou vigente —
+ *  é a MESMA conta do HTML do servidor, e é isso que mantém a hidratação
+ *  estável. A retirada ANTECIPADA pelo dono continua só alcançando o cliente
+ *  na próxima busca ao `/api/carimbo` — limite honesto, escrito na spec. */
+export function fechadoPeloDono(aviso: Aviso | null | undefined, agoraS: number | null): boolean {
+  if (aviso?.efeito !== "fechado") return false;
+  return agoraS === null || aviso.venceEm > agoraS;
 }
 
 /** A leitura do carimbo depois da palavra do dono.

@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, cleanup, screen } from "@testing-library/react";
 import CartaoTrilha from "@/app/CartaoTrilha";
 import LocalVivo from "@/app/local";
 import { CHAVE_LOCAL } from "@/lib/local";
 import { getFichasComCondicao } from "@/lib/ficha";
+import { agoraRecife } from "@/lib/horario";
 import { semComentarios } from "../css";
 
 afterEach(() => { cleanup(); localStorage.clear(); });
@@ -285,5 +286,58 @@ describe("a linha de metadados obedece à mesma régua de nível da ficha", () =
       }
       cleanup();
     }
+  });
+});
+
+// 🔴 C1 DA REVISÃO FINAL (2026-09-16), espelho do teste do `Carimbo`. Na home
+// NÃO há `AvisoDoDono`: o cartão é a afirmação inteira. A Rampa numa QUARTA,
+// com "a rampa está em reforma" valendo, saía "FECHADO AGORA / abre sábado" —
+// e "abre sábado" é FALSO enquanto o aviso vale. O dono ganha do calendário
+// como ganha do motor: fecharam os dois, a linha de baixo do selo se cala.
+// Renderiza `CartaoTrilha` (não `SeloTrilha` solto) porque é o cartão quem lê a
+// leitura e monta a `abertura` da ficha real — o selo virou apresentacional.
+describe("o selo do cartão, com o dono e o calendário fechando juntos", () => {
+  // 2027-01-13 é uma quarta-feira; 9h em Recife = 12h UTC. A Rampa REAL só
+  // abre sábado e domingo (content/), e é o dia que o calendário fecha.
+  const QUARTA_S = Date.UTC(2027, 0, 13, 12, 0) / 1000;
+  const quarta = () => agoraRecife(QUARTA_S);
+  const emReforma = {
+    texto: "a rampa está em reforma",
+    efeito: "fechado" as const,
+    criadoEm: QUARTA_S - 86_400,
+    venceEm: QUARTA_S + 7 * 86_400,
+  };
+
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(QUARTA_S * 1000); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  // CONTROLE DA PREMISSA E GUARDA DE REGRESSÃO num só: fechou SÓ o calendário,
+  // a frase do calendário SAI. Sem esta metade, um fixture que nunca fechasse
+  // faria a asserção de ausência lá embaixo passar pelo motivo errado.
+  it("fechada só pelo calendário, o selo diz quando abre — como sempre disse", () => {
+    const { container } = render(
+      <CartaoTrilha ficha={ficha} inicial={{ ...leitura, calculadoEm: QUARTA_S }} agora={quarta()} />,
+    );
+    expect(container.querySelector(".selo .w")?.textContent).toBe("Fechado agora");
+    expect(container.querySelector(".selo .s")?.textContent).toBe("abre sábado");
+  });
+
+  it("fechada pelo calendário E pelo dono, o selo NÃO promete sábado nenhum", () => {
+    const { container } = render(
+      <CartaoTrilha
+        ficha={ficha}
+        inicial={{ ...leitura, calculadoEm: QUARTA_S, aviso: emReforma }}
+        agora={quarta()}
+      />,
+    );
+    // O que TEM que estar lá: a palavra, a fase, e o elemento da linha de baixo.
+    expect(container.querySelector(".selo .w")?.textContent).toBe("Fechado agora");
+    expect(container.querySelector(".selo")?.getAttribute("data-fase")).toBe("fechado");
+    expect(container.querySelector(".selo .s"), "a linha de baixo do selo sumiu").not.toBeNull();
+    // E o que NÃO pode: a promessa do calendário por cima do fechado do dono.
+    expect(
+      container.querySelector(".selo .s")?.textContent,
+      "o selo voltou a prometer 'abre sábado' com o dono dizendo que está em reforma",
+    ).toBe("");
   });
 });

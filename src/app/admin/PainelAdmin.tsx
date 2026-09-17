@@ -71,7 +71,8 @@ function motorAgora(leitura: LeituraCarimbo, ficha: Ficha, agora: number): strin
     venceu: false,
     falhou: false,
     fechado: fechadoAgora(aberturaDaFicha(ficha), agoraRecife(agora)),
-    fechadoPeloDono: fechadoPeloDono(leitura.aviso),
+    // O instante do retrato também decide o prazo do aviso — o mesmo `agora`.
+    fechadoPeloDono: fechadoPeloDono(leitura.aviso, agora),
   });
   return `Na tela agora: ${marcaDe(fase, leitura.estado, vozDaFicha(ficha.condicao))}`;
 }

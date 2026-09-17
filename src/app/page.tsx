@@ -48,8 +48,10 @@ export default async function Home() {
   // (client) é quem decide, a cada leitura nova, o que aparece e SE agrupa —
   // mas não reordena: ver o comentário da folha sobre por que um cartão não
   // pode pular de lugar na tela.
+  // O relógio vai `null`: o aviso acabou de sair de `avisosVigentes`, que já
+  // comparou `vence_em > agora` em SQL neste mesmo instante — vale como chegou.
   const daPraIr = (x: { leitura: LeituraCarimbo }) =>
-    x.leitura.estado === "fresco" && !fechadoPeloDono(x.leitura.aviso);
+    x.leitura.estado === "fresco" && !fechadoPeloDono(x.leitura.aviso, null);
   const pares = [...comLeitura.filter(daPraIr), ...comLeitura.filter((x) => !daPraIr(x))];
 
   return (

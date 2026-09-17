@@ -125,7 +125,7 @@ describe("resolverEstado com a palavra do dono", () => {
     const r = await resolverEstado(ficha());
 
     expect(r.aviso?.texto).toBe("a rampa está em reforma");
-    expect(fechadoPeloDono(r.aviso)).toBe(true);
+    expect(fechadoPeloDono(r.aviso, AGORA_S)).toBe(true);
     // 🔴 E O ESTADO CONTINUA SENDO O DA CHUVA. "Em reforma" virando `frio` faria
     // o app dizer "não vá" com as palavras da CHUVA, que é obra virando tempo.
     expect(r.estado).toBe("fresco");

@@ -149,7 +149,10 @@ describe("FolhaTrilhas", () => {
           estado: "fresco" as const,
           erro: false,
           calculadoEm: AGORA_S,
-          aviso: { texto: "em reforma", efeito: "fechado" as const, criadoEm: 0, venceEm: 0 },
+          // `venceEm` no FUTURO: desde 2026-09-16 o fechado do dono só vale até o
+          // próprio prazo, e `venceEm: 0` aqui era um aviso já vencido posando de
+          // vigente — o fixture rejeitado pela guarda ERRADA.
+          aviso: { texto: "em reforma", efeito: "fechado" as const, criadoEm: AGORA_S - 3600, venceEm: AGORA_S + 86_400 },
         },
       },
     ];

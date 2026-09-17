@@ -170,7 +170,7 @@ describe("a home", () => {
             estado: "fresco" as const,
             erro: false,
             calculadoEm: AGORA_S,
-            aviso: { texto: "em reforma", efeito: "fechado" as const, criadoEm: 0, venceEm: 0 },
+            aviso: { texto: "em reforma", efeito: "fechado" as const, criadoEm: AGORA_S - 3600, venceEm: AGORA_S + 86_400 },
           },
         ],
         ["seca", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S, aviso: null }],
