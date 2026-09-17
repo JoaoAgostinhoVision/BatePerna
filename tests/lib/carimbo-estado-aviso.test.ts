@@ -80,7 +80,7 @@ vi.mock("@/lib/db", () => ({
 
 const { fetchPrecip, fetchPrecipMulti } = await import("@/lib/weather");
 const { avisoVigente, avisosVigentes } = await import("@/lib/db");
-const { resolverEstado, resolverEstados } = await import("@/lib/carimbo-estado");
+const { PRAZO_AVISO_MS, resolverEstado, resolverEstados } = await import("@/lib/carimbo-estado");
 
 function ficha() {
   const f = getFicha("rampa-do-pepe");
@@ -199,5 +199,74 @@ describe("resolverEstados com a palavra do dono", () => {
     expect(r.get(f.slug)).toEqual({
       estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null,
     });
+  });
+});
+
+// 🔴 I1 DA REVISÃO FINAL (2026-09-16): o `catch` segura ERRO, não DEMORA. Um
+// Turso PENDURADO — sem responder e sem recusar — travaria a ficha, a home e
+// o `/api/carimbo(s)`, que são o portão; antes desta branch nenhum desses
+// caminhos dependia do banco. Quem fecha isto é `comPrazo(..., PRAZO_AVISO_MS)`
+// em `lerAviso`/`lerAvisos`.
+//
+// Relógio FALSO e uma promessa que NUNCA resolve: sem o prazo, o `await` fica
+// pendurado e o `it` só termina pelo timeout do vitest — por isso ele é curto
+// (1 s) e menor que o prazo real (2 s): uma implementação sem `comPrazo`
+// estoura o teste, e uma com o prazo passa porque o relógio falso é avançado
+// à mão. `advanceTimersByTimeAsync` deixa as microtarefas do `Promise.race`
+// assentarem entre um tique e outro.
+describe("banco PENDURADO não segura o carimbo", () => {
+  const pendurada = <T,>() => new Promise<T>(() => {});
+
+  it("resolverEstado segue sem aviso quando o banco nunca responde", { timeout: 1_000 }, async () => {
+    vi.mocked(fetchPrecip).mockResolvedValue(seco());
+    vi.mocked(avisoVigente).mockReturnValue(pendurada());
+
+    const r = resolverEstado(ficha());
+    await vi.advanceTimersByTimeAsync(PRAZO_AVISO_MS + 1);
+
+    expect(await r).toEqual({ estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null });
+  });
+
+  it("resolverEstados segue sem avisos quando o banco nunca responde", { timeout: 1_000 }, async () => {
+    const f = ficha();
+    vi.mocked(fetchPrecipMulti).mockResolvedValue([serieSeca()]);
+    vi.mocked(avisosVigentes).mockReturnValue(pendurada());
+
+    const r = resolverEstados([f]);
+    await vi.advanceTimersByTimeAsync(PRAZO_AVISO_MS + 1);
+
+    expect((await r).get(f.slug)).toEqual({ estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null });
+  });
+
+  // Controle: o prazo não come um aviso que CHEGA a tempo. Sem este, um
+  // `comPrazo(…, 0)` passaria os dois de cima e apagaria todo aviso do app.
+  it("um aviso que responde antes do prazo continua entrando", async () => {
+    vi.mocked(fetchPrecip).mockResolvedValue(seco());
+    vi.mocked(avisoVigente).mockImplementation(
+      () => new Promise((ok) => setTimeout(() => ok(linha("fechado", "em reforma")), PRAZO_AVISO_MS - 1)),
+    );
+
+    const r = resolverEstado(ficha());
+    await vi.advanceTimersByTimeAsync(PRAZO_AVISO_MS);
+
+    expect((await r).aviso?.texto).toBe("em reforma");
+  });
+
+  // O clima e o aviso saem JUNTOS: em série, o pior caso somaria os dois
+  // prazos (2 s + 4 s) e encostaria nos 6 s do service worker. Prova pelo
+  // relógio: com o clima levando 4 s e o banco pendurado, o carimbo sai em
+  // ~4 s, não em ~6 s.
+  it("o aviso pendurado não SOMA ao tempo do clima — as buscas correm em paralelo", { timeout: 1_000 }, async () => {
+    vi.mocked(fetchPrecip).mockImplementation(
+      () => new Promise((ok) => setTimeout(() => ok(seco()), 4_000)),
+    );
+    vi.mocked(avisoVigente).mockReturnValue(pendurada());
+
+    let pronto = false;
+    const r = resolverEstado(ficha()).then((x) => { pronto = true; return x; });
+    await vi.advanceTimersByTimeAsync(4_000 + 10);
+
+    expect(pronto, "em série, o carimbo só sairia aos 6 s").toBe(true);
+    expect((await r).estado).toBe("fresco");
   });
 });

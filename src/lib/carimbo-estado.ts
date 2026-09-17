@@ -3,6 +3,24 @@ import { avaliar, type Estado } from "@/lib/motor";
 import { fetchPrecip, fetchPrecipMulti, type JanelaMax } from "@/lib/weather";
 import { aplicarAviso, daLinha, type Aviso } from "@/lib/aviso";
 import { avisoVigente, avisosVigentes, getClient } from "@/lib/db";
+// `comPrazo` mora em `cache-rotas.ts` (puro; só importa `despacho.ts`, que
+// não importa nada) — sem ciclo com este módulo, conferido em 2026-09-16.
+import { comPrazo } from "@/lib/cache-rotas";
+
+/** Quanto o carimbo espera o BANCO pelo aviso do dono antes de seguir sem ele.
+ *
+ *  🔴 O `catch` de `lerAviso`/`lerAvisos` segura ERRO, não DEMORA (revisão
+ *  final, 2026-09-16). Um Turso pendurado — sem responder e sem recusar —
+ *  travaria a ficha, a home e o `/api/carimbo(s)`, que são o portão: antes
+ *  desta branch nenhum desses caminhos dependia do banco, e o `fetchPrecip`
+ *  já usa `AbortSignal.timeout` exatamente por isso.
+ *
+ *  2 s porque é UMA consulta de uma linha, indexada, num banco da mesma região
+ *  — muito mais que o normal, e ainda assim menor que os 4 s do clima
+ *  (`PRAZO_CLIMA_MS`) que corre em PARALELO: o aviso nunca vira o gargalo, e o
+ *  pior caso da página continua sendo o do clima, abaixo dos 6 s em que o
+ *  service worker desiste da rede (`PRAZO_REDE_MS`). */
+export const PRAZO_AVISO_MS = 2_000;
 
 /** O que descreve um carimbo. A página entrega isto ao componente; a rota
  *  /api/carimbo devolve isto no corpo. Mesmo formato de propósito: são a mesma
@@ -23,11 +41,14 @@ export type LeituraCarimbo = {
  *  de duas respostas diferentes pro mesmo morro.
  *
  *  🔴 E DEPOIS DA CHUVA VEM O DONO. `aplicarAviso` é o último passo de
- *  propósito: ele esteve lá, a previsão não. Ver `src/lib/aviso.ts`. */
+ *  propósito: ele esteve lá, a previsão não. Ver `src/lib/aviso.ts`.
+ *
+ *  As duas buscas saem JUNTAS: uma não depende da outra, e em série o pior
+ *  caso somaria os dois prazos (2 s + 4 s), encostando nos 6 s do service
+ *  worker. Em paralelo, o pior caso é o do clima. */
 export async function resolverEstado(ficha: Ficha, debug?: string): Promise<LeituraCarimbo> {
   const agora = Math.floor(Date.now() / 1000);
-  const aviso = await lerAviso(ficha.slug, agora);
-  const base = await semAviso(ficha, debug, agora);
+  const [aviso, base] = await Promise.all([lerAviso(ficha.slug, agora), semAviso(ficha, debug, agora)]);
   return aplicarAviso(base, aviso);
 }
 
@@ -45,12 +66,17 @@ async function semAviso(ficha: Ficha, debug: string | undefined, agora: number):
   }
 }
 
-/** O aviso, e nunca uma exceção: banco fora do ar não pode derrubar o carimbo.
- *  Sem aviso é o caso NORMAL — é assim que o app roda hoje, e é assim que ele
- *  tem que continuar rodando se o Turso cair. */
+/** O aviso, e nunca uma exceção NEM uma espera sem fim: banco fora do ar não
+ *  pode derrubar o carimbo, e banco PENDURADO não pode segurá-lo. Sem aviso é
+ *  o caso NORMAL — é assim que o app roda hoje, e é assim que ele tem que
+ *  continuar rodando se o Turso cair ou emudecer.
+ *
+ *  `comPrazo` NÃO cancela a consulta (não há o que cancelar num
+ *  `@libsql/client`); ela só deixa de ser esperada. Uma resposta que chegue
+ *  depois é descartada — o carimbo já foi. */
 async function lerAviso(slug: string, agora: number): Promise<Aviso | null> {
   try {
-    const l = await avisoVigente(getClient(), slug, agora);
+    const l = await comPrazo(avisoVigente(getClient(), slug, agora), PRAZO_AVISO_MS, null);
     return l ? daLinha(l) : null;
   } catch {
     return null;
@@ -59,10 +85,10 @@ async function lerAviso(slug: string, agora: number): Promise<Aviso | null> {
 
 /** Os avisos de TODOS os lugares, numa consulta só — irmão do `lerAviso`, e
  *  pela mesma razão que `resolverEstados` existe: N consultas saindo do celular
- *  no portão é o que esta família de funções existe pra evitar. */
+ *  no portão é o que esta família de funções existe pra evitar. Mesmo prazo. */
 async function lerAvisos(agora: number): Promise<Map<string, Aviso>> {
   try {
-    const linhas = await avisosVigentes(getClient(), agora);
+    const linhas = await comPrazo(avisosVigentes(getClient(), agora), PRAZO_AVISO_MS, new Map());
     return new Map([...linhas].map(([slug, l]) => [slug, daLinha(l)]));
   } catch {
     return new Map();
@@ -91,8 +117,8 @@ export function janelaMaxima(fichas: Ficha[]): JanelaMax {
 export async function resolverEstados(fichas: Ficha[]): Promise<Map<string, LeituraCarimbo>> {
   const agora = Math.floor(Date.now() / 1000);
   if (fichas.length === 0) return new Map();
-  const avisos = await lerAvisos(agora);
-  const base = await climaDeTodas(fichas, agora);
+  // Juntas, pela mesma razão de `resolverEstado`: em série os prazos somam.
+  const [avisos, base] = await Promise.all([lerAvisos(agora), climaDeTodas(fichas, agora)]);
   return new Map(
     [...base].map(([slug, leitura]) => [slug, aplicarAviso(leitura, avisos.get(slug) ?? null)]),
   );
