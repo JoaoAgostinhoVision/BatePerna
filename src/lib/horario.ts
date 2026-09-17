@@ -102,7 +102,9 @@ export function fechadoNaHora(horario: Horario | undefined, minutos: number | nu
  *  duas — QUATRO componentes fazendo a mesma montagem à mão, que é a família de
  *  defeito que este projeto já pagou três vezes (a palavra e a cor nascendo de
  *  commits diferentes; `vozDaFicha` existe pela mesma razão). Aqui não há meia
- *  pergunta a fazer: quem chama `fechadoAgora` recebe a resposta completa. */
+ *  pergunta a fazer sobre os DOIS EIXOS: quem chama `fechadoAgora` recebe a
+ *  resposta completa do calendário; pra juntar o dono, ver `fechadoHoje`, logo
+ *  abaixo. */
 export function fechadoAgora(abertura: Abertura | undefined, agora: Agora | null): boolean {
   if (!abertura || agora === null) return false;
   return (
