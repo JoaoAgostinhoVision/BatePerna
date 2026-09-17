@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Estado } from "@/lib/motor";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { fechadoPeloDono, type Aviso } from "@/lib/aviso";
+import AvisoDoDono from "./AvisoDoDono";
 import {
   PRAZO_CONFERINDO_MS,
   type Fase,
@@ -299,10 +300,30 @@ export default function Carimbo({
   const comum = { className: "decision", "data-fase": fase } as const;
 
   // Só vira botão quando tocar serve pra alguma coisa.
-  return fase === "sem-informacoes" ? (
+  const decisao = fase === "sem-informacoes" ? (
     <button type="button" {...comum} onClick={() => tentar("toque")}>{miolo}</button>
   ) : (
     <div {...comum} role="status" aria-live="polite">{miolo}</div>
+  );
+
+  // 🔴 IRMÃO da decisão, e não filho dela: `AvisoDoDono` lê `leitura.aviso` —
+  // a mesma leitura VIVA que troca a cada busca ao /api/carimbo — nunca a
+  // prop `aviso` do servidor. O dono retira o aviso, o próximo `/api/carimbo`
+  // troca `leitura` inteira, e o texto retirado tem que sumir junto com o
+  // selo; se este bloco lesse a prop do servidor, ele ficaria plantado com um
+  // aviso morto enquanto o carimbo já mudou de ideia — a família
+  // "cabeçalho × cartão" que este projeto já pagou três vezes.
+  //
+  // `agora`: `calculadoEmAtual` (o instante da própria leitura), não
+  // `Date.now()`. `Date.now()` durante o render de um client component briga
+  // com a hidratação (o servidor e o navegador calculariam datas diferentes);
+  // `calculadoEmAtual` é o mesmo dos dois lados e fica no máximo ~30min atrás
+  // do relógio de parede, o que não muda um "há N dias".
+  return (
+    <>
+      {decisao}
+      <AvisoDoDono aviso={leitura.aviso} agora={calculadoEmAtual} />
+    </>
   );
 }
 

@@ -844,6 +844,60 @@ describe("Carimbo — a hora, e não só a chuva", () => {
     ).toBe("");
   });
 
+  // 🔴 TASK 11 — o bloco lê a leitura VIVA, não a prop do servidor. O carimbo
+  // troca `leitura` (aviso incluso) a cada busca ao /api/carimbo; se
+  // `AvisoDoDono` lesse a prop `aviso` em vez de `leitura.aviso`, um aviso
+  // retirado pelo dono ficaria plantado na tela depois da próxima leitura —
+  // a família "cabeçalho × cartão" que este projeto já pagou três vezes.
+  it("o recado do dono aparece junto do carimbo, fora da decisão", () => {
+    const { container } = montar({ abertura: { horario: PEDRA }, aviso: EM_REFORMA });
+    expect(container.querySelector(".aviso-dono")?.textContent).toContain(EM_REFORMA.texto);
+    // Nunca dentro do <button>/<div class="decision"> — é irmão dela.
+    expect(container.querySelector(".decision .aviso-dono")).toBeNull();
+  });
+
+  it("sem aviso, o bloco do dono nem nasce", () => {
+    const { container } = montar({ abertura: { horario: PEDRA }, aviso: null });
+    expect(container.querySelector(".aviso-dono")).toBeNull();
+  });
+
+  it("a leitura chega SEM aviso e um /api/carimbo novo traz um — o recado do dono nasce na tela", async () => {
+    const { pendentes } = redeFalsa();
+    const { container } = montar({ calculadoEm: AGORA_S, aviso: null });
+    expect(container.querySelector(".aviso-dono")).toBeNull();
+
+    // Vence a leitura em tela e volta o app pra frente — o mesmo gatilho que
+    // os testes de busca acima já usam pra fazer o Carimbo ir ao servidor.
+    vi.setSystemTime(AGORA_MS + 4 * 60 * 60 * 1000);
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+
+    await act(async () => {
+      pendentes[0].ok({
+        estado: "fresco", erro: false,
+        calculadoEm: Math.floor((AGORA_MS + 4 * 60 * 60 * 1000) / 1000),
+        aviso: EM_REFORMA,
+      });
+    });
+
+    expect(container.querySelector(".aviso-dono")?.textContent).toContain(EM_REFORMA.texto);
+  });
+
+  it("a leitura chega COM aviso e um /api/carimbo novo não traz mais nenhum — o recado do dono sai da tela", async () => {
+    const { pendentes } = redeFalsa();
+    // `erro: true` faz o "voltou" disparar busca mesmo sem a leitura ter
+    // vencido (`podeBuscar` aceita `erro || venceu` nesse gatilho) — sem
+    // precisar mexer no relógio pra este lado do teste.
+    const { container } = montar({ estado: "frio", erro: true, aviso: EM_REFORMA });
+    expect(container.querySelector(".aviso-dono")?.textContent).toContain(EM_REFORMA.texto);
+
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    await act(async () => {
+      pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null });
+    });
+
+    expect(container.querySelector(".aviso-dono")).toBeNull();
+  });
+
   // O outro lado, e ele é o guarda de regressão: fechou o CALENDÁRIO, a frase
   // do calendário continua saindo — nos dois eixos. Calar demais seria o
   // conserto virando o defeito oposto.
