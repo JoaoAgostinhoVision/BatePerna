@@ -6,6 +6,7 @@ import type { AvisoLinha, EfeitoAviso } from "@/lib/db";
 import { falaMolhada, vozDaFicha } from "@/lib/severidade";
 import { faseDe, marcaDe } from "@/lib/carimbo-fase";
 import { fechadoPeloDono } from "@/lib/aviso";
+import { aberturaDaFicha, agoraRecife, fechadoAgora } from "@/lib/horario";
 
 const EFEITOS: readonly EfeitoAviso[] = ["nenhum", "fresco", "frio", "fechado"];
 
@@ -40,25 +41,36 @@ function consequencia(efeito: EfeitoAviso, ficha: Ficha): string {
   return "O carimbo não muda — só o recado aparece na ficha.";
 }
 
-/** O que está NA TELA agora, pro dono — a MESMA palavra do selo público
- *  (`SeloTrilha`), tirada da MESMA fonte (`faseDe`/`marcaDe` em
- *  `carimbo-fase.ts`), nunca uma tabela paralela escrita aqui. Foi o defeito
- *  desta função na Task 10 original: "Não vá" fixo pra todo `frio`, quando a
- *  fala real de `frio` depende da severidade da ficha (`espera`/`cuidado`
- *  falam outra coisa) — a mesma "voz de um lugar virou a língua de todos" que
+/** O que está NA TELA agora, pro dono — byte a byte a mesma palavra que o
+ *  selo público (`SeloTrilha`) diria NO INSTANTE em que a página foi lida,
+ *  calendário incluso: mesma fonte (`faseDe`/`marcaDe` em `carimbo-fase.ts`),
+ *  nunca uma tabela paralela escrita aqui. Foi o defeito desta função na
+ *  Task 10 original: "Não vá" fixo pra todo `frio`, quando a fala real de
+ *  `frio` depende da severidade da ficha (`espera`/`cuidado` falam outra
+ *  coisa) — a mesma "voz de um lugar virou a língua de todos" que
  *  `severidade.ts` já fechou uma vez.
  *
- *  Omite o calendário (`fechado` de `horario.ts`): o servidor não tem relógio
- *  de tela pra saber se agora está dentro do horário — só a palavra do dono
- *  (`fechadoPeloDono`) chega pronta na leitura. `erro` não precisa de ramo
- *  próprio: `faseDe` já o transforma em `sem-informacoes`, e é `marcaDe` quem
- *  decide a palavra ("SEM INFORMAÇÕES") — vocabulário único, nunca dois. */
-function motorAgora(leitura: LeituraCarimbo, ficha: Ficha): string {
+ *  🔴 O CALENDÁRIO ENTRA, e a rodada anterior deste arquivo errou dizendo que
+ *  "o servidor não tem relógio de tela" — falso: `agora` já chega por prop
+ *  (`page.tsx` o computa com `Date.now()` no load), e `horario.ts` expõe
+ *  `agoraRecife`/`aberturaDaFicha`/`fechadoAgora` puros, sem precisar do
+ *  `useAgoraRecife` do CLIENTE (esse sim é o "relógio de tela": o hook que
+ *  bate a cada minuto na tela viva). O painel é um retrato de um instante —
+ *  ele recarrega a página depois de cada ação —, então o instante do retrato
+ *  É o relógio certo pra esta tela: sem ele, a Rampa do Pepê apareceria
+ *  "Pode ir" numa quarta no painel do dono enquanto a tela pública diz
+ *  "Fechado agora".
+ *
+ *  `erro` não precisa de ramo próprio: `faseDe` já o transforma em
+ *  `sem-informacoes`, e é `marcaDe` quem decide a palavra ("SEM
+ *  INFORMAÇÕES") — vocabulário único, nunca dois. */
+function motorAgora(leitura: LeituraCarimbo, ficha: Ficha, agora: number): string {
   const fase = faseDe({
     conferindo: false,
     erro: leitura.erro,
     venceu: false,
     falhou: false,
+    fechado: fechadoAgora(aberturaDaFicha(ficha), agoraRecife(agora)),
     fechadoPeloDono: fechadoPeloDono(leitura.aviso),
   });
   return `Na tela agora: ${marcaDe(fase, leitura.estado, vozDaFicha(ficha.condicao))}`;
@@ -158,7 +170,7 @@ export default function PainelAdmin({ fichas, leituras, agora, avisos = {}, avis
             {...(venceEmBreve ? { "data-vence-em-breve": "" } : {})}
           >
             <h2>{f.trajeto.waypoints[0].nome}</h2>
-            {leitura && <p className="adm-motor">{motorAgora(leitura, f)}</p>}
+            {leitura && <p className="adm-motor">{motorAgora(leitura, f, agora)}</p>}
 
             {avisoAtual && (
               <div className="adm-vigente">

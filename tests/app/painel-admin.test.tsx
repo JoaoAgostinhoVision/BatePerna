@@ -4,16 +4,26 @@ import PainelAdmin from "@/app/admin/PainelAdmin";
 import { getAllFichas } from "@/lib/ficha";
 import { vozDaFicha, falaMolhada } from "@/lib/severidade";
 import { faseDe, marcaDe } from "@/lib/carimbo-fase";
+import { aberturaDaFicha, agoraRecife, fechadoAgora } from "@/lib/horario";
 import type { AvisoLinha } from "@/lib/db";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
-const AGORA = 1_757_000_000;
+const AGORA = 1_757_000_000; // quinta-feira, ~09h33 Recife (ver Fix round 2)
 const DIA = 24 * 3600;
 const fichas = getAllFichas();
 const leituras = Object.fromEntries(
   fichas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: AGORA, aviso: null }]),
 );
+
+// 🔴 Fix round 2: sábado e quarta da MESMA semana, meio-dia em Recife — dentro
+// da janela de horário de Pedra Furada (5h–17h) e Véu (8h–17h) nos dois dias;
+// a Rampa do Pepê só abre sáb/dom (`content/fichas/rampa-do-pepe.json`), então
+// SAB mantém o acervo INTEIRO aberto e QUA fecha só a Rampa pelo calendário.
+// Calculados batendo `agoraRecife` contra os dois: sáb → dia "sab", minutos
+// 720; qua → dia "qua", minutos 720 — nenhum dos dois é um número mágico.
+const SAB_MEIODIA = 1_757_170_800;
+const QUA_MEIODIA = 1_756_911_600;
 
 describe("PainelAdmin", () => {
   // 🔴 Varre o ACERVO, nunca uma lista de slugs escrita a mao: guarda que
@@ -159,8 +169,9 @@ describe("PainelAdmin", () => {
   // de todos" de 10/09, recorrendo num arquivo novo.
   //
   // (a) Varre o acervo INTEIRO com leitura `frio`, deriva a marca esperada da
-  // MESMA funcao que o componente usa, e prova anti-vacuidade (mais de uma
-  // marca distinta — se cair pra uma so, a premissa do teste morreu).
+  // MESMA funcao que o componente usa (calendario incluso — Fix round 2), e
+  // prova anti-vacuidade (mais de uma marca distinta — se cair pra uma so, a
+  // premissa do teste morreu).
   it("'na tela agora' com frio mostra a MESMA marca do selo publico, ficha a ficha", () => {
     const marcasEsperadas = new Set<string>();
     for (const f of fichas) {
@@ -173,7 +184,9 @@ describe("PainelAdmin", () => {
         <PainelAdmin fichas={fichas} leituras={leiturasFrio} agora={AGORA} />,
       );
       const fase = faseDe({
-        conferindo: false, erro: false, venceu: false, falhou: false, fechadoPeloDono: false,
+        conferindo: false, erro: false, venceu: false, falhou: false,
+        fechado: fechadoAgora(aberturaDaFicha(f), agoraRecife(AGORA)),
+        fechadoPeloDono: false,
       });
       const marcaEsperada = marcaDe(fase, "frio", vozDaFicha(f.condicao));
       marcasEsperadas.add(marcaEsperada);
@@ -199,7 +212,9 @@ describe("PainelAdmin", () => {
       <PainelAdmin fichas={fichas} leituras={leiturasFechado} agora={AGORA} />,
     );
     const fase = faseDe({
-      conferindo: false, erro: false, venceu: false, falhou: false, fechadoPeloDono: true,
+      conferindo: false, erro: false, venceu: false, falhou: false,
+      fechado: fechadoAgora(aberturaDaFicha(fichas[0]), agoraRecife(AGORA)),
+      fechadoPeloDono: true,
     });
     const marcaEsperada = marcaDe(fase, "fresco", vozDaFicha(fichas[0].condicao));
     const bloco = container.querySelector(`[data-ficha="${alvo}"]`);
@@ -218,10 +233,61 @@ describe("PainelAdmin", () => {
       <PainelAdmin fichas={fichas} leituras={leiturasErro} agora={AGORA} />,
     );
     const fase = faseDe({
-      conferindo: false, erro: true, venceu: false, falhou: false, fechadoPeloDono: false,
+      conferindo: false, erro: true, venceu: false, falhou: false,
+      fechado: fechadoAgora(aberturaDaFicha(fichas[0]), agoraRecife(AGORA)),
+      fechadoPeloDono: false,
     });
     const marcaEsperada = marcaDe(fase, "frio", vozDaFicha(fichas[0].condicao));
     const bloco = container.querySelector(`[data-ficha="${alvo}"]`);
     expect(bloco?.textContent).toContain(marcaEsperada);
+  });
+
+  // 🔴 Fix round 2 — o calendario tinha sumido da fase por um comentario
+  // errado ("o servidor nao tem relogio de tela"): `agora` ja chega por prop
+  // e `horario.ts` tem `agoraRecife`/`aberturaDaFicha`/`fechadoAgora` puros.
+  //
+  // (a-restauro) fresco + acervo INTEIRO aberto (SAB_MEIODIA, ver comentario
+  // no topo do arquivo) mostra a fase "afirmando" do selo — "Pode ir",
+  // derivado de `marcaDe`, nunca literal.
+  it("'na tela agora' com fresco e o acervo inteiro aberto mostra a fase 'afirmando'", () => {
+    const leiturasAbertas = Object.fromEntries(
+      fichas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: SAB_MEIODIA, aviso: null }]),
+    );
+    const { container } = render(
+      <PainelAdmin fichas={fichas} leituras={leiturasAbertas} agora={SAB_MEIODIA} />,
+    );
+    const marcaEsperada = marcaDe("afirmando", "fresco", vozDaFicha(fichas[0].condicao));
+    for (const f of fichas) {
+      const bloco = container.querySelector(`[data-ficha="${f.slug}"]`);
+      expect(bloco?.textContent).toContain(marcaEsperada);
+    }
+  });
+
+  // (b) calendario fechando: a Rampa do Pepê (só sáb/dom) numa quarta mostra
+  // a fase "fechado" do selo — e a MESMA ficha, no sábado, não mostra.
+  it("a Rampa numa quarta mostra a fase 'fechado' do calendario; no sabado, nao", () => {
+    const rampa = fichas.find((f) => f.slug === "rampa-do-pepe")!;
+    const marcaFechado = marcaDe("fechado", "fresco", vozDaFicha(rampa.condicao));
+
+    const leiturasQua = {
+      ...leituras,
+      [rampa.slug]: { estado: "fresco" as const, erro: false, calculadoEm: QUA_MEIODIA, aviso: null },
+    };
+    const { container: emQuarta } = render(
+      <PainelAdmin fichas={fichas} leituras={leiturasQua} agora={QUA_MEIODIA} />,
+    );
+    const blocoQuarta = emQuarta.querySelector(`[data-ficha="${rampa.slug}"]`);
+    expect(blocoQuarta?.textContent).toContain(marcaFechado);
+
+    cleanup();
+    const leiturasSab = {
+      ...leituras,
+      [rampa.slug]: { estado: "fresco" as const, erro: false, calculadoEm: SAB_MEIODIA, aviso: null },
+    };
+    const { container: emSabado } = render(
+      <PainelAdmin fichas={fichas} leituras={leiturasSab} agora={SAB_MEIODIA} />,
+    );
+    const blocoSabado = emSabado.querySelector(`[data-ficha="${rampa.slug}"]`);
+    expect(blocoSabado?.textContent).not.toContain(marcaFechado);
   });
 });
