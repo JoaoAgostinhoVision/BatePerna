@@ -75,6 +75,23 @@ describe("service worker: /admin nunca vira cache", () => {
     ).toBeLessThan(padrao);
   });
 
+  // 🔴 I6 DA REVISÃO FINAL (2026-09-16): a guarda de cima trava a ORDEM, e só
+  // ela. Trocar `new NetworkOnly()` por `new NetworkFirst(...)` na rota do
+  // /admin passaria nela — a rota continuaria antes do spread, e o painel
+  // passaria a virar cache do mesmo jeito. Esta trava o HANDLER: o matcher do
+  // /admin e, dentro do mesmo objeto (até 200 caracteres, sem cruzar outro
+  // `matcher:`), `handler: new NetworkOnly()` — sem argumentos, porque
+  // NetworkOnly com opções é outra coisa.
+  it("e a rota do /admin responde com NetworkOnly — não é só a ordem, é o handler", () => {
+    const bloco = SW.slice(SW.indexOf("runtimeCaching:"));
+    expect(bloco).toMatch(
+      /matcher: \(\{ url \}\) => url\.pathname\.startsWith\("\/admin"\),\s*handler: new NetworkOnly\(\),/,
+    );
+    // E o par de cima é o ÚNICO uso de "/admin" no roteador — um segundo
+    // objeto com o mesmo matcher e outro handler não pode passar escondido.
+    expect(bloco.match(/startsWith\("\/admin"\)/g)).toHaveLength(1);
+  });
+
   it("e a ordem é load-bearing: o defaultCache de produção guardaria /admin como qualquer outra página", async () => {
     // Mesma razão do teste irmão acima: o defaultCache muda com o NODE_ENV, e
     // é o de produção que vai pro celular.
