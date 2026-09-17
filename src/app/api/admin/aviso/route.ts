@@ -28,14 +28,20 @@ export async function POST(req: Request): Promise<Response> {
     return new Response("", { status: 401 });
   }
 
-  let body: { slug?: unknown; texto?: unknown; efeito?: unknown; venceEm?: unknown };
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
     return new Response("", { status: 400 });
   }
+  // 🔴 `null` é JSON válido — não estoura o catch acima — mas destructurar
+  // `null` estoura na hora. Mesma guarda que /entrar já tem com o `?.` em
+  // `senha`, só que aqui há quatro campos, então o corpo inteiro é checado.
+  if (typeof body !== "object" || body === null) return new Response("", { status: 400 });
 
-  const { slug, texto, efeito, venceEm } = body;
+  const { slug, texto, efeito, venceEm } = body as {
+    slug?: unknown; texto?: unknown; efeito?: unknown; venceEm?: unknown;
+  };
   if (typeof slug !== "string" || getFicha(slug) == null) return new Response("", { status: 400 });
   if (typeof texto !== "string" || texto.trim() === "") return new Response("", { status: 400 });
   if (typeof efeito !== "string" || !EFEITOS.includes(efeito as EfeitoAviso)) {

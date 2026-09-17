@@ -103,6 +103,29 @@ describe("POST /api/admin/aviso", () => {
     expect((await POST(comSessao({ slug: "rampa-do-pepe", texto: "x", efeito: "frio", venceEm: agora - 1 }))).status).toBe(400);
   });
 
+  // 🔴 FIX ROUND 1: `null` é JSON válido — não estoura o `catch` do
+  // `req.json()` — mas destructurar `slug` de `null` estourava antes desta
+  // guarda existir. Sessão VÁLIDA aqui: o 400 não pode ser um 401 disfarçado.
+  it("corpo null → 400, não exceção — e nada é gravado", async () => {
+    const { POST } = await import("@/app/api/admin/aviso/route");
+    const res = await POST(comSessao(null));
+    expect(res.status).toBe(400);
+    expect(await avisoVigente(client, "rampa-do-pepe", Math.floor(Date.now() / 1000))).toBeNull();
+  });
+
+  it("corpo JSON malformado → 400", async () => {
+    const t = criarSessao(SEGREDO, Math.floor(Date.now() / 1000), DURACAO_SESSAO_S);
+    const { POST } = await import("@/app/api/admin/aviso/route");
+    const res = await POST(
+      new Request("http://x/api/admin/aviso", {
+        method: "POST",
+        headers: { cookie: `${COOKIE_ADMIN}=${t}` },
+        body: "{",
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
   // 🔴 RULING 2: `venceEm <= agora` e `venceEm < agora` só discordam quando
   // `venceEm === agora` — e a rota lê `Date.now()`, então só um relógio
   // congelado torna este instante determinístico. Mesma regra do
