@@ -293,6 +293,29 @@ describe("filtro e agrupamento juntos", () => {
     await waitFor(() => expect(container.querySelectorAll(".cartao")).toHaveLength(1));
   });
 
+  // 🔴 A REINCIDÊNCIA LITERAL DO ACHADO DAS TASKS 7+8 (2026-09-16): o chip
+  // chamava `fechadoAgora` direto e nunca olhava o aviso do dono. Uma trilha
+  // seca, com o calendário sempre aberto (sem horário nem dias na ficha), e o
+  // dono fechou por aviso — o chip tem que tirar ela igual tiraria por chuva.
+  // Este é o guarda do CALL SITE: o de `filtros.test.ts:775` prova a regra
+  // dentro do módulo, não que a home chama `passaNoFiltro` com a causa certa.
+  it('"dá hoje" tira também a que o DONO fechou — seca, aberta no calendário, e mesmo assim fora', async () => {
+    localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, daHoje: true }));
+    const emReforma: ParFolha = {
+      ficha: fichaFake("em-reforma"),
+      leitura: {
+        estado: "fresco",
+        erro: false,
+        calculadoEm: agoraSeg(),
+        aviso: { texto: "em reforma", efeito: "fechado", criadoEm: 0, venceEm: 0 },
+      },
+    };
+    const { container } = monta([emReforma, par("seca", "fresco")]);
+    await waitFor(() => expect(container.querySelectorAll(".cartao")).toHaveLength(1));
+    expect(container.textContent).toContain("promessa de seca");
+    expect(container.textContent).not.toContain("promessa de em-reforma");
+  });
+
   // O cabeçalho é uma AFIRMAÇÃO sobre o que está embaixo dele. Sobrando nada
   // embaixo, ele mente. Primo direto do Critical da rodada passada.
   it("grupo esvaziado pelo filtro perde o cabeçalho", async () => {

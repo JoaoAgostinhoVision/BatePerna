@@ -4,7 +4,7 @@ import { faseDe } from "@/lib/carimbo-fase";
 import { passaNoFiltro, tetoDaBarraDistancia } from "@/lib/filtros";
 import { coordDe } from "@/lib/local";
 import FolhaTrilhas, { type ParFolha } from "./FolhaTrilhas";
-import { aberturaDaFicha, fechadoAgora } from "@/lib/horario";
+import { aberturaDaFicha, fechadoHoje } from "@/lib/horario";
 import { useAgoraRecife } from "./useAgoraRecife";
 import MapaHome from "./MapaHome";
 import PainelFiltros from "./PainelFiltros";
@@ -97,7 +97,7 @@ export default function MioloHome({ pares }: { pares: ParFolha[] }) {
   // É o mesmo argumento do `confia` e do `tetoDistanciaKm` logo abaixo: este é
   // o único escopo que tem tudo junto, então é aqui que a fonte nasce.
   const agora = useAgoraRecife();
-  const estaFechado = (p: ParFolha) => fechadoAgora(aberturaDaFicha(p.ficha), agora);
+  const estaFechado = (p: ParFolha) => fechadoHoje(aberturaDaFicha(p.ficha), atual(p).aviso, agora);
 
   // O RECORTE, e ele acontece UMA vez. Filtro, agrupamento e pins saem da
   // MESMA leitura (`atual`), no MESMO escopo, na mesma passada. Separá-los em

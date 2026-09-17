@@ -2,7 +2,7 @@
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { SEM_FILTRO } from "@/lib/filtros";
-import { aberturaDaFicha, fechadoAgora, type Agora } from "@/lib/horario";
+import { aberturaDaFicha, fechadoHoje, type Agora } from "@/lib/horario";
 import { tomDe } from "@/lib/severidade";
 import CartaoTrilha from "./CartaoTrilha";
 import { useMexerFiltros } from "./filtros";
@@ -135,7 +135,8 @@ export default function FolhaTrilhas({
     // AFIRMAÇÃO sobre os cartões embaixo dele: com um cartão dizendo "Fechado
     // agora" ali, o grupo estaria convidando pra uma coisa que não dá. Mesma
     // régua do cabeçalho que some quando o filtro esvazia o grupo. Fechado
-    // também não entra no grupo do MEIO, e pela mesma frase.
+    // também não entra no grupo do MEIO, e pela mesma frase. Desde 2026-09-16,
+    // "fechado" aqui é `fechadoHoje`: calendário OU dono, nunca só o primeiro.
     //
     // 🔴 SÃO TRÊS GRUPOS DESDE 2026-09-10, e o agrupamento pergunta o TOM, não
     // o estado. Decisão dele (*"a cor e o grupo seguem o nível"*): o carimbo da
@@ -143,7 +144,7 @@ export default function FolhaTrilhas({
     // caindo sob "Hoje não" — o título contradizendo o cartão embaixo dele, que
     // é a mesma família do selo verde dizendo "Não vá".
     const tomDaqui = (p: ParFolha) =>
-      fechadoAgora(aberturaDaFicha(p.ficha), agora)
+      fechadoHoje(aberturaDaFicha(p.ficha), atual(p).aviso, agora)
         ? "frio"
         : tomDe(atual(p).estado, p.ficha.condicao.severidade);
 

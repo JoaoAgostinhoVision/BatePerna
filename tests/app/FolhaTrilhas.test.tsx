@@ -135,6 +135,40 @@ describe("FolhaTrilhas", () => {
     expect(container.querySelector("#aberta .selo .w")?.textContent).toBe("Pode ir");
   });
 
+  // 🔴 A REINCIDÊNCIA LITERAL DO ACHADO DAS TASKS 7+8 (2026-09-16): o cabeçalho
+  // chamava `fechadoAgora` direto e nunca olhava o aviso do dono. Uma trilha
+  // seca, sem horário nem dias (o calendário nunca fecha ela), e o dono fechou
+  // por aviso — o comentário de cima ("FECHADO NÃO ENTRA NO GRUPO DE CIMA")
+  // proíbe por escrito exatamente esta cena.
+  it("trilha fechada PELO DONO sai do grupo 'Hoje o tempo deixa', mesmo seca e sem horário", () => {
+    const emReforma = fichaFake("em-reforma"); // sem horário, sem dias: o calendário nunca fecha
+    const visiveis = [
+      {
+        ficha: emReforma,
+        leitura: {
+          estado: "fresco" as const,
+          erro: false,
+          calculadoEm: AGORA_S,
+          aviso: { texto: "em reforma", efeito: "fechado" as const, criadoEm: 0, venceEm: 0 },
+        },
+      },
+    ];
+
+    const { container } = render(<FolhaTrilhas visiveis={visiveis} confia={true} agora={relogio()} />);
+
+    const cabecalhos = Array.from(container.querySelectorAll(".grupo-k")).map((c) => c.textContent);
+    expect(cabecalhos).toEqual(["Hoje não"]);
+
+    const doGrupo = (titulo: string) =>
+      Array.from(
+        Array.from(container.querySelectorAll(".grupo-k"))
+          .find((c) => c.textContent === titulo)!
+          .nextElementSibling!.querySelectorAll(".cartao"),
+      ).map((a) => a.getAttribute("id"));
+
+    expect(doGrupo("Hoje não")).toEqual(["em-reforma"]);
+  });
+
   // O ramo LISO. Quem decide que não dá pra confiar é o `MioloHome` (clima
   // fora do ar, leitura vencida); o que esta folha faz com a resposta é isto:
   // nenhum cabeçalho, e nenhuma frase de veredito, porque `Não vá` é só pro

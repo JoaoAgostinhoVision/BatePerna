@@ -152,6 +152,40 @@ describe("a home", () => {
     expect(ids).toEqual(["seca", "molhada", "instavel"]);
   });
 
+  // 🔴 A REINCIDÊNCIA LITERAL DO ACHADO DAS TASKS 7+8 (2026-09-16): `pares`
+  // ordenava só por `estado`, então um lugar seco (fresco) que o dono fechou
+  // por aviso ia pra frente da fila como se desse pra ir. Mesmo caminho do
+  // teste acima (erro:true derruba `confia` e força o ramo liso, que é o único
+  // que expõe a ordem que a PÁGINA calcula).
+  it("um lugar seco fechado pelo DONO não é 'fresco primeiro' — a ordem olha as duas causas", async () => {
+    const emReforma = fichaFake("emReforma");
+    const seca = fichaFake("seca");
+    const instavel = fichaFake("instavel");
+    vi.mocked(getFichasComCondicao).mockReturnValueOnce([emReforma, seca, instavel]);
+    vi.mocked(resolverEstados).mockResolvedValue(
+      new Map([
+        [
+          "emReforma",
+          {
+            estado: "fresco" as const,
+            erro: false,
+            calculadoEm: AGORA_S,
+            aviso: { texto: "em reforma", efeito: "fechado" as const, criadoEm: 0, venceEm: 0 },
+          },
+        ],
+        ["seca", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S, aviso: null }],
+        // erro:true em qualquer par derruba `confia` e força o ramo liso.
+        ["instavel", { estado: "frio" as const, erro: true, calculadoEm: AGORA_S, aviso: null }],
+      ]),
+    );
+
+    const { container } = render(await Home());
+
+    expect(container.querySelectorAll(".grupo-k")).toHaveLength(0); // confirma: caiu no caminho sem cabeçalho
+    const ids = Array.from(container.querySelectorAll(".cartao")).map((el) => el.id);
+    expect(ids).toEqual(["seca", "emReforma", "instavel"]);
+  });
+
   it("barro medido diz 'Não vá' — a regra tem dois lados, e este é o outro", async () => {
     // Par do teste "sem leitura informa": aquele prova que frio+erro NÃO diz
     // "Não vá". Este prova que frio+leitura confiável DIZ. Sem os dois,

@@ -2,6 +2,7 @@ import "./ficha.css";
 import "./home.css";
 import { getFichasComCondicao } from "@/lib/ficha";
 import { resolverEstados, type LeituraCarimbo } from "@/lib/carimbo-estado";
+import { fechadoPeloDono } from "@/lib/aviso";
 import type { Ficha } from "@/types/ficha";
 import Appbar from "./Appbar";
 import BarraNavegacao from "./BarraNavegacao";
@@ -39,14 +40,17 @@ export default async function Home() {
     return leitura ? [{ ficha: f, leitura }] : [];
   });
 
-  // Ordem FIXA da folha: fresco primeiro, decidida uma vez pela classificação
-  // com que a página nasceu no servidor. O `MioloHome` (client) é quem decide,
-  // a cada leitura nova, o que aparece e SE agrupa — mas não reordena: ver o
-  // comentário da folha sobre por que um cartão não pode pular de lugar na tela.
-  const pares = [
-    ...comLeitura.filter((x) => x.leitura.estado === "fresco"),
-    ...comLeitura.filter((x) => x.leitura.estado !== "fresco"),
-  ];
+  // Ordem FIXA da folha: quem dá pra ir primeiro, decidida uma vez pela
+  // classificação com que a página nasceu no servidor. "Dá pra ir" é fresco E
+  // não fechado pelo dono — o servidor não tem relógio de tela (a ordem nunca
+  // prometeu calendário), mas o aviso ele TEM, na mesma `leitura` que vai pro
+  // cliente: um lugar seco em reforma não é "fresco primeiro". O `MioloHome`
+  // (client) é quem decide, a cada leitura nova, o que aparece e SE agrupa —
+  // mas não reordena: ver o comentário da folha sobre por que um cartão não
+  // pode pular de lugar na tela.
+  const daPraIr = (x: { leitura: LeituraCarimbo }) =>
+    x.leitura.estado === "fresco" && !fechadoPeloDono(x.leitura.aviso);
+  const pares = [...comLeitura.filter(daPraIr), ...comLeitura.filter((x) => !daPraIr(x))];
 
   return (
     <main className="bp">

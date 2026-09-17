@@ -5,6 +5,7 @@ import {
   abreAindaHoje,
   agoraRecife,
   fechadoAgora,
+  fechadoHoje,
   minutosDeHHMM,
   minutosDoDiaRecife,
   rotuloAbertura,
@@ -14,6 +15,7 @@ import {
   type Agora,
   type Horario,
 } from "@/lib/horario";
+import type { Aviso } from "@/lib/aviso";
 
 // 🔴 O DEFEITO QUE ESTE ARQUIVO TRANCA (2026-08-27). O carimbo só olhava CHUVA.
 // A Pedra Furada fecha às 17h, então às 18h com céu limpo a ficha dizia
@@ -234,6 +236,44 @@ describe("fechadoAgora junta a hora e o dia", () => {
     expect(rotuloFaixa(RAMPA)).toBe("Abre sábado e domingo.");
     expect(rotuloFaixa(SO_HORA)).toBe("Fecha às 17h, abre às 5h.");
     expect(rotuloFaixa(AMBOS)).toBe("Abre sábado e domingo. Fecha às 17h, abre às 5h.");
+  });
+});
+
+// 🔴 A SEGUNDA CAUSA (2026-09-16). `fechadoAgora` só sabe do calendário; o
+// dono fecha por fora dele, e `fechadoHoje` é a ÚNICA função que junta as
+// duas. Nasceu do achado da revisão das Tasks 7+8: `MioloHome` e
+// `FolhaTrilhas` chamavam `fechadoAgora` cada um por sua conta, e os dois
+// ficaram cegos ao dono.
+const avisoDe = (efeito: Aviso["efeito"]): Aviso => ({
+  texto: "aviso de teste",
+  efeito,
+  criadoEm: 0,
+  venceEm: 0,
+});
+
+describe("fechadoHoje junta o calendário e o dono", () => {
+  it("calendário aberto, sem aviso — aberto", () => {
+    expect(fechadoHoje(so(PEDRA), null, as(h(9)))).toBe(false);
+  });
+
+  it("calendário FECHADO, sem aviso — fechado pelo calendário, como sempre foi", () => {
+    expect(fechadoHoje(so(PEDRA), null, as(h(18)))).toBe(true);
+  });
+
+  it("calendário aberto, dono fechou — o dono ganha do calendário", () => {
+    expect(fechadoHoje(so(PEDRA), avisoDe("fechado"), as(h(9)))).toBe(true);
+  });
+
+  it("aviso que não fecha não fecha", () => {
+    expect(fechadoHoje(so(PEDRA), avisoDe("frio"), as(h(9)))).toBe(false);
+  });
+
+  it("agora === null, dono fechou — o dono não precisa do relógio: já no primeiro render", () => {
+    expect(fechadoHoje(so(PEDRA), avisoDe("fechado"), null)).toBe(true);
+  });
+
+  it("agora === null, sem aviso — o comportamento de hoje, preservado", () => {
+    expect(fechadoHoje(so(PEDRA), null, null)).toBe(false);
   });
 });
 

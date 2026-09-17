@@ -38,6 +38,7 @@ import {
   diaDaSemanaRecife,
   type Dia,
 } from "./semana";
+import { fechadoPeloDono, type Aviso } from "./aviso";
 
 /** O relógio de Recife inteiro: que horas são E que dia da semana é.
  *
@@ -107,6 +108,28 @@ export function fechadoAgora(abertura: Abertura | undefined, agora: Agora | null
   return (
     fechadoNoDia(abertura.dias, agora.dia) || fechadoNaHora(abertura.horario, agora.minutos)
   );
+}
+
+/** O lugar está fechado AGORA, por QUALQUER das duas causas: o calendário
+ *  (hora ou dia da semana, que precisa do relógio) ou o dono (que não precisa
+ *  — o aviso já veio do servidor dentro da leitura).
+ *
+ *  🔴 É A ÚNICA FUNÇÃO QUE JUNTA AS DUAS. `MioloHome` (o chip "só as que dá
+ *  hoje") e `FolhaTrilhas` (o cabeçalho do grupo) chamam ESTA, nunca
+ *  `fechadoAgora` direto — em 2026-09-15 cada um chamava `fechadoAgora` por
+ *  conta própria e os dois ficaram cegos ao dono: um lugar seco em reforma
+ *  caía sob "Hoje o tempo deixa" com o selo dizendo "Fechado agora", e
+ *  sobrevivia ao chip. Duas chamadas iguais em dois arquivos é a forma exata
+ *  de esquecer a segunda causa nos dois.
+ *
+ *  Com `agora === null` o calendário responde `false` (não se esconde pelo que
+ *  não se sabe); o dono responde pelo aviso mesmo assim. */
+export function fechadoHoje(
+  abertura: Abertura | undefined,
+  aviso: Aviso | null | undefined,
+  agora: Agora | null,
+): boolean {
+  return fechadoAgora(abertura, agora) || fechadoPeloDono(aviso);
 }
 
 /** A próxima abertura é HOJE ainda, ou só amanhã? Só faz sentido quando já se
