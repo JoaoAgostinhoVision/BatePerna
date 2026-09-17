@@ -3,6 +3,7 @@ import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/re
 import PainelAdmin from "@/app/admin/PainelAdmin";
 import { getAllFichas } from "@/lib/ficha";
 import { vozDaFicha, falaMolhada } from "@/lib/severidade";
+import { faseDe, marcaDe } from "@/lib/carimbo-fase";
 import type { AvisoLinha } from "@/lib/db";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -149,19 +150,78 @@ describe("PainelAdmin", () => {
     for (const f of fichas) expect(screen.getByText(f.trajeto.waypoints[0].nome)).not.toBeNull();
   });
 
-  // 🔴 Ruling 5: o motor diz o que esta NA TELA agora — nao o texto de
-  // falaMolhada (que e so a consequencia de ESCOLHER frio no formulario).
-  it("mostra o que o motor diz agora, e diz quando a leitura falhou", () => {
+  // 🔴 Fix round 1 — Ruling 5 corrigida: "na tela agora" e a MESMA palavra do
+  // selo publico (`SeloTrilha`), tirada de `faseDe`/`marcaDe` em
+  // `carimbo-fase.ts` — nunca uma tabela paralela. A versao anterior fixava
+  // "Nao va" pra todo `frio`, certa por sorte na Rampa (severidade `nao-va`)
+  // e falsa na Pedra Furada (`espera`, "Espera 6h") e na Veu de Noiva
+  // (`cuidado`, "Va com cuidado") — a mesma "voz de um lugar virou a lingua
+  // de todos" de 10/09, recorrendo num arquivo novo.
+  //
+  // (a) Varre o acervo INTEIRO com leitura `frio`, deriva a marca esperada da
+  // MESMA funcao que o componente usa, e prova anti-vacuidade (mais de uma
+  // marca distinta — se cair pra uma so, a premissa do teste morreu).
+  it("'na tela agora' com frio mostra a MESMA marca do selo publico, ficha a ficha", () => {
+    const marcasEsperadas = new Set<string>();
+    for (const f of fichas) {
+      cleanup();
+      const leiturasFrio = {
+        ...leituras,
+        [f.slug]: { estado: "frio" as const, erro: false, calculadoEm: AGORA, aviso: null },
+      };
+      const { container } = render(
+        <PainelAdmin fichas={fichas} leituras={leiturasFrio} agora={AGORA} />,
+      );
+      const fase = faseDe({
+        conferindo: false, erro: false, venceu: false, falhou: false, fechadoPeloDono: false,
+      });
+      const marcaEsperada = marcaDe(fase, "frio", vozDaFicha(f.condicao));
+      marcasEsperadas.add(marcaEsperada);
+      const bloco = container.querySelector(`[data-ficha="${f.slug}"]`);
+      expect(bloco?.textContent).toContain(marcaEsperada);
+    }
+    expect(marcasEsperadas.size).toBeGreaterThan(1);
+  });
+
+  // (b) O dono fechou (aviso.efeito === "fechado") — a fase e a marca vem de
+  // `faseDe`/`marcaDe`, derivadas, nunca "Fechado agora" digitado tambem aqui
+  // por coincidencia com o literal do lib.
+  it("'na tela agora' com o dono fechando mostra a fase 'fechado' do selo", () => {
     const alvo = fichas[0].slug;
-    const outro = fichas[1].slug;
-    const leiturasComErro = {
+    const leiturasFechado = {
       ...leituras,
-      [outro]: { estado: "frio" as const, erro: true, calculadoEm: AGORA, aviso: null },
+      [alvo]: {
+        estado: "fresco" as const, erro: false, calculadoEm: AGORA,
+        aviso: { texto: "em reforma", efeito: "fechado" as const, criadoEm: AGORA, venceEm: AGORA + DIA },
+      },
     };
-    const { container } = render(<PainelAdmin fichas={fichas} leituras={leiturasComErro} agora={AGORA} />);
-    const blocoFresco = container.querySelector(`[data-ficha="${alvo}"]`);
-    expect(blocoFresco?.textContent).toMatch(/na tela agora:.*pode ir/i);
-    const blocoErro = container.querySelector(`[data-ficha="${outro}"]`);
-    expect(blocoErro?.textContent).toMatch(/falhou/i);
+    const { container } = render(
+      <PainelAdmin fichas={fichas} leituras={leiturasFechado} agora={AGORA} />,
+    );
+    const fase = faseDe({
+      conferindo: false, erro: false, venceu: false, falhou: false, fechadoPeloDono: true,
+    });
+    const marcaEsperada = marcaDe(fase, "fresco", vozDaFicha(fichas[0].condicao));
+    const bloco = container.querySelector(`[data-ficha="${alvo}"]`);
+    expect(bloco?.textContent).toContain(marcaEsperada);
+  });
+
+  // (c) `erro: true` — a fase vira `sem-informacoes` dentro de `faseDe`, e a
+  // palavra e a de `marcaDe` pra essa fase — nunca um "falhou" escrito aqui.
+  it("'na tela agora' com erro mostra a fase que faseDe/marcaDe dao pra erro", () => {
+    const alvo = fichas[0].slug;
+    const leiturasErro = {
+      ...leituras,
+      [alvo]: { estado: "frio" as const, erro: true, calculadoEm: AGORA, aviso: null },
+    };
+    const { container } = render(
+      <PainelAdmin fichas={fichas} leituras={leiturasErro} agora={AGORA} />,
+    );
+    const fase = faseDe({
+      conferindo: false, erro: true, venceu: false, falhou: false, fechadoPeloDono: false,
+    });
+    const marcaEsperada = marcaDe(fase, "frio", vozDaFicha(fichas[0].condicao));
+    const bloco = container.querySelector(`[data-ficha="${alvo}"]`);
+    expect(bloco?.textContent).toContain(marcaEsperada);
   });
 });
