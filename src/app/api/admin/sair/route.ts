@@ -1,5 +1,5 @@
 import { lerConfigAdmin } from "@/lib/admin-config";
-import { cookieDeSessao } from "@/lib/admin-guarda";
+import { avisarDesligado, cookieDeSessao } from "@/lib/admin-guarda";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,10 @@ export const dynamic = "force-dynamic";
  *  feature de admin aqui", exatamente o que "falha fechada, sempre" esconde. */
 export async function POST(): Promise<Response> {
   const cfg = lerConfigAdmin(process.env);
-  if (!cfg.ligado) return new Response("", { status: 404 });
+  if (!cfg.ligado) {
+    avisarDesligado(cfg);
+    return new Response("", { status: 404 });
+  }
 
   return new Response("", {
     status: 200,

@@ -1,5 +1,26 @@
-import { lerConfigAdmin } from "@/lib/admin-config";
+import { lerConfigAdmin, type EstadoAdmin } from "@/lib/admin-config";
 import { lerSessao } from "@/lib/admin-sessao";
+
+/** O painel está desligado por ENGANO de configuração — avisa no log do
+ *  servidor, e só lá.
+ *
+ *  🔴 FALHA FECHADA VENCE "motivo explícito na tela" (revisão final,
+ *  2026-09-16): a spec pedia os dois e eles se contradizem — a tela pública
+ *  NUNCA explica por que o admin está desligado, porque explicar já anuncia
+ *  que ele existe. O 404 fica; o motivo vai pro log da Vercel, que é onde o
+ *  dono descobre que a senha ficou curta ou o segredo não foi criado.
+ *
+ *  `ausente` NÃO avisa, de propósito: é o estado NORMAL de todo ambiente que
+ *  ele não configurou (preview, clone, o deploy antes da variável), e um log
+ *  a cada request ali seria ruído até virar invisível. Só `senha-curta` e
+ *  `sem-segredo` são engano — alguém tentou ligar e não conseguiu.
+ *
+ *  Uma função pros QUATRO call sites (a página e as três rotas): três linhas
+ *  copiadas quatro vezes é como uma delas esquece o `ausente`. */
+export function avisarDesligado(cfg: EstadoAdmin): void {
+  if (cfg.ligado || cfg.motivo === "ausente") return;
+  console.warn(`[admin] desligado: ${cfg.motivo}`);
+}
 
 /** O nome do cookie da sessão do painel. Mora aqui porque três lugares
  *  precisam dele — as duas rotas e a página — e três cópias de uma string é

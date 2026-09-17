@@ -94,6 +94,29 @@ describe("/admin — a página", () => {
     expect(metadata.robots).toEqual({ index: false, follow: false });
   });
 
+  // 🔴 I4 DA REVISÃO FINAL (2026-09-16): falha fechada vence "motivo na tela".
+  // O 404 fica; o motivo vai pro `console.warn` do servidor — e só quando é
+  // ENGANO (senha curta). Sem ADMIN_SENHA é o estado normal: nada no log.
+  it("com ADMIN_SENHA curta, a página continua 404 — e avisa o motivo no log, uma vez", async () => {
+    vi.stubEnv("ADMIN_SENHA", "curta");
+    vi.stubEnv("ADMIN_SEGREDO", "x");
+    semCookie();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { default: Admin } = await import("@/app/admin/page");
+    await expect(Admin()).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0][0])).toContain("senha-curta");
+  });
+
+  it("sem ADMIN_SENHA, a página é 404 SEM avisar nada — ausente é o normal", async () => {
+    vi.stubEnv("ADMIN_SENHA", "");
+    vi.stubEnv("ADMIN_SEGREDO", "");
+    semCookie();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { default: Admin } = await import("@/app/admin/page");
+    await expect(Admin()).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(warn).not.toHaveBeenCalled();
+  });
 });
 
 // 🔴 I3 DA REVISÃO FINAL (2026-09-16): a spec diz que a PÁGINA exige o

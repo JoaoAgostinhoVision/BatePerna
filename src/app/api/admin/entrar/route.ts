@@ -1,5 +1,5 @@
 import { lerConfigAdmin } from "@/lib/admin-config";
-import { cookieDeSessao } from "@/lib/admin-guarda";
+import { avisarDesligado, cookieDeSessao } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao, senhaConfere } from "@/lib/admin-sessao";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +7,10 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request): Promise<Response> {
   const cfg = lerConfigAdmin(process.env);
   // 🔴 404, não 401: painel desligado não anuncia que existe.
-  if (!cfg.ligado) return new Response("", { status: 404 });
+  if (!cfg.ligado) {
+    avisarDesligado(cfg);
+    return new Response("", { status: 404 });
+  }
 
   let senha: unknown;
   try {

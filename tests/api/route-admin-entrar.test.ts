@@ -110,3 +110,52 @@ describe("POST /api/admin/sair", () => {
     expect(res.headers.get("set-cookie")).toBeNull();
   });
 });
+
+// 🔴 I4 DA REVISÃO FINAL (2026-09-16): falha fechada vence "motivo na tela".
+// O 404 fica em todas as rotas; o motivo vai pro `console.warn` do servidor,
+// e SÓ quando é engano (senha curta, sem segredo) — `ausente` é o estado
+// normal e não pode virar ruído no log. Guarda do CALL SITE de cada rota: o
+// helper `avisarDesligado` tem teste próprio, mas guarda de um módulo não
+// cobre a chamada em outro.
+describe("as rotas de admin avisam no log por que estão desligadas — e só por engano", () => {
+  const comWarn = () => vi.spyOn(console, "warn").mockImplementation(() => {});
+  afterEach(() => vi.restoreAllMocks());
+
+  it("/entrar com senha curta: 404 e um warn com o motivo", async () => {
+    vi.stubEnv("ADMIN_SENHA", "curta");
+    vi.resetModules();
+    const warn = comWarn();
+    const { POST } = await import("@/app/api/admin/entrar/route");
+    expect((await POST(pedido({ senha: "curta" }))).status).toBe(404);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0][0])).toContain("senha-curta");
+  });
+
+  it("/entrar sem senha nenhuma: 404 e NENHUM warn", async () => {
+    vi.stubEnv("ADMIN_SENHA", "");
+    vi.resetModules();
+    const warn = comWarn();
+    const { POST } = await import("@/app/api/admin/entrar/route");
+    expect((await POST(pedido({ senha: SENHA }))).status).toBe(404);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("/sair com senha curta: 404 e um warn com o motivo", async () => {
+    vi.stubEnv("ADMIN_SENHA", "curta");
+    vi.resetModules();
+    const warn = comWarn();
+    const { POST } = await import("@/app/api/admin/sair/route");
+    expect((await POST()).status).toBe(404);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0][0])).toContain("senha-curta");
+  });
+
+  it("/sair sem senha nenhuma: 404 e NENHUM warn", async () => {
+    vi.stubEnv("ADMIN_SENHA", "");
+    vi.resetModules();
+    const warn = comWarn();
+    const { POST } = await import("@/app/api/admin/sair/route");
+    expect((await POST()).status).toBe(404);
+    expect(warn).not.toHaveBeenCalled();
+  });
+});

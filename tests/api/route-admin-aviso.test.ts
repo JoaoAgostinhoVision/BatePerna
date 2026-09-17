@@ -219,3 +219,33 @@ describe("DELETE /api/admin/aviso", () => {
     expect(res.status).toBe(404);
   });
 });
+
+// 🔴 I4 DA REVISÃO FINAL (2026-09-16), guarda do CALL SITE desta rota (os
+// dois verbos): 404 fica, o motivo vai pro log só quando é ENGANO. Ver o
+// bloco irmão em route-admin-entrar.test.ts.
+describe("/api/admin/aviso avisa no log por que está desligada — e só por engano", () => {
+  const comWarn = () => vi.spyOn(console, "warn").mockImplementation(() => {});
+  afterEach(() => vi.restoreAllMocks());
+
+  it("POST e DELETE com senha curta: 404 e um warn cada, com o motivo", async () => {
+    vi.stubEnv("ADMIN_SENHA", "curta");
+    vi.resetModules();
+    const warn = comWarn();
+    const { POST, DELETE } = await import("@/app/api/admin/aviso/route");
+    expect((await POST(comSessao({ slug: "rampa-do-pepe", texto: "x", efeito: "frio", venceEm: daquiAUmaHora() }))).status).toBe(404);
+    expect((await DELETE(new Request("http://x/api/admin/aviso?id=1", { method: "DELETE" }))).status).toBe(404);
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(String(warn.mock.calls[0][0])).toContain("senha-curta");
+    expect(String(warn.mock.calls[1][0])).toContain("senha-curta");
+  });
+
+  it("POST e DELETE sem senha nenhuma: 404 e NENHUM warn", async () => {
+    vi.stubEnv("ADMIN_SENHA", "");
+    vi.resetModules();
+    const warn = comWarn();
+    const { POST, DELETE } = await import("@/app/api/admin/aviso/route");
+    expect((await POST(comSessao({ slug: "rampa-do-pepe", texto: "x", efeito: "frio", venceEm: daquiAUmaHora() }))).status).toBe(404);
+    expect((await DELETE(new Request("http://x/api/admin/aviso?id=1", { method: "DELETE" }))).status).toBe(404);
+    expect(warn).not.toHaveBeenCalled();
+  });
+});

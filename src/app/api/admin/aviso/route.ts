@@ -1,5 +1,5 @@
 import { lerConfigAdmin } from "@/lib/admin-config";
-import { COOKIE_ADMIN, sessaoValida } from "@/lib/admin-guarda";
+import { COOKIE_ADMIN, avisarDesligado, sessaoValida } from "@/lib/admin-guarda";
 import { getClient, inserirAviso, retirarAviso, type EfeitoAviso } from "@/lib/db";
 import { getFicha } from "@/lib/ficha";
 
@@ -21,7 +21,10 @@ export async function POST(req: Request): Promise<Response> {
   // /entrar e /sair — e ela vem ANTES da sessão, porque sem ADMIN_SENHA não
   // existe segredo pra validar sessão nenhuma.
   const cfg = lerConfigAdmin(process.env);
-  if (!cfg.ligado) return new Response("", { status: 404 });
+  if (!cfg.ligado) {
+    avisarDesligado(cfg);
+    return new Response("", { status: 404 });
+  }
 
   const agora = Math.floor(Date.now() / 1000);
   if (!sessaoValida(process.env, tokenDoCookie(req), agora)) {
@@ -58,7 +61,10 @@ export async function POST(req: Request): Promise<Response> {
 
 export async function DELETE(req: Request): Promise<Response> {
   const cfg = lerConfigAdmin(process.env);
-  if (!cfg.ligado) return new Response("", { status: 404 });
+  if (!cfg.ligado) {
+    avisarDesligado(cfg);
+    return new Response("", { status: 404 });
+  }
 
   const agora = Math.floor(Date.now() / 1000);
   if (!sessaoValida(process.env, tokenDoCookie(req), agora)) {
