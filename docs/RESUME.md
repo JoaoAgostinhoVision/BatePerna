@@ -18,8 +18,23 @@ quando descobri que **não havia remote nenhum**, escolheu **repositório PÚBLI
 nenhum token no conteúdo rastreado — o único `libsql://` é placeholder de doc. O que ficou público
 e ele soube antes: **o e-mail dele é o autor de todos os commits**.
 
-🔴 **NADA DISSO FOI AO AR — publicar no GitHub não é deployar.** A branch tem 30 commits à frente
-de `main`, o merge é decisão dele no PR, e o deploy tem as travas listadas abaixo.
+🚀 **E EM 24/09 FOI AO AR.** Ele disse *"pode deployar"*. Na ordem: **PR #1 mergeado** no `main`
+(suíte verde no resultado do merge, 1110/1110) → **`apply-schema` rodado contra o Turso de
+produção** (só `CREATE ... IF NOT EXISTS`; conferido depois: tabela `avisos` existe, índice
+`avisos_por_lugar` existe, 0 linhas) → **deploy** em https://bateperna.vercel.app.
+
+✅ **CONFERIDO NO NAVEGADOR, em 390px, não só por `curl`** — e o navegador quase me enganou ao
+contrário: o HTML **servido** da Rampa numa QUINTA trazia **"Pode ir"**, que é a espécie de defeito
+que este projeto já pagou. Não era: é o primeiro render antes de o relógio do cliente entrar. Na
+tela de verdade a Rampa diz **FECHADO AGORA / ABRE SÁBADO** + *"Abre sábado e domingo."* + *"a chuva
+não decide agora"* — e como **não há aviso do dono**, a frase do calendário DEVE mesmo aparecer (é
+o C1 ao contrário, e está certo). A home agrupa as duas em **"HOJE NÃO"**. O `/admin` cai no **404
+do próprio app** ("Não achei essa trilha."), sem explicar nada: falha fechada funcionando no ar.
+
+🔴 **O QUE SEGUE FALTANDO, E É SÓ DELE:** enquanto `ADMIN_SENHA` (≥ 24 chars) e `ADMIN_SEGREDO`
+não entrarem no Vercel **pelas mãos dele**, o painel NÃO EXISTE em produção — e por isso
+**a tela do painel em 375px continua sem nenhum olho humano em cima**. Assim que ele ligar,
+esse é o primeiro lugar pra olhar.
 
 ---
 
