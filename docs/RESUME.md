@@ -31,10 +31,26 @@ não decide agora"* — e como **não há aviso do dono**, a frase do calendári
 o C1 ao contrário, e está certo). A home agrupa as duas em **"HOJE NÃO"**. O `/admin` cai no **404
 do próprio app** ("Não achei essa trilha."), sem explicar nada: falha fechada funcionando no ar.
 
-🔴 **O QUE SEGUE FALTANDO, E É SÓ DELE:** enquanto `ADMIN_SENHA` (≥ 24 chars) e `ADMIN_SEGREDO`
-não entrarem no Vercel **pelas mãos dele**, o painel NÃO EXISTE em produção — e por isso
-**a tela do painel em 375px continua sem nenhum olho humano em cima**. Assim que ele ligar,
-esse é o primeiro lugar pra olhar.
+🔐 **E O PAINEL FOI LIGADO NO MESMO DIA** — ele pediu *"gera a senha e cola no vercel"*. A senha
+(32 chars, alfabeto sem ambiguidade visual) e o `ADMIN_SEGREDO` (48 bytes) foram gerados por
+`crypto.randomBytes` **direto pra arquivo** e mandados ao Vercel por `stdin`: **os valores nunca
+passaram pelo meu contexto nem pelo terminal**. Gravados como **Secret**, só em Production, e um
+deploy novo pra valerem.
+
+**Conferido no ar, sem eu autenticar** (não uso senha dele pra entrar): `/admin` agora é **200 com
+a CAIXA DE SENHA e sem nenhum vestígio do painel** (`adm-painel` e "Publicar" ausentes do HTML — é
+a garantia do I3 valendo em produção), e `POST /api/admin/entrar` com senha errada devolve **401**
+— não 404 (que seria admin desligado) e não 200. **O login em si é dele.**
+
+📄 **A senha está em `C:\Users\joao\Desktop\BATEPERNA-SENHA-DO-PAINEL.txt`** — ele guarda no
+gerenciador do celular na primeira vez que entrar **e apaga o arquivo**. O `ADMIN_SEGREDO` não
+existe fora do Vercel, nem num arquivo.
+
+👁️ **A TELA DE LOGIN FOI VISTA POR OLHO HUMANO PELA 1ª VEZ, e tem uma observação de produto:**
+ela funciona, mas **não parece o app** — "Painel" / "Senha do painel" / campo / "Entrar" em fonte
+do sistema, alinhados à esquerda, sem a moldura creme nem a serif das outras telas. Não é defeito
+e não consertei: é decisão dele se a porta dos fundos merece a roupa da casa. **O painel DEPOIS do
+login continua sem nenhum olho em cima** — só ele pode abrir.
 
 ---
 
