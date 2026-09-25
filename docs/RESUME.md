@@ -2,6 +2,18 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
+🟡 **ÚLTIMA PARADA: 2026-09-24, fim da sessão.** Ele encerrou com ***"eu quero continuar depois,
+deixe tudo pronto para a próxima sessão"***.
+
+🔵 **O EIXO MUDOU, e é grande: a FICHA vai sair do JSON e morar no BANCO, editável pelo celular.**
+Ele pediu *"esse painel está muito simples, me ajude a fazer um painel do adm mais funcional,
+inclusive modificar por completo os itens do app"*. Brainstorm completo feito, **seis escolhas
+dele** registradas, spec escrita, plano de **7 tarefas** escrito. **A Task 1 está feita e
+fechada** (re-revisão limpa após 1 fix round).
+
+🔴 **ESTAMOS NA BRANCH `ficha-no-banco`** (a partir de `main` em `956a69d`), com 2 commits. O
+`main` está no ar e intocado. **Nada desta rodada nova foi ao ar.**
+
 🟢 **ÚLTIMA PARADA: 2026-09-24. O PLANO DE ADMIN FECHOU INTEIRO.** O eixo era `acesso de usuários`.
 As 12 tarefas, o final review da branch e a onda de 6 fixes já estavam prontos; hoje rodou **a
 re-revisão escopada que faltava** e ela **voltou limpa**: C1, I1, I2, I3, I4 e I6 todos ADDRESSED
@@ -54,21 +66,34 @@ login continua sem nenhum olho em cima** — só ele pode abrir.
 
 ---
 
-## ▶ ELE DIGITOU "CONTINUA"? O PLANO ACABOU — O QUE SOBROU É DECISÃO DELE.
+## ▶ ELE DIGITOU "CONTINUA"? A RODADA NOVA ESTÁ NO MEIO DA TASK 1 — SIGA DAÍ.
 
 > 🔴 **A regra de sempre:** *"continua"* significa **construir**, não levantar opções. Sem menu, sem
 > pergunta de abertura. Ele já disse duas vezes: *"estás saindo do contexto"* / ***"o foco é o
 > aplicativo"***.
 
-**Mas este plano não tem próximo passo de construção** — ele fechou. Então, nesta ordem:
+**O que fazer, na ordem, sem perguntar nada:**
 
-1. `git checkout admin-porta-e-aviso`; `git status` limpo; `npm test -- --run` pra conferir por
-   você mesmo (deve dar **1110/1110**), nunca só relatar o número deste arquivo.
-2. **Apresentar as três travas de deploy abaixo e a decisão de produto pendente** — curto, sem
-   menu longo. O destino da branch é escolha dele.
-3. Se ele mandar seguir sem tocar no admin, o próximo tijolo **não é deste plano**: é o eixo
-   *"o que só sabe quem já foi"* (`modos` e `waypoints[1..]` seguem mortos no `src/`), medido em
-   09/09. Nada de reabrir acervo — ele fechou em 3 fichas.
+1. `git checkout ficha-no-banco`; `git status` limpo; `npm test -- --run` — deve dar **1118/1118**.
+   Confira você mesmo; nunca relate o número deste arquivo sem rodar.
+2. Carregar `superpowers:subagent-driven-development` e ler o ledger:
+   `.superpowers/sdd/2026-09-24-ficha-no-banco-e-editor/progress.md` (as últimas ~10 linhas).
+3. **Despachar a Task 2** — a Task 1 está FECHADA (re-revisão limpa). O brief já está extraído em
+   `task-2-brief.md`, e a **BASE é `b4667c5`**. Daí em diante é o laço normal do SDD até a Task 7:
+   implementador → revisão da tarefa → fix rounds se precisar → próxima.
+4. **NÃO deployar nada** desta branch sem a trava nova da seção de travas abaixo.
+
+### 🔴 AS DUAS RULINGS DE PRÉ-FLIGHT QUE A PRÓXIMA SESSÃO TEM QUE CARREGAR NOS DISPATCHES
+
+Estão por extenso no ledger. Em uma linha cada, porque se forem esquecidas o plano quebra:
+
+- **P1 (vai no dispatch da Task 3):** o `ordenarPorNome` muda de `ficha.ts` para `ficha-fonte.ts`
+  **e a reexportação entra no MESMO commit** — senão a suíte fica vermelha entre a Task 3 e a 4, e
+  a Task 3 seria revisada com a suíte quebrada.
+- **P2 (vai no dispatch da Task 4):** o guarda "ninguém lê o disco" mira **código que lê**, não
+  palavra que aparece — `cache-rotas.ts` e `error.tsx` citam `content/fichas` em comentário, e o
+  comentário é bom. E o implementador tem que **ver o guarda ficar vermelho** com uma mutação que
+  realmente leia o disco. Guarda que nunca foi visto vermelho não é guarda.
 
 ---
 
@@ -116,6 +141,35 @@ e o `epochS` viajando dentro de `Agora`, sem terceiro hook de relógio.
 `/api/carimbo` — só o **efeito** some no prazo. Esconder o bloco junto é **uma linha**. Mantê-lo é
 defensável (o recado do dono continua sendo coisa que ele escreveu); escondê-lo é mais honesto com
 o prazo que ele mesmo escolheu. **Não decidir sozinho.**
+
+### 📍 A RODADA NOVA — as 7 tarefas
+
+| tarefa | estado |
+|---|---|
+| **1 — a tabela `ficha_versoes`** | ✅ **completa** (`956a69d..b4667c5`), 1 fix round, re-revisão limpa |
+| 2 — a semente (os 3 JSON viram versão 1) | 🔴 **próxima** — brief pronto, BASE `b4667c5` |
+| 3 — a fonte (prazo + memória + erro honesto) | ⬜ carrega a **ruling P1** |
+| 4 — o carregador vira async, o disco sai | ⬜ carrega a **ruling P2**; 11 call sites |
+| 5 — o painel vira lista → lugar | ⬜ |
+| 6 — editar a voz | ⬜ |
+| 7 — o histórico e o voltar | ⬜ |
+
+**Suíte: 1118/1118**, `tsc` limpo.
+
+### 🔴 A TRAVA DE DEPLOY NOVA DESTA RODADA — mais dura que as de setembro
+
+Quando esta branch for ao ar, **a semente tem que rodar ANTES**:
+`npx dotenv -e .env.local -- tsx scripts/semear-fichas.ts`
+
+Na rodada de 16/09, subir antes do `apply-schema` só perdia o aviso. Aqui é outra coisa: **sem a
+semente o banco não tem ficha nenhuma, e o app inteiro cai no `error.tsx`** — porque a escolha dele
+foi "erro honesto, nunca conteúdo velho". Está escrita no fim do plano também.
+
+### 🔵 A DECISÃO DE PRODUTO QUE SEGUE ESPERANDO (do plano de admin, não deste)
+
+O `AvisoDoDono` mostra o **texto** de um aviso `fechado` já vencido até a próxima busca ao
+`/api/carimbo` — só o **efeito** some no prazo. Esconder o bloco junto é **uma linha**. Mantê-lo é
+defensável (o recado é dele); escondê-lo é mais honesto com o prazo que ele mesmo escolheu.
 
 ### 🔴 TRAVAS DE DEPLOY — nada sobe sem elas
 
