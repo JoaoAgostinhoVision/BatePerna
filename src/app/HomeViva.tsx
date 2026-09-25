@@ -91,7 +91,7 @@ export default function HomeViva({
   return <LeiturasProvider value={leituras}>{children}</LeiturasProvider>;
 }
 
-/** Só entra na tela o que tem a forma do trio. Slug com corpo torto é
+/** Só entra na tela o que tem a forma da leitura. Slug com corpo torto é
  *  descartado inteiro — melhor manter a leitura velha, que ao menos se
  *  reconhece vencida, do que aceitar uma nova que não se sabe o que é. */
 function lerCorpo(x: unknown): Map<string, LeituraCarimbo> {
@@ -105,11 +105,16 @@ function lerCorpo(x: unknown): Map<string, LeituraCarimbo> {
 
 function ehLeitura(x: unknown): x is LeituraCarimbo {
   if (typeof x !== "object" || x === null) return false;
-  const { estado, erro, calculadoEm } = x as Record<string, unknown>;
+  const { estado, erro, calculadoEm, aviso } = x as Record<string, unknown>;
   return (
     (estado === "fresco" || estado === "frio") &&
     typeof erro === "boolean" &&
     typeof calculadoEm === "number" &&
-    Number.isFinite(calculadoEm)
+    Number.isFinite(calculadoEm) &&
+    // A chave `aviso` é exigida aqui pela MESMA razão que no `ehLeitura` do
+    // `Carimbo.tsx`, e a razão está escrita lá por extenso: `undefined` é corpo
+    // de servidor velho, e tratá-lo como "sem aviso" apagaria da tela um aviso
+    // que talvez exista.
+    (aviso === null || typeof aviso === "object")
   );
 }

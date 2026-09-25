@@ -62,7 +62,7 @@ function fichaFake(slug: string): Ficha {
 
 const fichas = getFichasComCondicao();
 const leituras: Record<string, LeituraCarimbo> = Object.fromEntries(
-  fichas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
+  fichas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000, aviso: null }]),
 );
 
 describe("MapaHome", () => {
@@ -86,7 +86,7 @@ describe("MapaHome", () => {
     const mistas: Record<string, LeituraCarimbo> = Object.fromEntries(
       fichas.map((f, i) => [
         f.slug,
-        { estado: i === 0 ? ("frio" as const) : ("fresco" as const), erro: false, calculadoEm: 1_800_000_000 },
+        { estado: i === 0 ? ("frio" as const) : ("fresco" as const), erro: false, calculadoEm: 1_800_000_000, aviso: null },
       ]),
     );
     const { container } = render(<MapaHome fichas={fichas} leituras={mistas} agora={relogio()} />);
@@ -124,7 +124,7 @@ describe("MapaHome", () => {
   it("leitura nova no contexto move o pin, a cor do cartão E a palavra, no mesmo quadro", () => {
     const slug = fichas[0].slug;
     const nova = new Map<string, LeituraCarimbo>([
-      [slug, { estado: "frio", erro: false, calculadoEm: 1_800_000_000 }],
+      [slug, { estado: "frio", erro: false, calculadoEm: 1_800_000_000, aviso: null }],
     ]);
     const { container } = render(
       <LeiturasProvider value={nova}>
@@ -267,7 +267,7 @@ describe("MapaHome: o enquadramento usa a janela que a tela mostra, não a caixa
       fichaEm("oeste", deslocaMetros(RAMPA, -30_000, 0)),
     ];
     const leituras: Record<string, LeituraCarimbo> = Object.fromEntries(
-      fichas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
+      fichas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000, aviso: null }]),
     );
 
     const { container } = render(<MapaHome fichas={fichas} leituras={leituras} agora={relogio()} />);
@@ -295,7 +295,7 @@ describe("MapaHome com a localização da pessoa", () => {
   afterEach(() => { localStorage.clear(); });
 
   const leiturasObj = Object.fromEntries(
-    fichas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
+    fichas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000, aviso: null }]),
   );
 
   it("sem localização, não desenha o ponto 'você' — e o mapa é o de hoje", () => {
@@ -368,7 +368,7 @@ describe("MapaHome com a localização da pessoa", () => {
   it("duas trilhas fora: o aviso vai pro plural", async () => {
     const longe: Ficha[] = [fichaFake("uma"), fichaFake("outra")];
     const dobradas = Object.fromEntries(
-      longe.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
+      longe.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000, aviso: null }]),
     );
     localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
       tipo: "escolhido", coord: { lat: -23.5, lng: -46.6 },
@@ -399,7 +399,7 @@ describe("MapaHome com a localização da pessoa", () => {
         <MapaHome
           agora={relogio()}
           fichas={[mesma]}
-          leituras={{ mesma: { estado: "fresco", erro: false, calculadoEm: 1_800_000_000 } }}
+          leituras={{ mesma: { estado: "fresco", erro: false, calculadoEm: 1_800_000_000, aviso: null } }}
         />
       </LocalVivo>,
     );
@@ -460,7 +460,7 @@ describe("MapaHome com a localização da pessoa", () => {
       tipo: "gps", coord: { lat: -8.2, lng: -35.56 }, em: 1_800_000_000,
     }));
     const leiturasTres = Object.fromEntries(
-      tres.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
+      tres.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000, aviso: null }]),
     );
     const { container, findByTestId } = render(
       <LocalVivo><MapaHome fichas={tres} leituras={leiturasTres} agora={relogio()} /></LocalVivo>,
@@ -517,7 +517,7 @@ describe("MapaHome: o filtro zerou a lista", () => {
 
   const parDe = (f: Ficha): ParFolha => ({
     ficha: f,
-    leitura: { estado: "fresco", erro: false, calculadoEm: Math.floor(Date.now() / 1000) },
+    leitura: { estado: "fresco", erro: false, calculadoEm: Math.floor(Date.now() / 1000), aviso: null },
   });
 
   /** A home inteira menos a moldura, como o `page.tsx` a monta. */
@@ -610,7 +610,7 @@ describe("MapaHome: o filtro zerou a lista", () => {
   it("filtro zera + SEM localização: mantém o enquadramento que tinha", async () => {
     const duas = [fichaEm("a", -35.56, true), fichaEm("b", -34.56, true)];
     const leiturasDuas = Object.fromEntries(
-      duas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000 }]),
+      duas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000, aviso: null }]),
     );
 
     const antes = render(<MapaHome fichas={duas} leituras={leiturasDuas} agora={relogio()} />);
@@ -671,7 +671,7 @@ describe("MapaHome: o filtro zerou a lista", () => {
       <MapaHome
         agora={relogio()}
         fichas={[uma]}
-        leituras={{ uma: { estado: "fresco", erro: false, calculadoEm: 1_800_000_000 } }}
+        leituras={{ uma: { estado: "fresco", erro: false, calculadoEm: 1_800_000_000, aviso: null } }}
       />,
     );
     const caixaCheia = cheio.container.firstElementChild;

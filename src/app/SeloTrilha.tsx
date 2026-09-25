@@ -1,5 +1,6 @@
 "use client";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+import { fechadoPeloDono } from "@/lib/aviso";
 import { faseDe, marcaDe, subDe } from "@/lib/carimbo-fase";
 import { fechadoAgora, rotuloAbertura, type Abertura, type Agora } from "@/lib/horario";
 import type { Voz } from "@/lib/severidade";
@@ -40,12 +41,34 @@ export default function SeloTrilha({
 }) {
   const venceu = useVenceu(leitura.calculadoEm);
   const fechado = fechadoAgora(abertura, agora);
-  const fase = faseDe({ conferindo: false, erro: leitura.erro, venceu, falhou: false, fechado });
+  // O relógio do dono é o MESMO `agora` do calendário (`epochS` viaja dentro
+  // dele): sem ele, no primeiro render, o aviso vale como chegou.
+  const doDono = fechadoPeloDono(leitura.aviso, agora?.epochS ?? null);
+  const fase = faseDe({
+    conferindo: false,
+    erro: leitura.erro,
+    venceu,
+    falhou: false,
+    fechado,
+    fechadoPeloDono: doDono,
+  });
 
   // A MESMA palavra e a MESMA linha de baixo do carimbo da ficha, da mesma
   // fonte — o selo é o irmão pequeno, não um segundo vocabulário.
+  //
+  // 🔴 `fechado && !doDono`, E NÃO SÓ `fechado` (2026-09-16). Na home não há
+  // `AvisoDoDono`: o cartão é a afirmação inteira. A Rampa numa quarta, com
+  // "a rampa está em reforma" valendo, saía "FECHADO AGORA / abre sábado" —
+  // e "abre sábado" é FALSO enquanto o aviso vale. O dono ganha do calendário
+  // como ganha do motor; a linha de baixo se cala, e é o `Carimbo` da ficha
+  // que faz a mesma conta (a frase do calendário só quando foi ELE que fechou).
   const marca = marcaDe(fase, leitura.estado, voz);
-  const sub = subDe(fase, leitura.estado, voz, fechado ? rotuloAbertura(abertura!, agora!) : null);
+  const sub = subDe(
+    fase,
+    leitura.estado,
+    voz,
+    fechado && !doDono ? rotuloAbertura(abertura!, agora!) : null,
+  );
 
   return (
     <span className="selo" data-fase={fase}>

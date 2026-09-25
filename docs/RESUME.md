@@ -2,152 +2,244 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🟢🟢 **ÚLTIMA PARADA: 2026-09-13.** **958/958 em 58 arquivos**, `tsc` limpo, `build` passa,
-**10 mutações medidas, 10 mortas**. 🟢 **NADA PENDENTE DE DEPLOY** — no ar e conferido nas três
-camadas, inclusive **no navegador de verdade**, as duas metades do comportamento novo.
+🟢 **ÚLTIMA PARADA: 2026-09-24. O PLANO DE ADMIN FECHOU INTEIRO.** O eixo era `acesso de usuários`.
+As 12 tarefas, o final review da branch e a onda de 6 fixes já estavam prontos; hoje rodou **a
+re-revisão escopada que faltava** e ela **voltou limpa**: C1, I1, I2, I3, I4 e I6 todos ADDRESSED
+com `file:line`, os quatro extras do fixer julgados corretos, **zero quebra nova**. Conferido por
+mim depois do veredito: 7 call sites de `fechadoPeloDono` passando relógio real, a unidade do
+`agora` do painel é SEGUNDOS (não havia bug de unidade escondido), **1110/1110 em 69 arquivos**,
+`tsc` limpo. O workspace SDD foi apagado — o registro agora é o `git log` e este arquivo.
 
-🔴 **A TAREFA ÚNICA DE ONTEM MORREU NA CHECAGEM QUE ELA MESMA MANDOU FAZER.** O plano era guardar
-os tiles do mapa no aquecimento offline; o passo 2 dizia *"confira a política do OSM antes"*.
-Conferi. **A política proíbe.** O que subiu no lugar está logo abaixo, e a decisão que sobrou é dele.
+🟢 **E O PROJETO SAIU DESTA MÁQUINA PELA PRIMEIRA VEZ.** Ele escolheu *"push + Pull Request"* e,
+quando descobri que **não havia remote nenhum**, escolheu **repositório PÚBLICO**:
+**https://github.com/JoaoAgostinhoVision/BatePerna** — `main` + `admin-porta-e-aviso` no ar, e o
+**PR #1** aberto com o diff inteiro pra ele ler no navegador.
+⚠️ **Conferido ANTES de publicar** (é irreversível): nenhum `.env` jamais entrou no histórico,
+nenhum token no conteúdo rastreado — o único `libsql://` é placeholder de doc. O que ficou público
+e ele soube antes: **o e-mail dele é o autor de todos os commits**.
+
+🔴 **NADA DISSO FOI AO AR — publicar no GitHub não é deployar.** A branch tem 30 commits à frente
+de `main`, o merge é decisão dele no PR, e o deploy tem as travas listadas abaixo.
 
 ---
 
-## ▶ ELE DIGITOU "CONTINUA"? FAÇA A TAREFA ÚNICA ABAIXO. NÃO PERGUNTE NADA.
+## ▶ ELE DIGITOU "CONTINUA"? O PLANO ACABOU — O QUE SOBROU É DECISÃO DELE.
 
-> 🔴 **A regra, e ela vale mais que o resto do arquivo:** *"continua"* significa **construir**, não
-> levantar opções. Não ofereça menu, não peça confirmação pra começar, não abra o dia com pergunta.
-> Ele já disse duas vezes o que quer — *"estás saindo do contexto"* e ***"o foco é o aplicativo"***.
->
-> **Tudo o que depende dele está marcado ⛔ NÃO É TAREFA.** Não comece por lá, e não transforme
-> nada de lá em pergunta de abertura.
+> 🔴 **A regra de sempre:** *"continua"* significa **construir**, não levantar opções. Sem menu, sem
+> pergunta de abertura. Ele já disse duas vezes: *"estás saindo do contexto"* / ***"o foco é o
+> aplicativo"***.
+
+**Mas este plano não tem próximo passo de construção** — ele fechou. Então, nesta ordem:
+
+1. `git checkout admin-porta-e-aviso`; `git status` limpo; `npm test -- --run` pra conferir por
+   você mesmo (deve dar **1110/1110**), nunca só relatar o número deste arquivo.
+2. **Apresentar as três travas de deploy abaixo e a decisão de produto pendente** — curto, sem
+   menu longo. O destino da branch é escolha dele.
+3. Se ele mandar seguir sem tocar no admin, o próximo tijolo **não é deste plano**: é o eixo
+   *"o que só sabe quem já foi"* (`modos` e `waypoints[1..]` seguem mortos no `src/`), medido em
+   09/09. Nada de reabrir acervo — ele fechou em 3 fichas.
 
 ---
 
-## ☠️ O QUE MORREU EM 13/09 — os tiles no aquecimento offline
+## 📍 O PLANO DE ADMIN — FECHADO
 
-**A tarefa:** o instalador guarda o HTML da ficha e não guarda os tiles, então instalar, sair de
-casa e abrir uma ficha **aquecida e nunca aberta** dá a ficha inteira com o mapa vazio.
+| tarefa | estado |
+|---|---|
+| 1 a 7+8 | ✅ completas em 13–15/09 |
+| **8-bis** — a home enxerga o fechado do dono | ✅ completa, 1 fix round |
+| 9 — a rota que publica e retira | ✅ completa, 1 fix round |
+| 10 — o painel | ✅ completa, **2** fix rounds |
+| 11 — o aviso na ficha | ✅ completa, review limpa |
+| **final review** (opus, branch inteira) | ✅ *With fixes* — 1 Critical, 6 Important |
+| **onda de fix** (C1, I1, I2, I3, I4, I6) | ✅ aplicada (`050dfd6..1fd4a1f`), 9 mutações com `diff -u` |
+| **re-revisão escopada da onda** | ✅ **limpa (24/09) — tudo ADDRESSED, nenhuma quebra nova** |
 
-**Medido no ar, e o número é melhor que o de ontem:**
+**Suíte: 1110/1110 em 69 arquivos**, `tsc` limpo, `npm run build` verde.
+### 🔴 O QUE O FINAL REVIEW ACHOU — e que a onda consertou (a re-revisão confirma)
 
-| | tiles distintos | bytes |
+- **C1 (Crítico, a linha vermelha):** a Rampa numa **quarta** com o dono dizendo "em reforma"
+  mostrava **"FECHADO AGORA / abre sábado"** no cartão da home e "Abre sábado e domingo." na ficha.
+  A minha ruling de 15/09 ("fechou o dono, o motivo se cala") só cobria o calendário **aberto** —
+  **o ponto cego era meu, não do implementador.** Ruling nova: **o dono ganha do calendário como
+  ganha do motor** — a linha "abre …" só sai quando `fechado && !fechadoPeloDono`.
+- **I2:** um aviso `fechado` numa página em cache offline sobrevivia ao próprio `venceEm` pra sempre.
+  Agora `fechadoPeloDono(aviso, agoraS)` só vale enquanto `venceEm > agoraS` (relógio do cliente;
+  `null` no 1º render vale como antes). **Limite honesto, agora escrito na spec:** retirada
+  ANTECIPADA só chega ao cliente na próxima busca ao `/api/carimbo`.
+- **I1:** Turso pendurado segurava ficha/home/`/api/carimbo(s)` — caminhos que antes desta branch
+  nem tocavam o banco. `comPrazo` de 2 s no aviso.
+- **I3:** o `/admin` ligado e sem cookie não tinha teste provando que mostra a caixa e NÃO o painel.
+- **I4:** a spec dizia "senha curta desliga, **com motivo explícito na tela**" — inconsistente com a
+  própria regra de falha fechada. Ruling: **falha fechada vence**; o motivo vai pro `console.warn`
+  do servidor (`senha-curta` / `sem-segredo`, nunca `ausente`), nunca pra tela pública.
+- **I6:** o guarda do `sw.test` provava a ORDEM da rota `/admin`, não o HANDLER `NetworkOnly`.
+
+**O fixer fez quatro coisas ALÉM da ruling, e a re-revisão julgou as quatro CORRETAS:** `Promise.all`
+de aviso + clima em `resolverEstado(s)` (era minor deferido — e evita que 2 s + 4 s encostem no
+timeout de 6 s do service worker); duas linhas da spec reescritas pra bater com a ruling I4 (sem
+isso a spec ficaria falsa); três fixtures com `venceEm: 0` corrigidos **sem perder o que provavam**;
+e o `epochS` viajando dentro de `Agora`, sem terceiro hook de relógio.
+
+🔵 **DECISÃO DE PRODUTO PENDENTE, E É DELE** (não entrou na re-revisão, de propósito): o
+`AvisoDoDono` ainda mostra o **texto** de um aviso `fechado` já vencido até a próxima busca ao
+`/api/carimbo` — só o **efeito** some no prazo. Esconder o bloco junto é **uma linha**. Mantê-lo é
+defensável (o recado do dono continua sendo coisa que ele escreveu); escondê-lo é mais honesto com
+o prazo que ele mesmo escolheu. **Não decidir sozinho.**
+
+### 🔴 TRAVAS DE DEPLOY — nada sobe sem elas
+
+1. ~~A re-revisão da onda~~ — ✅ **caiu em 24/09, limpa.**
+2. **A tabela `avisos` só nasce em produção com** `npx dotenv -e .env.local -- tsx scripts/apply-schema.ts`.
+   O final review confirmou: deployar ANTES disso **não derruba nada** (`lerAviso(s)` engole o erro
+   e a ficha/home seguem sem aviso) — mas a primeira publicação daria erro.
+3. **`ADMIN_SENHA` (≥ 24 chars) e `ADMIN_SEGREDO` no Vercel**, com as mãos dele. Sem elas o admin
+   é 404 e nada mais muda (confirmado pelo final review).
+4. Depois de subir: `conferir-no-ar` **abrindo o navegador** — o painel em 375px, o `sw.ts`, a
+   hidratação do relógio novo. **Nenhuma dessas telas foi vista por olho humano.**
+
+### 📋 COPY DE TELA QUE EU ESCREVI E ELE AINDA NÃO LEU
+
+Palavra de tela é escolha dele. É tela de admin (só ele vê), mas **a lista abaixo é redação minha
+que nunca passou pelos olhos dele** — o workspace onde ela morava foi apagado, então ela fica aqui:
+
+**`AvisoDoDono.tsx`** (este aparece na ficha PÚBLICA, é o que mais importa):
+"publicado hoje" · "publicado há 1 dia" · "publicado há N dias"
+
+**`PainelAdmin.tsx`** — o que cada efeito faz, mostrado enquanto ele escolhe:
+"O lugar vai aparecer FECHADO, e não por causa de chuva." · `O carimbo vai dizer "Pode ir", mesmo
+se tiver chovido.` · "O carimbo não muda — só o recado aparece na ficha." · (o texto do `frio` sai
+da voz da própria ficha, não é string fixa) · "publicado há menos de 1 dia" · atalhos de prazo
+"amanhã" / demais · erros: "Não consegui publicar." · "Não consegui tirar o aviso." · "Sem rede." ·
+botão "Publicar" / "Publicando…"
+
+**`CaixaDeSenha.tsx`:** "Senha do painel" · "Entrar" / "Entrando…" · "Senha não confere." ·
+"O painel não está configurado." · "Sem rede."
+
+Conferir a qualquer momento: `grep -n '"' src/app/AvisoDoDono.tsx src/app/admin/PainelAdmin.tsx src/app/admin/CaixaDeSenha.tsx`
+
+### 📎 OS MINORS DIFERIDOS DO PLANO DE ADMIN (triados pelo final review — nenhum trava merge)
+
+O workspace onde moravam foi apagado; ficam aqui porque são dívida conhecida, não esquecida. O
+final review triou os 14: **um virou o I3 e foi consertado**, o resto é "depois" ou "descartar".
+
+- `lerSessao`: os ramos defensivos (JSON lixo, `exp` não-número) são inalcançáveis por teste —
+  só ocorrem se `criarSessao` tiver bug. Falta comentário dizendo que são inalcançáveis por desenho.
+- `db.ts:142`: `String(r.efeito) as EfeitoAviso` sem validação em runtime — mesmo padrão já usado
+  pro `Freshness.estado`, consistente com a convenção, não risco novo.
+- `tokenDoCookie` parseia o header à mão enquanto `admin/page.tsx` usa `cookies()` do next/headers
+  — não é duplicação (é o que torna a guarda testável sem o runtime do Next), mas é parser a mais.
+- Sem teste: JSON malformado no POST do aviso · `publicadoHa` no plural / 0 dias · o caminho
+  `dentro === true` do `admin/page.tsx` (exigiria mockar next/headers + next/navigation + db juntos).
+- `ficha.css:124`: o `<p class="reason">` vazio no fechado-do-dono ganha `margin: .85rem auto 0` e
+  sobra folga vertical. **A Task 11 pôs o texto do dono ali — some sozinho, mas ninguém viu em 375px.**
+- Um teste derivado da Task 10 usa `screen.getByText` global em vez de escopar ao bloco da ficha —
+  passa hoje por ausência de colisão de strings.
+
+### ⚠️ O QUE ESTA SESSÃO APRENDEU
+
+**1. Previsão de brief é hipótese, não fato — quatro vezes hoje.** Task 9 M3 (`<=`→`<` só difere
+no instante exato; o brief testava `agora - 1`), Task 10 M2 (nenhum teste do brief selecionava
+`frio`), Task 11 M3 e M4 (`textContent === ""` aceita caixa vazia; nenhum fixture caía em "há 1
+dia"). Todas previam "MORRE" e sobreviveriam. A regra *"se sobreviver, escreva o teste que mata
+NESTA tarefa"* pegou as quatro.
+
+**2. O risco que eu NOMEIO no dispatch do revisor é o que ele acha.** Na Task 10 escrevi *"confira
+se 'Não vá' é literal num componente que serve as 3 fichas"* — e era: a voz da Rampa virando a
+língua de todas, de novo, em arquivo novo, no MESMO commit em que a função vizinha acertou. Nomear
+o risco não é pré-julgar o veredito.
+
+**3. A frase falsa pode ser MINHA.** Na Task 10 mandei omitir o calendário "porque o servidor não
+tem relógio de tela" — falso (`agora` chega por prop, `horario.ts` tem as funções puras). O
+re-revisor pegou o comentário; a correção foi corrigir a **ruling**, não o implementador. E o C1
+do final review é a mesma coisa uma camada acima: a ruling de 15/09 só cobria metade da interseção.
+
+**4. O brief da Task 10 não tinha como cumprir a spec.** "Botão de tirar" exige `DELETE ?id=N`, e
+o `Aviso` que chega ao painel viaja **sem id** por desenho. O painel lê `avisosVigentes` por fora.
+Conferir interface no código real ANTES do dispatch achou isso; ler o brief não acharia.
+
+**5. Mutação que não aplica por CRLF fica verde** — o fixer viu o `diff -u` vazio e refez. É a
+espécie de 11/09 ("mutação não aplicada é indistinguível de sobrevivente") e o remédio funcionou.
+
+**6. O guarda de tracing pegou DUAS rotas novas** (`/api/admin/aviso` e `/admin`) lendo `content/`
+via fs — sem ele, produção não acharia as fichas. Guarda que já existia, fazendo o trabalho.
+
+**7. O bloco do aviso mora DENTRO do `Carimbo`, não no `page.tsx`** — o brief o punha no servidor,
+mas o `Carimbo` troca a leitura (aviso incluso) a cada busca; um aviso retirado ficaria na tela.
+Uma fonte por pergunta, de novo.
+
+⚠️ **A dívida de navegador continua e cresceu:** `sw.ts`, o painel de admin, o bloco do aviso na
+ficha, o relógio `epochS` dentro de `Agora` — nada visto em 375px.
+
+---
+
+## 🧭 O QUE ESTA RODADA É, EM UMA TELA
+
+Ele pediu **"acesso de usuários"** e, na conversa, isso se separou em **dois sistemas diferentes**:
+
+| | **conta de admin** | **conta de usuário** |
 |---|---|---|
-| uma ficha | 15 (a Pedra Furada, 8) | ≈ 105 KB |
-| a home | 10 | ≈ 70 KB |
-| **as 3 fichas, sem repetir** | **38** | **≈ 259 KB** |
-| as 3 fichas + a home | 48 | ≈ 328 KB |
+| quantas pessoas | 1 (ele) | muitas |
+| obrigatória? | pra ele, sim | **não** — *"seria algo não necessário para usar"* |
+| pra quê | editar ficha, corrigir carimbo, publicar aviso — do celular | levar os dados pra outro celular + *"recursos que serão implementados futuramente"* |
+| risco se vazar | **o app inteiro** | os dados de uma pessoa |
 
-⚠️ **E a home não compartilha NENHUM tile com as fichas** (38 + 10 = 48, sem sobreposição) — e
-offline a home **nunca rende**: `planoDaRaiz` serve `/trilhas`, que tem **0 tiles**. Os 70 KB dela
-seriam baixados pra ninguém ver. Isso já cortava a home antes de qualquer política.
+**Só a conta de admin está sendo construída.** A de usuário (com login social, que foi o pedido
+dele) fica pra quando os "recursos futuros" tiverem nome — hoje ela não teria o que guardar.
 
-### 🔴 E aí a política cortou o resto
-
-[Tile Usage Policy do OSM](https://operations.osmfoundation.org/policies/tiles/), lida em 13/09.
-Ela proíbe pelo **PADRÃO**, não pelo volume:
-
-> "You must not: Bulk download ('scrape') tiles **or offer prefetch features**."
->
-> "Bulk downloading is any **pre-emptive fetching of tiles other than those a user is actively
-> viewing**."
->
-> "**Offline use is not permitted on tile.openstreetmap.org.**"
->
-> Não permitido: "any 'download for offline' button **or background job that fetches tiles a user
-> is not currently viewing**."
-
-O `install` do service worker buscando 38 tiles é, ao pé da letra, **um background job buscando
-tile que ninguém está olhando**. *"São só 38"* não é defesa: não há faixa de tolerância no texto, e
-a sanção declarada é **bloqueio sem aviso** — o mapa sumiria pra todo mundo, **online inclusive**,
-pra ganhar mapa offline de uma ficha nunca aberta. Troca ruim.
-
-✅ **O que a MESMA política permite continua de pé e já estava no ar:** o `CacheFirst` do
-`bp-tiles-osm` — *"re-visits served from your local cache"*. **Ficha que ele ABRIU uma vez mantém o
-mapa offline.** O buraco é só a ficha aquecida e nunca aberta.
-
-**Onde isso está travado pra não ressuscitar:** o guarda *"o aquecimento NUNCA busca tile"* em
-`tests/lib/cache-rotas.test.ts`, com as citações inteiras, mais o doc de `ehTileOsm`. Sem ele, a
-próxima sessão lê um plano velho e implementa sem reler a política.
+**A arquitetura sai da régua que o projeto já tem**, no `nuncaCachear`: *"o resto da ficha é verdade
+parada; o placar não é."* O que apodrece (aviso, carimbo) vai pro **Turso** e é instantâneo; verdade
+parada (texto de ficha) vira **commit autorado por ele**, versionado, ~2min. É isso que faz a
+procedência deixar de ser disciplina minha e virar `git blame`.
 
 ---
 
-## ✅ O QUE SUBIU NO LUGAR — o mapa dizendo que não tem mapa
+## 🚦 O QUE ESTÁ ESPERANDO DECISÃO DELE (não abra o dia com isto)
 
-O que sobrava na tela era **um pin verde boiando num retângulo vazio**: alfinete marcando nada, com
-cara de mapa que carregou. Agora sobra uma linha:
-
-> **Sem o mapa, vale a coordenada abaixo.**
-
-E ela é verdadeira: a coordenada, a nota do waypoint e o "Abrir no mapa" estão logo ali embaixo.
-
-**Como funciona sem uma linha de JS** (o mapa é server component de propósito, e virar client
-component só pra ouvir `onError` é caro demais pra um recado): o `<p>` fica **antes** do mosaico no
-DOM, com `z-index: 0`. Os tiles são `<img>` **opacos** e `.wp-tiles` é **transparente** — quando
-eles pintam, o recado some por baixo deles. Quando não pintam, ele aparece.
-
-🔴 **E abrir o navegador achou um defeito que a suíte não acharia** (de novo): a primeira versão
-centrava com `left:0; right:0; max-width:300px; margin:0 auto`, e **o Chrome resolveu as duas
-margens em 0px** — no ar, o recado ficou **colado na esquerda**. O clamp do `max-width` não re-roda
-o cálculo das margens automáticas. Não é estética: `.wp-tiles` tem 480px fixos **centrados** dentro
-de uma `.wp-mapa` fluida, então **só o que está centrado fica garantidamente dentro da faixa dos
-tiles** — encostado numa borda, o recado vaza pra fora do mosaico e passa a aparecer **por cima de
-um mapa que carregou**, em todo mundo, o tempo todo. Corrigido com `left:50%` + `translateX(-50%)`,
-e os dois lados viraram guarda.
-
-**As 10 mutações medidas, todas mortas:** o recado sumindo · o recado passando pra depois do
-mosaico · `.wp-tiles` ganhando `background` · ganhando `background-color` · o `z-index` subindo ·
-o `margin:0 auto` voltando · o `translateX` sumindo · o recado ficando mais largo que a faixa ·
-o aquecimento voltando a buscar tile · o aquecimento não buscando nada (a vacuidade do anterior).
-
-**Conferido no navegador, as duas metades:** com os 15 tiles carregados o recado está **centrado na
-faixa, dentro dela, e coberto por `IMG` nos quatro cantos**; com os 15 quebrados ele **aparece,
-centrado e legível**.
+1. **`ADMIN_SENHA` e `ADMIN_SEGREDO`** — ele cria e põe no Vercel, com as próprias mãos. **Nada
+   disso bloqueia a construção:** a porta falha fechada, então o código sobe com o admin
+   simplesmente não existindo. Ele liga quando quiser.
+2. **Token do GitHub** de escopo mínimo — só na etapa 4 (editar ficha), que não está neste plano.
+3. **Limite de tentativas por IP** — deixei de fora de propósito (senha de 24+ caracteres já cobre).
+4. **"Criar ficha nova pelo app"** — é a etapa 6, fora deste plano, e colide com a regra dele de
+   09/09 (acervo fechado em 3).
 
 ---
 
-## ✅ A TAREFA ÚNICA DA PRÓXIMA VEZ
+## ✅ A OUTRA RODADA DO DIA, JÁ FECHADA E NO AR (13/09, primeira metade)
 
-🔴 **Antes dela, leia o ⛔ 0 logo abaixo** — a decisão dele sobre a FONTE dos tiles pode mudar o que
-vale a pena fazer no mapa. Se ele não tocar no assunto, **não pergunte: faça a tarefa abaixo.**
+**A tarefa dos tiles no aquecimento offline MORREU na checagem que ela mesma mandou fazer.** A
+[Tile Usage Policy do OSM](https://operations.osmfoundation.org/policies/tiles/) proíbe *"prefetch
+features"* e *"any background job that fetches tiles a user is not currently viewing"* — **pelo
+padrão, não pelo volume**, com sanção de bloqueio sem aviso. Medido antes de desistir: **38 tiles ≈
+259 KB** pelas 3 fichas (a home não compartilha nenhum tile com elas, e offline nunca rende).
 
-**`trajeto.waypoints[1..]` — o dado que carrega, valida, tem teste e NUNCA aparece na tela.**
+**Subiu no lugar:** o mapa dizendo que não tem mapa — *"Sem o mapa, vale a coordenada abaixo."* —
+sem uma linha de JS. Antes sobrava um pin verde boiando num retângulo vazio. **958/958**, 10
+mutações medidas e mortas, no ar e conferido no navegador nas duas metades.
 
-O schema aceita `waypoints` com N entradas (`src/types/ficha.ts`, `.min(1)`), e **todo lugar do
-`src/` lê só `waypoints[0]`** — `CartaoTrilha`, `ListaDoAcervo`, `MapaHome`, `[slug]/page.tsx`,
-`ficha.ts`, `geo.ts`. As 3 fichas têm exatamente 1 waypoint cada. É a espécie já catalogada, e é
-justamente o eixo que a medição de 09/09 apontou como vazio: **"o que só sabe quem já foi"**.
+🔴 **E o navegador achou o que a suíte não acha, de novo:** `margin: 0 auto` com `max-width` fez o
+Chrome resolver as duas margens em **0px** — no ar, o recado colado na esquerda, vazando pra fora da
+faixa dos tiles e ameaçando aparecer **por cima de um mapa que carregou**. Corrigido com
+`left:50%` + `translateX(-50%)`, e os dois lados viraram guarda.
 
-⚠️ **O QUE TRAVA, E POR ISSO A TAREFA NÃO É "RENDERIZAR" E SIM "PERGUNTAR":** waypoint novo é
-**fato novo sobre lugar real**, e isso só vem dele. O acervo está **FECHADO em 3 fichas** e a regra
-segue: **não criar ficha nem pesquisar lugar novo.** Então a tarefa é, nesta ordem:
-
-1. **Medir primeiro, sem escrever código:** confirmar nome a nome que `waypoints[1..]` é morto no
-   `src/` e que nenhum teste finge o contrário. Se estiver vivo em algum canto, a tarefa muda e é
-   isso que se reporta.
-2. **Levar a ele UMA pergunta concreta, com a ficha na mão** — não um questionário: *"na Rampa do
-   Pepê, tem algum ponto no caminho que você marcaria além do começo da trilha?"*. Uma ficha, uma
-   pergunta. Ele já disse que odeia menu.
-3. **Só depois construir**, com a palavra dele, e com a régua de procedência de sempre.
-
-Se ele não responder, **a saída de SUBTRAÇÃO é a sua**: `.min(1)` vira `.length(1)` e o campo para
-de prometer o que o app não entrega. Essa não precisa dele.
+O guarda que impede a tarefa dos tiles de ressuscitar mora em `tests/lib/cache-rotas.test.ts`, com
+as citações da política inteiras.
 
 ---
 
 ### 🔒 O RITUAL DE FECHAMENTO — vale pra qualquer tarefa
 
-O `--scope` **não é opcional** — sem ele dá `Not authorized`:
-
 ```
 npx --yes vercel@latest --prod --yes --scope bate-perna
 ```
 
-Depois, **conferir no domínio real** (`https://bateperna.vercel.app`) — `● Ready` não prova
-conteúdo. Marcadores **sem acento**, sempre (lição de 09/09).
+O `--scope` **não é opcional**. Depois, conferir no domínio real — `● Ready` não prova conteúdo.
+Marcadores **sem acento**, sempre.
 
-🔴 **E A LIÇÃO QUE JÁ COBROU TRÊS VEZES:** as camadas 1 e 2 **não bastam**. O HTML pré-renderizado
-mentiu sobre o carimbo (11/09), o cache mentiu sobre o estado (11/09), e o CSS mentiu sobre a
-posição do recado (13/09) — **as três só apareceram no navegador aberto.** **Tem que abrir.**
+🔴 **E A LIÇÃO QUE JÁ COBROU QUATRO VEZES:** as camadas 1 e 2 **não bastam**. O HTML pré-renderizado
+mentiu sobre o carimbo (11/09), o cache mentiu sobre o estado (11/09), o CSS mentiu sobre a posição
+do recado (13/09) — e agora o `defaultCache` do serwist guardaria o painel de admin sem nenhum teste
+reclamar (13/09), num caminho que **nem existe em desenvolvimento**. **Tem que abrir.**
 
 ---
 

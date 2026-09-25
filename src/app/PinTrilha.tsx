@@ -1,5 +1,6 @@
 "use client";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+import { fechadoPeloDono } from "@/lib/aviso";
 import { faseDe } from "@/lib/carimbo-fase";
 import { fechadoAgora, type Abertura, type Agora } from "@/lib/horario";
 import { tomDe, type Severidade } from "@/lib/severidade";
@@ -38,7 +39,7 @@ export default function PinTrilha({
   /** O nível desta trilha: o pin é pintado pelo TOM, igual ao cartão e ao selo.
    *  Sem ele o mapa seria a quarta boca a discordar das outras três. */
   severidade: Severidade;
-  /** A hora de Recife em minutos, ou `null` no primeiro render. Chega por prop
+  /** O relógio de Recife (`Agora`), ou `null` no primeiro render. Chega por prop
    *  pela mesma razão que a leitura chega: são N pins, e a fonte tem que ser
    *  UMA — quem lê o relógio é o `MapaHome`, uma vez só. */
   agora?: Agora | null;
@@ -51,6 +52,9 @@ export default function PinTrilha({
     venceu,
     falhou: false,
     fechado: fechadoAgora(abertura, agora),
+    // O mesmo relógio do calendário decide o prazo do aviso (`epochS` viaja
+    // dentro de `agora`); `null` no primeiro render, o aviso vale como chegou.
+    fechadoPeloDono: fechadoPeloDono(leitura.aviso, agora?.epochS ?? null),
   });
 
   return (

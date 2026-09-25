@@ -10,17 +10,17 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(AGORA_MS);
   vi.mocked(resolverEstado).mockResolvedValue({
-    estado: "fresco", erro: false, calculadoEm: AGORA_S,
+    estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null
   });
 });
 afterEach(() => { vi.useRealTimers(); vi.mocked(resolverEstado).mockReset(); });
 
 describe("route /api/carimbo", () => {
-  it("devolve o trio da leitura", async () => {
+  it("devolve a leitura inteira", async () => {
     const { GET } = await import("@/app/api/carimbo/route");
     const res = await GET(new Request("http://x/api/carimbo?slug=rampa-do-pepe"));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ estado: "fresco", erro: false, calculadoEm: AGORA_S });
+    expect(await res.json()).toEqual({ estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null });
   });
 
   it("nunca é guardada — leitura de chuva vinda de cache é leitura mentirosa", async () => {
@@ -45,7 +45,7 @@ describe("route /api/carimbo", () => {
     // O cliente precisa distinguir 'não consegui ler a chuva' de 'a requisição
     // nem chegou'. As duas coisas viram telas diferentes.
     vi.mocked(resolverEstado).mockResolvedValue({
-      estado: "frio", erro: true, calculadoEm: AGORA_S,
+      estado: "frio", erro: true, calculadoEm: AGORA_S, aviso: null
     });
     const { GET } = await import("@/app/api/carimbo/route");
     const res = await GET(new Request("http://x/api/carimbo?slug=rampa-do-pepe"));

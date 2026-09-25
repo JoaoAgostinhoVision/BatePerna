@@ -230,11 +230,13 @@ export function passaNoFiltro({
   filtros: Filtros;
   voce: Coord | null;
   confia: boolean;
-  /** Este lugar está fechado AGORA — por hora ou por dia da semana.
+  /** Este lugar está fechado AGORA — por hora, por dia da semana, ou pelo
+   *  dono. Quem junta as causas é `fechadoHoje`, em `horario.ts`.
    *
    *  Vem de fora porque quem tem o relógio é a tela (`MioloHome`), e este
    *  módulo é puro. `false` no primeiro render, antes de o relógio falar: o
-   *  app não esconde por um fechamento que ainda não sabe se existe. */
+   *  calendário ainda não sabe se existe, mas o dono já pode ter fechado
+   *  desde então — ver `fechadoHoje`. */
   fechado: boolean;
 }): boolean {
   // REGRA DE HONESTIDADE 1: "dá hoje" só esconde o que o motor MEDIU. Sem

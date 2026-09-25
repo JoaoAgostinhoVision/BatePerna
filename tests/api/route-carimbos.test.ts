@@ -12,10 +12,10 @@ const { getFichasComCondicao } = await import("@/lib/ficha");
 afterEach(() => { vi.mocked(resolverEstados).mockReset(); });
 
 describe("GET /api/carimbos", () => {
-  it("devolve um objeto slug -> trio, com todas as trilhas com condição", async () => {
+  it("devolve um objeto slug -> leitura, com todas as trilhas com condição", async () => {
     const slugs = getFichasComCondicao().map((f) => f.slug);
     vi.mocked(resolverEstados).mockResolvedValue(
-      new Map(slugs.map((s) => [s, { estado: "fresco" as const, erro: false, calculadoEm: 42 }])),
+      new Map(slugs.map((s) => [s, { estado: "fresco" as const, erro: false, calculadoEm: 42, aviso: null }])),
     );
 
     const res = await GET();
@@ -24,7 +24,7 @@ describe("GET /api/carimbos", () => {
     expect(res.status).toBe(200);
     expect(resolverEstados).toHaveBeenCalledWith(getFichasComCondicao());
     for (const s of slugs) {
-      expect(corpo[s]).toEqual({ estado: "fresco", erro: false, calculadoEm: 42 });
+      expect(corpo[s]).toEqual({ estado: "fresco", erro: false, calculadoEm: 42, aviso: null });
     }
   });
 

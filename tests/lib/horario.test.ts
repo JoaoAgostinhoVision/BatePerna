@@ -5,6 +5,7 @@ import {
   abreAindaHoje,
   agoraRecife,
   fechadoAgora,
+  fechadoHoje,
   minutosDeHHMM,
   minutosDoDiaRecife,
   rotuloAbertura,
@@ -14,6 +15,7 @@ import {
   type Agora,
   type Horario,
 } from "@/lib/horario";
+import type { Aviso } from "@/lib/aviso";
 
 // 🔴 O DEFEITO QUE ESTE ARQUIVO TRANCA (2026-08-27). O carimbo só olhava CHUVA.
 // A Pedra Furada fecha às 17h, então às 18h com céu limpo a ficha dizia
@@ -29,9 +31,14 @@ const h = (hh: number, mm = 0) => hh * 60 + mm;
 // Sem eles, "18h é fechado" passaria a depender também do dia, e uma quebra no
 // eixo do dia derrubaria testes que falam de hora — ruído no lugar de sinal.
 const QUARTA = 3;
+// O instante de onde hora e dia "saíram": qualquer epoch serve pra este
+// arquivo, que fala de hora e dia, não de segundos — só `fechadoHoje` o lê, pra
+// comparar com o prazo do aviso do dono (`avisoDe`, lá embaixo, vence DEPOIS).
+const INSTANTE = 1_800_000_000;
 const so = (horario?: Horario): Abertura => ({ horario });
+const em = (minutos: number, dia: number): Agora => ({ minutos, dia, epochS: INSTANTE });
 const as = (minutos: number | null): Agora | null =>
-  minutos === null ? null : { minutos, dia: QUARTA };
+  minutos === null ? null : em(minutos, QUARTA);
 
 describe("minutos do dia, em Recife", () => {
   it("converte 'HH:MM'", () => {
@@ -148,6 +155,7 @@ describe("agoraRecife — um relogio so, hora e dia do mesmo instante", () => {
     expect(agoraRecife(Date.UTC(2027, 0, 17, 0, 0) / 1000)).toEqual({
       minutos: 21 * 60,
       dia: 6, // sabado
+      epochS: Date.UTC(2027, 0, 17, 0, 0) / 1000, // o instante viaja junto
     });
   });
 
@@ -155,6 +163,7 @@ describe("agoraRecife — um relogio so, hora e dia do mesmo instante", () => {
     expect(agoraRecife(Date.UTC(2027, 0, 17, 3, 0) / 1000)).toEqual({
       minutos: 0,
       dia: 0, // domingo
+      epochS: Date.UTC(2027, 0, 17, 3, 0) / 1000,
     });
   });
 
@@ -186,8 +195,8 @@ describe("fechadoAgora junta a hora e o dia", () => {
   // 🔴 O DEFEITO EXATO QUE ESTAVA NO AR: a Rampa não tem horário nenhum, então
   // o eixo da hora diz "aberto" o dia inteiro. Só o eixo do dia a fecha.
   it("ficha SEM horário fecha pelo dia — era isto que dizia que dava pra ir na quarta", () => {
-    expect(fechadoAgora(RAMPA, { minutos: h(12), dia: QUA })).toBe(true);
-    expect(fechadoAgora(RAMPA, { minutos: h(12), dia: SAB })).toBe(false);
+    expect(fechadoAgora(RAMPA, em(h(12), QUA))).toBe(true);
+    expect(fechadoAgora(RAMPA, em(h(12), SAB))).toBe(false);
   });
 
   // O par ortogonal: ficha SEM dias não pode passar a fechar por dia nenhum.
@@ -195,7 +204,7 @@ describe("fechadoAgora junta a hora e o dia", () => {
   // acervo inteiro e o teste de cima continuaria verde.
   it("ficha SEM dias não fecha por dia — nos sete", () => {
     for (let d = 0; d < 7; d++) {
-      expect(fechadoAgora(SO_HORA, { minutos: h(12), dia: d }), "dia " + d).toBe(false);
+      expect(fechadoAgora(SO_HORA, em(h(12), d)), "dia " + d).toBe(false);
     }
   });
 
@@ -204,28 +213,28 @@ describe("fechadoAgora junta a hora e o dia", () => {
   // está aberto pelo dia e fechado pela hora, e um && no lugar do || diria que
   // dá pra ir.
   it("basta UM dos eixos fechar", () => {
-    expect(fechadoAgora(AMBOS, { minutos: h(12), dia: SAB })).toBe(false); // dia ok, hora ok
-    expect(fechadoAgora(AMBOS, { minutos: h(18), dia: SAB })).toBe(true);  // dia ok, hora não
-    expect(fechadoAgora(AMBOS, { minutos: h(12), dia: QUA })).toBe(true);  // dia não, hora ok
-    expect(fechadoAgora(AMBOS, { minutos: h(18), dia: QUA })).toBe(true);  // nenhum dos dois
+    expect(fechadoAgora(AMBOS, em(h(12), SAB))).toBe(false); // dia ok, hora ok
+    expect(fechadoAgora(AMBOS, em(h(18), SAB))).toBe(true);  // dia ok, hora não
+    expect(fechadoAgora(AMBOS, em(h(12), QUA))).toBe(true);  // dia não, hora ok
+    expect(fechadoAgora(AMBOS, em(h(18), QUA))).toBe(true);  // nenhum dos dois
   });
 
   // 🔴 O DIA GANHA DA HORA NA FRASE, e não é arbitrário: numa quarta-feira, num
   // lugar que só abre sábado, dizer "abre às 5h" é verdade sobre o relógio e
   // mentira sobre a viagem. Quem perdeu o dia precisa ouvir do dia.
   it("fechada pelos dois, a frase fala do DIA — não da hora", () => {
-    expect(rotuloAbertura(AMBOS, { minutos: h(18), dia: QUA })).toBe("abre sábado");
-    expect(rotuloAbertura(AMBOS, { minutos: h(18), dia: SEX })).toBe("abre amanhã");
+    expect(rotuloAbertura(AMBOS, em(h(18), QUA))).toBe("abre sábado");
+    expect(rotuloAbertura(AMBOS, em(h(18), SEX))).toBe("abre amanhã");
   });
 
   // E no dia em que ABRE, quem fala é a hora: aí o dia não tem nada a dizer.
   it("aberta pelo dia e fechada pela hora, a frase volta a ser da hora", () => {
-    expect(rotuloAbertura(AMBOS, { minutos: h(18), dia: SAB })).toBe("abre amanhã às 5h");
-    expect(rotuloAbertura(AMBOS, { minutos: h(4), dia: DOM })).toBe("abre às 5h");
+    expect(rotuloAbertura(AMBOS, em(h(18), SAB))).toBe("abre amanhã às 5h");
+    expect(rotuloAbertura(AMBOS, em(h(4), DOM))).toBe("abre às 5h");
   });
 
   it("aberta pelos dois, não há frase de abertura — o app cala", () => {
-    expect(rotuloAbertura(AMBOS, { minutos: h(12), dia: SAB })).toBeNull();
+    expect(rotuloAbertura(AMBOS, em(h(12), SAB))).toBeNull();
   });
 
   // A frase do motivo, na ficha. Com os dois eixos declarados as DUAS saem: são
@@ -234,6 +243,63 @@ describe("fechadoAgora junta a hora e o dia", () => {
     expect(rotuloFaixa(RAMPA)).toBe("Abre sábado e domingo.");
     expect(rotuloFaixa(SO_HORA)).toBe("Fecha às 17h, abre às 5h.");
     expect(rotuloFaixa(AMBOS)).toBe("Abre sábado e domingo. Fecha às 17h, abre às 5h.");
+  });
+});
+
+// 🔴 A SEGUNDA CAUSA (2026-09-16). `fechadoAgora` só sabe do calendário; o
+// dono fecha por fora dele, e `fechadoHoje` é a ÚNICA função que junta as
+// duas. Nasceu do achado da revisão das Tasks 7+8: `MioloHome` e
+// `FolhaTrilhas` chamavam `fechadoAgora` cada um por sua conta, e os dois
+// ficaram cegos ao dono.
+//
+// `venceEm` DEPOIS do `INSTANTE` de `em()`: desde 2026-09-16 o aviso só fecha
+// enquanto vale, e um `venceEm: 0` aqui faria o dono "perder" pra um prazo
+// vencido — o teste de cima passaria a provar outra coisa (o fixture rejeitado
+// pela guarda ERRADA, espécie já catalogada). O prazo vencido tem teste próprio.
+const avisoDe = (efeito: Aviso["efeito"], venceEm = INSTANTE + 3600): Aviso => ({
+  texto: "aviso de teste",
+  efeito,
+  criadoEm: 0,
+  venceEm,
+});
+
+describe("fechadoHoje junta o calendário e o dono", () => {
+  // 🔴 O RELÓGIO É O MESMO (2026-09-16): `epochS` sai do mesmo `Agora` que dá
+  // hora e dia ao calendário. Um aviso `fechado` já vencido pelo próprio prazo
+  // não fecha mais — é o que separa "o dono fechou até sábado" de "o dono
+  // fechou pra sempre" numa ficha aberta do cache dias depois.
+  it("calendário aberto, dono fechou mas o aviso VENCEU — aberto: o prazo é do dono também", () => {
+    expect(fechadoHoje(so(PEDRA), avisoDe("fechado", INSTANTE - 1), as(h(9)))).toBe(false);
+    // O instante exato do prazo já é vencido — o `>` estrito de `avisoVigente`.
+    expect(fechadoHoje(so(PEDRA), avisoDe("fechado", INSTANTE), as(h(9)))).toBe(false);
+  });
+
+  it("calendário FECHADO e aviso vencido — fechado, pelo calendário", () => {
+    expect(fechadoHoje(so(PEDRA), avisoDe("fechado", INSTANTE - 1), as(h(18)))).toBe(true);
+  });
+
+  it("calendário aberto, sem aviso — aberto", () => {
+    expect(fechadoHoje(so(PEDRA), null, as(h(9)))).toBe(false);
+  });
+
+  it("calendário FECHADO, sem aviso — fechado pelo calendário, como sempre foi", () => {
+    expect(fechadoHoje(so(PEDRA), null, as(h(18)))).toBe(true);
+  });
+
+  it("calendário aberto, dono fechou — o dono ganha do calendário", () => {
+    expect(fechadoHoje(so(PEDRA), avisoDe("fechado"), as(h(9)))).toBe(true);
+  });
+
+  it("aviso que não fecha não fecha", () => {
+    expect(fechadoHoje(so(PEDRA), avisoDe("frio"), as(h(9)))).toBe(false);
+  });
+
+  it("agora === null, dono fechou — o dono não precisa do relógio: já no primeiro render", () => {
+    expect(fechadoHoje(so(PEDRA), avisoDe("fechado"), null)).toBe(true);
+  });
+
+  it("agora === null, sem aviso — o comportamento de hoje, preservado", () => {
+    expect(fechadoHoje(so(PEDRA), null, null)).toBe(false);
   });
 });
 

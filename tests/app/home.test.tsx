@@ -42,7 +42,7 @@ const AGORA_S = Math.floor(Date.UTC(2027, 0, 16, 11, 0) / 1000);
 
 function leituras(estado: "fresco" | "frio", erro = false) {
   return new Map(
-    getFichasComCondicao().map((f) => [f.slug, { estado, erro, calculadoEm: AGORA_S }]),
+    getFichasComCondicao().map((f) => [f.slug, { estado, erro, calculadoEm: AGORA_S, aviso: null }]),
   );
 }
 
@@ -107,8 +107,8 @@ describe("a home", () => {
     vi.mocked(getFichasComCondicao).mockReturnValueOnce([seca, molhada]);
     vi.mocked(resolverEstados).mockResolvedValue(
       new Map([
-        ["seca", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S }],
-        ["molhada", { estado: "frio" as const, erro: false, calculadoEm: AGORA_S }],
+        ["seca", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S, aviso: null }],
+        ["molhada", { estado: "frio" as const, erro: false, calculadoEm: AGORA_S, aviso: null }],
       ]),
     );
 
@@ -137,11 +137,11 @@ describe("a home", () => {
     vi.mocked(getFichasComCondicao).mockReturnValueOnce([molhada, seca, instavel]);
     vi.mocked(resolverEstados).mockResolvedValue(
       new Map([
-        ["molhada", { estado: "frio" as const, erro: false, calculadoEm: AGORA_S }],
-        ["seca", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S }],
+        ["molhada", { estado: "frio" as const, erro: false, calculadoEm: AGORA_S, aviso: null }],
+        ["seca", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S, aviso: null }],
         // erro:true em qualquer par derruba `confia` (ver MioloHome.tsx) —
         // é o que tira os cabeçalhos e força o caminho que não reordena.
-        ["instavel", { estado: "frio" as const, erro: true, calculadoEm: AGORA_S }],
+        ["instavel", { estado: "frio" as const, erro: true, calculadoEm: AGORA_S, aviso: null }],
       ]),
     );
 
@@ -150,6 +150,40 @@ describe("a home", () => {
     expect(container.querySelectorAll(".grupo-k")).toHaveLength(0); // confirma: caiu no caminho sem cabeçalho
     const ids = Array.from(container.querySelectorAll(".cartao")).map((el) => el.id);
     expect(ids).toEqual(["seca", "molhada", "instavel"]);
+  });
+
+  // 🔴 A REINCIDÊNCIA LITERAL DO ACHADO DAS TASKS 7+8 (2026-09-16): `pares`
+  // ordenava só por `estado`, então um lugar seco (fresco) que o dono fechou
+  // por aviso ia pra frente da fila como se desse pra ir. Mesmo caminho do
+  // teste acima (erro:true derruba `confia` e força o ramo liso, que é o único
+  // que expõe a ordem que a PÁGINA calcula).
+  it("um lugar seco fechado pelo DONO não é 'fresco primeiro' — a ordem olha as duas causas", async () => {
+    const emReforma = fichaFake("emReforma");
+    const seca = fichaFake("seca");
+    const instavel = fichaFake("instavel");
+    vi.mocked(getFichasComCondicao).mockReturnValueOnce([emReforma, seca, instavel]);
+    vi.mocked(resolverEstados).mockResolvedValue(
+      new Map([
+        [
+          "emReforma",
+          {
+            estado: "fresco" as const,
+            erro: false,
+            calculadoEm: AGORA_S,
+            aviso: { texto: "em reforma", efeito: "fechado" as const, criadoEm: AGORA_S - 3600, venceEm: AGORA_S + 86_400 },
+          },
+        ],
+        ["seca", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S, aviso: null }],
+        // erro:true em qualquer par derruba `confia` e força o ramo liso.
+        ["instavel", { estado: "frio" as const, erro: true, calculadoEm: AGORA_S, aviso: null }],
+      ]),
+    );
+
+    const { container } = render(await Home());
+
+    expect(container.querySelectorAll(".grupo-k")).toHaveLength(0); // confirma: caiu no caminho sem cabeçalho
+    const ids = Array.from(container.querySelectorAll(".cartao")).map((el) => el.id);
+    expect(ids).toEqual(["seca", "emReforma", "instavel"]);
   });
 
   it("barro medido diz 'Não vá' — a regra tem dois lados, e este é o outro", async () => {
@@ -260,7 +294,7 @@ describe("SeloTrilha — o relógio da validade", () => {
     // worker) mostrariam. `render()` sozinho já drena o efeito — perguntar
     // ao DOM depois dele já responde com o valor CORRIGIDO, escondendo
     // justamente o quadro que este teste precisa provar.
-    const leituraVelha = { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S - 40 * 60 };
+    const leituraVelha = { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S - 40 * 60, aviso: null };
     const quadros: string[] = [];
     const registrar = () => {
       quadros.push(document.querySelector(".selo .w")?.textContent ?? "");

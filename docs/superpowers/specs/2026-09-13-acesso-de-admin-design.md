@@ -126,7 +126,9 @@ código dentro do handler é código sem prova — a mesma razão pela qual `res
 1. **Falha fechada, sempre.** Sem `ADMIN_SENHA` configurada, o admin **não existe** — 404 em
    `/admin` e em todo `/api/admin/*`. Uma variável de ambiente que some não pode virar painel
    aberto.
-2. **Senha curta desliga o admin**, com motivo explícito na tela. Menos de 24 caracteres e ele se
+2. **Senha curta desliga o admin**, com motivo explícito no log do servidor — nunca na tela:
+   explicar na tela contradiria a decisão 1, e falha fechada vence (ruling da revisão final,
+   2026-09-16). Menos de 24 caracteres e ele se
    recusa a funcionar. Isso torna a senha fraca **impossível** em vez de pedir cuidado — e esta
    senha é a chave do app inteiro. Mesmo formato do prazo obrigatório na Seção 2.
 3. **`/admin` entra em `RESERVADOS`** (`src/lib/despacho.ts`).
@@ -156,7 +158,7 @@ como esquecimento. Se o João preferir ter, entra.
 - cookie expirado não entra; cookie no limite exato do prazo decide de um jeito só
 - `senhaConfere` é de tempo constante (não retorna cedo na primeira divergência)
 - sem `ADMIN_SENHA` → 404, não 401 e não 200
-- `ADMIN_SENHA` curta → admin desligado, com motivo
+- `ADMIN_SENHA` curta → admin desligado (404 igual), com motivo no log e não na tela
 - `ehCaminhoDeFicha("/admin") === false`, e o service worker não guarda `/admin`
 
 Cada um com mutação medida, pelo método de sempre (o script prova que mutou antes de rodar).
@@ -238,6 +240,10 @@ breve.
 O aviso viaja pelo `/api/carimbo` e `/api/carimbos`, junto com o carimbo — então tem a **mesma
 validade offline que o carimbo já tem**. Quem abriu a ficha depois do aviso publicado o leva
 guardado; quem abriu antes, não. Não dá pra fazer melhor sem mentir sobre frescor.
+
+Um aviso `fechado` guardado offline vale até o próprio `venceEm` — o relógio do celular o
+encerra sozinho no prazo que o dono deu; já uma retirada ANTECIPADA só alcança o celular na
+próxima busca ao `/api/carimbo` que der certo.
 
 ### Como se prova
 

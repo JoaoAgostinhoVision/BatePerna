@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import { agoraRecife, type Agora } from "@/lib/horario";
 
-/** Que horas são em Recife, em minutos desde a meia-noite — ou `null`.
+/** O relógio de Recife (`Agora`: minutos do dia, dia da semana e o instante em
+ *  segundos de onde os dois saíram) — ou `null`.
  *
  *  **Devolve `null` no primeiro render, sempre**, e essa é a linha inteira que
  *  importa. Mesma disciplina do `useVenceu`, e pela mesma razão: a ficha e a

@@ -128,6 +128,14 @@ html, body { background: var(--ground); }
 @media (prefers-reduced-motion: no-preference) { .bp .live .pulse { animation: bp-pulse 2.4s ease-out infinite; } }
 @keyframes bp-pulse { 0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--rain) 55%,transparent);} 70%{box-shadow:0 0 0 6px transparent;} 100%{box-shadow:0 0 0 0 transparent;} }
 
+/* O recado do DONO — bloco próprio, de propósito NADA parecido com `.voz`
+   (que é serif/itálica, procedência de quem CONHECE o lugar). Este é sans,
+   alinhado à esquerda, com um risco de cor sob a borda: fala de AGORA, não é
+   verdade parada, e não pode se disfarçar da voz de ninguém. */
+.bp .aviso-dono { margin-top: 1rem; text-align: left; padding: .85rem 1rem; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); border-left: 3px solid var(--accent); }
+.bp .aviso-dono-txt { margin: 0; font-family: var(--sans); font-size: .95rem; font-weight: 600; color: var(--ink); }
+.bp .aviso-dono-quando { display: block; margin-top: .35rem; font-family: var(--type); font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+
 .bp .caveat { margin: .85rem 1.2rem 0; display: flex; gap: .55rem; padding: .7rem .85rem; border-radius: 12px; background: var(--rain-bg); border: 1px solid color-mix(in srgb, var(--rain) 22%, transparent); font-size: .87rem; color: var(--ink-soft); }
 .bp .caveat .ic { color: var(--rain); flex: none; }
 .bp .caveat b { color: var(--ink); font-weight: 650; }

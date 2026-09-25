@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, cleanup, act } from "@testing-library/react";
 import { regraDe, semComentarios, valorDe } from "../css";
 import type { Piso } from "@/lib/piso";
+import { rotuloFaixa } from "@/lib/horario";
 import { SEVERIDADES } from "@/lib/severidade";
 import Carimbo from "@/app/Carimbo";
 import Moldura from "@/app/Moldura";
@@ -23,6 +24,15 @@ afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
  *  a sua língua é `tests/lib/severidade.test.ts`. */
 const VOZ_RAMPA = { severidade: "nao-va", horasPassado: 6 } as const;
 
+/** A frase dele de 11/09, que é o caso que fez o aviso do dono existir: um
+ *  fechado que NÃO é chuva e NÃO é calendário. */
+const EM_REFORMA = {
+  texto: "a rampa está em reforma",
+  efeito: "fechado" as const,
+  criadoEm: AGORA_S - 86_400,
+  venceEm: AGORA_S + 86_400,
+};
+
 // 🔴 DERIVADO DO COMPONENTE, e não escrito à mão (2026-09-11). Esta linha era
 // uma CÓPIA das props do Carimbo, e como toda cópia ela envelheceu em silêncio:
 // já tinha perdido a prop `voz` e, quando `horario` virou `abertura`, o `tsc`
@@ -32,7 +42,7 @@ type Props = ComponentProps<typeof Carimbo>;
 
 function montar(props: Partial<Props> = {}) {
   return render(
-    <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} {...props} />,
+    <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} {...props} />,
   );
 }
 
@@ -59,7 +69,7 @@ function montarNaMoldura(props: Partial<Props> = {}) {
   const { estado = "fresco" } = props;
   return render(
     <Moldura estado={estado} severidade={VOZ_RAMPA.severidade} fase="afirmando">
-      <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} {...props} />
+      <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} {...props} />
     </Moldura>,
   );
 }
@@ -221,7 +231,7 @@ describe("Carimbo — a busca", () => {
 
     await act(async () => {
       pendentes[0].ok({
-        estado: "fresco", erro: false, calculadoEm: Math.floor((AGORA_MS + QUATRO_H_MS) / 1000),
+        estado: "fresco", erro: false, calculadoEm: Math.floor((AGORA_MS + QUATRO_H_MS) / 1000), aviso: null
       });
     });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
@@ -247,7 +257,7 @@ describe("Carimbo — a busca", () => {
 
     // A requisição não foi cancelada: aos 7s ela chega e ainda vale.
     await act(async () => {
-      pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S });
+      pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null });
     });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
   });
@@ -340,19 +350,19 @@ describe("Carimbo — a busca", () => {
     // A 1ª (a mais velha) responde agora, com uma leitura fresca — mas geração
     // velha: tem que ser descartada, sem tirar o "Conferindo…" da 2ª da tela.
     await act(async () => {
-      pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S - 999 });
+      pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S - 999, aviso: null });
     });
     expect(container.querySelector(".mark")?.textContent).toBe("CONFERINDO…");
 
     // A 2ª (a que vale) responde — essa sim repinta.
     await act(async () => {
-      pendentes[1].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S });
+      pendentes[1].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null });
     });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
   });
 
-  it("200 com corpo fora do trio cai no mesmo tratamento de falha", async () => {
-    // Sem conferir o corpo, os três campos viriam `undefined`,
+  it("200 com corpo fora da forma da leitura cai no mesmo tratamento de falha", async () => {
+    // Sem conferir o corpo, os campos viriam `undefined`,
     // carimboVenceu(undefined) daria NaN >= 1800 → false, e a tela afirmaria
     // "Pode ir" a partir de nada. A invariante mais protegida do projeto é
     // justamente essa: nunca afirmar sem leitura.
@@ -364,6 +374,21 @@ describe("Carimbo — a busca", () => {
 
     expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
     expect(container.querySelector("button.decision")).not.toBeNull();
+  });
+
+  // 🔴 CORPO SEM A CHAVE `aviso` É CORPO DE SERVIDOR VELHO, e é por isso que o
+  // campo é `Aviso | null` e não opcional. Aceitá-lo daria `undefined` em
+  // `leitura.aviso`, `fechadoPeloDono` diria `false`, e a tela mostraria ABERTO
+  // um lugar sobre o qual o dono pode ter dito "está em reforma" — o app
+  // afirmando por cima da palavra dele. Descartado, a leitura anterior fica.
+  it("200 com os campos de sempre mas SEM a chave aviso também é descartado", async () => {
+    const { pendentes } = redeFalsa();
+    const { container } = montar({ estado: "frio", erro: true });
+
+    tocar(container);
+    await act(async () => { pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S }); });
+
+    expect(container.querySelector(".mark")?.textContent).toBe("SEM INFORMAÇÕES");
   });
 
   it("corpo que nem é JSON também", async () => {
@@ -395,7 +420,7 @@ describe("Carimbo — a cor acompanha a leitura que está na tela", () => {
     act(() => { document.dispatchEvent(new Event("visibilitychange")); });
     await act(async () => {
       pendentes[0].ok({
-        estado: "frio", erro: false, calculadoEm: Math.floor((AGORA_MS + QUATRO_H_MS) / 1000),
+        estado: "frio", erro: false, calculadoEm: Math.floor((AGORA_MS + QUATRO_H_MS) / 1000), aviso: null
       });
     });
 
@@ -520,7 +545,7 @@ describe("Carimbo — o que os quadros commitados mostram", () => {
 
     render(
       <Profiler id="carimbo" onRender={registrar}>
-        <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} />
+        <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} />
       </Profiler>,
     );
 
@@ -531,7 +556,7 @@ describe("Carimbo — o que os quadros commitados mostram", () => {
     quadros.length = 0; // só interessam os quadros a partir da resposta
     await act(async () => {
       pendentes[0].ok({
-        estado: "fresco", erro: false, calculadoEm: Math.floor((AGORA_MS + QUATRO_H_MS) / 1000),
+        estado: "fresco", erro: false, calculadoEm: Math.floor((AGORA_MS + QUATRO_H_MS) / 1000), aviso: null
       });
     });
 
@@ -699,7 +724,7 @@ describe("Carimbo — o que a chuva faz com o chão vem do PISO", () => {
 // chega nos dois é o MESMO. Uma não substitui a outra — a de fonte não olha a
 // tela, e esta passaria com as duas escrevendo a mesma coisa à mão.
 describe("a ficha e o cartão dizem a MESMA palavra", () => {
-  const leitura = (estado: "fresco" | "frio") => ({ estado, erro: false, calculadoEm: AGORA_S });
+  const leitura = (estado: "fresco" | "frio") => ({ estado, erro: false, calculadoEm: AGORA_S, aviso: null });
 
   // 🔴 O CRUZAMENTO CRESCEU EM 2026-09-10: não são mais 2 casos, são 2 × 3 — a
   // palavra agora depende do NÍVEL da ficha, e carimbo e selo leem a mesma voz
@@ -713,7 +738,7 @@ describe("a ficha e o cartão dizem a MESMA palavra", () => {
   )("com leitura %s e nível %s, carimbo e selo não divergem", (estado, severidade) => {
     const voz = { severidade, horasPassado: 6 } as const;
     const carimbo = render(
-      <Carimbo estado={estado} erro={false} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={voz} />,
+      <Carimbo estado={estado} erro={false} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="rampa-do-pepe" voz={voz} />,
     ).container.querySelector(".mark")?.textContent;
     cleanup();
     const selo = render(<SeloTrilha leitura={leitura(estado)} voz={voz} />).container
@@ -765,6 +790,225 @@ describe("Carimbo — a hora, e não só a chuva", () => {
     const { container } = montar({ abertura: { horario: PEDRA }, calculadoEm });
     expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
     expect(container.querySelector(".sub")?.textContent).toBe("abre às 5h");
+  });
+
+  // 🔴 O DEFEITO DO FIX ROUND 1 (2026-09-15), e ele é a linha vermelha deste
+  // projeto com outra roupa. `motivo()` escolhia o ramo do calendário por
+  // `fase === "fechado" && abertura` — e `abertura` vem de `aberturaDaFicha`,
+  // que devolve SEMPRE um objeto (truthy mesmo vazio). Até o aviso do dono
+  // existir, `fase === "fechado"` IMPLICAVA fechado-por-calendário, e o ramo
+  // era seguro. Com o dono podendo fechar, não implica mais: numa sexta aberta,
+  // com "em reforma" postado, a tela saía
+  //
+  //     Fechado agora
+  //     Sexta e sábado. Fecha às 17h, abre às 5h.
+  //
+  // explicando o fechado com um calendário que, naquele instante, diz o
+  // CONTRÁRIO. É o app atribuindo causa falsa — o mesmo defeito que esta tarefa
+  // existe pra evitar no eixo da chuva (`fechado` não virar `frio`), uma camada
+  // acima.
+  //
+  // O remédio é SUBTRAÇÃO: fechou o DONO, `motivo` se cala. Copy nova aqui
+  // seria redação minha indo pra tela sem o João ter lido. O texto verdadeiro é
+  // o que o dono escreveu, e quem o desenha é o `AvisoDoDono` (Task 11) — até
+  // lá "Fechado agora" sem explicação é INCOMPLETO, e nunca FALSO.
+  it("o dono fecha com o calendário ABERTO, e nenhuma frase de calendário sai", () => {
+    const calculadoEm = asHoras(9);
+    // Sexta-feira às 9h, lugar que abre sexta e sábado das 5h às 17h: os DOIS
+    // eixos do calendário estão abertos. Se a frase vazar, ela vaza inteira.
+    const abertura = { horario: PEDRA, dias: ["sex", "sab"] } as const;
+
+    // CONTROLE DA PREMISSA: sem o aviso, este mesmo instante está ABERTO. Sem
+    // esta metade, um calendário que fechasse por acidente faria o teste passar
+    // pelo motivo errado.
+    const aberto = montar({ abertura, calculadoEm });
+    expect(aberto.container.querySelector(".mark")?.textContent).toBe("Pode ir");
+    cleanup();
+
+    const { container } = montar({ abertura, calculadoEm, aviso: EM_REFORMA });
+
+    // O que TEM que estar lá. Sem estas linhas, a asserção de ausência lá
+    // embaixo ficaria verde também com o carimbo inteiro sumido da tela —
+    // "ausência de texto mascarando o sumiço do elemento", espécie já
+    // catalogada neste projeto.
+    expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    expect(container.querySelector(".decision")?.getAttribute("data-fase")).toBe("fechado");
+    expect(container.querySelector(".reason"), "a <p class=reason> sumiu da tela").not.toBeNull();
+    expect(container.querySelector(".live")?.textContent, "sumiu a linha viva").toBeTruthy();
+
+    // E o que NÃO pode estar: nem calendário (não foi ele que fechou), nem
+    // chuva (com o lugar fechado, contar da chuva responde a pergunta errada).
+    expect(
+      container.querySelector(".reason")?.textContent,
+      "o motivo voltou a explicar o fechado do DONO com o calendário",
+    ).toBe("");
+  });
+
+  // 🔴 O PONTO CEGO DA RULING "fechou o dono, o motivo se cala" (revisão
+  // final, 2026-09-16 — C1). O teste acima só media o calendário ABERTO. Com
+  // os DOIS fechando — a Rampa numa QUARTA, com "a rampa está em reforma"
+  // valendo — a tela saía
+  //
+  //     Fechado agora
+  //     Abre sábado e domingo.
+  //     a rampa está em reforma
+  //
+  // duas afirmações, e a do calendário é FALSA enquanto o aviso vale: não abre
+  // sábado nenhum. O dono ganha do calendário como ganha do motor. O teste de
+  // regressão é o `it.each("fechado %s, a frase do calendário continua saindo")`
+  // logo abaixo — fechou SÓ o calendário, a frase continua.
+  it("o dono fecha JUNTO com o calendário, e a frase do calendário se cala — nas duas linhas", () => {
+    // 2027-01-13 é uma quarta-feira; 9h em Recife = 12h UTC. A Rampa REAL abre
+    // só sábado e domingo (ver content/), e é o dia que o calendário fecha.
+    const QUARTA_MS = Date.UTC(2027, 0, 13, 12, 0);
+    vi.setSystemTime(QUARTA_MS);
+    const calculadoEm = QUARTA_MS / 1000;
+    const abertura = { dias: ["sab", "dom"] } as const;
+    const emReformaDesdeOntem = {
+      ...EM_REFORMA,
+      criadoEm: calculadoEm - 86_400,
+      venceEm: calculadoEm + 7 * 86_400,
+    };
+
+    // CONTROLE DA PREMISSA: sem o aviso, o calendário fecha SOZINHO e a frase
+    // dele SAI. Sem esta metade, um calendário aberto por engano no fixture
+    // faria a asserção de ausência passar pelo motivo errado.
+    const soCalendario = montar({ abertura, calculadoEm });
+    expect(soCalendario.container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    expect(soCalendario.container.querySelector(".sub")?.textContent).toBe("abre sábado");
+    expect(soCalendario.container.querySelector(".reason")?.textContent).toBe("Abre sábado e domingo.");
+    cleanup();
+
+    const { container } = montar({ abertura, calculadoEm, aviso: emReformaDesdeOntem });
+
+    // O que TEM que estar lá — a fase, o elemento, o recado do dono.
+    expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    expect(container.querySelector(".decision")?.getAttribute("data-fase")).toBe("fechado");
+    expect(container.querySelector(".reason"), "a <p class=reason> sumiu da tela").not.toBeNull();
+    expect(container.querySelector(".sub"), "a linha de baixo sumiu da tela").not.toBeNull();
+    expect(container.querySelector(".aviso-dono")?.textContent).toContain(EM_REFORMA.texto);
+
+    // E o que NÃO pode: "abre sábado" / "Abre sábado e domingo." — as duas
+    // linhas que o calendário escreve, e que mentem enquanto o dono fecha.
+    expect(
+      container.querySelector(".sub")?.textContent,
+      "a linha de baixo voltou a prometer o dia do calendário por cima do fechado do DONO",
+    ).toBe("");
+    expect(
+      container.querySelector(".reason")?.textContent,
+      "o motivo voltou a explicar o fechado do DONO com o calendário",
+    ).toBe("");
+  });
+
+  // 🔴 I2 DA REVISÃO FINAL (2026-09-16): o `fechado` do dono tem PRAZO, e a
+  // tela aberta obedece a ele. Antes, `fechadoPeloDono` não olhava `venceEm`
+  // e nenhuma superfície do cliente olhava: uma ficha em cache, aberta dias
+  // depois, degradava a chuva pra "SEM INFORMAÇÕES" aos 30 min e mantinha o
+  // "Fechado agora" do dono pra sempre. O relógio que decide é o MESMO do
+  // calendário (`useAgoraRecife`, `epochS` dentro de `Agora`), e bate a cada
+  // minuto — por isso o avanço abaixo cruza o tique de 60 s.
+  it("o fechado do dono VENCE sozinho com o app aberto, no prazo que o dono deu", () => {
+    const venceDaquiAPouco = { ...EM_REFORMA, venceEm: AGORA_S + 10 };
+    const { container } = montar({ calculadoEm: AGORA_S, aviso: venceDaquiAPouco });
+    expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    expect(container.querySelector(".decision")?.getAttribute("data-fase")).toBe("fechado");
+
+    // 11 s: o prazo passou, mas o relógio de tela só bate no minuto — ainda
+    // fechado. Este meio é controle: prova que é o TIQUE que reavalia, e não
+    // um render por acaso.
+    act(() => { vi.advanceTimersByTime(11_000); });
+    expect(container.querySelector(".decision")?.getAttribute("data-fase")).toBe("fechado");
+
+    // Cruzou o tique de 60 s: o prazo do dono venceu, o lugar volta à chuva.
+    act(() => { vi.advanceTimersByTime(60_000); });
+    expect(container.querySelector(".decision")?.getAttribute("data-fase")).toBe("afirmando");
+    expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
+  });
+
+  // O mesmo relógio, no "publicado há N dias": congelado em `calculadoEm`, uma
+  // ficha aberta do cache dizia "publicado hoje" pra sempre.
+  it("o 'publicado há N dias' anda com o relógio de tela, não com a hora da leitura", () => {
+    const aviso = { ...EM_REFORMA, criadoEm: AGORA_S - 86_400, venceEm: AGORA_S + 30 * 86_400 };
+    const { container } = montar({ calculadoEm: AGORA_S, aviso });
+    expect(container.querySelector(".aviso-dono-quando")?.textContent).toBe("publicado há 1 dia");
+
+    act(() => { vi.advanceTimersByTime(2 * 86_400 * 1000); });
+    expect(container.querySelector(".aviso-dono-quando")?.textContent).toBe("publicado há 3 dias");
+  });
+
+  // 🔴 TASK 11 — o bloco lê a leitura VIVA, não a prop do servidor. O carimbo
+  // troca `leitura` (aviso incluso) a cada busca ao /api/carimbo; se
+  // `AvisoDoDono` lesse a prop `aviso` em vez de `leitura.aviso`, um aviso
+  // retirado pelo dono ficaria plantado na tela depois da próxima leitura —
+  // a família "cabeçalho × cartão" que este projeto já pagou três vezes.
+  it("o recado do dono aparece junto do carimbo, fora da decisão", () => {
+    const { container } = montar({ abertura: { horario: PEDRA }, aviso: EM_REFORMA });
+    expect(container.querySelector(".aviso-dono")?.textContent).toContain(EM_REFORMA.texto);
+    // Nunca dentro do <button>/<div class="decision"> — é irmão dela.
+    expect(container.querySelector(".decision .aviso-dono")).toBeNull();
+  });
+
+  it("sem aviso, o bloco do dono nem nasce", () => {
+    const { container } = montar({ abertura: { horario: PEDRA }, aviso: null });
+    expect(container.querySelector(".aviso-dono")).toBeNull();
+  });
+
+  it("a leitura chega SEM aviso e um /api/carimbo novo traz um — o recado do dono nasce na tela", async () => {
+    const { pendentes } = redeFalsa();
+    const { container } = montar({ calculadoEm: AGORA_S, aviso: null });
+    expect(container.querySelector(".aviso-dono")).toBeNull();
+
+    // Vence a leitura em tela e volta o app pra frente — o mesmo gatilho que
+    // os testes de busca acima já usam pra fazer o Carimbo ir ao servidor.
+    vi.setSystemTime(AGORA_MS + 4 * 60 * 60 * 1000);
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+
+    await act(async () => {
+      pendentes[0].ok({
+        estado: "fresco", erro: false,
+        calculadoEm: Math.floor((AGORA_MS + 4 * 60 * 60 * 1000) / 1000),
+        aviso: EM_REFORMA,
+      });
+    });
+
+    expect(container.querySelector(".aviso-dono")?.textContent).toContain(EM_REFORMA.texto);
+  });
+
+  it("a leitura chega COM aviso e um /api/carimbo novo não traz mais nenhum — o recado do dono sai da tela", async () => {
+    const { pendentes } = redeFalsa();
+    // `erro: true` faz o "voltou" disparar busca mesmo sem a leitura ter
+    // vencido (`podeBuscar` aceita `erro || venceu` nesse gatilho) — sem
+    // precisar mexer no relógio pra este lado do teste.
+    const { container } = montar({ estado: "frio", erro: true, aviso: EM_REFORMA });
+    expect(container.querySelector(".aviso-dono")?.textContent).toContain(EM_REFORMA.texto);
+
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    await act(async () => {
+      pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null });
+    });
+
+    expect(container.querySelector(".aviso-dono")).toBeNull();
+  });
+
+  // O outro lado, e ele é o guarda de regressão: fechou o CALENDÁRIO, a frase
+  // do calendário continua saindo — nos dois eixos. Calar demais seria o
+  // conserto virando o defeito oposto.
+  it.each([
+    ["por hora", { horario: PEDRA }, 18],
+    ["por dia", { dias: ["sab"] as const }, 9],
+  ])("fechado %s, a frase do calendário continua saindo", (_nome, abertura, hora) => {
+    const calculadoEm = asHoras(hora);
+    const { container } = montar({ abertura, calculadoEm });
+
+    // Derivado da MESMA fonte que o componente usa, e não copiado à mão: uma
+    // segunda escrita da frase envelheceria em silêncio no dia em que a
+    // primeira mudasse. O `toBeTruthy` é o controle contra a tautologia — se
+    // `rotuloFaixa` passasse a devolver vazio, o par de baixo ficaria oco.
+    const esperado = rotuloFaixa(abertura);
+    expect(esperado, "rotuloFaixa ficou vazio — o teste passaria por vacuidade").toBeTruthy();
+
+    expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    expect(container.querySelector(".reason")?.textContent).toBe(esperado);
   });
 
   it("dentro da faixa, o carimbo volta a falar de chuva", () => {
@@ -856,14 +1100,14 @@ describe("Carimbo — StrictMode e desmontagem", () => {
     const { pendentes } = redeFalsa();
     const { container } = render(
       <StrictMode>
-        <Carimbo estado="frio" erro={true} calculadoEm={AGORA_S} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} />
+        <Carimbo estado="frio" erro={true} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="rampa-do-pepe" voz={VOZ_RAMPA} />
       </StrictMode>,
     );
 
     tocar(container);
     expect(container.querySelector(".mark")?.textContent).toBe("CONFERINDO…");
 
-    await act(async () => { pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S }); });
+    await act(async () => { pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null }); });
     expect(container.querySelector(".mark")?.textContent).toBe("Pode ir");
   });
 
@@ -877,7 +1121,7 @@ describe("Carimbo — StrictMode e desmontagem", () => {
 
     tocar(container);
     unmount();
-    await act(async () => { pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S }); });
+    await act(async () => { pendentes[0].ok({ estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null }); });
 
     expect(document.querySelector(".mark")).toBeNull();
     expect(gritou).not.toHaveBeenCalled();

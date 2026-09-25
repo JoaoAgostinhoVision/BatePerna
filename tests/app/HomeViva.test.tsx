@@ -5,7 +5,7 @@ import { useLeitura } from "@/app/leituras";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 
 const AGORA_S = Math.floor(Date.UTC(2027, 0, 15, 11, 0) / 1000);
-const VELHA: LeituraCarimbo = { estado: "fresco", erro: false, calculadoEm: AGORA_S - 3600 };
+const VELHA: LeituraCarimbo = { estado: "fresco", erro: false, calculadoEm: AGORA_S - 3600, aviso: null };
 
 /** Uma sonda que só reporta o que o contexto está dizendo.
  *
@@ -35,13 +35,13 @@ afterEach(() => { vi.useRealTimers(); cleanup(); vi.unstubAllGlobals(); });
 
 describe("HomeViva", () => {
   it("sem busca nenhuma, publica o que veio do servidor", () => {
-    montar({ rampa: { estado: "fresco", erro: false, calculadoEm: AGORA_S } });
+    montar({ rampa: { estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null } });
     expect(lido()).toBe(`fresco·false·${AGORA_S}`);
   });
 
   it("leitura vencida + volta pra frente = busca, e a leitura nova entra no contexto", async () => {
     vi.stubGlobal("fetch", vi.fn(async () =>
-      new Response(JSON.stringify({ rampa: { estado: "frio", erro: false, calculadoEm: AGORA_S } })),
+      new Response(JSON.stringify({ rampa: { estado: "frio", erro: false, calculadoEm: AGORA_S, aviso: null } })),
     ));
     montar({ rampa: VELHA });
 
@@ -68,10 +68,27 @@ describe("HomeViva", () => {
     expect(lido()).toBe(`fresco·false·${VELHA.calculadoEm}`);
   });
 
+  // 🔴 A MESMA razão do irmão em `Carimbo.test.tsx`: corpo sem a chave `aviso`
+  // é corpo de servidor VELHO. Aceitá-lo apagaria da home um aviso que talvez
+  // exista — o selo diria "Pode ir" num lugar que o dono fechou.
+  it("corpo com os campos de sempre mas SEM a chave aviso também é descartado", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ rampa: { estado: "frio", erro: false, calculadoEm: AGORA_S } })),
+    ));
+    montar({ rampa: VELHA });
+
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+      await Promise.resolve();
+    });
+
+    expect(lido()).toBe(`fresco·false·${VELHA.calculadoEm}`);
+  });
+
   it("slug torto não contamina os slugs bons do mesmo corpo", async () => {
     vi.stubGlobal("fetch", vi.fn(async () =>
       new Response(JSON.stringify({
-        rampa: { estado: "frio", erro: false, calculadoEm: AGORA_S },
+        rampa: { estado: "frio", erro: false, calculadoEm: AGORA_S, aviso: null },
         outra: { estado: "azul" },
       })),
     ));
@@ -87,7 +104,7 @@ describe("HomeViva", () => {
 
   it("leitura fresca não dispara busca — o piso existe pra não virar dez chamadas", async () => {
     vi.stubGlobal("fetch", vi.fn());
-    montar({ rampa: { estado: "fresco", erro: false, calculadoEm: AGORA_S } });
+    montar({ rampa: { estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null } });
 
     await act(async () => {
       document.dispatchEvent(new Event("visibilitychange"));

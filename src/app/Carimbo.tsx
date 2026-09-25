@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Estado } from "@/lib/motor";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+import { fechadoPeloDono, type Aviso } from "@/lib/aviso";
+import AvisoDoDono from "./AvisoDoDono";
 import {
   PRAZO_CONFERINDO_MS,
   type Fase,
@@ -21,7 +23,12 @@ import { useAvisarMoldura } from "./Moldura";
 import { useAgoraRecife } from "./useAgoraRecife";
 
 /** O carimbo é a única coisa da ficha que apodrece. Tudo o mais — trajeto,
- *  coordenada, aviso, o que ler no portão — é verdade parada.
+ *  coordenada, os `avisos` da ficha, o que ler no portão — é verdade parada.
+ *
+ *  ⚠️ "aviso" virou duas coisas em 2026-09-15, e esta lista fala de UMA. Os
+ *  `avisos` da FICHA são texto parado, escrito uma vez. O `aviso` do DONO
+ *  (`src/lib/aviso.ts`) tem prazo, vem do banco junto com a leitura e viaja
+ *  DENTRO do carimbo — esse apodrece, e é por isso que ele mora aqui.
  *
  *  Quando não há leitura, ele não manda: informa que não sabe, devolve a
  *  decisão, e se oferece pra ir buscar de novo. "Não vá" ficou reservado pro
@@ -30,6 +37,7 @@ export default function Carimbo({
   estado,
   erro,
   calculadoEm,
+  aviso,
   pass,
   fut,
   slug,
@@ -41,6 +49,10 @@ export default function Carimbo({
   estado: Estado;
   erro: boolean;
   calculadoEm: number;
+  /** A palavra do dono sobre este lugar, se houver uma valendo. Chega junto com
+   *  a leitura do servidor e é o ponto de partida, igual aos três de cima: a
+   *  busca do portão pode trazer outra. */
+  aviso: Aviso | null;
   pass: number;
   fut: number;
   slug: string;
@@ -67,7 +79,7 @@ export default function Carimbo({
   // A leitura do servidor é só o ponto de partida: daqui pra frente o
   // componente pode trocá-la por uma mais nova. O primeiro render usa
   // exatamente o que veio no HTML, pra a hidratação bater.
-  const [leitura, setLeitura] = useState<LeituraCarimbo>({ estado, erro, calculadoEm });
+  const [leitura, setLeitura] = useState<LeituraCarimbo>({ estado, erro, calculadoEm, aviso });
   const [venceu, setVenceu] = useState(false);
   const [conferindo, setConferindo] = useState(false);
   const [falhou, setFalhou] = useState(false);
@@ -128,10 +140,10 @@ export default function Carimbo({
       if (!res.ok) throw new Error(String(res.status));
       const nova: unknown = await res.json();
       // O corpo é conferido, não assumido: é ele que vira a decisão que a
-      // pessoa lê no portão. Um 200 com corpo fora do trio daria `undefined`
-      // nos três campos e carimboVenceu(undefined) é NaN >= 1800 → false: a
+      // pessoa lê no portão. Um 200 com corpo fora da forma daria `undefined`
+      // nos campos e carimboVenceu(undefined) é NaN >= 1800 → false: a
       // tela afirmaria "Pode ir" a partir de nada. Corpo inválido é falha.
-      if (!ehLeitura(nova)) throw new Error("corpo fora do trio");
+      if (!ehLeitura(nova)) throw new Error("corpo fora da forma da leitura");
       if (geracao.current !== minha || !vivo.current) return;
       // Os quatro num lote só, de propósito. `venceu` é recalculado aqui em vez
       // de esperar o efeito [leitura.calculadoEm]: efeito passivo roda em tarefa
@@ -195,7 +207,18 @@ export default function Carimbo({
 
   const { estado: estadoAtual, erro: erroAtual, calculadoEm: calculadoEmAtual } = leitura;
   const fechado = fechadoAgora(abertura, agora);
-  const situacao = { conferindo, erro: erroAtual, venceu, falhou, fechado };
+  // O relógio do dono é o MESMO `agora` do calendário (`epochS` viaja dentro
+  // dele): `null` no primeiro render, e aí o aviso vale como chegou — a mesma
+  // conta que a página fez no servidor, senão a hidratação briga.
+  const doDono = fechadoPeloDono(leitura.aviso, agora?.epochS ?? null);
+  const situacao = {
+    conferindo,
+    erro: erroAtual,
+    venceu,
+    falhou,
+    fechado,
+    fechadoPeloDono: doDono,
+  };
   const fase = faseDe(situacao);
   const sintoma = sintomaDe(situacao);
 
@@ -217,8 +240,18 @@ export default function Carimbo({
   // A palavra e a linha de baixo vêm de `marcaDe`/`subDe`, não daqui: são as
   // MESMAS do selo do cartão, e escritas à mão nos dois elas já podiam
   // divergir. Ver `carimbo-fase.ts`.
+  //
+  // 🔴 `fechado && !doDono` NAS DUAS LINHAS ABAIXO (a `sub` aqui e a
+  // `aberturaQueFechou` do `motivo`), e não só `fechado` (2026-09-16). A ruling
+  // "fechou o dono, o motivo se cala" só tinha sido medida com o calendário
+  // ABERTO: a Rampa numa quarta, com "em reforma" valendo, ainda saía
+  // "Fechado agora / Abre sábado e domingo." com o recado do dono logo abaixo
+  // — duas afirmações, e a do calendário é FALSA enquanto o aviso vale. O dono
+  // ganha do calendário como ganha do motor; a frase do calendário só sai
+  // quando foi ELE que fechou.
+  const calendarioFechou = fechado && !doDono;
   const marca = marcaDe(fase, estadoAtual, voz);
-  const sub = subDe(fase, estadoAtual, voz, fechado ? rotuloAbertura(abertura!, agora!) : null);
+  const sub = subDe(fase, estadoAtual, voz, calendarioFechou ? rotuloAbertura(abertura!, agora!) : null);
 
   // 🔴 Fechado, o pulso PARA e a linha viva não fala de chuva. Ela existe pra
   // dizer "esta leitura é de agora" — e com o lugar fechado a leitura de chuva
@@ -246,7 +279,23 @@ export default function Carimbo({
         <div className="sub">{sub}</div>
       </div>
       <p className="reason">
-        {motivo(fase, sintoma, estadoAtual, calculadoEmAtual, pass, fut, secaRapido, piso, abertura)}
+        {/* 🔴 `calendarioFechou ? abertura : undefined`, E ISSO É A CORREÇÃO
+            INTEIRA. O `motivo` não pode decidir pela truthiness de `abertura`:
+            ela vem de `aberturaDaFicha`, que devolve SEMPRE um objeto. Quem
+            sabe se foi o CALENDÁRIO que fechou é esta linha — e "o calendário
+            fechou" é `fechado && !doDono`, não `fechado`: com o dono fechando
+            junto, a frase dele é a verdadeira e a do calendário se cala. */}
+        {motivo(
+          fase,
+          sintoma,
+          estadoAtual,
+          calculadoEmAtual,
+          pass,
+          fut,
+          secaRapido,
+          piso,
+          calendarioFechou ? abertura : undefined,
+        )}
       </p>
       <div className="live">
         <span className="pulse"></span>
@@ -267,14 +316,37 @@ export default function Carimbo({
   const comum = { className: "decision", "data-fase": fase } as const;
 
   // Só vira botão quando tocar serve pra alguma coisa.
-  return fase === "sem-informacoes" ? (
+  const decisao = fase === "sem-informacoes" ? (
     <button type="button" {...comum} onClick={() => tentar("toque")}>{miolo}</button>
   ) : (
     <div {...comum} role="status" aria-live="polite">{miolo}</div>
   );
+
+  // 🔴 IRMÃO da decisão, e não filho dela: `AvisoDoDono` lê `leitura.aviso` —
+  // a mesma leitura VIVA que troca a cada busca ao /api/carimbo — nunca a
+  // prop `aviso` do servidor. O dono retira o aviso, o próximo `/api/carimbo`
+  // troca `leitura` inteira, e o texto retirado tem que sumir junto com o
+  // selo; se este bloco lesse a prop do servidor, ele ficaria plantado com um
+  // aviso morto enquanto o carimbo já mudou de ideia — a família
+  // "cabeçalho × cartão" que este projeto já pagou três vezes.
+  //
+  // `agora`: o relógio do CLIENTE (`agora.epochS`, o mesmo que decide o
+  // calendário e o prazo do aviso), e `calculadoEmAtual` só enquanto ele não
+  // falou — o primeiro render. `Date.now()` durante o render de um client
+  // component briga com a hidratação (o servidor e o navegador calculariam
+  // datas diferentes); `calculadoEmAtual` é o mesmo dos dois lados, e por isso
+  // o HTML do servidor já sai com a data. Depois disso o relógio de tela
+  // assume: uma ficha aberta do cache dias depois não pode dizer "publicado
+  // hoje" com a data congelada no instante da leitura (2026-09-16).
+  return (
+    <>
+      {decisao}
+      <AvisoDoDono aviso={leitura.aviso} agora={agora?.epochS ?? calculadoEmAtual} />
+    </>
+  );
 }
 
-/** O corpo da rota é o trio, ou não é leitura nenhuma.
+/** O corpo da rota tem a forma de `LeituraCarimbo`, ou não é leitura nenhuma.
  *
  *  Mora aqui, e não em `carimbo-estado.ts` junto do tipo, porque aquele módulo
  *  puxa o motor e o fetch da chuva — importá-lo em runtime daqui arrastaria o
@@ -282,12 +354,19 @@ export default function Carimbo({
  *  compilação e pode continuar vindo de lá. */
 function ehLeitura(x: unknown): x is LeituraCarimbo {
   if (typeof x !== "object" || x === null) return false;
-  const { estado, erro, calculadoEm } = x as Record<string, unknown>;
+  const { estado, erro, calculadoEm, aviso } = x as Record<string, unknown>;
   return (
     (estado === "fresco" || estado === "frio") &&
     typeof erro === "boolean" &&
     typeof calculadoEm === "number" &&
-    Number.isFinite(calculadoEm)
+    Number.isFinite(calculadoEm) &&
+    // 🔴 A CHAVE `aviso` É EXIGIDA, e é por isso que ela é `Aviso | null` em vez
+    // de opcional. `undefined` reprova nas duas metades desta linha: corpo sem
+    // a chave é corpo de uma versão VELHA do servidor, e aceitá-lo como "sem
+    // aviso" apagaria da tela um aviso que talvez exista — o app afirmando
+    // aberto por cima da palavra do dono. Reprovado, a tela mantém a leitura
+    // anterior, que ao menos se reconhece vencida.
+    (aviso === null || typeof aviso === "object")
   );
 }
 
@@ -317,13 +396,29 @@ function motivo(
   fut: number,
   secaRapido?: string,
   piso?: Piso,
-  abertura?: Abertura,
+  /** A faixa do calendário SÓ quando foi ELE que fechou o lugar agora —
+   *  `undefined` em qualquer outro caso. Não é a `abertura` da ficha, e o nome
+   *  é diferente de propósito: ver o bloco 🔴 do ramo `fechado` logo abaixo. */
+  aberturaQueFechou?: Abertura,
 ) {
   // Primeiro de todos, pela mesma razão que `fechado` ganha em `faseDe`: com o
   // lugar fechado, contar da chuva é responder a pergunta errada. E a frase diz
   // as HORAS e mais nada — o nome da coisa que fecha não mora no código.
-  if (fase === "fechado" && abertura) {
-    return <>{rotuloFaixa(abertura)}</>;
+  //
+  // 🔴 E QUEM FECHOU DECIDE SE HÁ FRASE (2026-09-15). Este ramo testava
+  // `fase === "fechado" && abertura`, e era seguro enquanto `fechado` só podia
+  // vir do calendário. Com o DONO podendo fechar ("a rampa está em reforma"),
+  // deixou de ser: `abertura` é sempre truthy (vem de `aberturaDaFicha`), então
+  // a tela carimbava "Fechado agora" e explicava com uma faixa de horário que
+  // naquele instante dizia o CONTRÁRIO — causa falsa, a linha vermelha deste
+  // projeto, no eixo do calendário em vez do da chuva.
+  //
+  // Fechou o dono, o motivo SE CALA, e isso é subtração e não esquecimento:
+  // inventar frase aqui seria copy nova indo pra tela sem ele ter lido. O texto
+  // verdadeiro é o que o DONO escreveu, e quem o desenha é o `AvisoDoDono`.
+  // Incompleto é o lado certo pra errar; falso nunca é.
+  if (fase === "fechado") {
+    return aberturaQueFechou ? <>{rotuloFaixa(aberturaQueFechou)}</> : null;
   }
   if (fase === "conferindo") {
     return sintoma === "venceu" ? (

@@ -55,7 +55,7 @@ describe("resolverEstado", () => {
   it("sem chuva na janela, a serra está fresca", async () => {
     vi.mocked(fetchPrecip).mockResolvedValue(chuvaConstante(0));
     expect(await resolverEstado(ficha())).toEqual({
-      estado: "fresco", erro: false, calculadoEm: AGORA_S,
+      estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null
     });
   });
 
@@ -71,7 +71,7 @@ describe("resolverEstado", () => {
     // barro que ele não mediu.
     vi.mocked(fetchPrecip).mockRejectedValue(new Error("503"));
     expect(await resolverEstado(ficha())).toEqual({
-      estado: "frio", erro: true, calculadoEm: AGORA_S,
+      estado: "frio", erro: true, calculadoEm: AGORA_S, aviso: null
     });
   });
 
@@ -115,7 +115,7 @@ describe("resolverEstados", () => {
 
     const r = await resolverEstados(fichas);
 
-    expect(r.get("seca")).toEqual({ estado: "fresco", erro: false, calculadoEm: AGORA_S });
+    expect(r.get("seca")).toEqual({ estado: "fresco", erro: false, calculadoEm: AGORA_S, aviso: null });
     expect(r.get("molhada")!.estado).toBe("frio");
   });
 

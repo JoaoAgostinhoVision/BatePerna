@@ -5,6 +5,7 @@ import { resolverEstado } from "@/lib/carimbo-estado";
 import { rotuloPiso } from "@/lib/piso";
 import { vozDaFicha } from "@/lib/severidade";
 import { faseDe } from "@/lib/carimbo-fase";
+import { fechadoPeloDono } from "@/lib/aviso";
 import { aberturaDaFicha, rotuloFaixaCurta } from "@/lib/horario";
 import { rotuloDias } from "@/lib/semana";
 import { notFound } from "next/navigation";
@@ -16,7 +17,9 @@ import Carimbo from "../Carimbo";
 import LocalVivo from "../local";
 import Moldura from "../Moldura";
 
-// Compute-on-load: nada de cache estático, o estado é a chuva de agora.
+// Compute-on-load: nada de cache estático. O estado é a chuva de agora, e o
+// aviso do dono é a palavra dele de agora — as duas apodrecem, e nenhuma das
+// duas pode ser lida do build.
 export const dynamic = "force-dynamic";
 
 /** O CARTÃO QUE O LINK DESTA TRILHA MOSTRA quando alguém manda no WhatsApp.
@@ -79,7 +82,7 @@ export default async function Ficha({
   if (!ficha) notFound();
 
   const { debug } = await searchParams;
-  const { estado, erro, calculadoEm } = await resolverEstado(ficha, debug);
+  const { estado, erro, calculadoEm, aviso } = await resolverEstado(ficha, debug);
 
   const wp = ficha.trajeto.waypoints[0];
   const pass = ficha.condicao.regra.janela_passado_horas;
@@ -180,7 +183,23 @@ export default async function Ficha({
       // depende do relógio do navegador e por isso é `false` aqui — é a MESMA
       // conta que o Carimbo faz no primeiro render (`agora` nasce `null`), e
       // tem que continuar sendo, senão a hidratação briga.
-      fase={faseDe({ conferindo: false, erro, venceu: false, falhou: false })}
+      // `fechadoPeloDono` VAI DE VERDADE, e não `false` como o `fechado` logo
+      // acima: ele não depende do relógio do navegador — vem do servidor junto
+      // com a leitura, e o `Carimbo` calcula o MESMO no primeiro render, a
+      // partir da mesma prop. Mandar `false` aqui pintaria a moldura de aberto
+      // por um quadro num lugar que o dono fechou.
+      //
+      // O relógio vai `null` de propósito: é a conta do primeiro render do
+      // `Carimbo` (`agora` nasce `null` lá), e tem que ser a MESMA, senão a
+      // hidratação briga. E é honesto: o `aviso` acabou de sair de
+      // `avisoVigente`, que já comparou `vence_em > agora` em SQL neste instante.
+      fase={faseDe({
+        conferindo: false,
+        erro,
+        venceu: false,
+        falhou: false,
+        fechadoPeloDono: fechadoPeloDono(aviso, null),
+      })}
     >
       <div className="screen">
         <Appbar chip={chipCusto} />
@@ -194,6 +213,7 @@ export default async function Ficha({
             estado={estado}
             erro={erro}
             calculadoEm={calculadoEm}
+            aviso={aviso}
             pass={pass}
             fut={fut}
             slug={slug}
