@@ -50,6 +50,20 @@ export async function ensureSchema(client: Client): Promise<void> {
   await client.execute(
     `CREATE INDEX IF NOT EXISTS avisos_por_lugar ON avisos (ficha_slug, retirado, vence_em)`,
   );
+  // 🔴 APPEND-ONLY, como `avisos`, e pela mesma razão: o que foi dito sobre um
+  // lugar real, e quando, é a espinha deste projeto. A ficha saiu do git em
+  // 2026-09-24, então ESTA tabela é a única procedência que existe — não há
+  // `git blame` de socorro. Voltar a uma versão antiga GRAVA uma versão nova.
+  //
+  // `doc` é o JSON da ficha INTEIRA, não um campo. Versão de documento inteiro
+  // torna "voltar" trivial e espelha o que o git fazia; o custo é não haver
+  // diff por campo, que ninguém pediu.
+  await client.execute(`CREATE TABLE IF NOT EXISTS ficha_versoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, ficha_slug TEXT NOT NULL,
+    doc TEXT NOT NULL, autor TEXT NOT NULL, criado_em INTEGER NOT NULL)`);
+  await client.execute(
+    `CREATE INDEX IF NOT EXISTS ficha_versoes_por_lugar ON ficha_versoes (ficha_slug, id)`,
+  );
 }
 
 export function inicioDoDiaRecife(agora: number): number {
@@ -183,4 +197,68 @@ export async function avisosVigentes(
 /** Tirar da tela. NUNCA apaga a linha — ver o comentário da tabela. */
 export async function retirarAviso(client: Client, id: number): Promise<void> {
   await client.execute({ sql: `UPDATE avisos SET retirado = 1 WHERE id = ?`, args: [id] });
+}
+
+export type AutorVersao = "painel" | "semente";
+
+export type FichaVersao = {
+  id: number;
+  ficha_slug: string;
+  doc: string;
+  autor: AutorVersao;
+  criado_em: number;
+};
+
+function versaoDaLinha(r: Record<string, unknown>): FichaVersao {
+  return {
+    id: Number(r.id),
+    ficha_slug: String(r.ficha_slug),
+    doc: String(r.doc),
+    autor: String(r.autor) as AutorVersao,
+    criado_em: Number(r.criado_em),
+  };
+}
+
+export async function gravarVersao(
+  client: Client, slug: string, doc: string, autor: AutorVersao, criadoEm: number,
+): Promise<number> {
+  const r = await client.execute({
+    sql: `INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em)
+          VALUES (?, ?, ?, ?) RETURNING id`,
+    args: [slug, doc, autor, criadoEm],
+  });
+  return Number(r.rows[0].id);
+}
+
+/** A ficha de AGORA daquele lugar: a versão de maior `id`.
+ *
+ *  🔴 ORDENA POR `id`, NÃO POR `criado_em`. Duas gravações no mesmo segundo
+ *  são reais (salvar duas vezes seguidas), e por tempo o desempate viraria
+ *  sorteio — o João salvaria e veria a versão anterior. O `id` é monotônico. */
+export async function versaoAtual(client: Client, slug: string): Promise<FichaVersao | null> {
+  const r = await client.execute({
+    sql: `SELECT * FROM ficha_versoes WHERE ficha_slug = ? ORDER BY id DESC LIMIT 1`,
+    args: [slug],
+  });
+  return r.rows.length ? versaoDaLinha(r.rows[0]) : null;
+}
+
+/** A versão atual de TODOS os lugares, numa consulta só — irmão do
+ *  `avisosVigentes`, e pela mesma razão: N consultas no portão é o que esta
+ *  família evita. */
+export async function versoesAtuais(client: Client): Promise<Map<string, FichaVersao>> {
+  const r = await client.execute(
+    `SELECT * FROM ficha_versoes WHERE id IN
+       (SELECT MAX(id) FROM ficha_versoes GROUP BY ficha_slug)`,
+  );
+  return new Map(r.rows.map((l) => { const v = versaoDaLinha(l); return [v.ficha_slug, v]; }));
+}
+
+/** Tudo que já foi dito sobre UM lugar, do mais novo pro mais velho. */
+export async function historico(client: Client, slug: string): Promise<FichaVersao[]> {
+  const r = await client.execute({
+    sql: `SELECT * FROM ficha_versoes WHERE ficha_slug = ? ORDER BY id DESC`,
+    args: [slug],
+  });
+  return r.rows.map(versaoDaLinha);
 }
