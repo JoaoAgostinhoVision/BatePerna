@@ -10,9 +10,16 @@ mim depois do veredito: 7 call sites de `fechadoPeloDono` passando relógio real
 `agora` do painel é SEGUNDOS (não havia bug de unidade escondido), **1110/1110 em 69 arquivos**,
 `tsc` limpo. O workspace SDD foi apagado — o registro agora é o `git log` e este arquivo.
 
-🔴 **NÃO ESTAMOS EM `main`, E NADA DISSO FOI AO AR.** A branch é **`admin-porta-e-aviso`**, 28
-commits à frente de `main`. O que fazer com ela — merge, PR, ou deixar parada — **é decisão dele**,
-e o deploy tem travas listadas abaixo.
+🟢 **E O PROJETO SAIU DESTA MÁQUINA PELA PRIMEIRA VEZ.** Ele escolheu *"push + Pull Request"* e,
+quando descobri que **não havia remote nenhum**, escolheu **repositório PÚBLICO**:
+**https://github.com/JoaoAgostinhoVision/BatePerna** — `main` + `admin-porta-e-aviso` no ar, e o
+**PR #1** aberto com o diff inteiro pra ele ler no navegador.
+⚠️ **Conferido ANTES de publicar** (é irreversível): nenhum `.env` jamais entrou no histórico,
+nenhum token no conteúdo rastreado — o único `libsql://` é placeholder de doc. O que ficou público
+e ele soube antes: **o e-mail dele é o autor de todos os commits**.
+
+🔴 **NADA DISSO FOI AO AR — publicar no GitHub não é deployar.** A branch tem 30 commits à frente
+de `main`, o merge é decisão dele no PR, e o deploy tem as travas listadas abaixo.
 
 ---
 
