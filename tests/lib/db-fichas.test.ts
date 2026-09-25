@@ -19,6 +19,19 @@ describe("ficha_versoes", () => {
     expect(await versaoAtual(c, "nao-existe")).toBeNull();
   });
 
+  // 🔴 Achado da revisão (fix round 1): sem este teste, o `WHERE ficha_slug = ?`
+  // de `versaoAtual` é apagável sem a suíte notar — os outros testes só têm UM
+  // slug na tabela por vez. Com DOIS lugares presentes, apagar o WHERE faz
+  // `versaoAtual` pegar a linha errada (a de maior id da tabela inteira), que
+  // é a voz de um lugar vazando pra ficha de outro — a linha vermelha do
+  // projeto, já paga quatro vezes.
+  it("versaoAtual de um lugar não traz a versão do outro", async () => {
+    await gravarVersao(c, "rampa-do-pepe", '{"quem":"rampa"}', "painel", AGORA);
+    await gravarVersao(c, "pedra-furada-de-venturosa", '{"quem":"pedra"}', "painel", AGORA + 10);
+    const v = await versaoAtual(c, "rampa-do-pepe");
+    expect(v?.doc).toBe('{"quem":"rampa"}');
+  });
+
   // 🔴 O ponto da tabela: a versão nova VENCE, e a antiga CONTINUA EXISTINDO.
   // Se `versaoAtual` lesse a primeira em vez da última, o painel salvaria e a
   // tela não mudaria — e o João concluiria que o app não gravou.
