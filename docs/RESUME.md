@@ -2,66 +2,52 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🟡 **ÚLTIMA PARADA: 2026-09-16, fim da sessão.** O eixo segue `acesso de usuários`. Ele abriu com
-*"continua"* e encerrou com ***"quero continuar outro dia, deixe tudo pronto"***.
+🟢 **ÚLTIMA PARADA: 2026-09-24. O PLANO DE ADMIN FECHOU INTEIRO.** O eixo era `acesso de usuários`.
+As 12 tarefas, o final review da branch e a onda de 6 fixes já estavam prontos; hoje rodou **a
+re-revisão escopada que faltava** e ela **voltou limpa**: C1, I1, I2, I3, I4 e I6 todos ADDRESSED
+com `file:line`, os quatro extras do fixer julgados corretos, **zero quebra nova**. Conferido por
+mim depois do veredito: 7 call sites de `fechadoPeloDono` passando relógio real, a unidade do
+`agora` do painel é SEGUNDOS (não havia bug de unidade escondido), **1110/1110 em 69 arquivos**,
+`tsc` limpo. O workspace SDD foi apagado — o registro agora é o `git log` e este arquivo.
 
-**As 12 tarefas do plano estão FECHADAS** (1–11 mais a 8-bis), **o final review da branch inteira
-RODOU** (veredito: *"With fixes"* — 1 Critical, 6 Important) e **a onda de fix dos 6 achados está
-APLICADA e commitada** (`050dfd6..1fd4a1f`). O que falta é **uma coisa só**: a **re-revisão
-escopada dessa onda**. Depois dela, o plano fecha.
-
-🔴 **NÃO ESTAMOS EM `main`.** A branch é **`admin-porta-e-aviso`**, 28 commits à frente de `main`.
-**Nada disso foi ao ar, e nada deve ir ao ar** até a re-revisão fechar e as travas de deploy abaixo
-serem cumpridas — e o deploy é decisão DELE, não minha.
+🔴 **NÃO ESTAMOS EM `main`, E NADA DISSO FOI AO AR.** A branch é **`admin-porta-e-aviso`**, 28
+commits à frente de `main`. O que fazer com ela — merge, PR, ou deixar parada — **é decisão dele**,
+e o deploy tem travas listadas abaixo.
 
 ---
 
-## ▶ ELE DIGITOU "CONTINUA"? NÃO COMECE DO ZERO — FALTA UM PASSO SÓ.
+## ▶ ELE DIGITOU "CONTINUA"? O PLANO ACABOU — O QUE SOBROU É DECISÃO DELE.
 
 > 🔴 **A regra de sempre:** *"continua"* significa **construir**, não levantar opções. Sem menu, sem
 > pergunta de abertura. Ele já disse duas vezes: *"estás saindo do contexto"* / ***"o foco é o
 > aplicativo"***.
 
-**O que fazer, na ordem, sem perguntar nada:**
+**Mas este plano não tem próximo passo de construção** — ele fechou. Então, nesta ordem:
 
-1. `git checkout admin-porta-e-aviso`; `git status` tem que estar **limpo** (a sessão de 16/09
-   terminou limpa, 1110/1110, `tsc` limpo, build verde — conferido por mim, não só relatado).
-2. Carregar `superpowers:subagent-driven-development` e ler o **ledger**:
-   `.superpowers/sdd/2026-09-13-acesso-de-admin-porta-e-aviso/progress.md` (últimas ~15 linhas).
-3. **Despachar a re-revisão escopada da onda de fix** (`re-review-prompt.md` da skill, modelo
-   sonnet — o diff toca vocabulário central), com:
-   - a lista de achados: `<workspace>/final-rereview-findings.md` (já escrita, inclusive o que o
-     fixer fez ALÉM da ruling e que a re-revisão precisa julgar);
-   - o relatório do fixer: `<workspace>/final-fix-report.md`;
-   - o pacote: `<workspace>/review-428696a..1fd4a1f.diff` (já gerado).
-4. Se **tudo ADDRESSED e sem quebra nova** → apagar o workspace `.superpowers/sdd/2026-09-13-…/`
-   e seguir `superpowers:finishing-a-development-branch` (ele decide: merge em `main` / PR / deixar).
-   Se **sobrar achado** → adjudicar com ruling no ledger (não há segunda onda), e apresentar a ele.
-5. **Só então** falar de deploy — ver as travas abaixo.
-
-⚠️ Se o ledger em `.superpowers/` tiver sumido (`git clean -fdx` apaga; é git-ignored), o essencial
-está neste arquivo e em `git log 428696a..HEAD`: os 5 commits da onda são os achados C1+I2, I1,
-I3, I4, I6, nesta ordem.
+1. `git checkout admin-porta-e-aviso`; `git status` limpo; `npm test -- --run` pra conferir por
+   você mesmo (deve dar **1110/1110**), nunca só relatar o número deste arquivo.
+2. **Apresentar as três travas de deploy abaixo e a decisão de produto pendente** — curto, sem
+   menu longo. O destino da branch é escolha dele.
+3. Se ele mandar seguir sem tocar no admin, o próximo tijolo **não é deste plano**: é o eixo
+   *"o que só sabe quem já foi"* (`modos` e `waypoints[1..]` seguem mortos no `src/`), medido em
+   09/09. Nada de reabrir acervo — ele fechou em 3 fichas.
 
 ---
 
-## 📍 ONDE A EXECUÇÃO PAROU
-
-> **Atualizado em 2026-09-16, fim da sessão.** Nenhum subagente ficou rodando. Working tree limpo.
+## 📍 O PLANO DE ADMIN — FECHADO
 
 | tarefa | estado |
 |---|---|
-| 1 a 7+8 | ✅ completas em 13–15/09 (`git log`) |
-| **8-bis** — a home enxerga o fechado do dono | ✅ completa, 1 fix round (`042d5e0..ab6a599`) |
-| 9 — a rota que publica e retira | ✅ completa, 1 fix round (`ab6a599..8e10202`) |
-| 10 — o painel | ✅ completa, **2** fix rounds (`8e10202..eb0b50f`) |
-| 11 — o aviso na ficha | ✅ completa, review limpa (`eb0b50f..428696a`) |
-| **final review** (opus, branch inteira, 23 commits) | ✅ rodou — *With fixes* |
+| 1 a 7+8 | ✅ completas em 13–15/09 |
+| **8-bis** — a home enxerga o fechado do dono | ✅ completa, 1 fix round |
+| 9 — a rota que publica e retira | ✅ completa, 1 fix round |
+| 10 — o painel | ✅ completa, **2** fix rounds |
+| 11 — o aviso na ficha | ✅ completa, review limpa |
+| **final review** (opus, branch inteira) | ✅ *With fixes* — 1 Critical, 6 Important |
 | **onda de fix** (C1, I1, I2, I3, I4, I6) | ✅ aplicada (`050dfd6..1fd4a1f`), 9 mutações com `diff -u` |
-| **re-revisão escopada da onda** | 🔴 **NÃO RODOU — é o próximo passo** |
+| **re-revisão escopada da onda** | ✅ **limpa (24/09) — tudo ADDRESSED, nenhuma quebra nova** |
 
-**Suíte: 1110/1110 em 69 arquivos**, `tsc` limpo, `npm run build` verde. 16 commits nesta sessão.
-
+**Suíte: 1110/1110 em 69 arquivos**, `tsc` limpo, `npm run build` verde.
 ### 🔴 O QUE O FINAL REVIEW ACHOU — e que a onda consertou (a re-revisão confirma)
 
 - **C1 (Crítico, a linha vermelha):** a Rampa numa **quarta** com o dono dizendo "em reforma"
@@ -81,15 +67,21 @@ I3, I4, I6, nesta ordem.
   do servidor (`senha-curta` / `sem-segredo`, nunca `ausente`), nunca pra tela pública.
 - **I6:** o guarda do `sw.test` provava a ORDEM da rota `/admin`, não o HANDLER `NetworkOnly`.
 
-**O fixer fez três coisas ALÉM da ruling** — a re-revisão tem que julgar: `Promise.all` de aviso +
-clima em `resolverEstado(s)` (era minor deferido); duas linhas da spec reescritas pra bater com I4;
-três fixtures com `venceEm: 0` corrigidos. E deixou **uma decisão de produto pra ele**: o
-`AvisoDoDono` ainda mostra o **texto** de um aviso `fechado` vencido até a próxima busca (só o
-efeito some) — esconder o bloco é uma linha.
+**O fixer fez quatro coisas ALÉM da ruling, e a re-revisão julgou as quatro CORRETAS:** `Promise.all`
+de aviso + clima em `resolverEstado(s)` (era minor deferido — e evita que 2 s + 4 s encostem no
+timeout de 6 s do service worker); duas linhas da spec reescritas pra bater com a ruling I4 (sem
+isso a spec ficaria falsa); três fixtures com `venceEm: 0` corrigidos **sem perder o que provavam**;
+e o `epochS` viajando dentro de `Agora`, sem terceiro hook de relógio.
+
+🔵 **DECISÃO DE PRODUTO PENDENTE, E É DELE** (não entrou na re-revisão, de propósito): o
+`AvisoDoDono` ainda mostra o **texto** de um aviso `fechado` já vencido até a próxima busca ao
+`/api/carimbo` — só o **efeito** some no prazo. Esconder o bloco junto é **uma linha**. Mantê-lo é
+defensável (o recado do dono continua sendo coisa que ele escreveu); escondê-lo é mais honesto com
+o prazo que ele mesmo escolheu. **Não decidir sozinho.**
 
 ### 🔴 TRAVAS DE DEPLOY — nada sobe sem elas
 
-1. **A re-revisão da onda** (passo 3 acima).
+1. ~~A re-revisão da onda~~ — ✅ **caiu em 24/09, limpa.**
 2. **A tabela `avisos` só nasce em produção com** `npx dotenv -e .env.local -- tsx scripts/apply-schema.ts`.
    O final review confirmou: deployar ANTES disso **não derruba nada** (`lerAviso(s)` engole o erro
    e a ficha/home seguem sem aviso) — mas a primeira publicação daria erro.
@@ -100,10 +92,41 @@ efeito some) — esconder o bloco é uma linha.
 
 ### 📋 COPY DE TELA QUE EU ESCREVI E ELE AINDA NÃO LEU
 
-O painel (`PainelAdmin.tsx`) e o bloco do aviso (`AvisoDoDono.tsx`) têm strings minhas — a lista
-completa está na seção "strings" de `<workspace>/task-10-report.md` e `task-11-report.md`
-(se o workspace sumir: `grep -n '"' src/app/admin/PainelAdmin.tsx src/app/AvisoDoDono.tsx`).
-Palavra de tela é escolha dele; é tela de admin (só ele vê), mas vale a leitura antes do deploy.
+Palavra de tela é escolha dele. É tela de admin (só ele vê), mas **a lista abaixo é redação minha
+que nunca passou pelos olhos dele** — o workspace onde ela morava foi apagado, então ela fica aqui:
+
+**`AvisoDoDono.tsx`** (este aparece na ficha PÚBLICA, é o que mais importa):
+"publicado hoje" · "publicado há 1 dia" · "publicado há N dias"
+
+**`PainelAdmin.tsx`** — o que cada efeito faz, mostrado enquanto ele escolhe:
+"O lugar vai aparecer FECHADO, e não por causa de chuva." · `O carimbo vai dizer "Pode ir", mesmo
+se tiver chovido.` · "O carimbo não muda — só o recado aparece na ficha." · (o texto do `frio` sai
+da voz da própria ficha, não é string fixa) · "publicado há menos de 1 dia" · atalhos de prazo
+"amanhã" / demais · erros: "Não consegui publicar." · "Não consegui tirar o aviso." · "Sem rede." ·
+botão "Publicar" / "Publicando…"
+
+**`CaixaDeSenha.tsx`:** "Senha do painel" · "Entrar" / "Entrando…" · "Senha não confere." ·
+"O painel não está configurado." · "Sem rede."
+
+Conferir a qualquer momento: `grep -n '"' src/app/AvisoDoDono.tsx src/app/admin/PainelAdmin.tsx src/app/admin/CaixaDeSenha.tsx`
+
+### 📎 OS MINORS DIFERIDOS DO PLANO DE ADMIN (triados pelo final review — nenhum trava merge)
+
+O workspace onde moravam foi apagado; ficam aqui porque são dívida conhecida, não esquecida. O
+final review triou os 14: **um virou o I3 e foi consertado**, o resto é "depois" ou "descartar".
+
+- `lerSessao`: os ramos defensivos (JSON lixo, `exp` não-número) são inalcançáveis por teste —
+  só ocorrem se `criarSessao` tiver bug. Falta comentário dizendo que são inalcançáveis por desenho.
+- `db.ts:142`: `String(r.efeito) as EfeitoAviso` sem validação em runtime — mesmo padrão já usado
+  pro `Freshness.estado`, consistente com a convenção, não risco novo.
+- `tokenDoCookie` parseia o header à mão enquanto `admin/page.tsx` usa `cookies()` do next/headers
+  — não é duplicação (é o que torna a guarda testável sem o runtime do Next), mas é parser a mais.
+- Sem teste: JSON malformado no POST do aviso · `publicadoHa` no plural / 0 dias · o caminho
+  `dentro === true` do `admin/page.tsx` (exigiria mockar next/headers + next/navigation + db juntos).
+- `ficha.css:124`: o `<p class="reason">` vazio no fechado-do-dono ganha `margin: .85rem auto 0` e
+  sobra folga vertical. **A Task 11 pôs o texto do dono ali — some sozinho, mas ninguém viu em 375px.**
+- Um teste derivado da Task 10 usa `screen.getByText` global em vez de escopar ao bloco da ficha —
+  passa hoje por ausência de colisão de strings.
 
 ### ⚠️ O QUE ESTA SESSÃO APRENDEU
 
