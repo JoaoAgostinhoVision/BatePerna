@@ -3,17 +3,18 @@
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
 🟢 **ÚLTIMA PARADA: 2026-09-26.** As **sete tarefas do plano da ficha-no-banco estão COMPLETAS**, cada
-uma com revisão limpa. A branch está na **revisão final da branch inteira** (20 commits, no modelo mais
-capaz), que é o último portão antes de decidir o merge.
+uma com revisão limpa, **e a revisão final da branch inteira fechou**: 1 Critical, 7 Important e 7 Minor,
+todos endereçados numa onda única de fix, com re-revisão limpa. Veredito: **não impede o merge.**
+**A branch está pronta e NÃO foi ao ar. O merge e o deploy são decisão dele.**
 
 🔵 **O EIXO: a FICHA saiu do JSON e foi pro BANCO, e agora é editável pelo celular.** A ficha mora em
 `ficha_versoes` (append-only, a versão de maior `id` vence); `/admin` é lista → tela do lugar → editar a
 voz → histórico → voltar a uma versão antiga (**gravando uma versão nova**, nunca apagando).
 
-🔴 **ESTAMOS NA BRANCH `ficha-no-banco`**, HEAD **`21048f2`**, 20 commits à frente do `main`. O `main`
-está no ar e intocado. **Nada desta rodada foi ao ar.**
+🔴 **ESTAMOS NA BRANCH `ficha-no-banco`**, 26 commits à frente do `main`. O `main` está no ar e intocado.
+**Nada desta rodada foi ao ar.**
 
-**Estado medido por mim no `21048f2`:** árvore limpa, **1183/1183 em 79 arquivos**, `npx tsc --noEmit`
+**Estado medido por mim no fim do dia:** árvore limpa, **1193/1193 em 79 arquivos**, `npx tsc --noEmit`
 exit 0, **`npm run build` exit 0** com todas as rotas que leem banco como **ƒ (Dynamic)**.
 
 ---
@@ -23,14 +24,34 @@ exit 0, **`npm run build` exit 0** com todas as rotas que leem banco como **ƒ (
 > 🔴 **A regra de sempre:** *"continua"* significa **construir**, não levantar opções. Sem menu, sem
 > pergunta de abertura. Ele já disse: *"estás saindo do contexto"* / ***"o foco é o aplicativo"***.
 
-1. `git status` limpo; `npm test -- --run` — deve dar **1183/1183 em 79 arquivos**. Confira você mesmo;
+1. `git status` limpo; `npm test -- --run` — deve dar **1193/1193 em 79 arquivos**. Confira você mesmo;
    nunca relate o número deste arquivo sem rodar.
-2. **Se a revisão final da branch ainda não tiver sido resolvida**, o próximo passo é ela: gerar
-   `review-package ... 956a69d 21048f2` e despachar o final review (opus), apontando nominalmente a
-   lista de minors diferidos abaixo. Se ela já voltou com achados, é **UMA onda de fix** (não um fixer
-   por achado) e **UMA** re-revisão escopada — sem segunda onda.
-3. Depois disso: `superpowers:finishing-a-development-branch`, e aí as decisões abaixo, que **são dele**.
+2. 🔴 **O laço de construção ACABOU. O que falta não é código — são três coisas que são DELE**, e estão
+   logo abaixo: as onze palavras de tela, o prazo da cópia em memória, e olhar as três telas novas no
+   celular. **Não decida nenhuma delas sozinho, e não abra o dia com um menu delas** — se ele disser
+   "continua" sem tocar no assunto, a coisa certa a fazer é perguntar **uma** delas, a das palavras,
+   porque é a que trava o deploy com voz dele na tela.
+3. O merge é `superpowers:finishing-a-development-branch`, e é decisão dele — **não faça sozinho**.
 4. Todo dispatch que toque `src/app/` leva **`npm run build`** e `git add` por caminho (rulings P13/P8).
+
+### 🔵 AS TRÊS COISAS QUE SÃO DELE, E QUE O LAÇO NÃO PODE DECIDIR
+
+1. **As onze palavras de tela** (tabela abaixo) — copy é escolha dele, e é o método de 10/09 que
+   funcionou: eu escrevo, mostro por extenso, ele lê, ele decide. Nenhuma está publicada como voz dele.
+2. **O prazo da cópia em memória.** Hoje ela **não tem teto**: uma instância que leu o acervo continua
+   servindo aquela leitura para sempre se o banco cair — sem limite e sem sinal na tela. Todo outro prazo
+   do app tem constante nomeada e justificativa escrita; só esta não. É uma linha de código.
+   *De um lado:* sem teto, ele nunca vê a tela de erro, mas pode ver a voz que já reescreveu.
+   *Do outro:* com teto, passa do prazo e cai no erro honesto, que foi a escolha dele para todo o resto.
+3. **Olhar as três telas novas no celular.** Nenhuma foi vista por olho humano. O CSS que entrou é o
+   **mínimo estrutural**, reusando valor que já existia no `admin.css` — zero cor nova, zero fonte nova,
+   zero animação, conferido regra a regra na revisão. O visual é escolha dele.
+
+### 📜 AS RULINGS DE 26/09 ESTÃO VERSIONADAS
+
+**`docs/superpowers/2026-09-26-rulings-revisao-final.md`** — as doze decisões que tomei no lugar dele
+neste dia, cada uma com o custo se estiver errada. Inclui as duas vezes em que um revisor me corrigiu e
+melhorou a decisão, e a única vez em que desviei do processo de propósito (e por quê).
 
 ### 🔴 AS DUAS TRAVAS DO DIA DO DEPLOY — as duas derrubam o app inteiro se esquecidas
 
@@ -115,10 +136,18 @@ antes de qualquer `git clean`.
 
 ### 🟡 OS MINORS DIFERIDOS — entregues nominalmente à revisão final para triagem
 
-1. 🔴 **O maior:** não existe teste dedicado para *"versão antiga que não passa mais no schema de hoje →
-   400 e nada gravado"*. O `catch` que decide isso nunca é exercitado; a garantia vem só de leitura.
-2. `tests/lib/sem-disco-em-producao.test.ts` — três números imprecisos no docblock (o verdadeiro é
-   **10079 de 14570**). Nenhum afirma nada falso sobre o **comportamento** do guarda.
+> ✅ **A revisão final triou esta lista: os itens 1 e 2 foram CONSERTADOS na onda de fix; os itens 3 a 6
+> ela julgou "pode ir", e três deles ela derrubou como improcedentes.** Fica registrado o que era.
+
+1. ✅ **O maior, e foi consertado:** não existia teste dedicado para *"versão antiga que não passa mais
+   no schema de hoje → 400 e nada gravado"*. O `catch` que decide isso nunca era exercitado.
+2. ✅ **Consertado, e a minha própria correção estava errada.** Eu vinha repetindo que o número certo do
+   docblock de `tests/lib/sem-disco-em-producao.test.ts` era "10079 de 14570". **É falso para a expressão
+   que o docblock cita.** Duas medições independentes (a onda de fix e a re-revisão, que bateram): a tira
+   de comentário de **bloco sozinha** come **8880 de 14570 (60,9%)**; os **10079 (69,2%)** só aparecem
+   quando a tira de comentário de **linha** roda depois dela. E a causa que o docblock narrava — um `/*`
+   escondido dentro de um literal — **não reproduz hoje**: não há nenhuma ocorrência no arquivo. O volume
+   vem do tanto de JSDoc de bloco, e nada mais. O docblock foi reescrito pela medição.
 3. O teste "corpo sem nenhum dos dois formatos: 400" não é sustentado por mutação.
 4. "slug que não existe: 400" prova só o status (`plan-mandated`); e nenhum teste de **rota** cobre
    `campo: "slug"` direto.

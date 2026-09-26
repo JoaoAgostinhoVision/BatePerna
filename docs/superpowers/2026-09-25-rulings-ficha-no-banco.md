@@ -47,10 +47,19 @@ VAZIA (`scripts/apply-schema.ts` sozinho, sem semear depois) — o app agora est
 
 **T4-6 — três números imprecisos ficam deferidos para a onda de fix da revisão final.** No docblock de
 `tests/lib/sem-disco-em-producao.test.ts`: um "10251 de 14800" atribuído à expressão errada e contado em
-bytes (o verdadeiro é **10079 de 14570**, medido por mim); a lista do "lado rígido" omitindo "divisão lida
-como regex"; e `\//` listado como resíduo quando é conserto. Nenhum afirma nada falso sobre o
-comportamento do guarda.
+bytes; a lista do "lado rígido" omitindo "divisão lida como regex"; e `\//` listado como resíduo quando é
+conserto. Nenhum afirma nada falso sobre o comportamento do guarda.
 *Custo se errado:* três números imprecisos sobrevivem num comentário.
+
+> ✅ **RESOLVIDO na onda de fix da revisão final (2026-09-26) — e a correção que esta ruling propunha
+> estava ERRADA.** Onde antes se lia aqui *"o verdadeiro é 10079 de 14570, medido por mim"*: isso é falso
+> para a expressão que o docblock cita. Duas medições independentes, que bateram entre si: a tira de
+> comentário de **bloco sozinha** come **8880 de 14570 (60,9%)**; os **10079 (69,2%)** só aparecem quando
+> a tira de comentário de **linha** roda **depois** dela. E a causa narrada no docblock — um `/*` escondido
+> dentro de um literal, cegando a tira — **não reproduz hoje**: não há nenhuma ocorrência de `"/*`, `'/*`
+> ou `` `/* `` no arquivo. O volume alto vem só do tanto de JSDoc de bloco que o `cache-rotas.ts` tem.
+> **A lição, e é a razão de este parágrafo existir:** trocar um número por outro teria mantido a frase
+> falsa, só que com outro número. O que conserta uma frase medida é medir de novo, não reescrever.
 
 **T4-5 — onde o guarda para de crescer.** Decidido *antes* de ver o resultado da última re-revisão, para
 ser decisão e não reação: o resíduo declarado do varredor (texto de JSX com `//`, `${}` aninhado, regex
