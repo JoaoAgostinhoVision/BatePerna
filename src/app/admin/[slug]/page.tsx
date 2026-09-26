@@ -8,6 +8,7 @@ import { PRAZO_AVISO_MS, resolverEstado } from "@/lib/carimbo-estado";
 import { comPrazo } from "@/lib/cache-rotas";
 import { avisoVigente, getClient, type AvisoLinha } from "@/lib/db";
 import CaixaDeSenha from "../CaixaDeSenha";
+import EditorDeVoz from "../EditorDeVoz";
 import PainelAdmin from "../PainelAdmin";
 import "../admin.css";
 
@@ -94,6 +95,7 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
     <main className="adm">
       <h1>Painel</h1>
       <PainelAdmin ficha={ficha} leitura={leitura} aviso={aviso} avisoErro={avisoErro} agora={agora} />
+      <EditorDeVoz ficha={ficha} />
     </main>
   );
 }
