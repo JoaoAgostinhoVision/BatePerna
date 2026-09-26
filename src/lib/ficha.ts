@@ -1,19 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fichaSchema, type Ficha } from "@/types/ficha";
+// `ordenarPorNome` mora em `ficha-fonte.ts` desde 2026-09-25 (Task 3 do plano
+// "ficha no banco"): ela foi pro único lugar que a usa em produção, junto do
+// `buscarFichas` que lê do banco. Se este módulo a importasse de lá e
+// `ficha-fonte.ts` a importasse de volta daqui, seria um ciclo de VALOR (não
+// de tipo) entre os dois — o caso irmão do que o topo de `aviso.ts` registra.
+// A direção certa é só esta: `ficha.ts` importa de `ficha-fonte.ts`.
+import { ordenarPorNome } from "@/lib/ficha-fonte";
+
+// Reexportada pra `tests/lib/ficha.test.ts` continuar importando-a
+// de `@/lib/ficha`, como sempre importou.
+export { ordenarPorNome } from "@/lib/ficha-fonte";
 
 const FICHAS_DIR = path.join(process.cwd(), "content", "fichas");
-
-// Ordem de readdir é estável por acaso, não por contrato: muda com o sistema
-// de arquivos e com o nome do JSON. O acervo e a home dependem de uma ordem
-// que a pessoa reconheça, então ela é declarada aqui — pura e exportada, pra
-// o critério ter teste próprio, independente do que existe em content/fichas
-// (que é conteúdo do dono do projeto, não fixture de teste).
-export function ordenarPorNome(fichas: Ficha[]): Ficha[] {
-  return [...fichas].sort((a, b) =>
-    a.trajeto.waypoints[0].nome.localeCompare(b.trajeto.waypoints[0].nome, "pt-BR"),
-  );
-}
 
 /** Carrega e valida todo `.json` de `dir` (default: content/fichas real).
  *  O parâmetro existe só pra teste poder apontar pra um diretório sintético
