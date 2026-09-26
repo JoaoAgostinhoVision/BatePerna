@@ -9,22 +9,12 @@ const withSerwist = withSerwistInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // A ficha é lida de content/fichas em tempo de request (src/lib/ficha.ts via fs).
-  // O tracer estático do Next não enxerga readdirSync dinâmico, então incluímos a
-  // pasta explicitamente no bundle serverless — senão o deploy quebra ("ficha não
-  // encontrada"), e só em produção. tests/deploy/tracing.test.ts é o cadeado:
-  // ele falha se nascer rota que lê ficha sem declarar aqui.
-  outputFileTracingIncludes: {
-    "/": ["./content/**/*"],
-    "/[slug]": ["./content/**/*"],
-    "/trilhas": ["./content/**/*"],
-    "/api/confirmar": ["./content/**/*"],
-    "/api/carimbo": ["./content/**/*"],
-    "/api/carimbos": ["./content/**/*"],
-    "/api/cron/motor": ["./content/**/*"],
-    "/api/admin/aviso": ["./content/**/*"],
-    "/admin": ["./content/**/*"],
-  },
+  // Não há mais outputFileTracingIncludes de content/fichas: desde 2026-09-25 a
+  // ficha vem do banco (src/lib/ficha.ts, via src/lib/ficha-fonte.ts), não mais de
+  // fs em tempo de request. content/fichas só é lido por scripts/semear-fichas.ts
+  // (a semente) e em teste — os dois rodam fora do bundle serverless, então não
+  // precisam de tracer nenhum. Quem impede a volta é
+  // tests/lib/sem-disco-em-producao.test.ts.
 };
 
 export default withSerwist(nextConfig);
