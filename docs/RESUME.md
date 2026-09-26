@@ -26,9 +26,13 @@ execuções), `npx tsc --noEmit` exit 0, **`npm run build` exit 0**.
 
 1. `git status` limpo; `npm test -- --run` — deve dar **1152/1152 em 75 arquivos**. Confira você mesmo;
    nunca relate o número deste arquivo sem rodar.
-2. Carregar `superpowers:subagent-driven-development` e ler as últimas ~40 linhas do ledger:
-   `.superpowers/sdd/2026-09-24-ficha-no-banco-e-editor/progress.md`. O bloco
-   **"▶ PRÓXIMA SESSÃO COMEÇA AQUI"** no fim dele tem os 4 passos por extenso.
+2. Carregar `superpowers:subagent-driven-development` e ler
+   **`docs/superpowers/2026-09-25-rulings-ficha-no-banco.md`** — este é versionado e é a fonte que não
+   morre: a Parte 1 são as rulings ainda VIVAS que têm que viajar nos dispatches, e a Parte 2 é o que a
+   revisão da Task 5 tem que olhar. **Se** o ledger ainda existir em
+   `.superpowers/sdd/2026-09-24-ficha-no-banco-e-editor/progress.md`, as últimas ~40 linhas dele têm o
+   detalhe por extenso (o bloco "▶ PRÓXIMA SESSÃO COMEÇA AQUI"); se não existir, o doc versionado basta —
+   recrie o ledger com a identidade do plano na primeira linha e siga.
 3. **A Task 5 JÁ ESTÁ COMMITADA (`4ad7764`) — não redespache.** Gere
    `review-package ... 4c766d1 4ad7764` e despache **a revisão da Task 5**, avisando o revisor que
    **NÃO EXISTE relatório do implementador** (a sessão foi encerrada antes de ele escrever): ele julga
