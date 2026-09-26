@@ -57,7 +57,15 @@ export async function PUT(req: Request): Promise<Response> {
   if (trazVersaoId === trazCampo) return new Response("", { status: 400 });
 
   if (trazVersaoId) {
-    if (typeof versaoId !== "number") return new Response("", { status: 400 });
+    // 🔴 M1 DA REVISÃO FINAL (2026-09-26): `typeof versaoId !== "number"`
+    // deixava passar `1.5`, `-1` e `1e999` — este último o `JSON.parse`
+    // converte em `Infinity`, e o `@libsql/client` lança `RangeError` com
+    // `Infinity` como parâmetro, uma exceção NÃO TRATADA numa rota que
+    // devolve 400 controlado em todos os outros pontos. Mesma forma da rota
+    // irmã (`src/app/api/admin/aviso/route.ts`).
+    if (typeof versaoId !== "number" || !Number.isInteger(versaoId) || versaoId <= 0) {
+      return new Response("", { status: 400 });
+    }
 
     const versao = await versaoPorId(getClient(), versaoId);
     // 🔴 A LINHA VERMELHA: sem conferir que a versão pertence a ESTE slug, um

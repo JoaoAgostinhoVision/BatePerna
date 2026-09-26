@@ -199,6 +199,27 @@ describe("PUT /api/admin/ficha — voltar a uma versão (versaoId)", () => {
     expect((await PUT(pedido({ slug: SLUG, versaoId: 99_999 }, cookieBom))).status).toBe(400);
   });
 
+  // 🔴 I1 DA REVISÃO FINAL (2026-09-26): o `try { fichaSchema.parse(...) }
+  // catch { 400 }` que decide se uma versão antiga ainda pode ser restaurada
+  // não tinha teste nenhum — apagar as cinco linhas do `catch` não deixava
+  // nada vermelho. O custo é grande: se uma versão que não passa mais no
+  // schema de hoje virasse a atual, `buscarFichas`/`getAllFichas` estourariam
+  // pro acervo INTEIRO (home, /trilhas, /<slug>, /admin e /admin/<slug> —
+  // inclusive a tela pela qual se desfaria o erro), sem saída por SQL na mão.
+  // `promessa` é campo obrigatório do schema de hoje; a versão gravada abaixo
+  // não o tem.
+  it("voltar a uma versão que não passa mais no schema de hoje: 400, e o histórico não muda", async () => {
+    const { promessa: _promessa, ...semPromessa } = ficha;
+    const v1 = await gravarVersao(c, SLUG, JSON.stringify(semPromessa), "semente", AGORA);
+    const antes = await historico(c, SLUG);
+
+    const r = await PUT(pedido({ slug: SLUG, versaoId: v1 }, cookieBom));
+
+    expect(r.status).toBe(400);
+    const depois = await historico(c, SLUG);
+    expect(depois, "voltar pra uma versão inválida não pode gravar nada novo").toHaveLength(antes.length);
+  });
+
   // 🔴 FIX ROUND 1 (2026-09-26): "voltar" grava VERBATIM, não renormalizado.
   // Sem isto, `fichaSchema.parse` reescreve o passado — descarta chave
   // desconhecida em silêncio (mesma régua documentada em `src/types/ficha.ts`
@@ -237,5 +258,42 @@ describe("PUT /api/admin/ficha — voltar a uma versão (versaoId)", () => {
     const res = await PUT(pedido({ slug: SLUG, campo: "voz", valor: "x", versaoId: v1 }, cookieBom));
     expect(res.status).toBe(400);
     expect(await historico(c, SLUG)).toHaveLength(antes.length);
+  });
+
+  // 🔴 M1 DA REVISÃO FINAL (2026-09-26), medido pelo revisor: `versaoId:
+  // 1e999` sobrevive ao `JSON.parse` como `Infinity` (`typeof` continua
+  // "number"), e o `@libsql/client` lança `RangeError` com `Infinity` como
+  // parâmetro de bind — uma exceção não tratada, não um 400 controlado. `1.5`
+  // é o irmão mais simples (não-inteiro, mas `typeof` também deixa passar).
+  //
+  // ⚠️ HONESTIDADE DE MUTAÇÃO: este teste NÃO mata sozinho a remoção do
+  // `!Number.isInteger(...)` — medido: sem essa checagem, `versaoPorId` com
+  // `id = 1.5` roda a consulta de qualquer forma, não acha linha (os ids são
+  // inteiros) e devolve `null`, que o ramo seguinte já traduz em 400 pelo
+  // motivo errado. Fica como documentação do contrato (a rota recusa
+  // explicitamente, não por acaso de não achar linha); quem prova o defeito
+  // real de M1 é o teste de `1e999` logo abaixo.
+  it("versaoId não-inteiro (1.5): 400, e nada é gravado", async () => {
+    const res = await PUT(pedido({ slug: SLUG, versaoId: 1.5 }, cookieBom));
+    expect(res.status).toBe(400);
+    expect(await historico(c, SLUG)).toHaveLength(1);
+  });
+
+  // 🔴 `JSON.stringify({ versaoId: 1e999 })` NÃO exercita o defeito: em JS o
+  // literal `1e999` já É `Infinity` no momento em que o teste o escreve, e
+  // `JSON.stringify` serializa não-finito como `null` — o corpo chegaria com
+  // `versaoId: null`, que `typeof null !== "number"` já rejeitava mesmo
+  // ANTES deste conserto. O ataque real manda o TEXTO `1e999` no JSON (um
+  // número gigante, não `Infinity`), e é o `JSON.parse` DO SERVIDOR quem o
+  // estoura pra `Infinity` — por isso o corpo é montado como string à mão.
+  it("versaoId gigante o bastante pra o JSON.parse do servidor virar Infinity: 400, e nada é gravado", async () => {
+    const req = new Request("http://x/api/admin/ficha", {
+      method: "PUT",
+      headers: { cookie: `${COOKIE_ADMIN}=${cookieBom}` },
+      body: `{"slug":"${SLUG}","versaoId":1e999}`,
+    });
+    const res = await PUT(req);
+    expect(res.status).toBe(400);
+    expect(await historico(c, SLUG)).toHaveLength(1);
   });
 });
