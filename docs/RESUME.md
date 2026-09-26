@@ -2,98 +2,121 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🟡 **ÚLTIMA PARADA: 2026-09-24, fim da sessão.** Ele encerrou com ***"eu quero continuar depois,
-deixe tudo pronto para a próxima sessão"***.
+🟡 **ÚLTIMA PARADA: 2026-09-25, fim da sessão.** Ele encerrou com ***"quero continuar depois, deixe tudo
+pronto para a próxima sessão só digitar continua"***.
 
-🔵 **O EIXO MUDOU, e é grande: a FICHA vai sair do JSON e morar no BANCO, editável pelo celular.**
-Ele pediu *"esse painel está muito simples, me ajude a fazer um painel do adm mais funcional,
-inclusive modificar por completo os itens do app"*. Brainstorm completo feito, **seis escolhas
-dele** registradas, spec escrita, plano de **7 tarefas** escrito. **A Task 1 está feita e
-fechada** (re-revisão limpa após 1 fix round).
+🔵 **O EIXO: a FICHA saiu do JSON e foi pro BANCO, e agora é editável pelo celular.** Plano de **7
+tarefas** (`docs/superpowers/plans/2026-09-24-ficha-no-banco-e-editor.md`), na branch `ficha-no-banco`.
+**Tasks 1, 2, 3 e 4 fechadas com revisão limpa; mais duas tarefas minhas que nasceram no caminho (4-ter e
+4-bis), também fechadas. A Task 5 está COMMITADA mas NÃO REVISADA.** Faltam a revisão da 5, a Task 6
+(editar a voz) e a Task 7 (histórico e voltar atrás).
 
-🔴 **ESTAMOS NA BRANCH `ficha-no-banco`** (a partir de `main` em `956a69d`), com 2 commits. O
-`main` está no ar e intocado. **Nada desta rodada nova foi ao ar.**
+🔴 **ESTAMOS NA BRANCH `ficha-no-banco`**, HEAD **`4ad7764`**, 9 commits à frente do `main`. O `main` está
+no ar e intocado. **Nada desta rodada foi ao ar.**
 
-🟢 **ÚLTIMA PARADA: 2026-09-24. O PLANO DE ADMIN FECHOU INTEIRO.** O eixo era `acesso de usuários`.
-As 12 tarefas, o final review da branch e a onda de 6 fixes já estavam prontos; hoje rodou **a
-re-revisão escopada que faltava** e ela **voltou limpa**: C1, I1, I2, I3, I4 e I6 todos ADDRESSED
-com `file:line`, os quatro extras do fixer julgados corretos, **zero quebra nova**. Conferido por
-mim depois do veredito: 7 call sites de `fechadoPeloDono` passando relógio real, a unidade do
-`agora` do painel é SEGUNDOS (não havia bug de unidade escondido), **1110/1110 em 69 arquivos**,
-`tsc` limpo. O workspace SDD foi apagado — o registro agora é o `git log` e este arquivo.
-
-🟢 **E O PROJETO SAIU DESTA MÁQUINA PELA PRIMEIRA VEZ.** Ele escolheu *"push + Pull Request"* e,
-quando descobri que **não havia remote nenhum**, escolheu **repositório PÚBLICO**:
-**https://github.com/JoaoAgostinhoVision/BatePerna** — `main` + `admin-porta-e-aviso` no ar, e o
-**PR #1** aberto com o diff inteiro pra ele ler no navegador.
-⚠️ **Conferido ANTES de publicar** (é irreversível): nenhum `.env` jamais entrou no histórico,
-nenhum token no conteúdo rastreado — o único `libsql://` é placeholder de doc. O que ficou público
-e ele soube antes: **o e-mail dele é o autor de todos os commits**.
-
-🚀 **E EM 24/09 FOI AO AR.** Ele disse *"pode deployar"*. Na ordem: **PR #1 mergeado** no `main`
-(suíte verde no resultado do merge, 1110/1110) → **`apply-schema` rodado contra o Turso de
-produção** (só `CREATE ... IF NOT EXISTS`; conferido depois: tabela `avisos` existe, índice
-`avisos_por_lugar` existe, 0 linhas) → **deploy** em https://bateperna.vercel.app.
-
-✅ **CONFERIDO NO NAVEGADOR, em 390px, não só por `curl`** — e o navegador quase me enganou ao
-contrário: o HTML **servido** da Rampa numa QUINTA trazia **"Pode ir"**, que é a espécie de defeito
-que este projeto já pagou. Não era: é o primeiro render antes de o relógio do cliente entrar. Na
-tela de verdade a Rampa diz **FECHADO AGORA / ABRE SÁBADO** + *"Abre sábado e domingo."* + *"a chuva
-não decide agora"* — e como **não há aviso do dono**, a frase do calendário DEVE mesmo aparecer (é
-o C1 ao contrário, e está certo). A home agrupa as duas em **"HOJE NÃO"**. O `/admin` cai no **404
-do próprio app** ("Não achei essa trilha."), sem explicar nada: falha fechada funcionando no ar.
-
-🔐 **E O PAINEL FOI LIGADO NO MESMO DIA** — ele pediu *"gera a senha e cola no vercel"*. A senha
-(32 chars, alfabeto sem ambiguidade visual) e o `ADMIN_SEGREDO` (48 bytes) foram gerados por
-`crypto.randomBytes` **direto pra arquivo** e mandados ao Vercel por `stdin`: **os valores nunca
-passaram pelo meu contexto nem pelo terminal**. Gravados como **Secret**, só em Production, e um
-deploy novo pra valerem.
-
-**Conferido no ar, sem eu autenticar** (não uso senha dele pra entrar): `/admin` agora é **200 com
-a CAIXA DE SENHA e sem nenhum vestígio do painel** (`adm-painel` e "Publicar" ausentes do HTML — é
-a garantia do I3 valendo em produção), e `POST /api/admin/entrar` com senha errada devolve **401**
-— não 404 (que seria admin desligado) e não 200. **O login em si é dele.**
-
-📄 **A senha está em `C:\Users\joao\Desktop\BATEPERNA-SENHA-DO-PAINEL.txt`** — ele guarda no
-gerenciador do celular na primeira vez que entrar **e apaga o arquivo**. O `ADMIN_SEGREDO` não
-existe fora do Vercel, nem num arquivo.
-
-👁️ **A TELA DE LOGIN FOI VISTA POR OLHO HUMANO PELA 1ª VEZ, e tem uma observação de produto:**
-ela funciona, mas **não parece o app** — "Painel" / "Senha do painel" / campo / "Entrar" em fonte
-do sistema, alinhados à esquerda, sem a moldura creme nem a serif das outras telas. Não é defeito
-e não consertei: é decisão dele se a porta dos fundos merece a roupa da casa. **O painel DEPOIS do
-login continua sem nenhum olho em cima** — só ele pode abrir.
+**Estado medido por mim no `4ad7764`:** árvore limpa, **1152/1152 em 75 arquivos** (exit 0 em duas
+execuções), `npx tsc --noEmit` exit 0, **`npm run build` exit 0**.
 
 ---
 
-## ▶ ELE DIGITOU "CONTINUA"? A RODADA NOVA ESTÁ NO MEIO DA TASK 1 — SIGA DAÍ.
+## ▶ ELE DIGITOU "CONTINUA"? COMECE AQUI, SEM PERGUNTAR NADA.
 
 > 🔴 **A regra de sempre:** *"continua"* significa **construir**, não levantar opções. Sem menu, sem
-> pergunta de abertura. Ele já disse duas vezes: *"estás saindo do contexto"* / ***"o foco é o
-> aplicativo"***.
+> pergunta de abertura. Ele já disse: *"estás saindo do contexto"* / ***"o foco é o aplicativo"***.
 
-**O que fazer, na ordem, sem perguntar nada:**
+1. `git status` limpo; `npm test -- --run` — deve dar **1152/1152 em 75 arquivos**. Confira você mesmo;
+   nunca relate o número deste arquivo sem rodar.
+2. Carregar `superpowers:subagent-driven-development` e ler as últimas ~40 linhas do ledger:
+   `.superpowers/sdd/2026-09-24-ficha-no-banco-e-editor/progress.md`. O bloco
+   **"▶ PRÓXIMA SESSÃO COMEÇA AQUI"** no fim dele tem os 4 passos por extenso.
+3. **A Task 5 JÁ ESTÁ COMMITADA (`4ad7764`) — não redespache.** Gere
+   `review-package ... 4c766d1 4ad7764` e despache **a revisão da Task 5**, avisando o revisor que
+   **NÃO EXISTE relatório do implementador** (a sessão foi encerrada antes de ele escrever): ele julga
+   pelo diff, e a ausência de medição de mutação é, por si, achado a reportar.
+4. Daí em diante é o laço normal do SDD: fix rounds se precisar, depois **Task 6** e **Task 7**.
 
-1. `git checkout ficha-no-banco`; `git status` limpo; `npm test -- --run` — deve dar **1118/1118**.
-   Confira você mesmo; nunca relate o número deste arquivo sem rodar.
-2. Carregar `superpowers:subagent-driven-development` e ler o ledger:
-   `.superpowers/sdd/2026-09-24-ficha-no-banco-e-editor/progress.md` (as últimas ~10 linhas).
-3. **Despachar a Task 2** — a Task 1 está FECHADA (re-revisão limpa). O brief já está extraído em
-   `task-2-brief.md`, e a **BASE é `b4667c5`**. Daí em diante é o laço normal do SDD até a Task 7:
-   implementador → revisão da tarefa → fix rounds se precisar → próxima.
-4. **NÃO deployar nada** desta branch sem a trava nova da seção de travas abaixo.
+### 🔴 O QUE A REVISÃO DA TASK 5 TEM QUE OLHAR (ninguém olhou ainda)
 
-### 🔴 AS DUAS RULINGS DE PRÉ-FLIGHT QUE A PRÓXIMA SESSÃO TEM QUE CARREGAR NOS DISPATCHES
+- **`src/app/admin/marca-agora.ts` é arquivo NOVO que o brief não previu** — extração da pipeline da
+  marca. Ele **reusa** `faseDe`/`marcaDe`/`vozDaFicha` ou **duplica** a lógica? Duplicar é a espécie que
+  este app pagou quatro vezes.
+- **`PainelAdmin.tsx` teve 247 linhas mexidas** num arquivo que o brief mandava **mover, não reescrever**
+  (ele passa a servir UM lugar em vez de três). Comportamento se moveu?
+- **As 5 mutações (M1..M5) não têm prova nenhuma** — sem relatório, ninguém sabe se foram medidas. A **M5**
+  é a que eu criei nesta sessão: **trocar as marcas entre dois lugares**, que tem que morrer no teste
+  escopado de `tests/app/admin-lista.test.tsx:72,79`.
+- **O que JÁ conferi por mim e não precisa refazer:** build verde com `/admin` e `/admin/[slug]` como
+  **ƒ (Dynamic)**; a asserção escopada da ruling P10 chegou (`link.closest("li")` + `within`).
 
-Estão por extenso no ledger. Em uma linha cada, porque se forem esquecidas o plano quebra:
+### 📣 DUAS PALAVRAS DE TELA ESPERANDO O JOÃO LER (as duas marcadas `// PENDENTE`)
 
-- **P1 (vai no dispatch da Task 3):** o `ordenarPorNome` muda de `ficha.ts` para `ficha-fonte.ts`
-  **e a reexportação entra no MESMO commit** — senão a suíte fica vermelha entre a Task 3 e a 4, e
-  a Task 3 seria revisada com a suíte quebrada.
-- **P2 (vai no dispatch da Task 4):** o guarda "ninguém lê o disco" mira **código que lê**, não
-  palavra que aparece — `cache-rotas.ts` e `error.tsx` citam `content/fichas` em comentário, e o
-  comentário é bom. E o implementador tem que **ver o guarda ficar vermelho** com uma mutação que
-  realmente leia o disco. Guarda que nunca foi visto vermelho não é guarda.
+Eu extraí do código, porque o relatório que faria isso não foi escrito. **Copy é escolha dele:**
+
+- `src/app/admin/ListaDeLugares.tsx:7` — *"Toque num lugar pra ver e mudar o que o app diz dele."*
+- `src/app/admin/PainelAdmin.tsx:28` — *"Não consegui ler o aviso publicado — a seção abaixo pode estar
+  incompleta."*
+
+### 🔴 AS RULINGS DE PRÉ-FLIGHT QUE OS PRÓXIMOS DISPATCHES TÊM QUE CARREGAR
+
+- **P13 + P8 — em TODA tarefa que toque `src/app/`:** `npm run build` verde **no dispatch**, com a linha da
+  rota nova colada da tabela de rotas, e `git add` **por caminho** (nunca `-A`). Isto não é zelo: **nesta
+  sessão a branch ficou sem buildar** porque a Task 4 pôs leitura de banco no `not-found.tsx`, a única
+  página que lia banco sem `force-dynamic`, e **dois assentos de revisão passaram por cima** — porque
+  nenhum dispatch meu pedia build. Toda página que lê banco declara `force-dynamic`.
+- **Antes de despachar, audite a tabela de mutação do brief** perguntando de cada linha "qual teste muda de
+  resultado?". Nesta sessão isso achou, no meu próprio plano: um relógio injetado que nenhum teste lia
+  (Task 2), um `try/catch` que sobrevivia aos 7 testes (Task 3), uma lista de 6 arquivos de teste que eram
+  18 (Task 4), uma tabela de 11 `await` que eram 13 (Task 4), um teste que provava a marca "em algum lugar
+  da tela" em vez de na linha do lugar (Task 5) e **uma mutação apontando para um teste que não existe**
+  (Task 5).
+- **A trava de deploy da semente continua valendo, e derruba o app inteiro se esquecida:**
+  `npx dotenv -e .env.local -- tsx scripts/semear-fichas.ts` **antes** do primeiro deploy desta branch.
+  Sem a semente o banco não tem ficha nenhuma e **todo o app cai no `error.tsx`**. Conferido: `tsx` e
+  `dotenv-cli` estão instalados. (Isto é sobre PRODUÇÃO — é diferente do build, que já está verde e que
+  não toca o banco.)
+
+---
+
+## 📍 O PLANO DA FICHA NO BANCO — onde cada tarefa está
+
+| tarefa | estado |
+|---|---|
+| 1 — a tabela `ficha_versoes` e as funções de banco | ✅ completa, 1 fix round |
+| 2 — a semente (os três JSON viram versão 1) | ✅ completa, 1 fix round |
+| 3 — a fonte (banco, prazo, memória, erro honesto) | ✅ completa, **0** fix rounds |
+| 4 — produção lê do banco e o disco sai | ✅ completa, **2** fix rounds |
+| **4-ter** — `force-dynamic` no `/_not-found` (o build estava QUEBRADO) | ✅ completa, review limpa |
+| **4-bis** — a config de deploy que afirmava o que virou falso | ✅ completa, review limpa |
+| **5 — `/admin` vira lista, nasce a tela do lugar** | 🟡 **commitada, NÃO revisada, sem relatório** |
+| 6 — editar a voz | ⬜ não começada |
+| 7 — o histórico e o voltar | ⬜ não começada |
+
+**O que a rodada construiu até aqui:** a ficha mora em `ficha_versoes` (append-only, a versão de maior
+`id` vence); a semente é idempotente até para slug repetido no mesmo lote; a leitura passa por
+`src/lib/ficha-fonte.ts` com prazo, cópia da última boa em memória e **erro honesto** (sem banco e sem
+memória, estoura e cai no `error.tsx` — nunca conteúdo velho, nunca o JSON do repositório); nenhum caminho
+de `src/` lê `content/fichas` e isso é **travado por teste**; e `/admin` agora é lista → lugar.
+
+### 🟢 O GUARDA DESTA RODADA, e as três gerações de furo que ele já tapou
+
+`tests/lib/sem-disco-em-producao.test.ts` é o artefato que sustenta a rodada. Ele nasceu errado três vezes
+e cada furo foi achado por medição, não por leitura:
+
+1. varria por **palavra** — nasceria vermelho punindo três comentários bons que citam o caminho;
+2. dependia do **nome do import** — `fsMut`/`pathMut` passavam verdes;
+3. a tira de comentários por regex **comia 69% do `cache-rotas.ts`** (10079 de 14570 chars, medido por
+   mim), deixando o guarda verde com leitura de disco em código — e depois o varredor novo era cego por
+   **regex literal** (`/^\/api\//`).
+
+Hoje ele mira **código que lê** (o caminho em qualquer grafia **e** o nome `loadAll`), tem **teste de
+não-vacuidade do detector E do enumerador**, e um varredor que pula string, template e regex. Uma revisão
+o comparou contra o **parser do TypeScript** nos 75 arquivos de `src/`: **0 chars de código apagados, 0
+comentários sobrevivendo**. E **eu mesmo o provei vermelho** com uma mutação que junta os três vetores de
+evasão de uma vez. Se alguém for "simplificar" isso, o motivo está escrito no docblock.
+
+⚠️ **Três números imprecisos sobrevivem no docblock desse guarda** (um "10251 de 14800" atribuído à
+expressão errada e contado em bytes; o verdadeiro é 10079 de 14570). Deferidos de propósito para a onda
+de fix da revisão final — não valiam um fix round próprio.
 
 ---
 
