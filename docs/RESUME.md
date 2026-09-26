@@ -56,6 +56,14 @@ Eu extraí do código, porque o relatório que faria isso não foi escrito. **Co
 - `src/app/admin/PainelAdmin.tsx:28` — *"Não consegui ler o aviso publicado — a seção abaixo pode estar
   incompleta."*
 
+### 📜 AS 23 RULINGS DESTA EXECUÇÃO ESTÃO VERSIONADAS
+
+**`docs/superpowers/2026-09-25-rulings-ficha-no-banco.md`** — todas as decisões que eu tomei no lugar do
+João, cada uma com o **custo se estiver errada**, mais o que a revisão da Task 5 tem que olhar. Elas
+nasceram no ledger, que é git-ignored (`.gitignore:57`) e morre num `git clean -fdx`; por isso foram
+copiadas para um arquivo versionado. **A Parte 1 daquele doc é o que ainda está VIVO e viaja nos próximos
+dispatches** — leia-a antes de despachar qualquer coisa.
+
 ### 🔴 AS RULINGS DE PRÉ-FLIGHT QUE OS PRÓXIMOS DISPATCHES TÊM QUE CARREGAR
 
 - **P13 + P8 — em TODA tarefa que toque `src/app/`:** `npm run build` verde **no dispatch**, com a linha da
