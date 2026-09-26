@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createClient } from "@libsql/client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { versoesAtuais } from "@/lib/db";
 import { bancoVazio, semearAcervo } from "./banco";
 
@@ -45,6 +45,24 @@ describe("semearAcervo só aceita banco descartável", () => {
     await expect(semearAcervo(emArquivo)).rejects.toThrow(/recusou o banco/);
     await expect(semearAcervo(emArquivo)).rejects.toThrow(/TURSO_DATABASE_URL/);
     emArquivo.close();
+  });
+
+  // 🔴 O RAMO QUE PROTEGE O BANCO DE VERDADE, e era o único dos dois sem teste:
+  // um cliente REMOTO é recusado pelo `protocol`, e recusado ANTES de qualquer
+  // consulta de ida — é esta linha que impede o `DELETE FROM ficha_versoes` de
+  // cair no Turso do João. Roda offline: `createClient` não abre rede no
+  // construtor, e o espião de `execute` é o que prova que nenhuma ida aconteceu.
+  it("recusa um cliente REMOTO, e sem nem consultar o banco", async () => {
+    const remoto = createClient({
+      url: "libsql://banco-que-nao-existe.turso.io",
+      authToken: "nenhum",
+    });
+    expect(remoto.protocol, "a premissa: um cliente remoto não é `file`").not.toBe("file");
+    const espiao = vi.spyOn(remoto, "execute");
+
+    await expect(semearAcervo(remoto)).rejects.toThrow(/não é local/);
+    expect(espiao, "a recusa saiu DEPOIS de consultar o banco remoto").not.toHaveBeenCalled();
+    remoto.close();
   });
 
   // Controle: a trava recusa o banco errado E deixa passar o certo. Sem esta

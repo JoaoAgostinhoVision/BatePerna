@@ -71,26 +71,56 @@ function arquivos(dir: string): string[] {
 
 const relativo = (p: string) => path.relative(process.cwd(), p).replace(/\\/g, "/");
 
+/** Depois de que `/` pode vir um REGEX LITERAL em vez de uma divisão: fim de
+ *  operador, de abre-parêntese, de vírgula, ou de uma das palavras que esperam
+ *  um valor. Depois de identificador, número, `)`, `]` ou fim de string, uma
+ *  barra é divisão. Heurística conhecida, e é o que basta aqui. */
+const ANTES_DE_REGEX =
+  /[(,=:[!&|?{};+\-*%^<>~]$|\b(?:return|typeof|case|in|of|new|delete|void|yield|await|do|else)$/;
+
 /** A tira de comentários deste guarda — e ela NÃO é o `replace` de uma linha que
- *  os outros arquivos de teste usam, de propósito.
+ *  os outros arquivos de teste usam, de propósito. Ela é um varredor, e o que ele
+ *  entende (e o que não entende) está escrito aqui porque **guarda cego é guarda
+ *  silencioso**, e este guarda sustenta a rodada inteira.
  *
  *  🔴 "TIRA-DE-COMENTÁRIOS QUE COME O ARQUIVO" é espécie catalogada neste
- *  projeto: `src.replace(/\/\*[\s\S]*?\*\//g, "")` não sabe o que é string, então
- *  um `"/*"` dentro de um literal engole tudo até o fim-de-comentário seguinte.
- *  E como aqui a tira é quem decide o que é CÓDIGO, o pedaço comido seria
- *  declarado limpo.
- *  Onde o `fatos-da-trilha.test.ts` se protege com um canário por arquivo, este
- *  guarda não tinha canário nenhum, e um canário de "sobrou algum `export`" só
- *  pega o arquivo comido INTEIRO — não o pedaço.
+ *  projeto, e ela já cobrou duas vezes nesta tarefa — as duas MEDIDAS:
  *
- *  Então aqui a tira é um varredor curto que PULA string, template e o
- *  que mais estiver entre aspas. Quando ele erra, erra copiando DEMAIS (um
- *  template aninhado, por exemplo), e copiar demais deixa o guarda mais rígido —
- *  nunca mais frouxo, que é o lado que importa. O `CANARIOS` abaixo continua
- *  como segunda linha, pra acusar o caso grosseiro. */
+ *   1. `src.replace(/\/\*[\s\S]*?\*\//g, "")`, a tira de uma linha, não sabe o
+ *      que é string: com um `"/*"` dentro de um literal ela comeu **10251 dos
+ *      14800 caracteres** do `cache-rotas.ts` (69%) e devolveu "limpo" um
+ *      arquivo com o caminho do acervo em código.
+ *   2. a 1ª versão DESTE varredor não sabia o que era regex literal, e a
+ *      re-revisão mediu as duas formas que a cegavam: um regex terminado em
+ *      barra escapada (`/^\/api\//` é a forma realista) fazia o `\//` final
+ *      passar por começo de comentário e **apagava o resto da linha**; e um
+ *      regex com abre-comentário dentro de classe (`/[/*]/`) apagava dali até o
+ *      próximo fechamento — 109 de 148 caracteres num arquivo de ensaio, com o
+ *      canário CALADO, porque o `import` do topo sobreviveu.
+ *
+ *  O (2) é o mesmo furo do (1) entrando por outra porta, e é por isso que o
+ *  varredor de hoje entende QUATRO formas: comentário de linha, comentário de
+ *  bloco, string/template (`"` `'` e crase) e regex literal — este último pelo
+ *  `ANTES_DE_REGEX` acima, respeitando escape e classe `[...]`.
+ *
+ *  ⚠️ O QUE ELE NÃO ENTENDE, porque ele não é um parser: texto de JSX (um `//`
+ *  solto no meio de `<p>…</p>` passaria por comentário de linha), `${}` aninhado
+ *  dentro de template, e regex em posição que o `ANTES_DE_REGEX` não licencia.
+ *  Medido em 2026-09-25 nos 75 arquivos de `src/`: nenhum deles tem qualquer uma
+ *  dessas formas (nem `\//`, nem `//` em texto de JSX), então o guarda não está
+ *  cego hoje — mas "hoje" não é remédio, é o estado, e é por isso que está
+ *  escrito aqui em vez de virar silêncio.
+ *
+ *  Nos outros erros — string sem fechar, template aninhado, regex sem fechar na
+ *  linha — ele copia DEMAIS, e copiar demais deixa o guarda mais rígido, nunca
+ *  mais frouxo. O `CANARIOS` abaixo é a segunda linha, e pega só o caso
+ *  grosseiro (arquivo comido inteiro), nunca o pedaço. */
 function semComentarios(src: string): string {
   let fora = "";
   let i = 0;
+  /** O rabo do que já saiu, sem espaço no fim: é o que diz se um `/` é regex ou
+   *  divisão. 24 caracteres bastam pra maior das palavras da lista. */
+  const cauda = () => fora.slice(-24).replace(/\s+$/, "");
   while (i < src.length) {
     const c = src[i];
     const d = src[i + 1];
@@ -100,11 +130,31 @@ function semComentarios(src: string): string {
       fora += src.slice(i, j + 1); // a string inteira ATRAVESSA, aspas e tudo
       i = j + 1;
     } else if (c === "/" && d === "/") {
+      // Comentário de linha. `//` nunca é regex (regex vazio não existe) nem
+      // divisão dupla, então esta checagem vem antes da do regex.
       while (i < src.length && src[i] !== "\n") i++;
     } else if (c === "/" && d === "*") {
+      // Comentário de bloco. `/*` também nunca é regex: quantificador sem alvo.
       i += 2;
       while (i < src.length && !(src[i] === "*" && src[i + 1] === "/")) i++;
       i += 2;
+    } else if (c === "/" && (cauda() === "" || ANTES_DE_REGEX.test(cauda()))) {
+      // Regex literal: ATRAVESSA inteiro, como a string. O `\` escapa qualquer
+      // coisa (é o `/\//` que enganava a versão anterior) e dentro de `[...]` a
+      // barra não fecha (é o `/[/*]/`).
+      let j = i + 1;
+      let emClasse = false;
+      while (j < src.length) {
+        const ch = src[j];
+        if (ch === "\\") { j += 2; continue; }
+        if (ch === "\n") break; // regex não atravessa linha: desiste e copia
+        if (emClasse) { if (ch === "]") emClasse = false; j++; continue; }
+        if (ch === "[") { emClasse = true; j++; continue; }
+        if (ch === "/") { j++; break; }
+        j++;
+      }
+      fora += src.slice(i, j);
+      i = j;
     } else {
       fora += c;
       i++;
