@@ -5,6 +5,15 @@ import BarraNavegacao from "./BarraNavegacao";
 import ListaDoAcervo from "./ListaDoAcervo";
 import { getAllFichas } from "@/lib/ficha";
 
+// Sem isto, o `next build` prerenderiza `/_not-found` estaticamente — e nesse
+// momento não há request, não há instância quente, e o banco pode estar fora
+// do alcance: o `getAllFichas` abaixo quebra o BUILD, não uma visita. As outras
+// páginas que leem o banco (`page.tsx`, `trilhas/page.tsx`, `[slug]/page.tsx`,
+// `admin/page.tsx`) já têm este mesmo `force-dynamic`; esta ficou de fora
+// porque nasceu antes do banco (2026-09-11) e ninguém a revisitou quando a
+// leitura mudou de disco pra banco (2026-09-25).
+export const dynamic = "force-dynamic";
+
 /** O QUE APARECE QUANDO O ENDEREÇO NÃO EXISTE.
  *
  *  🔴 POR QUE ISTO EXISTE (2026-09-11). Sem este arquivo, um slug errado caía
