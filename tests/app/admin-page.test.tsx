@@ -122,21 +122,22 @@ describe("/admin — a página", () => {
 });
 
 // 🔴 I3 DA REVISÃO FINAL (2026-09-16): a spec diz que a PÁGINA exige o
-// cookie, e nada provava. Inverter o `if (!dentro)` entregava o painel
-// (fichas, avisos vigentes, "Tirar"/"Publicar") a qualquer um — a API ainda
-// recusaria, mas a tela já teria mostrado o que só o dono vê. Os dois lados
-// da porta, com a sessão de verdade (`criarSessao`), e não um mock da guarda.
+// cookie, e nada provava. Inverter o `if (!dentro)` entregava a lista (o
+// acervo, o estado de cada lugar) a qualquer um — a API ainda recusaria, mas
+// a tela já teria mostrado o que só o dono vê. Os dois lados da porta, com a
+// sessão de verdade (`criarSessao`), e não um mock da guarda.
 vi.mock("@/lib/carimbo-estado", () => ({ resolverEstados: vi.fn() }));
 
 // 🔴 O DUBLÊ DO BANCO FICOU PARCIAL EM 2026-09-25: a página lê o acervo do
 // BANCO (`getAllFichas` virou `async`), então ela precisa do `versoesAtuais` de
-// verdade — com o dublê total de antes, o painel estouraria antes de mostrar
+// verdade — com o dublê total de antes, a lista estouraria antes de mostrar
 // coisa nenhuma, e o teste da porta morreria por um motivo que não é a porta.
-// O que continua dublado é o aviso vigente, que este arquivo não mede.
+// `avisosVigentes` saiu do dublê na Task 5 (2026-09-25): a lista não lê mais
+// os avisos vigentes do acervo inteiro — isso virou responsabilidade de
+// `/admin/<slug>`, medida em `tests/app/admin-lugar.test.tsx`.
 let cliente: Client;
 vi.mock("@/lib/db", async (real) => ({
   ...(await real<typeof import("@/lib/db")>()),
-  avisosVigentes: vi.fn(),
   getClient: vi.fn(() => cliente),
 }));
 
@@ -154,41 +155,39 @@ describe("/admin — a porta", () => {
     vi.stubEnv("ADMIN_SEGREDO", SEGREDO);
     vi.resetModules();
     const { resolverEstados } = await import("@/lib/carimbo-estado");
-    const { avisosVigentes } = await import("@/lib/db");
     vi.mocked(resolverEstados).mockResolvedValue(new Map());
-    vi.mocked(avisosVigentes).mockResolvedValue(new Map());
   });
   afterEach(() => vi.unstubAllEnvs());
 
-  it("ligado e SEM cookie: a caixa de senha, e nada do painel", async () => {
+  it("ligado e SEM cookie: a caixa de senha, e nada da lista", async () => {
     semCookie();
     const { default: Admin } = await import("@/app/admin/page");
     const { container } = render(await Admin());
     expect(container.querySelector('input[type="password"]'), "a caixa de senha sumiu").not.toBeNull();
-    expect(container.querySelector(".adm-painel"), "o painel apareceu sem cookie").toBeNull();
+    expect(container.querySelector(".adm-lista"), "a lista apareceu sem cookie").toBeNull();
     expect(notFoundFalso).not.toHaveBeenCalled();
   });
 
-  it("ligado e com cookie VÁLIDO: o painel, e nenhuma caixa de senha", async () => {
+  it("ligado e com cookie VÁLIDO: a lista, e nenhuma caixa de senha", async () => {
     const { criarSessao, DURACAO_SESSAO_S } = await import("@/lib/admin-sessao");
     const token = criarSessao(SEGREDO, Math.floor(Date.now() / 1000), DURACAO_SESSAO_S);
     cookiesFalso.mockResolvedValue({ get: (nome: string) => (nome === COOKIE_ADMIN ? { value: token } : undefined) });
     const { default: Admin } = await import("@/app/admin/page");
     const { container } = render(await Admin());
-    expect(container.querySelector(".adm-painel"), "o painel não apareceu com a sessão boa").not.toBeNull();
-    expect(container.querySelector('input[type="password"]'), "a caixa de senha ficou na tela do painel").toBeNull();
+    expect(container.querySelector(".adm-lista"), "a lista não apareceu com a sessão boa").not.toBeNull();
+    expect(container.querySelector('input[type="password"]'), "a caixa de senha ficou na tela da lista").toBeNull();
   });
 
   // Cookie com assinatura de OUTRO segredo é o mesmo que nenhum: a porta não
   // abre por um token que parece sessão. Sem este, um `sessaoValida` que só
   // conferisse a forma do token passaria os dois de cima.
-  it("ligado e com cookie de outro segredo: a caixa de senha, não o painel", async () => {
+  it("ligado e com cookie de outro segredo: a caixa de senha, não a lista", async () => {
     const { criarSessao, DURACAO_SESSAO_S } = await import("@/lib/admin-sessao");
     const token = criarSessao("outro-segredo", Math.floor(Date.now() / 1000), DURACAO_SESSAO_S);
     cookiesFalso.mockResolvedValue({ get: () => ({ value: token }) });
     const { default: Admin } = await import("@/app/admin/page");
     const { container } = render(await Admin());
     expect(container.querySelector('input[type="password"]')).not.toBeNull();
-    expect(container.querySelector(".adm-painel")).toBeNull();
+    expect(container.querySelector(".adm-lista")).toBeNull();
   });
 });

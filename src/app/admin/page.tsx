@@ -5,9 +5,8 @@ import { lerConfigAdmin } from "@/lib/admin-config";
 import { COOKIE_ADMIN, avisarDesligado, sessaoValida } from "@/lib/admin-guarda";
 import { getAllFichas } from "@/lib/ficha";
 import { resolverEstados } from "@/lib/carimbo-estado";
-import { avisosVigentes, getClient, type AvisoLinha } from "@/lib/db";
 import CaixaDeSenha from "./CaixaDeSenha";
-import PainelAdmin from "./PainelAdmin";
+import ListaDeLugares from "./ListaDeLugares";
 import "./admin.css";
 
 export const dynamic = "force-dynamic";
@@ -15,18 +14,12 @@ export const dynamic = "force-dynamic";
 /** 🔴 Fora do índice. Painel de admin no Google é convite. */
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
-/** Os avisos vigentes de TODOS os lugares, numa consulta só — mesmo molde do
- *  `lerAvisos` de `carimbo-estado.ts`: banco fora do ar não pode derrubar o
- *  painel, só dizer isso na tela. */
-async function lerAvisosVigentes(agora: number): Promise<{ avisos: Record<string, AvisoLinha>; erro: boolean }> {
-  try {
-    const linhas = await avisosVigentes(getClient(), agora);
-    return { avisos: Object.fromEntries(linhas), erro: false };
-  } catch {
-    return { avisos: {}, erro: true };
-  }
-}
-
+/** `/admin` virou LISTA na Task 5 (2026-09-25) — antes era o painel dos três
+ *  lugares numa tela só; hoje é um índice, e cada item leva a `/admin/<slug>`,
+ *  que é quem monta o `PainelAdmin` de UM lugar. Por isso esta página não lê
+ *  mais os avisos vigentes (aquilo virou responsabilidade da página do
+ *  lugar): ela só precisa do acervo e do estado do motor de cada um, pra
+ *  `ListaDeLugares` derivar a marca do selo público. */
 export default async function Admin() {
   // 🔴 Painel desligado NÃO EXISTE — 404, nunca uma tela dizendo "configure-me".
   // O motivo (senha curta, sem segredo) vai pro LOG, nunca pra tela: ver
@@ -51,21 +44,12 @@ export default async function Admin() {
 
   const agora = Math.floor(Date.now() / 1000);
   const fichas = await getAllFichas();
-  const [leituras, { avisos, erro: avisosErro }] = await Promise.all([
-    resolverEstados(fichas),
-    lerAvisosVigentes(agora),
-  ]);
+  const leituras = Object.fromEntries(await resolverEstados(fichas));
 
   return (
     <main className="adm">
       <h1>Painel</h1>
-      <PainelAdmin
-        fichas={fichas}
-        leituras={Object.fromEntries(leituras)}
-        avisos={avisos}
-        avisosErro={avisosErro}
-        agora={agora}
-      />
+      <ListaDeLugares fichas={fichas} leituras={leituras} agora={agora} />
     </main>
   );
 }

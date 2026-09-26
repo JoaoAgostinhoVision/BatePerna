@@ -4,9 +4,7 @@ import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import type { AvisoLinha, EfeitoAviso } from "@/lib/db";
 import { falaMolhada, vozDaFicha } from "@/lib/severidade";
-import { faseDe, marcaDe } from "@/lib/carimbo-fase";
-import { fechadoPeloDono } from "@/lib/aviso";
-import { aberturaDaFicha, agoraRecife, fechadoAgora } from "@/lib/horario";
+import { marcaAgora } from "./marca-agora";
 
 const EFEITOS: readonly EfeitoAviso[] = ["nenhum", "fresco", "frio", "fechado"];
 
@@ -26,6 +24,9 @@ const ATALHOS = [
  *  3 dias é escolha do controlador desta task, não do João. */
 const VENCE_EM_BREVE_SEGUNDOS = 3 * DIA;
 
+// PENDENTE: redação minha, o João ainda não leu
+const AVISO_ERRO_LEITURA = "Não consegui ler o aviso publicado — a seção abaixo pode estar incompleta.";
+
 /** A linha que é o ponto da tela: o que vai pra tela se este efeito for
  *  publicado, nunca o nome do efeito. `frio` nunca escreve a fala à mão — ela
  *  sai de `falaMolhada`, a mesma língua que a ficha fala, porque foi a língua
@@ -41,40 +42,13 @@ function consequencia(efeito: EfeitoAviso, ficha: Ficha): string {
   return "O carimbo não muda — só o recado aparece na ficha.";
 }
 
-/** O que está NA TELA agora, pro dono — byte a byte a mesma palavra que o
- *  selo público (`SeloTrilha`) diria NO INSTANTE em que a página foi lida,
- *  calendário incluso: mesma fonte (`faseDe`/`marcaDe` em `carimbo-fase.ts`),
- *  nunca uma tabela paralela escrita aqui. Foi o defeito desta função na
- *  Task 10 original: "Não vá" fixo pra todo `frio`, quando a fala real de
- *  `frio` depende da severidade da ficha (`espera`/`cuidado` falam outra
- *  coisa) — a mesma "voz de um lugar virou a língua de todos" que
- *  `severidade.ts` já fechou uma vez.
- *
- *  🔴 O CALENDÁRIO ENTRA, e a rodada anterior deste arquivo errou dizendo que
- *  "o servidor não tem relógio de tela" — falso: `agora` já chega por prop
- *  (`page.tsx` o computa com `Date.now()` no load), e `horario.ts` expõe
- *  `agoraRecife`/`aberturaDaFicha`/`fechadoAgora` puros, sem precisar do
- *  `useAgoraRecife` do CLIENTE (esse sim é o "relógio de tela": o hook que
- *  bate a cada minuto na tela viva). O painel é um retrato de um instante —
- *  ele recarrega a página depois de cada ação —, então o instante do retrato
- *  É o relógio certo pra esta tela: sem ele, a Rampa do Pepê apareceria
- *  "Pode ir" numa quarta no painel do dono enquanto a tela pública diz
- *  "Fechado agora".
- *
- *  `erro` não precisa de ramo próprio: `faseDe` já o transforma em
- *  `sem-informacoes`, e é `marcaDe` quem decide a palavra ("SEM
- *  INFORMAÇÕES") — vocabulário único, nunca dois. */
+/** "Na tela agora: <marca>" — a MESMA pipeline que `ListaDeLugares` usa
+ *  (`marcaAgora`, em `./marca-agora.ts`). A função morava aqui inteira até a
+ *  Task 5 (2026-09-25), quando `/admin` virou lista: a extração é pra a lista
+ *  e o painel do lugar nunca poderem discordar sobre o que está na tela
+ *  agora — ver o porquê completo (calendário, dono, erro) no módulo extraído. */
 function motorAgora(leitura: LeituraCarimbo, ficha: Ficha, agora: number): string {
-  const fase = faseDe({
-    conferindo: false,
-    erro: leitura.erro,
-    venceu: false,
-    falhou: false,
-    fechado: fechadoAgora(aberturaDaFicha(ficha), agoraRecife(agora)),
-    // O instante do retrato também decide o prazo do aviso — o mesmo `agora`.
-    fechadoPeloDono: fechadoPeloDono(leitura.aviso, agora),
-  });
-  return `Na tela agora: ${marcaDe(fase, leitura.estado, vozDaFicha(ficha.condicao))}`;
+  return `Na tela agora: ${marcaAgora(ficha, leitura, agora)}`;
 }
 
 function publicadoHa(criadoEm: number, agora: number): string {
@@ -96,143 +70,136 @@ function formInicial(): EstadoForm {
 }
 
 type Props = {
-  fichas: Ficha[];
-  leituras: Record<string, LeituraCarimbo>;
+  ficha: Ficha;
+  leitura: LeituraCarimbo;
   agora: number;
-  /** Row do banco, com `id` — a `Aviso` que viaja pra ficha não tem id de
+  /** Row do banco, com `id` — a `Aviso` que viaja na leitura não tem id de
    *  propósito (ver `src/lib/aviso.ts`); é por isso que o painel recebe este
    *  prop a mais, só pra poder mandar o `DELETE ?id=`. */
-  avisos?: Record<string, AvisoLinha>;
-  /** A leitura dos avisos vigentes falhou no servidor — banco fora do ar não
+  aviso?: AvisoLinha;
+  /** A leitura do aviso vigente falhou no servidor — banco fora do ar não
    *  pode derrubar o painel, só avisar em uma linha curta. */
-  avisosErro?: boolean;
+  avisoErro?: boolean;
 };
 
-/** O painel do dono: o acervo inteiro, cada ficha com o que o motor diz
- *  agora, o aviso vigente (se houver) e o formulário pra publicar um novo. */
-export default function PainelAdmin({ fichas, leituras, agora, avisos = {}, avisosErro = false }: Props) {
-  const [formularios, setFormularios] = useState<Record<string, EstadoForm>>(() =>
-    Object.fromEntries(fichas.map((f) => [f.slug, formInicial()])),
-  );
+/** O painel do dono: UM lugar (Task 5, 2026-09-25 — antes servia o acervo
+ *  inteiro numa tela só; `/admin` virou lista, e cada item leva a
+ *  `/admin/<slug>`, que é quem monta este componente hoje), com o que o motor
+ *  diz agora, o aviso vigente (se houver) e o formulário pra publicar um
+ *  novo. */
+export default function PainelAdmin({ ficha, leitura, agora, aviso, avisoErro = false }: Props) {
+  const [form, setForm] = useState<EstadoForm>(formInicial());
 
-  function atualizar(slug: string, patch: Partial<EstadoForm>) {
-    setFormularios((atual) => ({ ...atual, [slug]: { ...atual[slug], ...patch } }));
+  function atualizar(patch: Partial<EstadoForm>) {
+    setForm((atual) => ({ ...atual, ...patch }));
   }
 
-  async function publicar(slug: string) {
-    const f = formularios[slug];
-    const texto = f.texto.trim();
-    if (texto === "" || f.enviando) return;
-    atualizar(slug, { enviando: true, erro: null });
+  async function publicar() {
+    const texto = form.texto.trim();
+    if (texto === "" || form.enviando) return;
+    atualizar({ enviando: true, erro: null });
     try {
       const r = await fetch("/api/admin/aviso", {
         method: "POST",
-        body: JSON.stringify({ slug, texto, efeito: f.efeito, venceEm: agora + f.prazoSegundos }),
+        body: JSON.stringify({ slug: ficha.slug, texto, efeito: form.efeito, venceEm: agora + form.prazoSegundos }),
       });
       if (r.ok) { location.reload(); return; }
-      atualizar(slug, { erro: "Não consegui publicar." });
+      atualizar({ erro: "Não consegui publicar." });
     } catch {
-      atualizar(slug, { erro: "Sem rede." });
+      atualizar({ erro: "Sem rede." });
     } finally {
-      atualizar(slug, { enviando: false });
+      atualizar({ enviando: false });
     }
   }
 
-  async function tirar(slug: string, id: number) {
-    atualizar(slug, { enviando: true, erro: null });
+  async function tirar(id: number) {
+    atualizar({ enviando: true, erro: null });
     try {
       const r = await fetch(`/api/admin/aviso?id=${id}`, { method: "DELETE" });
       if (r.ok) { location.reload(); return; }
-      atualizar(slug, { erro: "Não consegui tirar o aviso." });
+      atualizar({ erro: "Não consegui tirar o aviso." });
     } catch {
-      atualizar(slug, { erro: "Sem rede." });
+      atualizar({ erro: "Sem rede." });
     } finally {
-      atualizar(slug, { enviando: false });
+      atualizar({ enviando: false });
     }
   }
 
+  const venceEmBreve = aviso != null && aviso.vence_em - agora <= VENCE_EM_BREVE_SEGUNDOS;
+
   return (
     <div className="adm-painel">
-      {avisosErro && (
+      {avisoErro && (
         <p className="adm-erro" role="alert">
-          Não consegui ler os avisos publicados — a lista abaixo pode estar incompleta.
+          {AVISO_ERRO_LEITURA}
         </p>
       )}
-      {fichas.map((f) => {
-        const form = formularios[f.slug];
-        const leitura = leituras[f.slug];
-        const avisoAtual = avisos[f.slug];
-        const venceEmBreve = avisoAtual != null && avisoAtual.vence_em - agora <= VENCE_EM_BREVE_SEGUNDOS;
-        return (
-          <section
-            key={f.slug}
-            className="adm-ficha"
-            data-ficha={f.slug}
-            {...(venceEmBreve ? { "data-vence-em-breve": "" } : {})}
-          >
-            <h2>{f.trajeto.waypoints[0].nome}</h2>
-            {leitura && <p className="adm-motor">{motorAgora(leitura, f, agora)}</p>}
+      <section
+        className="adm-ficha"
+        data-ficha={ficha.slug}
+        {...(venceEmBreve ? { "data-vence-em-breve": "" } : {})}
+      >
+        <h2>{ficha.trajeto.waypoints[0].nome}</h2>
+        <p className="adm-motor">{motorAgora(leitura, ficha, agora)}</p>
 
-            {avisoAtual && (
-              <div className="adm-vigente">
-                <p className="adm-vigente-texto">{avisoAtual.texto}</p>
-                <p className="adm-vigente-meta">{publicadoHa(avisoAtual.criado_em, agora)}</p>
-                <button type="button" data-tirar={f.slug} onClick={() => tirar(f.slug, avisoAtual.id)}>
-                  Tirar
-                </button>
-              </div>
-            )}
-
-            <label className="adm-rotulo">
-              Aviso
-              <textarea
-                data-slug={f.slug}
-                value={form.texto}
-                onChange={(e) => atualizar(f.slug, { texto: e.target.value })}
-              />
-            </label>
-
-            <label className="adm-rotulo">
-              Efeito
-              <select
-                data-efeito={f.slug}
-                value={form.efeito}
-                onChange={(e) => atualizar(f.slug, { efeito: e.target.value as EfeitoAviso })}
-              >
-                {EFEITOS.map((efeito) => (
-                  <option key={efeito} value={efeito}>{efeito}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="adm-rotulo">
-              Prazo
-              <select
-                data-prazo={f.slug}
-                value={form.prazoSegundos}
-                onChange={(e) => atualizar(f.slug, { prazoSegundos: Number(e.target.value) })}
-              >
-                {ATALHOS.map((a) => (
-                  <option key={a.rotulo} value={a.segundos}>{a.rotulo}</option>
-                ))}
-              </select>
-            </label>
-
-            <p className="adm-consequencia">{consequencia(form.efeito, f)}</p>
-
-            <button
-              type="button"
-              data-publicar={f.slug}
-              disabled={form.texto.trim() === "" || form.enviando}
-              onClick={() => publicar(f.slug)}
-            >
-              {form.enviando ? "Publicando…" : "Publicar"}
+        {aviso && (
+          <div className="adm-vigente">
+            <p className="adm-vigente-texto">{aviso.texto}</p>
+            <p className="adm-vigente-meta">{publicadoHa(aviso.criado_em, agora)}</p>
+            <button type="button" data-tirar={ficha.slug} onClick={() => tirar(aviso.id)}>
+              Tirar
             </button>
+          </div>
+        )}
 
-            {form.erro && <p className="adm-erro" role="alert">{form.erro}</p>}
-          </section>
-        );
-      })}
+        <label className="adm-rotulo">
+          Aviso
+          <textarea
+            data-slug={ficha.slug}
+            value={form.texto}
+            onChange={(e) => atualizar({ texto: e.target.value })}
+          />
+        </label>
+
+        <label className="adm-rotulo">
+          Efeito
+          <select
+            data-efeito={ficha.slug}
+            value={form.efeito}
+            onChange={(e) => atualizar({ efeito: e.target.value as EfeitoAviso })}
+          >
+            {EFEITOS.map((efeito) => (
+              <option key={efeito} value={efeito}>{efeito}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="adm-rotulo">
+          Prazo
+          <select
+            data-prazo={ficha.slug}
+            value={form.prazoSegundos}
+            onChange={(e) => atualizar({ prazoSegundos: Number(e.target.value) })}
+          >
+            {ATALHOS.map((a) => (
+              <option key={a.rotulo} value={a.segundos}>{a.rotulo}</option>
+            ))}
+          </select>
+        </label>
+
+        <p className="adm-consequencia">{consequencia(form.efeito, ficha)}</p>
+
+        <button
+          type="button"
+          data-publicar={ficha.slug}
+          disabled={form.texto.trim() === "" || form.enviando}
+          onClick={() => publicar()}
+        >
+          {form.enviando ? "Publicando…" : "Publicar"}
+        </button>
+
+        {form.erro && <p className="adm-erro" role="alert">{form.erro}</p>}
+      </section>
     </div>
   );
 }
