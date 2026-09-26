@@ -43,4 +43,15 @@ describe("semear", () => {
     expect(r.semeados).toEqual(["morro-b"]);
     expect(r.pulados).toEqual(["morro-a"]);
   });
+
+  // 🔴 Achado da revisão (fix round 1): `jaTem` é um retrato de antes do
+  // laço — sem rastrear o que o próprio laço já gravou, dois slugs iguais no
+  // MESMO lote passariam os dois pelo `jaTem.has` e gravariam duas vezes numa
+  // única chamada, contradizendo o "IDEMPOTENTE" do docstring da função.
+  it("dois slugs iguais no mesmo lote gravam UMA versão só", async () => {
+    const r = await semear(c, [fichaFalsa("morro-a", "primeira"), fichaFalsa("morro-a", "segunda")], AGORA);
+    expect(r.semeados).toEqual(["morro-a"]);
+    expect(r.pulados).toEqual(["morro-a"]);
+    expect(await historico(c, "morro-a")).toHaveLength(1);
+  });
 });
