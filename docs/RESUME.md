@@ -2,20 +2,44 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🟢 **ÚLTIMA PARADA: 2026-09-26.** As **sete tarefas do plano da ficha-no-banco estão COMPLETAS**, cada
-uma com revisão limpa, **e a revisão final da branch inteira fechou**: 1 Critical, 7 Important e 7 Minor,
-todos endereçados numa onda única de fix, com re-revisão limpa. Veredito: **não impede o merge.**
-**A branch está pronta e NÃO foi ao ar. O merge e o deploy são decisão dele.**
+🟢 **ÚLTIMA PARADA: 2026-09-26. A RODADA DA FICHA-NO-BANCO ESTÁ NO AR.** As sete tarefas completas, a
+revisão final da branch inteira fechada (1 Critical, 7 Important, 7 Minor — todos endereçados numa onda
+única, com re-revisão limpa), mergeada no `main` e **publicada em produção**. Ele disse: *"pode ir
+seguindo e publicar diretamente, por enquanto não tem necessidade de teste, tudo ainda é a primeira
+versão"*.
 
 🔵 **O EIXO: a FICHA saiu do JSON e foi pro BANCO, e agora é editável pelo celular.** A ficha mora em
 `ficha_versoes` (append-only, a versão de maior `id` vence); `/admin` é lista → tela do lugar → editar a
 voz → histórico → voltar a uma versão antiga (**gravando uma versão nova**, nunca apagando).
 
-🔴 **ESTAMOS NA BRANCH `ficha-no-banco`**, bem à frente do `main` (`git rev-list --count main..HEAD` diz quantos — não crave o número aqui, ele muda a cada commit e já mentiu duas vezes hoje). O `main` está no ar e intocado.
-**Nada desta rodada foi ao ar.**
+**Estamos no `main`**, que está no ar. A branch `ficha-no-banco` foi mergeada por fast-forward e continua
+existindo local e no `origin` como âncora de rollback.
 
-**Estado medido por mim no fim do dia:** árvore limpa, **1193/1193 em 79 arquivos**, `npx tsc --noEmit`
-exit 0, **`npm run build` exit 0** com todas as rotas que leem banco como **ƒ (Dynamic)**.
+**Estado medido por mim:** árvore limpa, **1193/1193 em 79 arquivos**, `npx tsc --noEmit` exit 0,
+**`npm run build` exit 0** com todas as rotas que leem banco como **ƒ (Dynamic)**.
+
+### 🟢 COMO ESTE PROJETO PUBLICA — e o que eu aprendi errando, em 26/09
+
+🔴 **Push no GitHub NÃO dispara deploy neste repo.** Eu supus que sim e estava errado. A prova: nenhum
+commit deste repositório jamais teve status ou check do Vercel — **nem o PR #1, que foi mergeado**
+(`gh api repos/.../commits/<sha>/status` devolve `total=0` em todos). Quem publica é a **CLI**:
+
+```bash
+npm run semear                 # 1. SEMPRE antes, se a tabela puder estar vazia
+vercel --prod --yes            # 2. e é ISTO que põe no ar
+```
+
+A CLI **está** instalada (`/c/nvm4w/nodejs/vercel`), apesar de o aviso de abertura da sessão dizer que
+não — não acredite nesse aviso, rode `which vercel`.
+
+🔴 **"● Ready" do Vercel não prova nada sobre o conteúdo servido, e checksum de página é marcador
+ruim aqui.** Meu primeiro verificador comparava o md5 de `/trilhas` antes e depois. Ele **nunca mudaria**:
+a semente põe no banco exatamente o mesmo conteúdo que estava no disco, então a página pública renderiza
+idêntica vindo de qualquer uma das duas fontes. Eu teria lido "não subiu" de um deploy que subiu.
+**O marcador que funciona é algo que só existe no código novo** — aqui foi
+`GET /api/admin/ficha`: **404 = build velho, 405 = build novo** (a rota existe mas não tem `GET`).
+E a prova de ponta a ponta é a **voz gravada no banco aparecendo na tela**, comparada caractere a
+caractere em UTF-8 (o shell do Windows mastiga os acentos — faça a comparação dentro do Python).
 
 ---
 
@@ -26,18 +50,22 @@ exit 0, **`npm run build` exit 0** com todas as rotas que leem banco como **ƒ (
 
 1. `git status` limpo; `npm test -- --run` — deve dar **1193/1193 em 79 arquivos**. Confira você mesmo;
    nunca relate o número deste arquivo sem rodar.
-2. 🔴 **O laço de construção ACABOU. O que falta não é código — são três coisas que são DELE**, e estão
-   logo abaixo: as onze palavras de tela, o prazo da cópia em memória, e olhar as três telas novas no
-   celular. **Não decida nenhuma delas sozinho, e não abra o dia com um menu delas** — se ele disser
-   "continua" sem tocar no assunto, a coisa certa a fazer é perguntar **uma** delas, a das palavras,
-   porque é a que trava o deploy com voz dele na tela.
-3. O merge é `superpowers:finishing-a-development-branch`, e é decisão dele — **não faça sozinho**.
-4. Todo dispatch que toque `src/app/` leva **`npm run build`** e `git add` por caminho (rulings P13/P8).
+2. 🔴 **O laço de construção ACABOU e a rodada está NO AR. O que falta não é código — são três coisas
+   que são DELE**, logo abaixo: as onze palavras de tela, o prazo da cópia em memória, e olhar as três
+   telas novas no celular. **Não decida nenhuma delas sozinho, e não abra o dia com um menu delas** — se
+   ele disser "continua" sem tocar no assunto, a coisa certa é perguntar **uma**, a das palavras.
+3. Todo dispatch que toque `src/app/` leva **`npm run build`** e `git add` por caminho (rulings P13/P8).
+4. Para publicar de novo: `npm run semear` (se a tabela puder estar vazia) e **`vercel --prod --yes`** —
+   push no GitHub **não** publica neste repo. Veja o bloco "COMO ESTE PROJETO PUBLICA", acima.
 
 ### 🔵 AS TRÊS COISAS QUE SÃO DELE, E QUE O LAÇO NÃO PODE DECIDIR
 
 1. **As onze palavras de tela** (tabela abaixo) — copy é escolha dele, e é o método de 10/09 que
-   funcionou: eu escrevo, mostro por extenso, ele lê, ele decide. Nenhuma está publicada como voz dele.
+   funcionou: eu escrevo, mostro por extenso, ele lê, ele decide.
+   🔴 **ELAS ESTÃO NO AR desde 26/09, e continuam marcadas `// PENDENTE` no código de propósito.** Ele
+   autorizou *publicar*, o que não é *"li e aprovei a copy"* — e apagar o marcador por conta própria é
+   exatamente o erro de 03/09, prosa minha assinada como a voz dele. O marcador só sai frase a frase,
+   quando ele ler e disser qual serve.
 2. **O prazo da cópia em memória.** Hoje ela **não tem teto**: uma instância que leu o acervo continua
    servindo aquela leitura para sempre se o banco cair — sem limite e sem sinal na tela. Todo outro prazo
    do app tem constante nomeada e justificativa escrita; só esta não. É uma linha de código.
