@@ -49,6 +49,10 @@ dizer **de qual dos dois eixos ela é.**
 3. **Leia o acervo real** (`content/fichas/*.json`) e pergunte de cada opção: **isto exige ficha
    nova?** Se exigir, é **conteúdo**, e conteúdo está fechado em três desde 09/09 — a opção não
    morre, mas nasce com esse carimbo na testa.
+   🔴 **Desde a rodada `ficha-no-banco` (2026-09), `content/fichas/*.json` é só a SEMENTE — o acervo
+   vivo mora em `ficha_versoes` no banco.** Pra perguntas sobre CONTAGEM do acervo (três fichas,
+   quantos campos) o JSON ainda serve; pra perguntas sobre o CONTEÚDO de hoje de um lugar já
+   editado, confira o banco.
 4. **Custo em coisas que ele entende**, nunca em story points: quantos arquivos mudam, se o schema
    muda (schema mudando = as 3 fichas mudam), quantos testes quebram, se precisa de deploy, se
    precisa de **palavra dele** (então é `tres-redacoes`) ou de **olho no celular** (`olho-de-tela`).

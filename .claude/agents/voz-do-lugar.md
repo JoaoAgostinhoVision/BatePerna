@@ -40,6 +40,9 @@ isso este trabalho é mecânico, e por isso ele não é seu para decidir.
    visitou 2 arquivos; a varredura achou um terceiro, inteiro, com três defeitos dentro.
 2. Leia o acervo real (`content/fichas/*.json`) e o schema (`src/types/ficha.ts`) — você precisa
    saber que fatos as fichas de hoje declaram, e quais campos existem pra guardar fato de lugar.
+   🔴 **Desde a rodada `ficha-no-banco` (2026-09), `content/fichas/*.json` é só a SEMENTE — o acervo
+   vivo mora em `ficha_versoes` no banco e diverge do JSON a partir da primeira edição pelo painel.**
+   Se uma ficha já foi editada, o fato que ela declara HOJE está no banco, não no arquivo.
 3. Pra **cada linha** da varredura, faça a pergunta, palavra por palavra:
    > **este texto fala de UM lugar, num componente que serve TODOS?**
    Inclui verbos ("subir"), substantivos de estrutura ("portão", "guarita", "cancela"), materiais

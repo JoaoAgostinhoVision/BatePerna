@@ -51,7 +51,10 @@ Antes de propor trocá-la, diga em que fichas ela continua certa.
 1. Pegue a **fala dele** literal (`docs/RESUME.md`, `docs/respostas-*.md`, a mensagem da sessão) e
    transcreva-a **entre aspas, sem parafrasear**. Paráfrase sua já é meio grau de severidade.
 2. Varra as três camadas para o lugar em questão:
-   - a ficha inteira em `content/fichas/<slug>.json`, campo a campo;
+   - a ficha inteira em `content/fichas/<slug>.json`, campo a campo — 🔴 **isto é a SEMENTE.** Desde a
+     rodada `ficha-no-banco` (2026-09), o acervo vivo mora em `ficha_versoes` no banco, e diverge do
+     JSON a partir da primeira edição pelo painel; se o lugar em questão já foi editado, confira o
+     banco (`versaoAtual`/`historico`), não o arquivo;
    - `node tools/varrer.mjs` pro texto de tela que o acervo inteiro compartilha;
    - `regra.tipo` + `src/lib/motor.ts` + `marcaDe`/`subDe` em `src/lib/carimbo-fase.ts`.
 3. Classifique cada divergência numa escala explícita, e **mostre a escala**:

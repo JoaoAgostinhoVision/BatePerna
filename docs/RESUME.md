@@ -34,11 +34,17 @@ exit 0, **`npm run build` exit 0** com todas as rotas que leem banco como **ƒ (
 
 ### 🔴 AS DUAS TRAVAS DO DIA DO DEPLOY — as duas derrubam o app inteiro se esquecidas
 
-- **A semente roda ANTES do primeiro deploy desta branch:**
-  `npx dotenv -e .env.local -- tsx scripts/semear-fichas.ts`
-  Sem ela o banco não tem ficha nenhuma e **todo o app cai no `error.tsx`** — porque a escolha dele foi
-  "erro honesto, nunca conteúdo velho". Conferido: `tsx` e `dotenv-cli` estão instalados. É diferente do
-  build, que não toca o banco.
+- **A semente roda ANTES do primeiro deploy desta branch:** `npm run semear` (chama `dotenv -e
+  .env.local -- tsx scripts/semear-fichas.ts`, que por dentro já roda `ensureSchema` — **não rode
+  `scripts/apply-schema.ts` nesta subida, `semear-fichas.ts` o substitui**, porque `apply-schema.ts`
+  só cria as tabelas vazias, sem linha nenhuma em `ficha_versoes`). Conferido: `tsx` e `dotenv-cli`
+  estão instalados. É diferente do build, que não toca o banco.
+  🔴 **A frase antiga aqui era "sem ela, o app cai no `error.tsx`" — verdade pela metade.** A revisão
+  final (C1, 2026-09-26) achou que um Turso DE PÉ com `ficha_versoes` existindo mas ainda **VAZIA**
+  (schema aplicado sem a semente rodar depois) não caía em erro nenhum: `buscarFichas` via a leitura
+  como "sucesso" e a home passava a afirmar, em silêncio, que não existe trilha nenhuma em
+  Pernambuco. Corrigido em `src/lib/ficha-fonte.ts`: hoje, **sem a tabela `ficha_versoes` OU com ela
+  vazia**, o app estoura igual e cai no `error.tsx` — nunca lista vazia, nunca conteúdo velho.
 - **Toda página que lê banco declara `force-dynamic`.** Nesta rodada a branch ficou **sem compilar** com
   a suíte verde e o `tsc` limpo, porque o `not-found.tsx` era a única página que lia banco sem isso — e
   **dois assentos de revisão passaram por cima**, porque nenhum dispatch meu pedia build.
@@ -198,12 +204,16 @@ o prazo que ele mesmo escolheu. **Não decidir sozinho.**
 
 ### 🔴 A TRAVA DE DEPLOY NOVA DESTA RODADA — mais dura que as de setembro
 
-Quando esta branch for ao ar, **a semente tem que rodar ANTES**:
-`npx dotenv -e .env.local -- tsx scripts/semear-fichas.ts`
+Quando esta branch for ao ar, **a semente tem que rodar ANTES**: `npm run semear` (ver a trava
+atualizada no topo deste arquivo, "AS DUAS TRAVAS DO DIA DO DEPLOY").
 
 Na rodada de 16/09, subir antes do `apply-schema` só perdia o aviso. Aqui é outra coisa: **sem a
 semente o banco não tem ficha nenhuma, e o app inteiro cai no `error.tsx`** — porque a escolha dele
 foi "erro honesto, nunca conteúdo velho". Está escrita no fim do plano também.
+🔴 **Atualização da revisão final (C1, 2026-09-26):** isso vale também com a tabela `ficha_versoes`
+criada mas VAZIA (`apply-schema.ts` sozinho, sem a semente rodar depois) — antes dessa revisão o app
+NÃO caía em erro nesse caso, e é o que o conserto do C1 fechou. **Não rode `scripts/apply-schema.ts`
+sozinho nesta branch: `scripts/semear-fichas.ts` já chama `ensureSchema` por dentro e substitui.**
 
 ### 🔵 A DECISÃO DE PRODUTO QUE SEGUE ESPERANDO (do plano de admin, não deste)
 
@@ -217,6 +227,10 @@ defensável (o recado é dele); escondê-lo é mais honesto com o prazo que ele 
 2. **A tabela `avisos` só nasce em produção com** `npx dotenv -e .env.local -- tsx scripts/apply-schema.ts`.
    O final review confirmou: deployar ANTES disso **não derruba nada** (`lerAviso(s)` engole o erro
    e a ficha/home seguem sem aviso) — mas a primeira publicação daria erro.
+   🔴 **Isto é de 16/09, ANTES de `ficha_versoes` existir — não rode `apply-schema.ts` sozinho nesta
+   branch.** Hoje `ensureSchema` cria `ficha_versoes` também, e rodar `apply-schema.ts` sem a semente
+   logo depois deixa essa tabela VAZIA — o app agora estoura nesse caso (C1 da revisão final,
+   2026-09-26; ver "AS DUAS TRAVAS DO DIA DO DEPLOY" no topo). Use `npm run semear`.
 3. **`ADMIN_SENHA` (≥ 24 chars) e `ADMIN_SEGREDO` no Vercel**, com as mãos dele. Sem elas o admin
    é 404 e nada mais muda (confirmado pelo final review).
 4. Depois de subir: `conferir-no-ar` **abrindo o navegador** — o painel em 375px, o `sw.ts`, a

@@ -36,10 +36,13 @@ ao código.
 *Custo se errado:* uma auditoria de dez minutos por tarefa.
 
 **A trava de deploy da semente, que derruba o app inteiro se esquecida.**
-`npx dotenv -e .env.local -- tsx scripts/semear-fichas.ts` **antes** do primeiro deploy desta branch. Sem
-a semente o banco não tem ficha nenhuma e **todo o app cai no `error.tsx`**, porque a escolha do João foi
-"erro honesto, nunca conteúdo velho". Conferido: `tsx` e `dotenv-cli` estão instalados. É diferente do
-build, que não toca o banco (todas as rotas que leem banco são `ƒ (Dynamic)`).
+`npm run semear` (chama `dotenv -e .env.local -- tsx scripts/semear-fichas.ts`) **antes** do primeiro
+deploy desta branch. Sem a semente o banco não tem ficha nenhuma e **todo o app cai no `error.tsx`**,
+porque a escolha do João foi "erro honesto, nunca conteúdo velho". Conferido: `tsx` e `dotenv-cli` estão
+instalados. É diferente do build, que não toca o banco (todas as rotas que leem banco são `ƒ (Dynamic)`).
+🔴 **Atualizado pela revisão final (C1, 2026-09-26):** isto vale também com `ficha_versoes` criada mas
+VAZIA (`scripts/apply-schema.ts` sozinho, sem semear depois) — o app agora estoura nesse caso também;
+`semear-fichas.ts` já chama `ensureSchema`, então **não rode `apply-schema.ts` à parte nesta branch**.
 *Custo se errado:* o app publicado mostra a tela de erro em todas as telas.
 
 **T4-6 — três números imprecisos ficam deferidos para a onda de fix da revisão final.** No docblock de
@@ -61,7 +64,16 @@ forma que deixe o guarda **verde** com leitura de disco e que **exista hoje** em
 
 ## PARTE 2 — O QUE A REVISÃO DA TASK 5 TEM QUE OLHAR
 
-A Task 5 está **commitada em `4ad7764` e não revisada**, sem relatório: a sessão foi encerrada a pedido do
+🟢 **HISTÓRICA — RESOLVIDA EM 2026-09-26, mantida só como registro.** No dia em que esta seção foi
+escrita (2026-09-25), a Task 5 estava commitada e sem revisão; a instrução era não redespachá-la e
+despachar a revisão. **Isso já aconteceu**: a revisão rodou, voltou com achados, saiu **1 fix round**, e a
+re-revisão fechou **limpa** (ver `docs/RESUME.md`, tabela das sete tarefas — Task 5 "✅ completa (26/09), 1
+fix round"). Quem ler esta seção agora, depois do merge, **não tem tarefa nenhuma pra fazer aqui** — o
+"não redespachar" e o "despachar a revisão" abaixo são instrução MORTA, preservada só pelo valor histórico
+dos riscos nomeados (item 3, "as cinco mutações não têm prova nenhuma", é o que virou I1/M1 da revisão
+final da branch inteira).
+
+A Task 5 estava **commitada em `4ad7764` e não revisada**, sem relatório: a sessão foi encerrada a pedido do
 João e o implementador já havia commitado sem escrever o relatório. **Não redespachar a tarefa** — gerar
 `review-package ... 4c766d1 4ad7764` e despachar a revisão, avisando que **não existe relatório** e que a
 ausência de medição de mutação é, por si, achado a reportar. Riscos nomeados:

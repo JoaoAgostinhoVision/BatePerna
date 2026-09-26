@@ -86,10 +86,22 @@ const ANTES_DE_REGEX =
  *  🔴 "TIRA-DE-COMENTÁRIOS QUE COME O ARQUIVO" é espécie catalogada neste
  *  projeto, e ela já cobrou duas vezes nesta tarefa — as duas MEDIDAS:
  *
- *   1. `src.replace(/\/\*[\s\S]*?\*\//g, "")`, a tira de uma linha, não sabe o
- *      que é string: com um `"/*"` dentro de um literal ela comeu **10251 dos
- *      14800 caracteres** do `cache-rotas.ts` (69%) e devolveu "limpo" um
- *      arquivo com o caminho do acervo em código.
+ *   1. `src.replace(/\/\*[\s\S]*?\*\//g, "")`, a tira de comentário de BLOCO,
+ *      sozinha. 🔴 **REMEDIDA em 2026-09-26 (M2 da revisão final), porque os
+ *      números que rodavam por aqui não batiam entre si** ("10251 de 14800"
+ *      aqui, "10079 de 14570" no RESUME). A remedição, no `cache-rotas.ts` de
+ *      HOJE (14570 caracteres): esta tira SOZINHA come **8880 (60,9%)** — e os
+ *      canários (`export`/`import`/`const`/`function`) SOBREVIVEM a ela, o que
+ *      sobra ainda os tem. Os **10079 (69,2%)** só aparecem quando um SEGUNDO
+ *      `replace`, de comentário de LINHA (`/\/\/.*$/gm`), é aplicado DEPOIS
+ *      deste — não é o que esta tira faz sozinha. E o mecanismo que este
+ *      docblock narrava (um `"/*"` escondido DENTRO de um literal, cegando a
+ *      tira) **não reproduz hoje**: uma busca literal por `"/*`, `'/*` e
+ *      `` `/* `` no arquivo não acha nenhuma ocorrência. O volume alto vem só
+ *      do tanto de comentário de DOC (JSDoc de bloco) que o arquivo tem — não
+ *      da causa que ficava escrita aqui. Fica registrado pra não se repetir o
+ *      erro: **meça de novo antes de citar o número**, porque o arquivo muda
+ *      de tamanho a cada rodada e o número velho não segue junto.
  *   2. a 1ª versão DESTE varredor não sabia o que era regex literal, e a
  *      re-revisão mediu as duas formas que a cegavam: um regex terminado em
  *      barra escapada (`/^\/api\//` é a forma realista) fazia o `\//` final

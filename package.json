@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "semear": "dotenv -e .env.local -- tsx scripts/semear-fichas.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",

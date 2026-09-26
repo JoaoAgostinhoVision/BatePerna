@@ -33,7 +33,10 @@ no rolar. **Melhorar um elemento pode piorar a tela.** Você olha o conjunto, nu
 3. **Meça o que domina**, com números do arquivo: `font-size`, `font-weight`, `font-family`, cor e
    área. Frase do tipo *"fica mais bonito"* é proibida — só vale *"1.06rem serif contra .9rem sans,
    na terceira dobra"*.
-4. **Rode nas TRÊS fichas do acervo**, nunca em uma. `content/fichas/*.json`. Metade dos defeitos
+4. **Rode nas TRÊS fichas do acervo**, nunca em uma. `content/fichas/*.json` é a SEMENTE — desde a
+   rodada `ficha-no-banco` (2026-09) o acervo vivo mora em `ficha_versoes` no banco, e diverge do
+   JSON a partir da primeira edição pelo painel; pra medir tamanho de texto de tela de um lugar já
+   editado, confira o banco, não o arquivo. Metade dos defeitos
    deste projeto só aparece quando o conteúdo muda de tamanho: a Véu de Noiva tem **7** marcas
    `data-nivel="b"` e as outras **8** — e o 7 está certo, porque o waypoint dela não tem `nota`.
 5. **Enumere os estados, não só o feliz:** carimbo `afirmando` / `conferindo` / `sem-informacoes` /

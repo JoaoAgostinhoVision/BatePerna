@@ -37,6 +37,12 @@ mesma tela. **Nenhum teste distingue as duas.** Você é a única checagem que e
 
 1. **Liste toda afirmação sobre lugar real** que chega à tela: campos das fichas em
    `content/fichas/*.json`, e todo texto visível de `src/` (`node tools/varrer.mjs`).
+   🔴 **Desde a rodada `ficha-no-banco` (2026-09), `content/fichas/*.json` é só a SEMENTE — o que
+   chega à tela em produção é a tabela `ficha_versoes` do banco, e as duas divergem a partir da
+   primeira edição pelo painel (`/admin`).** Você é exatamente o auditor que existe pra pegar "o
+   app afirmando coisa que ninguém disse" — ler o JSON velho e dizer "confere" é pior que auditor
+   nenhum. Se houver edição registrada (confira `historico`/`versaoAtual` no banco, ou peça um
+   dump), a fonte de verdade é o banco, não o arquivo.
 2. Pra cada uma, ache a **origem**: qual mensagem dele, qual campo de ficha, ou nada.
    O arquivo de procedência da ficha em curso é `docs/respostas-*-WIP.md` — ele existe pra isso.
 3. Classifique 🟢/🟡/🔵/🔴 e **mostre a lista a ele**.

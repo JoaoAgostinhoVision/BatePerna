@@ -37,7 +37,9 @@ brejo"* matou o rodapé inteiro — a saída de subtração, que eu tinha listad
 
 1. **Junte a matéria-prima antes de escrever qualquer coisa.** A fala literal dele
    (`docs/RESUME.md`, `docs/respostas-veu-de-noiva-WIP.md`, a mensagem da sessão), a ficha
-   (`content/fichas/<slug>.json`) e os campos que existem pra guardar aquilo
+   (`content/fichas/<slug>.json` — 🔴 isto é a SEMENTE; desde a rodada `ficha-no-banco` (2026-09) o
+   acervo vivo mora em `ficha_versoes` no banco, e diverge do JSON a partir da primeira edição pelo
+   painel, então confira lá se o lugar já foi editado) e os campos que existem pra guardar aquilo
    (`src/types/ficha.ts`). **Nada entra numa redação sem vir de uma dessas fontes ou estar marcado
    como invenção sua.**
 2. **Colha o vocabulário dele, palavra por palavra.** Ele escreve curto e concreto: *"é barro:
