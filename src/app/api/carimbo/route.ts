@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  *  rota e a página são a MESMA função, e por isso não podem divergir. */
 export async function GET(req: Request): Promise<Response> {
   const slug = new URL(req.url).searchParams.get("slug");
-  const ficha = slug ? getFicha(slug) : null;
+  const ficha = slug ? await getFicha(slug) : null;
   if (!ficha) return Response.json({ erro: "ficha não encontrada" }, { status: 404 });
 
   // no-store explícito: o service worker já trata /api/* como NetworkOnly, mas

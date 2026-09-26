@@ -4,6 +4,7 @@ import { MIN_SENHA } from "@/lib/admin-config";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
 import { avisoVigente, ensureSchema } from "@/lib/db";
+import { semearAcervo } from "../banco";
 
 const SENHA = "s".repeat(MIN_SENHA);
 const SEGREDO = "segredo-de-assinatura-do-teste";
@@ -17,6 +18,8 @@ vi.mock("@/lib/db", async (io) => {
 beforeEach(async () => {
   client = createClient({ url: ":memory:" });
   await ensureSchema(client);
+  // A rota valida o slug contra o acervo, que vem do BANCO desde 2026-09-25.
+  await semearAcervo(client);
   vi.stubEnv("ADMIN_SENHA", SENHA);
   vi.stubEnv("ADMIN_SEGREDO", SEGREDO);
   vi.resetModules();

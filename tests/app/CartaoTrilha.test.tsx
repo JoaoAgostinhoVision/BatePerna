@@ -6,6 +6,7 @@ import { CHAVE_LOCAL } from "@/lib/local";
 import { getFichasComCondicao } from "@/lib/ficha";
 import { agoraRecife } from "@/lib/horario";
 import { semComentarios } from "../css";
+import { bancoDeProducao } from "../banco";
 
 afterEach(() => { cleanup(); localStorage.clear(); });
 
@@ -15,9 +16,15 @@ afterEach(() => { cleanup(); localStorage.clear(); });
 // waypoint, e "Pedra Furada" vem antes de "Rampa do Pepê". O índice dizia ONDE
 // a ficha estava; o slug diz QUAL ficha o teste quer, que é o que os
 // comentários daqui já afirmavam em português ("é a Rampa de verdade").
+// O acervo vem do BANCO desde 2026-09-25 (semeado de `content/fichas/`), e é
+// lido UMA vez no topo: `ficha` é a constante que quase todo teste daqui
+// renderiza, e `beforeEach` roda depois da avaliação do módulo.
+await bancoDeProducao();
+const ACERVO = await getFichasComCondicao();
+
 function fichaReal(slug: string) {
-  const f = getFichasComCondicao().find((x) => x.slug === slug);
-  if (!f) throw new Error(`ficha "${slug}" não está em content/fichas — estes testes são sobre ela`);
+  const f = ACERVO.find((x) => x.slug === slug);
+  if (!f) throw new Error(`ficha "${slug}" não está no acervo — estes testes são sobre ela`);
   return f;
 }
 
@@ -279,7 +286,7 @@ describe("a linha de metadados obedece à mesma régua de nível da ficha", () =
   // O acervo inteiro, não uma ficha: a Pedra Furada é GRÁTIS, então o cartão
   // dela tem dois pedaços e não três. Guarda que só olha a Rampa é cego a isso.
   it("vale pro acervo inteiro, e ficha grátis simplesmente tem um pedaço a menos", () => {
-    for (const f of getFichasComCondicao()) {
+    for (const f of ACERVO) {
       const { container } = render(<CartaoTrilha ficha={f} inicial={leitura} />);
       for (const [texto, nivel] of meta(container)) {
         if (f.piso && texto.includes(f.piso.replace(/-/g, " "))) expect(nivel, f.slug).toBe("b");

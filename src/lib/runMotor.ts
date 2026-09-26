@@ -12,7 +12,7 @@ type Deps = {
 
 export async function runMotor(deps: Deps): Promise<{ atualizadas: number }> {
   const fetchPrecipFn = deps.fetchPrecipFn ?? fetchPrecip;
-  const fichas = getFichasComCondicao();
+  const fichas = await getFichasComCondicao();
   let atualizadas = 0;
   for (const ficha of fichas) {
     try {

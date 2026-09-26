@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { getAllFichas } from "@/lib/ficha";
+import { bancoDeProducao } from "../banco";
 import { PISOS } from "@/lib/piso";
 import { DIAS } from "@/lib/semana";
 import type { Ficha } from "@/types/ficha";
@@ -38,7 +39,11 @@ import type { Ficha } from "@/types/ficha";
  *  dado. Ver `docs/RESUME.md` e o agente `.claude/agents/prova-que-trava.md`.
  */
 
-const fichas = getAllFichas();
+// O acervo vem do BANCO desde 2026-09-25 — semeado a partir de
+// `content/fichas/`, que continua sendo o conteúdo que este arquivo audita.
+// No TOPO porque `fichas` é a constante que todo laço daqui varre.
+await bancoDeProducao();
+const fichas = await getAllFichas();
 const pagas = fichas.filter((f) => f.custo.tag === "pago");
 
 /** O MESMO regex de `src/app/[slug]/page.tsx` — inclusive os centavos, que

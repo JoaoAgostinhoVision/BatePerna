@@ -17,6 +17,7 @@ import FiltrosVivos from "@/app/filtros";
 import LocalVivo from "@/app/local";
 import { LeiturasProvider } from "@/app/leituras";
 import { getFichasComCondicao } from "@/lib/ficha";
+import { bancoDeProducao } from "../banco";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { falaMolhada } from "@/lib/severidade";
 import { CHAVE_FILTROS, SEM_FILTRO } from "@/lib/filtros";
@@ -60,7 +61,12 @@ function fichaFake(slug: string): Ficha {
   };
 }
 
-const fichas = getFichasComCondicao();
+// O acervo vem do BANCO desde 2026-09-25. Semeado no TOPO de propósito: estas
+// fichas viram constantes de módulo que dezenas de testes deste arquivo
+// renderizam, e `beforeEach` roda depois da avaliação do módulo — semear lá
+// deixaria a constante vazia. Ver `tests/banco.ts`.
+await bancoDeProducao();
+const fichas = await getFichasComCondicao();
 const leituras: Record<string, LeituraCarimbo> = Object.fromEntries(
   fichas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000, aviso: null }]),
 );

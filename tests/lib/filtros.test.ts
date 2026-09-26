@@ -12,6 +12,7 @@ import {
   type Filtros,
 } from "@/lib/filtros";
 import { getFichasComCondicao } from "@/lib/ficha";
+import { bancoDeProducao } from "../banco";
 import { distanciaKm, kmNaTelaDistancia } from "@/lib/geo";
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
@@ -26,7 +27,10 @@ vi.mock("@/lib/geo", async (original) => {
   return { ...real, distanciaKm: vi.fn(real.distanciaKm) };
 });
 
-const base = getFichasComCondicao()[0];
+// O acervo vem do BANCO desde 2026-09-25, semeado no topo: `base` é a ficha de
+// partida de quase todo teste deste arquivo.
+await bancoDeProducao();
+const base = (await getFichasComCondicao())[0];
 const RAMPA = base.condicao.coords;
 const FRESCO: LeituraCarimbo = { estado: "fresco", erro: false, calculadoEm: 1_800_000_000, aviso: null };
 const FRIO: LeituraCarimbo = { estado: "frio", erro: false, calculadoEm: 1_800_000_000, aviso: null };

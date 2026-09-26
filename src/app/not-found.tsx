@@ -3,6 +3,7 @@ import "./home.css";
 import Appbar from "./Appbar";
 import BarraNavegacao from "./BarraNavegacao";
 import ListaDoAcervo from "./ListaDoAcervo";
+import { getAllFichas } from "@/lib/ficha";
 
 /** O QUE APARECE QUANDO O ENDEREÇO NÃO EXISTE.
  *
@@ -28,13 +29,17 @@ import ListaDoAcervo from "./ListaDoAcervo";
  *
  *  A barra de baixo fica, e é ela que garante a saída mesmo se a lista um dia
  *  estiver vazia. */
-export default function NaoAchei() {
+export default async function NaoAchei() {
+  // O acervo vem do BANCO e desce por prop — ver o comentário do
+  // `ListaDoAcervo`. A barra de baixo é quem garante a saída mesmo se a lista
+  // vier vazia, e é por isso que ela não depende desta leitura.
+  const fichas = await getAllFichas();
   return (
     <main className="bp">
       <div className="screen">
         <Appbar comSaida={false} />
         <p className="nao-achei">Não achei essa trilha.</p>
-        <ListaDoAcervo titulo="Todas as trilhas" />
+        <ListaDoAcervo titulo="Todas as trilhas" fichas={fichas} />
         <BarraNavegacao aqui="trilhas" />
       </div>
     </main>

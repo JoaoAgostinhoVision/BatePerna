@@ -50,7 +50,7 @@ export default async function Admin() {
   }
 
   const agora = Math.floor(Date.now() / 1000);
-  const fichas = getAllFichas();
+  const fichas = await getAllFichas();
   const [leituras, { avisos, erro: avisosErro }] = await Promise.all([
     resolverEstados(fichas),
     lerAvisosVigentes(agora),

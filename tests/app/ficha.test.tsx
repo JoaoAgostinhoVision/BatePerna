@@ -96,13 +96,26 @@ vi.mock("@/lib/ficha", async (real) => {
   const sinteticas = [SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS] as unknown as TipoFicha[];
   return {
     ...mod,
-    getFicha: (slug: string) => sinteticas.find((f) => f.slug === slug) ?? mod.getFicha(slug),
+    getFicha: async (slug: string) =>
+      sinteticas.find((f) => f.slug === slug) ?? (await mod.getFicha(slug)),
   };
 });
 
 const { resolverEstado } = await import("@/lib/carimbo-estado");
 const { getFicha, getAllFichas } = await import("@/lib/ficha");
 const Ficha = (await import("@/app/[slug]/page")).default;
+const { bancoDeProducao, gravarEdicao } = await import("../banco");
+
+// 🔴 A PÁGINA DA FICHA LÊ O BANCO DESDE 2026-09-25, e é o banco daqui: o
+// `getClient` de produção aponta pro `:memory:` que a semente encheu com
+// `content/fichas/`. Os slugs sintéticos do dublê acima continuam sendo
+// interceptados antes de o banco ser consultado; "rampa-do-pepe" atravessa e
+// sai do banco de verdade.
+//
+// No TOPO porque três `describe` deste arquivo leem o acervo no próprio corpo,
+// que roda na COLETA — antes de qualquer `beforeEach`.
+const banco = await bancoDeProducao();
+const acervoDoBanco = await getAllFichas();
 
 /** Abre a página da ficha DE VERDADE (o server component de [slug]/page.tsx),
  *  sem embrulhar nada à mão — é o ponto de uso, não um componente vizinho. */
@@ -211,7 +224,7 @@ describe("a frase de relevo atravessa da ficha até a tela", () => {
   afterEach(() => { vi.useRealTimers(); });
 
   it("a página entrega ao carimbo o que a ficha REAL diz", async () => {
-    const f = getFicha("rampa-do-pepe")!;
+    const f = (await getFicha("rampa-do-pepe"))!;
     expect(f.secaRapido, "a Rampa perdeu a frase dela — este teste ficaria oco").toBeTruthy();
     const { container } = await abrir("rampa-do-pepe");
     // Montada a partir da própria ficha: ele pode reescrever a frase (e as
@@ -253,7 +266,7 @@ describe("o chip do custo vem da FICHA, não do código", () => {
   const chip = (c: HTMLElement) => c.querySelector(".cost-chip")?.textContent;
 
   it("a página entrega o que a ficha REAL diz — a palavra dela, não a minha", async () => {
-    const f = getFicha("rampa-do-pepe")!;
+    const f = (await getFicha("rampa-do-pepe"))!;
     expect(f.custo.curto, "a Rampa perdeu o chip — este teste ficaria oco").toBeTruthy();
     const { container } = await abrir("rampa-do-pepe");
     expect(chip(container)).toBe(f.custo.curto);
@@ -298,7 +311,7 @@ describe("o horário atravessa da ficha até o carimbo", () => {
   afterEach(() => { vi.useRealTimers(); });
 
   it("às 18h, a ficha REAL que fecha às 17h diz que está fechada", async () => {
-    const f = getFicha("pedra-furada-de-venturosa")!;
+    const f = (await getFicha("pedra-furada-de-venturosa"))!;
     expect(f.horario, "a Pedra Furada perdeu o horário — este teste ficaria oco").toBeTruthy();
     const { container } = await abrir("pedra-furada-de-venturosa");
     expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
@@ -314,7 +327,7 @@ describe("o horário atravessa da ficha até o carimbo", () => {
   // SÓ CAI aqui — a Rampa passaria a fechar num horário que ninguém deu.
   it("a ficha REAL sem horário não fecha por HORA — nem às 18h de um dia em que abre", async () => {
     vi.setSystemTime(Date.UTC(2027, 0, 16, 21, 0)); // SÁBADO, 18h em Recife
-    const f = getFicha("rampa-do-pepe")!;
+    const f = (await getFicha("rampa-do-pepe"))!;
     expect(f.horario, "a Rampa ganhou horário — este par perdeu o sentido").toBeUndefined();
     const { container } = await abrir("rampa-do-pepe");
     expect(container.querySelector(".mark")?.textContent).not.toBe("Fechado agora");
@@ -335,7 +348,7 @@ describe("o dia da semana atravessa da ficha até o carimbo", () => {
   // devia abrir), e um que só olhasse o sábado passaria com o campo ignorado.
   // Os dois lados da régua, nos sete dias.
   it("a ficha REAL fecha nos cinco dias em que não abre, e só neles", async () => {
-    const f = getFicha("rampa-do-pepe")!;
+    const f = (await getFicha("rampa-do-pepe"))!;
     expect(f.dias, "a Rampa perdeu os dias — este teste ficaria oco").toEqual(["sab", "dom"]);
 
     // 2027-01-17 é um domingo; sete dias a partir dele cobrem a semana toda.
@@ -370,7 +383,7 @@ describe("o piso atravessa da ficha até a linha molhada do carimbo", () => {
   afterEach(() => { vi.useRealTimers(); });
 
   it("a página entrega ao carimbo o piso da ficha REAL", async () => {
-    const f = getFicha("rampa-do-pepe")!;
+    const f = (await getFicha("rampa-do-pepe"))!;
     expect(f.piso, "a Rampa perdeu o piso — este teste ficaria oco").toBe("barro");
     const { container } = await abrir("rampa-do-pepe", "frio");
     // Montada a partir da própria ficha, como a irmã de cima: as janelas de
@@ -428,7 +441,7 @@ describe("o piso no bloco Trajeto (a extensão saiu da tela na Task 6, e do mode
   // traz `piso: "barro"` — dado do João, sustentado pela ficha real em três
   // lugares. Fixture sintética não provaria isso.
   it("a Rampa real abre e mostra o piso no Trajeto", async () => {
-    const rampa = getFicha("rampa-do-pepe");
+    const rampa = await getFicha("rampa-do-pepe");
     expect(rampa?.piso).toBe("barro");
 
     const { container } = await abrir("rampa-do-pepe");
@@ -488,7 +501,7 @@ describe("o piso no bloco Trajeto (a extensão saiu da tela na Task 6, e do mode
 // slug escrito à mão, e a ficha nova não aparecia em teste nenhum.
 // ═══════════════════════════════════════════════════════════════════════════
 describe("o chrome da ficha parou de falar de UM lugar", () => {
-  const acervo = getAllFichas();
+  const acervo = acervoDoBanco;
   const titulo = (c: HTMLElement) => c.querySelector(".gate .k")?.textContent ?? "";
   const rodape = (c: HTMLElement) => c.querySelector(".foot")?.textContent ?? "";
 
@@ -588,7 +601,7 @@ describe("o chrome da ficha parou de falar de UM lugar", () => {
 // somem em silêncio.
 // ═══════════════════════════════════════════════════════════════════════════
 describe("Nível B brilha, Nível A fica plano", () => {
-  const acervo = getAllFichas();
+  const acervo = acervoDoBanco;
   const b = (c: HTMLElement, sel: string) =>
     c.querySelector<HTMLElement>(sel)?.getAttribute("data-nivel");
 
@@ -739,7 +752,7 @@ describe("Nível B brilha, Nível A fica plano", () => {
 // tela — e numa viagem de 120 km é ele que decide a ida.
 // ═══════════════════════════════════════════════════════════════════════════
 describe("o tíquete: preço e horário, cada um calando sozinho", () => {
-  const acervo = getAllFichas();
+  const acervo = acervoDoBanco;
   const tk = (c: HTMLElement) => c.querySelector<HTMLElement>(".ticket");
 
   // 🔴 AS TRÊS COMBINAÇÕES SAEM DO ACERVO REAL, e nenhuma ficha sintética foi
@@ -851,5 +864,35 @@ describe("o tíquete: preço e horário, cada um calando sozinho", () => {
     expect((SEM_FATOS as TipoFicha).horario).toBeUndefined();
     const { container } = await abrir("morro-sem-fatos");
     expect(tk(container), "o tíquete foi desenhado vazio numa ficha sem os dois campos").toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 A FICHA VEM DO BANCO (2026-09-25). Todo teste acima prova o que a página
+// FAZ com a ficha; este prova DE ONDE ela vem — e é a única asserção deste
+// arquivo que cairia se `getFicha` voltasse a ler o JSON do repositório.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("a página mostra a versão de AGORA, não a do repositório", () => {
+  it("o painel grava e a próxima visita já mostra o texto novo", async () => {
+    const antes = (await getFicha("rampa-do-pepe"))!;
+    const { container } = await abrir("rampa-do-pepe");
+    expect(container.querySelector(".promessa")?.textContent).toBe(antes.promessa);
+    cleanup();
+
+    try {
+      await gravarEdicao(banco, antes, { promessa: "PROMESSA REESCRITA PELO PAINEL" });
+      const depois = await abrir("rampa-do-pepe");
+      expect(
+        depois.container.querySelector(".promessa")?.textContent,
+        "a página continuou mostrando a promessa do JSON — o banco não é a fonte",
+      ).toBe("PROMESSA REESCRITA PELO PAINEL");
+    } finally {
+      // O banco é do arquivo inteiro (semeado no topo), então esta edição
+      // precisa ser desfeita — e desfazer é GRAVAR a antiga de novo, que é
+      // exatamente o que o painel fará ao voltar uma versão: a tabela é
+      // append-only, nada é apagado.
+      cleanup();
+      await gravarEdicao(banco, antes, {});
+    }
   });
 });

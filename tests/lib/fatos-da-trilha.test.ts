@@ -132,7 +132,10 @@ describe("as duas telas leem a MESMA montagem", () => {
     for (const caminho of [["app", "trilhas", "page.tsx"], ["app", "not-found.tsx"]]) {
       const src = fonte(caminho);
       const nome = caminho.join("/");
-      expect(src, `a tira comeu ${nome}`).toContain("export default function");
+      // `async` desde 2026-09-25: as duas páginas do acervo passaram a esperar o
+      // BANCO e a descer as fichas por prop pra lista. O que esta linha guarda
+      // continua sendo o mesmo — que a tira de comentários não comeu o arquivo.
+      expect(src, `a tira comeu ${nome}`).toMatch(/export default (?:async )?function/);
       expect(src, `${nome} parou de usar a lista única`).toContain("<ListaDoAcervo");
       expect(
         src.includes("lista-item"),

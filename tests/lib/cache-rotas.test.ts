@@ -388,10 +388,17 @@ describe("o aquecimento contra a página de verdade", () => {
     const { renderToStaticMarkup } = await import("react-dom/server");
     const Trilhas = (await import("@/app/trilhas/page")).default;
     const { getAllFichas } = await import("@/lib/ficha");
+    const { bancoDeProducao } = await import("../banco");
 
-    const html = renderToStaticMarkup(Trilhas());
+    // A página lê o BANCO desde 2026-09-25 e virou `async` — daí o `await
+    // Trilhas()`, que é também o que mantém o `renderToStaticMarkup` possível:
+    // MEDIDO nesta data, ele estoura ("a component suspended while responding to
+    // synchronous input") se um FILHO for `async`. Esperada aqui, a página
+    // entrega uma árvore síncrona.
+    await bancoDeProducao();
+    const html = renderToStaticMarkup(await Trilhas());
     const achadas = fichasDoAcervo(html);
-    const esperadas = getAllFichas().map((f) => `/${f.slug}`);
+    const esperadas = (await getAllFichas()).map((f) => `/${f.slug}`);
 
     expect(esperadas.length, "o acervo sumiu — este guarda ficaria oco").toBeGreaterThanOrEqual(3);
     expect(

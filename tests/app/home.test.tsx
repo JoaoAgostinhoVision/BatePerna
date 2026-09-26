@@ -4,6 +4,7 @@ import { Profiler } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, cleanup, waitFor } from "@testing-library/react";
 import { getFichasComCondicao } from "@/lib/ficha";
+import { bancoDeProducao } from "../banco";
 import { CHAVE_FILTROS, SEM_FILTRO } from "@/lib/filtros";
 import { CHAVE_LOCAL } from "@/lib/local";
 import type { Ficha } from "@/types/ficha";
@@ -16,10 +17,18 @@ vi.mock("@/lib/carimbo-estado", async (real) => ({
 // getFichasComCondicao por padrão continua sendo o loader de verdade — só o
 // teste de agrupamento troca por fichas sintéticas, porque content/fichas/
 // hoje tem uma ficha só e não dá pra provar "dois grupos" com uma.
+//
+// 🔴 E é por DELEGAR ao de verdade que este arquivo precisa de banco desde
+// 2026-09-25: o dublê embrulha a função real, que lê o BANCO. Sem semear, a
+// home abriria com o acervo vazio — ou estouraria o erro honesto do
+// `buscarFichas`. As trocas por ficha sintética passaram a `mockResolvedValue`,
+// porque o getter agora devolve promessa.
 vi.mock("@/lib/ficha", async (real) => {
   const mod = await real<typeof import("@/lib/ficha")>();
   return { ...mod, getFichasComCondicao: vi.fn(mod.getFichasComCondicao) };
 });
+
+await bancoDeProducao();
 
 const { resolverEstados } = await import("@/lib/carimbo-estado");
 const Home = (await import("@/app/page")).default;
@@ -40,9 +49,9 @@ const SeloTrilha = (await import("@/app/SeloTrilha")).default;
 // verde pelo motivo errado.
 const AGORA_S = Math.floor(Date.UTC(2027, 0, 16, 11, 0) / 1000);
 
-function leituras(estado: "fresco" | "frio", erro = false) {
+async function leituras(estado: "fresco" | "frio", erro = false) {
   return new Map(
-    getFichasComCondicao().map((f) => [f.slug, { estado, erro, calculadoEm: AGORA_S, aviso: null }]),
+    (await getFichasComCondicao()).map((f) => [f.slug, { estado, erro, calculadoEm: AGORA_S, aviso: null }]),
   );
 }
 
@@ -83,14 +92,14 @@ afterEach(() => {
 
 describe("a home", () => {
   it("dá um link pra cada trilha com condição", async () => {
-    vi.mocked(resolverEstados).mockResolvedValue(leituras("fresco"));
+    vi.mocked(resolverEstados).mockResolvedValue(await leituras("fresco"));
     const { container } = render(await Home());
     const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
-    for (const f of getFichasComCondicao()) expect(hrefs).toContain(`/${f.slug}`);
+    for (const f of await getFichasComCondicao()) expect(hrefs).toContain(`/${f.slug}`);
   });
 
   it("o carimbo já vem pintado no HTML do servidor, sem depender de JS", async () => {
-    vi.mocked(resolverEstados).mockResolvedValue(leituras("fresco"));
+    vi.mocked(resolverEstados).mockResolvedValue(await leituras("fresco"));
     const { container } = render(await Home());
     const selo = container.querySelector(".cartao .selo");
     expect(selo?.textContent).toContain("Pode ir");
@@ -104,7 +113,7 @@ describe("a home", () => {
     // rotulasse "Hoje não", ou que invertesse os cabeçalhos, passaria.)
     const seca = fichaFake("seca");
     const molhada = fichaFake("molhada");
-    vi.mocked(getFichasComCondicao).mockReturnValueOnce([seca, molhada]);
+    vi.mocked(getFichasComCondicao).mockResolvedValueOnce([seca, molhada]);
     vi.mocked(resolverEstados).mockResolvedValue(
       new Map([
         ["seca", { estado: "fresco" as const, erro: false, calculadoEm: AGORA_S, aviso: null }],
@@ -134,7 +143,7 @@ describe("a home", () => {
     const molhada = fichaFake("molhada");
     const seca = fichaFake("seca");
     const instavel = fichaFake("instavel");
-    vi.mocked(getFichasComCondicao).mockReturnValueOnce([molhada, seca, instavel]);
+    vi.mocked(getFichasComCondicao).mockResolvedValueOnce([molhada, seca, instavel]);
     vi.mocked(resolverEstados).mockResolvedValue(
       new Map([
         ["molhada", { estado: "frio" as const, erro: false, calculadoEm: AGORA_S, aviso: null }],
@@ -161,7 +170,7 @@ describe("a home", () => {
     const emReforma = fichaFake("emReforma");
     const seca = fichaFake("seca");
     const instavel = fichaFake("instavel");
-    vi.mocked(getFichasComCondicao).mockReturnValueOnce([emReforma, seca, instavel]);
+    vi.mocked(getFichasComCondicao).mockResolvedValueOnce([emReforma, seca, instavel]);
     vi.mocked(resolverEstados).mockResolvedValue(
       new Map([
         [
@@ -190,21 +199,21 @@ describe("a home", () => {
     // Par do teste "sem leitura informa": aquele prova que frio+erro NÃO diz
     // "Não vá". Este prova que frio+leitura confiável DIZ. Sem os dois,
     // apagar o ramo "Não vá" do SeloTrilha deixaria a suíte inteira verde.
-    vi.mocked(resolverEstados).mockResolvedValue(leituras("frio", false));
+    vi.mocked(resolverEstados).mockResolvedValue(await leituras("frio", false));
     const { container } = render(await Home());
     expect(container.textContent).toContain("Não vá");
     expect(container.textContent).not.toContain("SEM INFORMAÇÕES");
   });
 
   it("sem leitura, informa em vez de mandar — 'Não vá' é só pro barro medido", async () => {
-    vi.mocked(resolverEstados).mockResolvedValue(leituras("frio", true));
+    vi.mocked(resolverEstados).mockResolvedValue(await leituras("frio", true));
     const { container } = render(await Home());
     expect(container.textContent).toContain("SEM INFORMAÇÕES");
     expect(container.textContent).not.toContain("Não vá");
   });
 
   it("a barra marca que você está na home", async () => {
-    vi.mocked(resolverEstados).mockResolvedValue(leituras("fresco"));
+    vi.mocked(resolverEstados).mockResolvedValue(await leituras("fresco"));
     const { container } = render(await Home());
     expect(container.querySelector('.barra [aria-current="page"]')?.getAttribute("href")).toBe("/");
   });
@@ -240,7 +249,7 @@ describe("a home", () => {
   // renderiza a home de verdade (page.tsx), sem embrulhar nada à mão.
   it("a home de verdade embrulha tudo no LocalVivo: o ponto 'você' aparece sem ninguém embrulhar na mão", async () => {
     vi.useRealTimers();
-    vi.mocked(resolverEstados).mockResolvedValue(leituras("fresco"));
+    vi.mocked(resolverEstados).mockResolvedValue(await leituras("fresco"));
     localStorage.setItem(CHAVE_LOCAL, JSON.stringify({
       tipo: "gps", coord: { lat: -8.2, lng: -35.56 }, em: 1_800_000_000,
     }));
@@ -272,7 +281,7 @@ describe("a home", () => {
   // asserção que cai nomeia a trilha que não devia estar lá.
   it("a home de verdade embrulha tudo no FiltrosVivos: o filtro guardado recorta sem ninguém embrulhar na mão", async () => {
     vi.useRealTimers();
-    vi.mocked(resolverEstados).mockResolvedValue(leituras("fresco"));
+    vi.mocked(resolverEstados).mockResolvedValue(await leituras("fresco"));
     localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ ...SEM_FILTRO, soGratis: true }));
     const { container } = render(await Home());
     // `waitFor` com `expect` dentro, não `findByText`: o que cai quando o

@@ -10,7 +10,7 @@ function tiposValidos(t: unknown): t is TipoRelato {
 
 export async function GET(req: Request): Promise<Response> {
   const slug = new URL(req.url).searchParams.get("slug");
-  if (!slug || getFicha(slug) == null) {
+  if (!slug || (await getFicha(slug)) == null) {
     return new Response("ficha inválida", { status: 400 });
   }
   const agora = Math.floor(Date.now() / 1000);
@@ -25,7 +25,7 @@ export async function POST(req: Request): Promise<Response> {
     return new Response("bad request", { status: 400 });
   }
   const { slug, tipo } = body;
-  if (typeof slug !== "string" || getFicha(slug) == null) {
+  if (typeof slug !== "string" || (await getFicha(slug)) == null) {
     return new Response("ficha inválida", { status: 400 });
   }
   if (!tiposValidos(tipo)) {

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
 import PainelAdmin from "@/app/admin/PainelAdmin";
 import { getAllFichas } from "@/lib/ficha";
+import { bancoDeProducao } from "../banco";
 import { vozDaFicha, falaMolhada } from "@/lib/severidade";
 import { faseDe, marcaDe } from "@/lib/carimbo-fase";
 import { aberturaDaFicha, agoraRecife, fechadoAgora } from "@/lib/horario";
@@ -11,7 +12,11 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const AGORA = 1_757_000_000; // quinta-feira, ~09h33 Recife (ver Fix round 2)
 const DIA = 24 * 3600;
-const fichas = getAllFichas();
+// O acervo vem do BANCO desde 2026-09-25, e é semeado no TOPO: `fichas` é uma
+// constante de módulo que todo teste daqui passa por prop pro painel, e
+// `beforeEach` roda depois da avaliação do módulo.
+await bancoDeProducao();
+const fichas = await getAllFichas();
 const leituras = Object.fromEntries(
   fichas.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: AGORA, aviso: null }]),
 );

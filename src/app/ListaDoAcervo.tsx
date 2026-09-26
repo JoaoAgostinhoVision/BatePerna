@@ -1,5 +1,5 @@
-import { getAllFichas } from "@/lib/ficha";
 import { fatosDaTrilha } from "@/lib/fatos-da-trilha";
+import type { Ficha } from "@/types/ficha";
 
 /** A LISTA DO QUE EXISTE — o acervo inteiro, sem carimbo, com os fatos
  *  permanentes de cada lugar.
@@ -19,9 +19,25 @@ import { fatosDaTrilha } from "@/lib/fatos-da-trilha";
  *  Quem mostra veredito é a home.
  *
  *  Sem distância: server component, e a pergunta aqui não é "o que está perto".
- *  Ausente é silêncio, a régua de sempre. */
-export default function ListaDoAcervo({ titulo }: { titulo: string }) {
-  const fichas = getAllFichas();
+ *  Ausente é silêncio, a régua de sempre.
+ *
+ *  🔴 O ACERVO CHEGA POR PROP DESDE 2026-09-25, e quem o busca são as duas
+ *  páginas que a mostram. Até hoje ela chamava `getAllFichas()` por conta
+ *  própria; com a ficha vindo do BANCO o getter virou `async`, e uma função de
+ *  componente `async` só existe dentro de um pedido do servidor: MEDIDO nesta
+ *  data, um filho `async` não renderiza nem no `render` do testing-library (o
+ *  elemento nunca aparece) nem no `renderToStaticMarkup` ("a component
+ *  suspended while responding to synchronous input"), e as duas páginas que a
+ *  mostram são justamente as que os testes abrem assim. Dado por prop, ela
+ *  volta a ser pura — e é o MESMO desenho que `PainelAdmin` e `MioloHome` já
+ *  seguem: quem espera o banco é a página, quem desenha recebe pronto. */
+export default function ListaDoAcervo({
+  titulo,
+  fichas,
+}: {
+  titulo: string;
+  fichas: Ficha[];
+}) {
   return (
     <div className="lista">
       <div className="lista-k">{titulo}</div>

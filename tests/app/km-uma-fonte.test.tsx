@@ -83,9 +83,13 @@ const { FICHA } = vi.hoisted(() => ({
   } satisfies Ficha as Ficha,
 }));
 
+// `getFicha` é `async` desde 2026-09-25 (a ficha vem do banco), então o dublê
+// também devolve promessa — a página a espera. Nada aqui precisa de banco: este
+// arquivo é sobre UMA ficha sintética atravessando duas telas, e um dublê não
+// provaria nada sobre o banco de qualquer forma.
 vi.mock("@/lib/ficha", async (real) => ({
   ...(await real<typeof import("@/lib/ficha")>()),
-  getFicha: () => FICHA,
+  getFicha: async () => FICHA,
 }));
 
 vi.mock("@/lib/carimbo-estado", async (real) => ({

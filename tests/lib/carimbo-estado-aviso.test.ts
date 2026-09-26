@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { faseDe } from "@/lib/carimbo-fase";
 import { fechadoPeloDono } from "@/lib/aviso";
 import { getFicha } from "@/lib/ficha";
+import type { Client } from "@libsql/client";
 import type { AvisoLinha } from "@/lib/db";
 
 const base = { conferindo: false, erro: false, venceu: false, falhou: false, fechadoPeloDono: false };
@@ -72,8 +73,15 @@ const AGORA_S = Math.floor(AGORA_MS / 1000);
 const H = 3600;
 
 vi.mock("@/lib/weather", () => ({ fetchPrecip: vi.fn(), fetchPrecipMulti: vi.fn() }));
-vi.mock("@/lib/db", () => ({
-  getClient: vi.fn(() => ({})),
+
+// 🔴 O DUBLÊ DO BANCO FICOU PARCIAL EM 2026-09-25, e a mudança é obrigatória: a
+// ficha passou a vir do banco, então `getFicha` precisa do `versoesAtuais` de
+// verdade. O que continua dublado é só o que este arquivo mede — o aviso — e o
+// `getClient`, que aponta pro `:memory:` daqui em vez do Turso.
+let cliente: Client;
+vi.mock("@/lib/db", async (real) => ({
+  ...(await real<typeof import("@/lib/db")>()),
+  getClient: vi.fn(() => cliente),
   avisoVigente: vi.fn(),
   avisosVigentes: vi.fn(),
 }));
@@ -81,11 +89,17 @@ vi.mock("@/lib/db", () => ({
 const { fetchPrecip, fetchPrecipMulti } = await import("@/lib/weather");
 const { avisoVigente, avisosVigentes } = await import("@/lib/db");
 const { PRAZO_AVISO_MS, resolverEstado, resolverEstados } = await import("@/lib/carimbo-estado");
+const { bancoVazio, semearAcervo } = await import("../banco");
+
+// A ficha é fixture deste arquivo (a pergunta aqui é o aviso), e é lida uma vez
+// no topo: `ficha()` segue síncrona pros doze pontos que a chamam.
+cliente = bancoVazio();
+await semearAcervo(cliente);
+const RAMPA = await getFicha("rampa-do-pepe");
 
 function ficha() {
-  const f = getFicha("rampa-do-pepe");
-  if (!f) throw new Error("a ficha da Rampa sumiu do content/");
-  return f;
+  if (!RAMPA) throw new Error("a ficha da Rampa sumiu do acervo");
+  return RAMPA;
 }
 
 /** Sem chuva nenhuma na janela: o motor sozinho diria "fresco". */

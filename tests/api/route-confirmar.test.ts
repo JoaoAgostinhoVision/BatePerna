@@ -1,6 +1,7 @@
 import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ensureSchema } from "@/lib/db";
+import { semearAcervo } from "../banco";
 
 let client: Client;
 vi.mock("@/lib/db", async (importOriginal) => {
@@ -11,6 +12,9 @@ vi.mock("@/lib/db", async (importOriginal) => {
 beforeEach(async () => {
   client = createClient({ url: ":memory:" });
   await ensureSchema(client);
+  // A rota valida o slug contra o acervo, que vem do BANCO desde 2026-09-25 —
+  // o mesmo cliente que ela usa pro placar.
+  await semearAcervo(client);
 });
 afterEach(() => client.close());
 

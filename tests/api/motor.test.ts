@@ -1,12 +1,24 @@
 import { createClient, type Client } from "@libsql/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ensureSchema, getFreshness } from "@/lib/db";
 import { runMotor } from "@/lib/runMotor";
+import { semearAcervo } from "../banco";
 
 let client: Client;
+
+// 🔴 O MOTOR LÊ O ACERVO DO BANCO DESDE 2026-09-25 (`getFichasComCondicao` virou
+// `async`), e o banco dele é o `getClient` — não o `deps.client` que este teste
+// já passava pro freshness. Os dois apontam pro MESMO `:memory:` aqui: um banco
+// só, como em produção.
+vi.mock("@/lib/db", async (real) => ({
+  ...(await real<typeof import("@/lib/db")>()),
+  getClient: () => client,
+}));
+
 beforeEach(async () => {
   client = createClient({ url: ":memory:" });
   await ensureSchema(client);
+  await semearAcervo(client);
 });
 afterEach(() => client.close());
 

@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, cleanup, screen } from "@testing-library/react";
 import CaixaDeSenha from "@/app/admin/CaixaDeSenha";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
+import type { Client } from "@libsql/client";
+import { bancoVazio, semearAcervo } from "../banco";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
@@ -125,13 +127,26 @@ describe("/admin — a página", () => {
 // recusaria, mas a tela já teria mostrado o que só o dono vê. Os dois lados
 // da porta, com a sessão de verdade (`criarSessao`), e não um mock da guarda.
 vi.mock("@/lib/carimbo-estado", () => ({ resolverEstados: vi.fn() }));
-vi.mock("@/lib/db", () => ({ avisosVigentes: vi.fn(), getClient: vi.fn(() => ({})) }));
+
+// 🔴 O DUBLÊ DO BANCO FICOU PARCIAL EM 2026-09-25: a página lê o acervo do
+// BANCO (`getAllFichas` virou `async`), então ela precisa do `versoesAtuais` de
+// verdade — com o dublê total de antes, o painel estouraria antes de mostrar
+// coisa nenhuma, e o teste da porta morreria por um motivo que não é a porta.
+// O que continua dublado é o aviso vigente, que este arquivo não mede.
+let cliente: Client;
+vi.mock("@/lib/db", async (real) => ({
+  ...(await real<typeof import("@/lib/db")>()),
+  avisosVigentes: vi.fn(),
+  getClient: vi.fn(() => cliente),
+}));
 
 describe("/admin — a porta", () => {
   const SENHA = "s".repeat(24);
   const SEGREDO = "segredo-de-assinatura-do-teste";
 
   beforeEach(async () => {
+    cliente = bancoVazio();
+    await semearAcervo(cliente);
     notFoundFalso.mockClear();
     cookiesFalso.mockReset();
     vi.unstubAllEnvs();

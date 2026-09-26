@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getFicha } from "@/lib/ficha";
 import { janelaMaxima, resolverEstado, resolverEstados } from "@/lib/carimbo-estado";
 import type { Ficha } from "@/types/ficha";
+import { bancoDeProducao } from "../banco";
 
 const AGORA_MS = Date.UTC(2027, 0, 15, 11, 0);
 const AGORA_S = Math.floor(AGORA_MS / 1000);
@@ -10,10 +11,17 @@ const H = 3600;
 vi.mock("@/lib/weather", () => ({ fetchPrecip: vi.fn(), fetchPrecipMulti: vi.fn() }));
 const { fetchPrecip, fetchPrecipMulti } = await import("@/lib/weather");
 
+// A ficha vem do BANCO desde 2026-09-25, e é lida UMA vez aqui no topo: ela é
+// fixture de quase todo teste deste arquivo (a pergunta daqui é o carimbo, não a
+// fonte da ficha), e `ficha()` continua síncrona pra não mexer nos dez pontos
+// que a chamam. O mesmo banco serve os `avisoVigente` que o `resolverEstado`
+// consulta — antes deste dia o `getClient` estourava e o `catch` engolia.
+await bancoDeProducao();
+const RAMPA = await getFicha("rampa-do-pepe");
+
 function ficha() {
-  const f = getFicha("rampa-do-pepe");
-  if (!f) throw new Error("a ficha da Rampa sumiu do content/");
-  return f;
+  if (!RAMPA) throw new Error("a ficha da Rampa sumiu do acervo");
+  return RAMPA;
 }
 
 /** Uma ficha mínima com regra própria. Só o que resolverEstados olha. */

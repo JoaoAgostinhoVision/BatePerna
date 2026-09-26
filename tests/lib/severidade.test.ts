@@ -6,6 +6,7 @@ import { fichaSchema } from "@/types/ficha";
 import { marcaDe, subDe } from "@/lib/carimbo-fase";
 import { SEVERIDADES, falaMolhada, tomDe, vozDaFicha } from "@/lib/severidade";
 import { regraDe, semComentarios } from "../css";
+import { bancoDeProducao } from "../banco";
 
 /** 🔴 O DEFEITO QUE ESTES TESTES TRANCAM (2026-09-10). O carimbo tinha DUAS
  *  palavras pro acervo inteiro, e elas vinham de bocas diferentes: "Não vá" é a
@@ -17,6 +18,13 @@ import { regraDe, semComentarios } from "../css";
  *  `discriminador.formato`), e uma camada acima: ali era um FATO de um lugar
  *  escrito num componente que serve todos; aqui era a VOZ de um lugar virando a
  *  língua de todos. */
+// O acervo vem do BANCO desde 2026-09-25 — semeado de `content/fichas/`, que
+// continua sendo o conteúdo que este arquivo audita. UMA leitura no topo, e os
+// dois pontos que a usavam (um dentro de `it`, outro no corpo de um `describe`,
+// que roda na coleta e não veria um `beforeEach`) leem a mesma constante.
+await bancoDeProducao();
+const ACERVO = await getFichasComCondicao();
+
 describe("falaMolhada: cada trilha fala com a força que a ficha DELA declara", () => {
   it("os três níveis dizem coisas diferentes — senão o campo não decide nada", () => {
     const marcas = SEVERIDADES.map((s) => falaMolhada(s, 6).marca);
@@ -75,7 +83,7 @@ describe("falaMolhada: cada trilha fala com a força que a ficha DELA declara", 
   // MUTAÇÃO M3: `vozDaFicha` pegar a janela de PREVISÃO em vez da de passado.
   // As duas são números da mesma `regra`, e trocá-las não quebra tipo nenhum.
   it("a voz da ficha carrega a janela de PASSADO, que é a que o nível cita", () => {
-    for (const f of getFichasComCondicao()) {
+    for (const f of ACERVO) {
       const voz = vozDaFicha(f.condicao);
       expect(voz.horasPassado, f.slug).toBe(f.condicao.regra.janela_passado_horas);
       expect(voz.severidade, f.slug).toBe(f.condicao.severidade);
@@ -84,10 +92,11 @@ describe("falaMolhada: cada trilha fala com a força que a ficha DELA declara", 
 });
 
 describe("o acervo inteiro, e o guarda cresce com ele", () => {
-  // 🔴 LÊ `content/fichas/` — não enumera slug à mão. Guarda que lista o acervo
+  // 🔴 LÊ O ACERVO INTEIRO — não enumera slug à mão. Guarda que lista o acervo
   // na fonte é cego a ele crescer, e é uma das 36 espécies já catalogadas neste
-  // projeto: a ficha nova entra sem severidade e nenhum teste pisca.
-  const acervo = getFichasComCondicao();
+  // projeto: a ficha nova entra sem severidade e nenhum teste pisca. (A leitura
+  // é a do topo do arquivo, do banco semeado com `content/fichas/`.)
+  const acervo = ACERVO;
 
   it("toda ficha declara um nível, e o schema só aceita os três", () => {
     expect(acervo.length).toBeGreaterThan(0);

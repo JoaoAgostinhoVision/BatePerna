@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generateMetadata } from "@/app/[slug]/page";
 import { getAllFichas, getFicha } from "@/lib/ficha";
+import { bancoDeProducao } from "../banco";
 
 /** 🔴 O DEFEITO QUE ESTE ARQUIVO TRANCA (2026-09-11). As três fichas mandavam o
  *  MESMO cartão no WhatsApp — "BatePerna · Aventura pela via segura.", o título
@@ -16,9 +17,14 @@ import { getAllFichas, getFicha } from "@/lib/ficha";
 
 const pedir = (slug: string) => generateMetadata({ params: Promise.resolve({ slug }) });
 
-describe("o cartão que o link de uma trilha mostra", () => {
-  const fichas = getAllFichas();
+// O acervo vem do BANCO desde 2026-09-25 — e é o MESMO banco que o
+// `generateMetadata` lê, porque o `getClient` de produção aponta pra ele.
+// Semeado no topo: `fichas` era lida no corpo do `describe`, que roda na coleta,
+// antes de qualquer `beforeEach`.
+await bancoDeProducao();
+const fichas = await getAllFichas();
 
+describe("o cartão que o link de uma trilha mostra", () => {
   // 🔴 NÃO-VACUIDADE: todo laço abaixo varre o acervo. Com ele vazio, todos
   // passariam — a espécie "prova que passa por não ter o que provar". Cravado a
   // mão, como o do `coerencia-acervo`.
@@ -111,7 +117,7 @@ describe("o cartão que o link de uma trilha mostra", () => {
   // Slug que não existe herda o título do layout em vez de estourar: a rota 404
   // chama esta função antes do `notFound()`.
   it("slug inexistente devolve cartão vazio, e não um erro", async () => {
-    expect(getFicha("trilha-que-nao-existe"), "a premissa do teste").toBeFalsy();
+    expect(await getFicha("trilha-que-nao-existe"), "a premissa do teste").toBeFalsy();
     await expect(pedir("trilha-que-nao-existe")).resolves.toEqual({});
   });
 });

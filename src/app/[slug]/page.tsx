@@ -51,7 +51,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const ficha = getFicha(slug);
+  const ficha = await getFicha(slug);
   if (!ficha) return {}; // 404 herda o título do layout
 
   const nome = ficha.trajeto.waypoints[0].nome;
@@ -78,7 +78,7 @@ export default async function Ficha({
   searchParams: Promise<{ debug?: string }>;
 }) {
   const { slug } = await params;
-  const ficha = getFicha(slug);
+  const ficha = await getFicha(slug);
   if (!ficha) notFound();
 
   const { debug } = await searchParams;

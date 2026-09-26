@@ -6,6 +6,7 @@ import DistanciaDaqui from "@/app/DistanciaDaqui";
 import LocalVivo from "@/app/local";
 import { getFichasComCondicao } from "@/lib/ficha";
 import { CHAVE_GPS, CHAVE_LOCAL } from "@/lib/local";
+import { bancoDeProducao } from "../banco";
 
 const RAMPA = { lat: -7.907889, lng: -36.019222 };
 
@@ -17,9 +18,14 @@ const RAMPA = { lat: -7.907889, lng: -36.019222 };
 // tinha uma ficha. Entrou a Pedra Furada de Venturosa (2026-08-25) e
 // `ordenarPorNome` a pôs na frente — o `[0]` passou a ser outra trilha, e as
 // contas de ~111 km deste arquivo são todas ancoradas na coordenada da Rampa.
+// O acervo vem do BANCO desde 2026-09-25 (semeado de `content/fichas/`), lido
+// uma vez no topo — `ficha` é constante de módulo.
+await bancoDeProducao();
+const ACERVO = await getFichasComCondicao();
+
 function fichaReal(slug: string) {
-  const f = getFichasComCondicao().find((x) => x.slug === slug);
-  if (!f) throw new Error(`ficha "${slug}" não está em content/fichas — estes testes são sobre ela`);
+  const f = ACERVO.find((x) => x.slug === slug);
+  if (!f) throw new Error(`ficha "${slug}" não está no acervo — estes testes são sobre ela`);
   return f;
 }
 

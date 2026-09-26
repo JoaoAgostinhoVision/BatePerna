@@ -45,7 +45,7 @@ export async function POST(req: Request): Promise<Response> {
   const { slug, texto, efeito, venceEm } = body as {
     slug?: unknown; texto?: unknown; efeito?: unknown; venceEm?: unknown;
   };
-  if (typeof slug !== "string" || getFicha(slug) == null) return new Response("", { status: 400 });
+  if (typeof slug !== "string" || (await getFicha(slug)) == null) return new Response("", { status: 400 });
   if (typeof texto !== "string" || texto.trim() === "") return new Response("", { status: 400 });
   if (typeof efeito !== "string" || !EFEITOS.includes(efeito as EfeitoAviso)) {
     return new Response("", { status: 400 });

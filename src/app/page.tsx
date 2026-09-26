@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
  *  as duas respostas. Sem o segundo, o primeiro sábado de chuva devolveria uma
  *  home em branco — que é a tela que menos ajuda a decidir. */
 export default async function Home() {
-  const fichas = getFichasComCondicao();
+  const fichas = await getFichasComCondicao();
   const leituras = await resolverEstados(fichas);
 
   // O par ficha+leitura só existe se a leitura existir: `resolverEstados`

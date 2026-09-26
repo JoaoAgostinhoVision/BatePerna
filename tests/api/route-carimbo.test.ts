@@ -5,6 +5,12 @@ const AGORA_S = Math.floor(AGORA_MS / 1000);
 
 vi.mock("@/lib/carimbo-estado", () => ({ resolverEstado: vi.fn() }));
 const { resolverEstado } = await import("@/lib/carimbo-estado");
+const { bancoDeProducao } = await import("../banco");
+
+// A rota busca a ficha no BANCO desde 2026-09-25: sem semear, todo slug daria
+// 404 e o teste do 404 passaria pelo motivo errado. Semeado ANTES dos relógios
+// falsos do `beforeEach`, de propósito.
+await bancoDeProducao();
 
 beforeEach(() => {
   vi.useFakeTimers();

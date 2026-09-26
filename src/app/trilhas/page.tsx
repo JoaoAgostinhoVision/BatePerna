@@ -3,6 +3,7 @@ import "../home.css";
 import Appbar from "../Appbar";
 import BarraNavegacao from "../BarraNavegacao";
 import ListaDoAcervo from "../ListaDoAcervo";
+import { getAllFichas } from "@/lib/ficha";
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +32,15 @@ export const dynamic = "force-dynamic";
  *
  *  Sem distância: server component, e a pergunta aqui não é "o que está perto".
  *  Ausente é silêncio, a régua de sempre. */
-export default function Trilhas() {
+export default async function Trilhas() {
+  // O acervo vem do BANCO e desce por prop — ver o comentário do
+  // `ListaDoAcervo` sobre por que quem espera o banco é a página.
+  const fichas = await getAllFichas();
   return (
     <main className="bp">
       <div className="screen">
         <Appbar comSaida={false} />
-        <ListaDoAcervo titulo="Todas as trilhas" />
+        <ListaDoAcervo titulo="Todas as trilhas" fichas={fichas} />
         <BarraNavegacao aqui="trilhas" />
       </div>
     </main>

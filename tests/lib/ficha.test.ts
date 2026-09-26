@@ -1,7 +1,8 @@
 import fs, { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import type { Client } from "@libsql/client";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getFicha,
   getAllFichas,
@@ -9,6 +10,8 @@ import {
   loadAll,
   ordenarPorNome,
 } from "@/lib/ficha";
+import { versoesAtuais } from "@/lib/db";
+import { bancoDeProducao, gravarEdicao } from "../banco";
 import { fichaSchema } from "@/types/ficha";
 import type { Ficha } from "@/types/ficha";
 
@@ -38,9 +41,21 @@ function fichaComNome(nome: string): Ficha {
   };
 }
 
+/** 🔴 OS TRÊS GETTERS LEEM O BANCO DESDE 2026-09-25, e é por isso que estes
+ *  testes ganharam um banco `:memory:` semeado com o acervo do repositório.
+ *  Nada aqui mocka os getters: o caminho exercitado é o de produção inteiro
+ *  (`getAllFichas` → `buscarFichas` → `comPrazo` → `versoesAtuais` → SQL), e a
+ *  única peça trocada é para onde o `getClient` aponta. Ver `tests/banco.ts`.
+ *
+ *  Os testes de `loadAll(dir)` com diretório sintético, mais abaixo, NÃO usam o
+ *  banco de propósito: eles provam o leitor de disco, que continua existindo
+ *  pra semente. */
+let banco: Client;
+beforeEach(async () => { banco = await bancoDeProducao(); });
+
 describe("ficha loader", () => {
-  it("loads and validates the real Rampa do Pepê ficha", () => {
-    const f = getFicha("rampa-do-pepe");
+  it("loads and validates the real Rampa do Pepê ficha", async () => {
+    const f = await getFicha("rampa-do-pepe");
     expect(f).not.toBeNull();
     expect(f!.slug).toBe("rampa-do-pepe");
     expect(f!.modos).toContain("condicional");
@@ -49,17 +64,17 @@ describe("ficha loader", () => {
     expect(f!.trajeto.waypoints.length).toBeGreaterThan(0);
   });
 
-  it("returns null for an unknown slug", () => {
-    expect(getFicha("nao-existe")).toBeNull();
+  it("returns null for an unknown slug", async () => {
+    expect(await getFicha("nao-existe")).toBeNull();
   });
 
-  it("lists all fichas and those with condicao", () => {
-    expect(getAllFichas().length).toBeGreaterThan(0);
-    expect(getFichasComCondicao().every((f) => f.condicao != null)).toBe(true);
+  it("lists all fichas and those with condicao", async () => {
+    expect((await getAllFichas()).length).toBeGreaterThan(0);
+    expect((await getFichasComCondicao()).every((f) => f.condicao != null)).toBe(true);
   });
 
-  it("as fichas saem ordenadas por nome, não pela ordem do sistema de arquivos", () => {
-    const nomes = getAllFichas().map((f) => f.trajeto.waypoints[0].nome);
+  it("as fichas saem ordenadas por nome, não pela ordem do sistema de arquivos", async () => {
+    const nomes = (await getAllFichas()).map((f) => f.trajeto.waypoints[0].nome);
     expect(nomes).toEqual([...nomes].sort((a, b) => a.localeCompare(b, "pt-BR")));
   });
 
@@ -221,8 +236,8 @@ describe("piso", () => {
   // (lição 10) — desde a Task 8 (2026-08-23) a Rampa carrega com
   // `piso: "barro"`, dado do João, sustentado pela ficha real em três lugares
   // (não fixture).
-  it("a Rampa carrega com piso de barro — é dado real, não fixture", () => {
-    const f = getFicha("rampa-do-pepe");
+  it("a Rampa carrega com piso de barro — é dado real, não fixture", async () => {
+    const f = await getFicha("rampa-do-pepe");
     expect(f).not.toBeNull();
     expect(f!.piso).toBe("barro");
   });
@@ -281,9 +296,9 @@ describe("secaRapido — a explicação do relevo é da FICHA, não do app", () 
   // serve as duas. As de presença não são redundantes com ela: `not.toBe`
   // sozinha morreria se as duas fossem indefinidas, mas passa com uma
   // indefinida e a outra escrita, que é o meio-caminho a barrar aqui.
-  it("as duas fichas do acervo trazem a sua frase, e elas DISCORDAM", () => {
-    const rampa = getFicha("rampa-do-pepe");
-    const pedra = getFicha("pedra-furada-de-venturosa");
+  it("as duas fichas do acervo trazem a sua frase, e elas DISCORDAM", async () => {
+    const rampa = await getFicha("rampa-do-pepe");
+    const pedra = await getFicha("pedra-furada-de-venturosa");
     expect(rampa).not.toBeNull();
     expect(pedra).not.toBeNull();
     expect(rampa!.secaRapido, "a Rampa precisa da frase dela").toBeTruthy();
@@ -295,8 +310,8 @@ describe("secaRapido — a explicação do relevo é da FICHA, não do app", () 
   // palavra da Rampa; a Pedra Furada é plana, e o João a descreveu como
   // "estrada de chão batido e plana". Reword-proof: ele pode reescrever a
   // frase à vontade, só não pode pôr serra onde não tem.
-  it("a frase da Pedra Furada não fala em serra — foi essa a mentira que estava no ar", () => {
-    const pedra = getFicha("pedra-furada-de-venturosa");
+  it("a frase da Pedra Furada não fala em serra — foi essa a mentira que estava no ar", async () => {
+    const pedra = await getFicha("pedra-furada-de-venturosa");
     expect(pedra!.secaRapido).toBeTruthy();
     expect(pedra!.secaRapido!.toLowerCase()).not.toContain("serra");
   });
@@ -324,8 +339,8 @@ describe("custo.curto — o chip é da FICHA, não do app", () => {
   // A ficha REAL, por slug. A Pedra Furada é GRÁTIS, então não entra aqui — e
   // isso é registro, não esquecimento: hoje só existe uma ficha paga no acervo,
   // que é justamente por que o "portão" fixo passou despercebido tanto tempo.
-  it("a Rampa traz o chip dela, e ele NÃO repete a linha completa do custo", () => {
-    const rampa = getFicha("rampa-do-pepe")!;
+  it("a Rampa traz o chip dela, e ele NÃO repete a linha completa do custo", async () => {
+    const rampa = (await getFicha("rampa-do-pepe"))!;
     expect(rampa.custo.tag).toBe("pago");
     expect(rampa.custo.curto, "a Rampa precisa do chip dela").toBeTruthy();
     // Curto é curto: se alguém colar a frase inteira aqui, o chip do topo
@@ -334,8 +349,8 @@ describe("custo.curto — o chip é da FICHA, não do app", () => {
     expect(rampa.custo.curto).not.toBe(rampa.custo.valor);
   });
 
-  it("a única ficha grátis do acervo não tem chip pra ter", () => {
-    expect(getFicha("pedra-furada-de-venturosa")!.custo.tag).toBe("gratis");
+  it("a única ficha grátis do acervo não tem chip pra ter", async () => {
+    expect((await getFicha("pedra-furada-de-venturosa"))!.custo.tag).toBe("gratis");
   });
 });
 
@@ -370,8 +385,8 @@ describe("carroComum — a pergunta que o piso respondia errado", () => {
   // nela um `acesso` dizendo "só 4x4 alto chega" passava verde. É a espécie 12
   // ("guarda que enumera o acervo à mão é cego a ele crescer") no arquivo que
   // tem, dois testes abaixo, o guarda que fez tudo certo. Agora varre o acervo.
-  it("toda ficha que afirma carro comum sustenta o fato no acesso — a ressalva é de chuva, não de veículo", () => {
-    const afirmam = getAllFichas().filter((f) => f.carroComum === true);
+  it("toda ficha que afirma carro comum sustenta o fato no acesso — a ressalva é de chuva, não de veículo", async () => {
+    const afirmam = (await getAllFichas()).filter((f) => f.carroComum === true);
     expect(afirmam.length, "sumiu a ficha que afirma carro comum: este guarda ficaria oco")
       .toBeGreaterThanOrEqual(2);
     for (const f of afirmam) {
@@ -394,8 +409,8 @@ describe("carroComum — a pergunta que o piso respondia errado", () => {
   // lembrete não tocava justamente no caso pra que foi escrito. É a espécie do
   // "índice significando identidade" (2026-08-25) com outra roupa: **guarda que
   // enumera o acervo à mão é cego ao acervo crescer.**
-  it("enquanto TODAS forem true, não há chip pra ter — o recorte não recortaria", () => {
-    const todas = getAllFichas();
+  it("enquanto TODAS forem true, não há chip pra ter — o recorte não recortaria", async () => {
+    const todas = await getAllFichas();
     expect(todas.length, "o acervo sumiu — este lembrete ficaria oco").toBeGreaterThanOrEqual(2);
     const semCarro = todas.filter((f) => f.carroComum === false).map((f) => f.slug);
     expect(
@@ -445,8 +460,8 @@ describe("loadAll: slug repetido não pode divergir entre telas", () => {
 describe("a linha de relance não repete o título logo abaixo dela", () => {
   // Lê o acervo, não uma lista de slugs escrita à mão: guarda que enumera é
   // cego à ficha nova, e é uma das espécies já catalogadas aqui.
-  it("nenhum rotulo_escaneio começa com a primeira palavra do nome do waypoint", () => {
-    const acervo = getFichasComCondicao();
+  it("nenhum rotulo_escaneio começa com a primeira palavra do nome do waypoint", async () => {
+    const acervo = await getFichasComCondicao();
     expect(acervo.length).toBeGreaterThan(0); // não passa por vacuidade
 
     const primeira = (s: string) =>
@@ -472,5 +487,86 @@ describe("a linha de relance não repete o título logo abaixo dela", () => {
     // E não acusa o inocente: as duas linhas que são palavra dele passam.
     expect(primeira("Só sem chuva")).not.toBe(primeira("Rampa do Pepê"));
     expect(primeira("Com chuva, com cuidado")).not.toBe(primeira("Cachoeira Véu de Noiva"));
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 A FONTE MUDOU DE LUGAR (2026-09-25): os getters leem o BANCO. Os testes
+// acima provam o CONTEÚDO; estes provam DE ONDE ele vem — e é a diferença que
+// separa "a promessa resolveu" de "a ficha veio do banco".
+// ═══════════════════════════════════════════════════════════════════════════
+describe("os getters leem o banco, e não o disco", () => {
+  // 🔴 O TESTE QUE MATA A VOLTA DO DISCO. Grava uma versão nova, como o painel
+  // fará, e exige que a leitura seguinte traga o texto novo. Com `getFicha`
+  // caindo em `loadAll()`, ou com `versaoAtual` pegando a linha velha, o app
+  // mostraria pra sempre o que o repositório diz — e o João editaria no celular
+  // sem nada mudar na tela.
+  it("grava uma versão nova e a leitura seguinte já é a nova", async () => {
+    const antes = (await getFicha("rampa-do-pepe"))!;
+    expect(antes.promessa, "a Rampa sumiu do banco semeado").toBeTruthy();
+
+    await gravarEdicao(banco, antes, { promessa: "PROMESSA REESCRITA PELO PAINEL" });
+
+    const depois = (await getFicha("rampa-do-pepe"))!;
+    expect(depois.promessa).toBe("PROMESSA REESCRITA PELO PAINEL");
+    // E o acervo inteiro vê a mesma coisa: quem lê a lista não fica com a
+    // versão velha de um lugar enquanto a ficha dele já mudou.
+    const naLista = (await getAllFichas()).find((f) => f.slug === "rampa-do-pepe")!;
+    expect(naLista.promessa).toBe("PROMESSA REESCRITA PELO PAINEL");
+  });
+
+  // 🔴 MUTAÇÃO M3 DO PLANO: `.find((f) => f.slug === slug)` virando `[0]`. A
+  // ordem do acervo é por nome, então `[0]` é a Pedra Furada — pedir a Rampa e
+  // receber a Pedra é a voz de um lugar na ficha de outro, a linha vermelha
+  // deste projeto. Os dois sentidos, porque só o par separa `[0]` de `find`.
+  it("cada slug traz a ficha DELE, e não a primeira do acervo", async () => {
+    const acervo = await getAllFichas();
+    expect(acervo.length, "sem duas fichas este teste não separa nada").toBeGreaterThanOrEqual(2);
+    expect(acervo[0].slug, "a primeira do acervo deixou de ser outra que a Rampa")
+      .not.toBe("rampa-do-pepe");
+
+    expect((await getFicha("rampa-do-pepe"))!.slug).toBe("rampa-do-pepe");
+    expect((await getFicha(acervo[0].slug))!.slug).toBe(acervo[0].slug);
+  });
+
+  // 🔴 UMA CONSULTA POR PEDIDO DE ACERVO — não uma por ficha. `versoesAtuais`
+  // existe por isso (o irmão do `avisosVigentes`), e a home tem N lugares: N
+  // consultas saindo do celular no portão é o que esta família evita. Sem este
+  // teste, um `getFicha` reescrito pra consultar `versaoAtual` por slug passaria
+  // verde e a home ficaria N vezes mais lenta em silêncio.
+  it("uma chamada do getter é UMA consulta ao banco, qualquer que seja o acervo", async () => {
+    const espiao = vi.spyOn(banco, "execute");
+    await getAllFichas();
+    const lidas = espiao.mock.calls.filter((c) => JSON.stringify(c[0]).includes("ficha_versoes"));
+    expect(lidas.length, "o getter passou a consultar o banco mais de uma vez por pedido").toBe(1);
+
+    espiao.mockClear();
+    await getFicha("rampa-do-pepe");
+    const daFicha = espiao.mock.calls.filter((c) => JSON.stringify(c[0]).includes("ficha_versoes"));
+    expect(daFicha.length, "pedir UMA ficha passou a custar mais de uma consulta").toBe(1);
+    espiao.mockRestore();
+  });
+
+  // 🔴 GUARDA DE FONTE, e o porquê é uma MEDIÇÃO (2026-09-25). A dedução por
+  // pedido é do `cache()` do React, e ela é INVISÍVEL em teste: fora de um
+  // pedido não há dispatcher de cache, então a função embrulhada roda toda vez —
+  // medido chamando um `cache(fn)` duas vezes (2 execuções) e também dentro de
+  // `renderToStaticMarkup` (3 execuções). Nenhuma asserção de comportamento
+  // nesta suíte distingue o getter com `cache()` do getter sem ele; a mutação
+  // "tirar o cache()" sobrevive a tudo. Então o que trava é a FONTE.
+  //
+  // E o que se perde sem ele é concreto: `[slug]/page.tsx` chama `getFicha`
+  // duas vezes no mesmo pedido (no `generateMetadata` e na página). Sem
+  // `cache()` são duas idas ao banco por visita, e — pior — duas leituras que
+  // podem discordar se o João salvar entre elas: o cartão do link de um lugar
+  // com o corpo da página de outro.
+  it("o `getAllFichas` está embrulhado no `cache()` do React — a dedução por pedido", () => {
+    const src = readFileSync(path.join(process.cwd(), "src", "lib", "ficha.ts"), "utf8");
+    expect(src, "`ficha.ts` parou de importar o `cache` do React").toMatch(
+      /import\s*\{[^}]*\bcache\b[^}]*\}\s*from\s*"react"/,
+    );
+    expect(src, "o `getAllFichas` saiu de dentro do `cache()`").toMatch(
+      /export\s+const\s+getAllFichas\s*=\s*cache\s*\(/,
+    );
   });
 });
