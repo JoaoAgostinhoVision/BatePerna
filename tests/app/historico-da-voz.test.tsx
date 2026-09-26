@@ -14,7 +14,12 @@ const VERSOES = [
   { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA },
 ];
 
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+// 🔴 M4 DA REVISÃO FINAL (2026-09-26): `vi.restoreAllMocks()` NÃO desfaz
+// `vi.stubGlobal` (várias abaixo dublam `fetch`/`location`) — o par certo é
+// `vi.unstubAllGlobals()`. Sem ele, um teste que ficasse depois de um que
+// dublasse `location` herdaria o `reload` falso, e o vazamento só apareceria
+// se a ORDEM dos testes mudasse.
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("HistoricoDaVoz", () => {
   // 🔴 O autor é por LINHA, não fixo. Com rótulo fixo o João leria "você, pelo
@@ -24,6 +29,39 @@ describe("HistoricoDaVoz", () => {
     render(<HistoricoDaVoz versoes={VERSOES} />);
     expect(screen.getByText(/você, pelo painel/i)).toBeTruthy();
     expect(screen.getByText(/acervo original/i)).toBeTruthy();
+  });
+
+  // 🔴 I3 DA REVISÃO FINAL (2026-09-26): nenhum teste desta suíte asseria o
+  // TEXTO da versão — só o caminho até o botão de voltar. A spec é explícita
+  // ("toca numa linha, VÊ AQUELE TEXTO, e tem voltar a esta"): apagar o `<p>`
+  // que mostra a voz, ou fazer a extração devolver `""` sempre, passava
+  // verde. O texto só pode aparecer DEPOIS do clique que abre a linha —
+  // antes, nem ele nem o da outra versão estão na tela.
+  it("mostra o texto daquela versão só depois de abrir a linha, e é o texto CERTO", () => {
+    render(<HistoricoDaVoz versoes={VERSOES} />);
+    expect(screen.queryByText("velha"), "o texto apareceu ANTES do clique").toBeNull();
+    expect(screen.queryByText("nova"), "o texto apareceu ANTES do clique").toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /acervo original/i }));
+    expect(screen.getByText("velha")).toBeTruthy();
+    expect(screen.queryByText("nova"), "abrir a versão velha mostrou o texto da NOVA").toBeNull();
+  });
+
+  // 🔴 O `catch` de `vozDaVersao` (doc que não parseia → "" em vez de
+  // derrubar a lista) também estava sem teste — uma linha antiga corrompida
+  // não pode tirar as OUTRAS versões da tela.
+  it("versão com doc que não parseia não derruba a lista — mostra vazio só para ela", () => {
+    const versoes = [
+      { id: 2, ficha_slug: SLUG, doc: "{ isto não é JSON", autor: "painel" as const, criado_em: AGORA + 10 },
+      { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA },
+    ];
+    render(<HistoricoDaVoz versoes={versoes} />);
+    expect(screen.getByText(/você, pelo painel/i), "a linha corrompida sumiu da lista").toBeTruthy();
+    expect(screen.getByText(/acervo original/i), "a versão boa sumiu junto da corrompida").toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /você, pelo painel/i }));
+    const item = screen.getByRole("button", { name: /você, pelo painel/i }).closest("li")!;
+    expect(item.querySelector("p")!.textContent, "doc podre tem que virar vazio, não estourar").toBe("");
   });
 
   // 🔴 FIX ROUND 1 (2026-09-26): o `voltar()` — a superfície mais complexa do

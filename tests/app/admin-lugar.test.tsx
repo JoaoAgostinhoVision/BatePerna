@@ -63,11 +63,19 @@ describe("/admin/[slug] — painel desligado", () => {
 // página lê o acervo do BANCO (`getFicha` é `async`), então precisa do
 // `versoesAtuais` de verdade — só `avisoVigente`/`getClient` são dublados.
 let cliente: Client;
-vi.mock("@/lib/db", async (real) => ({
-  ...(await real<typeof import("@/lib/db")>()),
-  avisoVigente: vi.fn(),
-  getClient: vi.fn(() => cliente),
-}));
+vi.mock("@/lib/db", async (real) => {
+  const mod = await real<typeof import("@/lib/db")>();
+  return {
+    ...mod,
+    avisoVigente: vi.fn(),
+    getClient: vi.fn(() => cliente),
+    // 🔴 I2 da revisão final: por padrão DELEGA pro `historico` de verdade
+    // (é o que a página usa pra montar o histórico real do lugar), mas fica
+    // dublável por teste — é o mesmo molde do `avisoVigente`, só que este
+    // aqui tem comportamento default em vez de mock cego.
+    historico: vi.fn(mod.historico),
+  };
+});
 vi.mock("@/lib/carimbo-estado", async (real) => ({
   ...(await real<typeof import("@/lib/carimbo-estado")>()),
   resolverEstado: vi.fn(),
@@ -111,6 +119,33 @@ describe("/admin/[slug] — a porta e o conteúdo", () => {
     const { container } = render(await Lugar({ params: Promise.resolve({ slug: ficha.slug }) }));
     expect(container.querySelector(".adm-painel")).not.toBeNull();
     expect(screen.getByText(new RegExp(ficha.trajeto.waypoints[0].nome))).toBeTruthy();
+  });
+
+  // 🔴 I2 DA REVISÃO FINAL (2026-09-26): nada nesta suíte provava que
+  // `EditorDeVoz` e `HistoricoDaVoz` de fato aparecem na tela do lugar —
+  // apagar `<EditorDeVoz>` (o dono não pode editar nada), apagar
+  // `<HistoricoDaVoz>` (sem histórico, sem voltar) ou passar `versoes={[]}`
+  // sobreviviam à suíte inteira. `data-editor-voz` e `data-historico` são os
+  // marcadores que os dois componentes já expõem por prop.
+  it("com cookie válido: o editor da voz e o histórico aparecem, e o histórico não vem vazio", async () => {
+    const { getAllFichas } = await import("@/lib/ficha");
+    const { historico } = await import("@/lib/db");
+    const fichas = await getAllFichas();
+    const ficha = fichas[0];
+    await comSessaoValida();
+    const { default: Lugar } = await import("@/app/admin/[slug]/page");
+    const { container } = render(await Lugar({ params: Promise.resolve({ slug: ficha.slug }) }));
+
+    expect(container.querySelector(`[data-editor-voz="${ficha.slug}"]`), "o editor da voz sumiu").not.toBeNull();
+    const historicoEl = container.querySelector("[data-historico]");
+    expect(historicoEl, "o histórico sumiu").not.toBeNull();
+
+    const versoesReais = await historico(cliente, ficha.slug);
+    expect(versoesReais.length, "sem versão nenhuma este teste não separa vazio de cheio").toBeGreaterThan(0);
+    expect(
+      historicoEl!.querySelectorAll("li").length,
+      "o histórico apareceu vazio, mesmo com versão gravada no banco",
+    ).toBe(versoesReais.length);
   });
 
   // 2. Slug fora do acervo: `notFound()` é chamado.
@@ -193,6 +228,49 @@ describe("/admin/[slug] — a porta e o conteúdo", () => {
         ).not.toBeNull();
         const alerta = screen.getByRole("alert");
         expect(alerta.textContent).toMatch(/não consegui ler o aviso/i);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  // 🔴 I2/I3 DA REVISÃO FINAL (2026-09-26): irmão do teste 5, agora pro
+  // HISTÓRICO — banco pendurado (não fora do ar) na consulta de `historico`
+  // nunca tinha prova, e o `lerHistorico` da página trata isso como ERRO DE
+  // LEITURA (`historicoErro` → `role="alert"`), NUNCA como "não há histórico"
+  // (lista vazia). As duas dariam a mesma tela sem marca nenhuma, e o dono
+  // leria "este lugar nunca teve edição" quando o Turso só ficou mudo.
+  // `PRAZO_HISTORICO_MS` não é exportado da página; usa-se o valor de
+  // `PRAZO_AVISO_MS` (mesmos 2 s, ver o comentário do próprio `page.tsx`
+  // sobre o prazo do histórico ser "o mesmo valor" do vizinho).
+  it(
+    "banco pendurado no histórico: a tela renderiza e diz que não conseguiu ler, não finge 'sem histórico'",
+    { timeout: 1_000 },
+    async () => {
+      const { getAllFichas } = await import("@/lib/ficha");
+      const fichas = await getAllFichas();
+      const ficha = fichas[0];
+      await comSessaoValida();
+      const { historico } = await import("@/lib/db");
+      const { PRAZO_AVISO_MS } = await import("@/lib/carimbo-estado");
+      vi.mocked(historico).mockReturnValue(new Promise<never>(() => {}));
+
+      vi.useFakeTimers();
+      try {
+        const { default: Lugar } = await import("@/app/admin/[slug]/page");
+        const pagina = Lugar({ params: Promise.resolve({ slug: ficha.slug }) });
+        await vi.advanceTimersByTimeAsync(PRAZO_AVISO_MS + 1);
+        const { container } = render(await pagina);
+
+        expect(
+          container.querySelector(".adm-painel"),
+          "banco pendurado derrubou o painel inteiro",
+        ).not.toBeNull();
+        const historicoEl = container.querySelector("[data-historico]");
+        expect(historicoEl, "o histórico sumiu inteiro em vez de mostrar erro").not.toBeNull();
+        expect(historicoEl!.querySelectorAll("li").length, "mostrou lista vazia em vez de erro").toBe(0);
+        const alerta = screen.getByRole("alert");
+        expect(alerta.textContent).toMatch(/não consegui ler o histórico/i);
       } finally {
         vi.useRealTimers();
       }
