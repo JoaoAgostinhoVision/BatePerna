@@ -86,4 +86,34 @@ describe("buscarFichas", () => {
     ]));
     expect(fichas.map((f) => f.trajeto.waypoints[0].nome)).toEqual(["Abacate", "Zebu"]);
   });
+
+  // 🔴 C1 DA REVISÃO FINAL (2026-09-26): um `Map` VAZIO é uma leitura BEM
+  // SUCEDIDA, não um banco fora — mas antes deste conserto ela caía no MESMO
+  // ramo de "tudo certo" que uma leitura com fichas, e `[]` virava "última
+  // boa" pra sempre. Os dois lados da mesma escolha 6 dele, agora cobrindo
+  // vazio: com memória quente, serve a última boa; sem memória, estoura —
+  // nunca lista vazia (que é a home dizendo "não existe trilha nenhuma").
+  it("banco de pé mas com a tabela VAZIA, e cópia em memória: serve a última boa", async () => {
+    await buscarFichas(async () => umaLinha(rampa));
+    const fichas = await buscarFichas(async () => new Map());
+    expect(fichas[0].slug).toBe("rampa-do-pepe");
+  });
+
+  it("banco de pé mas com a tabela VAZIA, SEM cópia em memória: estoura, nunca lista vazia", async () => {
+    await expect(buscarFichas(async () => new Map())).rejects.toThrow();
+  });
+
+  // 🔴 I5 DA REVISÃO FINAL: a chave do Map (o `ficha_slug` do banco) é a
+  // identidade de verdade da linha; o `slug` de DENTRO do documento é só o
+  // que foi digitado lá. Hoje os três escritores mantêm os dois iguais, mas
+  // isso valia por disciplina, não por trava — o leitor de disco (`loadAll`)
+  // já tem essa trava; o de banco não tinha. Uma linha gravada sob uma chave
+  // e com outro slug escrito dentro do doc tem que estourar, nunca servir a
+  // ficha (potencialmente a de outro lugar) em silêncio.
+  it("chave do banco e slug de dentro do documento divergem: estoura, nunca serve a ficha errada", async () => {
+    const doc = { ...rampa, slug: "pedra-furada-de-venturosa" };
+    await expect(
+      buscarFichas(async () => new Map([["rampa-do-pepe", { doc: JSON.stringify(doc) }]])),
+    ).rejects.toThrow(/divergente/);
+  });
 });

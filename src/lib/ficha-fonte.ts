@@ -50,7 +50,19 @@ export function esquecerMemoria(): void {
  *  só o ESTOURO do prazo faz isso). Sem o `catch`, banco que recusa (em vez de
  *  pendurar) faria esta função rejeitar direto, pulando a memória — a última
  *  boa nunca seria servida. É o `catch` quem trata os dois jeitos de o banco
- *  falhar (pendurar e recusar) da mesma forma. */
+ *  falhar (pendurar e recusar) da mesma forma.
+ *
+ *  🔴 ACHADO DA REVISÃO FINAL (C1, 2026-09-26): `linhas === null` cobria só a
+ *  RECUSA/ESTOURO do banco — não cobria um `Map` VAZIO, que é uma leitura
+ *  BEM-SUCEDIDA e diferente de "banco fora". Um Turso DE PÉ com a tabela
+ *  `ficha_versoes` ainda sem linha nenhuma (schema aplicado sem a semente
+ *  rodar depois) devolvia `[]`, nenhum ramo de erro disparava, e `[]` ficava
+ *  MEMORIZADO como "última boa" — a home e o acervo passavam a afirmar, em
+ *  silêncio, que não existe trilha nenhuma em Pernambuco. Por isso o mapa
+ *  vazio entra no MESMO ramo do banco fora: sem cópia em memória, estoura;
+ *  com cópia, serve a última boa. "Acervo vazio" hoje só existe por essa
+ *  falta de semente — criar/apagar ficha pelo painel é rodada futura —,
+ *  então esta trava não custa nada ao caminho normal. */
 export async function buscarFichas(
   ler: () => Promise<Map<string, { doc: string }>>,
 ): Promise<Ficha[]> {
@@ -60,11 +72,35 @@ export async function buscarFichas(
   } catch {
     linhas = null;
   }
-  if (linhas === null) {
+  if (linhas === null || linhas.size === 0) {
     if (ultimaBoa) return ultimaBoa;
-    throw new Error("Não consegui ler as fichas: banco fora e sem cópia em memória.");
+    throw new Error(
+      "Não consegui ler as fichas: banco fora, ou sem nenhuma linha, e sem cópia em memória.",
+    );
   }
-  const fichas = ordenarPorNome([...linhas.values()].map((l) => fichaSchema.parse(JSON.parse(l.doc))));
+  // 🔴 I5 da revisão final (2026-09-26): a chave do Map é o `ficha_slug` do
+  // BANCO — a identidade de verdade da linha —, e o `slug` de DENTRO do
+  // documento é só o que o dono digitou lá dentro. Os três escritores de
+  // `ficha_versoes` hoje mantêm os dois iguais (é o que `versaoPorId`
+  // exige na rota de "voltar"), mas isso valia por DISCIPLINA, não por
+  // trava — exatamente o ponto que `loadAll` (`ficha.ts`) já tranca há mais
+  // tempo pro leitor de DISCO. Se algum dia divergirem, a home (que agrupa
+  // pela chave) e a ficha (que lê o `slug` de dentro) discordariam sobre
+  // qual morro é qual — a mesma classe de defeito, agora no leitor que roda
+  // em produção.
+  const fichas = ordenarPorNome(
+    [...linhas.entries()].map(([slug, l]) => {
+      const doc = fichaSchema.parse(JSON.parse(l.doc));
+      if (doc.slug !== slug) {
+        throw new Error(
+          `Ficha divergente: o banco guarda esta versão sob "${slug}", mas o ` +
+            `documento diz "${doc.slug}" — a home e a ficha divergiriam sobre ` +
+            "qual lugar é qual.",
+        );
+      }
+      return doc;
+    }),
+  );
   ultimaBoa = fichas;
   return fichas;
 }
