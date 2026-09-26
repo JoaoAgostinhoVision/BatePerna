@@ -2,20 +2,19 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🟡 **ÚLTIMA PARADA: 2026-09-25, fim da sessão.** Ele encerrou com ***"quero continuar depois, deixe tudo
-pronto para a próxima sessão só digitar continua"***.
+🟢 **ÚLTIMA PARADA: 2026-09-26.** As **sete tarefas do plano da ficha-no-banco estão COMPLETAS**, cada
+uma com revisão limpa. A branch está na **revisão final da branch inteira** (20 commits, no modelo mais
+capaz), que é o último portão antes de decidir o merge.
 
-🔵 **O EIXO: a FICHA saiu do JSON e foi pro BANCO, e agora é editável pelo celular.** Plano de **7
-tarefas** (`docs/superpowers/plans/2026-09-24-ficha-no-banco-e-editor.md`), na branch `ficha-no-banco`.
-**Tasks 1, 2, 3 e 4 fechadas com revisão limpa; mais duas tarefas minhas que nasceram no caminho (4-ter e
-4-bis), também fechadas. A Task 5 está COMMITADA mas NÃO REVISADA.** Faltam a revisão da 5, a Task 6
-(editar a voz) e a Task 7 (histórico e voltar atrás).
+🔵 **O EIXO: a FICHA saiu do JSON e foi pro BANCO, e agora é editável pelo celular.** A ficha mora em
+`ficha_versoes` (append-only, a versão de maior `id` vence); `/admin` é lista → tela do lugar → editar a
+voz → histórico → voltar a uma versão antiga (**gravando uma versão nova**, nunca apagando).
 
-🔴 **ESTAMOS NA BRANCH `ficha-no-banco`**, HEAD **`4ad7764`**, 9 commits à frente do `main`. O `main` está
-no ar e intocado. **Nada desta rodada foi ao ar.**
+🔴 **ESTAMOS NA BRANCH `ficha-no-banco`**, HEAD **`21048f2`**, 20 commits à frente do `main`. O `main`
+está no ar e intocado. **Nada desta rodada foi ao ar.**
 
-**Estado medido por mim no `4ad7764`:** árvore limpa, **1152/1152 em 75 arquivos** (exit 0 em duas
-execuções), `npx tsc --noEmit` exit 0, **`npm run build` exit 0**.
+**Estado medido por mim no `21048f2`:** árvore limpa, **1183/1183 em 79 arquivos**, `npx tsc --noEmit`
+exit 0, **`npm run build` exit 0** com todas as rotas que leem banco como **ƒ (Dynamic)**.
 
 ---
 
@@ -24,90 +23,101 @@ execuções), `npx tsc --noEmit` exit 0, **`npm run build` exit 0**.
 > 🔴 **A regra de sempre:** *"continua"* significa **construir**, não levantar opções. Sem menu, sem
 > pergunta de abertura. Ele já disse: *"estás saindo do contexto"* / ***"o foco é o aplicativo"***.
 
-1. `git status` limpo; `npm test -- --run` — deve dar **1152/1152 em 75 arquivos**. Confira você mesmo;
+1. `git status` limpo; `npm test -- --run` — deve dar **1183/1183 em 79 arquivos**. Confira você mesmo;
    nunca relate o número deste arquivo sem rodar.
-2. Carregar `superpowers:subagent-driven-development` e ler
-   **`docs/superpowers/2026-09-25-rulings-ficha-no-banco.md`** — este é versionado e é a fonte que não
-   morre: a Parte 1 são as rulings ainda VIVAS que têm que viajar nos dispatches, e a Parte 2 é o que a
-   revisão da Task 5 tem que olhar. **Se** o ledger ainda existir em
-   `.superpowers/sdd/2026-09-24-ficha-no-banco-e-editor/progress.md`, as últimas ~40 linhas dele têm o
-   detalhe por extenso (o bloco "▶ PRÓXIMA SESSÃO COMEÇA AQUI"); se não existir, o doc versionado basta —
-   recrie o ledger com a identidade do plano na primeira linha e siga.
-3. **A Task 5 JÁ ESTÁ COMMITADA (`4ad7764`) — não redespache.** Gere
-   `review-package ... 4c766d1 4ad7764` e despache **a revisão da Task 5**, avisando o revisor que
-   **NÃO EXISTE relatório do implementador** (a sessão foi encerrada antes de ele escrever): ele julga
-   pelo diff, e a ausência de medição de mutação é, por si, achado a reportar.
-4. Daí em diante é o laço normal do SDD: fix rounds se precisar, depois **Task 6** e **Task 7**.
+2. **Se a revisão final da branch ainda não tiver sido resolvida**, o próximo passo é ela: gerar
+   `review-package ... 956a69d 21048f2` e despachar o final review (opus), apontando nominalmente a
+   lista de minors diferidos abaixo. Se ela já voltou com achados, é **UMA onda de fix** (não um fixer
+   por achado) e **UMA** re-revisão escopada — sem segunda onda.
+3. Depois disso: `superpowers:finishing-a-development-branch`, e aí as decisões abaixo, que **são dele**.
+4. Todo dispatch que toque `src/app/` leva **`npm run build`** e `git add` por caminho (rulings P13/P8).
 
-### 🔴 O QUE A REVISÃO DA TASK 5 TEM QUE OLHAR (ninguém olhou ainda)
+### 🔴 AS DUAS TRAVAS DO DIA DO DEPLOY — as duas derrubam o app inteiro se esquecidas
 
-- **`src/app/admin/marca-agora.ts` é arquivo NOVO que o brief não previu** — extração da pipeline da
-  marca. Ele **reusa** `faseDe`/`marcaDe`/`vozDaFicha` ou **duplica** a lógica? Duplicar é a espécie que
-  este app pagou quatro vezes.
-- **`PainelAdmin.tsx` teve 247 linhas mexidas** num arquivo que o brief mandava **mover, não reescrever**
-  (ele passa a servir UM lugar em vez de três). Comportamento se moveu?
-- **As 5 mutações (M1..M5) não têm prova nenhuma** — sem relatório, ninguém sabe se foram medidas. A **M5**
-  é a que eu criei nesta sessão: **trocar as marcas entre dois lugares**, que tem que morrer no teste
-  escopado de `tests/app/admin-lista.test.tsx:72,79`.
-- **O que JÁ conferi por mim e não precisa refazer:** build verde com `/admin` e `/admin/[slug]` como
-  **ƒ (Dynamic)**; a asserção escopada da ruling P10 chegou (`link.closest("li")` + `within`).
+- **A semente roda ANTES do primeiro deploy desta branch:**
+  `npx dotenv -e .env.local -- tsx scripts/semear-fichas.ts`
+  Sem ela o banco não tem ficha nenhuma e **todo o app cai no `error.tsx`** — porque a escolha dele foi
+  "erro honesto, nunca conteúdo velho". Conferido: `tsx` e `dotenv-cli` estão instalados. É diferente do
+  build, que não toca o banco.
+- **Toda página que lê banco declara `force-dynamic`.** Nesta rodada a branch ficou **sem compilar** com
+  a suíte verde e o `tsc` limpo, porque o `not-found.tsx` era a única página que lia banco sem isso — e
+  **dois assentos de revisão passaram por cima**, porque nenhum dispatch meu pedia build.
 
-### 📣 DUAS PALAVRAS DE TELA ESPERANDO O JOÃO LER (as duas marcadas `// PENDENTE`)
+### 📣 ONZE PALAVRAS DE TELA ESPERANDO O JOÃO LER — todas marcadas `// PENDENTE`
 
-Eu extraí do código, porque o relatório que faria isso não foi escrito. **Copy é escolha dele:**
+Copy é escolha dele. Nada disto está publicado como se fosse a voz dele.
 
-- `src/app/admin/ListaDeLugares.tsx:7` — *"Toque num lugar pra ver e mudar o que o app diz dele."*
-- `src/app/admin/PainelAdmin.tsx:28` — *"Não consegui ler o aviso publicado — a seção abaixo pode estar
-  incompleta."*
+| onde | a frase |
+|---|---|
+| `admin/ListaDeLugares.tsx:7` | "Toque num lugar pra ver e mudar o que o app diz dele." |
+| `admin/PainelAdmin.tsx:28` | "Não consegui ler o aviso publicado — a seção abaixo pode estar incompleta." |
+| `admin/EditorDeVoz.tsx:6` | "A sua voz" |
+| `admin/EditorDeVoz.tsx:8` | "É o que só quem já foi sabe. Aparece entre aspas na ficha." |
+| `admin/EditorDeVoz.tsx:10` | "Não consegui salvar." |
+| `admin/EditorDeVoz.tsx:12` | "Sem rede." |
+| `admin/HistoricoDaVoz.tsx:6` | "Histórico da voz" |
+| `admin/HistoricoDaVoz.tsx:8` | "você, pelo painel" / "acervo original" (o rótulo de autor, **por linha**) |
+| `admin/HistoricoDaVoz.tsx:10` | "voltar a esta" |
+| `admin/HistoricoDaVoz.tsx:12` | "Voltando…" |
+| `admin/HistoricoDaVoz.tsx:14` | "Não consegui voltar a esta versão." |
 
-### 📜 AS 23 RULINGS DESTA EXECUÇÃO ESTÃO VERSIONADAS
+### 📜 AS RULINGS DESTA EXECUÇÃO ESTÃO VERSIONADAS
 
-**`docs/superpowers/2026-09-25-rulings-ficha-no-banco.md`** — todas as decisões que eu tomei no lugar do
-João, cada uma com o **custo se estiver errada**, mais o que a revisão da Task 5 tem que olhar. Elas
-nasceram no ledger, que é git-ignored (`.gitignore:57`) e morre num `git clean -fdx`; por isso foram
-copiadas para um arquivo versionado. **A Parte 1 daquele doc é o que ainda está VIVO e viaja nos próximos
-dispatches** — leia-a antes de despachar qualquer coisa.
-
-### 🔴 AS RULINGS DE PRÉ-FLIGHT QUE OS PRÓXIMOS DISPATCHES TÊM QUE CARREGAR
-
-- **P13 + P8 — em TODA tarefa que toque `src/app/`:** `npm run build` verde **no dispatch**, com a linha da
-  rota nova colada da tabela de rotas, e `git add` **por caminho** (nunca `-A`). Isto não é zelo: **nesta
-  sessão a branch ficou sem buildar** porque a Task 4 pôs leitura de banco no `not-found.tsx`, a única
-  página que lia banco sem `force-dynamic`, e **dois assentos de revisão passaram por cima** — porque
-  nenhum dispatch meu pedia build. Toda página que lê banco declara `force-dynamic`.
-- **Antes de despachar, audite a tabela de mutação do brief** perguntando de cada linha "qual teste muda de
-  resultado?". Nesta sessão isso achou, no meu próprio plano: um relógio injetado que nenhum teste lia
-  (Task 2), um `try/catch` que sobrevivia aos 7 testes (Task 3), uma lista de 6 arquivos de teste que eram
-  18 (Task 4), uma tabela de 11 `await` que eram 13 (Task 4), um teste que provava a marca "em algum lugar
-  da tela" em vez de na linha do lugar (Task 5) e **uma mutação apontando para um teste que não existe**
-  (Task 5).
-- **A trava de deploy da semente continua valendo, e derruba o app inteiro se esquecida:**
-  `npx dotenv -e .env.local -- tsx scripts/semear-fichas.ts` **antes** do primeiro deploy desta branch.
-  Sem a semente o banco não tem ficha nenhuma e **todo o app cai no `error.tsx`**. Conferido: `tsx` e
-  `dotenv-cli` estão instalados. (Isto é sobre PRODUÇÃO — é diferente do build, que já está verde e que
-  não toca o banco.)
+**`docs/superpowers/2026-09-25-rulings-ficha-no-banco.md`** — as decisões tomadas no lugar dele, cada uma
+com o **custo se estiver errada**. Elas nasceram no ledger, que é git-ignored (`.gitignore:57`) e morre
+num `git clean -fdx`; por isso foram copiadas para um arquivo versionado. **As rulings de 26/09 (Tasks 5,
+6 e 7) ainda estão só no ledger** — se o registro completo importar, elas precisam ser copiadas para lá
+antes de qualquer `git clean`.
 
 ---
 
-## 📍 O PLANO DA FICHA NO BANCO — onde cada tarefa está
+## 📍 O PLANO DA FICHA NO BANCO — as sete tarefas, TODAS COMPLETAS
 
 | tarefa | estado |
 |---|---|
 | 1 — a tabela `ficha_versoes` e as funções de banco | ✅ completa, 1 fix round |
 | 2 — a semente (os três JSON viram versão 1) | ✅ completa, 1 fix round |
 | 3 — a fonte (banco, prazo, memória, erro honesto) | ✅ completa, **0** fix rounds |
-| 4 — produção lê do banco e o disco sai | ✅ completa, **2** fix rounds |
+| 4 — produção lê do banco e o disco sai | ✅ completa, 2 fix rounds |
 | **4-ter** — `force-dynamic` no `/_not-found` (o build estava QUEBRADO) | ✅ completa, review limpa |
 | **4-bis** — a config de deploy que afirmava o que virou falso | ✅ completa, review limpa |
-| **5 — `/admin` vira lista, nasce a tela do lugar** | 🟡 **commitada, NÃO revisada, sem relatório** |
-| 6 — editar a voz | ⬜ não começada |
-| 7 — o histórico e o voltar | ⬜ não começada |
+| 5 — `/admin` vira lista, nasce a tela do lugar | ✅ completa (26/09), 1 fix round |
+| 6 — editar a voz | ✅ completa (26/09), 1 fix round |
+| 7 — o histórico e o voltar | ✅ completa (26/09), 1 fix round |
+| **final review da branch inteira** (opus) | 🟡 **em curso** |
 
-**O que a rodada construiu até aqui:** a ficha mora em `ficha_versoes` (append-only, a versão de maior
-`id` vence); a semente é idempotente até para slug repetido no mesmo lote; a leitura passa por
-`src/lib/ficha-fonte.ts` com prazo, cópia da última boa em memória e **erro honesto** (sem banco e sem
-memória, estoura e cai no `error.tsx` — nunca conteúdo velho, nunca o JSON do repositório); nenhum caminho
-de `src/` lê `content/fichas` e isso é **travado por teste**; e `/admin` agora é lista → lugar.
+### 🔴 O QUE O DIA 26/09 CONSERTOU, E QUE NENHUMA SUÍTE VERDE TINHA PEGADO
+
+1. **Task 5 — leitura de banco sem prazo na tela do lugar.** O `try/catch` cobria banco *fora do ar*;
+   não cobria banco *pendurado*, que travava a página sem nem cair no `error.tsx`. **E rejeitei a
+   correção que o revisor propôs:** com fallback `null`, banco pendurado ficaria indistinguível de
+   "nenhum aviso publicado", e o dono abriria a tela do próprio lugar achando que o recado dele sumiu.
+   Ficou sentinela caindo em erro honesto.
+2. **Task 6 — `tokenDoCookie` duplicado byte a byte** entre duas rotas de admin. O revisor marcou como
+   minor não-conferido; eu conferi e era idêntico. Extraído para `admin-guarda.ts`, com mutação provando
+   que quebrar o helper mata teste das **duas** rotas — que é o que prova que a extração ficou de fato
+   compartilhada.
+3. **Task 7 — "voltar" reescrevia o passado.** O código revalidava e **re-serializava** o documento
+   antigo antes de regravar. O `fichaSchema` descarta chave desconhecida **em silêncio** (está
+   documentado em `src/types/ficha.ts`), então voltar a uma versão com campo já removido do schema o
+   apagaria para sempre, e a ordem das chaves mudaria. Numa tabela que existe para que *nada do que já se
+   disse sobre um lugar se perca*, isso era a perda entrando pela porta que devia impedi-la. Agora valida
+   só para **decidir** (400 se não passa) e grava **verbatim**.
+4. **Duas provas que não travavam nada** morreram no caminho: um `location.reload()` que podia ser
+   apagado com a suíte inteira verde, e um teste de recusa que provava o status sem provar que o banco
+   não mudou.
+
+### 🟡 OS MINORS DIFERIDOS — entregues nominalmente à revisão final para triagem
+
+1. 🔴 **O maior:** não existe teste dedicado para *"versão antiga que não passa mais no schema de hoje →
+   400 e nada gravado"*. O `catch` que decide isso nunca é exercitado; a garantia vem só de leitura.
+2. `tests/lib/sem-disco-em-producao.test.ts` — três números imprecisos no docblock (o verdadeiro é
+   **10079 de 14570**). Nenhum afirma nada falso sobre o **comportamento** do guarda.
+3. O teste "corpo sem nenhum dos dois formatos: 400" não é sustentado por mutação.
+4. "slug que não existe: 400" prova só o status (`plan-mandated`); e nenhum teste de **rota** cobre
+   `campo: "slug"` direto.
+5. `historico-da-voz.test.tsx` usa `vi.restoreAllMocks()`, que não desfaz `vi.stubGlobal`.
+6. `painel-admin.test.tsx` teve que ser adaptado sem estar na lista do brief (omissão do plano).
 
 ### 🟢 O GUARDA DESTA RODADA, e as três gerações de furo que ele já tapou
 
@@ -117,18 +127,13 @@ e cada furo foi achado por medição, não por leitura:
 1. varria por **palavra** — nasceria vermelho punindo três comentários bons que citam o caminho;
 2. dependia do **nome do import** — `fsMut`/`pathMut` passavam verdes;
 3. a tira de comentários por regex **comia 69% do `cache-rotas.ts`** (10079 de 14570 chars, medido por
-   mim), deixando o guarda verde com leitura de disco em código — e depois o varredor novo era cego por
-   **regex literal** (`/^\/api\//`).
+   mim), deixando o guarda verde com leitura de disco em código.
 
 Hoje ele mira **código que lê** (o caminho em qualquer grafia **e** o nome `loadAll`), tem **teste de
 não-vacuidade do detector E do enumerador**, e um varredor que pula string, template e regex. Uma revisão
 o comparou contra o **parser do TypeScript** nos 75 arquivos de `src/`: **0 chars de código apagados, 0
 comentários sobrevivendo**. E **eu mesmo o provei vermelho** com uma mutação que junta os três vetores de
 evasão de uma vez. Se alguém for "simplificar" isso, o motivo está escrito no docblock.
-
-⚠️ **Três números imprecisos sobrevivem no docblock desse guarda** (um "10251 de 14800" atribuído à
-expressão errada e contado em bytes; o verdadeiro é 10079 de 14570). Deferidos de propósito para a onda
-de fix da revisão final — não valiam um fix round próprio.
 
 ---
 
