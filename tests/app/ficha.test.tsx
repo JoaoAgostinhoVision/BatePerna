@@ -89,8 +89,10 @@ const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS } = vi.hoisted(() => {
   };
 });
 
-// Só os slugs sintéticos são interceptados: "rampa-do-pepe" continua saindo do
-// JSON de verdade, senão o teste que fala de produção viraria decoração.
+// Só os slugs sintéticos são interceptados: "rampa-do-pepe" continua saindo da
+// FONTE DE VERDADE — que desde 2026-09-25 é o banco semeado logo abaixo, e não
+// mais o JSON do repositório —, senão o teste que fala de produção viraria
+// decoração.
 vi.mock("@/lib/ficha", async (real) => {
   const mod = await real<typeof import("@/lib/ficha")>();
   const sinteticas = [SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS] as unknown as TipoFicha[];
@@ -436,10 +438,10 @@ describe("o piso no bloco Trajeto (a extensão saiu da tela na Task 6, e do mode
     expect(fatos.textContent).toBe("asfalto esburacado");
   });
 
-  // O teste que fala de PRODUÇÃO: a Rampa vem do JSON de verdade (o mock
-  // acima só intercepta os slugs sintéticos), que desde 2026-08-23 (Task 8)
-  // traz `piso: "barro"` — dado do João, sustentado pela ficha real em três
-  // lugares. Fixture sintética não provaria isso.
+  // O teste que fala de PRODUÇÃO: a Rampa vem da fonte de verdade — o BANCO,
+  // desde 2026-09-25 (o dublê acima só intercepta os slugs sintéticos) —, e ela
+  // traz `piso: "barro"` desde 2026-08-23 (Task 8): dado do João, sustentado
+  // pela ficha real em três lugares. Fixture sintética não provaria isso.
   it("a Rampa real abre e mostra o piso no Trajeto", async () => {
     const rampa = await getFicha("rampa-do-pepe");
     expect(rampa?.piso).toBe("barro");

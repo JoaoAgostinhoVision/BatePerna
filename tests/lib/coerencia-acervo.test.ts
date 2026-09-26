@@ -59,7 +59,7 @@ const prosaDe = (f: Ficha) =>
 describe("coerência do acervo — varre TODAS as fichas, nunca uma lista de slugs", () => {
   // 🔴 NÃO-VACUIDADE, e ela é load-bearing aqui mais que em qualquer outro
   // arquivo: todo teste abaixo é um laço sobre `fichas`. Com o acervo vazio, ou
-  // com o `loadAll` devolvendo [], **todos passariam** — a espécie "prova que
+  // com a semente não tendo entrado no banco, **todos passariam** — a espécie "prova que
   // passa por não ter o que provar". O número é cravado e cresce a mão junto com
   // o acervo, de propósito: `fichas.length` contra si mesmo não prova nada.
   it("o acervo tem conteúdo pra varrer — sem isto, todo laço abaixo passa vazio", () => {

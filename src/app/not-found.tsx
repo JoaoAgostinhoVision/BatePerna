@@ -31,8 +31,12 @@ import { getAllFichas } from "@/lib/ficha";
  *  estiver vazia. */
 export default async function NaoAchei() {
   // O acervo vem do BANCO e desce por prop — ver o comentário do
-  // `ListaDoAcervo`. A barra de baixo é quem garante a saída mesmo se a lista
-  // vier vazia, e é por isso que ela não depende desta leitura.
+  // `ListaDoAcervo`.
+  //
+  // ⚠️ E ESTA LEITURA VEM ANTES DO JSX: com o banco fora, esta tela cai junto e
+  // a saída passa a ser a barra do `error.tsx` (que tem a mesma `BarraNavegacao`
+  // e um "Tentar de novo"). A garantia da barra daqui, escrita acima, é pro caso
+  // de a lista vir VAZIA — não pro caso de a leitura falhar.
   const fichas = await getAllFichas();
   return (
     <main className="bp">

@@ -174,7 +174,8 @@ describe("a linha de metadados do cartão", () => {
     expect(container.textContent).not.toContain("undefined");
   });
 
-  // O teste que fala de PRODUÇÃO. `ficha` é o JSON de verdade da Rampa, que
+  // O teste que fala de PRODUÇÃO. `ficha` é a Rampa de verdade, lida da fonte de
+  // verdade (o BANCO, desde 2026-09-25), que
   // desde 2026-08-23 traz `piso: "barro"` — dado do João, sustentado pela ficha
   // real em três lugares. É a primeira vez que o campo criado na rodada
   // passada aparece na tela dele. Fixture sintética não provaria isso.

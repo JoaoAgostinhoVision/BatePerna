@@ -27,20 +27,26 @@ import { describe, expect, it } from "vitest";
  *  do estado de hoje, que não protege nada.
  *
  *  🔴 E POR QUE ELE NÃO EXIGE A CHAMADA DE `fs` NA MESMA LINHA — isto foi
- *  MEDIDO em 2026-09-25, e a medição mudou o guarda. A primeira versão pedia
- *  que a linha juntasse o acervo com uma chamada de `node:fs` ou de
- *  `path.join`. Uma mutação que punha, no alto de `src/lib/runMotor.ts`:
+ *  MEDIDO em 2026-09-25, e a medição mudou o guarda duas vezes.
  *
- *      import fsMut from "node:fs";
- *      import pathMut from "node:path";
- *      const DIR_MUT = pathMut.join(process.cwd(), "content", "fichas");
- *      const DO_DISCO = fsMut.readdirSync(DIR_MUT);
+ *  A 1ª versão pedia que a LINHA juntasse o acervo com uma chamada de `node:fs`
+ *  ou de `path.join`. Passou VERDE com um `import fsMut from "node:fs"` +
+ *  `pathMut.join(process.cwd(), "content", "fichas")` em `src/lib/runMotor.ts`:
+ *  o regex procurava `path.join(`, e o import se chamava `pathMut`. Guarda que
+ *  depende do NOME do import não guarda.
  *
- *  passou VERDE: o regex procurava `path.join(`, e o import se chamava
- *  `pathMut`. Guarda que depende do NOME do import não guarda. A régua abaixo
- *  não depende de nome nenhum: em `src/`, **mencionar o caminho do acervo em
- *  CÓDIGO** (não em comentário) já é a volta das duas fontes — produção não tem
- *  o que fazer com esse caminho, e quem o menciona vai lê-lo.
+ *  A 2ª versão passou a procurar o CAMINHO em código, mas ainda linha a linha —
+ *  e o furo seguinte é a montagem em duas etapas, que é como código real
+ *  cresce:
+ *
+ *      const DIR_CONTENT = path.join(process.cwd(), "content");
+ *      const DIR_FICHAS = path.join(DIR_CONTENT, "fichas");
+ *
+ *  Nenhuma das duas linhas tem as duas palavras. Daí a régua de hoje: o exame é
+ *  do ARQUIVO INTEIRO, e os dois pedaços do caminho são procurados em separado
+ *  — cada um como SEGMENTO de caminho (entre aspas, `/` ou `\`), que é o que
+ *  separa `"content", "fichas"` de um `textContent` ou de uma variável chamada
+ *  `fichas`.
  *
  *  Se esta lista precisar de exceção um dia, a exceção é uma LINHA AQUI, com o
  *  motivo escrito — nunca um `// eslint-disable` no arquivo que voltou a ler. */
@@ -49,6 +55,12 @@ const RAIZ = path.join(process.cwd(), "src");
 /** O ÚNICO arquivo de `src/` que pode ler o acervo do disco: é onde vive o
  *  `loadAll`, que desde 2026-09-25 roda só na semente e em teste. */
 const O_UNICO = "src/lib/ficha.ts";
+
+/** Piso de arquivos varridos. Cravado à mão e com folga pra baixo (o `src/`
+ *  tinha 75 arquivos no dia em que este guarda nasceu): serve pra acusar um
+ *  enumerador que parou de enumerar, não pra contar o projeto. Ver o teste da
+ *  VARREDURA abaixo. */
+const PISO_DE_ARQUIVOS = 50;
 
 function arquivos(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
@@ -59,14 +71,65 @@ function arquivos(dir: string): string[] {
 
 const relativo = (p: string) => path.relative(process.cwd(), p).replace(/\\/g, "/");
 
-/** Mesma tira de comentários de `tests/lib/fatos-da-trilha.test.ts`: é ela que
- *  faz este guarda olhar código em vez de prosa. */
-const semComentarios = (src: string) => src.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+/** A tira de comentários deste guarda — e ela NÃO é o `replace` de uma linha que
+ *  os outros arquivos de teste usam, de propósito.
+ *
+ *  🔴 "TIRA-DE-COMENTÁRIOS QUE COME O ARQUIVO" é espécie catalogada neste
+ *  projeto: `src.replace(/\/\*[\s\S]*?\*\//g, "")` não sabe o que é string, então
+ *  um `"/*"` dentro de um literal engole tudo até o fim-de-comentário seguinte.
+ *  E como aqui a tira é quem decide o que é CÓDIGO, o pedaço comido seria
+ *  declarado limpo.
+ *  Onde o `fatos-da-trilha.test.ts` se protege com um canário por arquivo, este
+ *  guarda não tinha canário nenhum, e um canário de "sobrou algum `export`" só
+ *  pega o arquivo comido INTEIRO — não o pedaço.
+ *
+ *  Então aqui a tira é um varredor curto que PULA string, template e o
+ *  que mais estiver entre aspas. Quando ele erra, erra copiando DEMAIS (um
+ *  template aninhado, por exemplo), e copiar demais deixa o guarda mais rígido —
+ *  nunca mais frouxo, que é o lado que importa. O `CANARIOS` abaixo continua
+ *  como segunda linha, pra acusar o caso grosseiro. */
+function semComentarios(src: string): string {
+  let fora = "";
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i];
+    const d = src[i + 1];
+    if (c === '"' || c === "'" || c === "`") {
+      let j = i + 1;
+      while (j < src.length && src[j] !== c) j += src[j] === "\\" ? 2 : 1;
+      fora += src.slice(i, j + 1); // a string inteira ATRAVESSA, aspas e tudo
+      i = j + 1;
+    } else if (c === "/" && d === "/") {
+      while (i < src.length && src[i] !== "\n") i++;
+    } else if (c === "/" && d === "*") {
+      i += 2;
+      while (i < src.length && !(src[i] === "*" && src[i + 1] === "/")) i++;
+      i += 2;
+    } else {
+      fora += c;
+      i++;
+    }
+  }
+  return fora;
+}
 
-/** O caminho do acervo, em qualquer grafia que o código use: `"content",
- *  "fichas"`, `content/fichas`, `content\\fichas`, ou a constante que este
- *  projeto deu a ele. */
-const CAMINHO_DO_ACERVO = /content.{0,12}fichas|FICHAS_DIR/;
+/** O canário do arquivo despido: as palavras que um arquivo de código tem e um
+ *  arquivo comido não tem. A comparação é com o ANTES, nunca com uma expectativa
+ *  cravada — `src/app/sw.ts` não tem um único `export` (é script de service
+ *  worker, não módulo), e medir "todo arquivo tem export" acusaria ELE em vez da
+ *  tira. A regra que vale é: se o arquivo TINHA e o despido NÃO TEM, a tira
+ *  comeu. (Medido: foi assim que o `sw.ts` apareceu.) */
+const CANARIOS = /\b(?:export|import|const|function)\b/;
+
+/** Os dois pedaços do caminho do acervo, cada um como SEGMENTO: entre aspas,
+ *  crase, `/` ou `\`. É o que casa `"content", "fichas"`, `"content/fichas"` e
+ *  `'content\\fichas'`, e é o que NÃO casa `textContent` nem `const fichas =`.
+ *  Insensível a caixa: `Content/Fichas` acharia o mesmo diretório no Windows. */
+const SEGMENTO_CONTENT = /["'`/\\]content["'`/\\]/i;
+const SEGMENTO_FICHAS = /["'`/\\]fichas["'`/\\]/i;
+
+/** O nome que este projeto deu ao diretório, e que dispensa os segmentos. */
+const CONSTANTE_DO_DIRETORIO = /\bFICHAS_DIR\b/;
 
 /** 🔴 A OUTRA METADE, e é a mais provável das duas: `loadAll` é a leitura de
  *  disco com NOME DE FUNÇÃO. Uma rota que faça `loadAll()` lê o acervo do disco
@@ -75,40 +138,65 @@ const CAMINHO_DO_ACERVO = /content.{0,12}fichas|FICHAS_DIR/;
  *  `ficha.ts`, em `src/`, mencionar esse nome já é o defeito. */
 const O_LEITOR = /\bloadAll\b/;
 
-/** As linhas de CÓDIGO deste arquivo que leem o acervo do disco. */
-function linhasQueLeemOAcervo(fonte: string): string[] {
-  return semComentarios(fonte)
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => CAMINHO_DO_ACERVO.test(l) || O_LEITOR.test(l));
+/** O arquivo lê o acervo do disco? Exame do arquivo INTEIRO, no código (a prosa
+ *  sai antes). Devolve o motivo, pro relatório da falha dizer qual metade
+ *  acusou. */
+function porQueLeOAcervo(fonte: string): string | null {
+  const codigo = semComentarios(fonte);
+  if (CANARIOS.test(fonte) && !CANARIOS.test(codigo)) {
+    throw new Error(
+      "a tira de comentários comeu o arquivo (sumiram os `export`/`import`/`const`/" +
+        "`function` que ele tinha): este guarda julgaria o vazio e ficaria verde. " +
+        "Provável `/*` dentro de string ou de regex literal.",
+    );
+  }
+  if (O_LEITOR.test(codigo)) return "chama `loadAll`";
+  if (CONSTANTE_DO_DIRETORIO.test(codigo)) return "usa `FICHAS_DIR`";
+  if (SEGMENTO_CONTENT.test(codigo) && SEGMENTO_FICHAS.test(codigo)) {
+    return "monta o caminho `content/fichas`";
+  }
+  return null;
 }
 
 describe("nenhum caminho de produção lê content/fichas", () => {
-  // 🔴 CONTROLE, e sem ele o teste abaixo é oco: um detector que não casa com
-  // nada deixa a lista de culpados vazia pra sempre, e o guarda fica verde
-  // enquanto o disco volta pra dentro de uma rota. Este teste exige que o
-  // detector ACUSE o leitor de verdade — o `loadAll` do `ficha.ts`, que
-  // continua existindo pra semente —, e as DUAS metades dele: o caminho e o
-  // nome da função.
-  it("o detector acha o leitor que EXISTE — senão ele não acharia nenhum outro", () => {
-    const fonte = fs.readFileSync(path.join(process.cwd(), O_UNICO), "utf8");
-    const achadas = linhasQueLeemOAcervo(fonte);
-    expect(achadas, `o detector parou de enxergar a leitura de disco do ${O_UNICO}`).not.toEqual([]);
+  // 🔴 CONTROLE DA VARREDURA, e ele é o irmão esquecido do controle do detector:
+  // o teste principal EXCLUI o `ficha.ts` da lista, então ele não pode servir de
+  // canário de si mesmo. Se o `arquivos()` passar a devolver `[]` — filtro de
+  // extensão, `RAIZ` mudando de lugar, a pasta sendo renomeada —, os dois testes
+  // de baixo ficam verdes PARA SEMPRE e o disco volta em silêncio.
+  it("a varredura acha os arquivos de `src/` — inclusive o que sabemos que existe", () => {
+    const vistos = arquivos(RAIZ).map(relativo);
+    expect(vistos, `a varredura não achou o ${O_UNICO} — ela parou de enumerar`).toContain(O_UNICO);
     expect(
-      achadas.some((l) => CAMINHO_DO_ACERVO.test(l)),
-      "a metade do CAMINHO parou de casar — nenhum diretório de acervo seria achado",
+      vistos.length,
+      `a varredura devolveu ${vistos.length} arquivos de src/ — abaixo do piso, ` +
+        "provavelmente ela parou de descer nas subpastas",
+    ).toBeGreaterThanOrEqual(PISO_DE_ARQUIVOS);
+  });
+
+  // 🔴 CONTROLE DO DETECTOR, e sem ele o teste seguinte é oco: um detector que
+  // não casa com nada deixa a lista de culpados vazia pra sempre. Este teste
+  // exige que ele ACUSE o leitor de verdade — o `loadAll` do `ficha.ts`, que
+  // continua existindo pra semente —, e as DUAS metades dele: o nome da função e
+  // o caminho.
+  it("o detector acha o leitor que EXISTE — senão ele não acharia nenhum outro", () => {
+    const codigo = semComentarios(fs.readFileSync(path.join(process.cwd(), O_UNICO), "utf8"));
+    expect(
+      O_LEITOR.test(codigo),
+      "a metade do NOME parou de casar — um `loadAll()` numa rota passaria batido",
     ).toBe(true);
     expect(
-      achadas.some((l) => O_LEITOR.test(l)),
-      "a metade do NOME parou de casar — um `loadAll()` numa rota passaria batido",
+      SEGMENTO_CONTENT.test(codigo) && SEGMENTO_FICHAS.test(codigo),
+      "a metade do CAMINHO parou de casar — nenhum diretório de acervo seria achado",
     ).toBe(true);
   });
 
   it(`só o \`${O_UNICO}\` lê o acervo do disco, e só pelo \`loadAll\` da semente`, () => {
     const culpados = arquivos(RAIZ)
       .filter((p) => relativo(p) !== O_UNICO)
-      .filter((p) => linhasQueLeemOAcervo(fs.readFileSync(p, "utf8")).length > 0)
-      .map(relativo);
+      .map((p) => ({ arquivo: relativo(p), motivo: porQueLeOAcervo(fs.readFileSync(p, "utf8")) }))
+      .filter((x) => x.motivo !== null)
+      .map((x) => `${x.arquivo} (${x.motivo})`);
     expect(
       culpados,
       "voltou a existir código de produção lendo a ficha do disco — são duas fontes " +
@@ -116,7 +204,7 @@ describe("nenhum caminho de produção lê content/fichas", () => {
     ).toEqual([]);
   });
 
-  // A segunda asserção, e ela é mais larga que a primeira de propósito: um
+  // A última asserção, e ela é mais larga que as outras de propósito: um
   // componente ou rota não tem o que fazer com `node:fs`, qualquer que seja o
   // arquivo lido. Já passava antes desta rodada, e continua sendo a linha que
   // pega a próxima tentativa antes de ela virar leitura de acervo.

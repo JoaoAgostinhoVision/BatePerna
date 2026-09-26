@@ -11,11 +11,17 @@ import BarraNavegacao from "./BarraNavegacao";
  *  standalone não há barra de URL, e a pessoa fica presa **exatamente no
  *  momento em que o app já falhou uma vez**.
  *
- *  ⚠️ NÃO MOSTRA O ACERVO, e não é escolha: `error.tsx` é obrigatoriamente
- *  client component, e a lista lê `content/fichas/` com `node:fs`. Tentar
- *  encaixá-la aqui arrastaria o `node:fs` pro bundle do navegador — o mesmo
- *  motivo que mantém `piso.ts`, `semana.ts` e `fatos-da-trilha.ts` puros. A
- *  porta é a barra de baixo, que basta.
+ *  ⚠️ NÃO MOSTRA O ACERVO, e não é escolha — mas o MOTIVO mudou em 2026-09-25,
+ *  quando a ficha saiu do disco e foi pro banco. `error.tsx` é obrigatoriamente
+ *  client component, e o acervo agora é uma leitura ASSÍNCRONA DE SERVIDOR
+ *  (`getAllFichas` → banco): nenhum componente de cliente a alcança. Até aquela
+ *  data o impedimento era outro e igualmente firme — a lista lia
+ *  `content/fichas/` com `node:fs`, e encaixá-la aqui arrastaria o `node:fs` pro
+ *  bundle do navegador, o mesmo motivo que mantém `piso.ts`, `semana.ts` e
+ *  `fatos-da-trilha.ts` puros. E há o motivo que vale pelos dois: esta tela é o
+ *  que aparece justamente quando aquela leitura FALHOU, então mostrar a lista
+ *  aqui seria tentar de novo o que acabou de não dar. A porta é a barra de
+ *  baixo, que basta.
  *
  *  ⚠️ E NÃO MOSTRA A MENSAGEM DO ERRO. Ela é escrita pra quem programa, em
  *  inglês, e quase sempre não diz nada a quem está no portão decidindo se sobe.

@@ -4,7 +4,7 @@ import { Profiler } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, cleanup, waitFor } from "@testing-library/react";
 import { getFichasComCondicao } from "@/lib/ficha";
-import { bancoDeProducao } from "../banco";
+import { bancoDeProducao, gravarEdicao } from "../banco";
 import { CHAVE_FILTROS, SEM_FILTRO } from "@/lib/filtros";
 import { CHAVE_LOCAL } from "@/lib/local";
 import type { Ficha } from "@/types/ficha";
@@ -28,7 +28,7 @@ vi.mock("@/lib/ficha", async (real) => {
   return { ...mod, getFichasComCondicao: vi.fn(mod.getFichasComCondicao) };
 });
 
-await bancoDeProducao();
+const banco = await bancoDeProducao();
 
 const { resolverEstados } = await import("@/lib/carimbo-estado");
 const Home = (await import("@/app/page")).default;
@@ -96,6 +96,29 @@ describe("a home", () => {
     const { container } = render(await Home());
     const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
     for (const f of await getFichasComCondicao()) expect(hrefs).toContain(`/${f.slug}`);
+  });
+
+  // 🔴 A PROVA DE QUE A HOME VEM DO BANCO, e ela é a que mais importa das cinco:
+  // esta é A tela que o João abre. Sem ela, todo teste deste arquivo mede a home
+  // contra uma chamada NOVA do mesmo getter — asserção escrita contra a própria
+  // fonte, que é espécie catalogada aqui: as duas leituras concordariam do mesmo
+  // jeito se o getter tivesse voltado a ler o JSON do repositório.
+  it("o que o painel grava aparece na home, na visita seguinte", async () => {
+    const rampa = (await getFichasComCondicao()).find((f) => f.slug === "rampa-do-pepe")!;
+    expect(rampa, "a Rampa sumiu do acervo semeado").toBeTruthy();
+    try {
+      await gravarEdicao(banco, rampa, { promessa: "PROMESSA REESCRITA PELO PAINEL" });
+      vi.mocked(resolverEstados).mockResolvedValue(await leituras("fresco"));
+      const { container } = render(await Home());
+      expect(
+        container.textContent,
+        "a home continuou mostrando a promessa do JSON — o banco não é a fonte",
+      ).toContain("PROMESSA REESCRITA PELO PAINEL");
+    } finally {
+      // Desfazer é GRAVAR a antiga de novo (append-only, como o painel fará ao
+      // voltar uma versão): o banco é do arquivo inteiro.
+      await gravarEdicao(banco, rampa, {});
+    }
   });
 
   it("o carimbo já vem pintado no HTML do servidor, sem depender de JS", async () => {

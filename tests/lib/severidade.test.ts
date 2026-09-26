@@ -96,11 +96,9 @@ describe("o acervo inteiro, e o guarda cresce com ele", () => {
   // na fonte é cego a ele crescer, e é uma das 36 espécies já catalogadas neste
   // projeto: a ficha nova entra sem severidade e nenhum teste pisca. (A leitura
   // é a do topo do arquivo, do banco semeado com `content/fichas/`.)
-  const acervo = ACERVO;
-
   it("toda ficha declara um nível, e o schema só aceita os três", () => {
-    expect(acervo.length).toBeGreaterThan(0);
-    for (const f of acervo) {
+    expect(ACERVO.length).toBeGreaterThan(0);
+    for (const f of ACERVO) {
       expect(SEVERIDADES, f.slug).toContain(f.condicao.severidade);
     }
   });
@@ -111,7 +109,7 @@ describe("o acervo inteiro, e o guarda cresce com ele", () => {
   // mesma coisa: se um nível deixar de ser exercitado pelo acervo, ou ele sai
   // da tabela, ou entra a ficha que o usa.
   it("o acervo exercita os TRÊS níveis — tabela sem uso é máquina sem costura", () => {
-    const usados = new Set(acervo.map((f) => f.condicao.severidade));
+    const usados = new Set(ACERVO.map((f) => f.condicao.severidade));
     expect([...usados].sort()).toEqual([...SEVERIDADES].sort());
   });
 

@@ -27,7 +27,8 @@ const FICHAS_DIR = path.join(process.cwd(), "content", "fichas");
  *  Carrega e valida todo `.json` de `dir` (default: content/fichas real).
  *  O parâmetro existe só pra teste poder apontar pra um diretório sintético
  *  sem tocar em content/fichas — que é conteúdo do dono do projeto, não
- *  fixture de teste; em produção roda sempre com o default.
+ *  fixture de teste. (A oração "em produção roda sempre com o default" morava
+ *  aqui e morreu no dia em que produção parou de chamar esta função.)
  *
  *  Estoura em slug repetido. Sem isto, dois JSONs com o mesmo slug fariam a
  *  home (que agrupa num Map, onde o ÚLTIMO arquivo lido vence) e /{slug} (que
