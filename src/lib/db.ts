@@ -243,6 +243,18 @@ export async function versaoAtual(client: Client, slug: string): Promise<FichaVe
   return r.rows.length ? versaoDaLinha(r.rows[0]) : null;
 }
 
+/** Uma versão específica, por `id` — a peça que falta pro "voltar": antes de
+ *  regravar o conteúdo dela, quem chama tem que conferir que `ficha_slug`
+ *  bate com o lugar pedido (ver `src/app/api/admin/ficha/route.ts`). Devolve
+ *  `null` pra um `id` que não existe, nunca lança. */
+export async function versaoPorId(client: Client, id: number): Promise<FichaVersao | null> {
+  const r = await client.execute({
+    sql: `SELECT * FROM ficha_versoes WHERE id = ?`,
+    args: [id],
+  });
+  return r.rows.length ? versaoDaLinha(r.rows[0]) : null;
+}
+
 /** A versão atual de TODOS os lugares, numa consulta só — irmão do
  *  `avisosVigentes`, e pela mesma razão: N consultas no portão é o que esta
  *  família evita. */

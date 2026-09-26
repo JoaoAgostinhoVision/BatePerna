@@ -6,9 +6,10 @@ import { COOKIE_ADMIN, avisarDesligado, sessaoValida } from "@/lib/admin-guarda"
 import { getFicha } from "@/lib/ficha";
 import { PRAZO_AVISO_MS, resolverEstado } from "@/lib/carimbo-estado";
 import { comPrazo } from "@/lib/cache-rotas";
-import { avisoVigente, getClient, type AvisoLinha } from "@/lib/db";
+import { avisoVigente, getClient, historico, type AvisoLinha, type FichaVersao } from "@/lib/db";
 import CaixaDeSenha from "../CaixaDeSenha";
 import EditorDeVoz from "../EditorDeVoz";
+import HistoricoDaVoz from "../HistoricoDaVoz";
 import PainelAdmin from "../PainelAdmin";
 import "../admin.css";
 
@@ -22,6 +23,14 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
  *  aviso publicado"). Um `Symbol` garante identidade única mesmo que este
  *  módulo seja reimportado; nenhum outro valor pode ser `===` a ele. */
 const ESTOUROU = Symbol("prazo do aviso do admin");
+
+/** Irmão do `ESTOUROU` de cima, pro `historico` — mesma razão: `Symbol` não
+ *  pode ser confundido nem com uma lista real (mesmo vazia) nem com o `null`
+ *  de "leitura OK". */
+const ESTOUROU_HISTORICO = Symbol("prazo do historico da voz");
+
+// PENDENTE: redação minha, o João ainda não leu
+const HISTORICO_ERRO_LEITURA = "Não consegui ler o histórico — pode estar incompleto.";
 
 /** O aviso vigente de UM lugar — mesmo molde do `lerAvisosVigentes` que a
  *  antiga página única tinha (agora em `admin/page.tsx`, pro acervo inteiro).
@@ -57,6 +66,26 @@ async function lerAvisoVigente(slug: string, agora: number): Promise<{ aviso?: A
   }
 }
 
+/** O histórico de versões de UM lugar — mesma trava que `lerAvisoVigente`:
+ *  banco pendurado não pode segurar o `Promise.all` abaixo pra sempre, e
+ *  "não consegui ler" não pode virar silenciosamente "não há histórico" (por
+ *  isso `erro`, não uma lista vazia, no estouro). Mesma constante de prazo
+ *  (`PRAZO_AVISO_MS`) do irmão: mesma consulta indexada de uma linha, o
+ *  mesmo Turso. */
+async function lerHistorico(slug: string): Promise<{ versoes: FichaVersao[]; erro: boolean }> {
+  try {
+    const linhas = await comPrazo<FichaVersao[] | typeof ESTOUROU_HISTORICO>(
+      historico(getClient(), slug),
+      PRAZO_AVISO_MS,
+      ESTOUROU_HISTORICO,
+    );
+    if (linhas === ESTOUROU_HISTORICO) return { versoes: [], erro: true };
+    return { versoes: linhas, erro: false };
+  } catch {
+    return { versoes: [], erro: true };
+  }
+}
+
 /** A tela de UM lugar (Task 5, 2026-09-25): nasce da lista em `/admin`, e é
  *  quem hoje monta o `PainelAdmin` — que passou a servir um lugar só. */
 export default async function Lugar({ params }: { params: Promise<{ slug: string }> }) {
@@ -86,9 +115,10 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
   if (!ficha) notFound();
 
   const agora = Math.floor(Date.now() / 1000);
-  const [leitura, { aviso, erro: avisoErro }] = await Promise.all([
+  const [leitura, { aviso, erro: avisoErro }, { versoes, erro: historicoErro }] = await Promise.all([
     resolverEstado(ficha),
     lerAvisoVigente(slug, agora),
+    lerHistorico(slug),
   ]);
 
   return (
@@ -96,6 +126,8 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
       <h1>Painel</h1>
       <PainelAdmin ficha={ficha} leitura={leitura} aviso={aviso} avisoErro={avisoErro} agora={agora} />
       <EditorDeVoz ficha={ficha} />
+      {historicoErro && <p className="adm-erro" role="alert">{HISTORICO_ERRO_LEITURA}</p>}
+      <HistoricoDaVoz versoes={versoes} />
     </main>
   );
 }

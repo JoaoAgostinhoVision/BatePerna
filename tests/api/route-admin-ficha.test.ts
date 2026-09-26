@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MIN_SENHA } from "@/lib/admin-config";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
-import { ensureSchema, historico, versaoAtual } from "@/lib/db";
+import { ensureSchema, gravarVersao, historico, versaoAtual } from "@/lib/db";
 import { semearAcervo } from "../banco";
 import type { Ficha } from "@/types/ficha";
 
@@ -156,5 +156,62 @@ describe("PUT /api/admin/ficha", () => {
     const res = await PUT(pedido(null, cookieBom));
     expect(res.status).toBe(400);
     expect(await historico(c, SLUG)).toHaveLength(1);
+  });
+});
+
+describe("PUT /api/admin/ficha — voltar a uma versão (versaoId)", () => {
+  // 🔴 O teste central da escolha 3 dele: voltar GRAVA, não apaga.
+  //
+  // 🔴 C1 da revisão do controlador: o brief cravava `toHaveLength(3)`, e a
+  // conta certa é 4 (semente + "a primeira" + "a segunda" + o voltar) — mas
+  // cravar QUALQUER número trava de novo se o `beforeEach` mudar de tamanho.
+  // A asserção é RELATIVA (`antes + 1`), estritamente mais forte, e a
+  // absoluta que prova que "a segunda" continua lá fica intacta.
+  it("voltar a uma versão antiga grava versão nova, e a atual continua no histórico", async () => {
+    const v1 = await gravarVersao(c, SLUG, JSON.stringify({ ...ficha, voz: "a primeira" }), "semente", AGORA);
+    await gravarVersao(c, SLUG, JSON.stringify({ ...ficha, voz: "a segunda" }), "painel", AGORA + 10);
+
+    const antes = await historico(c, SLUG);
+
+    const r = await PUT(pedido({ slug: SLUG, versaoId: v1 }, cookieBom));
+
+    expect(r.status).toBe(200);
+    expect(JSON.parse((await versaoAtual(c, SLUG))!.doc).voz).toBe("a primeira");
+    const h = await historico(c, SLUG);
+    expect(h, "voltar tem que INSERIR, nunca apagar").toHaveLength(antes.length + 1);
+    expect(JSON.parse(h[1].doc).voz, "a versão de onde voltamos continua lá").toBe("a segunda");
+  });
+
+  // 🔴 A LINHA VERMELHA EM FORMA DE TESTE. Sem conferir que a versão é DAQUELE
+  // lugar, um `versaoId` qualquer põe a voz da Rampa na ficha da Pedra Furada —
+  // exatamente o defeito que este projeto mais caça, agora com ajuda do banco.
+  it("versaoId de OUTRO lugar: 400, e a ficha não é tocada", async () => {
+    const daRampa = await gravarVersao(c, "rampa-do-pepe", JSON.stringify({ ...ficha, voz: "voz da Rampa" }), "painel", AGORA);
+    await gravarVersao(c, "pedra-furada-de-venturosa", JSON.stringify({ ...outra, voz: "voz da Pedra" }), "semente", AGORA);
+
+    const r = await PUT(pedido({ slug: "pedra-furada-de-venturosa", versaoId: daRampa }, cookieBom));
+
+    expect(r.status).toBe(400);
+    expect(JSON.parse((await versaoAtual(c, "pedra-furada-de-venturosa"))!.doc).voz).toBe("voz da Pedra");
+  });
+
+  it("versaoId que não existe: 400", async () => {
+    expect((await PUT(pedido({ slug: SLUG, versaoId: 99_999 }, cookieBom))).status).toBe(400);
+  });
+
+  // 🔴 C6 da revisão do controlador: o ramo novo não pode virar porta lateral —
+  // nem os dois formatos juntos, nem nenhum dos dois, é gravação nenhuma.
+  it("corpo sem campo/valor e sem versaoId: 400, e nada é gravado", async () => {
+    const res = await PUT(pedido({ slug: SLUG }, cookieBom));
+    expect(res.status).toBe(400);
+    expect(await historico(c, SLUG)).toHaveLength(1);
+  });
+
+  it("corpo com campo e versaoId ao mesmo tempo: 400, e nada é gravado", async () => {
+    const v1 = await gravarVersao(c, SLUG, JSON.stringify({ ...ficha, voz: "a primeira" }), "semente", AGORA);
+    const antes = await historico(c, SLUG);
+    const res = await PUT(pedido({ slug: SLUG, campo: "voz", valor: "x", versaoId: v1 }, cookieBom));
+    expect(res.status).toBe(400);
+    expect(await historico(c, SLUG)).toHaveLength(antes.length);
   });
 });
