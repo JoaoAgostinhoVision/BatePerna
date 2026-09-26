@@ -36,3 +36,48 @@
 .adm-item-nome { font-size: 1.05rem; }
 .adm-item-marca { font-size: .85rem; color: #555; text-align: right; }
 .adm-lista-rodape { font-size: .85rem; color: #777; margin-top: 1rem; }
+
+/* 🔴 I6 DA REVISÃO FINAL (2026-09-26): EditorDeVoz (Task 6) e HistoricoDaVoz
+   (Task 7) não tinham UMA regra sequer aqui — o `<textarea>` caía no default
+   do navegador (~20 colunas, 2 linhas, monoespaçado, sem borda do app) pra
+   escrever um parágrafo de prosa, e a lista do histórico vinha com marcador e
+   recuo padrão. Toda regra abaixo REUSA um valor que já existe acima nesta
+   folha — nenhuma cor, fonte ou animação nova. A ÚNICA exceção é o
+   `min-height` do textarea: não existe precedente de altura de campo neste
+   arquivo pra reusar, e o valor foi escolhido só grande o bastante pra caber
+   um parágrafo, não como escolha visual. */
+
+/* Mesmo `display: grid` que TODA seção deste arquivo já usa (`.adm-painel`,
+   `.adm-porta`, `.adm-ficha`, `.adm-rotulo`) — é o que dá largura cheia de
+   graça pros filhos (o textarea abaixo não precisa de `width` próprio) e um
+   gap previsível entre eles. `gap: .5rem` é o mesmo de `.adm-ficha`;
+   `margin-top: 1.2rem` é o mesmo espaçamento que `.adm-painel` já usa ENTRE
+   as seções de ficha — aqui vale entre `.adm-painel`, `.adm-voz` e
+   `.adm-historico`, que são irmãs dentro de `<main class="adm">`. */
+.adm-voz, .adm-historico { display: grid; gap: .5rem; margin-top: 1.2rem; }
+/* De `.adm-ficha h2`. */
+.adm-voz h2, .adm-historico h2 { font-size: 1.05rem; margin: 0; }
+/* De `.adm-lista-rodape` (tamanho) e `.adm-vigente-meta` (cor e margin: 0) —
+   é o mesmo registro de "texto de apoio, menor e mais claro". */
+.adm-ajuda { margin: 0; font-size: .85rem; color: #777; }
+/* Padding, fonte e borda de `.adm-rotulo textarea` — o mesmo campo que o
+   formulário de aviso já usa. `min-height` é o único valor novo desta folha
+   (ver nota acima). */
+.adm-voz textarea {
+  padding: .5rem; font-size: .95rem; border: 1px solid #999; border-radius: 8px;
+  min-height: 6rem;
+}
+/* De `.adm-ficha button` — o mesmo botão que todo o resto do painel usa. */
+.adm-voz button, .adm-historico button { padding: .6rem; font-size: .95rem; border-radius: 8px; }
+/* De `.adm-lista` — mesma remoção de marcador/recuo que a lista de lugares
+   já usa, mesmo `gap`. */
+.adm-historico ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+/* De `.adm-item` (borda/raio) e `.adm-ficha` (padding) — cada versão vira um
+   cartão como os outros cartões do painel. */
+.adm-historico li { border: 1px solid #ccc; border-radius: 10px; padding: 1rem; }
+/* Mesmo `gap` de `.adm-vigente`/`.adm-rotulo`, pro texto da versão e o botão
+   de voltar não ficarem colados. */
+.adm-historico-item { display: grid; gap: .3rem; margin-top: .3rem; }
+/* Convenção do arquivo inteiro (`.adm-vigente-texto`, `.adm-ficha h2`, …):
+   parágrafo sem margin extra dentro de um `grid` que já tem `gap`. */
+.adm-historico-item p { margin: 0; }
