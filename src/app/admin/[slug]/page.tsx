@@ -4,7 +4,8 @@ import type { Metadata } from "next";
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { COOKIE_ADMIN, avisarDesligado, sessaoValida } from "@/lib/admin-guarda";
 import { getFicha } from "@/lib/ficha";
-import { resolverEstado } from "@/lib/carimbo-estado";
+import { PRAZO_AVISO_MS, resolverEstado } from "@/lib/carimbo-estado";
+import { comPrazo } from "@/lib/cache-rotas";
 import { avisoVigente, getClient, type AvisoLinha } from "@/lib/db";
 import CaixaDeSenha from "../CaixaDeSenha";
 import PainelAdmin from "../PainelAdmin";
@@ -15,12 +16,40 @@ export const dynamic = "force-dynamic";
 /** 🔴 Fora do índice. Painel de admin no Google é convite. */
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
+/** Sentinela do estouro do prazo — nunca pode ser confundido com uma
+ *  `AvisoLinha` real nem com `null` (que aqui significa "leitura OK, sem
+ *  aviso publicado"). Um `Symbol` garante identidade única mesmo que este
+ *  módulo seja reimportado; nenhum outro valor pode ser `===` a ele. */
+const ESTOUROU = Symbol("prazo do aviso do admin");
+
 /** O aviso vigente de UM lugar — mesmo molde do `lerAvisosVigentes` que a
- *  antiga página única tinha (agora em `admin/page.tsx`, pro acervo inteiro):
- *  banco fora do ar não pode derrubar a página, só dizer isso na tela. */
+ *  antiga página única tinha (agora em `admin/page.tsx`, pro acervo inteiro).
+ *
+ *  🔴 BANCO FORA DO AR *e* BANCO PENDURADO caem os dois em `{ erro: true }`.
+ *  O `try/catch` sozinho só cobre o primeiro — um Turso que aceita a conexão
+ *  e nunca responde não lança, ele fica parado, e sem prazo o `Promise.all`
+ *  do `Lugar` abaixo travaria pra sempre. `comPrazo` (`src/lib/cache-rotas.ts`)
+ *  fecha o segundo caso, com a mesma constante nomeada (`PRAZO_AVISO_MS`, a
+ *  mesma consulta indexada de uma linha, o mesmo Turso) que o `lerAviso`
+ *  público usa em `src/lib/carimbo-estado.ts`.
+ *
+ *  O irmão público pode devolver `null` no estouro porque lá "sem aviso" e
+ *  "não consegui ler" dão a MESMA tela pro visitante — tanto faz. Aqui é o
+ *  ADMIN: ele já tem canal honesto pra "não consegui ler" (`avisoErro` →
+ *  `AVISO_ERRO_LEITURA`, com `role="alert"`, em `../PainelAdmin`), e usar
+ *  `null` no estouro faria o dono abrir a própria tela e ler "sem aviso
+ *  publicado" quando na verdade o Turso só ficou mudo — o recado dele
+ *  pareceria ter sumido. Por isso o estouro usa o sentinela `ESTOUROU` (nunca
+ *  confundível com uma leitura real) e cai no MESMO ramo de erro que o
+ *  `catch` já usa pro banco fora do ar. */
 async function lerAvisoVigente(slug: string, agora: number): Promise<{ aviso?: AvisoLinha; erro: boolean }> {
   try {
-    const linha = await avisoVigente(getClient(), slug, agora);
+    const linha = await comPrazo<AvisoLinha | null | typeof ESTOUROU>(
+      avisoVigente(getClient(), slug, agora),
+      PRAZO_AVISO_MS,
+      ESTOUROU,
+    );
+    if (linha === ESTOUROU) return { erro: true };
     return { aviso: linha ?? undefined, erro: false };
   } catch {
     return { erro: true };

@@ -152,4 +152,50 @@ describe("/admin/[slug] — a porta e o conteúdo", () => {
       "NEXT_NOT_FOUND",
     );
   });
+
+  // 5. FINDING 1 da revisão da Task 5: banco PENDURADO (não FORA DO AR) no
+  // aviso deste admin nunca tinha prova — o mock de `avisoVigente` no
+  // `beforeEach` sempre RESOLVE (nunca pendura), então o buraco ficava
+  // invisível. Relógio FALSO e uma promessa que NUNCA resolve, no molde de
+  // `tests/lib/carimbo-estado-aviso.test.ts` ("banco PENDURADO não segura o
+  // carimbo"): sem `comPrazo` aqui, o `await` fica pendurado pra sempre e o
+  // teste só terminaria pelo timeout do vitest — por isso o timeout curto
+  // (1 s), bem menor que qualquer prazo real (`PRAZO_AVISO_MS` são 2 s).
+  //
+  // 🔴 O que vale não é só "a tela renderiza" — é que ela conta a verdade:
+  // banco pendurado tem que virar ERRO DE LEITURA (`avisoErro` → o
+  // `role="alert"` de `PainelAdmin`), nunca "sem aviso publicado" (`null`).
+  // As duas dariam a MESMA tela, e o dono leria "sumiu meu recado" quando o
+  // Turso só ficou mudo — por isso M6 (fazer o estouro devolver
+  // `{ erro: false }`) tem que morrer bem aqui.
+  it(
+    "banco pendurado no aviso: a tela renderiza e diz que não conseguiu ler, não finge 'sem aviso'",
+    { timeout: 1_000 },
+    async () => {
+      const { getAllFichas } = await import("@/lib/ficha");
+      const fichas = await getAllFichas();
+      const ficha = fichas[0];
+      await comSessaoValida();
+      const { avisoVigente } = await import("@/lib/db");
+      const { PRAZO_AVISO_MS } = await import("@/lib/carimbo-estado");
+      vi.mocked(avisoVigente).mockReturnValue(new Promise<never>(() => {}));
+
+      vi.useFakeTimers();
+      try {
+        const { default: Lugar } = await import("@/app/admin/[slug]/page");
+        const pagina = Lugar({ params: Promise.resolve({ slug: ficha.slug }) });
+        await vi.advanceTimersByTimeAsync(PRAZO_AVISO_MS + 1);
+        const { container } = render(await pagina);
+
+        expect(
+          container.querySelector(".adm-painel"),
+          "banco pendurado derrubou o painel inteiro",
+        ).not.toBeNull();
+        const alerta = screen.getByRole("alert");
+        expect(alerta.textContent).toMatch(/não consegui ler o aviso/i);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 });
