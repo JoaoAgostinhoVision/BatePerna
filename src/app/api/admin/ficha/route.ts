@@ -65,17 +65,40 @@ export async function PUT(req: Request): Promise<Response> {
     // defeito que este projeto mais caça, agora com ajuda do banco.
     if (versao == null || versao.ficha_slug !== slug) return new Response("", { status: 400 });
 
-    // 🔴 Validação na porta de escrita vale pro voltar também: o documento
-    // volta a passar pelo `fichaSchema` antes de virar linha nova, mesmo que
-    // já tenha passado uma vez quando foi gravado a primeira vez.
-    let docValidado: string;
+    // 🔴 FIX ROUND 1 (2026-09-26): "voltar" grava VERBATIM, não renormalizado.
+    //
+    // O `fichaSchema.parse` aqui existe só pra DECIDIR (400 se a versão antiga
+    // não passa mais no schema de hoje) — o resultado do parse é DESCARTADO. O
+    // que vai pro `gravarVersao` é `versao.doc`, o texto exatamente como ele
+    // saiu do banco.
+    //
+    // A primeira versão desta rota gravava `JSON.stringify(fichaSchema.parse(...))`
+    // — e isso REESCREVIA o passado: `src/types/ficha.ts` (comentário de
+    // `esforco`/`duracao`, 2026-08-23) documenta que o zod descarta chave
+    // desconhecida EM SILÊNCIO. Uma versão antiga que ainda tivesse esses
+    // campos os perderia pra sempre ao "voltar" — e a ordem das chaves passaria
+    // a ser a do schema, não a do documento original. Numa tabela que existe
+    // para que "nada do que já se disse sobre um lugar se perca", isso é a
+    // perda entrando pela porta que deveria impedi-la.
+    //
+    // 🔴 POR QUE É SEGURO NUNCA RENORMALIZAR: o caminho de LEITURA
+    // (`fichaSchema.parse` em `buscarFichas`/`getFicha`) já filtra campo
+    // desconhecido antes de a ficha chegar em qualquer tela — é assim que
+    // `esforco`/`duracao` já se comportam hoje em fichas antigas. O campo
+    // morto fica GUARDADO no arquivo histórico e SOME da tela, que é o
+    // certo pra um arquivo.
+    //
+    // 🔴 CONSEQUÊNCIA DELIBERADA: uma versão que não passa mais no schema
+    // ATUAL fica IMPOSSÍVEL de restaurar — 400, nunca uma ficha quebrada no
+    // ar. É a mesma régua de `aplicarCampo`: estourar é melhor que publicar
+    // algo meio certo.
     try {
-      docValidado = JSON.stringify(fichaSchema.parse(JSON.parse(versao.doc)));
+      fichaSchema.parse(JSON.parse(versao.doc));
     } catch {
       return new Response("", { status: 400 });
     }
 
-    const id = await gravarVersao(getClient(), slug, docValidado, "painel", agora);
+    const id = await gravarVersao(getClient(), slug, versao.doc, "painel", agora);
     return Response.json({ id }, { headers: { "cache-control": "no-store" } });
   }
 

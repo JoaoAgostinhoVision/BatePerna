@@ -29,6 +29,17 @@ const ESTOUROU = Symbol("prazo do aviso do admin");
  *  de "leitura OK". */
 const ESTOUROU_HISTORICO = Symbol("prazo do historico da voz");
 
+/** Quanto o HISTÓRICO espera o banco antes de seguir sem ele.
+ *
+ *  🔴 FIX ROUND 1 (2026-09-26): este prazo tinha o NOME do vizinho
+ *  (`PRAZO_AVISO_MS`) emprestado — mesmo valor, mas a justificativa dele
+ *  ("UMA consulta de uma linha, indexada", ver `carimbo-estado.ts`) não bate
+ *  aqui: `historico()` devolve TODAS as versões daquele lugar, não uma linha
+ *  só. Poucas linhas por lugar hoje (a régua é editar a voz, não trocar a
+ *  cada minuto) — daí o mesmo valor ser razoável —, mas o nome tem que dizer
+ *  a verdade sobre a consulta que ele governa, não repetir o do irmão. */
+const PRAZO_HISTORICO_MS = 2_000;
+
 // PENDENTE: redação minha, o João ainda não leu
 const HISTORICO_ERRO_LEITURA = "Não consegui ler o histórico — pode estar incompleto.";
 
@@ -69,14 +80,14 @@ async function lerAvisoVigente(slug: string, agora: number): Promise<{ aviso?: A
 /** O histórico de versões de UM lugar — mesma trava que `lerAvisoVigente`:
  *  banco pendurado não pode segurar o `Promise.all` abaixo pra sempre, e
  *  "não consegui ler" não pode virar silenciosamente "não há histórico" (por
- *  isso `erro`, não uma lista vazia, no estouro). Mesma constante de prazo
- *  (`PRAZO_AVISO_MS`) do irmão: mesma consulta indexada de uma linha, o
- *  mesmo Turso. */
+ *  isso `erro`, não uma lista vazia, no estouro). Prazo próprio
+ *  (`PRAZO_HISTORICO_MS`, acima) — mesmo Turso do irmão, mas outra consulta,
+ *  e o nome tem que dizer isso. */
 async function lerHistorico(slug: string): Promise<{ versoes: FichaVersao[]; erro: boolean }> {
   try {
     const linhas = await comPrazo<FichaVersao[] | typeof ESTOUROU_HISTORICO>(
       historico(getClient(), slug),
-      PRAZO_AVISO_MS,
+      PRAZO_HISTORICO_MS,
       ESTOUROU_HISTORICO,
     );
     if (linhas === ESTOUROU_HISTORICO) return { versoes: [], erro: true };

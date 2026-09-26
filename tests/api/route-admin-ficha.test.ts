@@ -199,6 +199,30 @@ describe("PUT /api/admin/ficha — voltar a uma versão (versaoId)", () => {
     expect((await PUT(pedido({ slug: SLUG, versaoId: 99_999 }, cookieBom))).status).toBe(400);
   });
 
+  // 🔴 FIX ROUND 1 (2026-09-26): "voltar" grava VERBATIM, não renormalizado.
+  // Sem isto, `fichaSchema.parse` reescreve o passado — descarta chave
+  // desconhecida em silêncio (mesma régua documentada em `src/types/ficha.ts`
+  // pra `esforco`/`duracao`) e reordena as chaves pela ordem do schema, não a
+  // do documento original. O doc de teste carrega os DOIS defeitos ao mesmo
+  // tempo — chave a mais e ordem diferente — porque só assim "gravou o
+  // antigo" se distingue de "gravou o renormalizado".
+  it("voltar grava o doc EXATAMENTE como estava — nunca renormalizado pelo schema", async () => {
+    const chaveDesconhecida = "campoQueOSchemaNaoConheceMais";
+    const invertido = Object.fromEntries([...Object.entries(ficha)].reverse());
+    const docAntigo = JSON.stringify({ ...invertido, [chaveDesconhecida]: "só sobrevive se gravar verbatim" });
+
+    const v1 = await gravarVersao(c, SLUG, docAntigo, "semente", AGORA);
+    await gravarVersao(c, SLUG, JSON.stringify({ ...ficha, voz: "a mais nova" }), "painel", AGORA + 10);
+
+    const r = await PUT(pedido({ slug: SLUG, versaoId: v1 }, cookieBom));
+
+    expect(r.status).toBe(200);
+    expect(
+      (await versaoAtual(c, SLUG))!.doc,
+      "verbatim: a mesma string byte a byte, não reserializada pelo schema",
+    ).toBe(docAntigo);
+  });
+
   // 🔴 C6 da revisão do controlador: o ramo novo não pode virar porta lateral —
   // nem os dois formatos juntos, nem nenhum dos dois, é gravação nenhuma.
   it("corpo sem campo/valor e sem versaoId: 400, e nada é gravado", async () => {
