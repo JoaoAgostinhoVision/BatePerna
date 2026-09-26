@@ -11,7 +11,7 @@ todos endereçados numa onda única de fix, com re-revisão limpa. Veredito: **n
 `ficha_versoes` (append-only, a versão de maior `id` vence); `/admin` é lista → tela do lugar → editar a
 voz → histórico → voltar a uma versão antiga (**gravando uma versão nova**, nunca apagando).
 
-🔴 **ESTAMOS NA BRANCH `ficha-no-banco`**, 26 commits à frente do `main`. O `main` está no ar e intocado.
+🔴 **ESTAMOS NA BRANCH `ficha-no-banco`**, 27 commits à frente do `main`. O `main` está no ar e intocado.
 **Nada desta rodada foi ao ar.**
 
 **Estado medido por mim no fim do dia:** árvore limpa, **1193/1193 em 79 arquivos**, `npx tsc --noEmit`
