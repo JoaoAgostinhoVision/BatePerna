@@ -1,20 +1,11 @@
 import { lerConfigAdmin } from "@/lib/admin-config";
-import { COOKIE_ADMIN, avisarDesligado, sessaoValida } from "@/lib/admin-guarda";
+import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
 import { getClient, inserirAviso, retirarAviso, type EfeitoAviso } from "@/lib/db";
 import { getFicha } from "@/lib/ficha";
 
 export const dynamic = "force-dynamic";
 
 const EFEITOS: readonly EfeitoAviso[] = ["nenhum", "fresco", "frio", "fechado"];
-
-function tokenDoCookie(req: Request): string | undefined {
-  return req.headers
-    .get("cookie")
-    ?.split(";")
-    .map((p) => p.trim())
-    .find((p) => p.startsWith(`${COOKIE_ADMIN}=`))
-    ?.slice(COOKIE_ADMIN.length + 1);
-}
 
 export async function POST(req: Request): Promise<Response> {
   // 🔴 404, não 401: painel desligado não anuncia que existe. Mesma regra de

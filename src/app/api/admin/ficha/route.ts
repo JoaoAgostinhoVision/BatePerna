@@ -1,18 +1,9 @@
 import { lerConfigAdmin } from "@/lib/admin-config";
-import { COOKIE_ADMIN, avisarDesligado, sessaoValida } from "@/lib/admin-guarda";
+import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
 import { getClient, gravarVersao, versaoAtual } from "@/lib/db";
 import { aplicarCampo, eCampoEditavel } from "@/lib/editar-ficha";
 
 export const dynamic = "force-dynamic";
-
-function tokenDoCookie(req: Request): string | undefined {
-  return req.headers
-    .get("cookie")
-    ?.split(";")
-    .map((p) => p.trim())
-    .find((p) => p.startsWith(`${COOKIE_ADMIN}=`))
-    ?.slice(COOKIE_ADMIN.length + 1);
-}
 
 /** Grava um campo novo sobre a ficha de `slug`, como uma versão NOVA em
  *  `ficha_versoes` — nunca um UPDATE (a tabela é append-only, ver `db.ts`).

@@ -36,6 +36,24 @@ export function cookieDeSessao(token: string, maxAgeS: number): string {
   return `${COOKIE_ADMIN}=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${maxAgeS}`;
 }
 
+/** O token de sessão que veio no cookie desta requisição, ou `undefined` se
+ *  não veio nenhum.
+ *
+ *  🔴 FIX ROUND 1 (2026-09-26): morava duplicada, byte a byte, em
+ *  `api/admin/aviso/route.ts` e `api/admin/ficha/route.ts` — as duas rotas
+ *  copiaram "o molde exato" da rota irmã (como o brief da Task 6 mandou) e
+ *  arrastaram o helper junto. Copiar o molde não obrigava a duplicar a
+ *  lógica; ela mora aqui, junto de `COOKIE_ADMIN` e `sessaoValida`, que já
+ *  são os outros dois pedaços que as mesmas rotas compartilham. */
+export function tokenDoCookie(req: Request): string | undefined {
+  return req.headers
+    .get("cookie")
+    ?.split(";")
+    .map((p) => p.trim())
+    .find((p) => p.startsWith(`${COOKIE_ADMIN}=`))
+    ?.slice(COOKIE_ADMIN.length + 1);
+}
+
 /** Esta requisição tem sessão boa? Falso também quando o admin está desligado —
  *  painel desligado não tem sessão válida nenhuma. */
 export function sessaoValida(

@@ -23,7 +23,8 @@ describe("EditorDeVoz", () => {
     // r.ok dispara location.reload(); jsdom não implementa navegação de
     // verdade e poluiria o stderr — mesmo ajuste que CaixaDeSenha e
     // PainelAdmin já precisaram.
-    vi.stubGlobal("location", { ...window.location, reload: vi.fn() });
+    const reloadFalso = vi.fn();
+    vi.stubGlobal("location", { ...window.location, reload: reloadFalso });
     const { container } = render(<EditorDeVoz ficha={f} />);
     fireEvent.change(container.querySelector(`textarea[data-voz="${f.slug}"]`)!, {
       target: { value: "a serra firmou de novo" },
@@ -34,6 +35,10 @@ describe("EditorDeVoz", () => {
     expect(url).toBe("/api/admin/ficha");
     expect(init.method).toBe("PUT");
     expect(JSON.parse(init.body)).toEqual({ slug: f.slug, campo: "voz", valor: "a serra firmou de novo" });
+    // 🔴 FIX ROUND 1: sem esta asserção, apagar o `location.reload()` do
+    // componente e deixar só `return;` passava verde — a linha que traz a
+    // tela "da fonte nova (o banco), nunca de estado otimista" não tinha prova.
+    await waitFor(() => expect(reloadFalso).toHaveBeenCalledTimes(1));
   });
 
   it("resposta que não é ok mostra a mensagem de erro de gravação", async () => {

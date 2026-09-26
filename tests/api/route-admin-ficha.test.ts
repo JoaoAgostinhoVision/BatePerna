@@ -137,7 +137,10 @@ describe("PUT /api/admin/ficha", () => {
     expect(JSON.parse(versaoOutra!.doc).voz).toBe(outra.voz);
   });
 
-  it("corpo JSON malformado: 400", async () => {
+  // 🔴 FIX ROUND 1, item 2: só o status não prova nada — todo irmão de
+  // recusa deste arquivo prova código E efeito. Sem `historico`, um bug que
+  // gravasse por engano antes de devolver 400 passaria verde aqui.
+  it("corpo JSON malformado: 400, e nada é gravado", async () => {
     const res = await PUT(
       new Request("http://x/api/admin/ficha", {
         method: "PUT",
@@ -146,6 +149,7 @@ describe("PUT /api/admin/ficha", () => {
       }),
     );
     expect(res.status).toBe(400);
+    expect(await historico(c, SLUG)).toHaveLength(1);
   });
 
   it("corpo null: 400, não exceção — e nada é gravado", async () => {
