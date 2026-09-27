@@ -55,7 +55,9 @@
  *
  *      node scripts/mutar.mjs                 # as 34 entradas
  *      node scripts/mutar.mjs M12 N3 B3b      # só estas
- *      node scripts/mutar.mjs --controles     # o teste do INSTRUMENTO
+ *      node scripts/mutar.mjs --controles     # o teste do INSTRUMENTO:
+ *                                             #   5 controles de CATEGORIA
+ *                                             #   + 4 autotestes de RECUSA
  *
  *  Roda de qualquer pasta: a raiz sai do lugar deste arquivo, não do `cwd`.
  *
@@ -64,8 +66,9 @@
  *   - **1** — recusa de COMEÇAR ou de terminar: árvore suja nos arquivos
  *     envolvidos (antes ou depois); arquivo de teste que não existe mais; a
  *     suíte de base já vermelha; a base executando menos testes que o piso
- *     (arquivo renomeado ou `describe.skip`); ou um `mata` frouxo (nome que
- *     casa zero ou mais de um teste real).
+ *     (arquivo renomeado ou `describe.skip`); um `mata` frouxo (nome que casa
+ *     zero ou mais de um teste real); ou uma entrada de `MUTACOES` trazendo
+ *     campo que só existe em `CONTROLES`.
  *   - **2** — achado: sobreviveu / sem alvo / sem diff / sem medição, ou um
  *     `mata` declarado que não falhou, ou um controle fora do que declarou.
  *
@@ -87,15 +90,25 @@
  *   - **vermelho sem teste vermelho.** `success: false` com zero falhas
  *     nomeadas é erro fora de teste, e vira "sem medição", não "morreu".
  *   - **`mata` que não mata, e `mata` frouxo.** Ver (c).
- *   - **o próprio instrumento.** `node scripts/mutar.mjs --controles` roda
- *     **cinco** controles, um por guarda, cada um declarando o que tem de
- *     sair. 🔴 A regra que os criou: **guarda sem controle é guarda que se
- *     pode desligar em silêncio.** A rodada 4/5 criou os portões do `mata` e
- *     do piso sem controle nenhum, e um re-revisor desligou os dois numa
- *     cópia com os controles de então **verdes, exit 0**. Hoje as três
- *     sabotagens (colapsar "sem medição" em "morreu"; forçar `mataConfere`
- *     pra `true`; baixar o piso e cortar a lista pela metade) são pegas, cada
- *     uma nomeando o controle que ela quebrou — medido em 27/09.
+ *   - **o próprio instrumento, em DOIS níveis.**
+ *     `node scripts/mutar.mjs --controles` roda **cinco controles de
+ *     CATEGORIA** (um por ramo do que o harness DIZ) e depois **quatro
+ *     autotestes de RECUSA**, cada um num processo filho, porque um
+ *     `process.exit` só se confere de fora.
+ *
+ *     🔴 A regra que os criou: **guarda sem controle é guarda que se pode
+ *     desligar em silêncio.** Ela precisou de duas rodadas para ficar de pé.
+ *     Na 4b, os portões do `mata` e do piso nasceram sem controle e um
+ *     re-revisor desligou os dois com os controles de então VERDES, exit 0.
+ *     Consertado — e na rodada seguinte o portão NOVO daquela rodada, o piso
+ *     de especificidade, repetiu a história: apagar o `if` dele deixava os
+ *     **cinco** controles verdes e `mata: "a"` voltava a passar. Daí os
+ *     autotestes, e daí o portão dos campos de controle.
+ *
+ *     As sabotagens hoje cobertas, todas medidas: colapsar "sem medição" em
+ *     "morreu"; forçar `mataConfere`; baixar o piso e cortar a lista pela
+ *     metade; apagar o piso de especificidade; e desligar o portão dos
+ *     campos de controle. Cada uma sai com 2, nomeando quem ela quebrou.
  *
  *  ## (b) A ARMADILHA DO CRLF, E COMO ESTE HARNESS A NEUTRALIZA
  *
@@ -181,10 +194,15 @@
  *     esse piso, `mata: "a"` casaria os 51 nomes e satisfaria o portão sempre;
  *   - um `mata` declarado que NÃO falhou derruba a rodada com código 2.
  *
- *  Campos opcionais: `arquivosDeTeste` e `piso` (trocam a suíte e o piso só
- *  daquela entrada — usados pelos controles), e, só em `CONTROLES`,
- *  `esperaCategoria`, `esperaMataConfere`, `mataFantasmaDeProposito` e
- *  `alvoInexistenteDeProposito`.
+ *  🔴 **Campos que existem SÓ em `CONTROLES`, e agora isso é PORTÃO, não
+ *  promessa:** `esperaCategoria`, `esperaMataConfere`, `mataFantasmaDeProposito`,
+ *  `alvoInexistenteDeProposito`, `piso` e `arquivosDeTeste`. Uma entrada de
+ *  `MUTACOES` que traga qualquer um deles faz o processo recusar começar com
+ *  código 1. Antes disso a frase "só em CONTROLES" estava no docblock e nada
+ *  a garantia: bastava uma entrada REAL declarar `mataFantasmaDeProposito`
+ *  para pular o piso de especificidade, ou `piso`/`arquivosDeTeste` para ser
+ *  medida contra metade da suíte — as duas com **exit 0**, sem tocar no
+ *  motor. Medido por um re-revisor em 27/09.
  *
  *  Rode `node scripts/mutar.mjs <id>` sozinho pra conferir antes de integrar.
  *
@@ -305,7 +323,8 @@ function aplicarEdicoes(lf, edicoes) {
 const COERENCIA = "src/lib/coerencia.ts";
 const PAGINA = "src/app/[slug]/page.tsx";
 
-const MUTACOES = [
+// `let` por causa dos AUTOTESTES, que injetam uma entrada doente de propósito.
+let MUTACOES = [
   {
     id: "M1",
     titulo: "violacoesDoAcervo devolve [] sempre",
@@ -1126,12 +1145,163 @@ function nomesDosTestes() {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// OS AUTOTESTES — os controles das RECUSAS (código 1), que nenhum controle de
+// categoria alcança.
+//
+// 🔴 Por que existem, e é o achado da re-revisão da rodada 4b: os cinco
+// controles de categoria provam o que o harness DIZ (sobreviveu, sem alvo, sem
+// medição, `mata` que não mata). Eles não tocam os portões que fazem o harness
+// se RECUSAR a começar — e o portão novo daquela rodada, o piso de
+// especificidade do `mata`, nasceu de novo sem guarda de si mesmo. Um
+// re-revisor apagou o `if` dele e rodou `--controles`: **os cinco verdes, exit
+// 0**, e `mata: "a"` (que casa os 51 testes) voltou a passar na rodada normal,
+// também com exit 0.
+//
+// Pior: dava para burlar **sem editar o motor**. Bastava uma entrada REAL
+// declarar `mataFantasmaDeProposito: true` — campo que o docblock afirmava
+// existir "só em CONTROLES", promessa que o código não cumpria. Mesma espécie
+// do `contarOcorrencias` da rodada 3 (mecanismo prometido que não existe),
+// agora com consequência: a tabela mentindo com exit 0.
+//
+// Cada autoteste injeta UMA entrada deliberadamente doente em `MUTACOES` e
+// espera que o processo recuse começar, com o código e a frase declarados. O
+// `--controles` roda os cinco de categoria e depois estes, cada um num
+// processo filho — é a única forma de conferir um `process.exit` de dentro.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** A edição que todos os autotestes usam: a mesma de M1, que existe e aplica.
+ *  O que se mede aqui não é a mutação — é o PORTÃO que roda antes dela. */
+const EDICAO_DE_AUTOTESTE = [{
+  inicio: 591, fim: 591,
+  espera: "  return TABELA.flatMap((r) => r.achar(fichas).map((a) => ({ regra: r.regra, ...a })));",
+  novo: "  return [];",
+}];
+
+const AUTOTESTES = [
+  {
+    nome: "mata-frouxo",
+    porque: 'uma entrada com `mata: "a"`, que casa os 51 testes e provaria nada',
+    entrada: { id: "AUTO-FROUXO", titulo: "autoteste", arquivo: COERENCIA, edicoes: EDICAO_DE_AUTOTESTE, mata: "a" },
+    esperaCodigo: 1,
+    esperaTrecho: "piso de especificidade",
+  },
+  {
+    nome: "mata-fantasma",
+    porque: "uma entrada cujo `mata` não casa teste nenhum (45ª espécie)",
+    entrada: { id: "AUTO-FANTASMA", titulo: "autoteste", arquivo: COERENCIA, edicoes: EDICAO_DE_AUTOTESTE, mata: "ESTE TESTE NUNCA EXISTIU" },
+    esperaCodigo: 1,
+    esperaTrecho: "piso de especificidade",
+  },
+  {
+    nome: "campo-de-controle",
+    porque: "uma entrada REAL declarando `mataFantasmaDeProposito`, a flag que pula o portão",
+    entrada: {
+      id: "AUTO-FLAG", titulo: "autoteste", arquivo: COERENCIA, edicoes: EDICAO_DE_AUTOTESTE,
+      mata: "a", mataFantasmaDeProposito: true,
+    },
+    esperaCodigo: 1,
+    esperaTrecho: "campo de controle",
+  },
+  {
+    nome: "piso-por-entrada",
+    porque: "uma entrada REAL com `piso` e `arquivosDeTeste` próprios, medindo metade em silêncio",
+    entrada: {
+      id: "AUTO-PISO", titulo: "autoteste", arquivo: COERENCIA, edicoes: EDICAO_DE_AUTOTESTE,
+      mata: "cada uma das 13 regras dispara na quebra escrita pra ela",
+      arquivosDeTeste: ["tests/lib/coerencia.test.ts"], piso: 1,
+    },
+    esperaCodigo: 1,
+    esperaTrecho: "campo de controle",
+  },
+];
+
+/** Os campos que só fazem sentido num controle. Uma entrada de `MUTACOES` que
+ *  traga qualquer um deles está pedindo para pular um portão — e o docblock
+ *  dizia "só em CONTROLES" sem nada garantir. Agora garante. */
+const CAMPOS_SO_DE_CONTROLE = [
+  "esperaCategoria",
+  "esperaMataConfere",
+  "mataFantasmaDeProposito",
+  "alvoInexistenteDeProposito",
+  "piso",
+  "arquivosDeTeste",
+];
+
+function recusarCamposDeControle(entradas) {
+  const culpadas = [];
+  for (const m of entradas) {
+    const achados = CAMPOS_SO_DE_CONTROLE.filter((c) => Object.prototype.hasOwnProperty.call(m, c));
+    if (achados.length > 0) culpadas.push(`${m.id}: ${achados.join(", ")}`);
+  }
+  if (culpadas.length > 0) {
+    console.error("🔴 entrada de MUTACOES com campo de controle — isso pula portão:");
+    for (const linha of culpadas) console.error(`  ${linha}`);
+    console.error("Estes campos existem só em CONTROLES. Em MUTACOES eles desligam o piso de");
+    console.error("especificidade do `mata` ou trocam a suíte medida, e a rodada mente com exit 0.");
+    process.exit(1);
+  }
+}
+
+function rodarAutotestes() {
+  const esteArquivo = fileURLToPath(import.meta.url);
+  const falhas = [];
+  console.log("\nautotestes das RECUSAS (cada um num processo filho):");
+  for (const a of AUTOTESTES) {
+    let codigo = 0;
+    let saida = "";
+    try {
+      saida = execFileSync(process.execPath, [esteArquivo, `--autoteste=${a.nome}`], {
+        cwd: RAIZ, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: TIMEOUT_VITEST,
+      });
+    } catch (erro) {
+      codigo = erro?.status ?? -1;
+      saida = String(erro?.stdout ?? "") + String(erro?.stderr ?? "");
+    }
+    const codigoBate = codigo === a.esperaCodigo;
+    const trechoBate = saida.includes(a.esperaTrecho);
+    if (codigoBate && trechoBate) {
+      console.log(`  ✅ ${a.nome} — recusou com ${codigo}: ${a.porque}`);
+    } else {
+      console.log(`  🔴 ${a.nome} — ${a.porque}`);
+      falhas.push(
+        `${a.nome}: esperava código ${a.esperaCodigo} e a frase "${a.esperaTrecho}"; ` +
+          `saiu código ${codigo}${trechoBate ? "" : ' e a frase NÃO apareceu'}`,
+      );
+    }
+  }
+  return falhas;
+}
+
 function main() {
   const pedido = process.argv.slice(2);
   const modoControle = pedido.includes("--controles");
-  const ids = pedido.filter((a) => a !== "--controles");
+
+  // `--autoteste=<nome>` injeta UMA entrada doente em MUTACOES e segue o
+  // caminho normal, pra um processo pai poder conferir a RECUSA. Ver AUTOTESTES.
+  const pedidoAuto = pedido.find((a) => a.startsWith("--autoteste="));
+  let idAuto = null;
+  if (pedidoAuto) {
+    const nome = pedidoAuto.slice("--autoteste=".length);
+    const auto = AUTOTESTES.find((a) => a.nome === nome);
+    if (!auto) {
+      console.error(`autoteste desconhecido: ${nome}`);
+      process.exit(1);
+    }
+    MUTACOES = [...MUTACOES, auto.entrada];
+    idAuto = auto.entrada.id;
+  }
+
+  const ids = idAuto ? [idAuto] : pedido.filter((a) => a !== "--controles");
   const universo = modoControle ? CONTROLES : MUTACOES;
   const alvo = ids.length > 0 ? universo.filter((m) => ids.includes(m.id)) : universo;
+
+  // 🔴 Nenhuma entrada de MUTACOES pode trazer campo de controle. O docblock
+  // dizia "só em CONTROLES" e nada garantia: uma entrada real que declarasse
+  // `mataFantasmaDeProposito` pulava o piso de especificidade do `mata`, e uma
+  // com `piso`/`arquivosDeTeste` media metade da suíte — as duas com exit 0 e
+  // sem tocar no motor. Medido por um re-revisor em 27/09.
+  if (!modoControle) recusarCamposDeControle(alvo);
 
   if (ids.length > 0 && alvo.length !== ids.length) {
     const achados = new Set(alvo.map((m) => m.id));
@@ -1270,9 +1440,18 @@ function main() {
       for (const linha of controleFalhou) console.error(`  ${linha}`);
       process.exit(2);
     }
-    console.log(`\n✅ os ${alvo.length} controles saíram como declararam — o instrumento sabe dizer`);
-    console.log("   sobreviveu, sem alvo e sem medição (nos dois ramos), e sabe acusar um `mata`");
-    console.log("   que não mata. Não é um carimbador de 'morreu'.");
+
+    const autoFalhou = rodarAutotestes();
+    if (autoFalhou.length > 0) {
+      console.error("\n🔴 AUTOTESTE FALHOU — um portão de RECUSA parou de recusar:");
+      for (const linha of autoFalhou) console.error(`  ${linha}`);
+      process.exit(2);
+    }
+    console.log(`\n✅ os ${alvo.length} controles de CATEGORIA e os ${AUTOTESTES.length} autotestes de RECUSA`);
+    console.log("   saíram como declararam. O instrumento sabe dizer sobreviveu, sem alvo e");
+    console.log("   sem medição nos dois ramos, sabe acusar um `mata` que não mata, e sabe");
+    console.log("   RECUSAR começar com `mata` frouxo, `mata` fantasma ou campo de controle");
+    console.log("   numa entrada real. Não é um carimbador de morreu.");
     return;
   }
 
