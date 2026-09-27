@@ -5,11 +5,10 @@
 🔴 **ÚLTIMA PARADA: 2026-09-27, E DESTA VEZ NÃO FOI PARADA — O PC DELE DESLIGOU SOZINHO** no meio
 da passada de confirmação da Tarefa 2 (*"algo aconteceu o pc se desligou"*). O commit `d8b1f73` ficou
 gravado; o **resultado da passada morreu com a sessão** e foi **redespachado** na sessão seguinte.
-**Estamos na branch `painel-completo`**, com **2 tarefas completas** (a 2ª fechou em `914e38a`, depois de nove rodadas de conserto **no
-instrumento**) e a 3ª em execução
-(de 12), árvore limpa, **1304/1304 em 82 arquivos**, `tsc` limpo, `npm run build` exit 0 — os três
-medidos por mim em 27/09 no `914e38a`, junto com o harness inteiro (34 morreu, `--controles` exit 0
-com 6 controles e 16 autotestes). **NADA FOI AO AR** e nenhuma tarefa deste plano roda `vercel`.
+**Estamos na branch `painel-completo`**, com **2 tarefas completas e a 3ª a uma re-revisão de fechar**
+(de 12), árvore limpa, **1330/1330 em 82 arquivos**, `tsc` limpo, `npm run build` exit 0 — os três
+medidos por mim em 27/09 no `0c7053f`. No `914e38a` eu também medi o harness inteiro (34 morreu,
+`--controles` exit 0 com 6 controles e 16 autotestes). **NADA FOI AO AR** e nenhuma tarefa deste plano roda `vercel`.
 O `main` segue publicado e intacto.
 → Como retomar: o bloco **"▶ RETOMAR A RODADA DO PAINEL COMPLETO"**, logo abaixo.
 
@@ -105,7 +104,7 @@ guarda do próprio harness, na 4e; → 1304 com os seis que a 4f acrescentou a e
 |---|---|
 | **1 — o registro de campos, `aplicarCampo` com caminho/tipo/"não sei"** | ✅ completa (`dfeb005..50f71bf`), 1 rodada de fix, re-revisão limpa |
 | **2 — as 13 regras de coerência viram porta de produção** | ✅ **completa** (`7c4ddf9..914e38a`), **10 rodadas de fix**, e as sete últimas foram no PRÓPRIO INSTRUMENTO, depois de **dezesseis `Critical` nele**. A sétima passada não achou nada da classe que reabriria; ver as seções 4 a 4h. 🔴 **Ela ainda não tem consumidor de produção: a promessa dela só se cumpre na Tarefa 3** |
-| **3 — a porta de escrita aceita todo campo e passa pela coerência** | 🟡 **em execução** — despachada em 27/09 com o brief já auditado (sete defeitos achados, rulings T3-R1 e T3-R2) |
+| **3 — a porta de escrita aceita todo campo e passa pela coerência** | 🟡 **implementada e revisada** (`914e38a..0c7053f`): 1 `Critical` (a porta recusava RENOMEAR o lugar), 3 `Important`, 4 `Minor` — onda de fix aplicada e medida; falta a re-revisão dela. Ver a seção **5b** |
 | 4 — `oculto`: esconder sem apagar | ⬜ |
 | 5 — a tela do lugar mostra a ficha inteira | ⬜ |
 | 6 — um editor por espécie de campo | ⬜ |
@@ -535,6 +534,92 @@ O ledger da execução está em `.superpowers/sdd/2026-09-26-painel-completo/pro
 **git-ignored** (`.gitignore:57`), some num `git clean -fdx`. Se existir, ali estão os briefs por
 tarefa, os relatórios dos implementadores e os pacotes de diff. Se não existir, as rulings estão no
 arquivo versionado do item 2 da seção 2, e o resto se reconstrói do `git log`.
+
+### 5b. 🟡 A TAREFA 3 — A PORTA DE ESCRITA, E O `Critical` ERA A PORTA TRANCANDO O DONO
+
+**O que ela fez** (`08b1632`, `8f80f7e`): a rota `PATCH /api/admin/ficha` passou a aceitar **qualquer
+campo do registro**, a ter um `"não sei"` que **remove a chave**, e — o ponto da tarefa — a ser o
+**consumidor de produção** do módulo de coerência, que existia sem consumidor nenhum. Dois arquivos,
++528 linhas, 21 casos novos.
+
+**O que o implementador achou medindo, e que o brief não previa:** todos os 400 daquela rota
+devolviam **corpo vazio**, então **as 7 frases do registro de campos morriam na porta**. Ele mediu,
+consertou (o 400 devolve a frase; `ZodError` não vaza) e provou os dois lados por mutação.
+**E ele achou uma mutação sobrevivente no próprio trabalho:** um caso que provava *"valor E naoSei
+juntos"* usando um campo **obrigatório** — a recusa vinha do vizinho, não da guarda que o caso dizia
+guardar. Trocou o campo por um opcional e a mutação morreu.
+
+🔴 **O `Critical` da revisão, e é o pior tipo que este app pode ter: a porta RECUSAVA RENOMEAR O
+LUGAR.** A identidade de uma violação no diff era `[regra, slug, frase]`, e o nome do lugar aparece na
+frase das **treze** regras (é o `nomeDe(f)` do módulo). Então, numa ficha que já tinha **qualquer**
+violação preexistente, renomear mudava a frase, a identidade deixava de casar, e o diff classificava
+como **introduzida** uma violação que **já estava no acervo** — o oposto do ruling T3-R1. Medido com
+requisições de verdade: chip velho + renomear → **409 falando de PREÇO**; `limiar_mm` zerado +
+renomear → **409 falando de CHUVA**; voz duplicada acusada no **outro** lugar + renomear este → **409
+por violação de um lugar que ele não estava editando**. E `trajeto.waypoints[].nome` é **obrigatório**:
+sem `"não sei"`, sem saída pelo campo. Um typo no nome do lugar é das coisas mais prováveis de se
+querer consertar do celular.
+
+**O conserto:** a identidade passou a ser o **par `(regra, slug)`**, e o portão compara a **CONTAGEM**
+de cada par — nunca o conteúdo das frases.
+
+- **Por que a contagem** e não o conjunto: três regras podem acusar o mesmo par **mais de uma vez**
+  (um achado por número zerado da janela, um por campo de prosa copiado, um por dia malformado). Com
+  conjuntos, quem já tinha uma passaria a ter duas **em silêncio**.
+- 🔴 **O que isto deixa passar, DE PROPÓSITO, e está escrito no código e em teste:** gravação que
+  mantém a contagem trocando o valor errado por outro valor errado **passa**. Se o chip já dizia R$ 1
+  numa ficha que cobra R$ 5, escrever R$ 12 no valor sai com 200 e o documento continua incoerente
+  **como já estava**. É a leitura deliberada de T3-R1 — ele não introduziu nada, **herdou** —, e quem
+  cobra essa dívida são os 15 guardas de coerência do acervo, não esta porta.
+
+🔴 **A identidade não tinha prova em NENHUM dos dois sentidos** (o re-revisor mediu: tirar a `frase`
+**ou** tirar o `slug` deixava a suíte inteira verde). Nasceram cinco casos, e a matriz mostra que cada
+um morre na mutação **dele**, com o controle intacto verde:
+
+| mutação | quem fica vermelho |
+|---|---|
+| a `frase` volta para a identidade | os **dois** casos de renomear + o do falso negativo deliberado |
+| compara CONJUNTO em vez de CONTAGEM | a segunda violação da mesma regra no mesmo lugar |
+| a identidade perde o `slug` | a violação que **muda de lugar** |
+| `trazCampo` perde o `\|\| "naoSei" in corpo` | o corpo sem `campo` |
+| o 400 volta a devolver qualquer `Error` | o corpo vazio do zod |
+
+🔴 **E o caso do `slug` só existe porque uma mutação sobreviveu no MEU conserto** — na primeira
+medição, tirar o `slug` não derrubava teste nenhum. Construí o caso e ele custou duas medições: **a
+ordem do acervo é a do último gravado**, e a regra acusa todos menos o primeiro do grupo, então
+gravação no último lugar sempre acusa ele mesmo e a violação nunca muda de lugar. A premissa da ordem
+ficou **explícita** no caso, imprimindo a ordem medida — em vez de o caso morrer misterioso no dia em
+que ela mudar.
+
+**Os outros três:** o caso do `naoSei` + `versaoId` passava **pelo motivo errado** (a carga levava
+`campo`, e o buraco real era `{slug, naoSei, versaoId}` **sem** campo, que saía 200 e **voltava a
+versão antiga** em silêncio); o caso que teve a carga trocada ganhou a **premissa** por extenso (ele
+só atravessa porque o preço da carga bate com o chip); e o 400 **vazava mensagem de motor** para o
+celular dele — um documento corrompido devolvia `Unexpected token 'i'…` em inglês, com o conteúdo
+bruto ecoado. A régua agora é a **classe** do erro.
+
+🔴 **E A CONTA DAS PALAVRAS DE TELA, MEDIDA — o número que eu ia dar a ele estava errado.** Comparando
+arquivo por arquivo com `3eb8a0f`: antes da rodada havia **15** marcadores `PENDENTE` em 8 arquivos
+(não 12), e as novas são **26** (7 da Tarefa 1, 19 da Tarefa 2), não 27. Cada marcador precede **uma**
+frase — conferido até dentro de ternária, onde os dois lados têm marcador próprio.
+🔴 **E o que mudou de verdade com a Tarefa 3: essas 26 frases até agora NÃO CHEGAVAM A NINGUÉM.** As
+19 da coerência não tinham consumidor, e as 7 do registro eram jogadas fora pelo corpo vazio do 400.
+A partir de `08b1632` elas saem no corpo do 400 e do 409 — **aparecem no celular dele**. Nenhuma foi
+lida por ele, e nada está no ar.
+
+🔵 **UMA DECISÃO DE PRODUTO QUE É DELE, achada por medição e registrada aqui:** para trocar o preço de
+um lugar de R$ 5 para R$ 12 a porta exige **três gravações** (o chip e o valor não podem divergir,
+então escrever qualquer um dos dois primeiro dá recusa). O caminho existe todo pelo celular — `"não
+sei"` no chip → preço novo → chip novo — e está provado em teste. **Mas a frase da recusa não diz essa
+ordem.** Três saídas: a frase ganha a instrução; a tela oferece o `"não sei"` ali mesmo; ou a porta
+passa a aceitar dois campos numa gravação. **A mesma fricção existe na hora de FECHAR** (prosa × campo
+de horário), e ali o campo do meio é **obrigatório** — ele teria de publicar uma frase descartável no
+ar entre a segunda e a terceira gravação. As duas devem sair na **mesma** decisão de redação.
+
+**Minors diferidos desta tarefa:** o acervo é montado e parseado **duas vezes** por gravação
+(irrelevante com 3 fichas, vira custo quando T11/T12 abrirem "criar lugar"); e `coerencia.ts:529` tem
+um ramo **inalcançável em produção** (a 52ª espécie) — o schema garante que `dias` nunca traz dia
+inventado, e a rota sempre parseia, então aquela frase vive só no teste que constrói `Ficha` por cast.
 
 ### 5. As três coisas que a rodada já deve a ele
 
