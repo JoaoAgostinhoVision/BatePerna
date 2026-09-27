@@ -105,10 +105,20 @@
  *     **cinco** controles verdes e `mata: "a"` voltava a passar. Daí os
  *     autotestes, e daí o portão dos campos de controle.
  *
+ *     🔴 E a recursão PARA, porque a última camada não é mecanismo: é um
+ *     **inventário cravado à mão** (`CONTROLES_ESPERADOS`,
+ *     `AUTOTESTES_ESPERADOS`) que pina o **par** nome + o que cada guarda
+ *     AFIRMA. Ele precisou disso: a primeira versão guardava só os nomes, e
+ *     cinco clones que mantinham os nomes afirmando outra coisa passaram
+ *     verdes. Mexeu em controle ou autoteste? Mexa na lista, à mão — a
+ *     fricção é o ponto.
+ *
  *     As sabotagens hoje cobertas, todas medidas: colapsar "sem medição" em
  *     "morreu"; forçar `mataConfere`; baixar o piso e cortar a lista pela
- *     metade; apagar o piso de especificidade; e desligar o portão dos
- *     campos de controle. Cada uma sai com 2, nomeando quem ela quebrou.
+ *     metade; apagar o piso de especificidade; desligar o portão dos campos
+ *     de controle; apagar ou renomear um autoteste; trocar a substância de um
+ *     autoteste mantendo o nome; e uma entrada real **sem** `mata`. Cada uma
+ *     sai com 1 ou 2, nomeando quem ela quebrou.
  *
  *  ## (b) A ARMADILHA DO CRLF, E COMO ESTE HARNESS A NEUTRALIZA
  *
@@ -1145,6 +1155,107 @@ function nomesDosTestes() {
   }
 }
 
+// As MARCAS das recusas. Elas existem para o `esperaTrecho` dos AUTOTESTES nao
+// depender da PROSA da mensagem: um re-revisor mediu que a frase "piso de
+// especificidade" aparece, partida pela quebra de linha, DENTRO da mensagem do
+// outro portao -- um `console.error` reembrulhado e os dois autotestes deixavam
+// de discriminar. Marca e codigo, nao texto.
+const MARCA_ESPECIFICIDADE = "[PORTAO:ESPECIFICIDADE]";
+const MARCA_CAMPOS = "[PORTAO:CAMPOS-DE-CONTROLE]";
+const MARCA_SEM_MATA = "[PORTAO:SEM-MATA]";
+const MARCA_INVENTARIO = "[PORTAO:INVENTARIO]";
+
+// ═══════════════════════════════════════════════════════════════════════════
+// O INVENTÁRIO CRAVADO À MÃO — e é AQUI que a recursão para.
+//
+// 🔴 A quinta sabotagem, medida por um re-revisor em 27/09: os autotestes eram
+// um **enumerador sem controle de não-vacuidade**. Nada conferia quantos são,
+// quais são, nem que fossem distintos — e o banner de sucesso imprimia
+// `AUTOTESTES.length`, que vem da PRÓPRIA lista, então ele não enxerga o que
+// encolheu. Trocando os quatro autotestes por quatro CLONES do mesmo e
+// apagando o piso de especificidade, `--controles` saiu **verde, exit 0**,
+// ainda dizendo "4 autotestes", e `mata: "a"` voltou a passar. É a 44ª espécie
+// do catálogo — guarda cego ao que sumiu — aplicada aos próprios guardas.
+//
+// O padrão das últimas três rodadas, escrito por extenso porque ele é o
+// aprendizado e não o defeito:
+//
+//   4a  o portão nasceu sem controle           → nasceram os controles
+//   4b  o portão NOVO nasceu sem controle      → nasceram os autotestes
+//   4c  o CONTROLE novo nasceu sem inventário  → nasceu este arquivo de listas
+//
+// Cada rodada resolveu o caso e criou a camada seguinte sem guarda. Uma quarta
+// camada de mecanismo repetiria isso para sempre. **A recursão só para quando
+// a última camada é um DADO que uma pessoa lê**, e não um mecanismo que se
+// audita — o mesmo idioma que `tests/lib/coerencia.test.ts:182` já usa neste
+// projeto: *"o número é cravado à mão, como todo número deste projeto"*.
+//
+// Mexeu em controle ou autoteste? Mexa aqui também, à mão. É para doer um
+// pouco: é essa fricção que faz alguém olhar.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** 🔴 Nome NÃO basta, e eu descobri isso testando o meu próprio conserto: a
+ *  primeira versão destas listas guardava só os nomes, e eu troquei os cinco
+ *  autotestes por cinco CLONES que mantinham os nomes e afirmavam outra coisa
+ *  — passou verde, exit 0. Então o que está cravado aqui é o PAR: o nome e o
+ *  que aquele guarda tem de AFIRMAR. Trocar a substância mantendo o nome bate
+ *  aqui; e trocar o nome também. */
+const CONTROLES_ESPERADOS = {
+  "CTRL-SOBREVIVE": "sobreviveu",
+  "CTRL-SEM-ALVO": "sem alvo",
+  "CTRL-SEM-MEDICAO": "sem medição",
+  "CTRL-PISO-BAIXO": "sem medição",
+  "CTRL-MATA-ERRADO": "morreu",
+};
+
+const AUTOTESTES_ESPERADOS = {
+  "mata-frouxo": MARCA_ESPECIFICIDADE,
+  "mata-fantasma": MARCA_ESPECIFICIDADE,
+  "mata-ausente": MARCA_SEM_MATA,
+  "campo-de-controle": MARCA_CAMPOS,
+  "piso-por-entrada": MARCA_CAMPOS,
+};
+
+/** Confere um enumerador contra a lista escrita à mão: mesmos nomes, mesma
+ *  quantidade, sem repetido. Não usa `length` do próprio array para nada —
+ *  foi exatamente assim que a quinta sabotagem passou. */
+function conferirInventario(rotulo, reais, esperados) {
+  const nomesReais = reais.map((r) => r.nome);
+  const nomesEsperados = Object.keys(esperados);
+  const faltando = nomesEsperados.filter((n) => !nomesReais.includes(n));
+  const sobrando = nomesReais.filter((n) => !nomesEsperados.includes(n));
+  const repetidos = nomesReais.filter((n, i) => nomesReais.indexOf(n) !== i);
+  const trocados = reais
+    .filter((r) => nomesEsperados.includes(r.nome) && r.afirma !== esperados[r.nome])
+    .map((r) => `${r.nome} afirma ${JSON.stringify(r.afirma)}, e a lista diz ${JSON.stringify(esperados[r.nome])}`);
+  if (faltando.length === 0 && sobrando.length === 0 && repetidos.length === 0 && trocados.length === 0) return;
+
+  console.error(`${MARCA_INVENTARIO} o inventário de ${rotulo} não bate com a lista cravada à mão:`);
+  if (faltando.length > 0) console.error(`  sumiram: ${faltando.join(", ")}`);
+  if (sobrando.length > 0) console.error(`  apareceram sem estar na lista: ${sobrando.join(", ")}`);
+  if (repetidos.length > 0) console.error(`  repetidos: ${[...new Set(repetidos)].join(", ")}`);
+  for (const linha of trocados) console.error(`  trocaram de substância: ${linha}`);
+  console.error("  Se a mudança é deliberada, atualize a lista à mão no topo do arquivo.");
+  process.exit(1);
+}
+
+/** 🔴 O escape de DADO, e o mais plausível por acidente de todos: uma entrada
+ *  de `MUTACOES` SEM o campo `mata` pula os DOIS portões do `mata` de uma vez
+ *  (`mutacao.mata == null` é `true` para `undefined`, tanto em `rodarUma`
+ *  quanto no piso de especificidade), e a rodada sai com 0 provando nada sobre
+ *  teste nenhum. `CAMPOS_SO_DE_CONTROLE` não alcança isto: ela é lista negra
+ *  de campo a MAIS, e o que falta aqui é o campo OBRIGATÓRIO. Quem acrescentar
+ *  a 35ª entrada e esquecer o `mata` bate aqui. */
+function recusarEntradasSemMata(entradas) {
+  const semMata = entradas.filter((m) => m.mata == null).map((m) => m.id);
+  if (semMata.length > 0) {
+    console.error(`${MARCA_SEM_MATA} entrada de MUTACOES sem \`mata\`: ${semMata.join(", ")}`);
+    console.error("Sem `mata` a entrada pula o piso de especificidade E a conferência de quem");
+    console.error("morreu — ela mede, mas não prova nada sobre teste nenhum. Declare o teste.");
+    process.exit(1);
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // OS AUTOTESTES — os controles das RECUSAS (código 1), que nenhum controle de
 // categoria alcança.
@@ -1184,14 +1295,21 @@ const AUTOTESTES = [
     porque: 'uma entrada com `mata: "a"`, que casa os 51 testes e provaria nada',
     entrada: { id: "AUTO-FROUXO", titulo: "autoteste", arquivo: COERENCIA, edicoes: EDICAO_DE_AUTOTESTE, mata: "a" },
     esperaCodigo: 1,
-    esperaTrecho: "piso de especificidade",
+    esperaTrecho: MARCA_ESPECIFICIDADE,
   },
   {
     nome: "mata-fantasma",
     porque: "uma entrada cujo `mata` não casa teste nenhum (45ª espécie)",
     entrada: { id: "AUTO-FANTASMA", titulo: "autoteste", arquivo: COERENCIA, edicoes: EDICAO_DE_AUTOTESTE, mata: "ESTE TESTE NUNCA EXISTIU" },
     esperaCodigo: 1,
-    esperaTrecho: "piso de especificidade",
+    esperaTrecho: MARCA_ESPECIFICIDADE,
+  },
+  {
+    nome: "mata-ausente",
+    porque: "uma entrada sem o campo `mata`, que pula os DOIS portões do `mata` de uma vez",
+    entrada: { id: "AUTO-SEM-MATA", titulo: "autoteste", arquivo: COERENCIA, edicoes: EDICAO_DE_AUTOTESTE },
+    esperaCodigo: 1,
+    esperaTrecho: MARCA_SEM_MATA,
   },
   {
     nome: "campo-de-controle",
@@ -1201,7 +1319,7 @@ const AUTOTESTES = [
       mata: "a", mataFantasmaDeProposito: true,
     },
     esperaCodigo: 1,
-    esperaTrecho: "campo de controle",
+    esperaTrecho: MARCA_CAMPOS,
   },
   {
     nome: "piso-por-entrada",
@@ -1212,7 +1330,7 @@ const AUTOTESTES = [
       arquivosDeTeste: ["tests/lib/coerencia.test.ts"], piso: 1,
     },
     esperaCodigo: 1,
-    esperaTrecho: "campo de controle",
+    esperaTrecho: MARCA_CAMPOS,
   },
 ];
 
@@ -1235,7 +1353,7 @@ function recusarCamposDeControle(entradas) {
     if (achados.length > 0) culpadas.push(`${m.id}: ${achados.join(", ")}`);
   }
   if (culpadas.length > 0) {
-    console.error("🔴 entrada de MUTACOES com campo de controle — isso pula portão:");
+    console.error(`${MARCA_CAMPOS} 🔴 entrada de MUTACOES com campo de controle — isso pula portão:`);
     for (const linha of culpadas) console.error(`  ${linha}`);
     console.error("Estes campos existem só em CONTROLES. Em MUTACOES eles desligam o piso de");
     console.error("especificidade do `mata` ou trocam a suíte medida, e a rodada mente com exit 0.");
@@ -1301,7 +1419,17 @@ function main() {
   // `mataFantasmaDeProposito` pulava o piso de especificidade do `mata`, e uma
   // com `piso`/`arquivosDeTeste` media metade da suíte — as duas com exit 0 e
   // sem tocar no motor. Medido por um re-revisor em 27/09.
-  if (!modoControle) recusarCamposDeControle(alvo);
+  // 🔴 O INVENTÁRIO, antes de tudo: os controles e os autotestes conferidos
+  // contra as listas cravadas à mão. É o que a quinta sabotagem derrubou —
+  // quatro clones do mesmo autoteste passavam, e o banner ainda dizia "4".
+  // Roda SEMPRE, não só no modo controle: a lista é invariante do arquivo.
+  conferirInventario("CONTROLES", CONTROLES.map((c) => ({ nome: c.id, afirma: c.esperaCategoria })), CONTROLES_ESPERADOS);
+  conferirInventario("AUTOTESTES", AUTOTESTES.map((a) => ({ nome: a.nome, afirma: a.esperaTrecho })), AUTOTESTES_ESPERADOS);
+
+  if (!modoControle) {
+    recusarCamposDeControle(alvo);
+    recusarEntradasSemMata(alvo);
+  }
 
   if (ids.length > 0 && alvo.length !== ids.length) {
     const achados = new Set(alvo.map((m) => m.id));
@@ -1366,7 +1494,7 @@ function main() {
     }
   }
   if (frouxos.length > 0) {
-    console.error("🔴 `mata` sem piso de especificidade — a tabela não prova o que diz provar:");
+    console.error(`${MARCA_ESPECIFICIDADE} 🔴 \`mata\` sem piso de especificidade — a tabela não prova o que diz provar:`);
     for (const linha of frouxos) console.error(`  ${linha}`);
     process.exit(1);
   }
@@ -1447,11 +1575,15 @@ function main() {
       for (const linha of autoFalhou) console.error(`  ${linha}`);
       process.exit(2);
     }
-    console.log(`\n✅ os ${alvo.length} controles de CATEGORIA e os ${AUTOTESTES.length} autotestes de RECUSA`);
-    console.log("   saíram como declararam. O instrumento sabe dizer sobreviveu, sem alvo e");
-    console.log("   sem medição nos dois ramos, sabe acusar um `mata` que não mata, e sabe");
-    console.log("   RECUSAR começar com `mata` frouxo, `mata` fantasma ou campo de controle");
-    console.log("   numa entrada real. Não é um carimbador de morreu.");
+    // Os números vêm das listas CRAVADAS À MÃO, nunca do `length` dos arrays
+    // que acabaram de rodar: foi exatamente assim que a quinta sabotagem
+    // imprimiu "4 autotestes" rodando quatro clones do mesmo.
+    console.log(`\n✅ os ${Object.keys(CONTROLES_ESPERADOS).length} controles de CATEGORIA e os ${Object.keys(AUTOTESTES_ESPERADOS).length} autotestes de RECUSA`);
+    console.log("   saíram como declararam, e o inventário dos dois bate com a lista escrita");
+    console.log("   à mão. O instrumento sabe dizer sobreviveu, sem alvo e sem medição nos");
+    console.log("   dois ramos, sabe acusar um `mata` que não mata, e sabe RECUSAR começar");
+    console.log("   com `mata` frouxo, fantasma ou AUSENTE, e com campo de controle numa");
+    console.log("   entrada real. Não é um carimbador de morreu.");
     return;
   }
 
