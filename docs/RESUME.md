@@ -94,7 +94,7 @@ arquivos**.
 | tarefa | estado |
 |---|---|
 | **1 — o registro de campos, `aplicarCampo` com caminho/tipo/"não sei"** | ✅ completa (`dfeb005..50f71bf`), 1 rodada de fix, re-revisão limpa |
-| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 5 rodadas de fix aplicadas (`7c4ddf9..a698d43`); as rodadas 4 e 4b endureceram o próprio instrumento depois de cinco `Critical` **nele** — falta só a re-revisão escopada da 4b, ver as seções 4, 4b e 4c |
+| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 6 rodadas de fix aplicadas (`7c4ddf9..f41289d`); as rodadas 4, 4b e 4c endureceram o próprio instrumento depois de **sete `Critical` nele** — falta só a última re-revisão, ver as seções 4 a 4d |
 | 3 — a porta de escrita aceita todo campo e passa pela coerência | ⬜ próxima |
 | 4 — `oculto`: esconder sem apagar | ⬜ |
 | 5 — a tela do lugar mostra a ficha inteira | ⬜ |
@@ -203,12 +203,47 @@ teste, porque as duas metades moravam num `it` só. Agora cada mutação declara
 `mata confere` = sim nas 34; `--controles` → exit 0 com os cinco; **1289/1289 em 81 arquivos**
 (eram 1287 — os dois `it` partidos somaram dois); `tsc` exit 0; `npm run build` exit 0.
 
-🟡 **O que falta para FECHAR a Tarefa 2:** a re-revisão escopada da rodada 4b (despachada, com o
-pedido explícito de achar uma **quarta** sabotagem que passe pelos cinco controles, e de varrer o
-docblock atrás de frase falsa pela quarta rodada seguida). Fechando limpa — ou só com Minor, que vão
-para a triagem da revisão final da branch —, a Tarefa 2 está completa e o próximo passo é a
-**Tarefa 3** (a porta de escrita), cujo brief **já foi auditado por mim**: sete defeitos achados,
-dois deles rulings (T3-R1 e T3-R2), em `task-3-brief.md` e no fim do `progress.md`.
+### 4d. 🔴 A RODADA 4c/5 — A QUARTA SABOTAGEM NÃO PRECISAVA EDITAR O MOTOR (`f41289d`)
+
+O padrão se repetiu **mudando de lugar**: os dois portões da rodada 4 ganharam controle, e o portão
+novo da 4b — **o piso de especificidade do `mata`** — nasceu de novo sem guarda de si mesmo. Apagar
+o `if` dele deixava os **cinco** controles verdes, exit 0, e `mata: "a"` (que casa os 51 testes)
+voltava a passar. Razão estrutural: todos os controles têm `mata: null` ou a flag de fantasma, então
+`--controles` avaliava **zero** nomes naquele portão.
+
+🔴 **E o agravante que muda a regra: dava para burlar SEM EDITAR O MOTOR.** O docblock afirmava que
+`mataFantasmaDeProposito`, `piso` e `arquivosDeTeste` existiam *"só em `CONTROLES`"* — e nada
+garantia. Bastava uma entrada **real** declarar dois campos para pular o portão, ou ser medida
+contra 33 dos 51 testes, **as duas com exit 0**.
+
+Os dois consertos, e o segundo fecha a **classe**, não o caso:
+
+1. **`AUTOTESTES`** — quatro controles das **recusas** (código 1), que controle de categoria nenhum
+   alcança. Cada um injeta uma entrada deliberadamente doente em `MUTACOES` e roda num **processo
+   filho**, porque um `process.exit` só se confere de fora.
+2. **A frase do docblock virou portão:** entrada de `MUTACOES` com qualquer campo de controle faz o
+   processo recusar começar, com código 1. É por **lista de campos**, não por caso.
+
+Provado vermelho: apagar o piso de especificidade derruba `mata-frouxo` (saindo *"código 0"*,
+exatamente o que o re-revisor mediu) e `mata-fantasma`; desligar o portão dos campos derruba
+`campo-de-controle` e `piso-por-entrada`.
+
+🟢 **E esta foi a primeira rodada em quatro sem nenhuma frase falsa** — as dez afirmações do commit
+anterior foram medidas uma a uma pelo re-revisor, e as dez conferem.
+
+**Limite honesto registrado:** o piso **não** cobre TROCA — apagar um teste e acrescentar outro
+mantém 51. Dos 51, **29** são nomeados por algum `mata` (aí o piso de especificidade acusa) e **22**
+não são nomeados por ninguém.
+
+**Medido:** 34 morreu, 0 nas quatro categorias de falha, exit 0, `mata confere` = sim nas 34;
+`--controles` exit 0 com os **5 controles e os 4 autotestes**; 1289/1289 em 81 arquivos; `tsc` exit
+0; `npm run build` exit 0.
+
+🟡 **A ÚLTIMA re-revisão está despachada, com uma pergunta só: a recursão fechou, ou existe uma
+quinta sabotagem?** Sobrando só Minor, a Tarefa 2 fecha e eles vão para a triagem da revisão final
+da branch, junto com os onze que já estão lá. O próximo passo é a **Tarefa 3** (a porta de escrita),
+cujo brief **já foi auditado por mim**: sete defeitos achados, dois deles rulings (T3-R1 e T3-R2),
+em `task-3-brief.md` e no fim do `progress.md`.
 
 🔵 **Uma recomendação registrada que é DELE, e que eu deixei fora do escopo de propósito:** medir
 **cobertura de ramo** nos testes (`@vitest/coverage-v8` com limiar) seria guarda automático contra a
