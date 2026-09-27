@@ -57,24 +57,49 @@
  *      node scripts/mutar.mjs M12 N3 B3b      # só estas
  *      node scripts/mutar.mjs --controles     # o teste do INSTRUMENTO:
  *                                             #   5 controles de CATEGORIA
- *                                             #   + 4 autotestes de RECUSA
+ *                                             #   + 10 autotestes de RECUSA
+ *                                             #   + 2 autotestes de VEREDITO
+ *      node scripts/mutar.mjs --inventario    # as TRÊS listas reais em JSON,
+ *                                             # sem mutar nada. É por aqui que
+ *                                             # tests/lib/harness-de-mutacao
+ *                                             # .test.ts confere o instrumento.
+ *
+ *  🔴 As contagens acima são as únicas do arquivo escritas em PROSA, e elas já
+ *  nasceram falsas uma vez: a rodada 4d acrescentou o quinto autoteste e deixou
+ *  dois lugares dizendo "quatro" — a quinta frase falsa em cinco rodadas,
+ *  sempre na parte que ninguém re-lê, e esta na única seção que alguém lê ANTES
+ *  de rodar o comando. Quem for mexer nas listas: o número de verdade sai de
+ *  `node scripts/mutar.mjs --inventario`, e o guarda dele é
+ *  `tests/lib/harness-de-mutacao.test.ts`, que roda em `npm test`.
  *
  *  Roda de qualquer pasta: a raiz sai do lugar deste arquivo, não do `cwd`.
  *
  *   - **0** — na rodada normal: todas morreram e todo `mata` declarado
- *     realmente falhou. No `--controles`: os cinco saíram como declararam.
- *   - **1** — recusa de COMEÇAR ou de terminar: árvore suja nos arquivos
- *     envolvidos (antes ou depois); arquivo de teste que não existe mais; a
- *     suíte de base já vermelha; a base executando menos testes que o piso
- *     (arquivo renomeado ou `describe.skip`); um `mata` frouxo (nome que casa
- *     zero ou mais de um teste real); ou uma entrada de `MUTACOES` trazendo
- *     campo que só existe em `CONTROLES`.
- *   - **2** — achado: sobreviveu / sem alvo / sem diff / sem medição, ou um
- *     `mata` declarado que não falhou, ou um controle fora do que declarou.
+ *     realmente falhou. No `--controles`: os controles E os autotestes saíram
+ *     como declararam, e o inventário das três listas bate.
+ *   - **1** — recusa de COMEÇAR ou de terminar. A lista é aberta de propósito,
+ *     porque ela cresceu em cinco rodadas seguidas, e hoje tem: árvore suja
+ *     nos arquivos envolvidos (antes ou depois); arquivo de teste que não
+ *     existe mais; a suíte de base já vermelha; a base executando menos testes
+ *     que o piso (arquivo renomeado ou `describe.skip`); um `mata` frouxo (nome
+ *     que casa zero ou mais de um teste real); uma entrada de `MUTACOES`
+ *     trazendo campo que só existe em `CONTROLES`, **própria ou herdada do
+ *     protótipo**; uma entrada de `MUTACOES` **sem `mata`, ou com `mata: []`**;
+ *     e **qualquer uma das três listas fora do inventário cravado à mão**.
+ *     Cada recusa imprime uma MARCA (`[PORTAO:...]`), e é a marca — nunca a
+ *     prosa — que os autotestes casam.
+ *   - **2** — achado, e as duas sentenças também imprimem marca
+ *     (`[VEREDITO:...]`): sobreviveu / sem alvo / sem diff / sem medição, ou um
+ *     `mata` declarado que não falhou, ou um controle fora do que declarou, ou
+ *     um autoteste que parou de recusar.
  *
  *  🔴 O `--controles` PRECISA poder ficar verde, e por isso ele não aplica a
- *  regra geral: lá "sobreviveu" e "sem medição" são o resultado CERTO. Um
- *  guarda que nunca fica verde não é guarda, é ruído que se aprende a ignorar.
+ *  regra geral: lá "sobreviveu", "sem alvo" e "sem medição" são o resultado
+ *  CERTO. Um guarda que nunca fica verde não é guarda, é ruído que se aprende a
+ *  ignorar. 🔴 Mas o preço disso ficou escondido quatro rodadas: o modo
+ *  controle dá `return` ANTES do veredito, então ele exercita o
+ *  CLASSIFICADOR e nunca a SENTENÇA. É a terceira família de autotestes
+ *  (`esperaCodigo: 2`) que cobre isso, e ela nasceu na rodada 4e.
  *
  *  ## (a2) O QUE MAIS O HARNESS SE RECUSA A DEIXAR PASSAR EM SILÊNCIO
  *
@@ -90,11 +115,14 @@
  *   - **vermelho sem teste vermelho.** `success: false` com zero falhas
  *     nomeadas é erro fora de teste, e vira "sem medição", não "morreu".
  *   - **`mata` que não mata, e `mata` frouxo.** Ver (c).
- *   - **o próprio instrumento, em DOIS níveis.**
+ *   - **o próprio instrumento, em QUATRO níveis.**
  *     `node scripts/mutar.mjs --controles` roda **cinco controles de
- *     CATEGORIA** (um por ramo do que o harness DIZ) e depois **quatro
- *     autotestes de RECUSA**, cada um num processo filho, porque um
- *     `process.exit` só se confere de fora.
+ *     CATEGORIA** (um por ramo do que o harness DIZ), depois os **autotestes
+ *     de RECUSA** (código 1) e os de **VEREDITO** (código 2), cada um num
+ *     processo filho, porque um `process.exit` só se confere de fora. O quarto
+ *     nível é o **inventário** das três listas contra as listas cravadas à
+ *     mão — e o quinto, que é o único que não mora aqui, é
+ *     `tests/lib/harness-de-mutacao.test.ts`, que roda em `npm test`.
  *
  *     🔴 A regra que os criou: **guarda sem controle é guarda que se pode
  *     desligar em silêncio.** Ela precisou de duas rodadas para ficar de pé.
@@ -219,8 +247,11 @@
  *
  *  ## Por que este arquivo é `.mjs` e não `.ts`
  *
- *  `tsconfig.json` só inclui `**\/*.ts` e `**\/*.tsx` — um `.mjs` nunca entra
- *  em `npx tsc --noEmit`. E o `next build` só compila o que está no grafo de
+ *  O `include` do `tsconfig.json` tem quatro padrões (`next-env.d.ts`,
+ *  `**\/*.ts`, `**\/*.tsx` e `.next/types/**\/*.ts`) e nenhum deles alcança um
+ *  `.mjs` — este arquivo nunca entra em `npx tsc --noEmit`. (A redação anterior
+ *  dizia "só inclui `**\/*.ts` e `**\/*.tsx`", que é falso no meio e verdadeiro
+ *  na conclusão; medido em 27/09.) E o `next build` só compila o que está no grafo de
  *  módulos importado pelas rotas; nada em `src/` importa este arquivo. Os
  *  dois são medidos ao fim de uma rodada (ver `task-2-report.md`) exatamente
  *  para prová-lo, não só para presumir.
@@ -927,7 +958,7 @@ const PISO_DE_TESTES = 51;
 // silêncio.
 // ═══════════════════════════════════════════════════════════════════════════
 
-const CONTROLES = [
+let CONTROLES = [
   {
     id: "CTRL-SOBREVIVE",
     titulo: "CONTROLE: troca real no arquivo, semanticamente NULA",
@@ -1113,7 +1144,12 @@ function rodarUma(mutacao) {
     // uma coisa; "morreu no teste desenhado pra ela" é outra, e é a segunda
     // que trava a 45ª espécie do catálogo (nome de teste fantasma na tabela).
     const nomes = mutacao.mata == null ? null : (Array.isArray(mutacao.mata) ? mutacao.mata : [mutacao.mata]);
-    const mataConfere = nomes === null ? null : nomes.every((n) => r.falhas.some((f) => f.includes(n)));
+    // 🔴 `nomes.length > 0` antes do `every`: `[].every(...)` é `true` por
+    // vacuidade, e com isso `mata: []` imprimia "mata confere: sim" provando
+    // nada. O portão de cima já recusa a entrada; este cinto existe porque a
+    // rodada 4d mostrou que DUAS portas em série caem juntas quando as duas
+    // confiam na mesma leitura (47ª espécie).
+    const mataConfere = nomes === null ? null : nomes.length > 0 && nomes.every((n) => r.falhas.some((f) => f.includes(n)));
     return { ...base, categoria: "morreu", numstat, teste: r.falhas[0] ?? "", falhas: r.falhas, mataConfere };
   } finally {
     restaurarTudo();
@@ -1164,6 +1200,15 @@ const MARCA_ESPECIFICIDADE = "[PORTAO:ESPECIFICIDADE]";
 const MARCA_CAMPOS = "[PORTAO:CAMPOS-DE-CONTROLE]";
 const MARCA_SEM_MATA = "[PORTAO:SEM-MATA]";
 const MARCA_INVENTARIO = "[PORTAO:INVENTARIO]";
+/** 🔴 As marcas do VEREDITO, e elas nasceram do achado mais fino da rodada
+ *  4e/5: os cinco controles de categoria provam que o harness sabe DIZER
+ *  "sobreviveu"; nada provava que dizer isso virava **exit 2**. Um re-revisor
+ *  apagou as três linhas do veredito e um buraco REAL saiu com **exit 0**,
+ *  imprimindo `🔴 SOBREVIVEU` igual — stdout idêntico, e só o código de saída
+ *  diferente, que é justamente o que um dispatch lê. A sentença agora tem
+ *  marca, e a marca tem autoteste (família `esperaCodigo: 2`). */
+const MARCA_VEREDITO_MATA = "[VEREDITO:MATA-NAO-MORREU]";
+const MARCA_VEREDITO_CATEGORIA = "[VEREDITO:CATEGORIA-DE-FALHA]";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // O INVENTÁRIO CRAVADO À MÃO — e é AQUI que a recursão para.
@@ -1200,25 +1245,125 @@ const MARCA_INVENTARIO = "[PORTAO:INVENTARIO]";
  *  — passou verde, exit 0. Então o que está cravado aqui é o PAR: o nome e o
  *  que aquele guarda tem de AFIRMAR. Trocar a substância mantendo o nome bate
  *  aqui; e trocar o nome também. */
+/** 🔴 A SUBSTÂNCIA de cada espécie de entrada — o "o que este guarda AFIRMA"
+ *  do par que o inventário pina. As três funções existem porque **nome não
+ *  basta** (rodada 4d) e porque **categoria não basta** (rodada 4e): o
+ *  inventário dos controles pinava só `esperaCategoria`, e apagar a linha
+ *  `esperaMataConfere: false` de `CTRL-MATA-ERRADO` — UMA linha de dado —
+ *  deixava o portão do `mata` sem controle nenhum enquanto o banner seguia
+ *  afirmando por extenso que o instrumento "sabe acusar um `mata` que não
+ *  mata". Medido por um re-revisor em 27/09. O par é composto de propósito:
+ *  tudo o que aquela entrada promete entra na string. */
+function substanciaDeControle(c) {
+  const mc = "esperaMataConfere" in c ? String(c.esperaMataConfere) : "nao-declarado";
+  return `${c.esperaCategoria}|mataConfere=${mc}`;
+}
+
+/** Para um autoteste, a substância é a MARCA que ele espera mais o `mata` que
+ *  ele injeta — sem a segunda metade, clonar `mata-fantasma` em cima de
+ *  `mata-frouxo` (mesmo nome, mesma marca, `mata` trocado de fantasma para
+ *  `"a"`) passava pelo inventário em silêncio, e o ramo ZERO do piso de
+ *  especificidade perdia o controle. */
+function substanciaDeAutoteste(a) {
+  const mata = a.entrada && "mata" in a.entrada ? JSON.stringify(a.entrada.mata) : "(sem entrada)";
+  return `${a.esperaCodigo}|${a.esperaTrecho}|mata=${mata}`;
+}
+
+/** E para uma mutação, a substância é o `mata` — o teste que ela declara
+ *  matar, que é a única coisa que ela promete ao mundo. */
+function substanciaDeMutacao(m) {
+  if (m.mata == null) return "(sem mata)";
+  return Array.isArray(m.mata) ? m.mata.join(" + ") : String(m.mata);
+}
+
+/** 🔴 As listas cravadas à mão, e a regra que as governa: **o número nunca vem
+ *  do `length` do array que acabou de rodar.** Os literais estão escritos por
+ *  extenso de propósito, sem referência a constante — colapsar as quatro
+ *  `MARCA_*` num valor só deixava o inventário MUDO, porque os dois lados
+ *  viravam a mesma constante, e os autotestes voltavam a não discriminar qual
+ *  portão disparou (que é a colisão de prosa que a rodada 4d consertou).
+ *  Mexeu numa lista? Mexa aqui, à mão. A fricção é o ponto. */
 const CONTROLES_ESPERADOS = {
-  "CTRL-SOBREVIVE": "sobreviveu",
-  "CTRL-SEM-ALVO": "sem alvo",
-  "CTRL-SEM-MEDICAO": "sem medição",
-  "CTRL-PISO-BAIXO": "sem medição",
-  "CTRL-MATA-ERRADO": "morreu",
+  "CTRL-SOBREVIVE": "sobreviveu|mataConfere=nao-declarado",
+  "CTRL-SEM-ALVO": "sem alvo|mataConfere=nao-declarado",
+  "CTRL-SEM-MEDICAO": "sem medição|mataConfere=nao-declarado",
+  "CTRL-PISO-BAIXO": "sem medição|mataConfere=nao-declarado",
+  "CTRL-MATA-ERRADO": "morreu|mataConfere=false",
 };
 
 const AUTOTESTES_ESPERADOS = {
-  "mata-frouxo": MARCA_ESPECIFICIDADE,
-  "mata-fantasma": MARCA_ESPECIFICIDADE,
-  "mata-ausente": MARCA_SEM_MATA,
-  "campo-de-controle": MARCA_CAMPOS,
-  "piso-por-entrada": MARCA_CAMPOS,
+  "mata-frouxo": '1|[PORTAO:ESPECIFICIDADE]|mata="a"',
+  "mata-fantasma": '1|[PORTAO:ESPECIFICIDADE]|mata="ESTE TESTE NUNCA EXISTIU"',
+  "mata-ausente": "1|[PORTAO:SEM-MATA]|mata=(sem entrada)",
+  "mata-lista-vazia": "1|[PORTAO:SEM-MATA]|mata=[]",
+  "campo-de-controle": '1|[PORTAO:CAMPOS-DE-CONTROLE]|mata="a"',
+  "campo-de-controle-herdado": '1|[PORTAO:CAMPOS-DE-CONTROLE]|mata="o chip que não bate com o preço é pego"',
+  "piso-por-entrada": '1|[PORTAO:CAMPOS-DE-CONTROLE]|mata="cada uma das 13 regras dispara na quebra escrita pra ela"',
+  "inventario-mutacoes": "1|[PORTAO:INVENTARIO]|mata=(sem entrada)",
+  "inventario-controles": "1|[PORTAO:INVENTARIO]|mata=(sem entrada)",
+  "inventario-autotestes": "1|[PORTAO:INVENTARIO]|mata=(sem entrada)",
+  "veredito-sobreviveu": '2|[VEREDITO:CATEGORIA-DE-FALHA]|mata="cada uma das 13 regras dispara na quebra escrita pra ela"',
+  "veredito-mata-mente": '2|[VEREDITO:MATA-NAO-MORREU]|mata="a ficha sozinha, com a frase dela mesma, não é acusada de emprestar"',
+};
+
+/** 🔴 A SEXTA SABOTAGEM, e ela é a razão desta lista existir: `MUTACOES` era a
+ *  única lista do arquivo SEM inventário — a carga útil, a razão de o arquivo
+ *  existir. Um re-revisor cortou 31 das 34 entradas numa cópia e mediu
+ *  `placar: 3 morreu, 0, 0, 0, 0 (de 3)` com **exit 0**, os cinco controles,
+ *  os cinco autotestes e os DOIS inventários verdes — porque o denominador
+ *  vinha do `length` do array que acabou de encolher, que é exatamente o
+ *  defeito que a rodada anterior declarou ter matado e consertou só no banner
+ *  do `--controles`. Efeito colateral medido por ele: `ARQUIVOS_ENVOLVIDOS`
+ *  deriva de `MUTACOES`, e só UMA das 34 entradas muta `page.tsx` — apagar
+ *  essa uma tirava o arquivo do guarda de árvore suja, em silêncio.
+ *
+ *  O valor é o `mata` de cada entrada escrito por extenso (vários nomes
+ *  juntados por ` + `), porque uma pessoa tem de poder LER esta lista: é ela a
+ *  última camada de dado deste arquivo. Apagar uma entrada bate aqui; trocar o
+ *  teste que ela declara matar também. */
+const MUTACOES_ESPERADAS = {
+  "M1": "o chip que não bate com o preço é pego + um nome de dia que não existe é pego, mesmo sem repetição nenhuma + a janela de chuva é conferida nos TRÊS números, um a um",
+  "M2": "cada uma das 13 regras dispara na quebra escrita pra ela + o chip que não bate com o preço é pego",
+  "M3": "a prosa que nomeia piso diferente do campo é pega",
+  "M4": "a frase da violação nomeia o lugar e não é o identificador da regra",
+  "M5": "uma ficha que empresta a frase de outra é pega",
+  "M5b": "a ficha sozinha, com a frase dela mesma, não é acusada de emprestar",
+  "M6": "cada uma das 13 regras dispara na quebra escrita pra ela + custo sem preço legível dá UM erro, não dois",
+  "M7": "cada uma das 13 regras dispara na quebra escrita pra ela + um nome de dia que não existe é pego, mesmo sem repetição nenhuma",
+  "M8": "a janela de chuva é conferida nos TRÊS números, um a um",
+  "M9": "cada uma das 13 regras dispara na quebra escrita pra ela + a hora citada na prosa é lida com acento e sem acento",
+  "M10": "um nome de dia que não existe é pego, mesmo sem repetição nenhuma",
+  "M11": "a janela de chuva é conferida nos TRÊS números, um a um",
+  "M12": "os QUATRO textos que distinguem um lugar do outro são conferidos, um a um + a lista dos textos que distinguem tem EXATAMENTE quatro campos",
+  "M13": "a travessia da noite DITA na ficha passa — a regra exige o aviso, não proíbe o horário",
+  "M14": "os QUATRO textos que distinguem um lugar do outro são conferidos, um a um + a lista dos textos que distinguem tem EXATAMENTE quatro campos",
+  "M15": "ficha paga SEM chip é silêncio, não violação",
+  "N1": "ficha SEM piso é silêncio, mesmo com a prosa nomeando um piso",
+  "N2": "duas fichas SEM secaRapido não emprestam frase uma da outra",
+  "N3": "a lista dos textos que distinguem tem EXATAMENTE quatro campos + campo de prosa fora da lista pode ser igual em duas fichas",
+  "N4": "ficha grátis não é medida por regra de custo nenhuma",
+  "N5": "custo sem preço legível dá UM erro, não dois",
+  "N6": "o chip cabe com 4 palavras e não cabe com 5",
+  "N7": "horário igual em abre e fecha é acusado, e a frase fala de 24 horas",
+  "N8": "a hora citada na prosa é lida com acento e sem acento",
+  "N9": "a frase do dia não reconhecido fala de GRAFIA e mostra os sete dias",
+  "N10": "a frase da semana inteira não manda esvaziar a lista, porque o schema recusa",
+  "N11": "a ficha genuinamente invertida recebe a frase da noite, não a das 24 horas",
+  "N12": "o texto do regex de preço aparece UMA vez só em todo o src/ + a página continua montando o chip a partir do PRECO importado",
+  "B1a": "a ficha genuinamente invertida recebe a frase da noite, não a das 24 horas",
+  "B1b": "horário igual em abre e fecha é acusado, e a frase fala de 24 horas",
+  "B2a": "custo completo AUSENTE recebe a frase do campo vazio",
+  "B2b": "custo completo ILEGÍVEL mostra por extenso o que ele escreveu",
+  "B3a": "chip SEM número recebe a frase de não mostrar preço nenhum",
+  "B3b": "chip com número DIVERGENTE mostra os dois preços lado a lado",
 };
 
 /** Confere um enumerador contra a lista escrita à mão: mesmos nomes, mesma
- *  quantidade, sem repetido. Não usa `length` do próprio array para nada —
- *  foi exatamente assim que a quinta sabotagem passou. */
+ *  quantidade, sem repetido, mesma substância. 🔴 A quantidade ESPERADA nunca
+ *  vem do array que acabou de rodar — vem da lista cravada, e foi exatamente
+ *  assim que a quinta sabotagem passou (o banner imprimia `AUTOTESTES.length`,
+ *  que encolhe junto). O array de verdade é percorrido, claro; o que ele não
+ *  faz é dar o número contra o qual ele mesmo é conferido. */
 function conferirInventario(rotulo, reais, esperados) {
   const nomesReais = reais.map((r) => r.nome);
   const nomesEsperados = Object.keys(esperados);
@@ -1247,9 +1392,15 @@ function conferirInventario(rotulo, reais, esperados) {
  *  de campo a MAIS, e o que falta aqui é o campo OBRIGATÓRIO. Quem acrescentar
  *  a 35ª entrada e esquecer o `mata` bate aqui. */
 function recusarEntradasSemMata(entradas) {
-  const semMata = entradas.filter((m) => m.mata == null).map((m) => m.id);
+  // 🔴 `mata: []` é a MESMA ausência, e ela atravessava os três portões por
+  // VACUIDADE: `[] == null` é false, o piso de especificidade itera sobre zero
+  // nomes, e `[].every(...)` é `true`. Medido em 27/09 saindo com exit 0 e
+  // `mata confere: sim`. Lista vazia não é declaração — é a 48ª espécie.
+  const semMata = entradas
+    .filter((m) => m.mata == null || (Array.isArray(m.mata) && m.mata.length === 0))
+    .map((m) => m.id);
   if (semMata.length > 0) {
-    console.error(`${MARCA_SEM_MATA} entrada de MUTACOES sem \`mata\`: ${semMata.join(", ")}`);
+    console.error(`${MARCA_SEM_MATA} entrada de MUTACOES sem \`mata\` (ausente ou lista vazia): ${semMata.join(", ")}`);
     console.error("Sem `mata` a entrada pula o piso de especificidade E a conferência de quem");
     console.error("morreu — ela mede, mas não prova nada sobre teste nenhum. Declare o teste.");
     process.exit(1);
@@ -1289,7 +1440,17 @@ const EDICAO_DE_AUTOTESTE = [{
   novo: "  return [];",
 }];
 
-const AUTOTESTES = [
+/** A troca semanticamente NULA — a mesma de `CTRL-SOBREVIVE`. Ela entra no
+ *  arquivo (há diff), o vitest mede, e a suíte fica VERDE: é um "sobreviveu"
+ *  de verdade, que é o que o autoteste do veredito precisa para provar que
+ *  sobreviver vira **exit 2** e não exit 0. */
+const EDICAO_QUE_SOBREVIVE = [{
+  inicio: 1, fim: 1,
+  espera: 'import { PISOS } from "@/lib/piso";',
+  novo: 'import { PISOS as PISOS } from "@/lib/piso";',
+}];
+
+let AUTOTESTES = [
   {
     nome: "mata-frouxo",
     porque: 'uma entrada com `mata: "a"`, que casa os 51 testes e provaria nada',
@@ -1332,6 +1493,108 @@ const AUTOTESTES = [
     esperaCodigo: 1,
     esperaTrecho: MARCA_CAMPOS,
   },
+  {
+    nome: "mata-lista-vazia",
+    porque: "uma entrada com `mata: []`, que atravessava os TRÊS portões do `mata` por VACUIDADE",
+    // 🔴 Três portas vazias em série, medidas por um re-revisor em 27/09:
+    // `[] == null` é false (passa o portão do `mata` ausente, que acabara de
+    // nascer), o piso de especificidade itera sobre ZERO nomes (nenhum frouxo)
+    // e `[].every(...)` é `true` por vacuidade — então a tabela saía com
+    // `mata confere: SIM` e exit 0, provando nada sobre teste nenhum. É a 48ª
+    // espécie do catálogo, e o escape mais plausível por acidente logo depois
+    // do que a rodada anterior fechou: quem põe `mata: []` pra preencher depois.
+    entrada: { id: "AUTO-MATA-VAZIO", titulo: "autoteste", arquivo: COERENCIA, edicoes: EDICAO_DE_AUTOTESTE, mata: [] },
+    esperaCodigo: 1,
+    esperaTrecho: MARCA_SEM_MATA,
+  },
+  {
+    nome: "campo-de-controle-herdado",
+    porque: "uma entrada REAL com `piso` HERDADO do protótipo, que o `hasOwnProperty` não via",
+    // 🔴 O portão dos campos de controle usava `hasOwnProperty`, e os
+    // consumidores leem pelo protótipo (`m.piso ?? PISO_DE_TESTES`): um
+    // `Object.create` com `piso` no protótipo pulava o portão e era MEDIDO de
+    // verdade — o re-revisor provou pela saída "o vitest EXECUTOU 18 teste(s)",
+    // que só aparece se o override chegou ao motor. É a sabotagem da rodada 4c
+    // ressuscitada por DADO, sem tocar em lógica.
+    // 🔴 O `mata` daqui É A SUBSTÂNCIA DO AUTOTESTE, e a primeira versão errou:
+    // com `mata: "a"` a entrada saía com 1 de qualquer jeito — pelo piso de
+    // ESPECIFICIDADE, não pelo portão dos campos —, então o autoteste ficava
+    // verde mesmo com o `hasOwnProperty` de volta. Medido. Agora o `mata` é um
+    // teste real e único que MORRE nesta mutação: com o portão no lugar, sai 1
+    // pelos CAMPOS; com o `hasOwnProperty` de volta, a entrada atravessa tudo e
+    // sai **0** medindo com piso 1, que é o escape que o re-revisor mediu.
+    entrada: Object.assign(
+      Object.create({ piso: 1 }),
+      {
+        id: "AUTO-PROTO", titulo: "autoteste", arquivo: COERENCIA, edicoes: EDICAO_DE_AUTOTESTE,
+        mata: "o chip que não bate com o preço é pego",
+      },
+    ),
+    esperaCodigo: 1,
+    esperaTrecho: MARCA_CAMPOS,
+  },
+  {
+    nome: "inventario-mutacoes",
+    porque: "uma entrada APAGADA de MUTACOES — a sexta sabotagem, e a lista da carga útil",
+    args: ["--sabotar=mutacoes"],
+    esperaCodigo: 1,
+    esperaTrecho: MARCA_INVENTARIO,
+  },
+  {
+    nome: "inventario-controles",
+    porque: "um CONTROLE apagado da lista",
+    args: ["--sabotar=controles"],
+    esperaCodigo: 1,
+    esperaTrecho: MARCA_INVENTARIO,
+  },
+  {
+    nome: "inventario-autotestes",
+    porque: "um AUTOTESTE apagado da lista — a quinta sabotagem, agora com controle",
+    args: ["--sabotar=autotestes"],
+    esperaCodigo: 1,
+    esperaTrecho: MARCA_INVENTARIO,
+  },
+  {
+    nome: "veredito-sobreviveu",
+    porque: "um buraco REAL (mutação que sobrevive) tem de virar exit 2, não exit 0",
+    // 🔴 A terceira família, e ela nasceu do achado mais fino da rodada 4e: os
+    // controles de categoria provam que o harness sabe DIZER "sobreviveu";
+    // nada provava que dizer isso virava exit 2. Apagando as três linhas do
+    // veredito, o stdout ficava IDÊNTICO — inclusive o `🔴 SOBREVIVEU` — e só
+    // o código de saída mudava, que é o que um dispatch lê. Este autoteste
+    // roda o vitest de verdade (base + mutação), por isso é lento.
+    entrada: {
+      id: "AUTO-VEREDITO-SOBREVIVE", titulo: "autoteste", arquivo: COERENCIA,
+      edicoes: EDICAO_QUE_SOBREVIVE,
+      mata: "cada uma das 13 regras dispara na quebra escrita pra ela",
+    },
+    esperaCodigo: 2,
+    esperaTrecho: MARCA_VEREDITO_CATEGORIA,
+  },
+  {
+    nome: "veredito-mata-mente",
+    porque: "uma mutação que morre no teste ERRADO tem de virar exit 2",
+    // O outro ramo do veredito: a entrada morre de verdade, mas o `mata` que
+    // ela declara é um teste real, único, e NÃO é o que falhou. Sem controle,
+    // apagar o `if` do `mataFalhou` fazia a tabela mentir com exit 0.
+    //
+    // 🔴 E A ESCOLHA DO TESTE É A SUBSTÂNCIA DESTE AUTOTESTE, não detalhe —
+    // eu errei na primeira versão e a medição me corrigiu. Declarei "a hora
+    // citada na prosa é lida com acento e sem acento", que é real e único, mas
+    // que a mutação `return []` TAMBÉM derruba: `mataConfere` saiu `true` e o
+    // autoteste saiu com código 0. O `mata` tem de nomear um teste que
+    // SOBREVIVE a esta mutação, e os que sobrevivem são os NEGATIVOS — os que
+    // afirmam silêncio (`not.toContain`). Com `return []` o silêncio continua
+    // verdadeiro, então o teste passa, então o `mata` mente, que é o que este
+    // autoteste precisa provar.
+    entrada: {
+      id: "AUTO-VEREDITO-MATA", titulo: "autoteste", arquivo: COERENCIA,
+      edicoes: EDICAO_DE_AUTOTESTE,
+      mata: "a ficha sozinha, com a frase dela mesma, não é acusada de emprestar",
+    },
+    esperaCodigo: 2,
+    esperaTrecho: MARCA_VEREDITO_MATA,
+  },
 ];
 
 /** Os campos que só fazem sentido num controle. Uma entrada de `MUTACOES` que
@@ -1349,7 +1612,11 @@ const CAMPOS_SO_DE_CONTROLE = [
 function recusarCamposDeControle(entradas) {
   const culpadas = [];
   for (const m of entradas) {
-    const achados = CAMPOS_SO_DE_CONTROLE.filter((c) => Object.prototype.hasOwnProperty.call(m, c));
+    // 🔴 `c in m`, não `hasOwnProperty`: os consumidores leem pelo PROTÓTIPO
+    // (`m.piso ?? PISO_DE_TESTES`), então um `Object.create({piso: 1})` pulava
+    // o portão e era medido contra 33 dos 51 testes com exit 0 — medido em
+    // 27/09. O portão tem de ler do mesmo jeito que o motor lê.
+    const achados = CAMPOS_SO_DE_CONTROLE.filter((c) => c in m);
     if (achados.length > 0) culpadas.push(`${m.id}: ${achados.join(", ")}`);
   }
   if (culpadas.length > 0) {
@@ -1369,7 +1636,7 @@ function rodarAutotestes() {
     let codigo = 0;
     let saida = "";
     try {
-      saida = execFileSync(process.execPath, [esteArquivo, `--autoteste=${a.nome}`], {
+      saida = execFileSync(process.execPath, [esteArquivo, `--autoteste=${a.nome}`, ...(a.args ?? [])], {
         cwd: RAIZ, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: TIMEOUT_VITEST,
       });
     } catch (erro) {
@@ -1395,6 +1662,52 @@ function main() {
   const pedido = process.argv.slice(2);
   const modoControle = pedido.includes("--controles");
 
+  // 🔴 `--sabotar=<lista>` existe SÓ para os autotestes do inventário, e ele
+  // não é uma porta: tudo o que sabe fazer é REMOVER a primeira entrada de uma
+  // das três listas, o que só pode fazer o inventário ACUSAR (código 1). Não
+  // existe forma de usá-lo para silenciar guarda nenhum — um portão que só
+  // sabe disparar é seguro de ter; era isso ou o portão do inventário seguir
+  // sem controle nenhum, que é o defeito que esta rodada inteira persegue.
+  const pedidoSabotar = pedido.find((a) => a.startsWith("--sabotar="));
+  if (pedidoSabotar) {
+    const qual = pedidoSabotar.slice("--sabotar=".length);
+    if (qual === "mutacoes") MUTACOES = MUTACOES.slice(1);
+    else if (qual === "controles") CONTROLES = CONTROLES.slice(1);
+    else if (qual === "autotestes") AUTOTESTES = AUTOTESTES.slice(1);
+    else {
+      console.error(`--sabotar desconhecido: ${qual} (use mutacoes, controles ou autotestes)`);
+      process.exit(1);
+    }
+  }
+
+  // 🔴 O INVENTÁRIO, ANTES DE QUALQUER OUTRA COISA — inclusive antes da
+  // injeção do `--autoteste`, que acrescenta uma entrada a `MUTACOES` de
+  // propósito. As três listas do arquivo são conferidas contra as listas
+  // cravadas à mão: é o que a quinta sabotagem derrubou nos guardas (quatro
+  // clones do mesmo autoteste passavam, e o banner ainda dizia "4"), e o que a
+  // SEXTA derrubou na CARGA ÚTIL — `MUTACOES` era a única lista sem
+  // inventário, e cortar 31 das 34 entradas saía com exit 0 e
+  // `placar: 3 morreu (de 3)`, com os cinco controles e os autotestes verdes.
+  conferirInventario("MUTACOES", MUTACOES.map((m) => ({ nome: m.id, afirma: substanciaDeMutacao(m) })), MUTACOES_ESPERADAS);
+  conferirInventario("CONTROLES", CONTROLES.map((c) => ({ nome: c.id, afirma: substanciaDeControle(c) })), CONTROLES_ESPERADOS);
+  conferirInventario("AUTOTESTES", AUTOTESTES.map((a) => ({ nome: a.nome, afirma: substanciaDeAutoteste(a) })), AUTOTESTES_ESPERADOS);
+
+  // `--inventario` imprime as TRÊS listas REAIS (não as cravadas) em JSON e
+  // sai. É a porta pela qual `tests/lib/harness-de-mutacao.test.ts` confere o
+  // instrumento — e esse teste é a última camada de propósito: ele mora em
+  // `tests/`, logo roda em `npm test`, logo roda em TODO dispatch. Um guarda
+  // que vive dentro do arquivo que a sabotagem edita nunca fecha a recursão.
+  if (pedido.includes("--inventario")) {
+    console.log(JSON.stringify({
+      mutacoes: MUTACOES.map((m) => ({ id: m.id, afirma: substanciaDeMutacao(m) })),
+      controles: CONTROLES.map((c) => ({ id: c.id, afirma: substanciaDeControle(c) })),
+      autotestes: AUTOTESTES.map((a) => ({ id: a.nome, afirma: substanciaDeAutoteste(a) })),
+      piso: PISO_DE_TESTES,
+      arquivosDeTeste: ARQUIVOS_DE_TESTE,
+    }, null, 2));
+    return;
+  }
+
   // `--autoteste=<nome>` injeta UMA entrada doente em MUTACOES e segue o
   // caminho normal, pra um processo pai poder conferir a RECUSA. Ver AUTOTESTES.
   const pedidoAuto = pedido.find((a) => a.startsWith("--autoteste="));
@@ -1406,8 +1719,12 @@ function main() {
       console.error(`autoteste desconhecido: ${nome}`);
       process.exit(1);
     }
-    MUTACOES = [...MUTACOES, auto.entrada];
-    idAuto = auto.entrada.id;
+    // Os autotestes do INVENTÁRIO não injetam entrada: eles sabotam uma lista
+    // por `--sabotar=` e o processo já morreu no inventário, lá em cima.
+    if (auto.entrada) {
+      MUTACOES = [...MUTACOES, auto.entrada];
+      idAuto = auto.entrada.id;
+    }
   }
 
   const ids = idAuto ? [idAuto] : pedido.filter((a) => a !== "--controles");
@@ -1419,13 +1736,6 @@ function main() {
   // `mataFantasmaDeProposito` pulava o piso de especificidade do `mata`, e uma
   // com `piso`/`arquivosDeTeste` media metade da suíte — as duas com exit 0 e
   // sem tocar no motor. Medido por um re-revisor em 27/09.
-  // 🔴 O INVENTÁRIO, antes de tudo: os controles e os autotestes conferidos
-  // contra as listas cravadas à mão. É o que a quinta sabotagem derrubou —
-  // quatro clones do mesmo autoteste passavam, e o banner ainda dizia "4".
-  // Roda SEMPRE, não só no modo controle: a lista é invariante do arquivo.
-  conferirInventario("CONTROLES", CONTROLES.map((c) => ({ nome: c.id, afirma: c.esperaCategoria })), CONTROLES_ESPERADOS);
-  conferirInventario("AUTOTESTES", AUTOTESTES.map((a) => ({ nome: a.nome, afirma: a.esperaTrecho })), AUTOTESTES_ESPERADOS);
-
   if (!modoControle) {
     recusarCamposDeControle(alvo);
     recusarEntradasSemMata(alvo);
@@ -1483,7 +1793,10 @@ function main() {
 
   // 🔴 O PISO DE ESPECIFICIDADE do `mata`. Sem ele o portão do `mata` é
   // satisfeito por substring solta: medido, `mata: "a"` casa os 51 nomes e
-  // `"violacoesDoAcervo"` casa 31 deles. Cada nome declarado tem de casar
+  // `"violacoesDoAcervo"` casa 33 deles (o 31 desta linha era resíduo da era
+  // de 49 testes, e ela dizia "medido" no presente — medido de novo em 27/09
+  // contra os 51 nomes reais: 51 para `"a"` e 33 para `"violacoesDoAcervo"`).
+  // Cada nome declarado tem de casar
   // EXATAMENTE UM teste real — nem zero (fantasma), nem dois (ambíguo).
   const frouxos = [];
   for (const m of alvo) {
@@ -1547,7 +1860,18 @@ function main() {
 
   console.log("\nid\tarquivo\tcategoria\tnumstat\tteste_que_matou\tmata_confere");
   console.log(linhas.join("\n"));
-  console.log(`\nplacar: ${CATEGORIAS.map((c) => `${placar[c]} ${c}`).join(", ")} (de ${alvo.length})`);
+  // 🔴 O DENOMINADOR VEM DA LISTA CRAVADA À MÃO, nunca do `length` do array
+  // que acabou de rodar — foi exatamente assim que a SEXTA sabotagem passou:
+  // cortando 31 das 34 entradas, o placar dizia `3 morreu … (de 3)` com exit 0.
+  // A regra já estava escrita para o banner do `--controles` e o placar da
+  // rodada normal tinha ficado de fora.
+  const cravadas = Object.keys(modoControle ? CONTROLES_ESPERADOS : MUTACOES_ESPERADAS).length;
+  const denominador = ids.length > 0 ? `${alvo.length} pedida(s), de ${cravadas} cravada(s) à mão` : `${cravadas} cravada(s) à mão`;
+  console.log(`\nplacar: ${CATEGORIAS.map((c) => `${placar[c]} ${c}`).join(", ")} (de ${denominador})`);
+  if (ids.length === 0 && alvo.length !== cravadas) {
+    console.error(`\n${MARCA_INVENTARIO} rodaram ${alvo.length} entradas e a lista cravada tem ${cravadas} — o inventário deveria ter pegado isto antes.`);
+    process.exit(1);
+  }
 
   const statusFinal = git(["status", "--porcelain", "--", ...ARQUIVOS_ENVOLVIDOS]);
   if (statusFinal.trim() !== "") {
@@ -1578,21 +1902,35 @@ function main() {
     // Os números vêm das listas CRAVADAS À MÃO, nunca do `length` dos arrays
     // que acabaram de rodar: foi exatamente assim que a quinta sabotagem
     // imprimiu "4 autotestes" rodando quatro clones do mesmo.
-    console.log(`\n✅ os ${Object.keys(CONTROLES_ESPERADOS).length} controles de CATEGORIA e os ${Object.keys(AUTOTESTES_ESPERADOS).length} autotestes de RECUSA`);
-    console.log("   saíram como declararam, e o inventário dos dois bate com a lista escrita");
-    console.log("   à mão. O instrumento sabe dizer sobreviveu, sem alvo e sem medição nos");
-    console.log("   dois ramos, sabe acusar um `mata` que não mata, e sabe RECUSAR começar");
-    console.log("   com `mata` frouxo, fantasma ou AUSENTE, e com campo de controle numa");
-    console.log("   entrada real. Não é um carimbador de morreu.");
+    const nAuto = Object.keys(AUTOTESTES_ESPERADOS).length;
+    const nVeredito = Object.values(AUTOTESTES_ESPERADOS).filter((v) => v.startsWith("2|")).length;
+    console.log(`\n✅ os ${Object.keys(CONTROLES_ESPERADOS).length} controles de CATEGORIA e os ${nAuto} autotestes`);
+    console.log(`   (${nAuto - nVeredito} de RECUSA, código 1, e ${nVeredito} de VEREDITO, código 2) saíram como`);
+    console.log("   declararam, e o inventário das TRÊS listas — mutações, controles e");
+    console.log("   autotestes — bate com a lista escrita à mão. O instrumento sabe dizer");
+    console.log("   sobreviveu, sem alvo e sem medição nos dois ramos; sabe acusar um `mata`");
+    console.log("   que não mata; sabe RECUSAR começar com `mata` frouxo, fantasma, AUSENTE");
+    console.log("   ou lista VAZIA, com campo de controle numa entrada real (próprio ou");
+    console.log("   herdado do protótipo) e com uma lista que encolheu; e sabe SENTENCIAR");
+    console.log("   com 2 o buraco real e o `mata` que mente. Não é um carimbador de morreu.");
     return;
   }
 
+  // 🔴 AS DUAS SENTENÇAS DA RODADA NORMAL, e elas passaram quatro rodadas sem
+  // controle nenhum: o `--controles` exercita o CLASSIFICADOR (o harness sabe
+  // DIZER "sobreviveu"), nunca a SENTENÇA (dizer isso sair com 2). Um
+  // re-revisor apagou as três linhas e um buraco real saiu com exit 0
+  // imprimindo `🔴 SOBREVIVEU` — stdout idêntico, só o código de saída
+  // diferente, que é justamente o que um dispatch lê. Agora cada sentença tem
+  // MARCA, e cada marca tem autoteste na terceira família (`esperaCodigo: 2`).
   if (mataFalhou.length > 0) {
-    console.error('\n🔴 "mata" DECLARADO QUE NÃO MORREU — a tabela mente sobre quem trava o quê:');
+    console.error(`\n${MARCA_VEREDITO_MATA} 🔴 "mata" DECLARADO QUE NÃO MORREU — a tabela mente sobre quem trava o quê:`);
     for (const linha of mataFalhou) console.error(`  ${linha}`);
     process.exit(2);
   }
-  if (placar.sobreviveu + placar["sem alvo"] + placar["sem diff"] + placar["sem medição"] > 0) {
+  const deFalha = placar.sobreviveu + placar["sem alvo"] + placar["sem diff"] + placar["sem medição"];
+  if (deFalha > 0) {
+    console.error(`\n${MARCA_VEREDITO_CATEGORIA} 🔴 ${deFalha} entrada(s) fora de "morreu" — três das quatro categorias são AUSÊNCIA DE MEDIÇÃO, e "sobreviveu" é buraco real.`);
     process.exit(2);
   }
 }
