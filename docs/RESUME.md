@@ -2,12 +2,19 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🔴 **ÚLTIMA PARADA: 2026-09-27, E A SESSÃO PAROU NO MEIO DA RODADA DO PAINEL COMPLETO.**
-Ele disse *"eu preciso dormir e continuar na próxima sessão"*. **Estamos na branch
-`painel-completo`**, com **1 tarefa completa e a 2ª a um conserto de fechar** (de 12), árvore limpa,
-**1287/1287 em 81 arquivos**, `tsc` limpo, `npm run build` exit 0. **NADA FOI AO AR** e nenhuma
-tarefa deste plano roda `vercel`. O `main` segue publicado e intacto.
+🔴 **ÚLTIMA PARADA: 2026-09-27, E DESTA VEZ NÃO FOI PARADA — O PC DELE DESLIGOU SOZINHO** no meio
+da passada de confirmação da Tarefa 2 (*"algo aconteceu o pc se desligou"*). O commit `d8b1f73` ficou
+gravado; o **resultado da passada morreu com a sessão** e foi **redespachado** na sessão seguinte.
+**Estamos na branch `painel-completo`**, com **1 tarefa completa e a 2ª a uma re-revisão de fechar**
+(de 12), árvore limpa, **1289/1289 em 81 arquivos**, `tsc` limpo, `npm run build` exit 0 — os três
+medidos por mim em 27/09 no `d8b1f73`. **NADA FOI AO AR** e nenhuma tarefa deste plano roda `vercel`.
+O `main` segue publicado e intacto.
 → Como retomar: o bloco **"▶ RETOMAR A RODADA DO PAINEL COMPLETO"**, logo abaixo.
+
+🔴 **DUAS SESSÕES MORRERAM SEM AVISO nesta mesma tarefa** (a tela fechou na rodada 3, o PC desligou
+na 4d). As duas vezes o que sobreviveu foi o `git log` e o `RESUME.md`, e as duas vezes o que morreu
+foi **o resultado de um subagente já despachado**. Regra que ficou: **commitar a rodada antes de
+despachar a seguinte**, e escrever no `RESUME.md` o que está **em voo**, não só o que fechou.
 
 🔴 **E a lição de processo desta sessão, que foi minha:** eu parei em 2 de 12 quando ele disse
 *"quero continuar na próxima sessão"*, e ele respondeu *"tu não terminasse não?"*. O método
@@ -88,13 +95,13 @@ falhou. A métrica da rodada: **ele fazia 4 coisas e precisava de mim para 40; o
 
 ### 3. O estado, medido — confira você mesmo, nunca repita o número deste arquivo
 
-`git checkout painel-completo`; `git status` limpo; `npm test -- --run` deve dar **1287/1287 em 81
-arquivos**.
+`git checkout painel-completo`; `git status` limpo; `npm test -- --run` deve dar **1289/1289 em 81
+arquivos** (eram 1287 até a rodada 4b partir dois `it` em quatro).
 
 | tarefa | estado |
 |---|---|
 | **1 — o registro de campos, `aplicarCampo` com caminho/tipo/"não sei"** | ✅ completa (`dfeb005..50f71bf`), 1 rodada de fix, re-revisão limpa |
-| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 6 rodadas de fix aplicadas (`7c4ddf9..f41289d`); as rodadas 4, 4b e 4c endureceram o próprio instrumento depois de **sete `Critical` nele** — falta só a última re-revisão, ver as seções 4 a 4d |
+| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 7 rodadas de fix aplicadas (`7c4ddf9..d8b1f73`); as rodadas 4, 4b, 4c e 4d endureceram o próprio instrumento depois de **nove `Critical` nele** — falta só a passada de confirmação, **redespachada** em 27/09; ver as seções 4 a 4e |
 | 3 — a porta de escrita aceita todo campo e passa pela coerência | ⬜ próxima |
 | 4 — `oculto`: esconder sem apagar | ⬜ |
 | 5 — a tela do lugar mostra a ficha inteira | ⬜ |
@@ -239,11 +246,74 @@ não são nomeados por ninguém.
 `--controles` exit 0 com os **5 controles e os 4 autotestes**; 1289/1289 em 81 arquivos; `tsc` exit
 0; `npm run build` exit 0.
 
-🟡 **A ÚLTIMA re-revisão está despachada, com uma pergunta só: a recursão fechou, ou existe uma
-quinta sabotagem?** Sobrando só Minor, a Tarefa 2 fecha e eles vão para a triagem da revisão final
-da branch, junto com os onze que já estão lá. O próximo passo é a **Tarefa 3** (a porta de escrita),
-cujo brief **já foi auditado por mim**: sete defeitos achados, dois deles rulings (T3-R1 e T3-R2),
-em `task-3-brief.md` e no fim do `progress.md`.
+### 4e. 🔴 A RODADA 4d/5 — A QUINTA SABOTAGEM, E ONDE A RECURSÃO PARA (`d8b1f73`)
+
+> 🔴 **Esta seção foi escrita na sessão SEGUINTE, porque o PC dele desligou sozinho** depois do
+> commit `d8b1f73` e antes do commit de docs, **no meio da passada de confirmação — cujo resultado
+> morreu com a sessão**. O ledger git-ignored (`progress.md`) sobreviveu e tem a rodada por extenso.
+> É a segunda vez nesta tarefa que uma sessão morre sem aviso; a lição operacional é a de sempre —
+> **o que não está no `git log` ou no `RESUME.md` não existe na sessão seguinte.**
+
+O padrão se repetiu **uma quarta vez, e desta vez no próprio CONTROLE**, com dois `Critical`:
+
+1. 🔴 **Os autotestes eram um enumerador sem controle de não-vacuidade.** Nada conferia quantos
+   são, quais são, nem que fossem distintos — e o banner de sucesso imprimia `AUTOTESTES.length`,
+   que vem da **própria lista**, então ele não enxerga o que encolheu. Trocando os quatro por quatro
+   **clones** e apagando o piso de especificidade, `--controles` saiu **verde, exit 0, ainda dizendo
+   "4 autotestes"**, e `mata: "a"` voltou a passar. É a **44ª espécie** do catálogo — guarda cego ao
+   que sumiu — aplicada aos próprios guardas.
+2. 🔴 **Um escape de DADO: entrada de `MUTACOES` SEM o campo `mata`** pula os **dois** portões do
+   `mata` de uma vez (`undefined == null` é true nas duas linhas) e a rodada sai com 0 provando nada
+   sobre teste nenhum. `CAMPOS_SO_DE_CONTROLE` não alcança isso — ela é lista negra de campo **a
+   mais**, e o que faltava era o campo **obrigatório**. É o escape mais plausível **por acidente**:
+   quem acrescentar a 35ª entrada e esquecer o `mata` ficava verde. Nasceu `recusarEntradasSemMata`
+   (código 1) e o quinto autoteste, `mata-ausente`.
+
+**E mais um conserto de instrumento:** o `esperaTrecho` dos autotestes deixou de depender da
+**prosa**. A frase "piso de especificidade" aparece, partida pela quebra de linha, **dentro** da
+mensagem do outro portão — um `console.error` reembrulhado e dois autotestes deixavam de
+discriminar. Agora cada recusa imprime uma **marca** (`[PORTAO:...]`) e o autoteste casa a marca.
+
+🔴 **A REGRA QUE FECHA A RECURSÃO, e ela não é mecanismo:**
+
+```
+4a  o portão nasceu sem controle           -> nasceram os controles
+4b  o portão NOVO nasceu sem controle      -> nasceram os autotestes
+4c  o CONTROLE novo nasceu sem inventário  -> nasceu esta lista
+```
+
+Uma quarta camada de **mecanismo** repetiria isso para sempre. **A recursão só para quando a última
+camada é um DADO que uma pessoa lê:** `CONTROLES_ESPERADOS` e `AUTOTESTES_ESPERADOS`, cravados à
+mão — o mesmo idioma que `tests/lib/coerencia.test.ts:182` já usa aqui (*"o número é cravado à mão,
+como todo número deste projeto"*).
+
+🔴 **E NOME NÃO BASTA — isso foi achado testando o próprio conserto.** A primeira versão guardava só
+os nomes; trocando os cinco autotestes por cinco clones que **mantinham os nomes** e afirmavam outra
+coisa, passou verde, exit 0. O que está cravado agora é o **par**: o nome **e o que aquele guarda
+afirma**. As duas formas saem com 1: *"sumiram X / apareceram Y"* e *"trocaram de substância"*.
+
+**Limite honesto registrado:** o piso **não** cobre TROCA — apagar um teste e acrescentar outro
+mantém 51. Dos 51, **29** são nomeados por algum `mata`, **22** não são nomeados por ninguém.
+
+**Medido pelo commit:** 34 morreu, 0 nas quatro categorias de falha, exit 0, `mata confere` = sim
+nas 34; `--controles` exit 0 com os 5 controles e os **5** autotestes.
+**Medido por mim na sessão seguinte**, no `d8b1f73` com árvore limpa: **1289/1289 em 81 arquivos**,
+`tsc` exit 0, `npm run build` exit 0. Os números do harness estão sendo **remedidos** pela passada
+de confirmação; não os repito sem rodar.
+
+🟡 **A PASSADA DE CONFIRMAÇÃO FOI REDESPACHADA em 2026-09-27**, agora com **três** perguntas: os
+dois `Critical` fecharam de verdade, existe uma **sexta** sabotagem, e existe frase falsa? Sobrando
+só Minor, a Tarefa 2 **fecha** e eles vão para a triagem da revisão final da branch, junto com os
+onze que já estão lá. O próximo passo é a **Tarefa 3** (a porta de escrita), cujo brief **já foi
+auditado por mim**: sete defeitos achados, dois deles rulings (T3-R1 e T3-R2), em `task-3-brief.md`
+e no fim do `progress.md`.
+
+🔴 **A SEXTA FRASE FALSA, e esta é minha — achada e medida nesta sessão, entra na onda de fix ache o
+revisor ou não:** `scripts/mutar.mjs:60`, na seção (a1) *"COMO RODAR"*, ainda diz **`+ 4 autotestes
+de RECUSA`**, e são **cinco** desde este mesmo commit — `mata-ausente` nasceu nele. O padrão não
+mudou (o conserto entra, o docblock fica no mundo antigo), e o agravante é o **lugar**: (a1) é a
+única seção que alguém lê **antes de rodar o comando**. Medido: `sed -n '60p'` diz 4;
+`AUTOTESTES_ESPERADOS` (`:1211-1217`) e a lista real (`:1294-1325`) têm 5 nomes.
 
 🔵 **Uma recomendação registrada que é DELE, e que eu deixei fora do escopo de propósito:** medir
 **cobertura de ramo** nos testes (`@vitest/coverage-v8` com limiar) seria guarda automático contra a
