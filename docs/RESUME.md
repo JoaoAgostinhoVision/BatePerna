@@ -51,7 +51,7 @@ caractere em UTF-8 (o shell do Windows mastiga os acentos — faça a comparaç�
 1. `git status` limpo; `npm test -- --run` — deve dar **1193/1193 em 79 arquivos**. Confira você mesmo;
    nunca relate o número deste arquivo sem rodar.
 2. 🔴 **O laço de construção ACABOU e a rodada está NO AR. O que falta não é código — são três coisas
-   que são DELE**, logo abaixo: as onze palavras de tela, o prazo da cópia em memória, e olhar as três
+   que são DELE**, logo abaixo: as doze palavras de tela, o prazo da cópia em memória, e olhar as três
    telas novas no celular. **Não decida nenhuma delas sozinho, e não abra o dia com um menu delas** — se
    ele disser "continua" sem tocar no assunto, a coisa certa é perguntar **uma**, a das palavras.
 3. Todo dispatch que toque `src/app/` leva **`npm run build`** e `git add` por caminho (rulings P13/P8).
@@ -60,7 +60,7 @@ caractere em UTF-8 (o shell do Windows mastiga os acentos — faça a comparaç�
 
 ### 🔵 AS TRÊS COISAS QUE SÃO DELE, E QUE O LAÇO NÃO PODE DECIDIR
 
-1. **As onze palavras de tela** (tabela abaixo) — copy é escolha dele, e é o método de 10/09 que
+1. **As doze palavras de tela** (tabela abaixo) — copy é escolha dele, e é o método de 10/09 que
    funcionou: eu escrevo, mostro por extenso, ele lê, ele decide.
    🔴 **ELAS ESTÃO NO AR desde 26/09, e continuam marcadas `// PENDENTE` no código de propósito.** Ele
    autorizou *publicar*, o que não é *"li e aprovei a copy"* — e apagar o marcador por conta própria é
@@ -98,7 +98,11 @@ melhorou a decisão, e a única vez em que desviei do processo de propósito (e 
   a suíte verde e o `tsc` limpo, porque o `not-found.tsx` era a única página que lia banco sem isso — e
   **dois assentos de revisão passaram por cima**, porque nenhum dispatch meu pedia build.
 
-### 📣 ONZE PALAVRAS DE TELA ESPERANDO O JOÃO LER — todas marcadas `// PENDENTE`
+### 📣 DOZE PALAVRAS DE TELA ESPERANDO O JOÃO LER — todas marcadas `// PENDENTE`
+
+🔴 **Eram "onze" até 26/09 à noite, e o número era falso: a tabela era lista escrita à mão,
+cega ao que cresceu.** `grep -rn PENDENTE src/app/admin/` devolve **doze** — faltava a de
+`admin/[slug]/page.tsx:43`. Conferir sempre pelo grep, nunca por esta tabela.
 
 Copy é escolha dele. Nada disto está publicado como se fosse a voz dele.
 
@@ -115,6 +119,7 @@ Copy é escolha dele. Nada disto está publicado como se fosse a voz dele.
 | `admin/HistoricoDaVoz.tsx:10` | "voltar a esta" |
 | `admin/HistoricoDaVoz.tsx:12` | "Voltando…" |
 | `admin/HistoricoDaVoz.tsx:14` | "Não consegui voltar a esta versão." |
+| `admin/[slug]/page.tsx:43` | "Não consegui ler o histórico — pode estar incompleto." |
 
 ### 📜 AS RULINGS DESTA EXECUÇÃO ESTÃO VERSIONADAS
 
