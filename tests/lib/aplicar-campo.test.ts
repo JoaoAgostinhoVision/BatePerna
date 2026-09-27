@@ -101,7 +101,27 @@ describe("aplicarCampo", () => {
     expect(() => aplicarCampo(DOC, "voz", 42 as never)).toThrow();
     expect(() => aplicarCampo(DOC, "condicao.regra.limiar_mm", "doze" as never)).toThrow();
     expect(() => aplicarCampo(DOC, "piso", "asfalto-de-mentira")).toThrow();
-    expect(() => aplicarCampo(DOC, "horario.abre", "8h")).toThrow();
+  });
+
+  // 🔴 I3 DA REVISÃO (2026-09-26). Esta asserção morava na linha de cima, com
+  // o `DOC` da Rampa — QUE NÃO TEM `horario`. O ZodError trazia DOIS problemas
+  // (a regex E `fecha: Required`), então trocar `z.string().regex(/^\d{2}:\d{2}$/)`
+  // por `z.string()` no schema deixava a suíte inteira VERDE: o segundo
+  // problema sobrava quando o primeiro saía. A regex não estava pinada por
+  // nada — e o comentário da espécie `hora` e a justificativa do bloco se
+  // APOIAM nela.
+  //
+  // Morde assim: `minutosDeHHMM("8h")` dá `NaN`, `fechadoNaHora` devolve
+  // `false` (o lugar nunca fecha) e o chip da ficha pública renderiza
+  // `NaNhundefined`.
+  it("a regex HH:MM do `hora` é a ÚNICA coisa que recusa `8h` numa ficha que TEM horário", () => {
+    const e = estouro(() => aplicarCampo(DOC_HORA, "horario.abre", "8h"));
+    expect(e).toBeInstanceOf(ZodError);
+    const issues = (e as ZodError).issues;
+    expect(issues, "mais de um problema: o teste mediria a regex por acidente").toHaveLength(1);
+    expect(issues[0].path.join(".")).toBe("horario.abre");
+    expect(issues[0].code).toBe("invalid_string");
+    expect((issues[0] as { validation?: unknown }).validation).toBe("regex");
   });
 
   it("caminho fora do registro é recusado", () => {
@@ -182,8 +202,16 @@ describe("removerCampo — o 'não sei'", () => {
     expect(() => removerCampo(DOC, "inventado")).toThrow();
   });
 
+  // 🔴 I2 DA REVISÃO (2026-09-26). A redação de antes era
+  // `expect(() => JSON.parse(removerCampo(...))).not.toThrow()`, e ela era
+  // VÁCUO: `JSON.parse` de um `JSON.stringify` nunca estoura. A asserção media
+  // que `removerCampo` não estourou, e NADA sobre o documento ser válido. A
+  // redação veio do brief — e o brief não é a régua. Quem valida é o schema.
   it("o documento continua válido depois de remover", () => {
-    expect(() => JSON.parse(removerCampo(DOC, "secaRapido"))).not.toThrow();
+    expect(() => fichaSchema.parse(JSON.parse(removerCampo(DOC, "secaRapido")))).not.toThrow();
+    expect(() => fichaSchema.parse(JSON.parse(removerCampo(DOC, "piso")))).not.toThrow();
+    expect(() => fichaSchema.parse(JSON.parse(removerCampo(DOC, "custo.curto")))).not.toThrow();
+    expect(() => fichaSchema.parse(JSON.parse(removerCampo(DOC_HORA, "horario")))).not.toThrow();
   });
 
   it("só a chave pedida sai; todo o resto sai idêntico", () => {
@@ -234,11 +262,11 @@ describe("o bloco opcional inteiro — o 'não sei' do horário", () => {
   // PASSA no `fichaSchema` — se a guarda do registro sumir, esta chamada não
   // estoura de jeito nenhum, e a mutação morre no `estouro()` e não num
   // `toThrow()` de fachada.
-  it("gravar o bloco inteiro é RECUSADO, e quem recusa é o registro", () => {
-    const e = estouro(() => aplicarCampo(DOC_HORA, "horario", { abre: "06:00", fecha: "18:00" } as never));
+  it("com o bloco PRESENTE, gravar o bloco inteiro é recusado, e a recusa manda editar campo a campo", () => {
+    const e = estouro(() => aplicarCampo(DOC_HORA, "horario", { abre: "06:00", fecha: "18:00" }));
     expect(e).not.toBeInstanceOf(ZodError);
-    expect((e as Error).message).toContain("bloco");
     expect((e as Error).message).toContain("horario");
+    expect((e as Error).message).toContain("um campo de cada vez");
     // e o documento não mudou
     expect(JSON.parse(DOC_HORA).horario).toEqual(comHora.horario);
   });
@@ -247,6 +275,66 @@ describe("o bloco opcional inteiro — o 'não sei' do horário", () => {
     const depois = JSON.parse(aplicarCampo(DOC_HORA, "horario.abre", "06:00"));
     expect(depois.horario.abre).toBe("06:00");
     expect(depois.horario.fecha).toBe(comHora.horario!.fecha);
+  });
+
+  // 🔴 C1 DA REVISÃO (2026-09-26): a primeira redação do H1 deixou o `horario`
+  // numa PORTA DE MÃO ÚNICA. O "não sei" tirava o bloco e nada o trazia de
+  // volta — `abre` sozinho estoura por falta de `fecha`, `fecha` sozinho pela
+  // falta de `abre`, e não havia sequência nenhuma da API que devolvesse
+  // horário a uma ficha sem horário. Ele tocaria "não sei", mudaria de ideia,
+  // e o horário só voltaria com um desenvolvedor no banco. Os quatro casos
+  // abaixo são a IDA E VOLTA completa.
+  it("com o bloco AUSENTE, gravar o bloco inteiro GRAVA", () => {
+    const depois = JSON.parse(aplicarCampo(DOC, "horario", { abre: "05:00", fecha: "17:00" }));
+    expect(depois.horario).toEqual({ abre: "05:00", fecha: "17:00" });
+    expect(() => fichaSchema.parse(depois)).not.toThrow();
+  });
+
+  // A CONSEQUÊNCIA, medida no motor da tela — e a ida e volta inteira: a Rampa
+  // não fecha por hora, passa a fechar, e volta a não fechar.
+  it("o lugar que não fechava PASSA A FECHAR às 18h, e o 'não sei' desfaz", () => {
+    const seisDaTarde = { minutos: 18 * 60, dia: 6, epochS: 0 }; // 18h, sábado (a Rampa abre sáb/dom)
+    const antes = fichaSchema.parse(JSON.parse(DOC));
+    expect(fechadoAgora(aberturaDaFicha(antes), seisDaTarde), "a premissa: sem horário ela não fecha").toBe(false);
+
+    const comHorario = aplicarCampo(DOC, "horario", { abre: "05:00", fecha: "17:00" });
+    expect(fechadoAgora(aberturaDaFicha(fichaSchema.parse(JSON.parse(comHorario))), seisDaTarde)).toBe(true);
+
+    const semDeNovo = removerCampo(comHorario, "horario");
+    expect(fechadoAgora(aberturaDaFicha(fichaSchema.parse(JSON.parse(semDeNovo))), seisDaTarde)).toBe(false);
+  });
+
+  // 🔴 A CONFERÊNCIA É FOLHA A FOLHA, ANTES DE MONTAR. Montar e deixar o
+  // `fichaSchema.parse` decidir devolveria um ZodError cru que não diz QUAL
+  // das duas horas está errada — e o dono lê a recusa no celular.
+  it("hora mal escrita no bloco é recusada pela regra de `hora`, nomeando a folha", () => {
+    const e = estouro(() => aplicarCampo(DOC, "horario", { abre: "8h", fecha: "17:00" }));
+    expect(e).not.toBeInstanceOf(ZodError);
+    expect((e as Error).message).toContain("horario.abre");
+    expect((e as Error).message).not.toContain("horario.fecha");
+  });
+
+  it("folha que falta no bloco é nomeada, e o bloco não entra pela metade", () => {
+    const e = estouro(() => aplicarCampo(DOC, "horario", { abre: "06:00" }));
+    expect(e).not.toBeInstanceOf(ZodError);
+    expect((e as Error).message).toContain("horario.fecha");
+    // e nem o `abre` que veio certo foi gravado
+    expect("horario" in JSON.parse(DOC)).toBe(false);
+  });
+
+  it("chave que não é do bloco é recusada nomeando a chave", () => {
+    const e = estouro(() => aplicarCampo(DOC, "horario", { abre: "06:00", fecha: "18:00", almoco: "12:00" }));
+    expect(e).not.toBeInstanceOf(ZodError);
+    expect((e as Error).message).toContain("almoco");
+  });
+
+  // O caminho que a revisão provou NUNCA produzir sucesso, agora com recusa
+  // que diz o que fazer em vez de um `Required` sobre a outra hora.
+  it("meia folha de um bloco AUSENTE é recusada mandando preencher o bloco inteiro", () => {
+    const e = estouro(() => aplicarCampo(DOC, "horario.abre", "06:00"));
+    expect(e).not.toBeInstanceOf(ZodError);
+    expect((e as Error).message).toContain("horario");
+    expect((e as Error).message).toContain("inteiro");
   });
 
   // 🔴 E A ARMADILHA DA M3 DE NOVO, no caso mais escorregadio do arquivo:

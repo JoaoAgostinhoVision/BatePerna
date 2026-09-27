@@ -109,6 +109,29 @@ function blocosOpcionaisDoSchema(tipo: z.ZodTypeAny, prefixo: string, saida: str
   return saida;
 }
 
+/** A marca de "qualquer índice" dentro de um caminho do registro. */
+const MOLDE = "[]";
+
+/** O tipo Zod que o `fichaSchema` declara para UM caminho concreto.
+ *
+ *  🔴 O MÓDULO TEM UM RESOLVEDOR IGUAL A ESTE, e a duplicação é de propósito:
+ *  lá ele é COMPORTAMENTO (a conferência folha a folha de `gravarBloco`), aqui
+ *  ele é o GUARDA. Um guarda que chama a função do módulo que ele guarda mede
+ *  o módulo contra ele mesmo. São 10 linhas; a independência vale mais. */
+function tipoNoCaminho(caminho: string): z.ZodTypeAny | undefined {
+  let atual: z.ZodTypeAny | undefined = fichaSchema;
+  for (const degrau of caminho.split(".")) {
+    if (!atual) return undefined;
+    const d = def(desembrulhar(atual));
+    if (d.typeName === "ZodObject") atual = d.shape!()[degrau];
+    else if (d.typeName === "ZodArray") atual = /^\d+$/.test(degrau) ? d.type : undefined;
+    else return undefined;
+  }
+  return atual;
+}
+
+const eOpcionalNoSchema = (tipo: z.ZodTypeAny) => def(tipo).typeName === "ZodOptional";
+
 const FOLHAS = folhasDoSchema(fichaSchema, "", []);
 const BLOCOS_DO_SCHEMA = blocosOpcionaisDoSchema(fichaSchema, "", []);
 const NO_REGISTRO = new Set(CAMPOS_DA_FICHA.map((c) => c.caminho));
@@ -224,6 +247,64 @@ describe("o registro cobre o schema", () => {
     // ao mesmo tempo, porque as regras de cobertura delas se contradizem.
     const nos_dois = [...BLOCOS_INTEIROS.keys()].filter((b) => EDITADOS_INTEIROS.has(b));
     expect(nos_dois).toEqual([]);
+  });
+
+  // 🔴 I1 DA REVISÃO (2026-09-26), E É O FURO MAIS SÉRIO QUE ESTE ARQUIVO
+  // TINHA. O arquivo inteiro existe pra matar "lista à mão cega ao que
+  // cresceu" — e o guarda de cobertura confere só a coluna `caminho`. A coluna
+  // `obrigatorio`, que é a que DECIDE se o "não sei" existe, era escrita à mão
+  // sem guarda nenhum. O revisor mediu duas mutações sobrevivendo à suíte
+  // inteira, 1244/1244 verde:
+  //
+  //   `avisos` (o schema exige) vira `obrigatorio: false`
+  //      → o João toca "não sei" e leva um 400 mudo da rota.
+  //   `custo.valor` (opcional) vira `obrigatorio: true`
+  //      → ele não consegue mais tirar o preço de um lugar que virou grátis,
+  //        e o app segue afirmando um preço que não vale.
+  //
+  // Quem responde "este campo é obrigatório?" é o SCHEMA, não eu. O varredor
+  // resolve o tipo de cada caminho do registro e compara.
+  describe("a coluna `obrigatorio` bate com o schema", () => {
+    const resolvidos = CAMPOS_DA_FICHA.map((c) => ({
+      caminho: c.caminho,
+      obrigatorio: c.obrigatorio,
+      // O molde vale pra qualquer índice, e o tipo do item não depende de qual.
+      tipo: tipoNoCaminho(c.caminho.replace(MOLDE, ".0")),
+    }));
+
+    // NÃO-VACUIDADE: se o resolvedor devolvesse `undefined` em tudo, o laço
+    // abaixo compararia nada e passaria verde. Aqui ele é medido antes.
+    it("todo caminho do registro resolve num tipo do schema", () => {
+      expect(resolvidos.filter((r) => r.tipo === undefined).map((r) => r.caminho)).toEqual([]);
+      expect(resolvidos).toHaveLength(CAMPOS_DA_FICHA.length);
+      // e o resolvedor não é constante: o schema tem dos dois
+      const opcionais = resolvidos.filter((r) => eOpcionalNoSchema(r.tipo!));
+      expect(opcionais.length).toBeGreaterThan(0);
+      expect(opcionais.length).toBeLessThan(resolvidos.length);
+    });
+
+    it("nenhuma entrada diverge — `obrigatorio` é o que o schema diz, não o que eu escrevi", () => {
+      const divergentes = resolvidos
+        .filter((r) => r.tipo !== undefined && r.obrigatorio === eOpcionalNoSchema(r.tipo))
+        .map((r) => `${r.caminho}: registro diz obrigatorio=${r.obrigatorio}, schema diz o contrário`);
+      expect(
+        divergentes,
+        "a coluna que decide se o 'não sei' existe tem que vir do schema. Se algum " +
+          "campo precisar divergir, ele entra com o motivo escrito — nunca afrouxando isto",
+      ).toEqual([]);
+    });
+
+    // ⚠️ O caso que eu esperava precisar de exceção e NÃO precisou: as folhas
+    // do bloco `horario` são obrigatórias DENTRO dele (`z.string()`, sem
+    // `.optional()`), e o bloco é que é `ZodOptional`. O resolvedor desembrulha
+    // o `ZodOptional` do `horario` ao DESCER, então `horario.abre` chega como
+    // `ZodString` puro — obrigatório, que é exatamente o que o registro diz.
+    // Zero exceções nas 30 entradas.
+    it("o bloco é opcional e as folhas dele não — e o varredor enxerga os dois", () => {
+      expect(eOpcionalNoSchema(tipoNoCaminho("horario")!)).toBe(true);
+      expect(eOpcionalNoSchema(tipoNoCaminho("horario.abre")!)).toBe(false);
+      expect(eOpcionalNoSchema(tipoNoCaminho("horario.fecha")!)).toBe(false);
+    });
   });
 
   it("o registro não está vazio nem é só a voz — senão os guardas acima passam ocos", () => {
