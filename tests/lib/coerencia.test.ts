@@ -476,6 +476,76 @@ describe("violacoesDoAcervo", () => {
     expect(v[0].frase).not.toContain("noite toda");
   });
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🔴 RODADA 2/5 — FRASE COM BIFURCAÇÃO PRECISA DE PROVA DE TEXTO EM CADA RAMO.
+  //
+  //  Achado: a bifurcação que eu mesmo introduzi na rodada 1/5 (frase de "24
+  //  horas" × frase de "noite toda") tinha asserção de conteúdo só num lado.
+  //  Colapsar a ternária pro ramo das 24h deixava as 46 asserções VERDES — e uma
+  //  ficha que abre à noite de verdade passaria a ler "está aberto 24 horas e
+  //  nunca fecha". Nenhum outro arquivo importa a lógica de frases do módulo (a
+  //  página importa só o `PRECO`), então estes dois arquivos são tudo que pode
+  //  matar.
+  //
+  //  🔴 A varredura achou **TRÊS** bifurcações nessa situação, não uma — as
+  //  outras duas eram `??` dentro da frase, e as duas escondiam um defeito
+  //  DIFERENTE do que a frase descrevia:
+  //   - `custo.valor ?? ""` dizia *"o custo está escrito como """* quando o campo
+  //     está AUSENTE. Ele não escreveu vazio, não escreveu nada;
+  //   - `noCurto ?? "nenhum preço"` produzia *"o chip do topo diz nenhum preço"*,
+  //     que além de não ser português escondia o caso do chip sem número dentro.
+  //
+  //  Os três casos abaixo são simétricos: cada ramo tem a frase dele afirmada E
+  //  a do outro ramo negada, e há mutação colapsando cada bifurcação nos dois
+  //  sentidos.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  it("a ficha genuinamente invertida recebe a frase da noite, não a das 24 horas", () => {
+    const f = rampa();
+    f.horario = { abre: "17:00", fecha: "08:00" };
+    const v = violacoesDoAcervo([f]).filter((x) => x.regra === "horario-invertido-sem-aviso");
+    expect(v.length, "horário invertido de verdade passou batido").toBe(1);
+    expect(v[0].frase, "a ficha invertida recebeu a frase do caso de 24 horas")
+      .toContain("noite toda");
+    expect(v[0].frase).not.toContain("24 horas");
+  });
+
+  it("custo completo AUSENTE e custo ILEGÍVEL recebem frases diferentes", () => {
+    const ausente = rampa();
+    ausente.custo = { tag: "pago", curto: "R$ 5 · portão" };
+    const a = violacoesDoAcervo([ausente]).filter((x) => x.regra === "preco-legivel-no-custo");
+    expect(a.length, "ficha paga com chip e sem custo completo passou batido").toBe(1);
+    expect(a[0].frase, "a frase do campo ausente diz que ele escreveu algo")
+      .not.toMatch(/escrito como/);
+    expect(a[0].frase).toContain("vazio");
+
+    const ilegivel = rampa();
+    ilegivel.custo = { tag: "pago", valor: "cinco reais por pessoa", curto: "R$ 5 · portão" };
+    const b = violacoesDoAcervo([ilegivel]).filter((x) => x.regra === "preco-legivel-no-custo");
+    expect(b.length).toBe(1);
+    expect(b[0].frase, "a frase do custo ilegível não mostra o que ele escreveu")
+      .toContain("cinco reais por pessoa");
+    expect(b[0].frase).not.toContain("vazio");
+  });
+
+  it("chip SEM número e chip com número divergente recebem frases diferentes", () => {
+    const semNumero = rampa();
+    semNumero.custo = { tag: "pago", valor: "R$ 5 · portão da entrada", curto: "no portão" };
+    const a = violacoesDoAcervo([semNumero]).filter((x) => x.regra === "chip-bate-com-preco");
+    expect(a.length, "chip sem número nenhum passou batido").toBe(1);
+    expect(a[0].frase, 'a frase do chip sem número virou "diz nenhum preço"')
+      .not.toMatch(/diz nenhum/);
+    expect(a[0].frase).toContain("não mostra preço nenhum");
+
+    const divergente = rampa();
+    divergente.custo = { tag: "pago", valor: "R$ 10,00", curto: "R$ 5" };
+    const b = violacoesDoAcervo([divergente]).filter((x) => x.regra === "chip-bate-com-preco");
+    expect(b.length).toBe(1);
+    expect(b[0].frase, "a frase do chip divergente não mostra os dois preços")
+      .toMatch(/R\$ 5.*R\$ 10,00/);
+    expect(b[0].frase).not.toContain("não mostra preço nenhum");
+  });
+
   it("um minuto de faixa já é faixa normal, e passa calado", () => {
     const f = rampa();
     f.horario = { abre: "08:00", fecha: "08:01" };

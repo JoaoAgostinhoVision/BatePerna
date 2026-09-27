@@ -164,11 +164,21 @@ const TABELA: readonly Regra[] = [
         if (PRECO.test(f.custo.valor ?? "")) return [];
         return [{
           slug: f.slug,
-          // PENDENTE: redação minha, o João ainda não leu
-          frase:
-            `Em ${nomeDe(f)}, o custo está escrito como "${f.custo.valor ?? ""}" e o app não ` +
-            "acha um preço aí dentro. Escreva o valor em reais (por exemplo, R$ 10), " +
-            "senão o chip do topo da ficha não tem número pra mostrar.",
+          // 🔴 DUAS FRASES, E O `?? ""` QUE MORAVA AQUI ERA A PRIMEIRA A MENTIR
+          // (achado na revisão 2/5, 2026-09-27). Com `custo.valor` AUSENTE a
+          // frase dizia *"o custo está escrito como """* — ele não escreveu
+          // vazio, ele não escreveu NADA, e são dois consertos diferentes: num
+          // ele corrige o texto, no outro ele preenche um campo que não existe.
+          // O que a tela faz nesse caso: `page.tsx` cai no literal "Pago".
+          frase: f.custo.valor
+            // PENDENTE: redação minha, o João ainda não leu
+            ? `Em ${nomeDe(f)}, o custo está escrito como "${f.custo.valor}" e o app não ` +
+              "acha um preço aí dentro. Escreva o valor em reais (por exemplo, R$ 10), " +
+              "senão o chip do topo da ficha não tem número pra mostrar."
+            // PENDENTE: redação minha, o João ainda não leu
+            : `Em ${nomeDe(f)}, o chip do topo está preenchido e o custo completo está ` +
+              'vazio. O app não tem de onde tirar o preço, e a ficha vai dizer só "Pago" ' +
+              "no lugar do valor.",
         }];
       }),
   },
@@ -193,11 +203,19 @@ const TABELA: readonly Regra[] = [
         if (noCurto?.replace(/\s/g, "") === noValor.replace(/\s/g, "")) return [];
         return [{
           slug: f.slug,
-          // PENDENTE: redação minha, o João ainda não leu
-          frase:
-            `O chip do topo de ${nomeDe(f)} diz ${noCurto ?? "nenhum preço"} e o custo completo ` +
-            `diz ${noValor}. A pessoa lê o chip antes de sair de casa e o custo completo só ` +
-            "quando chega.",
+          // 🔴 DUAS FRASES, e o `?? "nenhum preço"` que morava aqui produzia
+          // *"o chip do topo diz nenhum preço"* — que além de não ser português
+          // escondia um defeito DIFERENTE: o chip existe e não tem número nenhum
+          // dentro (ele escreveu só "no portão"). Achado na revisão 2/5.
+          frase: noCurto
+            // PENDENTE: redação minha, o João ainda não leu
+            ? `O chip do topo de ${nomeDe(f)} diz ${noCurto} e o custo completo diz ` +
+              `${noValor}. A pessoa lê o chip antes de sair de casa e o custo completo só ` +
+              "quando chega."
+            // PENDENTE: redação minha, o João ainda não leu
+            : `O chip do topo de ${nomeDe(f)} não mostra preço nenhum ("${f.custo.curto}") e ` +
+              `o custo completo diz ${noValor}. A pessoa lê o chip antes de sair de casa, e ` +
+              "sem o número ali ela não sabe quanto levar.",
         }];
       }),
   },
@@ -371,6 +389,12 @@ const TABELA: readonly Regra[] = [
     // que o app vai anunciar o lugar "aberto a noite toda e fechado o dia todo"
     // seria descrever o OUTRO caso. A fronteira `<` × `<=` é de propósito e tem
     // teste nos dois lados.
+    //
+    // ⚠️ E OS DOIS RAMOS TÊM PROVA DE CONTEÚDO, não só de disparo — a bifurcação
+    // nasceu, na revisão 2/5, com prova só num lado: colapsá-la pro ramo das 24h
+    // deixava as 46 asserções verdes, e uma ficha que abre à noite de verdade
+    // passava a ler "está aberto 24 horas e nunca fecha". Regra com bifurcação de
+    // frase precisa de asserção de TEXTO em cada ramo; senão a prova é de metade.
     regra: "horario-invertido-sem-aviso",
     achar: (fichas) =>
       fichas.flatMap((f) => {
