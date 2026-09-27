@@ -73,17 +73,22 @@
  *                                             # tests/lib/harness-de-mutacao
  *                                             # .test.ts.
  *      node scripts/mutar.mjs --inventario    # as três listas REAIS (não as
- *                                             # cravadas) mais o piso e os
- *                                             # arquivos medidos — cinco chaves
- *                                             # em JSON, sem mutar nada. É por
- *                                             # aqui que tests/lib/harness-de-
- *                                             # mutacao.test.ts confere o
- *                                             # instrumento, e o piso é uma das
- *                                             # cinco porque é o único lugar
- *                                             # onde o 51 fica cravado fora.
+ *                                             # cravadas), mais tudo de que o
+ *                                             # guarda de fora precisa: o piso,
+ *                                             # os arquivos medidos, as
+ *                                             # categorias e os arquivos
+ *                                             # exigidos. Em JSON, sem mutar
+ *                                             # nada. 🔴 QUANTAS CHAVES SÃO não
+ *                                             # está escrito aqui, pelo mesmo
+ *                                             # motivo das contagens acima: a
+ *                                             # redação anterior dizia "cinco"
+ *                                             # e o MESMO commit acrescentou a
+ *                                             # sexta e a sétima.
  *
- *  🔴 As contagens acima são as únicas do arquivo escritas em PROSA, e elas já
- *  nasceram falsas uma vez: a rodada 4d acrescentou o quinto autoteste e deixou
+ *  🔴 Este arquivo tem contagens em prosa em vários lugares (as 34 entradas, as
+ *  cinco categorias, os níveis do instrumento), e TODA VEZ que uma delas ficou
+ *  no mundo antigo ela virou frase falsa — sete rodadas, sete. As do comando
+ *  acima são as que mais custaram: a rodada 4d acrescentou o quinto autoteste e deixou
  *  dois lugares dizendo "quatro" — a quinta frase falsa em cinco rodadas,
  *  sempre na parte que ninguém re-lê, e esta na única seção que alguém lê ANTES
  *  de rodar o comando. Quem for mexer nas listas: o número de verdade sai de
@@ -103,7 +108,10 @@
  *     que casa zero ou mais de um teste real); uma entrada de `MUTACOES`
  *     trazendo campo que só existe em `CONTROLES`, **própria ou herdada do
  *     protótipo**; uma entrada de `MUTACOES` **sem `mata`, ou com `mata: []`**;
- *     e **qualquer uma das três listas fora do inventário cravado à mão**.
+ *     **qualquer uma das três listas fora do inventário cravado à mão**; e o
+ *     **guarda de fora apagado** (`tests/lib/harness-de-mutacao.test.ts`), que é
+ *     a recusa nascida na rodada 4f e que ficou faltando nesta lista no commit
+ *     que a criou.
  *     Cada recusa imprime uma MARCA (`[PORTAO:...]`), e é a marca — nunca a
  *     prosa — que os autotestes casam.
  *   - **2** — achado, e as duas sentenças também imprimem marca
@@ -137,7 +145,9 @@
  *     QUATRO e se contradizia cinco linhas abaixo, nomeando um quinto — a mesma
  *     espécie que este arquivo já confessou ter corrigido uma vez):
  *
- *       1. os **cinco controles de CATEGORIA**, um por ramo do que o harness DIZ;
+ *       1. os **controles de CATEGORIA**, um por ramo do que o harness DIZ — e
+ *          o do `sem diff` só nasceu na rodada 4g, depois de um re-revisor medir
+ *          que ele era o único ramo do classificador sem controle nenhum;
  *       2. os **autotestes de RECUSA** (código 1);
  *       3. os **autotestes de VEREDITO** (código 2) — porque o modo controle dá
  *          `return` antes da sentença, e por quatro rodadas ninguém provou que
@@ -1082,6 +1092,23 @@ let CONTROLES = [
     mata: null,
   },
   {
+    id: "CTRL-SEM-DIFF",
+    titulo: "CONTROLE: troca que não muda NADA (o `novo` igual ao `espera`)",
+    arquivo: COERENCIA,
+    // 🔴 Este controle faltava, e a frase "cinco controles, um por ramo do que o
+    // harness DIZ" era falsa por causa dele: `sem diff` era o único ramo do
+    // classificador sem controle nenhum. Medido na sétima passada — desviar o
+    // ramo `sem diff` para `sobreviveu` deixava as três camadas verdes.
+    edicoes: [{
+      inicio: 1, fim: 1,
+      espera: 'import { PISOS } from "@/lib/piso";',
+      novo: 'import { PISOS } from "@/lib/piso";',
+    }],
+    esperaCategoria: "sem diff",
+    esperaPorque: null,
+    mata: null,
+  },
+  {
     id: "CTRL-MATA-ERRADO",
     titulo: "CONTROLE: mutação que morre de verdade, com `mata` FANTASMA",
     arquivo: COERENCIA,
@@ -1357,7 +1384,19 @@ function substanciaDeAutoteste(a) {
   const troca = a.entrada
     ? a.entrada.edicoes.map((e) => `${e.inicio}-${e.fim}→${JSON.stringify(e.novo)}`).join("; ")
     : "(sem entrada)";
-  return `${a.esperaCodigo}|${a.esperaTrecho}|mata=${mata}|args=${JSON.stringify(a.args ?? [])}|troca=${troca}`;
+  // 🔴 E os campos de controle da entrada injetada, separando PRÓPRIO de
+  // HERDADO — porque é exatamente isso que `campo-de-controle-herdado` existe
+  // para exercitar, e sem isto ele era degradável por DADO: trocar o
+  // `Object.create({piso: 1})` por um objeto comum com `piso` próprio deixava a
+  // substância byte a byte idêntica, e depois disso reverter o `c in m` para
+  // `hasOwnProperty` mantinha o autoteste VERDE. Medido na sétima passada.
+  const campos = a.entrada
+    ? CAMPOS_SO_DE_CONTROLE
+        .filter((c) => c in a.entrada)
+        .map((c) => `${Object.prototype.hasOwnProperty.call(a.entrada, c) ? "own" : "proto"}:${c}`)
+        .join(",") || "(nenhum)"
+    : "(sem entrada)";
+  return `${a.esperaCodigo}|${a.esperaTrecho}|mata=${mata}|args=${JSON.stringify(a.args ?? [])}|troca=${troca}|campos=${campos}`;
 }
 
 /** E para uma mutação, a substância é o `mata` — o teste que ela declara
@@ -1370,9 +1409,17 @@ function substanciaDeMutacao(m) {
   // nenhuma. O `arquivo` entra porque `ARQUIVOS_ENVOLVIDOS` deriva daqui: a
   // única entrada que muta `page.tsx` é o que mantém o arquivo no guarda de
   // árvore suja.
-  const onde = `${m.arquivo}@${m.edicoes.map((e) => `${e.inicio}-${e.fim}`).join(",")}`;
+  // 🔴 E a TROCA entra junto, não só o lugar — esta é a metade que a onda
+  // anterior deixou de fora, e a sétima passada mediu o preço: trocando só o
+  // `novo` de M8 por uma quebra de OUTRA coisa, o harness imprimia
+  // `M8 [morreu] desliga o exame do limiar_mm`, `mata confere: sim`, exit 0,
+  // com o exame do `limiar_mm` INTACTO e o inventário byte a byte igual. A
+  // entrada mentia sobre a própria identidade. `substanciaDeAutoteste` já
+  // pinava a troca desde o commit anterior; aqui é a mesma decisão, na lista
+  // que mais precisava dela.
+  const onde = m.edicoes.map((e) => `${e.inicio}-${e.fim}→${JSON.stringify(e.novo)}`).join("; ");
   const oque = m.mata == null ? "(sem mata)" : (Array.isArray(m.mata) ? m.mata.join(" + ") : String(m.mata));
-  return `${onde} · ${oque}`;
+  return `${m.arquivo}@${onde} · ${oque}`;
 }
 
 /** 🔴 As listas cravadas à mão, e a regra que as governa: **o número nunca vem
@@ -1385,28 +1432,29 @@ function substanciaDeMutacao(m) {
 const CONTROLES_ESPERADOS = {
   "CTRL-SOBREVIVE": "sobreviveu|mataConfere=nao-declarado|porque=null",
   "CTRL-SEM-ALVO": "sem alvo|mataConfere=nao-declarado|porque=null",
+  "CTRL-SEM-DIFF": "sem diff|mataConfere=nao-declarado|porque=null",
   "CTRL-SEM-MEDICAO": 'sem medição|mataConfere=nao-declarado|porque="não escreveu relatório"',
   "CTRL-PISO-BAIXO": 'sem medição|mataConfere=nao-declarado|porque="EXECUTOU"',
   "CTRL-MATA-ERRADO": "morreu|mataConfere=false|porque=null",
 };
 
 const AUTOTESTES_ESPERADOS = {
-  "mata-frouxo": "1|[PORTAO:ESPECIFICIDADE]|mata=\"a\"|args=[]|troca=591-591→\"  return [];\"",
-  "mata-fantasma": "1|[PORTAO:ESPECIFICIDADE]|mata=\"ESTE TESTE NUNCA EXISTIU\"|args=[]|troca=591-591→\"  return [];\"",
-  "mata-ausente": "1|[PORTAO:SEM-MATA]|mata=(sem entrada)|args=[]|troca=591-591→\"  return [];\"",
-  "campo-de-controle": "1|[PORTAO:CAMPOS-DE-CONTROLE]|mata=\"a\"|args=[]|troca=591-591→\"  return [];\"",
-  "piso-por-entrada": "1|[PORTAO:CAMPOS-DE-CONTROLE]|mata=\"cada uma das 13 regras dispara na quebra escrita pra ela\"|args=[]|troca=591-591→\"  return [];\"",
-  "mata-lista-vazia": "1|[PORTAO:SEM-MATA]|mata=[]|args=[]|troca=591-591→\"  return [];\"",
-  "campo-de-controle-herdado": "1|[PORTAO:CAMPOS-DE-CONTROLE]|mata=\"o chip que não bate com o preço é pego\"|args=[]|troca=591-591→\"  return [];\"",
-  "inventario-mutacoes": "1|[PORTAO:INVENTARIO]|mata=(sem entrada)|args=[\"--sabotar=mutacoes\"]|troca=(sem entrada)",
-  "inventario-controles": "1|[PORTAO:INVENTARIO]|mata=(sem entrada)|args=[\"--sabotar=controles\"]|troca=(sem entrada)",
-  "inventario-autotestes": "1|[PORTAO:INVENTARIO]|mata=(sem entrada)|args=[\"--sabotar=autotestes\"]|troca=(sem entrada)",
-  "veredito-sobreviveu": "2|[VEREDITO:CATEGORIA-DE-FALHA]|mata=\"cada uma das 13 regras dispara na quebra escrita pra ela\"|args=[]|troca=1-1→\"import { PISOS as PISOS } from \\\"@/lib/piso\\\";\"",
-  "veredito-sem-alvo": "2|[VEREDITO:CATEGORIA-DE-FALHA]|mata=\"o chip que não bate com o preço é pego\"|args=[]|troca=1-1→\"nada\"",
-  "veredito-sem-diff": "2|[VEREDITO:CATEGORIA-DE-FALHA]|mata=\"o chip que não bate com o preço é pego\"|args=[]|troca=1-1→\"import { PISOS } from \\\"@/lib/piso\\\";\"",
-  "veredito-sem-medicao": "2|[VEREDITO:CATEGORIA-DE-FALHA]|mata=\"o chip que não bate com o preço é pego\"|args=[]|troca=1-1→\"import { PISOS } from \\\"@/lib/piso\\\"; ((((\"",
-  "guarda-de-fora": "1|[PORTAO:GUARDA-DE-FORA]|mata=(sem entrada)|args=[\"--sabotar=guarda\"]|troca=(sem entrada)",
-  "veredito-mata-mente": "2|[VEREDITO:MATA-NAO-MORREU]|mata=\"a ficha sozinha, com a frase dela mesma, não é acusada de emprestar\"|args=[]|troca=591-591→\"  return [];\"",
+  "mata-frouxo": "1|[PORTAO:ESPECIFICIDADE]|mata=\"a\"|args=[]|troca=591-591→\"  return [];\"|campos=(nenhum)",
+  "mata-fantasma": "1|[PORTAO:ESPECIFICIDADE]|mata=\"ESTE TESTE NUNCA EXISTIU\"|args=[]|troca=591-591→\"  return [];\"|campos=(nenhum)",
+  "mata-ausente": "1|[PORTAO:SEM-MATA]|mata=(sem entrada)|args=[]|troca=591-591→\"  return [];\"|campos=(nenhum)",
+  "campo-de-controle": "1|[PORTAO:CAMPOS-DE-CONTROLE]|mata=\"a\"|args=[]|troca=591-591→\"  return [];\"|campos=own:mataFantasmaDeProposito",
+  "piso-por-entrada": "1|[PORTAO:CAMPOS-DE-CONTROLE]|mata=\"cada uma das 13 regras dispara na quebra escrita pra ela\"|args=[]|troca=591-591→\"  return [];\"|campos=own:piso,own:arquivosDeTeste",
+  "mata-lista-vazia": "1|[PORTAO:SEM-MATA]|mata=[]|args=[]|troca=591-591→\"  return [];\"|campos=(nenhum)",
+  "campo-de-controle-herdado": "1|[PORTAO:CAMPOS-DE-CONTROLE]|mata=\"o chip que não bate com o preço é pego\"|args=[]|troca=591-591→\"  return [];\"|campos=proto:piso",
+  "inventario-mutacoes": "1|[PORTAO:INVENTARIO]|mata=(sem entrada)|args=[\"--sabotar=mutacoes\"]|troca=(sem entrada)|campos=(sem entrada)",
+  "inventario-controles": "1|[PORTAO:INVENTARIO]|mata=(sem entrada)|args=[\"--sabotar=controles\"]|troca=(sem entrada)|campos=(sem entrada)",
+  "inventario-autotestes": "1|[PORTAO:INVENTARIO]|mata=(sem entrada)|args=[\"--sabotar=autotestes\"]|troca=(sem entrada)|campos=(sem entrada)",
+  "veredito-sobreviveu": "2|[VEREDITO:CATEGORIA-DE-FALHA]|mata=\"cada uma das 13 regras dispara na quebra escrita pra ela\"|args=[]|troca=1-1→\"import { PISOS as PISOS } from \\\"@/lib/piso\\\";\"|campos=(nenhum)",
+  "veredito-sem-alvo": "2|[VEREDITO:CATEGORIA-DE-FALHA]|mata=\"o chip que não bate com o preço é pego\"|args=[]|troca=1-1→\"nada\"|campos=(nenhum)",
+  "veredito-sem-diff": "2|[VEREDITO:CATEGORIA-DE-FALHA]|mata=\"o chip que não bate com o preço é pego\"|args=[]|troca=1-1→\"import { PISOS } from \\\"@/lib/piso\\\";\"|campos=(nenhum)",
+  "veredito-sem-medicao": "2|[VEREDITO:CATEGORIA-DE-FALHA]|mata=\"o chip que não bate com o preço é pego\"|args=[]|troca=1-1→\"import { PISOS } from \\\"@/lib/piso\\\"; ((((\"|campos=(nenhum)",
+  "guarda-de-fora": "1|[PORTAO:GUARDA-DE-FORA]|mata=(sem entrada)|args=[\"--sabotar=guarda\"]|troca=(sem entrada)|campos=(sem entrada)",
+  "veredito-mata-mente": "2|[VEREDITO:MATA-NAO-MORREU]|mata=\"a ficha sozinha, com a frase dela mesma, não é acusada de emprestar\"|args=[]|troca=591-591→\"  return [];\"|campos=(nenhum)",
 };
 
 /** 🔴 A SEXTA SABOTAGEM, e ela é a razão desta lista existir: `MUTACOES` era a
@@ -1425,40 +1473,40 @@ const AUTOTESTES_ESPERADOS = {
  *  última camada de dado deste arquivo. Apagar uma entrada bate aqui; trocar o
  *  teste que ela declara matar também. */
 const MUTACOES_ESPERADAS = {
-  "M1": "src/lib/coerencia.ts@591-591 · o chip que não bate com o preço é pego + um nome de dia que não existe é pego, mesmo sem repetição nenhuma + a janela de chuva é conferida nos TRÊS números, um a um",
-  "M2": "src/lib/coerencia.ts@196-199 · cada uma das 13 regras dispara na quebra escrita pra ela + o chip que não bate com o preço é pego",
-  "M3": "src/lib/coerencia.ts@365-365 · a prosa que nomeia piso diferente do campo é pega",
-  "M4": "src/lib/coerencia.ts@591-591 · a frase da violação nomeia o lugar e não é o identificador da regra",
-  "M5": "src/lib/coerencia.ts@284-284 · uma ficha que empresta a frase de outra é pega",
-  "M5b": "src/lib/coerencia.ts@288-288 · a ficha sozinha, com a frase dela mesma, não é acusada de emprestar",
-  "M6": "src/lib/coerencia.ts@160-163 · cada uma das 13 regras dispara na quebra escrita pra ela + custo sem preço legível dá UM erro, não dois",
-  "M7": "src/lib/coerencia.ts@515-518 · cada uma das 13 regras dispara na quebra escrita pra ela + um nome de dia que não existe é pego, mesmo sem repetição nenhuma",
-  "M8": "src/lib/coerencia.ts@495-495 · a janela de chuva é conferida nos TRÊS números, um a um",
-  "M9": "src/lib/coerencia.ts@452-452 · cada uma das 13 regras dispara na quebra escrita pra ela + a hora citada na prosa é lida com acento e sem acento",
-  "M10": "src/lib/coerencia.ts@529-529 · um nome de dia que não existe é pego, mesmo sem repetição nenhuma",
-  "M11": "src/lib/coerencia.ts@477-477 · a janela de chuva é conferida nos TRÊS números, um a um",
-  "M12": "src/lib/coerencia.ts@145-145 · os QUATRO textos que distinguem um lugar do outro são conferidos, um a um + a lista dos textos que distinguem tem EXATAMENTE quatro campos",
-  "M13": "src/lib/coerencia.ts@407-407 · a travessia da noite DITA na ficha passa — a regra exige o aviso, não proíbe o horário",
-  "M14": "src/lib/coerencia.ts@142-142 · os QUATRO textos que distinguem um lugar do outro são conferidos, um a um + a lista dos textos que distinguem tem EXATAMENTE quatro campos",
-  "M15": "src/lib/coerencia.ts@160-163 · ficha paga SEM chip é silêncio, não violação",
-  "N1": "src/lib/coerencia.ts@359-364 · ficha SEM piso é silêncio, mesmo com a prosa nomeando um piso",
-  "N2": "src/lib/coerencia.ts@283-284 · duas fichas SEM secaRapido não emprestam frase uma da outra",
-  "N3": "src/lib/coerencia.ts@141-146 · a lista dos textos que distinguem tem EXATAMENTE quatro campos + campo de prosa fora da lista pode ser igual em duas fichas",
-  "N4": "src/lib/coerencia.ts@160-163 · ficha grátis não é medida por regra de custo nenhuma",
-  "N5": "src/lib/coerencia.ts@201-203 · custo sem preço legível dá UM erro, não dois",
-  "N6": "src/lib/coerencia.ts@242-242 · o chip cabe com 4 palavras e não cabe com 5",
-  "N7": "src/lib/coerencia.ts@406-406 · horário igual em abre e fecha é acusado, e a frase fala de 24 horas",
-  "N8": "src/lib/coerencia.ts@430-430,451-451 · a hora citada na prosa é lida com acento e sem acento",
-  "N9": "src/lib/coerencia.ts@540-543 · a frase do dia não reconhecido fala de GRAFIA e mostra os sete dias",
-  "N10": "src/lib/coerencia.ts@572-574 · a frase da semana inteira não manda esvaziar a lista, porque o schema recusa",
-  "N11": "src/lib/coerencia.ts@410-410 · a ficha genuinamente invertida recebe a frase da noite, não a das 24 horas",
-  "N12": "src/app/[slug]/page.tsx@106-106 · o texto do regex de preço aparece UMA vez só em todo o src/ + a página continua montando o chip a partir do PRECO importado",
-  "B1a": "src/lib/coerencia.ts@410-410 · a ficha genuinamente invertida recebe a frase da noite, não a das 24 horas",
-  "B1b": "src/lib/coerencia.ts@410-410 · horário igual em abre e fecha é acusado, e a frase fala de 24 horas",
-  "B2a": "src/lib/coerencia.ts@173-173 · custo completo AUSENTE recebe a frase do campo vazio",
-  "B2b": "src/lib/coerencia.ts@173-173 · custo completo ILEGÍVEL mostra por extenso o que ele escreveu",
-  "B3a": "src/lib/coerencia.ts@210-210 · chip SEM número recebe a frase de não mostrar preço nenhum",
-  "B3b": "src/lib/coerencia.ts@210-210 · chip com número DIVERGENTE mostra os dois preços lado a lado",
+  "M1": "src/lib/coerencia.ts@591-591→\"  return [];\" · o chip que não bate com o preço é pego + um nome de dia que não existe é pego, mesmo sem repetição nenhuma + a janela de chuva é conferida nos TRÊS números, um a um",
+  "M2": "src/lib/coerencia.ts@196-199→\"    regra: \\\"chip-bate-com-preco\\\",\\n    achar: (fichas) =>\\n      fichas.flatMap((f) => {\\n        if (true) return []; // ausente é silêncio (mutacao M2: regra desligada)\" · cada uma das 13 regras dispara na quebra escrita pra ela + o chip que não bate com o preço é pego",
+  "M3": "src/lib/coerencia.ts@365-365→\"        if (true) return []; // mutacao M3: regra do piso ignora a prosa\" · a prosa que nomeia piso diferente do campo é pega",
+  "M4": "src/lib/coerencia.ts@591-591→\"  return TABELA.flatMap((r) => r.achar(fichas).map((a) => ({ regra: r.regra, ...a, frase: r.regra })));\" · a frase da violação nomeia o lugar e não é o identificador da regra",
+  "M5": "src/lib/coerencia.ts@284-284→\"        const k = f.slug; // mutacao M5: chave por ficha, nunca agrupa com outra\" · uma ficha que empresta a frase de outra é pega",
+  "M5b": "src/lib/coerencia.ts@288-288→\"        grupo.map((f) => ({ // mutacao M5b: acusa o grupo inteiro, inclusive o 1º\" · a ficha sozinha, com a frase dela mesma, não é acusada de emprestar",
+  "M6": "src/lib/coerencia.ts@160-163→\"    regra: \\\"preco-legivel-no-custo\\\",\\n    achar: (fichas) =>\\n      fichas.flatMap((f) => {\\n        if (true) return []; // mutacao M6: regra desligada\" · cada uma das 13 regras dispara na quebra escrita pra ela + custo sem preço legível dá UM erro, não dois",
+  "M7": "src/lib/coerencia.ts@515-518→\"    regra: \\\"dia-repetido-ou-inventado\\\",\\n    achar: (fichas) =>\\n      fichas.flatMap((f) => {\\n        if (true) return []; // mutacao M7: regra desligada\" · cada uma das 13 regras dispara na quebra escrita pra ela + um nome de dia que não existe é pego, mesmo sem repetição nenhuma",
+  "M8": "src/lib/coerencia.ts@495-495→\"        if (false) { // mutacao M8: exame do limiar_mm desligado\" · a janela de chuva é conferida nos TRÊS números, um a um",
+  "M9": "src/lib/coerencia.ts@452-452→\"        if (true) return []; // sem campo, quem acusa é a regra de cima (mutacao M9)\" · cada uma das 13 regras dispara na quebra escrita pra ela + a hora citada na prosa é lida com acento e sem acento",
+  "M10": "src/lib/coerencia.ts@529-529→\"        const inventados = []; // mutacao M10: exame do dia inventado desligado\" · um nome de dia que não existe é pego, mesmo sem repetição nenhuma",
+  "M11": "src/lib/coerencia.ts@477-477→\"        if (false) { // mutacao M11: exame do janela_passado_horas desligado\" · a janela de chuva é conferida nos TRÊS números, um a um",
+  "M12": "src/lib/coerencia.ts@145-145→null · os QUATRO textos que distinguem um lugar do outro são conferidos, um a um + a lista dos textos que distinguem tem EXATAMENTE quatro campos",
+  "M13": "src/lib/coerencia.ts@407-407→null · a travessia da noite DITA na ficha passa — a regra exige o aviso, não proíbe o horário",
+  "M14": "src/lib/coerencia.ts@142-142→null · os QUATRO textos que distinguem um lugar do outro são conferidos, um a um + a lista dos textos que distinguem tem EXATAMENTE quatro campos",
+  "M15": "src/lib/coerencia.ts@160-163→\"    regra: \\\"preco-legivel-no-custo\\\",\\n    achar: (fichas) =>\\n      fichas.flatMap((f) => {\\n        if (f.custo.tag !== \\\"pago\\\") return []; // mutacao M15: sem exigir custo.curto\" · ficha paga SEM chip é silêncio, não violação",
+  "N1": "src/lib/coerencia.ts@359-364→\"        const prosa = prosaDe(f);\\n        // \\\"asfalto-esburacado\\\" e \\\"asfalto-tapete\\\" aparecem em prosa como duas\\n        // palavras; o valor do enum é hifenizado. Comparo pelo primeiro termo.\\n        const citados = PISOS.filter((p) => prosa.includes(p.split(\\\"-\\\")[0]));\\n        const estranhos = citados.filter((p) => p.split(\\\"-\\\")[0] !== (f.piso ?? \\\"\\\").split(\\\"-\\\")[0]); // mutacao N1\" · ficha SEM piso é silêncio, mesmo com a prosa nomeando um piso",
+  "N2": "src/lib/coerencia.ts@283-284→\"        const k = (f.secaRapido ?? \\\"\\\").trim().toLowerCase(); // mutacao N2: guarda removida\" · duas fichas SEM secaRapido não emprestam frase uma da outra",
+  "N3": "src/lib/coerencia.ts@141-146→\"const TEXTOS_QUE_DISTINGUEM = [\\n  { campo: \\\"voz\\\", rotulo: \\\"a voz\\\" },\\n  { campo: \\\"promessa\\\", rotulo: \\\"a promessa\\\" },\\n  { campo: \\\"premio\\\", rotulo: \\\"o prêmio\\\" },\\n  { campo: \\\"rotulo_escaneio\\\", rotulo: \\\"a etiqueta\\\" },\\n  { campo: \\\"acesso\\\", rotulo: \\\"o acesso\\\" }, // mutacao N3\\n] as const;\" · a lista dos textos que distinguem tem EXATAMENTE quatro campos + campo de prosa fora da lista pode ser igual em duas fichas",
+  "N4": "src/lib/coerencia.ts@160-163→\"    regra: \\\"preco-legivel-no-custo\\\",\\n    achar: (fichas) =>\\n      fichas.flatMap((f) => {\\n        if (!f.custo.curto) return []; // mutacao N4: sem exigir tag pago\" · ficha grátis não é medida por regra de custo nenhuma",
+  "N5": "src/lib/coerencia.ts@201-203→\"        const noCurto = f.custo.curto.match(PRECO)?.[0]; // mutacao N5: guarda de exclusividade removida\\n        if (noCurto?.replace(/\\\\s/g, \\\"\\\") === (noValor ?? \\\"\\\").replace(/\\\\s/g, \\\"\\\")) return [];\" · custo sem preço legível dá UM erro, não dois",
+  "N6": "src/lib/coerencia.ts@242-242→\"        if (palavras <= 5) return []; // mutacao N6\" · o chip cabe com 4 palavras e não cabe com 5",
+  "N7": "src/lib/coerencia.ts@406-406→\"        if (abre <= fecha) return []; // mutacao N7\" · horário igual em abre e fecha é acusado, e a frase fala de 24 horas",
+  "N8": "src/lib/coerencia.ts@430-430→\"        const citada = /fecha às (\\\\d{1,2})\\\\s*h/i.exec(prosaDe(f)); // mutacao N8\"; 451-451→\"        const citada = /fecha às (\\\\d{1,2})\\\\s*h/i.exec(prosaDe(f)); // mutacao N8\" · a hora citada na prosa é lida com acento e sem acento",
+  "N9": "src/lib/coerencia.ts@540-543→\"            frase:\\n              `${nomeDe(f)} tem ${inventados.map((d) => `\\\"${d}\\\"`).join(\\\", \\\")} na lista de dias, ` +\\n              \\\"e isso não é dia da semana.\\\", // mutacao N9: reverte a correcao da grafia\" · a frase do dia não reconhecido fala de GRAFIA e mostra os sete dias",
+  "N10": "src/lib/coerencia.ts@572-574→\"          frase:\\n            `${nomeDe(f)} declara os sete dias da semana, o que é o mesmo que não declarar dia ` +\\n            \\\"nenhum. Deixe a lista de dias vazia: o app só fala de dia quando o lugar folga em algum.\\\", // mutacao N10\" · a frase da semana inteira não manda esvaziar a lista, porque o schema recusa",
+  "N11": "src/lib/coerencia.ts@410-410→\"          frase: true // mutacao N11: colapsa a bifurcacao (sempre 24h)\" · a ficha genuinamente invertida recebe a frase da noite, não a das 24 horas",
+  "N12": "src/app/[slug]/page.tsx@106-106→\"  const precoCurto = ficha.custo.valor?.match(/R\\\\$\\\\s?\\\\d+(?:[.,]\\\\d{2})?/)?.[0] ?? \\\"Pago\\\"; // mutacao N12\" · o texto do regex de preço aparece UMA vez só em todo o src/ + a página continua montando o chip a partir do PRECO importado",
+  "B1a": "src/lib/coerencia.ts@410-410→\"          frase: true // mutacao B1a: sempre a frase das 24h\" · a ficha genuinamente invertida recebe a frase da noite, não a das 24 horas",
+  "B1b": "src/lib/coerencia.ts@410-410→\"          frase: false // mutacao B1b: sempre a frase da noite\" · horário igual em abre e fecha é acusado, e a frase fala de 24 horas",
+  "B2a": "src/lib/coerencia.ts@173-173→\"          frase: true // mutacao B2a: sempre o ramo ilegivel\" · custo completo AUSENTE recebe a frase do campo vazio",
+  "B2b": "src/lib/coerencia.ts@173-173→\"          frase: false // mutacao B2b: sempre o ramo ausente\" · custo completo ILEGÍVEL mostra por extenso o que ele escreveu",
+  "B3a": "src/lib/coerencia.ts@210-210→\"          frase: true // mutacao B3a: sempre o ramo com numero\" · chip SEM número recebe a frase de não mostrar preço nenhum",
+  "B3b": "src/lib/coerencia.ts@210-210→\"          frase: false // mutacao B3b: sempre o ramo sem numero\" · chip com número DIVERGENTE mostra os dois preços lado a lado",
 };
 
 /** Confere um enumerador contra a lista escrita à mão: mesmos nomes, mesma
@@ -1891,9 +1939,10 @@ function main() {
   // instrumento — e esse teste é a última camada de propósito: ele mora em
   // `tests/`, logo roda em `npm test`, logo roda em TODO dispatch. Um guarda
   // que vive dentro do arquivo que a sabotagem edita nunca fecha a recursão.
-  // Cinco chaves, não três: o piso e os arquivos medidos vão junto porque o
-  // guarda de fora depende deles — `tests/lib/harness-de-mutacao.test.ts` é o
-  // único lugar em que o piso 51 está cravado fora deste arquivo.
+  // Vai junto tudo de que o guarda de fora precisa, não só as três listas: ele
+  // é o único lugar em que o piso 51, as categorias e a própria exigência estão
+  // cravados FORA deste arquivo. (Não conte as chaves em prosa: a redação que
+  // dizia "cinco" nasceu falsa no mesmo commit que acrescentou duas.)
   if (pedido.includes("--inventario")) {
     console.log(JSON.stringify({
       mutacoes: MUTACOES.map((m) => ({ id: m.id, afirma: substanciaDeMutacao(m) })),
@@ -2149,11 +2198,19 @@ function main() {
   // re-revisor em 27/09, com os 5 controles, os 12 autotestes e o `npm test`
   // verdes. Categoria nova passa a entrar na sentença sozinha.
   const deFalha = CATEGORIAS.filter((c) => c !== "morreu").reduce((n, c) => n + placar[c], 0);
-  // E o cinto contra placar quebrado: se alguém tirar uma string de
-  // `CATEGORIAS`, a categoria deixa de ser contada e a soma vira `NaN`, e
-  // `NaN > 0` é false — exit 0 para sempre. Aqui isso estoura.
+  // 🔴 O cinto é uma LEI DE CONSERVAÇÃO: toda entrada que rodou tem de estar
+  // contada em alguma categoria. Ele pega as três formas de quebrar o placar
+  // que eu soube inventar — categoria fora da lista, categoria tirada de
+  // `CATEGORIAS`, e `r.categoria` undefined —, e nas três a soma sai **0**,
+  // nunca `NaN`.
+  //
+  // A redação anterior dizia que a soma "vira NaN, e `NaN > 0` é false", e um
+  // re-revisor mediu que não: `placar` nasce de `Object.fromEntries(CATEGORIAS…)`,
+  // então `placar[c]` para `c ∈ CATEGORIAS` é sempre número, e o
+  // `!Number.isInteger(somaTotal)` era INALCANÇÁVEL — metade do cinto era código
+  // morto sustentando uma frase falsa. O mecanismo de verdade é a igualdade.
   const somaTotal = CATEGORIAS.reduce((n, c) => n + placar[c], 0);
-  if (!Number.isInteger(somaTotal) || somaTotal !== alvo.length) {
+  if (somaTotal !== alvo.length) {
     console.error(`\n${MARCA_VEREDITO_CATEGORIA} 🔴 o placar não fecha: ${somaTotal} contadas para ${alvo.length} rodadas.`);
     console.error("  Alguma categoria saiu de CATEGORIAS ou `rodarUma` devolveu categoria fora da lista.");
     process.exit(2);

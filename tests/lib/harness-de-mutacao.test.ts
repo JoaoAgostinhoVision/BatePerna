@@ -3,20 +3,23 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 /** 🔴 O GUARDA DO PRÓPRIO INSTRUMENTO — e ele existe porque a recursão de
- *  conserto da Tarefa 2 andou CINCO rodadas sem sair do lugar.
+ *  conserto da Tarefa 2 andou SETE rodadas sem sair do lugar.
  *
  *  `scripts/mutar.mjs` é o harness de mutação do `src/lib/coerencia.ts`: ele
  *  troca trechos do módulo por versões erradas e afirma que a suíte MORRE em
  *  cada troca. É ele que sustenta a frase "as 13 regras de coerência estão
- *  provadas". Cinco rodadas seguidas, um revisor conseguiu DESLIGAR em silêncio
- *  o portão que a rodada anterior tinha acabado de criar, sempre com os
- *  controles verdes e `exit 0`:
+ *  provadas". SETE rodadas seguidas, um revisor conseguiu DESLIGAR em silêncio o
+ *  portão que a rodada anterior tinha acabado de criar, sempre com os controles
+ *  verdes e `exit 0` — e nas duas últimas o portão desligado era um guarda DESTE
+ *  arquivo:
  *
  *    4a  o portão nasceu sem controle            -> nasceram os CONTROLES
  *    4b  o portão NOVO nasceu sem controle       -> nasceram os AUTOTESTES
  *    4c  o CONTROLE novo nasceu sem inventário   -> nasceu a lista cravada à mão
  *    4d  a lista cravada guardava só o NOME      -> passou a guardar o PAR
  *    4e  a CARGA ÚTIL não tinha inventário       -> nasceu este arquivo
+ *    4f  nada guardava ESTE arquivo              -> o harness passou a EXIGI-LO
+ *    4g  a substância pinava o LUGAR, não a troca-> a troca entrou no par
  *
  *  🔴 A razão de este guarda morar em `tests/` e não dentro do harness: **um
  *  guarda que vive no arquivo que a sabotagem edita nunca fecha a recursão.**
@@ -88,6 +91,7 @@ const MUTACOES_CRAVADAS = [
 const CONTROLES_CRAVADOS = [
   "CTRL-SOBREVIVE",
   "CTRL-SEM-ALVO",
+  "CTRL-SEM-DIFF",
   "CTRL-SEM-MEDICAO",
   "CTRL-PISO-BAIXO",
   "CTRL-MATA-ERRADO",
@@ -139,6 +143,11 @@ const VEREDITO_CRAVADO = [
 const CONTROLES_SUBSTANCIA: Record<string, string> = {
   "CTRL-SOBREVIVE": "sobreviveu|mataConfere=nao-declarado|porque=null",
   "CTRL-SEM-ALVO": "sem alvo|mataConfere=nao-declarado|porque=null",
+  // 🔴 O sexto, e ele faltava: `sem diff` era o único ramo do classificador sem
+  // controle nenhum, e a frase do docblock dizia "cinco controles, um por ramo"
+  // — falsa por causa dele. Medido na sétima passada: desviar o ramo `sem diff`
+  // para outra categoria de falha deixava as três camadas verdes.
+  "CTRL-SEM-DIFF": "sem diff|mataConfere=nao-declarado|porque=null",
   "CTRL-SEM-MEDICAO": 'sem medição|mataConfere=nao-declarado|porque="não escreveu relatório"',
   "CTRL-PISO-BAIXO": 'sem medição|mataConfere=nao-declarado|porque="EXECUTOU"',
   "CTRL-MATA-ERRADO": "morreu|mataConfere=false|porque=null",
@@ -160,11 +169,11 @@ describe("o harness de mutação do coerencia.ts", () => {
     expect(new Set(mutacoes.map((m) => m.id)).size).toBe(34);
   });
 
-  it("tem os 5 controles de categoria e os 16 autotestes", () => {
+  it("tem os 6 controles de categoria e os 16 autotestes", () => {
     const { controles, autotestes } = inventario();
     expect([...controles.map((c) => c.id)].sort()).toEqual([...CONTROLES_CRAVADOS].sort());
     expect([...autotestes.map((a) => a.id)].sort()).toEqual([...AUTOTESTES_CRAVADOS].sort());
-    expect(controles).toHaveLength(5);
+    expect(controles).toHaveLength(6);
     expect(autotestes).toHaveLength(16);
   });
 
@@ -177,7 +186,7 @@ describe("o harness de mutação do coerencia.ts", () => {
     expect([...veredito.map((a) => a.id)].sort()).toEqual(VEREDITO_CRAVADO);
   });
 
-  it("cada um dos 5 controles declara a substância dele, com o RAMO", () => {
+  it("cada um dos 6 controles declara a substância dele, com o RAMO", () => {
     const { controles } = inventario();
     const real = Object.fromEntries(controles.map((c) => [c.id, c.afirma]));
     expect(real).toEqual(CONTROLES_SUBSTANCIA);
@@ -208,19 +217,19 @@ describe("o harness de mutação do coerencia.ts", () => {
     // distinguiam), com os dois controles de "sem medição" (só o ramo), e com
     // os três autotestes de veredito que EU escrevi (só a troca).
     const { mutacoes, controles, autotestes } = inventario();
-    expect(new Set(controles.map((c) => c.afirma)).size).toBe(5);
+    expect(new Set(controles.map((c) => c.afirma)).size).toBe(6);
     expect(new Set(autotestes.map((a) => a.afirma)).size).toBe(16);
-    // 🔴 33 de 34, e o número é cravado à mão com o motivo escrito: `N11` e
-    // `B1a` são a MESMA troca por projeto (mesma linha, mesmo `espera`, mesmo
-    // `novo`), duas entradas porque chegaram por dois caminhos diferentes do
-    // brief. É o único par legítimo; qualquer segundo par é uma entrada que
-    // virou clone de outra.
     const substancias = mutacoes.map((m) => m.afirma);
-    expect(new Set(substancias).size).toBe(33);
-    const repetida = substancias.filter((x, i) => substancias.indexOf(x) !== i);
-    expect(repetida).toHaveLength(1);
-    const par = mutacoes.filter((m) => m.afirma === repetida[0]).map((m) => m.id);
-    expect(par).toEqual(["N11", "B1a"]);
+    expect(new Set(substancias).size).toBe(34);
+    // 🔴 34 de 34 desde que a TROCA entrou na substância — e aqui vai a parte
+    // desconfortável, medida: `N11` e `B1a` são a MESMA mutação semântica
+    // (colapsam a bifurcação na linha 410, as duas escrevendo `frase: true`), e
+    // o que as distingue nesta contagem é só o COMENTÁRIO dentro do `novo`. Ou
+    // seja: 34 distintas aqui NÃO significa 34 trocas distintas no módulo — são
+    // 33, como o docblock do harness diz. A distinção da 34ª é cosmética, está
+    // escrita, e é melhor assim do que uma contagem que parece semântica e não é.
+    const na410 = mutacoes.filter((m) => m.afirma.includes("@410-410") && m.afirma.includes("frase: true"));
+    expect([...na410.map((m) => m.id)].sort()).toEqual(["B1a", "N11"]);
   });
 
   it("as 34 mutações mutam os arquivos que dizem mutar — 33 no módulo, 1 na página", () => {
@@ -237,8 +246,15 @@ describe("o harness de mutação do coerencia.ts", () => {
   });
 
   it("toda mutação declara qual teste ela mata — nenhuma com `mata` ausente ou vazio", () => {
+    // 🔴 Esta asserção era VÁCUA e um re-revisor mediu: `m.afirma === "(sem
+    // mata)"` nunca podia ser verdade, porque a substância é
+    // `arquivo@linhas→troca · mata` — uma entrada sem `mata` lê
+    // `"…@495-495→… · (sem mata)"`, que não é igual a `"(sem mata)"`. Apagando o
+    // `mata` de uma entrada e sincronizando a lista cravada, os 15 testes daqui
+    // passavam verdes. Quem pegava era o portão do harness (exit 1), não este
+    // teste, que dizia conferir isso e não conferia.
     const { mutacoes } = inventario();
-    const semMata = mutacoes.filter((m) => m.afirma === "(sem mata)" || m.afirma.trim() === "");
+    const semMata = mutacoes.filter((m) => m.afirma.endsWith(" · (sem mata)") || m.afirma.trim() === "");
     expect(semMata.map((m) => m.id)).toEqual([]);
   });
 
