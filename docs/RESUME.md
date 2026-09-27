@@ -5,10 +5,11 @@
 🔴 **ÚLTIMA PARADA: 2026-09-27, E DESTA VEZ NÃO FOI PARADA — O PC DELE DESLIGOU SOZINHO** no meio
 da passada de confirmação da Tarefa 2 (*"algo aconteceu o pc se desligou"*). O commit `d8b1f73` ficou
 gravado; o **resultado da passada morreu com a sessão** e foi **redespachado** na sessão seguinte.
-**Estamos na branch `painel-completo`**, com **1 tarefa completa e a 2ª a uma re-revisão de fechar**
+**Estamos na branch `painel-completo`**, com **2 tarefas completas** (a 2ª fechou em `914e38a`, depois de nove rodadas de conserto **no
+instrumento**) e a 3ª em execução
 (de 12), árvore limpa, **1304/1304 em 82 arquivos**, `tsc` limpo, `npm run build` exit 0 — os três
-medidos por mim em 27/09 no `e558edd`, junto com o harness inteiro (34 morreu, `--controles` exit 0
-com 5 controles e 16 autotestes). **NADA FOI AO AR** e nenhuma tarefa deste plano roda `vercel`.
+medidos por mim em 27/09 no `914e38a`, junto com o harness inteiro (34 morreu, `--controles` exit 0
+com 6 controles e 16 autotestes). **NADA FOI AO AR** e nenhuma tarefa deste plano roda `vercel`.
 O `main` segue publicado e intacto.
 → Como retomar: o bloco **"▶ RETOMAR A RODADA DO PAINEL COMPLETO"**, logo abaixo.
 
@@ -103,8 +104,8 @@ guarda do próprio harness, na 4e; → 1304 com os seis que a 4f acrescentou a e
 | tarefa | estado |
 |---|---|
 | **1 — o registro de campos, `aplicarCampo` com caminho/tipo/"não sei"** | ✅ completa (`dfeb005..50f71bf`), 1 rodada de fix, re-revisão limpa |
-| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 9 rodadas de fix aplicadas (`7c4ddf9..e558edd`); as rodadas 4 a 4f endureceram o próprio instrumento depois de **dezesseis `Critical` nele** — falta só a sétima e última passada, despachada em 27/09 **com a regra de parada dentro dela**; ver as seções 4 a 4g. 🔴 **Só classe (a) reabre** (o harness afirmando cobertura que não existe); qualquer outro achado vira minor diferido e a tarefa FECHA |
-| 3 — a porta de escrita aceita todo campo e passa pela coerência | ⬜ próxima |
+| **2 — as 13 regras de coerência viram porta de produção** | ✅ **completa** (`7c4ddf9..914e38a`), **10 rodadas de fix**, e as sete últimas foram no PRÓPRIO INSTRUMENTO, depois de **dezesseis `Critical` nele**. A sétima passada não achou nada da classe que reabriria; ver as seções 4 a 4h. 🔴 **Ela ainda não tem consumidor de produção: a promessa dela só se cumpre na Tarefa 3** |
+| **3 — a porta de escrita aceita todo campo e passa pela coerência** | 🟡 **em execução** — despachada em 27/09 com o brief já auditado (sete defeitos achados, rulings T3-R1 e T3-R2) |
 | 4 — `oculto`: esconder sem apagar | ⬜ |
 | 5 — a tela do lugar mostra a ficha inteira | ⬜ |
 | 6 — um editor por espécie de campo | ⬜ |
@@ -440,17 +441,77 @@ nas três listas, e a distribuição por arquivo das 34 (33 no módulo, 1 na pá
 = **34 morreu, 0 nas quatro categorias de falha**, exit 0, `mata confere` = sim nas 34;
 **1304/1304 em 82 arquivos**; `tsc` exit 0; `npm run build` exit 0.
 
-🟡 **A SÉTIMA E ÚLTIMA PASSADA ESTÁ DESPACHADA, com a regra de parada escrita DENTRO dela** — e é a
-primeira vez que um revisor desta branch recebe a consequência junto com a pergunta:
+### 4h. 🟢 A RODADA 4g/5 — SEM CLASSE (a), E A TAREFA 2 FECHOU (`914e38a`)
+
+A sétima passada foi a primeira desta branch a receber a **consequência junto com a pergunta**:
 
 > **Só REABRE a tarefa um achado da classe (a):** o harness saindo com 0 (ou carimbando *"morreu"*)
-> para uma mutação que a suíte **não** mata, com o `npm test` verde — o instrumento afirmando
-> cobertura que não existe. **Qualquer outro achado, de qualquer gravidade, entra como MINOR
-> DIFERIDO** para a triagem da revisão final da branch, e a **Tarefa 2 FECHA.**
+> para uma mutação que a suíte **não** mata, com o `npm test` verde. **Qualquer outro achado, de
+> qualquer gravidade, entra como MINOR DIFERIDO**, e a **Tarefa 2 FECHA.**
 
-Seis rodadas no instrumento com **10 das 12 tarefas da LEI dele esperando** é desproporção, e o ponto
-em que o retorno para de compensar é este: a camada de fora roda em todo dispatch, e as duas camadas
-se guardam. A decisão de consequência é minha; o revisor reporta tudo o que achar.
+🟢 **Veredito dela: nenhum achado de classe (a).** Ela mediu os controles um a um **desligando o ramo
+de cada um** (todos vermelhos **nomeando o motivo** — e o `esperaPorque` discriminou o ramo do *sem
+medição* exatamente como desenhado), os quatro portões de campo (diagonal limpa), o piso de
+especificidade, o portão do `sem mata`, o cinto do placar nas três formas de quebrá-lo, e a
+fidelidade **byte a byte** da restauração.
+
+🔴 **Mas o candidato que ela achou era a metade NÃO CONSERTADA de um conserto meu**, e eu apliquei: a
+substância da mutação pinava `arquivo@linhas · mata` e **não o `novo`**. Trocando só o `novo` de M8
+por uma quebra de **outra** coisa, o harness imprimia *"M8 [morreu] desliga o exame do `limiar_mm`"*,
+`mata confere: sim`, **exit 0** — com aquele exame **intacto**, o inventário byte a byte igual e o
+guarda de fora em 15/15. **A entrada mentia sobre a própria identidade.** Pela letra da regra não é
+classe (a) (a mutação que rodou a suíte mata); pelo espírito, encosta — e o commit anterior **já**
+tinha tomado essa decisão na substância dos autotestes, com o motivo escrito.
+
+**A onda final, aplicada SEM oitava passada de revisão** (a regra de parada valendo), com cada
+conserto provado vermelho por mim e o controle intacto verde ao lado:
+
+| conserto | a sabotagem que o prova |
+|---|---|
+| a **troca** entrou na substância da mutação | trocar só o `novo` de M8 → `--inventario` **exit 1** nomeando M8 |
+| os **campos de controle** (próprio × herdado) entraram na do autoteste | `piso` próprio em vez de herdado → **exit 1** |
+| nasceu o **sexto controle**, `CTRL-SEM-DIFF` | desviar o ramo → `--controles` **exit 2**, *"esperava sem diff, saiu sobreviveu"* |
+| a asserção **vácua** do guarda virou `endsWith` | apagar o `mata` e sincronizar a cravada → o guarda **exit 1** (antes ficava verde) |
+
+🔴 **E duas descobertas que valem mais que os consertos:**
+
+1. **`sem diff` era o único ramo do classificador sem controle nenhum**, e por causa dele a frase *"os
+   cinco controles, um por ramo do que o harness DIZ"* era **falsa**. **Preferi tornar a frase
+   verdadeira a reescrevê-la** — o sexto controle custou dez linhas.
+2. **Metade do cinto novo era CÓDIGO MORTO sustentando uma frase falsa.** O comentário dizia que
+   tirar uma categoria de `CATEGORIAS` fazia a soma virar `NaN`; **não vira** — `placar` nasce de
+   `Object.fromEntries(CATEGORIAS)`, então `placar[c]` é sempre número e o `!Number.isInteger` era
+   **inalcançável**. As três formas de quebrar o placar dão soma **0**, inteira. O mecanismo de
+   verdade é a **lei de conservação** (`somaTotal === alvo.length`), e agora é só ela.
+   → Isto e a asserção vácua acima são a **52ª espécie** do catálogo: **a condição que virou
+   INALCANÇÁVEL** quando o formato do dado inspecionado mudou. A pergunta que a acha é nova:
+   *"existe algum dado real que faça esta condição ser verdadeira?"*
+
+**E a parte desconfortável, escrita no guarda em vez de escondida:** são **34 substâncias distintas**,
+mas isso **não** são 34 trocas distintas no módulo — `N11` e `B1a` fazem a **mesma** mudança
+(`frase: true` na linha 410) e o que as separa nesta contagem é **só o comentário dentro do `novo`**.
+São 33 trocas, como o docblock sempre disse. Melhor escrever isso do que ter uma contagem que parece
+semântica e não é.
+
+🔴 **QUATRO frases falsas — sétima rodada em sete.** *"Cinco chaves"* no `--inventario` (são sete, e o
+**mesmo** commit acrescentou as duas últimas); a lista das recusas omitia o portão `GUARDA-DE-FORA`,
+que era **a tese central** do commit que a escreveu; *"as contagens acima são as únicas do arquivo
+escritas em prosa"* (há contagens em prosa em cinco outros lugares); e *"cinco controles, um por
+ramo"*.
+
+**Medido:** `--controles` exit 0 com os **6** controles (placar 1/1/1/1/2 — os seis ramos) e os 16
+autotestes; `node scripts/mutar.mjs` = **34 morreu, 0 nas quatro categorias de falha**, exit 0, `mata
+confere` = sim nas 34; **1304/1304 em 82 arquivos**; `tsc` exit 0; `npm run build` exit 0.
+
+🟢 **COM ISTO A TAREFA 2 ESTÁ FECHADA.** As 13 regras de coerência estão num módulo de produção, com
+34 mutações provando que a suíte as trava, e um instrumento cujo próprio guarda **mora fora dele** e
+roda em todo dispatch. **O consumidor de produção é a Tarefa 3**, despachada em seguida.
+
+**Os minors diferidos que a Tarefa 2 deixa para a triagem da revisão final da branch** (além dos onze
+da seção 7): o ramo `sem diff` do **classificador** pode ser renomeado para outra categoria de falha
+sem ninguém acusar (o desvio perigoso, para `"morreu"`, é pego pelo veredito); a tabela de história do
+guarda e o docblock crescem a cada rodada e exigem atualização à mão; o ramo do `TIMEOUT_VITEST`
+nunca foi exercitado; e a restauração com finais de linha **mistos** segue latente.
 
 O próximo passo é a **Tarefa 3** (a porta de escrita), cujo brief **já foi auditado por mim**: sete
 defeitos achados, dois deles rulings (T3-R1 e T3-R2), em `task-3-brief.md` e no fim do
