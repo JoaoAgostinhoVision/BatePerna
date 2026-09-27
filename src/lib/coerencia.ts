@@ -86,9 +86,10 @@ export type Violacao = { regra: string; slug: string; frase: string };
 
 /** O MESMO regex de `src/app/[slug]/page.tsx` — inclusive os centavos, que
  *  ficaram de fora até 2026-08-27 e faziam o chip anunciar menos do que o lugar
- *  cobra. Duplicado de propósito e com o porquê ao lado: `page.tsx` monta o chip
- *  sozinho e não pode importar o módulo que o audita. O preço da duplicação é o
- *  guarda no fim de `tests/lib/coerencia-acervo.test.ts`, que confere os dois. */
+ *  cobra. Copiado de propósito e com o porquê ao lado: se o de lá mudar e o daqui
+ *  não, o teste do fim de `tests/lib/coerencia-acervo.test.ts` acusa. A `page.tsx`
+ *  monta o chip sozinha e não pode importar o módulo que a audita — a duplicação
+ *  é deliberada, e aquele guarda é o preço dela. */
 export const PRECO = /R\$\s?\d+(?:[.,]\d{2})?/;
 
 /** Todo texto corrido da ficha, junto e em minúsculas — é sobre ele que as
@@ -178,12 +179,18 @@ const TABELA: readonly Regra[] = [
       }),
   },
   {
-    // 🔴 BURACO DECLARADO, medido em 2026-09-04: `custo.curto: "R$ 10 · portão"`
-    // numa ficha que cobra **na entrada** sobrevive a todas estas regras, e não
-    // dá pra fechar. O preço bate, o tamanho cabe, e a diferença — portão ×
-    // entrada — é FATO DO LUGAR: só quem conhece sabe onde se paga. Uma regra
-    // que soubesse seria a geografia inventada com roupa de código. Declarar o
-    // buraco é a saída honesta.
+    // 🔴 BURACO DECLARADO, medido em 2026-09-04: a mutação `custo.curto:
+    // "R$ 10 · portão"` numa ficha que cobra **na entrada** SOBREVIVE a estas
+    // regras, e não dá pra fechar aqui. O preço bate, o tamanho cabe, e a
+    // diferença — portão × entrada — é **fato do lugar**: só quem conhece sabe
+    // onde se paga. Uma regra que soubesse seria a geografia inventada com roupa
+    // de código, e morreria no dia em que o João corrigisse o dado.
+    //
+    // Foi exatamente esta palavra que passou meses escrita no código. O que a
+    // impede hoje não é teste nem regra: é o campo existir, e `page.tsx` não
+    // montar mais o chip. Declarar o buraco é a saída honesta — enterrá-lo junto
+    // com o que dá pra medir é a espécie "declarar buraco é certo; enterrar a
+    // metade provável, não" (2026-08-21).
     //
     // O que dá pra medir é o tamanho: o chip é uma pílula no topo da ficha.
     regra: "chip-cabe-na-pilula",
@@ -202,8 +209,9 @@ const TABELA: readonly Regra[] = [
       }),
   },
   {
-    // Mata: `curto = valor` inteiro. O chip é a forma CURTA do custo; repetido,
-    // ele não acrescenta nada e ainda estoura a barra.
+    // Mata: `curto = valor` inteiro (7 palavras estourando a pílula). O chip é a
+    // forma CURTA do custo; repetido, ele não acrescenta nada e ainda estoura a
+    // barra.
     regra: "chip-nao-repete-a-linha",
     achar: (fichas) =>
       fichas.flatMap((f) => {
@@ -282,8 +290,10 @@ const TABELA: readonly Regra[] = [
     //
     // 🔴 O QUE ESTA REGRA **NÃO** FAZ: ela não sabe qual é o piso de lugar
     // nenhum. Ela só exige que a ficha não se contradiga — se a prosa dela
-    // nomeia um piso da escala, tem que ser o piso dela. O dono pode trocar o
+    // nomeia um piso da escala, tem que ser o piso dela. O João pode trocar o
     // dado à vontade desde que troque a prosa junto, que é justamente o ponto.
+    //
+    // Molde: a asserção de `acesso` sustentando `carroComum`, em ficha.test.ts.
     regra: "prosa-bate-com-piso",
     achar: (fichas) =>
       fichas.flatMap((f) => {
@@ -307,7 +317,7 @@ const TABELA: readonly Regra[] = [
     // Mata: `abre: "17:00", fecha: "08:00"`. `fechadoAgora` lê faixa invertida
     // como travessia da meia-noite — comportamento deliberado e certo pra um
     // lugar que abre à noite. Numa ficha em que foi engano, o app anuncia a
-    // trilha **aberta a noite toda e fechada o dia todo**.
+    // trilha **aberta a noite toda e fechada o dia todo**, com a suíte verde.
     //
     // Não proíbe a travessia: exige que ela esteja DITA na prosa, que é o mesmo
     // critério do piso acima — o dado incomum precisa de dono.
@@ -370,8 +380,8 @@ const TABELA: readonly Regra[] = [
       }),
   },
   {
-    // Mata: zerar as janelas de chuva — o carimbo passa a imprimir "Sem chuva
-    // nas últimas ~0h e nada previsto pras próximas ~0h", que é uma regra que
+    // Mata: zerar as duas janelas de chuva na ficha real — o carimbo passa a
+    // imprimir "Sem chuva nas últimas ~0h e nada previsto pras próximas ~0h", que é uma regra que
     // nunca diz não. O zod aceita 0 de propósito (as fixtures sintéticas usam),
     // então o guarda pertence ao ACERVO, não ao schema.
     //
