@@ -1,0 +1,489 @@
+import { PISOS } from "@/lib/piso";
+import { DIAS } from "@/lib/semana";
+import type { Ficha } from "@/types/ficha";
+
+/** 🔴 A COERÊNCIA DO ACERVO, EM PRODUÇÃO — e é por isto que ela saiu dos testes.
+ *
+ *  Estas regras moravam dentro de `tests/lib/coerencia-acervo.test.ts`. Elas
+ *  são o que protege o acervo de dizer bobagem sobre um lugar real: o chip de
+ *  preço que não bate com o valor, a ficha que empresta a frase de outra, a
+ *  prosa que diz "barro" com o campo dizendo asfalto.
+ *
+ *  **Como teste, elas rodavam no computador do desenvolvedor, antes do
+ *  deploy.** Um lugar que o dono editar do celular numa terça de manhã nunca
+ *  passaria por nenhuma delas. Migrar os guardas de fonte (do JSON pro banco)
+ *  não resolveria nada: o problema não é de ONDE eles leem, é QUANDO eles
+ *  rodam. Aqui eles rodam na hora da gravação, e a porta de escrita do painel
+ *  recusa o que produzir violação, mostrando a `frase` ao dono.
+ *
+ *  A procedência — que o app nunca afirme sobre um lugar real algo que o dono
+ *  não disse — é a linha vermelha deste projeto, e este módulo passa a ser
+ *  quem a guarda em tempo de execução.
+ *
+ *  ## 🔴 POR QUE SÃO 13 REGRAS E NÃO 15
+ *
+ *  O arquivo de teste de onde elas vieram tinha, na véspera desta extração, 15
+ *  casos `it(`. **13 viraram regra aqui, e a conta fecha assim:**
+ *
+ *  | caso do arquivo de teste | virou |
+ *  |---|---|
+ *  | "o acervo tem conteúdo pra varrer" | **fica lá**: é não-vacuidade DO TESTE — prova que há acervo pra varrer, não diz nada sobre uma ficha |
+ *  | "alguma ficha exercita o campo [dias]" | **fica lá**, pela mesma razão |
+ *  | "o regex de preço daqui é o mesmo que a página usa" | **fica lá**: compara DOIS ARQUIVOS DE CÓDIGO (este módulo e `[slug]/page.tsx`), lendo o disco. Não é fato de ficha nenhuma, e produção não lê o disco |
+ *  | "colchete vazio é o MOLDE do registro de campos" | **fica lá**: varre o `src/`, não o acervo |
+ *  | "o `src/` continua cego ao waypoint 2 em diante" | **fica lá**: varre o `src/`, e MUDA DE NATUREZA na tarefa da cadeia de trajeto |
+ *  | "nenhuma ficha do acervo tem 2º waypoint" | **fica lá**: cai a mão naquela mesma tarefa, e mexer nela aqui esconderia a mudança |
+ *  | os 10 casos restantes | viraram **13 regras** |
+ *
+ *  Os 10 casos restantes rendem 13 porque **três deles juntavam, num `it(` só,
+ *  defeitos de naturezas diferentes — e a `frase` que o dono lê é o que separa
+ *  uma regra da outra**:
+ *   - "o preço do CHIP é o mesmo da linha completa" → `preco-legivel-no-custo`
+ *     (o app não acha preço no texto) **+** `chip-bate-com-preco` (acha, e
+ *     diverge). São dois consertos diferentes na mão dele;
+ *   - "o chip cabe na pílula e não repete a linha inteira" →
+ *     `chip-cabe-na-pilula` **+** `chip-nao-repete-a-linha`;
+ *   - "quando a prosa cita a hora de fechar, ela bate com o campo" →
+ *     `hora-de-fechar-sem-campo` (não há campo pra bater) **+**
+ *     `prosa-bate-com-hora-de-fechar` (há, e diverge).
+ *
+ *  E **dois deles NÃO se dividem, embora tenham vários `expect`**, porque ali
+ *  os vários exames são o MESMO defeito medido em campos irmãos do mesmo
+ *  objeto, com um conserto só: `janela-nao-zerada` (as duas janelas e o limiar
+ *  da mesma regra de chuva — "regra que nunca fecha não é regra") e
+ *  `dia-repetido-ou-inventado` (a mesma lista `dias` malformada).
+ *
+ *  ⚠️ **Não é que duas regras tenham se perdido na extração.** Se alguém contar
+ *  15 lá e 13 aqui e concluir isso, esta tabela é a resposta.
+ *
+ *  ## 🔴 A ASSINATURA É DO ACERVO, NÃO DA FICHA
+ *
+ *  Duas das regras (`frase-emprestada` e `texto-emprestado`, esta última sobre
+ *  quatro campos) comparam **uma ficha com as outras**. Por isso a porta de
+ *  escrita lê o acervo inteiro antes de aceitar uma gravação.
+ *
+ *  ⚠️ E a lista que chega aqui é **a lista pronta de quem chama** — este módulo
+ *  não filtra nada e não sabe o que está visível na tela pública. Quem chamar
+ *  tem que passar o acervo INTEIRO: um lugar escondido volta um dia, e se a
+ *  comparação de frases o ignorasse, o dono poderia escrever no lugar A a frase
+ *  do lugar B escondido, e o defeito só apareceria no dia em que reexibisse B.
+ *
+ *  ## ⚠️ A RÉGUA QUE VEIO JUNTO: NADA AQUI AFIRMA SOBRE UM LUGAR
+ *
+ *  Nenhum texto literal sobre um lugar específico mora neste arquivo — ele
+ *  serve os três, e vai servir os que vierem. Toda regra é sobre a ficha ser
+ *  coerente **consigo mesma** ou **distinta das outras**. Uma regra que soubesse
+ *  que a Véu de Noiva é de barro seria a geografia inventada com roupa de
+ *  código, e morreria no dia em que o dono mudasse o dado. */
+
+/** O que está incoerente, pronto pra ir à tela do dono.
+ *
+ *  `frase` é a que ele lê no celular, no meio de uma edição: diz o que está
+ *  incoerente, em português, nomeando o lugar e o valor. Nunca "inválido",
+ *  nunca o identificador da regra, nunca jargão. `regra` é pra código e pra
+ *  teste; `slug` é pra saber em que ficha mexer. */
+export type Violacao = { regra: string; slug: string; frase: string };
+
+/** O MESMO regex de `src/app/[slug]/page.tsx` — inclusive os centavos, que
+ *  ficaram de fora até 2026-08-27 e faziam o chip anunciar menos do que o lugar
+ *  cobra. Duplicado de propósito e com o porquê ao lado: `page.tsx` monta o chip
+ *  sozinho e não pode importar o módulo que o audita. O preço da duplicação é o
+ *  guarda no fim de `tests/lib/coerencia-acervo.test.ts`, que confere os dois. */
+export const PRECO = /R\$\s?\d+(?:[.,]\d{2})?/;
+
+/** Todo texto corrido da ficha, junto e em minúsculas — é sobre ele que as
+ *  regras de "a prosa diz uma coisa e o campo diz outra" trabalham. */
+const prosaDe = (f: Ficha) =>
+  [f.voz, f.acesso, f.avisos, f.promessa, f.premio, f.condicao.regra_texto,
+    f.discriminador.como_ler].join(" \n ").toLowerCase();
+
+/** O nome do lugar como o dono o escreveu — é ele que vai na frase, nunca o
+ *  slug. `waypoints[0]` é O LUGAR; do `[1]` em diante são as etapas do trajeto
+ *  até ele. */
+const nomeDe = (f: Ficha) => f.trajeto.waypoints[0].nome;
+
+/** O que uma regra acha. O identificador da regra é carimbado pela tabela lá
+ *  embaixo, nunca escrito aqui dentro — assim nenhuma regra pode carimbar o
+ *  nome de outra, nem um nome que não esteja em `REGRAS`. */
+type Achado = { slug: string; frase: string };
+
+type Regra = {
+  regra: string;
+  achar: (fichas: readonly Ficha[]) => Achado[];
+};
+
+/** Os quatro campos que existem pra DISTINGUIR um lugar do outro na lista, e o
+ *  nome de cada um na boca do dono — a tela dele não fala `rotulo_escaneio`. */
+const TEXTOS_QUE_DISTINGUEM = [
+  { campo: "voz", rotulo: "a voz" },
+  { campo: "promessa", rotulo: "a promessa" },
+  { campo: "premio", rotulo: "o prêmio" },
+  { campo: "rotulo_escaneio", rotulo: "a etiqueta" },
+] as const;
+
+/** 🔴 A TABELA DAS REGRAS. A ORDEM É A DA TELA: o dono lê a primeira frase
+ *  primeiro, então as de custo (que é onde o defeito mais caro já entrou) vêm
+ *  na frente.
+ *
+ *  `REGRAS` é DERIVADA desta tabela, nunca uma segunda lista escrita à mão —
+ *  lista à mão cega ao que cresceu é a doença que este projeto já pagou três
+ *  vezes. */
+const TABELA: readonly Regra[] = [
+  {
+    // Mata: `custo.valor: "cinco reais"`. O chip do topo é montado extraindo o
+    // preço de `valor` com o regex acima; sem preço legível ali, a página cai
+    // no literal "Pago" e o dono nunca vê que o número dele sumiu da tela.
+    regra: "preco-legivel-no-custo",
+    achar: (fichas) =>
+      fichas.flatMap((f) => {
+        if (f.custo.tag !== "pago" || !f.custo.curto) return [];
+        if (PRECO.test(f.custo.valor ?? "")) return [];
+        return [{
+          slug: f.slug,
+          // PENDENTE: redação minha, o João ainda não leu
+          frase:
+            `Em ${nomeDe(f)}, o custo está escrito como "${f.custo.valor ?? ""}" e o app não ` +
+            "acha um preço aí dentro. Escreva o valor em reais (por exemplo, R$ 10), " +
+            "senão o chip do topo da ficha não tem número pra mostrar.",
+        }];
+      }),
+  },
+  {
+    // Mata: `custo.curto: "R$ 1 · entrada"` numa ficha que cobra R$ 10.
+    //
+    // O chip e a linha completa são DUAS fontes pro mesmo dinheiro, escritas
+    // por ele em campos separados de propósito — a forma de cobrar muda de
+    // lugar pra lugar. Separadas, elas podem divergir sem ninguém ver: a tela
+    // mostra o chip no topo e o ticket lá no fim, longe um do outro.
+    //
+    // 🔴 É o defeito dos centavos entrando pelo JSON depois de ter sido fechado
+    // no código: numa auditoria de 2026-09-03 o chip anunciou UM DÉCIMO do
+    // preço, com a suíte inteira verde.
+    regra: "chip-bate-com-preco",
+    achar: (fichas) =>
+      fichas.flatMap((f) => {
+        if (f.custo.tag !== "pago" || !f.custo.curto) return []; // ausente é silêncio
+        const noValor = f.custo.valor?.match(PRECO)?.[0];
+        if (!noValor) return []; // quem acusa isto é a regra de cima
+        const noCurto = f.custo.curto.match(PRECO)?.[0];
+        if (noCurto?.replace(/\s/g, "") === noValor.replace(/\s/g, "")) return [];
+        return [{
+          slug: f.slug,
+          // PENDENTE: redação minha, o João ainda não leu
+          frase:
+            `O chip do topo de ${nomeDe(f)} diz ${noCurto ?? "nenhum preço"} e o custo completo ` +
+            `diz ${noValor}. A pessoa lê o chip antes de sair de casa e o custo completo só ` +
+            "quando chega.",
+        }];
+      }),
+  },
+  {
+    // 🔴 BURACO DECLARADO, medido em 2026-09-04: `custo.curto: "R$ 10 · portão"`
+    // numa ficha que cobra **na entrada** sobrevive a todas estas regras, e não
+    // dá pra fechar. O preço bate, o tamanho cabe, e a diferença — portão ×
+    // entrada — é FATO DO LUGAR: só quem conhece sabe onde se paga. Uma regra
+    // que soubesse seria a geografia inventada com roupa de código. Declarar o
+    // buraco é a saída honesta.
+    //
+    // O que dá pra medir é o tamanho: o chip é uma pílula no topo da ficha.
+    regra: "chip-cabe-na-pilula",
+    achar: (fichas) =>
+      fichas.flatMap((f) => {
+        if (f.custo.tag !== "pago" || !f.custo.curto) return [];
+        const palavras = f.custo.curto.split(/\s+/).length;
+        if (palavras <= 4) return [];
+        return [{
+          slug: f.slug,
+          // PENDENTE: redação minha, o João ainda não leu
+          frase:
+            `O chip de ${nomeDe(f)} tem ${palavras} palavras ("${f.custo.curto}") e estoura a ` +
+            "pílula do topo da ficha. Cabem até 4.",
+        }];
+      }),
+  },
+  {
+    // Mata: `curto = valor` inteiro. O chip é a forma CURTA do custo; repetido,
+    // ele não acrescenta nada e ainda estoura a barra.
+    regra: "chip-nao-repete-a-linha",
+    achar: (fichas) =>
+      fichas.flatMap((f) => {
+        if (f.custo.tag !== "pago" || !f.custo.curto) return [];
+        if (f.custo.curto !== f.custo.valor) return [];
+        return [{
+          slug: f.slug,
+          // PENDENTE: redação minha, o João ainda não leu
+          frase:
+            `O chip de ${nomeDe(f)} está igual ao custo completo. O chip é a forma curta, pra ` +
+            "ler no topo da ficha; repetido, ele não diz nada de novo.",
+        }];
+      }),
+  },
+  {
+    // Mata: copiar o `secaRapido` da Rampa pra qualquer outra ficha.
+    //
+    // 🔴 Substitui a asserção antiga `pedra.secaRapido !== rampa.secaRapido`,
+    // que comparava DUAS fichas nomeadas à mão e por isso não via a terceira. A
+    // frase é a explicação de por que o chão firma NAQUELE lugar; duas fichas
+    // com a mesma frase significam que ela voltou a ser genérica — que é
+    // exatamente o estado de onde o campo veio, quando morava fixa no
+    // `Carimbo.tsx` e dizia "a serra firmou" sobre uma cachoeira do brejo.
+    regra: "frase-emprestada",
+    achar: (fichas) => {
+      const porFrase = new Map<string, Ficha[]>();
+      for (const f of fichas) {
+        if (!f.secaRapido) continue; // ausente é silêncio: o carimbo termina antes
+        const k = f.secaRapido.trim().toLowerCase();
+        porFrase.set(k, [...(porFrase.get(k) ?? []), f]);
+      }
+      return [...porFrase.values()].flatMap((grupo) =>
+        grupo.slice(1).map((f) => ({
+          slug: f.slug,
+          // PENDENTE: redação minha, o João ainda não leu
+          frase:
+            `${grupo.map(nomeDe).join(" e ")} explicam o chão com a MESMA frase: ` +
+            `"${f.secaRapido}". Ou uma delas está falando do lugar da outra, ou a frase é ` +
+            "genérica demais pra estar na ficha.",
+        })),
+      );
+    },
+  },
+  {
+    // Mesma família, na voz do app: promessa, prêmio, voz e etiqueta são o
+    // texto que a pessoa lê pra escolher ENTRE lugares. Dois cartões idênticos
+    // na home não escolhem nada — e `tests/app/trilhas.test.tsx` não pega,
+    // porque os dois lados dele leem `getAllFichas()`.
+    regra: "texto-emprestado",
+    achar: (fichas) =>
+      TEXTOS_QUE_DISTINGUEM.flatMap(({ campo, rotulo }) => {
+        const vistos = new Map<string, Ficha>();
+        const achados: Achado[] = [];
+        for (const f of fichas) {
+          const k = String(f[campo]).trim().toLowerCase();
+          const dono = vistos.get(k);
+          if (dono) {
+            achados.push({
+              slug: f.slug,
+              // PENDENTE: redação minha, o João ainda não leu
+              frase:
+                `${nomeDe(dono)} e ${nomeDe(f)} têm ${rotulo} exatamente igual: ` +
+                `"${String(f[campo])}". Esse texto existe pra distinguir um lugar do outro na ` +
+                "lista; repetido, ele não distingue nada.",
+            });
+          } else {
+            vistos.set(k, f);
+          }
+        }
+        return achados;
+      }),
+  },
+  {
+    // Mata: `piso: "asfalto-tapete"` numa ficha cuja prosa diz barro cinco
+    // vezes.
+    //
+    // 🔴 O QUE ESTA REGRA **NÃO** FAZ: ela não sabe qual é o piso de lugar
+    // nenhum. Ela só exige que a ficha não se contradiga — se a prosa dela
+    // nomeia um piso da escala, tem que ser o piso dela. O dono pode trocar o
+    // dado à vontade desde que troque a prosa junto, que é justamente o ponto.
+    regra: "prosa-bate-com-piso",
+    achar: (fichas) =>
+      fichas.flatMap((f) => {
+        const prosa = prosaDe(f);
+        // "asfalto-esburacado" e "asfalto-tapete" aparecem em prosa como duas
+        // palavras; o valor do enum é hifenizado. Comparo pelo primeiro termo.
+        const citados = PISOS.filter((p) => prosa.includes(p.split("-")[0]));
+        const estranhos = citados.filter((p) => p.split("-")[0] !== (f.piso ?? "").split("-")[0]);
+        if (estranhos.length === 0) return [];
+        return [{
+          slug: f.slug,
+          // PENDENTE: redação minha, o João ainda não leu
+          frase:
+            `${nomeDe(f)} declara o piso "${f.piso ?? "(nenhum)"}" e o texto da ficha fala de ` +
+            `${estranhos.join(", ")}. Uma das duas coisas está errada, e a tela mostra as duas ` +
+            "juntas.",
+        }];
+      }),
+  },
+  {
+    // Mata: `abre: "17:00", fecha: "08:00"`. `fechadoAgora` lê faixa invertida
+    // como travessia da meia-noite — comportamento deliberado e certo pra um
+    // lugar que abre à noite. Numa ficha em que foi engano, o app anuncia a
+    // trilha **aberta a noite toda e fechada o dia todo**.
+    //
+    // Não proíbe a travessia: exige que ela esteja DITA na prosa, que é o mesmo
+    // critério do piso acima — o dado incomum precisa de dono.
+    regra: "horario-invertido-sem-aviso",
+    achar: (fichas) =>
+      fichas.flatMap((f) => {
+        if (!f.horario) return []; // ausente é silêncio: ficha sem horário nunca fecha
+        const [ah, am] = f.horario.abre.split(":").map(Number);
+        const [fh, fm] = f.horario.fecha.split(":").map(Number);
+        if (ah * 60 + am < fh * 60 + fm) return [];
+        if (/noite|madrugada|24 ?h|vinte e quatro/.test(prosaDe(f))) return [];
+        return [{
+          slug: f.slug,
+          // PENDENTE: redação minha, o João ainda não leu
+          frase:
+            `${nomeDe(f)} abre às ${f.horario.abre} e fecha às ${f.horario.fecha} — assim o app ` +
+            "vai anunciá-la aberta a noite toda e fechada o dia todo. Se for de propósito, diga " +
+            "isso no texto da ficha; se não for, os dois horários estão trocados.",
+        }];
+      }),
+  },
+  {
+    // Mata: o `avisos` dizendo "fecha às 17h" numa ficha SEM campo `horario`. A
+    // pessoa leu que fecha, e o carimbo nunca vai fechar — o app dizendo "Pode
+    // ir" num lugar que a própria ficha diz estar fechado.
+    regra: "hora-de-fechar-sem-campo",
+    achar: (fichas) =>
+      fichas.flatMap((f) => {
+        const citada = /fecha (?:às|as) (\d{1,2})\s*h/i.exec(prosaDe(f));
+        if (!citada || f.horario) return [];
+        return [{
+          slug: f.slug,
+          // PENDENTE: redação minha, o João ainda não leu
+          frase:
+            `O texto de ${nomeDe(f)} diz que fecha às ${citada[1]}h, mas a ficha não tem ` +
+            "horário preenchido. O carimbo nunca vai fechar, e a pessoa leu que fecha.",
+        }];
+      }),
+  },
+  {
+    // Mata: `horario.fecha: "23:00"` enquanto o `avisos` da mesma ficha diz
+    // "fecha às 17h". A hora vive em DUAS fontes — o campo, que o carimbo lê, e
+    // a prosa, que a pessoa lê — e nada as amarrava. É o defeito que
+    // `tests/app/km-uma-fonte.test.tsx` fechou pro km e ninguém tinha fechado
+    // pra hora. Só age quando a prosa realmente cita uma hora de fechar: sem
+    // citação não há divergência possível.
+    regra: "prosa-bate-com-hora-de-fechar",
+    achar: (fichas) =>
+      fichas.flatMap((f) => {
+        const citada = /fecha (?:às|as) (\d{1,2})\s*h/i.exec(prosaDe(f));
+        if (!citada || !f.horario) return []; // sem campo, quem acusa é a regra de cima
+        if (Number(citada[1]) === Number(f.horario.fecha.split(":")[0])) return [];
+        return [{
+          slug: f.slug,
+          // PENDENTE: redação minha, o João ainda não leu
+          frase:
+            `O texto de ${nomeDe(f)} diz que fecha às ${citada[1]}h e o horário da ficha diz ` +
+            `${f.horario.fecha}. As duas frases aparecem na mesma tela.`,
+        }];
+      }),
+  },
+  {
+    // Mata: zerar as janelas de chuva — o carimbo passa a imprimir "Sem chuva
+    // nas últimas ~0h e nada previsto pras próximas ~0h", que é uma regra que
+    // nunca diz não. O zod aceita 0 de propósito (as fixtures sintéticas usam),
+    // então o guarda pertence ao ACERVO, não ao schema.
+    //
+    // ⚠️ UMA REGRA SÓ pros três números: é o mesmo defeito — "regra que nunca
+    // fecha não é regra" — medido em campos irmãos da MESMA regra de chuva, e o
+    // conserto é um só.
+    regra: "janela-nao-zerada",
+    achar: (fichas) =>
+      fichas.flatMap((f) => {
+        const r = f.condicao.regra;
+        const achados: Achado[] = [];
+        if (!(r.janela_passado_horas > 0)) {
+          achados.push({
+            slug: f.slug,
+            // PENDENTE: redação minha, o João ainda não leu
+            frase:
+              `A regra de chuva de ${nomeDe(f)} olha 0 hora pra trás: assim ela nunca vê chuva ` +
+              "nenhuma e o lugar nunca fecha.",
+          });
+        }
+        if (!(r.janela_previsao_horas > 0)) {
+          achados.push({
+            slug: f.slug,
+            // PENDENTE: redação minha, o João ainda não leu
+            frase:
+              `A regra de chuva de ${nomeDe(f)} olha 0 hora pra frente: assim ela nunca vê ` +
+              "chuva prevista e o lugar nunca fecha.",
+          });
+        }
+        if (!(r.limiar_mm > 0)) {
+          achados.push({
+            slug: f.slug,
+            // PENDENTE: redação minha, o João ainda não leu
+            frase:
+              `O limite de chuva de ${nomeDe(f)} é 0 mm: qualquer orvalho fecha o lugar, e o ` +
+              "app passa a dizer não o ano inteiro.",
+          });
+        }
+        return achados;
+      }),
+  },
+  {
+    // Mata: `dias: ["sab","sab"]`, que faz a tela dizer "Abre sábado e
+    // sábado.". E `dias: ["Sab"]`, que o schema pega hoje — mas só porque o
+    // enum é montado a partir de DIAS; no dia em que virar `z.string()`, esta
+    // regra continua.
+    //
+    // ⚠️ UMA REGRA SÓ pros dois exames: é a MESMA lista `dias` malformada, e é
+    // um conserto só na mão dele.
+    regra: "dia-repetido-ou-inventado",
+    achar: (fichas) =>
+      fichas.flatMap((f) => {
+        if (!f.dias?.length) return [];
+        const achados: Achado[] = [];
+        if (new Set(f.dias).size !== f.dias.length) {
+          achados.push({
+            slug: f.slug,
+            // PENDENTE: redação minha, o João ainda não leu
+            frase:
+              `${nomeDe(f)} tem o mesmo dia repetido na lista de dias, e a tela diria esse dia ` +
+              "duas vezes na mesma frase.",
+          });
+        }
+        const inventados = f.dias.filter((d) => !DIAS.includes(d));
+        if (inventados.length > 0) {
+          achados.push({
+            slug: f.slug,
+            // PENDENTE: redação minha, o João ainda não leu
+            frase:
+              `${nomeDe(f)} tem ${inventados.join(", ")} na lista de dias, e isso não é dia da ` +
+              "semana. O app não vai saber que dia mostrar.",
+          });
+        }
+        return achados;
+      }),
+  },
+  {
+    // 🔴 Mata: `dias` com os SETE dias. Declarar a semana inteira é o mesmo que
+    // não declarar nada — e as duas coisas não são iguais no repositório: a
+    // ficha com os sete carrega um dado que nunca muda veredito, e quem ler a
+    // ficha acha que o app está checando algo que ele não checa. Ausente é
+    // silêncio, e aqui o silêncio é o certo — mesma régua do `piso` e do
+    // `secaRapido`.
+    //
+    // Irmã da janela de chuva zerada, do outro lado: lá era a regra que nunca
+    // fecha; aqui é a regra que nunca age.
+    regra: "semana-inteira-nao-declara",
+    achar: (fichas) =>
+      fichas.flatMap((f) => {
+        if (!f.dias?.length || f.dias.length < 7) return [];
+        return [{
+          slug: f.slug,
+          // PENDENTE: redação minha, o João ainda não leu
+          frase:
+            `${nomeDe(f)} declara os sete dias da semana, o que é o mesmo que não declarar dia ` +
+            "nenhum. Deixe a lista de dias vazia: o app só fala de dia quando o lugar folga em " +
+            "algum.",
+        }];
+      }),
+  },
+];
+
+/** Os identificadores das 13 regras — DERIVADOS da tabela, nunca uma segunda
+ *  lista. É o que o teste de não-vacuidade percorre pra provar que cada uma
+ *  ainda dispara. */
+export const REGRAS: readonly string[] = TABELA.map((r) => r.regra);
+
+/** Tudo que está incoerente no acervo recebido, em ordem de tabela.
+ *
+ *  🔴 Recebe O ACERVO, não uma ficha: duas das regras comparam uma ficha com as
+ *  outras. E recebe a lista PRONTA de quem chama — ver o docblock do topo sobre
+ *  os lugares escondidos. */
+export function violacoesDoAcervo(fichas: readonly Ficha[]): Violacao[] {
+  return TABELA.flatMap((r) => r.achar(fichas).map((a) => ({ regra: r.regra, ...a })));
+}

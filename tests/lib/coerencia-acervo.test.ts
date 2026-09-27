@@ -3,9 +3,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { getAllFichas } from "@/lib/ficha";
 import { bancoDeProducao } from "../banco";
-import { PISOS } from "@/lib/piso";
-import { DIAS } from "@/lib/semana";
-import type { Ficha } from "@/types/ficha";
+import { PRECO, REGRAS, violacoesDoAcervo } from "@/lib/coerencia";
 
 /** 🔴 POR QUE ESTE ARQUIVO EXISTE — e é uma medição, não uma intuição.
  *
@@ -37,7 +35,24 @@ import type { Ficha } from "@/types/ficha";
  *  guarda que soubesse que a Véu de Noiva é de barro seria a geografia
  *  inventada com roupa de teste — e morreria no dia em que o João mudasse o
  *  dado. Ver `docs/RESUME.md` e o agente `.claude/agents/prova-que-trava.md`.
- */
+ *
+ *  🔴 **2026-09-26 — AS REGRAS SAÍRAM DAQUI E VIRARAM `src/lib/coerencia.ts`.**
+ *  Elas eram TESTES, e teste roda no computador do desenvolvedor, antes do
+ *  deploy: um lugar que o João editar do celular numa terça de manhã nunca
+ *  passaria por nenhuma delas. Agora são código de produção, chamado pela porta
+ *  de escrita do painel, que recusa a gravação e mostra a frase da violação.
+ *
+ *  **O QUE ESTE ARQUIVO PROVA HOJE, e continua sendo necessário:** que o ACERVO
+ *  REAL — o que está no BANCO, pelo caminho de produção inteiro — não viola
+ *  nenhuma delas. Cada caso abaixo tem o MESMO nome que tinha, e a justificativa
+ *  de cada regra (o defeito real que a motivou) **viajou junto com ela** pro
+ *  módulo: está lá, ao lado do código que a implementa, e não foi perdida nem
+ *  duplicada aqui. Quem vier "simplificar" uma regra lê o porquê no lugar onde
+ *  ela mora.
+ *
+ *  Que o MÓDULO ainda sabe ACUSAR é outra pergunta, e ela tem outro arquivo:
+ *  `tests/lib/coerencia.test.ts`, onde há uma quebra escrita pra cada uma das 13
+ *  regras. Um módulo que devolvesse `[]` pra tudo passaria aqui com louvor. */
 
 // O acervo vem do BANCO desde 2026-09-25 — semeado a partir de
 // `content/fichas/`, que continua sendo o conteúdo que este arquivo audita.
@@ -46,15 +61,12 @@ await bancoDeProducao();
 const fichas = await getAllFichas();
 const pagas = fichas.filter((f) => f.custo.tag === "pago");
 
-/** O MESMO regex de `src/app/[slug]/page.tsx` — inclusive os centavos, que
- *  ficaram de fora até 2026-08-27 e faziam o chip anunciar menos do que o lugar
- *  cobra. Copiado de propósito e com o porquê ao lado: se o de lá mudar e o
- *  daqui não, o teste do fim deste arquivo acusa. */
-const PRECO = /R\$\s?\d+(?:[.,]\d{2})?/;
-
-const prosaDe = (f: Ficha) =>
-  [f.voz, f.acesso, f.avisos, f.promessa, f.premio, f.condicao.regra_texto,
-    f.discriminador.como_ler].join(" \n ").toLowerCase();
+/** As violações do acervo real, calculadas UMA vez. Cada caso abaixo filtra as
+ *  suas — e nunca pergunta "tem violação?", que ficaria verde quando uma regra
+ *  diferente da que o caso testa fosse a que disparou. */
+const violacoes = violacoesDoAcervo(fichas);
+const das = (...regras: string[]) =>
+  violacoes.filter((v) => regras.includes(v.regra)).map((v) => v.frase);
 
 describe("coerência do acervo — varre TODAS as fichas, nunca uma lista de slugs", () => {
   // 🔴 NÃO-VACUIDADE, e ela é load-bearing aqui mais que em qualquer outro
@@ -67,183 +79,111 @@ describe("coerência do acervo — varre TODAS as fichas, nunca uma lista de slu
     expect(pagas.length, "sumiu a ficha paga: os guardas de custo ficariam ocos").toBeGreaterThanOrEqual(2);
   });
 
-  // Mata: `custo.curto: "R$ 1 · entrada"` numa ficha que cobra R$ 10, e
-  // `curto = valor` inteiro (7 palavras estourando a pílula).
-  //
-  // O chip e a linha completa são DUAS fontes pro mesmo dinheiro, escritas por
-  // ele em campos separados de propósito — a forma de cobrar muda de lugar pra
-  // lugar. Separadas, elas podem divergir sem ninguém ver: a tela mostra o chip
-  // no topo e o ticket lá no fim, longe um do outro.
-  it("em toda ficha paga, o preço do CHIP é o mesmo preço da linha completa", () => {
-    for (const f of pagas) {
-      if (!f.custo.curto) continue; // ausente é silêncio — o app mostra só o preço
-      const noValor = f.custo.valor?.match(PRECO)?.[0];
-      const noCurto = f.custo.curto.match(PRECO)?.[0];
-      expect(noValor, `${f.slug}: a linha completa do custo não tem preço legível`).toBeTruthy();
-      expect(
-        noCurto?.replace(/\s/g, ""),
-        `${f.slug}: o chip do topo diz "${noCurto}" e a linha completa diz "${noValor}" — ` +
-          "a pessoa lê o chip antes de sair de casa e o ticket só quando chega.",
-      ).toBe(noValor?.replace(/\s/g, ""));
-    }
-  });
+  // 🔴 A COSTURA ENTRE ESTE ARQUIVO E O MÓDULO, e ela nasceu com a extração de
+  // 2026-09-26. Cada caso abaixo filtra as violações POR NOME de regra; uma
+  // regra nova no módulo que ninguém liste aqui nunca seria conferida contra o
+  // acervo real — e a falha seria silenciosa, porque nenhum caso ficaria
+  // vermelho. É a doença da lista escrita à mão cega ao que cresceu, que este
+  // projeto já pagou três vezes; aqui ela é fechada por medição.
+  const COBERTAS = [
+    "preco-legivel-no-custo",
+    "chip-bate-com-preco",
+    "chip-cabe-na-pilula",
+    "chip-nao-repete-a-linha",
+    "frase-emprestada",
+    "texto-emprestado",
+    "prosa-bate-com-piso",
+    "horario-invertido-sem-aviso",
+    "hora-de-fechar-sem-campo",
+    "prosa-bate-com-hora-de-fechar",
+    "janela-nao-zerada",
+    "dia-repetido-ou-inventado",
+    "semana-inteira-nao-declara",
+  ];
 
-  // 🔴 BURACO DECLARADO, medido em 2026-09-04: a mutação `custo.curto:
-  // "R$ 10 · portão"` numa ficha que cobra **na entrada** SOBREVIVE a este
-  // arquivo, e não dá pra fechar aqui. O preço bate, o tamanho cabe, e a
-  // diferença — portão × entrada — é **fato do lugar**: só quem conhece sabe
-  // onde se paga. Um teste que soubesse seria a geografia inventada com roupa
-  // de prova, e morreria no dia em que o João corrigisse o dado.
-  //
-  // Foi exatamente esta palavra que passou meses escrita no código. O que a
-  // impede hoje não é teste: é o campo existir, e `page.tsx` não montar mais o
-  // chip. Declarar o buraco é a saída honesta — enterrá-lo junto com o que dá
-  // pra medir é a espécie "declarar buraco é certo; enterrar a metade provável,
-  // não" (2026-08-21).
-  it("o chip cabe na pílula e não repete a linha inteira", () => {
-    for (const f of pagas) {
-      if (!f.custo.curto) continue;
-      expect(
-        f.custo.curto.split(/\s+/).length,
-        `${f.slug}: o chip tem ${f.custo.curto.split(/\s+/).length} palavras e estoura a barra`,
-      ).toBeLessThanOrEqual(4);
-      expect(f.custo.curto, `${f.slug}: o chip virou cópia da linha completa`).not.toBe(f.custo.valor);
-    }
-  });
-
-  // Mata: copiar o `secaRapido` da Rampa pra qualquer outra ficha.
-  //
-  // 🔴 Substitui a asserção antiga `pedra.secaRapido !== rampa.secaRapido`, que
-  // comparava DUAS fichas nomeadas à mão e por isso não via a terceira. A frase
-  // é a explicação de por que o chão firma NAQUELE lugar; duas fichas com a
-  // mesma frase significam que ela voltou a ser genérica — que é exatamente o
-  // estado de onde o campo veio, quando morava fixa no `Carimbo.tsx`.
-  it("nenhuma ficha empresta o secaRapido de outra — a frase é do lugar", () => {
-    const porFrase = new Map<string, string[]>();
-    for (const f of fichas) {
-      if (!f.secaRapido) continue; // ausente é silêncio: o carimbo termina antes
-      const k = f.secaRapido.trim().toLowerCase();
-      porFrase.set(k, [...(porFrase.get(k) ?? []), f.slug]);
-    }
-    const repetidas = [...porFrase.entries()].filter(([, s]) => s.length > 1);
+  it("todas as regras do módulo são conferidas contra o acervo real, uma a uma", () => {
     expect(
-      repetidas.map(([frase, slugs]) => `${slugs.join(" e ")} dizem "${frase}"`),
+      [...REGRAS].filter((r) => !COBERTAS.includes(r)),
+      "regra do módulo que nenhum caso deste arquivo confere contra o acervo real",
+    ).toEqual([]);
+    expect(
+      COBERTAS.filter((r) => !REGRAS.includes(r)),
+      "caso deste arquivo apontando pra uma regra que não existe mais no módulo: " +
+        "ele passaria verde para sempre, filtrando o que nunca aparece",
+    ).toEqual([]);
+  });
+
+  it("em toda ficha paga, o preço do CHIP é o mesmo preço da linha completa", () => {
+    expect(
+      das("preco-legivel-no-custo", "chip-bate-com-preco"),
+      "a pessoa lê o chip antes de sair de casa e o ticket só quando chega.",
+    ).toEqual([]);
+  });
+
+  it("o chip cabe na pílula e não repete a linha inteira", () => {
+    expect(das("chip-cabe-na-pilula", "chip-nao-repete-a-linha")).toEqual([]);
+  });
+
+  it("nenhuma ficha empresta o secaRapido de outra — a frase é do lugar", () => {
+    expect(
+      das("frase-emprestada"),
       "duas fichas explicando o relevo com a MESMA frase: ou uma delas está " +
         "falando do lugar da outra, ou a frase é genérica e não devia estar na ficha.",
     ).toEqual([]);
   });
 
-  // Mesma família, na voz do app: promessa, prêmio, voz e etiqueta são o texto
-  // que a pessoa lê pra escolher ENTRE lugares. Dois cartões idênticos na home
-  // não escolhem nada — e `tests/app/trilhas.test.tsx` não pega, porque os dois
-  // lados dele leem `getAllFichas()`.
   it("nenhuma ficha empresta a voz, a promessa, o prêmio ou a etiqueta de outra", () => {
-    for (const campo of ["voz", "promessa", "premio", "rotulo_escaneio"] as const) {
-      const vistos = new Map<string, string>();
-      for (const f of fichas) {
-        const k = String(f[campo]).trim().toLowerCase();
-        const dono = vistos.get(k);
-        expect(
-          dono ? `${dono} e ${f.slug} têm o mesmo ${campo}` : null,
-          `o texto de ${campo} foi copiado entre fichas — ele existe pra distinguir um lugar do outro`,
-        ).toBeNull();
-        vistos.set(k, f.slug);
-      }
-    }
+    expect(
+      das("texto-emprestado"),
+      "o texto foi copiado entre fichas — ele existe pra distinguir um lugar do outro",
+    ).toEqual([]);
   });
 
-  // Mata: `piso: "asfalto-tapete"` numa ficha cuja prosa diz barro cinco vezes.
-  //
-  // 🔴 O QUE ESTE TESTE **NÃO** FAZ: ele não sabe qual é o piso de lugar nenhum.
-  // Ele só exige que a ficha não se contradiga — se a prosa dela nomeia um piso
-  // da escala, tem que ser o piso dela. O João pode trocar o dado à vontade
-  // desde que troque a prosa junto, que é justamente o ponto.
-  //
-  // Molde: a asserção de `acesso` sustentando `carroComum`, em ficha.test.ts.
   it("a prosa da ficha não nomeia um piso diferente do que o campo declara", () => {
-    for (const f of fichas) {
-      const prosa = prosaDe(f);
-      // "asfalto-esburacado" e "asfalto-tapete" aparecem em prosa como duas
-      // palavras; o valor do enum é hifenizado. Comparo pelo primeiro termo.
-      const citados = PISOS.filter((p) => prosa.includes(p.split("-")[0]));
-      const estranhos = citados.filter((p) => p.split("-")[0] !== (f.piso ?? "").split("-")[0]);
-      expect(
-        estranhos,
-        `${f.slug} declara piso "${f.piso ?? "(nenhum)"}" e a prosa dela fala de ` +
-          `${estranhos.join(", ")} — uma das duas está errada, e a tela mostra as duas juntas.`,
-      ).toEqual([]);
-    }
+    expect(
+      das("prosa-bate-com-piso"),
+      "uma das duas está errada, e a tela mostra as duas juntas.",
+    ).toEqual([]);
   });
 
-  // Mata: `abre: "17:00", fecha: "08:00"`. `fechadoAgora` lê faixa invertida
-  // como travessia da meia-noite — comportamento deliberado e certo pra um lugar
-  // que abre à noite. Numa ficha em que foi engano, o app anuncia a trilha
-  // **aberta a noite toda e fechada o dia todo**, com a suíte verde.
-  //
-  // Não proíbe a travessia: exige que ela esteja DITA na prosa, que é o mesmo
-  // critério do piso acima — o dado incomum precisa de dono.
   it("horário invertido só passa se a prosa da ficha disser que atravessa a noite", () => {
-    for (const f of fichas) {
-      if (!f.horario) continue; // ausente é silêncio: ficha sem horário nunca fecha
-      const [ah, am] = f.horario.abre.split(":").map(Number);
-      const [fh, fm] = f.horario.fecha.split(":").map(Number);
-      if (ah * 60 + am < fh * 60 + fm) continue;
-      expect(
-        /noite|madrugada|24 ?h|vinte e quatro/.test(prosaDe(f)),
-        `${f.slug} abre às ${f.horario.abre} e fecha às ${f.horario.fecha} — o app vai ` +
-          "anunciá-la aberta a noite toda e fechada o dia todo. Se for de propósito, " +
-          "diga isso na prosa da ficha; se não for, os dois campos estão trocados.",
-      ).toBe(true);
-    }
+    expect(
+      das("horario-invertido-sem-aviso"),
+      "o app vai anunciá-la aberta a noite toda e fechada o dia todo. Se for de " +
+        "propósito, diga isso na prosa da ficha; se não for, os dois campos estão trocados.",
+    ).toEqual([]);
   });
 
-  // Mata: `horario.fecha: "23:00"` enquanto o `avisos` da mesma ficha diz
-  // "fecha às 17h". A hora vive em DUAS fontes — o campo, que o carimbo lê, e a
-  // prosa, que a pessoa lê — e nada as amarrava. É o defeito que
-  // `tests/app/km-uma-fonte.test.tsx` fechou pro km e ninguém tinha fechado pra
-  // hora. O teste só age quando a prosa realmente cita uma hora de fechar: sem
-  // citação não há divergência possível.
   it("quando a prosa cita a hora de fechar, ela bate com o campo", () => {
-    for (const f of fichas) {
-      const citada = /fecha (?:às|as) (\d{1,2})\s*h/i.exec(prosaDe(f));
-      if (!citada) continue;
-      expect(
-        f.horario,
-        `${f.slug}: a prosa diz "fecha às ${citada[1]}h" mas a ficha não tem campo ` +
-          "`horario` — o carimbo nunca vai fechar, e a pessoa leu que fecha.",
-      ).toBeTruthy();
-      expect(
-        Number(citada[1]),
-        `${f.slug}: a prosa diz que fecha às ${citada[1]}h e o campo diz ${f.horario!.fecha} — ` +
-          "as duas frases aparecem na mesma tela.",
-      ).toBe(Number(f.horario!.fecha.split(":")[0]));
-    }
+    expect(
+      das("hora-de-fechar-sem-campo", "prosa-bate-com-hora-de-fechar"),
+      "as duas frases aparecem na mesma tela.",
+    ).toEqual([]);
   });
 
-  // Mata: zerar as duas janelas de chuva na ficha real — o carimbo passa a
-  // imprimir "Sem chuva nas últimas ~0h e nada previsto pras próximas ~0h", que
-  // é uma regra que nunca diz não. O zod aceita 0 de propósito (as fixtures
-  // sintéticas usam), então o guarda pertence ao ACERVO, não ao schema.
   it("nenhuma ficha real tem janela de chuva zerada — regra que nunca fecha não é regra", () => {
-    for (const f of fichas) {
-      const r = f.condicao.regra;
-      expect(r.janela_passado_horas, `${f.slug}: janela do passado zerada`).toBeGreaterThan(0);
-      expect(r.janela_previsao_horas, `${f.slug}: janela de previsão zerada`).toBeGreaterThan(0);
-      expect(r.limiar_mm, `${f.slug}: limiar de chuva zerado — qualquer orvalho fecha`).toBeGreaterThan(0);
-    }
+    expect(das("janela-nao-zerada")).toEqual([]);
   });
 
-  // 🔴 O regex de preço está ESCRITO DUAS VEZES: aqui e em page.tsx. Duplicação
-  // deliberada — o teste não deve importar a implementação que audita, senão
-  // vira auto-referência (a espécie em que os dois lados da asserção vêm da
-  // mesma constante). Este guarda é o preço da duplicação: se um mudar sem o
-  // outro, o chip volta a poder divergir do ticket sem ninguém ver.
+  // 🔴 O regex de preço está ESCRITO DUAS VEZES: em `src/lib/coerencia.ts` e em
+  // `page.tsx`. Duplicação deliberada — a página monta o chip sozinha e não pode
+  // importar o módulo que a audita, senão vira auto-referência (a espécie em que
+  // os dois lados da asserção vêm da mesma constante). Este guarda é o preço da
+  // duplicação: se um mudar sem o outro, o chip volta a poder divergir do ticket
+  // sem ninguém ver.
+  //
+  // ⚠️ MUDOU EM 2026-09-26, e o motivo está escrito porque a versão anterior
+  // desta frase ficaria FALSA: o `PRECO` deste arquivo era uma TERCEIRA cópia,
+  // escrita à mão aqui. Ele agora vem do módulo — que é a cópia de produção —, e
+  // com isso o guarda passou a comparar duas fontes de PRODUÇÃO, não mais uma de
+  // produção contra uma de teste. Fica mais forte, e não vira auto-referência:
+  // o que está sendo auditado é `page.tsx`, que não é de onde o `PRECO` veio.
   it("o regex de preço daqui é o mesmo que a página usa pra montar o chip", () => {
     const src = readFileSync(path.join(process.cwd(), "src", "app", "[slug]", "page.tsx"), "utf8")
       .replace(/^\s*\/\/.*$/gm, "");
     expect(src, "a tira de comentários comeu o arquivo — a asserção abaixo ficaria vazia")
       .toContain("precoCurto");
-    expect(src, "o regex de preço da página mudou; atualize o PRECO deste arquivo junto")
+    expect(src, "o regex de preço da página mudou; atualize o PRECO de `src/lib/coerencia.ts` junto")
       .toContain(PRECO.source);
   });
 });
@@ -272,36 +212,15 @@ describe("os dias da semana, no acervo", () => {
     ).toBeGreaterThanOrEqual(1);
   });
 
-  // Mata: `dias: ["sab","sab"]`, que faz a tela dizer "Abre sábado e sábado.".
-  // E `dias: ["Sab"]`, que o schema pega hoje — mas só porque o enum é montado
-  // a partir de DIAS; no dia em que virar `z.string()`, este guarda continua.
   it("nenhuma ficha repete um dia nem inventa um nome de dia", () => {
-    for (const f of comDias) {
-      const d = f.dias!;
-      expect(new Set(d).size, f.slug + ": repetiu um dia").toBe(d.length);
-      expect(
-        d.filter((x) => !DIAS.includes(x)),
-        f.slug + ": nome de dia que não existe na escala",
-      ).toEqual([]);
-    }
+    expect(das("dia-repetido-ou-inventado")).toEqual([]);
   });
 
-  // 🔴 Mata: `dias` com os SETE dias. Declarar a semana inteira é o mesmo que
-  // não declarar nada — e as duas coisas não são iguais no repositório: a ficha
-  // com os sete carrega um dado que nunca muda veredito, e quem ler o JSON acha
-  // que o app está checando algo que ele não checa. Ausente é silêncio, e aqui
-  // o silêncio é o certo — mesma régua do `piso` e do `secaRapido`.
-  //
-  // Irmã da janela de chuva zerada, do outro lado: lá era a regra que nunca
-  // fecha; aqui é a regra que nunca age.
   it("nenhuma ficha declara a semana inteira — isso é o mesmo que não declarar", () => {
-    for (const f of comDias) {
-      expect(
-        f.dias!.length,
-        f.slug + " declara os sete dias: o campo não muda veredito nenhum e some " +
-          "da ficha sem perda nenhuma.",
-      ).toBeLessThan(7);
-    }
+    expect(
+      das("semana-inteira-nao-declara"),
+      "o campo não muda veredito nenhum e some da ficha sem perda nenhuma.",
+    ).toEqual([]);
   });
 });
 
