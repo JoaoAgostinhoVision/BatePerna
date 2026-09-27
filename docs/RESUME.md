@@ -94,7 +94,7 @@ arquivos**.
 | tarefa | estado |
 |---|---|
 | **1 — o registro de campos, `aplicarCampo` com caminho/tipo/"não sei"** | ✅ completa (`dfeb005..50f71bf`), 1 rodada de fix, re-revisão limpa |
-| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 3 rodadas de fix aplicadas (`7c4ddf9..cfa3482`); a rodada 3 (o harness versionado + as 34 re-rodadas + três frases falsas) está **feita** — falta só a re-revisão escopada dela, ver a seção 4 |
+| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 4 rodadas de fix aplicadas (`7c4ddf9..cdeb69b`); a rodada 4 endureceu o próprio instrumento depois de dois `Critical` — falta só a re-revisão escopada dela, ver as seções 4 e 4b |
 | 3 — a porta de escrita aceita todo campo e passa pela coerência | ⬜ próxima |
 | 4 — `oculto`: esconder sem apagar | ⬜ |
 | 5 — a tela do lugar mostra a ficha inteira | ⬜ |
@@ -138,11 +138,50 @@ arquivos**.
 **Medido depois do commit:** 1287/1287 em 81 arquivos, `npx tsc --noEmit` exit 0, `npm run build`
 exit 0.
 
-🟡 **O que falta para FECHAR a Tarefa 2:** a re-revisão escopada da rodada 3 (despachada; cinco
-perguntas — o harness pode mentir? as 34 são as 34? alguma é vácua? sobrou frase falsa? o placar é
-reproduzível?). Fechando limpa, a Tarefa 2 está completa e o próximo passo é a **Tarefa 3** (a
+### 4b. 🔴 A RODADA 4/5 — A RE-REVISÃO ACHOU DOIS `Critical` NO PRÓPRIO INSTRUMENTO (`cdeb69b`)
+
+A re-revisão da rodada 3 devolveu **6 achados**, e os dois `Critical` eram no harness que eu tinha
+acabado de versionar — os dois da espécie que ele existe para caçar: **régua que só sabe dar a
+resposta confortável.**
+
+1. 🔴 **`vitest` que NÃO RODAVA saía como `morreu`, com exit 0.** O campo `semRelatorio` era escrito
+   e nunca lido, então "o vitest nem rodou" e "a suíte ficou vermelha por causa da mutação"
+   imprimiam a mesma palavra. Provado apontando o harness para dois arquivos de teste inexistentes:
+   **uma mutação que era só troca de comentário saiu `morreu`.** Agora existe a quinta categoria
+   **`sem medição`** (sem relatório, JSON inválido, ou menos testes que o piso medido de 49), o
+   stderr é capturado, e sai com código 2.
+2. 🔴 **A frase do `grep` precisou de TRÊS redações — e a segunda fui eu, nesta sessão.** Eu medi
+   `grep -c $'\r'`, li **592** igual ao `od`, e escrevi que o grep "não mente". Medindo direito:
+   `grep -c $'\r'` → **0** (o GNU grep 3.0 daqui abre em modo TEXTO e come o CR); `grep -Uc $'\r'`
+   → **592**; `grep -c $"\r"`, com aspas **duplas**, → **411**, que é a contagem da **letra `r`**
+   (`$"..."` é tradução de locale, não escape). **A armadilha: 592 é também o número de linhas do
+   arquivo**, então uma régua que casasse qualquer linha daria o número certo por coincidência.
+
+Os outros quatro: arquivos de teste são **filtros**, não caminhos (agora `existsSync` + piso);
+`contarOcorrencias` era código morto sustentando uma promessa do docblock que não existia (apagada);
+`mata` e `todasAsFalhas` **nunca eram lidos**; e N11 == B1a, logo são **34 entradas e 33 trocas
+distintas**.
+
+🔴 **Ligar a conferência do `mata` reprovou TREZE das 34 entradas de cara** — nove com prosa em
+volta do nome do teste, quatro com sufixo entre parênteses. Em todas as treze a mutação morria de
+verdade; o errado era a **atribuição**, e uma (M6) nomeava um teste que existe e **não** falha com
+aquela mutação. É a 45ª espécie do catálogo virando **guarda** em vez de disciplina.
+
+**O instrumento agora tem comando próprio:** `node scripts/mutar.mjs --controles` — três controles
+que declaram a categoria que têm de sair (`sobreviveu`, `sem alvo`, `sem medição`). Fica **verde**
+quando o instrumento é honesto, e foi provado **vermelho** reintroduzindo o C1 numa cópia dentro do
+repo.
+
+**Medido:** `node scripts/mutar.mjs` → **34 morreu, 0 sobreviveu, 0 sem alvo, 0 sem diff, 0 sem
+medição**, exit 0, todos os `mata` conferem; `--controles` exit 0; 1287/1287 em 81 arquivos; `tsc`
+exit 0; `npm run build` exit 0.
+
+🟡 **O que falta para FECHAR a Tarefa 2:** a re-revisão escopada da rodada 4 (despachada para o
+mesmo revisor, com o pedido explícito de tentar derrubar cada conserto — e em especial de dizer se
+algum dos treze `mata` novos ficou **frouxo demais**, porque ali eu mudei a declaração para casar
+com a observação). Fechando limpa, a Tarefa 2 está completa e o próximo passo é a **Tarefa 3** (a
 porta de escrita), cujo brief **já foi auditado por mim** — sete defeitos achados, dois deles
-rulings (T3-R1 e T3-R2), tudo em `task-3-brief.md` e no fim do `progress.md`.
+rulings (T3-R1 e T3-R2), em `task-3-brief.md` e no fim do `progress.md`.
 
 🔵 **Uma recomendação registrada que é DELE, e que eu deixei fora do escopo de propósito:** medir
 **cobertura de ramo** nos testes (`@vitest/coverage-v8` com limiar) seria guarda automático contra a
