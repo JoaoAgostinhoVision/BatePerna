@@ -54,8 +54,12 @@ caractere em UTF-8 (o shell do Windows mastiga os acentos — faça a comparaç�
    que são DELE**, logo abaixo: as doze palavras de tela, o prazo da cópia em memória, e olhar as três
    telas novas no celular. **Não decida nenhuma delas sozinho, e não abra o dia com um menu delas** — se
    ele disser "continua" sem tocar no assunto, a coisa certa é perguntar **uma**, a das palavras.
-3. Todo dispatch que toque `src/app/` leva **`npm run build`** e `git add` por caminho (rulings P13/P8).
-4. Para publicar de novo: `npm run semear` (se a tabela puder estar vazia) e **`vercel --prod --yes`** —
+3. 🔴 **EM 26/09 À NOITE ELE ABRIU EIXO NOVO: o painel.** *"ainda não achei que o painel de
+   controle está bom (…) para um aplicativo de fato está muito longe"*. Nasceu o agente
+   **`painel-que-cresce`** (o 11º) e ele já rodou — o relatório está na seção
+   "O PAINEL COMO PRODUTO", abaixo. **A recomendação espera a palavra dele; nada foi construído.**
+4. Todo dispatch que toque `src/app/` leva **`npm run build`** e `git add` por caminho (rulings P13/P8).
+5. Para publicar de novo: `npm run semear` (se a tabela puder estar vazia) e **`vercel --prod --yes`** —
    push no GitHub **não** publica neste repo. Veja o bloco "COMO ESTE PROJETO PUBLICA", acima.
 
 ### 🔵 AS TRÊS COISAS QUE SÃO DELE, E QUE O LAÇO NÃO PODE DECIDIR
@@ -74,6 +78,85 @@ caractere em UTF-8 (o shell do Windows mastiga os acentos — faça a comparaç�
 3. **Olhar as três telas novas no celular.** Nenhuma foi vista por olho humano. O CSS que entrou é o
    **mínimo estrutural**, reusando valor que já existia no `admin.css` — zero cor nova, zero fonte nova,
    zero animação, conferido regra a regra na revisão. O visual é escolha dele.
+
+## 🔵 O PAINEL COMO PRODUTO — o eixo que ele abriu em 26/09, e o que o agente achou
+
+**O pedido, palavras dele:** *"ainda não achei que o painel de controle está bom, poderias ver para
+desenvolver um agente para pensar nas melhores soluções do painel para substituir o que a gente estava
+fazendo na mão de escrever os locais um a um, acho que para um aplicativo de fato está muito longe (…)
+bote ele para pensar e evoluir a ideia"*
+
+Nasceu **`.claude/agents/painel-que-cresce.md`** (o 11º agente, família 2 — acha, propõe e recomenda;
+sem `Edit`/`Write`). Ele rodou uma vez, em 26/09. **Nada foi construído, e nada será sem a palavra dele.**
+
+### O buraco, medido — e eu conferi os quatro números depois dele
+
+| medida | valor | onde |
+|---|---|---|
+| campos da ficha | **17** | `src/types/ficha.ts:46-189` |
+| campos que o painel edita | **1** (`voz`) | `src/lib/editar-ficha.ts:9` |
+| campos que o painel **mostra** | **1** — os outros 16 não aparecem em tela nenhuma do `/admin` | — |
+| caminhos de criar lugar | **0** | o `+ lugar novo` saiu de propósito: `admin/ListaDeLugares.tsx:25-27` |
+
+### 🔴 Três achados que mudam decisão, os três conferidos por mim
+
+1. **PÔR UM LUGAR NOVO NO AR NÃO PRECISA DE DEPLOY.** As páginas do acervo são todas `force-dynamic`
+   (`page.tsx:19`, `[slug]/page.tsx:23`, `trilhas/page.tsx:8`) e o acervo vem do banco. Basta o JSON em
+   `content/fichas/` e **`npm run semear`**. 🔴 **Isso derruba metade da premissa dele:** "escrever o
+   local na mão" é 1 arquivo e 1 comando. O caro nunca foi o JSON — foram as **24 perguntas** do
+   `docs/questionario-ficha.md` que só ele pode responder.
+2. **`modos` é campo MORTO.** Aparece **uma única vez em todo o `src/`**: a linha que o declara
+   (`src/types/ficha.ts:47`). Obrigatório em toda ficha, lido por ninguém. São **16 campos vivos + 1
+   peso morto**. Apagar é decisão dele (apagar campo é apagar coisa que já se disse).
+3. **Os 15 guardas de coerência do acervo auditam o DISCO, não o banco.** `tests/banco.ts:90` semeia o
+   banco de teste com `loadAll()`. **Lugar criado pelo painel nasceria fora do alcance dos 15** — são
+   eles que pegam chip de preço mentindo e ficha emprestando a frase de outra. Item de escopo
+   obrigatório de qualquer rota que crie ficha.
+
+⚠️ **E um quarto, de manutenção:** `waypoints[0]` aparece em **10 lugares de 8 arquivos** (era "5" em
+doc antigo). Um segundo ponto de trajeto sumiria em silêncio nos oito.
+
+### A pergunta reescrita pelo agente, e as três coisas empilhadas
+
+> **"Como o painel deixa de ser um editor de um campo e vira o lugar onde eu descarrego o que sei de um
+> lugar — inclusive de um que ainda não está no app — sem ninguém escrever JSON e sem o app afirmar
+> nada que eu não disse?"**
+
+- **(a)** ele não consegue **ver** do celular o que o app diz de cada lugar (16 campos invisíveis);
+- **(b)** a ação que faria parecer app — *"conheci um lugar, quero pôr aqui"* — não tem nem botão;
+- **(c)** com **3 lugares**, qualquer painel parece um editor de 3 arquivos. E o acervo não é pequeno por
+  falta de tela: é pequeno porque cada lugar custa ele ter ido lá.
+
+### As três rotas, e a recomendação
+
+| rota | o que é | estágios |
+|---|---|---|
+| **1 — a ficha inteira na mão** | crescer por **alcance** | 1.1 ver os 16 · 1.2 os 5 campos de prosa · 1.3 enums e números com a consequência à vista · 1.4 a geometria no mapa |
+| **2 — o lugar novo primeiro** | crescer por **criar** | 2.1 rascunho que não vai ao ar · 2.2 publicar · 2.3 os 15 guardas passam a ver o banco |
+| **3 — o app pergunta** | crescer por **conversa** — fila de perguntas que o próprio app monta | 3.1 o questionário vira dado · 3.2 a fila na tela do lugar · 3.3 a fila aceita lugar que ainda não existe |
+
+🔴 **A Rota 3 atravessa a procedência de um jeito que as outras não:** fila de perguntas **empurra**,
+e responder sob pressão de lista é como fato plausível entra no lugar de fato conhecido. O remédio é um
+botão *"não sei, e o app cala"* tão grande quanto o de responder.
+
+**Recomendação do agente: Rota 1, estágio 1.1 — ver a ficha inteira no painel.** Não depende de nada,
+muda a experiência dele no mesmo dia, barateia todos os outros estágios e **não fecha porta nenhuma**.
+Custo: 1 arquivo novo + 2 tocados + 1 de teste, **0 testes quebrados, 0 mudança de schema**, um
+`vercel --prod --yes` sem semente. Pede duas coisas dele: os **rótulos dos blocos** (`tres-redacoes`) e
+**olhar 16 blocos em 375px** (`olho-de-tela`).
+
+### 🔵 AS SEIS PERGUNTAS QUE SÃO DELE — nenhuma respondida
+
+1. **O acervo está reaberto?** A frase de hoje soa como ele reabrindo o "fechado em três" de 09/09. Só a
+   Rota 2 precisa da resposta, e só antes do estágio 2.2.
+2. **Tem lugar esperando?** Se sim, muda tudo: pôr no ar pelo caminho de hoje é 1 arquivo + 1 comando.
+3. **Quais dos 16 campos o incomodam hoje?** A Rota 1 foi ordenada por custo de código; se o que irrita é
+   preço ou horário, o 1.3 sobe na fila.
+4. **Fila de perguntas ajuda ou pressiona?** É a diferença entre a Rota 3 ser a melhor e a pior.
+5. **As doze palavras de tela** seguem esperando — e todo estágio acima acrescenta palavras novas à fila.
+6. **`modos` morre?**
+
+---
 
 ### 📜 AS RULINGS DE 26/09 ESTÃO VERSIONADAS
 
