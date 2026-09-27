@@ -6,9 +6,9 @@
 da passada de confirmação da Tarefa 2 (*"algo aconteceu o pc se desligou"*). O commit `d8b1f73` ficou
 gravado; o **resultado da passada morreu com a sessão** e foi **redespachado** na sessão seguinte.
 **Estamos na branch `painel-completo`**, com **1 tarefa completa e a 2ª a uma re-revisão de fechar**
-(de 12), árvore limpa, **1298/1298 em 82 arquivos**, `tsc` limpo, `npm run build` exit 0 — os três
-medidos por mim em 27/09 no `7c5698c`, junto com o harness inteiro (34 morreu, `--controles` exit 0
-com 5 controles e 12 autotestes). **NADA FOI AO AR** e nenhuma tarefa deste plano roda `vercel`.
+(de 12), árvore limpa, **1304/1304 em 82 arquivos**, `tsc` limpo, `npm run build` exit 0 — os três
+medidos por mim em 27/09 no `e558edd`, junto com o harness inteiro (34 morreu, `--controles` exit 0
+com 5 controles e 16 autotestes). **NADA FOI AO AR** e nenhuma tarefa deste plano roda `vercel`.
 O `main` segue publicado e intacto.
 → Como retomar: o bloco **"▶ RETOMAR A RODADA DO PAINEL COMPLETO"**, logo abaixo.
 
@@ -96,14 +96,14 @@ falhou. A métrica da rodada: **ele fazia 4 coisas e precisava de mim para 40; o
 
 ### 3. O estado, medido — confira você mesmo, nunca repita o número deste arquivo
 
-`git checkout painel-completo`; `git status` limpo; `npm test -- --run` deve dar **1298/1298 em 82
+`git checkout painel-completo`; `git status` limpo; `npm test -- --run` deve dar **1304/1304 em 82
 arquivos** (1287 → 1289 quando a rodada 4b partiu dois `it` em quatro; → 1298 com os nove testes do
-guarda do próprio harness, na 4e).
+guarda do próprio harness, na 4e; → 1304 com os seis que a 4f acrescentou a ele).
 
 | tarefa | estado |
 |---|---|
 | **1 — o registro de campos, `aplicarCampo` com caminho/tipo/"não sei"** | ✅ completa (`dfeb005..50f71bf`), 1 rodada de fix, re-revisão limpa |
-| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 8 rodadas de fix aplicadas (`7c4ddf9..7c5698c`); as rodadas 4 a 4e endureceram o próprio instrumento depois de **treze `Critical` nele** — falta só a re-revisão da última onda, despachada em 27/09; ver as seções 4 a 4f. 🔴 **Regra de parada escrita na 4f**: sétima sabotagem que só a camada de dentro não pega vira minor diferido e a tarefa FECHA |
+| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 9 rodadas de fix aplicadas (`7c4ddf9..e558edd`); as rodadas 4 a 4f endureceram o próprio instrumento depois de **dezesseis `Critical` nele** — falta só a sétima e última passada, despachada em 27/09 **com a regra de parada dentro dela**; ver as seções 4 a 4g. 🔴 **Só classe (a) reabre** (o harness afirmando cobertura que não existe); qualquer outro achado vira minor diferido e a tarefa FECHA |
 | 3 — a porta de escrita aceita todo campo e passa pela coerência | ⬜ próxima |
 | 4 — `oculto`: esconder sem apagar | ⬜ |
 | 5 — a tela do lugar mostra a ficha inteira | ⬜ |
@@ -378,18 +378,79 @@ scripts/mutar.mjs` = **34 morreu, 0 nas quatro categorias de falha**, exit 0, `m
 nas 34, placar dizendo *"de 34 cravada(s) à mão"*; **1298/1298 em 82 arquivos** (eram 1289 em 81 — os
 nove do guarda novo); `tsc` exit 0; `npm run build` exit 0.
 
-🟡 **A RE-REVISÃO DESTA ONDA ESTÁ DESPACHADA, e a barra dela mudou de altura.** Nas cinco rodadas
-anteriores a pergunta era *"existe outra sabotagem?"*, e a resposta foi sempre sim, uma camada mais
-adentro — isso pode seguir para sempre. A pergunta agora é: **alguma sabotagem deixa um buraco REAL
-no `coerencia.ts` passar pelas DUAS camadas, o harness E o `npm test`?** Achado que derruba só a
-camada de dentro não é `Critical` — é o desenho funcionando.
+### 4g. 🔴 A RODADA 4f/5 — A SENTENÇA TINHA CONTROLE PARA 1 DOS 4 RAMOS, E NADA GUARDAVA O GUARDA (`e558edd`)
 
-🔴 **E A REGRA DE PARADA, que é minha e está escrita para eu não me esconder dela:** se a re-revisão
-achar uma **sétima** sabotagem que só o harness sozinho não pega, ela entra como **minor diferido** e
-a Tarefa 2 **fecha**. Seis rodadas no instrumento com 10 das 12 tarefas da LEI dele esperando é
-desproporção, e a camada de fora (`npm test`, que roda em todo dispatch) é o ponto em que o retorno
-para de compensar. Só reabro se o achado for da classe (a): o harness carimbando "morreu" para uma
-mutação que a suíte **não** mata.
+A re-revisão da onda 4e achou **três `Critical`**, e o primeiro é exatamente a classe que a regra de
+parada manda reabrir: **exit 0 para uma entrada que a suíte NUNCA MEDIU.**
+
+1. 🔴 **A sentença conferia QUATRO categorias de falha e tinha controle para UMA.** `deFalha` era a
+   soma de quatro parcelas escritas à mão, e a família de VEREDITO que nasceu na 4e cobria só
+   `sobreviveu`. Apagar **uma parcela** fazia uma entrada não medida sair com **exit 0 e stdout
+   idêntico**, com os 5 controles, os 12 autotestes e o `npm test` verdes. É a **48ª espécie**
+   aplicada à **sentença**.
+   **Conserto:** a soma passou a ser **derivada de `CATEGORIAS`** (categoria nova entra sozinha),
+   nasceu um cinto de integridade do placar (tirar uma categoria fazia a soma virar `NaN`, e
+   `NaN > 0` é false — exit 0 para sempre), e nasceram três autotestes de veredito.
+   🔴 **E a prova não foi "eles ficam vermelhos", foi uma MATRIZ 4×4** — remove uma parcela, roda os
+   quatro autotestes: **diagonal perfeita**, cada um pega a sua parcela com 0 e os outros três seguem
+   em 2; com o arquivo intacto, os quatro saem 2. Sem a matriz eu teria quatro guardas possivelmente
+   vermelhos **pelo motivo errado**, que é a espécie que me mordeu duas vezes na onda anterior.
+2. 🔴 **A substância do controle pinava a CATEGORIA e não o RAMO.** `CTRL-SEM-MEDICAO` e
+   `CTRL-PISO-BAIXO` existem para os **dois ramos** de *"sem medição"* (relatório ausente × piso
+   curto) e tinham substância byte a byte idêntica: duas edições de **dado** faziam um virar clone do
+   outro com as duas camadas verdes, e o ramo perdido é o que já fez, em 3/5, uma troca de
+   **comentário** sair carimbada *"morreu"* com exit 0. Nasceu `esperaPorque` — o trecho que **só**
+   aquele ramo imprime —, **conferido** em `main()` e obrigatório em todo controle, mesmo como null.
+3. 🔴 **NADA GUARDAVA O GUARDA DE FORA, e este é o que mais importa.** A tese da 4e era *"a última
+   camada mora em `tests/`, que roda em todo dispatch"* — e o re-revisor simplesmente **moveu** o
+   arquivo: `npx vitest run` ficou **verde em 81/1289** (ninguém acusou os nove testes que sumiram,
+   porque número nenhum estava cravado), o harness seguiu em exit 0, e **com o arquivo fora as três
+   sabotagens coordenadas que a 4e provou vermelhas voltavam a passar**. É a família do defeito mais
+   caro desta branch: *o que não é referenciado por nada desaparece em silêncio.*
+   **Conserto:** `ARQUIVOS_EXIGIDOS` — exigido por `existsSync`, **não medido** (fora do filtro do
+   vitest e do piso) —, com marca própria e autoteste próprio; e o guarda de fora crava que **ele
+   mesmo** é exigido.
+   🔴 **As duas camadas agora se guardam, e isso não é uma terceira camada:** apagar o teste derruba
+   o harness, e tirar a exigência derruba o teste.
+
+**Mais dois, e são a MESMA espécie em dois lugares — clone por DADO:** os três autotestes de
+inventário tinham substância idêntica (só as `args` os distinguiam, e trocá-las deixava dois portões
+sem controle com o banner afirmando o contrário); e a substância da mutação pinava a **declaração**
+(`mata`) e não a **carga** — repontar as `edicoes` de M8 para as de M11, que declara o mesmo `mata`,
+saía *"34 morreu, exit 0"* com as duas camadas verdes e o exame do `limiar_mm` **sem sonda**.
+
+🔴 **E O MEU CONSERTO CRIOU A MESMA ESPÉCIE DE NOVO, achada por mim ao medir:** os três
+`veredito-sem-*` nasceram com substância **idêntica**, porque o que os distingue não é a linha (os
+três mexem na linha 1) — é a **troca**. Hoje: **34 mutações / 33 substâncias distintas** (o único par
+legítimo é `N11 == B1a`, a mesma troca por projeto, com o 33 cravado à mão e o motivo ao lado),
+**5 controles / 5**, **16 autotestes / 16**.
+
+🔴 **SEIS frases falsas — sexta rodada em seis — e uma estava IMPRESSA NA TELA:** o banner anunciava
+*"autotestes das RECUSAS"* e imprimia *"recusou com 2"* para quem não recusou nada, **sentenciou**.
+**O remédio foi de espécie, não de caso: tirei a CONTAGEM da prosa do docblock.** Ela nasceu falsa
+duas vezes (a 4d dizia *"quatro"*, a 4e dizia *"dez e dois"*); o número agora sai do **banner**,
+contado das listas cravadas, com o guarda de fora por cima.
+
+**O guarda de fora foi de 9 para 15 testes:** a substância dos cinco controles por extenso, os cinco
+de veredito nomeados um por ramo, as cinco categorias, a exigência mútua, a distinção de substância
+nas três listas, e a distribuição por arquivo das 34 (33 no módulo, 1 na página — a única que mantém
+`page.tsx` no guarda de árvore suja).
+
+**Medido:** `--controles` exit 0 com os 5 controles e os **16** autotestes; `node scripts/mutar.mjs`
+= **34 morreu, 0 nas quatro categorias de falha**, exit 0, `mata confere` = sim nas 34;
+**1304/1304 em 82 arquivos**; `tsc` exit 0; `npm run build` exit 0.
+
+🟡 **A SÉTIMA E ÚLTIMA PASSADA ESTÁ DESPACHADA, com a regra de parada escrita DENTRO dela** — e é a
+primeira vez que um revisor desta branch recebe a consequência junto com a pergunta:
+
+> **Só REABRE a tarefa um achado da classe (a):** o harness saindo com 0 (ou carimbando *"morreu"*)
+> para uma mutação que a suíte **não** mata, com o `npm test` verde — o instrumento afirmando
+> cobertura que não existe. **Qualquer outro achado, de qualquer gravidade, entra como MINOR
+> DIFERIDO** para a triagem da revisão final da branch, e a **Tarefa 2 FECHA.**
+
+Seis rodadas no instrumento com **10 das 12 tarefas da LEI dele esperando** é desproporção, e o ponto
+em que o retorno para de compensar é este: a camada de fora roda em todo dispatch, e as duas camadas
+se guardam. A decisão de consequência é minha; o revisor reporta tudo o que achar.
 
 O próximo passo é a **Tarefa 3** (a porta de escrita), cujo brief **já foi auditado por mim**: sete
 defeitos achados, dois deles rulings (T3-R1 e T3-R2), em `task-3-brief.md` e no fim do
