@@ -2,7 +2,15 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🟢 **ÚLTIMA PARADA: 2026-09-26. A RODADA DA FICHA-NO-BANCO ESTÁ NO AR.** As sete tarefas completas, a
+🔴 **ÚLTIMA PARADA: 2026-09-27, E A SESSÃO PAROU NO MEIO DA RODADA DO PAINEL COMPLETO.**
+Ele disse *"quero continuar na próxima sessão"*. **Estamos na branch `painel-completo`**, com **2 das
+12 tarefas completas**, árvore limpa, **1287/1287 em 81 arquivos**, `tsc` limpo, `npm run build` exit
+0. **NADA FOI AO AR** e nenhuma tarefa deste plano roda `vercel`. O `main` segue publicado e intacto.
+→ Como retomar: o bloco **"▶ RETOMAR A RODADA DO PAINEL COMPLETO"**, logo abaixo.
+
+---
+
+🟢 **A PARADA ANTERIOR: 2026-09-26. A RODADA DA FICHA-NO-BANCO ESTÁ NO AR.** As sete tarefas completas, a
 revisão final da branch inteira fechada (1 Critical, 7 Important, 7 Minor — todos endereçados numa onda
 única, com re-revisão limpa), mergeada no `main` e **publicada em produção**. Ele disse: *"pode ir
 seguindo e publicar diretamente, por enquanto não tem necessidade de teste, tudo ainda é a primeira
@@ -40,6 +48,125 @@ idêntica vindo de qualquer uma das duas fontes. Eu teria lido "não subiu" de u
 `GET /api/admin/ficha`: **404 = build velho, 405 = build novo** (a rota existe mas não tem `GET`).
 E a prova de ponta a ponta é a **voz gravada no banco aparecendo na tela**, comparada caractere a
 caractere em UTF-8 (o shell do Windows mastiga os acentos — faça a comparação dentro do Python).
+
+---
+
+## ▶ RETOMAR A RODADA DO PAINEL COMPLETO — a sessão parou aqui em 2026-09-27
+
+> 🔴 **A regra de sempre vale:** *"continua"* significa **construir**, não levantar opções. Sem
+> menu, sem pergunta de abertura.
+
+### 1. O que ele pediu, em palavras dele — a LEI da rodada
+
+> *"o normal de todo app é que os dados fiquem no banco, que possa ser incluso novos lugares e que
+> não seja sempre necessário mexer no código para atualizar dados mutáveis, era essa máxima que eu
+> preciso nesse app"*
+
+E a forma de entrega, também dele: *"eu quero que organize para fazer tudo isso junto, acredito que
+essa tela deve ser tudo programado junto para evitar conflito ou problemas"* — **uma branch, um
+desenho, UM deploy. Nada sobe pela metade.** Método escolhido por ele: **subagent-driven**.
+
+🔴 **A régua de custo, e eu já errei por não tê-la:** custo se mede na **autonomia dele**, não no
+meu esforço. *"1 arquivo e 1 comando"* é barato pra quem tem terminal e **impossível** pra quem tem
+celular. Se a resposta a *"como o João faz isso sozinho?"* for *"ele pede pro Claude"*, a proposta
+falhou. A métrica da rodada: **ele fazia 4 coisas e precisava de mim para 40; o alvo é 1.**
+
+### 2. Os três documentos, nesta ordem
+
+1. **O desenho:** `docs/superpowers/specs/2026-09-26-painel-completo-design.md`
+2. **O plano, 12 tarefas:** `docs/superpowers/plans/2026-09-26-painel-completo.md`
+3. **As rulings já tomadas, com o custo de cada uma:**
+   `docs/superpowers/2026-09-27-rulings-painel-completo.md` — **leia antes de despachar qualquer
+   tarefa**, porque várias delas modificam o texto do plano.
+
+### 3. O estado, medido — confira você mesmo, nunca repita o número deste arquivo
+
+`git checkout painel-completo`; `git status` limpo; `npm test -- --run` deve dar **1287/1287 em 81
+arquivos**.
+
+| tarefa | estado |
+|---|---|
+| **1 — o registro de campos, `aplicarCampo` com caminho/tipo/"não sei"** | ✅ completa (`dfeb005..50f71bf`), 1 rodada de fix, re-revisão limpa |
+| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 2 rodadas de fix aplicadas (`7c4ddf9..1227b6f`). **Falta a re-revisão da rodada 2** |
+| 3 — a porta de escrita aceita todo campo e passa pela coerência | ⬜ próxima |
+| 4 — `oculto`: esconder sem apagar | ⬜ |
+| 5 — a tela do lugar mostra a ficha inteira | ⬜ |
+| 6 — um editor por espécie de campo | ⬜ |
+| 7 — o número de motor com a consequência ao vivo | ⬜ |
+| 8 — o mapa que arrasta o pin | ⬜ |
+| 9 — o histórico de qualquer campo, e o escondido na lista | ⬜ |
+| 10 — a cadeia de waypoints | ⬜ |
+| 11 — criar lugar: o rascunho | ⬜ |
+| 12 — publicar o rascunho, e o que o app vai calar | ⬜ |
+
+### 4. 🔴 O PRIMEIRO PASSO, E É ESTE
+
+**A re-revisão escopada da rodada 2 da Tarefa 2 foi despachada e o resultado dela MORREU com a
+sessão.** Redespache-a: diff `66b7af7..1227b6f`, e ela tem **três** encargos:
+
+1. as **três** bifurcações de frase — colapsar cada ramo nos **dois** sentidos (seis colapsos) e
+   dizer, de cada um, se fica vermelho e em qual teste;
+2. 🔴 **conferir, sem aceitar, a afirmação retroativa do implementador sobre o defeito de
+   medição dele.** Sete mutações voltaram *"alvo não encontrado"* porque as edições deixaram
+   `coerencia.ts` e `page.tsx` em **CRLF** e os alvos multi-linha do harness usavam `\n`. *"Sem
+   alvo" estava imprimindo como RESULTADO quando é a AUSÊNCIA de medição.* Ele diz ter conferido
+   que o placar do commit anterior dizia "0 sem alvo" — **se isso for falso, as "28 mutações, 0
+   sobreviventes" daquele commit ficam sem valor**, e é achado sério;
+3. julgar se existe **guarda barato** contra a espécie 49 (bifurcação de frase com prova de um lado
+   só), que ele declarou como buraco por ser disciplina e não guarda.
+
+O ledger da execução está em `.superpowers/sdd/2026-09-26-painel-completo/progress.md` —
+**git-ignored** (`.gitignore:57`), some num `git clean -fdx`. Se ele existir, aí está tudo:
+os briefs por tarefa, os relatórios dos implementadores e os pacotes de diff. Se não existir,
+as rulings estão no arquivo versionado do item 2 e o resto se reconstrói do `git log`.
+
+### 5. As três coisas que a rodada já deve a ele
+
+1. 🔴 **27 palavras de tela novas esperando a leitura dele**, todas marcadas `// PENDENTE` (8 da
+   Tarefa 1, 19 da Tarefa 2) — **fora as 12 que já estão no ar** desde 26/09. As da Tarefa 2 são as
+   mais delicadas da rodada: são as **recusas de coerência**, que aparecem no celular dele no meio
+   de uma edição, quando ele acabou de errar. **Não entregar a lista por partes** — metade ainda
+   vai mudar de redação pelo caminho; entregar tudo por extenso, agrupado por tela, quando o
+   conjunto fechar.
+2. 🔵 **Jargão de equipe nas frases:** "pílula", "chip", "carimbo". Nenhuma aparece explicada em
+   tela nenhuma dele. É pauta **dele**, junto com a lista acima.
+3. 🔵 **Agrupamento de campos que pode ser dele:** `avisos` ficou no grupo *chegar* e `secaRapido`
+   no grupo *condição*, medido no layout da ficha pública. Não é erro; é tela, e ele pode querer
+   diferente. Vai junto com `olho-de-tela` no fim.
+
+### 6. O que amarrar nos dispatches das tarefas que faltam
+
+- **T3 (a porta de escrita)** leva **dois** guardas: um provando que a rota **recusa** ficha
+  incoerente, e outro provando que ela **NÃO** recusa ficha legítima **sem `piso`**. É na T3 que o
+  C1 da Tarefa 2 passaria a morder. E o módulo de coerência **ainda não tem consumidor de
+  produção** — a promessa da Tarefa 2 só se cumpre na T3.
+- **T5/T6** precisam saber que a espécie `bloco` **não é caixa de texto**: ela é o "não sei" do
+  grupo *quando*. E `camposDaFicha` devolve a entrada de bloco **ao lado** das folhas dele.
+- **T6** monta componentes de **cliente**, e `campos-da-ficha.ts` passou a importar `zod`. Se um
+  componente de cliente importar o registro, **o zod inteiro vai pro bundle do celular.**
+- **T6** revisa a frase do dia não reconhecido: ela mostra os **códigos crus** (`dom, seg, …`)
+  porque é o que ele digita hoje; com botões de escolher, ela fica estranha.
+- **T8 (o mapa)** vai precisar de um `if`: a espécie `coord` carrega **duas formas de valor** — par
+  em `condicao.coords`, metades nos waypoints.
+- **T11/T12 (o formulário)**: a frase *"tire os dias da ficha"* pressupõe um formulário que sabe
+  **remover** o campo, não só esvaziá-lo — `dias` tem `.min(1)`, então lista vazia é inválida.
+- **Toda** tarefa que toque `src/app/` leva **`npm run build`** no dispatch. Na rodada passada a
+  branch ficou **sem compilar** com a suíte verde e `tsc` limpo, e dois assentos de revisão
+  passaram por cima, porque nenhum dispatch pedia build.
+
+### 7. Os onze minors diferidos, para a revisão final da branch triar
+
+Estão no ledger com uma linha cada. Os que mais valem: as três frases da janela de chuva escrevem
+`0` à mão e mentiriam com número negativo (`limiar_mm` e `janela_*` são `z.number()` **sem
+`.min(0)`**); `includes("paralelepipedo")` nunca casa com a palavra acentuada; a recusa **não é
+uniforme** (bloco fala português nomeado, folha solta devolve erro de schema cru) e um teste
+**depende** dessa inconsistência; e quatro `toThrow()` herdados do brief sobrevivem à própria
+mutação.
+
+🔴 **E duas frases falsas que os próprios commits desta rodada criaram, a consertar na onda de
+fix do fim:** `docs/RESUME.md` e `.claude/agents/painel-que-cresce.md` ainda afirmam
+`CAMPOS_EDITAVEIS = ["voz"]` em `src/lib/editar-ficha.ts:9`, e **esse arquivo foi apagado na Tarefa
+1**.
 
 ---
 
