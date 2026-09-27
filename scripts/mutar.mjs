@@ -2,33 +2,84 @@
 /** 🔴 O HARNESS DE MUTAÇÃO DO `src/lib/coerencia.ts` — refeito do zero em
  *  2026-09-27 (rodada de conserto 3/5) porque o original vivia em
  *  `scratchpad/mutar.mjs`, uma pasta efêmera de sessão, e morreu com a pausa.
- *  Este arquivo é a fonte única das 34 mutações acumuladas nas rodadas
- *  anteriores (16 da extração + 12 da rodada 1/5 + 6 da rodada 2/5) — nenhuma
+ *  A rodada 4/5 o endureceu depois de uma re-revisão que achou DOIS
+ *  defeitos Critical nele mesmo — ver (a) e (b).
+ *
+ *  Este arquivo é a fonte única das 34 entradas acumuladas nas rodadas
+ *  anteriores (16 da extração + 12 da rodada 1/5 + 6 da rodada 2/5; são 33
+ *  trocas distintas, porque N11 e B1a coincidem — ver abaixo) — nenhuma
  *  foi reinventada; cada uma foi reconstruída lendo `task-2-report.md` e o
  *  código atual, e o que era ambíguo está anotado abaixo, mutação por mutação.
  *
- *  ## (a) AS QUATRO CATEGORIAS, E POR QUE "SEM ALVO" NÃO É RESULTADO
+ *  ## (a) AS CINCO CATEGORIAS, E POR QUE SÓ UMA É RESULTADO
  *
- *  Cada mutação cai em uma de quatro categorias, nunca "sobreviveu = bom":
+ *  Cada mutação cai em uma de cinco categorias, nunca "sobreviveu = bom":
  *
- *   - **morreu**      — a mutação entrou (há diff) e a suíte ficou vermelha.
- *                       É o único resultado que prova cobertura.
- *   - **sobreviveu**  — a mutação entrou e a suíte ficou VERDE. É um BURACO
- *                       real: o exame que aquela mutação desliga não tem
- *                       prova nenhuma.
- *   - **sem alvo**    — o texto que a mutação procura não foi encontrado
- *                       (ficou 0 ocorrências) OU foi encontrado mais de uma
- *                       vez (ficou ambíguo, e aplicar a errada não mede nada).
- *                       Isto é AUSÊNCIA DE MEDIÇÃO, não sucesso: a régua nunca
- *                       chegou a tocar o código. Sem alvo nunca deve ser lido
- *                       como "a suíte protegeu isto".
+ *   - **morreu**      — a mutação entrou (há diff), o vitest MEDIU (escreveu
+ *                       relatório e rodou pelo menos `PISO_DE_TESTES` testes)
+ *                       e a suíte ficou vermelha. É o único resultado que
+ *                       prova cobertura.
+ *   - **sobreviveu**  — a mutação entrou, o vitest mediu, e a suíte ficou
+ *                       VERDE. É um BURACO real: o exame que aquela mutação
+ *                       desliga não tem prova nenhuma.
+ *   - **sem alvo**    — as linhas `[inicio,fim]` do arquivo não são o texto
+ *                       de `espera`, então a troca nem chegou a ser aplicada.
+ *                       AUSÊNCIA DE MEDIÇÃO, não sucesso: a régua nunca tocou
+ *                       o código. Nunca leia isto como "a suíte protegeu".
  *   - **sem diff**    — o texto foi trocado mas `git diff --numstat` voltou
  *                       vazio (a troca não mudou nada, ou o arquivo já estava
  *                       sujo antes de começar). Também é ausência de medição.
+ *   - **sem medição** — a mutação entrou, mas o vitest NÃO MEDIU: não
+ *                       escreveu relatório, escreveu um JSON inválido, ou
+ *                       rodou menos testes que `PISO_DE_TESTES`. 🔴 Esta
+ *                       nasceu na rodada 4/5, e o buraco que ela fecha era
+ *                       grave: até então "o vitest nem rodou" caía no mesmo
+ *                       ramo de "a suíte ficou vermelha" e imprimia
+ *                       **morreu**, com exit 0. Um re-revisor provou o
+ *                       defeito apontando o harness para dois arquivos de
+ *                       teste inexistentes: uma mutação que era só troca de
+ *                       comentário saiu "morreu" e o placar saiu limpo.
  *
- *  As últimas duas categorias existem exatamente porque a rodada 2/5 mediu
- *  "0 sem alvo" sem ter a categoria — sete mutações silenciosamente pararam
- *  de aplicar, e o placar registrado não sabia disso. Ver item (b).
+ *  As quatro últimas são todas falha de medição, e qualquer uma delas faz o
+ *  processo sair com código 2. As categorias "sem alvo" e "sem diff" existem
+ *  porque a rodada 2/5 mediu "0 sem alvo" sem ter a categoria — sete mutações
+ *  silenciosamente pararam de aplicar, e o placar não sabia disso. Ver (b).
+ *
+ *  ## (a1) COMO RODAR, E O QUE CADA CÓDIGO DE SAÍDA SIGNIFICA
+ *
+ *      node scripts/mutar.mjs                 # as 34 entradas
+ *      node scripts/mutar.mjs M12 N3 B3b      # só estas
+ *      node scripts/mutar.mjs --controles     # o teste do INSTRUMENTO
+ *
+ *  Roda de qualquer pasta: a raiz sai do lugar deste arquivo, não do `cwd`.
+ *
+ *   - **0** — na rodada normal: todas morreram e todo `mata` declarado
+ *     realmente falhou. No `--controles`: os três saíram na categoria que
+ *     declararam.
+ *   - **1** — recusa de começar ou de terminar: árvore suja nos arquivos
+ *     envolvidos (antes ou depois), ou arquivo de teste que não existe mais.
+ *   - **2** — achado: sobreviveu / sem alvo / sem diff / sem medição, ou um
+ *     `mata` declarado que não falhou, ou um controle fora da categoria.
+ *
+ *  🔴 O `--controles` PRECISA poder ficar verde, e por isso ele não aplica a
+ *  regra geral: lá "sobreviveu" e "sem medição" são o resultado CERTO. Um
+ *  guarda que nunca fica verde não é guarda, é ruído que se aprende a ignorar.
+ *
+ *  ## (a2) O QUE MAIS O HARNESS SE RECUSA A DEIXAR PASSAR EM SILÊNCIO
+ *
+ *   - **arquivo de teste que sumiu.** Os itens de `ARQUIVOS_DE_TESTE` são
+ *     FILTROS do vitest, não caminhos: um nome que não casa com nada não dá
+ *     erro, só some da rodada, e o placar fica com a mesma cara medindo
+ *     metade. `main()` confere `existsSync` em cada um antes de começar.
+ *   - **`mata` que não mata.** O campo `mata` de cada mutação é conferido
+ *     contra TODAS as falhas da rodada (não só a primeira). Se o teste
+ *     declarado não falhou, o processo sai com 2 — "morreu" é uma coisa,
+ *     "morreu no teste desenhado pra ela" é outra, e a segunda é a que trava
+ *     a 45ª espécie do catálogo (nome de teste fantasma na tabela).
+ *   - **o próprio instrumento.** `node scripts/mutar.mjs --controles` roda
+ *     três mutações de controle que TEM de sair "sobreviveu", "sem alvo" e
+ *     "sem medição". Se qualquer uma sair diferente, exit 2. Sem isso,
+ *     "34 morreram" e "o harness carimba morreu em tudo" são indistinguíveis.
  *
  *  ## (b) A ARMADILHA DO CRLF, E COMO ESTE HARNESS A NEUTRALIZA
  *
@@ -51,13 +102,28 @@
  *  resposta confortável. Medido em 27/09 contra um arquivo de teste com CRLF
  *  conhecido: a receita antiga disse 0, a de cima disse 2.
  *
- *  ⚠️  E o que este docblock afirmava sobre o `grep` era FALSO, medido no
- *  mesmo dia. `grep`/`cat`/`sed` deste Git Bash NÃO traduzem CRLF→LF e NÃO
- *  mentem sobre `\r`: os mounts do MSYS aqui são **binary** (`mount` mostra
- *  `C: on /c type ntfs (binary,noacl,posix=0,...)`), `grep -c $"\r"` em
- *  `src/lib/coerencia.ts` devolve 592 e o `od` devolve os mesmos 592, e o
- *  `wc -c` bate byte a byte com `fs.readFileSync(...).length` do Node. Use
- *  `od` por ser o instrumento mais direto, não porque o `grep` minta.
+ *  ⚠️  SOBRE O `grep`, e esta frase já nasceu errada DUAS vezes neste mesmo
+ *  docblock — a terceira redação é esta, e cada número abaixo foi medido:
+ *
+ *   - `grep -c $'\r' src/lib/coerencia.ts` devolve **0** (exit 1), num
+ *     arquivo que tem 592 CR. O GNU grep 3.0 daqui abre em **modo texto** e
+ *     come o CR antes de casar, ainda que o mount seja `binary`.
+ *   - `grep -Uc $'\r' src/lib/coerencia.ts` devolve **592** — o `-U`
+ *     (modo binário) é obrigatório, e sem ele o grep responde 0 sempre.
+ *   - `grep -c $"\r"` — com ASPAS DUPLAS — devolve **411**, e isso não
+ *     tem nada a ver com CR: `$"..."` é tradução de locale, não escape, então
+ *     o padrão vira o literal `\r`, que em BRE casa a LETRA `r`. Confere
+ *     com `grep -c 'r'` → 411. Foi assim que a segunda redação
+ *     desta frase se enganou, e o pior: 592 é TAMBÉM o número de linhas do
+ *     arquivo, então uma leitura vazia que casasse tudo daria o número certo
+ *     por coincidência. Três réguas diferentes, três respostas, e duas delas
+ *     confortáveis.
+ *
+ *  Por isso a medição de fim de linha neste projeto se faz com `od`, e quando
+ *  for com `grep`, com `-U` e aspas SIMPLES. O que confere é: o mount ser
+ *  `binary` (`mount` → `C: on /c type ntfs (binary,noacl,posix=0,...)`) e o
+ *  `wc -c` bater byte a byte com `fs.readFileSync(...).length` do Node (31289
+ *  nos dois, em 27/09).
  *
  *  Este harness lê o arquivo com `fs.readFileSync(..., "utf8")`: bytes como
  *  eles são, sem tradução de fim de linha.
@@ -95,10 +161,12 @@
  *    regras de custo: `preco-legivel-no-custo`, `chip-bate-com-preco`,
  *    `chip-cabe-na-pilula`, `chip-nao-repete-a-linha`). Escolhi sempre a
  *    ocorrência de `preco-legivel-no-custo` (a primeira da tabela) para as
- *    quatro mutações que o relatório amarra a essa regra ou a uma prova
- *    genérica de não-vacuidade — cada `espera` inclui a linha `regra:
- *    "preco-legivel-no-custo",` acima do guarda, então o harness recusa
- *    aplicar em qualquer outra regra por engano. M2 usa a ocorrência de
+ *    TRÊS mutações que o relatório amarra a essa regra ou a uma prova
+ *    genérica de não-vacuidade — M6, M15 e N4 (a redação anterior desta
+ *    frase dizia QUATRO e se contradizia cinco linhas abaixo). Cada
+ *    `espera` inclui a linha `regra: "preco-legivel-no-custo",` acima do
+ *    guarda, então o harness recusa aplicar em qualquer outra regra por
+ *    engano. M2 usa a ocorrência de
  *    `chip-bate-com-preco` (é a que o relatório nomeia).
  *  - **M7 ("a regra dos dias devolve [] sempre")** não diz qual das DUAS
  *    regras de dia (`dia-repetido-ou-inventado` × `semana-inteira-nao-
@@ -120,7 +188,10 @@
  *    direções da mesma bifurcação depois de achar que a rodada 1/5 só tinha
  *    provado uma. Mantive as duas entradas — cada uma documenta uma rodada
  *    diferente — mas quem rodar as 34 vai ver os dois placares idênticos, e
- *    isto está dito aqui para não parecer erro de cópia.
+ *    isto está dito aqui para não parecer erro de cópia. 🔴 Consequência
+ *    que tem de ser dita junto com o placar: são **34 entradas e 33
+ *    trocas distintas**. Quem escrever "34 mutações" sem essa linha ao
+ *    lado está contando uma a mais do que mediu.
  *  - **"a regra do chip" em M2** é `chip-bate-com-preco` (é o que o
  *    relatório nomeia: "o chip que não bate com o preço é pego"), não
  *    `chip-cabe-na-pilula` nem `chip-nao-repete-a-linha`.
@@ -130,8 +201,12 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
+import { fileURLToPath } from "node:url";
 
-const RAIZ = process.cwd();
+/** A raiz vem do LUGAR DO SCRIPT, não do `cwd`: assim `node
+ *  scripts/mutar.mjs` funciona de qualquer pasta, e um `cd` errado no meio de
+ *  uma sessão não faz o harness medir árvore nenhuma e ainda imprimir placar. */
+const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function lerLF(relativo) {
   const abs = path.join(RAIZ, relativo);
@@ -141,18 +216,15 @@ function lerLF(relativo) {
   return { abs, crlf, lf };
 }
 
+/** ⚠️ Latente, e dito porque ninguém percebe depois: a restauração é
+ *  RECONSTRUTIVA, não um `git checkout`. Se o arquivo tivesse finais de linha
+ *  MISTOS, isto devolveria tudo em CRLF e o `git status` não acusaria (o
+ *  `autocrlf` normaliza na comparação) — ou seja, o harness teria "arrumado"
+ *  o arquivo sem ninguém pedir. Hoje os dois arquivos envolvidos são
+ *  uniformemente CRLF no disco (CR = LF = 592 em `coerencia.ts` e 381 em
+ *  `page.tsx`, medido em 27/09), então a reconstrução sai byte a byte igual. */
 function escreverLF(abs, lf, crlf) {
   writeFileSync(abs, crlf ? lf.replace(/\n/g, "\r\n") : lf, "utf8");
-}
-
-/** Conta ocorrências de `alvo` dentro do texto do arquivo (já em LF), pra
- *  detectar tanto "não achei" (0) quanto "achei em mais de um lugar, e
- *  aplicar a errada não prova nada" (>1). As duas viram "sem alvo". */
-function contarOcorrencias(lf, alvo) {
-  if (alvo === "") return 0;
-  let n = 0, i = 0;
-  while ((i = lf.indexOf(alvo, i)) !== -1) { n++; i += Math.max(alvo.length, 1); }
-  return n;
 }
 
 /** Aplica uma lista de edições de linha (1-indexadas, inclusive) sobre o
@@ -217,7 +289,10 @@ const MUTACOES = [
         '        if (true) return []; // ausente é silêncio (mutacao M2: regra desligada)',
       ].join("\n"),
     }],
-    mata: 'o caso de cobertura novo, e "o chip que não bate com o preço é pego"',
+    mata: [
+      "cada uma das 13 regras dispara na quebra escrita pra ela",
+      "o chip que não bate com o preço é pego",
+    ],
   },
   {
     id: "M3",
@@ -282,7 +357,10 @@ const MUTACOES = [
         '        if (true) return []; // mutacao M6: regra desligada',
       ].join("\n"),
     }],
-    mata: 'o caso de cobertura novo ("todas as regras do módulo são conferidas contra o acervo real, uma a uma")',
+    mata: [
+      "cada uma das 13 regras dispara na quebra escrita pra ela",
+      "custo sem preço legível dá UM erro, não dois",
+    ],
   },
   {
     id: "M7",
@@ -303,7 +381,10 @@ const MUTACOES = [
         '        if (true) return []; // mutacao M7: regra desligada',
       ].join("\n"),
     }],
-    mata: "não-vacuidade (cada uma das 13 regras dispara na quebra escrita pra ela)",
+    mata: [
+      "cada uma das 13 regras dispara na quebra escrita pra ela",
+      "um nome de dia que não existe é pego, mesmo sem repetição nenhuma",
+    ],
   },
   {
     id: "M8",
@@ -325,7 +406,10 @@ const MUTACOES = [
       espera: '        if (!citada || !f.horario) return []; // sem campo, quem acusa é a regra de cima',
       novo: '        if (true) return []; // sem campo, quem acusa é a regra de cima (mutacao M9)',
     }],
-    mata: "não-vacuidade (cada uma das 13 regras dispara na quebra escrita pra ela)",
+    mata: [
+      "cada uma das 13 regras dispara na quebra escrita pra ela",
+      "a hora citada na prosa é lida com acento e sem acento",
+    ],
   },
   {
     id: "M10",
@@ -358,7 +442,10 @@ const MUTACOES = [
       espera: '  { campo: "rotulo_escaneio", rotulo: "a etiqueta" },',
       novo: null,
     }],
-    mata: 'os QUATRO textos que distinguem…, e "a lista dos textos que distinguem tem EXATAMENTE quatro campos"',
+    mata: [
+      "os QUATRO textos que distinguem um lugar do outro são conferidos, um a um",
+      "a lista dos textos que distinguem tem EXATAMENTE quatro campos",
+    ],
   },
   {
     id: "M13",
@@ -380,7 +467,10 @@ const MUTACOES = [
       espera: '  { campo: "voz", rotulo: "a voz" },',
       novo: null,
     }],
-    mata: 'os QUATRO textos que distinguem…, e "a lista dos textos que distinguem tem EXATAMENTE quatro campos"',
+    mata: [
+      "os QUATRO textos que distinguem um lugar do outro são conferidos, um a um",
+      "a lista dos textos que distinguem tem EXATAMENTE quatro campos",
+    ],
   },
   {
     id: "M15",
@@ -401,7 +491,9 @@ const MUTACOES = [
         '        if (f.custo.tag !== "pago") return []; // mutacao M15: sem exigir custo.curto',
       ].join("\n"),
     }],
-    mata: 'ficha paga SEM chip é silêncio, não violação (sub-caso "por extenso")',
+    mata: [
+      "ficha paga SEM chip é silêncio, não violação",
+    ],
   },
   {
     id: "N1",
@@ -465,7 +557,10 @@ const MUTACOES = [
         '] as const;',
       ].join("\n"),
     }],
-    mata: 'a lista dos textos que distinguem tem EXATAMENTE quatro campos, e "campo de prosa fora da lista pode ser igual em duas fichas"',
+    mata: [
+      "a lista dos textos que distinguem tem EXATAMENTE quatro campos",
+      "campo de prosa fora da lista pode ser igual em duas fichas",
+    ],
   },
   {
     id: "N4",
@@ -605,7 +700,10 @@ const MUTACOES = [
       espera: '  const precoCurto = ficha.custo.valor?.match(PRECO)?.[0] ?? "Pago";',
       novo: '  const precoCurto = ficha.custo.valor?.match(/R\\$\\s?\\d+(?:[.,]\\d{2})?/)?.[0] ?? "Pago"; // mutacao N12',
     }],
-    mata: 'o texto do regex de preço aparece UMA vez só em todo o src/, e "a página continua montando o chip a partir do PRECO importado"',
+    mata: [
+      "o texto do regex de preço aparece UMA vez só em todo o src/",
+      "a página continua montando o chip a partir do PRECO importado",
+    ],
   },
   {
     id: "B1a",
@@ -638,7 +736,9 @@ const MUTACOES = [
       espera: '          frase: f.custo.valor',
       novo: '          frase: true // mutacao B2a: sempre o ramo ilegivel',
     }],
-    mata: "custo completo AUSENTE e custo ILEGÍVEL recebem frases diferentes (metade ausente)",
+    // A redação antiga trazia um sufixo entre parênteses (metade ausente)
+    // que não existe no nome do teste — era prosa, e o guarda de `mata` pegou.
+    mata: "custo completo AUSENTE e custo ILEGÍVEL recebem frases diferentes",
   },
   {
     id: "B2b",
@@ -649,7 +749,9 @@ const MUTACOES = [
       espera: '          frase: f.custo.valor',
       novo: '          frase: false // mutacao B2b: sempre o ramo ausente',
     }],
-    mata: "custo completo AUSENTE e custo ILEGÍVEL recebem frases diferentes (metade ilegível)",
+    // A redação antiga trazia um sufixo entre parênteses (metade ilegível)
+    // que não existe no nome do teste — era prosa, e o guarda de `mata` pegou.
+    mata: "custo completo AUSENTE e custo ILEGÍVEL recebem frases diferentes",
   },
   {
     id: "B3a",
@@ -660,7 +762,9 @@ const MUTACOES = [
       espera: '          frase: noCurto',
       novo: '          frase: true // mutacao B3a: sempre o ramo com numero',
     }],
-    mata: "chip SEM número e chip com número divergente recebem frases diferentes (metade sem número)",
+    // A redação antiga trazia um sufixo entre parênteses (metade sem número)
+    // que não existe no nome do teste — era prosa, e o guarda de `mata` pegou.
+    mata: "chip SEM número e chip com número divergente recebem frases diferentes",
   },
   {
     id: "B3b",
@@ -671,7 +775,9 @@ const MUTACOES = [
       espera: '          frase: noCurto',
       novo: '          frase: false // mutacao B3b: sempre o ramo sem numero',
     }],
-    mata: "chip SEM número e chip com número divergente recebem frases diferentes (metade divergente)",
+    // A redação antiga trazia um sufixo entre parênteses (metade divergente)
+    // que não existe no nome do teste — era prosa, e o guarda de `mata` pegou.
+    mata: "chip SEM número e chip com número divergente recebem frases diferentes",
   },
 ];
 
@@ -698,90 +804,200 @@ process.on("SIGINT", () => {
   process.exit(130);
 });
 
+const ARQUIVOS_DE_TESTE = [
+  "tests/lib/coerencia.test.ts",
+  "tests/lib/coerencia-acervo.test.ts",
+];
+
+/** O PISO: quantos testes estes dois arquivos somam quando tudo está no
+ *  lugar. Medido em 2026-09-27 com `npx vitest run <os dois> --reporter=json`
+ *  → `numTotalTests: 49`. Serve de guarda contra a rodada que mede MENOS do
+ *  que o placar diz: se um arquivo sumir, for renomeado, ou se a mutação
+ *  quebrar a COLETA de um deles, o total cai e a rodada vira "sem medição"
+ *  em vez de "morreu". Se você acrescentar testes a estes arquivos, suba o
+ *  número — ele é piso, não igualdade, justamente pra isso não travar.
+ */
+const PISO_DE_TESTES = 49;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AS TRÊS MUTAÇÕES DE CONTROLE — elas provam o INSTRUMENTO, não o código. Um
+// harness que carimba "morreu" em tudo dá exatamente o mesmo quadro de uma
+// suíte perfeita, e a rodada 3/5 só descobriu isso porque um re-revisor teve
+// de COPIAR o script para mexer nele. Agora são um comando:
+// `node scripts/mutar.mjs --controles`. Cada controle declara a categoria que
+// TEM de sair; se sair outra, o processo termina com código 2.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const CONTROLES = [
+  {
+    id: "CTRL-SOBREVIVE",
+    titulo: "CONTROLE: troca real no arquivo, semanticamente NULA",
+    arquivo: COERENCIA,
+    edicoes: [{
+      inicio: 1, fim: 1,
+      espera: 'import { PISOS } from "@/lib/piso";',
+      novo: 'import { PISOS as PISOS } from "@/lib/piso";',
+    }],
+    esperaCategoria: "sobreviveu",
+    mata: null,
+  },
+  {
+    id: "CTRL-SEM-ALVO",
+    titulo: "CONTROLE: `espera` que não existe em lugar nenhum do repo",
+    arquivo: COERENCIA,
+    edicoes: [{
+      inicio: 1, fim: 1,
+      espera: "esta linha nao existe em lugar nenhum deste repositorio",
+      novo: "nem esta",
+    }],
+    esperaCategoria: "sem alvo",
+    mata: null,
+  },
+  {
+    id: "CTRL-SEM-MEDICAO",
+    titulo: "CONTROLE: vitest que não roda (arquivo de teste inexistente)",
+    arquivo: COERENCIA,
+    edicoes: [{
+      inicio: 1, fim: 1,
+      espera: 'import { PISOS } from "@/lib/piso";',
+      novo: 'import { PISOS as PISOS } from "@/lib/piso";',
+    }],
+    // Aponta o vitest para um arquivo que não existe: nenhum relatório é
+    // escrito. ANTES da rodada 4/5 isto saía como "morreu", com exit 0.
+    arquivosDeTeste: ["tests/lib/ESTE-ARQUIVO-NAO-EXISTE.test.ts"],
+    piso: 0,
+    esperaCategoria: "sem medição",
+    mata: null,
+  },
+];
+
 function git(args) {
   return execFileSync("git", args, { cwd: RAIZ, encoding: "utf8" });
 }
 
-function rodarVitest(arquivosDeTeste) {
+/** Roda o vitest e devolve SEMPRE um de três estados, nunca dois colapsados
+ *  num só: `{ medido:false }` (o vitest não chegou a medir — e isso NÃO é
+ *  "morreu"), `{ medido:true, passou:true }` e `{ medido:true, passou:false }`.
+ *
+ *  🔴 O buraco que isto fecha, achado na re-revisão da rodada 3/5: relatório
+ *  ausente caía no mesmo `else` do teste vermelho, então "o vitest nem rodou"
+ *  e "a suíte ficou vermelha por causa da mutação" imprimiam a MESMA palavra,
+ *  com exit 0. Uma mutação que era só troca de comentário saiu "morreu". */
+function rodarVitest(arquivosDeTeste, piso) {
   const saida = path.join(os.tmpdir(), `mutar-vitest-${process.pid}-${Date.now()}.json`);
+  let erroBruto = "";
   try {
     execFileSync(
       "npx",
       ["vitest", "run", ...arquivosDeTeste, "--reporter=json", `--outputFile=${saida}`],
-      { cwd: RAIZ, encoding: "utf8", stdio: ["ignore", "ignore", "ignore"], shell: true },
+      { cwd: RAIZ, encoding: "utf8", stdio: ["ignore", "ignore", "pipe"], shell: true },
     );
-  } catch {
-    // vitest sai com código != 0 quando há teste vermelho — o relatório
-    // ainda foi escrito, é ele que interessa, não o exit code.
+  } catch (erro) {
+    // O vitest sai com código != 0 quando há teste vermelho — aí o relatório
+    // existe e é ele que interessa. Mas ele também sai != 0 quando não achou
+    // arquivo de teste nenhum, e AÍ não há relatório: guardamos o stderr em
+    // vez de jogá-lo fora, porque é a única pista do que aconteceu.
+    erroBruto = String(erro?.stderr ?? erro?.message ?? "").trim();
   }
+
   if (!existsSync(saida)) {
-    return { passou: false, semRelatorio: true, falhas: [] };
+    return { medido: false, porque: "o vitest não escreveu relatório nenhum", erroBruto, falhas: [] };
   }
-  const relatorio = JSON.parse(readFileSync(saida, "utf8"));
+
+  let relatorio;
+  try {
+    relatorio = JSON.parse(readFileSync(saida, "utf8"));
+  } catch (erro) {
+    return { medido: false, porque: `o relatório do vitest não é JSON válido (${erro.message})`, erroBruto, falhas: [] };
+  }
+
+  const total = relatorio.numTotalTests ?? 0;
+  if (total < piso) {
+    return {
+      medido: false,
+      porque: `o vitest rodou ${total} teste(s), e o piso medido destes arquivos é ${piso}`,
+      erroBruto,
+      falhas: [],
+    };
+  }
+
   const falhas = [];
   for (const arquivo of relatorio.testResults ?? []) {
     for (const teste of arquivo.assertionResults ?? []) {
       if (teste.status === "failed") falhas.push(teste.fullName ?? teste.title);
     }
   }
-  return {
-    passou: relatorio.success === true && (relatorio.numFailedTests ?? 0) === 0,
-    falhas,
-  };
+  const passou = relatorio.success === true && (relatorio.numFailedTests ?? 0) === 0;
+  return { medido: true, passou, falhas, total };
 }
-
-const ARQUIVOS_DE_TESTE = [
-  "tests/lib/coerencia.test.ts",
-  "tests/lib/coerencia-acervo.test.ts",
-];
 
 function rodarUma(mutacao) {
   // Hoje todas as mutações mexem num arquivo só; se um dia uma precisar de
   // dois, esta função troca `mutacao.arquivo` por uma lista e repete o padrão
   // abaixo por arquivo.
+  const base = { id: mutacao.id, arquivo: mutacao.arquivo, numstat: "", teste: "", falhas: [], mataConfere: null };
   const original = lerLF(mutacao.arquivo);
   const novoConteudo = aplicarEdicoes(original.lf, mutacao.edicoes);
 
-  if (novoConteudo === null) {
-    return { id: mutacao.id, arquivo: mutacao.arquivo, categoria: "sem alvo", numstat: "", teste: "" };
-  }
+  if (novoConteudo === null) return { ...base, categoria: "sem alvo" };
 
   emAndamento = { originais: [original] };
   try {
     escreverLF(original.abs, novoConteudo, original.crlf);
 
     const numstat = git(["diff", "--numstat", "--", mutacao.arquivo]).trim();
-    if (numstat === "") {
-      return { id: mutacao.id, arquivo: mutacao.arquivo, categoria: "sem diff", numstat: "", teste: "" };
-    }
+    if (numstat === "") return { ...base, categoria: "sem diff" };
 
-    const resultado = rodarVitest(ARQUIVOS_DE_TESTE);
-    if (resultado.passou) {
-      return { id: mutacao.id, arquivo: mutacao.arquivo, categoria: "sobreviveu", numstat, teste: "" };
+    const arquivos = mutacao.arquivosDeTeste ?? ARQUIVOS_DE_TESTE;
+    const piso = mutacao.piso ?? PISO_DE_TESTES;
+    const r = rodarVitest(arquivos, piso);
+
+    if (!r.medido) {
+      return { ...base, categoria: "sem medição", numstat, teste: r.porque, erroBruto: r.erroBruto };
     }
-    return {
-      id: mutacao.id,
-      arquivo: mutacao.arquivo,
-      categoria: "morreu",
-      numstat,
-      teste: resultado.falhas[0] ?? "(vitest terminou sem relatório — ver saída bruta)",
-      todasAsFalhas: resultado.falhas,
-    };
+    if (r.passou) return { ...base, categoria: "sobreviveu", numstat };
+
+    // 🔴 Confere o `mata` contra TODAS as falhas, não só a primeira. Antes da
+    // rodada 4/5 o campo `mata` não era lido por ninguém: era prosa ao lado do
+    // código, e o placar imprimia só a PRIMEIRA falha, que em duas entradas
+    // (M4, M8) não era a declarada. "Morreu" é uma coisa; "morreu no teste
+    // desenhado pra ela" é outra — e é a que a 45ª espécie (nome de teste
+    // fantasma na tabela) ataca.
+    // `mata` pode ser um nome só ou uma LISTA — e quando é lista, TODOS
+    // têm de ter falhado. Nove entradas traziam prosa em volta do nome do
+    // teste ("o caso de cobertura novo, e ..."), que nunca casaria com
+    // `fullName` nenhum; a lista é o formato honesto pra elas.
+    const nomes = mutacao.mata == null ? null : (Array.isArray(mutacao.mata) ? mutacao.mata : [mutacao.mata]);
+    const mataConfere = nomes === null ? null : nomes.every((n) => r.falhas.some((f) => f.includes(n)));
+    return { ...base, categoria: "morreu", numstat, teste: r.falhas[0] ?? "", falhas: r.falhas, mataConfere };
   } finally {
     restaurarTudo();
   }
 }
 
+const CATEGORIAS = ["morreu", "sobreviveu", "sem alvo", "sem diff", "sem medição"];
+
 function main() {
   const pedido = process.argv.slice(2);
-  const alvo = pedido.length > 0
-    ? MUTACOES.filter((m) => pedido.includes(m.id))
-    : MUTACOES;
+  const modoControle = pedido.includes("--controles");
+  const ids = pedido.filter((a) => a !== "--controles");
+  const universo = modoControle ? CONTROLES : MUTACOES;
+  const alvo = ids.length > 0 ? universo.filter((m) => ids.includes(m.id)) : universo;
 
-  if (pedido.length > 0 && alvo.length !== pedido.length) {
+  if (ids.length > 0 && alvo.length !== ids.length) {
     const achados = new Set(alvo.map((m) => m.id));
-    const faltando = pedido.filter((id) => !achados.has(id));
-    console.error(`id(s) desconhecido(s): ${faltando.join(", ")}`);
+    console.error(`id(s) desconhecido(s): ${ids.filter((id) => !achados.has(id)).join(", ")}`);
+    process.exit(1);
+  }
+
+  // 🔴 Os itens de ARQUIVOS_DE_TESTE são FILTROS do vitest, não caminhos: um
+  // nome que não casa com arquivo nenhum não dá erro, só some da rodada — e o
+  // placar continua com a mesma cara, medindo metade. É a 44ª espécie (guarda
+  // cego ao que sumiu) aplicada ao próprio instrumento.
+  const sumidos = ARQUIVOS_DE_TESTE.filter((f) => !existsSync(path.join(RAIZ, f)));
+  if (sumidos.length > 0) {
+    console.error(`arquivo(s) de teste que não existem mais: ${sumidos.join(", ")}`);
+    console.error("conserte a lista e o piso — rodar assim mede menos do que o placar diz.");
     process.exit(1);
   }
 
@@ -793,28 +1009,51 @@ function main() {
   }
 
   const linhas = [];
-  const placar = { morreu: 0, sobreviveu: 0, "sem alvo": 0, "sem diff": 0 };
+  const placar = Object.fromEntries(CATEGORIAS.map((c) => [c, 0]));
+  const mataFalhou = [];
+  const controleFalhou = [];
 
   for (const mutacao of alvo) {
     const r = rodarUma(mutacao);
     placar[r.categoria]++;
-    const testeCol = r.categoria === "morreu" ? r.teste : "";
-    linhas.push(
-      `${r.id}\t${r.arquivo}\t${r.categoria}\t${r.numstat.replace(/\n/g, " / ").replace(/\t/g, " ") || "(vazio)"}\t${testeCol}`,
-    );
+
+    if (modoControle && r.categoria !== mutacao.esperaCategoria) {
+      controleFalhou.push(`${r.id}: esperava "${mutacao.esperaCategoria}", saiu "${r.categoria}"`);
+    }
+    if (r.mataConfere === false) {
+      mataFalhou.push(`${r.id}: declara matar "${mutacao.mata}", e esse teste não falhou`);
+    }
+
+    linhas.push([
+      r.id,
+      r.arquivo,
+      r.categoria,
+      r.numstat.replace(/\n/g, " / ").replace(/\t/g, " ") || "(vazio)",
+      r.teste,
+      r.mataConfere === null ? "—" : r.mataConfere ? "sim" : "NÃO",
+    ].join("\t"));
+
     console.log(`${r.id} [${r.categoria}] ${mutacao.titulo}`);
-    if (r.categoria === "morreu") console.log(`  morreu em: ${r.teste}`);
-    if (r.categoria === "sobreviveu") console.log(`  🔴 SOBREVIVEU — buraco real, escreva o teste que mata`);
-    if (r.categoria === "sem alvo") console.log(`  🔴 SEM ALVO — o texto esperado não bateu (0 ou >1 ocorrências)`);
-    if (r.categoria === "sem diff") console.log(`  🔴 SEM DIFF — a troca não mudou o arquivo`);
+    if (r.categoria === "morreu") {
+      console.log(`  morreu em: ${r.teste}${r.falhas.length > 1 ? ` (+${r.falhas.length - 1} outra(s))` : ""}`);
+      if (r.mataConfere === false) {
+        console.log(`  🔴 mas o teste DECLARADO em "mata" não falhou: ${JSON.stringify(mutacao.mata)}`);
+        console.log("     quem falhou de verdade:");
+        for (const f of r.falhas) console.log(`       - ${f}`);
+      }
+    }
+    if (r.categoria === "sobreviveu") console.log("  🔴 SOBREVIVEU — buraco real, escreva o teste que mata");
+    if (r.categoria === "sem alvo") console.log("  🔴 SEM ALVO — o texto esperado não bateu nas linhas indicadas");
+    if (r.categoria === "sem diff") console.log("  🔴 SEM DIFF — a troca não mudou o arquivo");
+    if (r.categoria === "sem medição") {
+      console.log(`  🔴 SEM MEDIÇÃO — ${r.teste}`);
+      if (r.erroBruto) console.log(`     stderr do vitest: ${r.erroBruto.split("\n")[0]}`);
+    }
   }
 
-  console.log("\nid\tarquivo\tcategoria\tnumstat\tteste_que_matou");
+  console.log("\nid\tarquivo\tcategoria\tnumstat\tteste_que_matou\tmata_confere");
   console.log(linhas.join("\n"));
-  console.log(
-    `\nplacar: ${placar.morreu} morreram, ${placar.sobreviveu} sobreviveram, ` +
-      `${placar["sem alvo"]} sem alvo, ${placar["sem diff"]} sem diff (de ${alvo.length})`,
-  );
+  console.log(`\nplacar: ${CATEGORIAS.map((c) => `${placar[c]} ${c}`).join(", ")} (de ${alvo.length})`);
 
   const statusFinal = git(["status", "--porcelain", "--", ...ARQUIVOS_ENVOLVIDOS]);
   if (statusFinal.trim() !== "") {
@@ -823,7 +1062,29 @@ function main() {
     process.exit(1);
   }
 
-  if (placar.sobreviveu > 0 || placar["sem alvo"] > 0 || placar["sem diff"] > 0) {
+  if (modoControle) {
+    // 🔴 No modo controle o placar "ruim" é o RESULTADO ESPERADO: os três
+    // controles têm de sair "sobreviveu", "sem alvo" e "sem medição". Aplicar
+    // aqui a regra geral (qualquer categoria != morreu ⇒ exit 2) faria este
+    // comando ser SEMPRE vermelho — e um guarda que nunca fica verde não é
+    // guarda, é ruído que todo mundo aprende a ignorar. Aqui só uma coisa
+    // reprova: um controle que saiu diferente do que declarou.
+    if (controleFalhou.length > 0) {
+      console.error("\n🔴 CONTROLE FALHOU — o instrumento não sabe mais dizer o que promete:");
+      for (const linha of controleFalhou) console.error(`  ${linha}`);
+      process.exit(2);
+    }
+    console.log("\n✅ os três controles saíram na categoria que declararam — o instrumento sabe");
+    console.log("   dizer sobreviveu, sem alvo e sem medição, e não só carimbar morreu.");
+    return;
+  }
+
+  if (mataFalhou.length > 0) {
+    console.error('\n🔴 "mata" DECLARADO QUE NÃO MORREU — a tabela mente sobre quem trava o quê:');
+    for (const linha of mataFalhou) console.error(`  ${linha}`);
+    process.exit(2);
+  }
+  if (placar.sobreviveu + placar["sem alvo"] + placar["sem diff"] + placar["sem medição"] > 0) {
     process.exit(2);
   }
 }
