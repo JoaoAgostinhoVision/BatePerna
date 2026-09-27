@@ -1,6 +1,6 @@
 # Os agentes deste projeto
 
-Dez agentes, em **duas famílias**. Chame por nome.
+Onze agentes, em **duas famílias**. Chame por nome.
 
 ## 1. Os seis que ACHAM — análises que se repetiram em toda rodada
 
@@ -13,12 +13,12 @@ Dez agentes, em **duas famílias**. Chame por nome.
 | **`conferir-no-ar`** | depois de todo deploy | `● Ready` não prova conteúdo, e marcador com acento dá o mesmo quadro de um deploy que não subiu |
 | **`pesquisa-de-lugar`** | quando ele pedir "procura no Google"; ao preparar ficha nova | a mesma busca que ajudou errou o **preço pela metade**, ofereceu a coordenada de **outra cachoeira a 5 km**, e o horário dela junto |
 
-## 2. Os quatro que ACHAM **e PROPÕEM** — criados em 2026-09-10, a pedido dele
+## 2. Os cinco que ACHAM **e PROPÕEM** — os quatro primeiros de 2026-09-10, a pedido dele
 
 > *"quero que você gere agentes completos que consigam analisar essas dúvidas e dar sugestões
 > também, tem coisas que sou leigo"* — João, 10/09.
 
-A família 1 devolve o achado e cala, porque o achado já é a resposta. Estes quatro devolvem
+A família 1 devolve o achado e cala, porque o achado já é a resposta. Estes cinco devolvem
 **achado + menu de saídas + uma recomendação explícita**, porque a dúvida é de um domínio em que
 ele não tem como julgar sozinho — tipografia, custo de código, gradação de risco, redação.
 
@@ -28,8 +28,13 @@ ele não tem como julgar sozinho — tipografia, custo de código, gradação de
 | **`olho-de-tela`** | como a tela FICA — hierarquia, tipografia, 375px — e o que ele deve olhar no celular | especificidade calculada e `arquivo:linha`; *"fica mais bonito"* é proibido |
 | **`tres-redacoes`** | falta palavra na tela; quais são as opções? | **três** redações, a 1ª sempre SUBTRAÇÃO, procedência palavra por palavra. Nenhuma está aprovada |
 | **`escolha-de-produto`** | ordem da ficha, ficha × waypoint, qual eixo construir | primeiro pergunta se **a pergunta é a certa**. Custo em arquivos e testes, não em story points |
+| **`painel-que-cresce`** *(2026-09-26)* | o painel está longe de um app de verdade; criar/editar lugar pelo app | mede o buraco em número (**1 campo editável de 17**, **0 caminhos de criar lugar**) e só propõe em **estágios que sobem sozinhos** |
 
-## O que os DEZ têm em comum, e é de propósito
+> O quinto nasceu em **2026-09-26**, quando ele disse: *"ainda não achei que o painel de controle
+> está bom (…) para um aplicativo de fato está muito longe (…) preciso de um agente capaz de captar
+> tudo isso, adaptar e pensar em um aplicativo próprio"*.
+
+## O que os ONZE têm em comum, e é de propósito
 
 - **Nenhum conserta, e nenhum tem `Edit` ou `Write`.** Auditor que conserta para de auditar — e
   quem escreve o texto é o pior auditor dele. Recomendar é permitido; executar não.
@@ -42,6 +47,8 @@ ele não tem como julgar sozinho — tipografia, custo de código, gradação de
   `BatePerna · PE`, *"1 agora, 3 depois"*). Isso não é achado, é decisão — reabrir por conta
   própria é erro.
 - **Todos se passam a bola:** achado de CSS que virou ordem de blocos vai pro `escolha-de-produto`;
+  estágio de painel que precisa de palavra nova vai pro `tres-redacoes` e de olho no celular pro
+  `olho-de-tela`;
   achado que precisa de frase nova vai pro `tres-redacoes`; qualquer proposta que suba ao ar passa
   depois pelo `conferir-no-ar`.
 
