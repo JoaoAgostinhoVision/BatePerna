@@ -27,21 +27,64 @@ const TEXTO = { "content-type": "text/plain; charset=utf-8", "cache-control": "n
  *  documento inteiro não fechando, e disso o dono não tem o que fazer campo a
  *  campo. */
 function recusar400(erro: unknown): Response {
-  const frase = erro instanceof ZodError || !(erro instanceof Error) ? "" : erro.message;
-  return new Response(frase, { status: 400, headers: TEXTO });
+  // 🔴 SÓ AS NOSSAS FRASES VÃO PRO CELULAR DELE, e a régua é a CLASSE do erro:
+  // tudo o que este app escreve pra ele é `new Error(...)` com frase em
+  // português (ver `campos-da-ficha.ts`), enquanto `ZodError`, `SyntaxError` e
+  // `TypeError` são subclasses. Sem esta régua, um documento corrompido no banco
+  // devolvia `Unexpected token 'i', "isto nao e json" is not valid JSON` — em
+  // inglês, com o conteúdo bruto do documento ecoado —, medido por um re-revisor
+  // em 27/09. É o mesmo mal que a guarda do `ZodError` já existia pra impedir.
+  const nossa = erro instanceof Error && erro.constructor === Error;
+  return new Response(nossa ? erro.message : "", { status: 400, headers: TEXTO });
 }
 
-/** A identidade COMPLETA de uma violação — `regra` **+** `slug` **+** `frase`.
+/** O PAR (`regra`, `slug`) de uma violação — e o portão compara a CONTAGEM de
+ *  cada par, não o conteúdo das frases.
  *
- *  🔴 POR QUE OS TRÊS, e não só a `regra`: duas fichas podem violar a MESMA
- *  regra, e o acervo pode já carregar a violação de uma delas. Comparando só
- *  pela regra, a violação nova da outra ficha sumiria no diff — a porta
- *  deixaria passar exatamente o defeito que ela existe pra pegar. E a `frase`
- *  entra porque uma mesma regra no mesmo slug muda de conteúdo quando o dado
- *  muda (o chip dizia R$ 1, passou a dizer R$ 2): sem ela, trocar um valor
- *  errado por outro valor errado atravessaria em silêncio. */
-function identidade(v: Violacao): string {
-  return JSON.stringify([v.regra, v.slug, v.frase]);
+ *  🔴 A REDAÇÃO ANTERIOR USAVA A `frase`, E ISSO TRANCAVA O DONO DE RENOMEAR O
+ *  LUGAR. Medido por um re-revisor em 2026-09-27, com requisições de verdade: o
+ *  nome do lugar (`trajeto.waypoints[0].nome`) aparece na frase de **todas as 13
+ *  regras** (é o `nomeDe(f)` de `coerencia.ts`). Então, numa ficha que já tinha
+ *  qualquer violação preexistente, renomear o lugar mudava a frase daquela
+ *  violação, a identidade deixava de casar, e o diff classificava como
+ *  **introduzida** uma violação que **já estava no acervo** — exatamente o que o
+ *  ruling T3-R1 proíbe. Três medições dele:
+ *
+ *    - chip velho preexistente na própria ficha + renomear → **409**, e a frase
+ *      falava de PREÇO;
+ *    - `limiar_mm` zerado preexistente + renomear → **409**, e a frase falava de
+ *      CHUVA;
+ *    - a voz duplicada acusada no OUTRO lugar + renomear este → **409**, por
+ *      violação de um lugar que ele não estava editando.
+ *
+ *  E `trajeto.waypoints[].nome` é obrigatório: **não tem "não sei", não tem
+ *  saída pelo campo.** Um typo no nome do lugar é das coisas mais prováveis de
+ *  se querer consertar do celular, e a porta respondia sobre outro assunto.
+ *
+ *  🔴 POR QUE A CONTAGEM, E NÃO O CONJUNTO DE PARES. Três regras podem acusar o
+ *  MESMO par mais de uma vez: `janela-nao-zerada` empurra um achado por cada um
+ *  dos três números zerados, `texto-emprestado` um por campo de prosa copiado, e
+ *  `dia-repetido-ou-inventado` um por dia malformado. Comparando conjuntos, uma
+ *  ficha que já tinha UMA dessas passaria a ter DUAS em silêncio — o dono
+ *  quebraria o segundo campo e a porta calaria, porque o par já existia. A
+ *  contagem é a leitura humana de *"a minha gravação piorou esta ficha?"*.
+ *
+ *  🔴 E O QUE ISTO DEIXA PASSAR, DE PROPÓSITO — está escrito porque é escolha, e
+ *  não descuido. Uma gravação que MANTÉM a contagem de um par mas troca o valor
+ *  errado por outro valor errado passa: se o chip já dizia R$ 1 numa ficha que
+ *  cobra R$ 5, escrever R$ 12 no valor sai com 200, e o documento continua
+ *  incoerente **como já estava**. É a leitura deliberada de T3-R1: numa porta, o
+ *  falso positivo é pior que o falso negativo, porque **trava o dono de gravar
+ *  uma verdade** — e ele não introduziu problema nenhum, herdou um. Quem cobra
+ *  essa dívida são os 15 guardas de coerência do acervo, não esta porta. */
+function par(v: Violacao): string {
+  return JSON.stringify([v.regra, v.slug]);
+}
+
+function contarPares(violacoes: Violacao[]): Map<string, number> {
+  const conta = new Map<string, number>();
+  for (const v of violacoes) conta.set(par(v), (conta.get(par(v)) ?? 0) + 1);
+  return conta;
 }
 
 /** O acervo INTEIRO como fichas, com o documento de `slug` trocado por `doc`.
@@ -122,11 +165,11 @@ export async function PUT(req: Request): Promise<Response> {
   try {
     body = await req.json();
   } catch {
-    return new Response("", { status: 400 });
+    return new Response("", { status: 400, headers: TEXTO });
   }
   // 🔴 `null` é JSON válido — não estoura o catch acima — mas destructurar
   // `null` estoura na hora. Mesma guarda da rota de aviso.
-  if (typeof body !== "object" || body === null) return new Response("", { status: 400 });
+  if (typeof body !== "object" || body === null) return new Response("", { status: 400, headers: TEXTO });
 
   const corpo = body as {
     slug?: unknown;
@@ -136,7 +179,7 @@ export async function PUT(req: Request): Promise<Response> {
     versaoId?: unknown;
   };
   const { slug, campo, valor, naoSei, versaoId } = corpo;
-  if (typeof slug !== "string") return new Response("", { status: 400 });
+  if (typeof slug !== "string") return new Response("", { status: 400, headers: TEXTO });
 
   // 🔴 C6 da revisão do controlador: os dois formatos são MUTUAMENTE
   // EXCLUSIVOS. `"campo" in corpo` (e não `campo !== undefined`) porque
@@ -145,7 +188,7 @@ export async function PUT(req: Request): Promise<Response> {
   // tipo. Nem os dois formatos juntos, nem nenhum dos dois: 400.
   const trazVersaoId = "versaoId" in corpo;
   const trazCampo = "campo" in corpo || "valor" in corpo || "naoSei" in corpo;
-  if (trazVersaoId === trazCampo) return new Response("", { status: 400 });
+  if (trazVersaoId === trazCampo) return new Response("", { status: 400, headers: TEXTO });
 
   if (trazVersaoId) {
     // 🔴 M1 DA REVISÃO FINAL (2026-09-26): `typeof versaoId !== "number"`
@@ -155,14 +198,14 @@ export async function PUT(req: Request): Promise<Response> {
     // devolve 400 controlado em todos os outros pontos. Mesma forma da rota
     // irmã (`src/app/api/admin/aviso/route.ts`).
     if (typeof versaoId !== "number" || !Number.isInteger(versaoId) || versaoId <= 0) {
-      return new Response("", { status: 400 });
+      return new Response("", { status: 400, headers: TEXTO });
     }
 
     const versao = await versaoPorId(getClient(), versaoId);
     // 🔴 A LINHA VERMELHA: sem conferir que a versão pertence a ESTE slug, um
     // `versaoId` qualquer põe a voz de um lugar na ficha de outro — o
     // defeito que este projeto mais caça, agora com ajuda do banco.
-    if (versao == null || versao.ficha_slug !== slug) return new Response("", { status: 400 });
+    if (versao == null || versao.ficha_slug !== slug) return new Response("", { status: 400, headers: TEXTO });
 
     // 🔴 FIX ROUND 1 (2026-09-26): "voltar" grava VERBATIM, não renormalizado.
     //
@@ -194,7 +237,7 @@ export async function PUT(req: Request): Promise<Response> {
     try {
       fichaSchema.parse(JSON.parse(versao.doc));
     } catch {
-      return new Response("", { status: 400 });
+      return new Response("", { status: 400, headers: TEXTO });
     }
 
     const id = await gravarVersao(getClient(), slug, versao.doc, "painel", agora);
@@ -209,13 +252,13 @@ export async function PUT(req: Request): Promise<Response> {
   // os confundiria num só.
   const trazValor = "valor" in corpo;
   const trazNaoSei = "naoSei" in corpo;
-  if (trazValor === trazNaoSei) return new Response("", { status: 400 });
+  if (trazValor === trazNaoSei) return new Response("", { status: 400, headers: TEXTO });
 
   // 🔴 `naoSei` SÓ VALE `true` — decisão desta tarefa, que o brief não tomava.
   // Com a leitura por `in`, um corpo `{campo: "piso", naoSei: false}` pediria
   // REMOÇÃO dizendo "não" — a tela que mandasse a bandeira desligada apagaria o
   // campo. Falha fechada: qualquer outra coisa é 400.
-  if (trazNaoSei && naoSei !== true) return new Response("", { status: 400 });
+  if (trazNaoSei && naoSei !== true) return new Response("", { status: 400, headers: TEXTO });
 
   // 🔴 A LISTA BRANCA saiu de `CAMPOS_EDITAVEIS = ["voz"]` e virou o registro
   // de `campos-da-ficha.ts` (2026-09-26). O que ela guarda é o mesmo: sem ela,
@@ -223,11 +266,11 @@ export async function PUT(req: Request): Promise<Response> {
   // que já circula. `campoPorCaminho` resolve caminho aninhado e índice de
   // waypoint (`trajeto.waypoints.0.nome`) pelo molde do registro.
   if (typeof campo !== "string" || campoPorCaminho(campo) === undefined) {
-    return new Response("", { status: 400 });
+    return new Response("", { status: 400, headers: TEXTO });
   }
 
   const versao = await versaoAtual(getClient(), slug);
-  if (versao == null) return new Response("", { status: 400 });
+  if (versao == null) return new Response("", { status: 400, headers: TEXTO });
 
   // 🔴 `valor` chega como `unknown` e NÃO é coagido pra string aqui — se
   // fosse `String(valor)`, um número viraria texto válido e passaria pelo
@@ -278,10 +321,13 @@ export async function PUT(req: Request): Promise<Response> {
   //  O custo é honesto e não é regressão: a gravação pode pendurar até o timeout
   //  da plataforma — exatamente como o `versaoAtual` logo acima já pendura.
   const versoes = await versoesAtuais(getClient());
-  const jaHavia = new Set(violacoesDoAcervo(acervoComo(versoes, slug, versao.doc)).map(identidade));
-  const introduzidas = violacoesDoAcervo(acervoComo(versoes, slug, novoDoc)).filter(
-    (v) => !jaHavia.has(identidade(v)),
-  );
+  const antes = contarPares(violacoesDoAcervo(acervoComo(versoes, slug, versao.doc)));
+  const todasDepois = violacoesDoAcervo(acervoComo(versoes, slug, novoDoc));
+  const depois = contarPares(todasDepois);
+  // Introduzida = par cuja CONTAGEM cresceu. O filtro devolve as violações
+  // daquele par (inclusive a que já existia), e a frase que volta pro dono é a
+  // primeira em ordem de tabela — ele lê a regra que a gravação dele piorou.
+  const introduzidas = todasDepois.filter((v) => (depois.get(par(v)) ?? 0) > (antes.get(par(v)) ?? 0));
   // A primeira em ORDEM DE TABELA, que é a ordem da tela do dono: as regras de
   // custo vêm na frente porque é onde o defeito mais caro já entrou.
   if (introduzidas.length > 0) {

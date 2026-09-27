@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MIN_SENHA } from "@/lib/admin-config";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
-import { ensureSchema, gravarVersao, historico, versaoAtual } from "@/lib/db";
+import { ensureSchema, gravarVersao, historico, versaoAtual, versoesAtuais } from "@/lib/db";
 import { semearAcervo } from "../banco";
 import type { Ficha } from "@/types/ficha";
 
@@ -148,6 +148,11 @@ describe("PUT /api/admin/ficha", () => {
   // inteira e grava.
   it("campo aninhado que entrou no registro (custo.valor): 200, e grava", async () => {
     const VALOR = "R$ 5 por pessoa · cobrado na portaria";
+    // 🔴 A PREMISSA DESTE CASO, e ela é nova: a carga só atravessa o portão de
+    // coerência porque o preço dela BATE com o chip do topo da ficha. Sem esta
+    // linha, o dia em que o preço da Rampa mudar no acervo faz este caso virar
+    // 409, e o vermelho vai parecer defeito de rota.
+    expect(ficha.custo.curto, "a premissa: a carga tem que bater com o chip do topo").toContain("R$ 5");
     const res = await PUT(pedido({ slug: SLUG, campo: "custo.valor", valor: VALOR }, cookieBom));
     expect(res.status).toBe(200);
     const atual = await versaoAtual(c, SLUG);
@@ -400,12 +405,23 @@ describe("PUT /api/admin/ficha — os três formatos são exaustivos e exclusivo
     expect(await historico(c, SLUG)).toHaveLength(1);
   });
 
-  it("corpo com naoSei e versaoId ao mesmo tempo: 400, e nada é gravado", async () => {
-    const v1 = await gravarVersao(c, SLUG, JSON.stringify(ficha), "semente", AGORA);
+  // 🔴 ESTE CASO PASSAVA PELO MOTIVO ERRADO, e um re-revisor mediu: a carga
+  // levava `campo`, então a recusa vinha da primeira cláusula de `trazCampo` e o
+  // caso ficava VERDE mesmo arrancando o `|| "naoSei" in corpo`. O buraco real
+  // era `{slug, naoSei, versaoId}` SEM `campo`: saía 200 e **voltava a versão
+  // antiga**, ignorando o `naoSei` em silêncio. Sem `campo` na carga, e a
+  // asserção é sobre o CONTEÚDO — o tamanho do histórico sozinho não distingue
+  // "recusou" de "voltou a versão errada" numa base que já tem duas.
+  it("corpo com naoSei e versaoId, SEM campo: 400, e a versão NÃO volta", async () => {
+    const v1 = await gravarVersao(c, SLUG, JSON.stringify({ ...ficha, voz: "a primeira" }), "semente", AGORA);
+    await gravarVersao(c, SLUG, JSON.stringify({ ...ficha, voz: "a segunda" }), "painel", AGORA);
     const antes = await historico(c, SLUG);
-    const res = await PUT(pedido({ slug: SLUG, campo: "piso", naoSei: true, versaoId: v1 }, cookieBom));
+
+    const res = await PUT(pedido({ slug: SLUG, naoSei: true, versaoId: v1 }, cookieBom));
+
     expect(res.status).toBe(400);
     expect(await historico(c, SLUG)).toHaveLength(antes.length);
+    expect(JSON.parse((await versaoAtual(c, SLUG))!.doc).voz).toBe("a segunda");
   });
 });
 
@@ -584,7 +600,126 @@ describe("PUT /api/admin/ficha — o portão da coerência", () => {
     expect(await historico(c, SLUG)).toHaveLength(2);
   });
 
-  // 🔴 POR QUE A IDENTIDADE É `regra` + `slug` + `frase`, E NÃO SÓ A REGRA.
+  // 🔴🔴 O QUE ESTE BLOCO DE QUATRO CASOS GUARDA: a IDENTIDADE da violação no
+  // diff. Ela não tinha prova em NENHUM dos dois sentidos — um re-revisor mediu
+  // que trocar `[regra, slug, frase]` por `[regra, slug]` **ou** por
+  // `[regra, frase]` deixava a suíte inteira VERDE. E era a `frase` ali que
+  // trancava o dono de renomear o lugar, porque o nome do lugar aparece na frase
+  // das treze regras.
+  //
+  // Os quatro casos abaixo morrem em mutações DIFERENTES, de propósito:
+  //   (1) e (2) morrem se a `frase` (ou qualquer coisa que varie com o nome do
+  //       lugar) voltar para a identidade;
+  //   (3) morre se a comparação virar CONJUNTO de pares em vez de CONTAGEM;
+  //   (4) morre se a identidade virar só a `regra`, sem o `slug`.
+  it("renomear o lugar NÃO é trancado por violação preexistente na própria ficha", async () => {
+    // O chip velho fica mentindo no acervo (R$ 1 num lugar que cobra R$ 5). Com
+    // a frase na identidade, renomear devolvia 409 FALANDO DE PREÇO — o dono
+    // pedia pra consertar o NOME e a porta respondia sobre outro assunto.
+    await gravarVersao(c, SLUG, comChip(ficha, "R$ 1 · portão"), "semente", AGORA);
+    const novoNome = `${ficha.trajeto.waypoints[0].nome} (Gravatá)`;
+
+    const res = await PUT(
+      pedido({ slug: SLUG, campo: "trajeto.waypoints.0.nome", valor: novoNome }, cookieBom),
+    );
+
+    expect(res.status, await res.text()).toBe(200);
+    const doc = JSON.parse((await versaoAtual(c, SLUG))!.doc) as Ficha;
+    expect(doc.trajeto.waypoints[0].nome).toBe(novoNome);
+  });
+
+  it("renomear o lugar NÃO é trancado por violação preexistente no OUTRO lugar do par", async () => {
+    // `frase-emprestada` compara fichas entre si e acusa UM dos dois lados. Com
+    // a frase na identidade, renomear a Rampa era recusado por uma violação que
+    // o módulo atribui ao VÉU — um lugar que o dono não estava editando.
+    const veu = acervo.find((f) => f.slug === VEU)!;
+    await gravarVersao(c, VEU, JSON.stringify({ ...veu, voz: ficha.voz }), "semente", AGORA);
+    const novoNome = `${ficha.trajeto.waypoints[0].nome} (Gravatá)`;
+
+    const res = await PUT(
+      pedido({ slug: SLUG, campo: "trajeto.waypoints.0.nome", valor: novoNome }, cookieBom),
+    );
+
+    expect(res.status, await res.text()).toBe(200);
+    expect(JSON.parse((await versaoAtual(c, SLUG))!.doc).trajeto.waypoints[0].nome).toBe(novoNome);
+  });
+
+  it("a SEGUNDA violação da mesma regra no MESMO lugar é recusada — o portão conta, não agrupa", async () => {
+    // 🔴 `janela-nao-zerada` empurra UM achado por número zerado. Com o limiar já
+    // zerado no acervo, zerar TAMBÉM a janela do passado leva o par de 1 para 2.
+    // Comparando CONJUNTO de pares, isto passaria em silêncio: o par já existia.
+    const comLimiarZero = {
+      ...ficha,
+      condicao: { ...ficha.condicao, regra: { ...ficha.condicao.regra, limiar_mm: 0 } },
+    };
+    await gravarVersao(c, SLUG, JSON.stringify(comLimiarZero), "semente", AGORA);
+
+    const res = await PUT(
+      pedido({ slug: SLUG, campo: "condicao.regra.janela_passado_horas", valor: 0 }, cookieBom),
+    );
+
+    expect(res.status).toBe(409);
+    // E nada foi gravado: a versão de cima continua sendo a do limiar zerado.
+    const doc = JSON.parse((await versaoAtual(c, SLUG))!.doc) as Ficha;
+    expect(doc.condicao.regra.janela_passado_horas).toBe(ficha.condicao.regra.janela_passado_horas);
+    expect(await historico(c, SLUG)).toHaveLength(2);
+  });
+
+  it("a MESMA contagem com valor errado DIFERENTE passa — a escolha está escrita, e é de propósito", async () => {
+    // 🔴 O preço do falso negativo que a porta aceita pagar, e ele está aqui como
+    // TESTE pra ninguém "consertar" isso por engano. O chip já mentia no acervo
+    // (R$ 1 numa ficha que cobra R$ 5); gravar R$ 12 no custo completo mantém a
+    // contagem do par `chip-bate-com-preco` em 1 e sai com 200, com o documento
+    // continuando incoerente COMO JÁ ESTAVA. É a leitura deliberada de T3-R1:
+    // numa porta, o falso positivo é pior, porque trava o dono de gravar uma
+    // verdade — e aqui ele não introduziu nada, herdou. A dívida é cobrada pelos
+    // 15 guardas de coerência do acervo, não por esta porta.
+    await gravarVersao(c, SLUG, comChip(ficha, "R$ 1 · portão"), "semente", AGORA);
+
+    const res = await PUT(pedido({ slug: SLUG, campo: "custo.valor", valor: "R$ 12,00" }, cookieBom));
+
+    expect(res.status, await res.text()).toBe(200);
+    expect(JSON.parse((await versaoAtual(c, SLUG))!.doc).custo.valor).toBe("R$ 12,00");
+  });
+
+  it("a violação que MUDA DE LUGAR é recusada, mesmo com a contagem total igual", async () => {
+    // 🔴 ESTE CASO EXISTE PORQUE UMA MUTAÇÃO SOBREVIVEU: tirar o `slug` do par
+    // (contando só por regra) não derrubava teste nenhum, então o `slug` estava
+    // sem prova. Aqui a contagem TOTAL de `frase-emprestada` fica em 1 antes e
+    // depois — o que muda é DE QUEM é a violação, e é o `slug` no par que vê.
+    //
+    // Antes: a Rampa e a Pedra explicam o chão com a mesma frase (o módulo acusa
+    // a segunda em ordem de acervo). A gravação troca a frase da Rampa pela do
+    // Véu: a primeira violação desaparece e nasce outra, em outro lugar.
+    // 🔴 A gravação é no VÉU, não na Rampa, e o motivo é MEDIDO: a ordem do
+    // acervo é `pedra | veu | rampa`, e esta regra acusa todos menos o primeiro
+    // do grupo — então uma gravação na Rampa (que é a última) sempre acusaria a
+    // própria Rampa, e a violação nunca mudaria de lugar.
+    const pedra = acervo.find((f) => f.slug !== SLUG && f.slug !== VEU)!;
+    const veu = acervo.find((f) => f.slug === VEU)!;
+    // Antes: o Véu explica o chão com a frase da Pedra, e o módulo acusa o VÉU.
+    await gravarVersao(c, VEU, JSON.stringify({ ...veu, secaRapido: pedra.secaRapido }), "semente", AGORA);
+    // 🔴 A PREMISSA, medida e explícita: a ordem do acervo é a do ÚLTIMO
+    // gravado, e esta regra acusa todos menos o primeiro do grupo. Se o Véu
+    // ficar por último, ele é acusado nos dois lados e a violação não muda de
+    // lugar — o caso deixaria de medir o que diz medir. Esta gravação a mais
+    // (idêntica, na Rampa) devolve o Véu para o meio.
+    await gravarVersao(c, SLUG, JSON.stringify(ficha), "semente", AGORA);
+    const ordem = [...(await versoesAtuais(c)).keys()];
+    expect(ordem.indexOf(VEU), `a premissa deste caso: o Véu no meio, e a ordem é ${ordem.join(" | ")}`)
+      .toBe(1);
+    const antes = await historico(c, VEU);
+
+    // A gravação copia pro Véu a frase da RAMPA: a acusação do Véu morre e nasce
+    // uma na Rampa. Contagem total de `frase-emprestada`: 1 antes, 1 depois.
+    const res = await PUT(pedido({ slug: VEU, campo: "secaRapido", valor: ficha.secaRapido }, cookieBom));
+
+    expect(res.status).toBe(409);
+    expect(JSON.parse((await versaoAtual(c, VEU))!.doc).secaRapido).toBe(pedra.secaRapido);
+    expect(await historico(c, VEU)).toHaveLength(antes.length);
+  });
+
+  // 🔴 POR QUE A IDENTIDADE TEM O `slug`, E NÃO SÓ A REGRA.
   //
   // Duas fichas, a MESMA regra: o Véu já viola `chip-bate-com-preco` (chip R$ 1,
   // valor R$ 10), e a gravação introduz a violação da MESMA regra na Rampa (chip
