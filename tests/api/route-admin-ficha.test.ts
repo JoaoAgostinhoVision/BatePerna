@@ -152,7 +152,14 @@ describe("PUT /api/admin/ficha", () => {
     // coerência porque o preço dela BATE com o chip do topo da ficha. Sem esta
     // linha, o dia em que o preço da Rampa mudar no acervo faz este caso virar
     // 409, e o vermelho vai parecer defeito de rota.
-    expect(ficha.custo.curto, "a premissa: a carga tem que bater com o chip do topo").toContain("R$ 5");
+    // 🔴 A premissa é sobre o que a REGRA extrai, não sobre substring: um
+    // re-revisor mediu que `toContain("R$ 5")` fica VERDE com o chip em
+    // "R$ 50 · portão" — e nesse estado o caso leva 409, ou seja, a premissa
+    // passava e o vermelho confuso acontecia igual.
+    expect(
+      ficha.custo.curto?.match(/R\$\s?\d+(?:[.,]\d{2})?/)?.[0],
+      "a premissa: o preço do chip tem que ser o mesmo da carga",
+    ).toBe("R$ 5");
     const res = await PUT(pedido({ slug: SLUG, campo: "custo.valor", valor: VALOR }, cookieBom));
     expect(res.status).toBe(200);
     const atual = await versaoAtual(c, SLUG);
@@ -412,6 +419,23 @@ describe("PUT /api/admin/ficha — os três formatos são exaustivos e exclusivo
   // antiga**, ignorando o `naoSei` em silêncio. Sem `campo` na carga, e a
   // asserção é sobre o CONTEÚDO — o tamanho do histórico sozinho não distingue
   // "recusou" de "voltou a versão errada" numa base que já tem duas.
+  // 🔴 A RÉGUA NOVA DO 400 NÃO TINHA PROVA: um re-revisor voltou `recusar400`
+  // para a régua ANTERIOR (só `ZodError` barrado) e a suíte inteira ficou verde,
+  // porque o caso que parecia guardá-la é o do zod, que já existia. O que
+  // distingue as duas réguas é um `Error` que NÃO é nosso: um documento
+  // corrompido no banco devolvia `Unexpected token 'i', "isto nao e json" is not
+  // valid JSON` — em inglês, com o conteúdo bruto ecoado pro celular dele.
+  it("documento corrompido no banco: 400 com corpo VAZIO — mensagem de motor não vira texto de tela", async () => {
+    await gravarVersao(c, SLUG, "isto nao e json", "semente", AGORA);
+    const antes = await historico(c, SLUG);
+
+    const res = await PUT(pedido({ slug: SLUG, campo: "voz", valor: "voz nova" }, cookieBom));
+
+    expect(res.status).toBe(400);
+    expect(await res.text()).toBe("");
+    expect(await historico(c, SLUG)).toHaveLength(antes.length);
+  });
+
   it("corpo com naoSei e versaoId, SEM campo: 400, e a versão NÃO volta", async () => {
     const v1 = await gravarVersao(c, SLUG, JSON.stringify({ ...ficha, voz: "a primeira" }), "semente", AGORA);
     await gravarVersao(c, SLUG, JSON.stringify({ ...ficha, voz: "a segunda" }), "painel", AGORA);
@@ -663,6 +687,28 @@ describe("PUT /api/admin/ficha — o portão da coerência", () => {
     const doc = JSON.parse((await versaoAtual(c, SLUG))!.doc) as Ficha;
     expect(doc.condicao.regra.janela_passado_horas).toBe(ficha.condicao.regra.janela_passado_horas);
     expect(await historico(c, SLUG)).toHaveLength(2);
+  });
+
+  it("o 409 fala do achado que a gravação INTRODUZIU, não do que já estava lá", async () => {
+    // 🔴 A regra da chuva emite um achado por número zerado, e os três moram no
+    // MESMO par `(regra, slug)`. Com a janela do passado já zerada no acervo,
+    // zerar o LIMIAR fazia a porta devolver a frase da JANELA — o dono mexia num
+    // número e lia sobre o outro. É a forma-mensagem do defeito que gerou esta
+    // onda: "ele pede pra consertar X e a porta responde sobre Y".
+    const comJanelaZero = {
+      ...ficha,
+      condicao: { ...ficha.condicao, regra: { ...ficha.condicao.regra, janela_passado_horas: 0 } },
+    };
+    await gravarVersao(c, SLUG, JSON.stringify(comJanelaZero), "semente", AGORA);
+
+    const res = await PUT(pedido({ slug: SLUG, campo: "condicao.regra.limiar_mm", valor: 0 }, cookieBom));
+
+    expect(res.status).toBe(409);
+    const frase = await res.text();
+    expect(frase, "a frase tem que falar do LIMITE, que é o que ele acabou de zerar").toContain(
+      "O limite de chuva",
+    );
+    expect(frase, "e não pode falar da janela, que já estava zerada antes").not.toContain("pra trás");
   });
 
   it("a MESMA contagem com valor errado DIFERENTE passa — a escolha está escrita, e é de propósito", async () => {

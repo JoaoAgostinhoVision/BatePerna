@@ -64,7 +64,12 @@ function recusar400(erro: unknown): Response {
  *  🔴 POR QUE A CONTAGEM, E NÃO O CONJUNTO DE PARES. Três regras podem acusar o
  *  MESMO par mais de uma vez: `janela-nao-zerada` empurra um achado por cada um
  *  dos três números zerados, `texto-emprestado` um por campo de prosa copiado, e
- *  `dia-repetido-ou-inventado` um por dia malformado. Comparando conjuntos, uma
+ *  `dia-repetido-ou-inventado` **um por ESPÉCIE de malformação** — no máximo
+ *  dois, um de dia repetido e um de dia inventado, e não um por dia. (A redação
+ *  anterior desta linha dizia "um por dia malformado" e era FALSA: medido,
+ *  `["sab","sab","dom","dom"]` dá UM achado. E por esta porta aquele par nunca
+ *  passa de 1, porque `dias` é `z.array(z.enum(DIAS))` e a grafia inventada é
+ *  barrada com 400 antes de chegar aqui.) Comparando conjuntos, uma
  *  ficha que já tinha UMA dessas passaria a ter DUAS em silêncio — o dono
  *  quebraria o segundo campo e a porta calaria, porque o par já existia. A
  *  contagem é a leitura humana de *"a minha gravação piorou esta ficha?"*.
@@ -321,17 +326,28 @@ export async function PUT(req: Request): Promise<Response> {
   //  O custo é honesto e não é regressão: a gravação pode pendurar até o timeout
   //  da plataforma — exatamente como o `versaoAtual` logo acima já pendura.
   const versoes = await versoesAtuais(getClient());
-  const antes = contarPares(violacoesDoAcervo(acervoComo(versoes, slug, versao.doc)));
+  const violacoesAntes = violacoesDoAcervo(acervoComo(versoes, slug, versao.doc));
+  const antes = contarPares(violacoesAntes);
   const todasDepois = violacoesDoAcervo(acervoComo(versoes, slug, novoDoc));
   const depois = contarPares(todasDepois);
-  // Introduzida = par cuja CONTAGEM cresceu. O filtro devolve as violações
-  // daquele par (inclusive a que já existia), e a frase que volta pro dono é a
-  // primeira em ordem de tabela — ele lê a regra que a gravação dele piorou.
+  // Introduzida = par cuja CONTAGEM cresceu.
   const introduzidas = todasDepois.filter((v) => (depois.get(par(v)) ?? 0) > (antes.get(par(v)) ?? 0));
+  // 🔴 E A FRASE QUE VOLTA É A DO ACHADO QUE NÃO EXISTIA ANTES, não a primeira
+  // em ordem de tabela. Medido por um re-revisor em 27/09: com a janela do
+  // passado já zerada no acervo, zerar o LIMIAR devolvia a frase que fala da
+  // janela — *"o dono pede pra consertar X e a porta responde sobre Y"*, que é o
+  // defeito que gerou esta onda, na forma de mensagem.
+  //
+  // ⚠️ Comparar frases AQUI é seguro, e o porquê tem de ficar escrito: esta
+  // comparação só escolhe QUAL frase mostrar, DENTRO de um par cuja contagem já
+  // cresceu — ela nunca decide recusar. Renomear o lugar não cresce contagem
+  // nenhuma, então não chega aqui, que era exatamente o C1 desta tarefa.
   // A primeira em ORDEM DE TABELA, que é a ordem da tela do dono: as regras de
   // custo vêm na frente porque é onde o defeito mais caro já entrou.
   if (introduzidas.length > 0) {
-    return new Response(introduzidas[0].frase, { status: 409, headers: TEXTO });
+    const frasesAntes = new Set(violacoesAntes.map((v) => v.frase));
+    const aDizer = introduzidas.find((v) => !frasesAntes.has(v.frase)) ?? introduzidas[0];
+    return new Response(aDizer.frase, { status: 409, headers: TEXTO });
   }
 
   const id = await gravarVersao(getClient(), slug, novoDoc, "painel", agora);
