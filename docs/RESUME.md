@@ -3,10 +3,17 @@
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
 🔴 **ÚLTIMA PARADA: 2026-09-27, E A SESSÃO PAROU NO MEIO DA RODADA DO PAINEL COMPLETO.**
-Ele disse *"quero continuar na próxima sessão"*. **Estamos na branch `painel-completo`**, com **2 das
-12 tarefas completas**, árvore limpa, **1287/1287 em 81 arquivos**, `tsc` limpo, `npm run build` exit
-0. **NADA FOI AO AR** e nenhuma tarefa deste plano roda `vercel`. O `main` segue publicado e intacto.
+Ele disse *"eu preciso dormir e continuar na próxima sessão"*. **Estamos na branch
+`painel-completo`**, com **1 tarefa completa e a 2ª a um conserto de fechar** (de 12), árvore limpa,
+**1287/1287 em 81 arquivos**, `tsc` limpo, `npm run build` exit 0. **NADA FOI AO AR** e nenhuma
+tarefa deste plano roda `vercel`. O `main` segue publicado e intacto.
 → Como retomar: o bloco **"▶ RETOMAR A RODADA DO PAINEL COMPLETO"**, logo abaixo.
+
+🔴 **E a lição de processo desta sessão, que foi minha:** eu parei em 2 de 12 quando ele disse
+*"quero continuar na próxima sessão"*, e ele respondeu *"tu não terminasse não?"*. O método
+subagent-driven manda **não pausar entre tarefas** — sem "devo continuar?", sem resumo de progresso
+entre uma e outra. Da próxima vez, seguir até a revisão final da branch, e só parar se ele mandar
+parar, se aparecer decisão que seja dele, ou nas quatro situações que o método lista.
 
 ---
 
@@ -87,7 +94,7 @@ arquivos**.
 | tarefa | estado |
 |---|---|
 | **1 — o registro de campos, `aplicarCampo` com caminho/tipo/"não sei"** | ✅ completa (`dfeb005..50f71bf`), 1 rodada de fix, re-revisão limpa |
-| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 2 rodadas de fix aplicadas (`7c4ddf9..1227b6f`). **Falta a re-revisão da rodada 2** |
+| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 2 rodadas de fix aplicadas (`7c4ddf9..1227b6f`), re-revisão da rodada 2 **limpa no achado**. **Falta a rodada 3**, que é de MÉTODO, não de código — ver o primeiro passo |
 | 3 — a porta de escrita aceita todo campo e passa pela coerência | ⬜ próxima |
 | 4 — `oculto`: esconder sem apagar | ⬜ |
 | 5 — a tela do lugar mostra a ficha inteira | ⬜ |
@@ -99,26 +106,49 @@ arquivos**.
 | 11 — criar lugar: o rascunho | ⬜ |
 | 12 — publicar o rascunho, e o que o app vai calar | ⬜ |
 
-### 4. 🔴 O PRIMEIRO PASSO, E É ESTE
+### 4. 🔴 O PRIMEIRO PASSO: a rodada 3 da Tarefa 2 — três itens, e nenhum é de código
 
-**A re-revisão escopada da rodada 2 da Tarefa 2 foi despachada e o resultado dela MORREU com a
-sessão.** Redespache-a: diff `66b7af7..1227b6f`, e ela tem **três** encargos:
+A re-revisão da rodada 2 **fechou o achado** (as três bifurcações de frase, seis colapsos medidos, os
+seis morrem). Mas ela derrubou duas conferências sobre o defeito de medição, e a rodada 3 foi
+despachada e **morreu com a pausa sem deixar nada** — árvore limpa, nenhum commit, `scripts/mutar.mjs`
+não chegou a existir. Redespache com os três itens:
 
-1. as **três** bifurcações de frase — colapsar cada ramo nos **dois** sentidos (seis colapsos) e
-   dizer, de cada um, se fica vermelho e em qual teste;
-2. 🔴 **conferir, sem aceitar, a afirmação retroativa do implementador sobre o defeito de
-   medição dele.** Sete mutações voltaram *"alvo não encontrado"* porque as edições deixaram
-   `coerencia.ts` e `page.tsx` em **CRLF** e os alvos multi-linha do harness usavam `\n`. *"Sem
-   alvo" estava imprimindo como RESULTADO quando é a AUSÊNCIA de medição.* Ele diz ter conferido
-   que o placar do commit anterior dizia "0 sem alvo" — **se isso for falso, as "28 mutações, 0
-   sobreviventes" daquele commit ficam sem valor**, e é achado sério;
-3. julgar se existe **guarda barato** contra a espécie 49 (bifurcação de frase com prova de um lado
-   só), que ele declarou como buraco por ser disciplina e não guarda.
+**1. Reprovar o conjunto acumulado de mutações.** As *"28 mutações, 0 sobreviventes"* de `66b7af7`
+estão **sem valor até serem medidas**. Um checkout **fresco** daquele commit sai em **CRLF** (medido
+com `git worktree add --detach` + `od -c`), então o mecanismo do bug valia lá também; se a
+conferência do implementador foi **ler** um registro em vez de **re-rodar**, foi leitura e não
+medição; e se o harness daquele momento não tinha a categoria *"sem alvo"*, dizer *"0 sem alvo"* não
+significa nada. Rodar tudo contra o `HEAD` com o harness corrigido, árvore limpa, **uma linha por
+mutação**: alvo, `numstat` da aplicação, e a categoria (morreu / sobreviveu / sem-alvo / sem-diff).
+Se alguma voltar **sobreviveu** ou **sem-alvo**, é buraco real e o teste que mata se escreve ali.
+
+**2. 🔴 Versionar o harness de mutação em `scripts/mutar.mjs`.** Ele vivia num scratchpad efêmero e
+**não existe em lugar nenhum** — o re-revisor foi auditá-lo e não achou. Consequência: **todo o
+argumento de qualidade desta branch repousa em evidência que nenhum revisor posterior pode
+conferir.** Requisitos: fora do caminho de `npm test` e de `npm run build`, nunca deixa a árvore
+suja se interrompido, e o docblock explica as quatro categorias, por que *"sem alvo"* **não** é
+resultado, e a armadilha do CRLF (item 3).
+
+**3. Corrigir a frase falsa da causa do CRLF** no `task-2-report.md`: não foram *"as edições desta
+rodada"*. O blob em **todos** os commits da branch é puro LF — nunca houve CRLF commitado. `git
+config core.autocrlf` é **`true`** nesta máquina, então **qualquer** checkout sai em CRLF. O efeito
+estava certo, a causa errada, e a verdadeira é pior: não é acidente de uma rodada, é a condição
+padrão de toda sessão aqui.
+
+Depois disso: re-revisão escopada da rodada 3, fechar a Tarefa 2, e seguir para a **Tarefa 3** (a
+porta de escrita), cujo brief já está extraído no workspace.
+
+🔵 **Uma recomendação registrada que é DELE, e que eu deixei fora do escopo de propósito:** medir
+**cobertura de ramo** nos testes (`@vitest/coverage-v8` com limiar) seria guarda automático contra a
+espécie 49 — uma ternária com um lado nunca exercitado ficaria vermelha sozinha, sem ninguém
+precisar lembrar. É dependência nova e decisão de ferramental do **repositório inteiro**, não desta
+tarefa. *Custo de eu ter deixado fora:* a espécie 49 segue sendo disciplina e não guarda, e pode
+voltar numa tarefa futura desta mesma rodada.
 
 O ledger da execução está em `.superpowers/sdd/2026-09-26-painel-completo/progress.md` —
-**git-ignored** (`.gitignore:57`), some num `git clean -fdx`. Se ele existir, aí está tudo:
-os briefs por tarefa, os relatórios dos implementadores e os pacotes de diff. Se não existir,
-as rulings estão no arquivo versionado do item 2 e o resto se reconstrói do `git log`.
+**git-ignored** (`.gitignore:57`), some num `git clean -fdx`. Se existir, ali estão os briefs por
+tarefa, os relatórios dos implementadores e os pacotes de diff. Se não existir, as rulings estão no
+arquivo versionado do item 2 da seção 2, e o resto se reconstrói do `git log`.
 
 ### 5. As três coisas que a rodada já deve a ele
 
