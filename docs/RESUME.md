@@ -6,8 +6,9 @@
 da passada de confirmação da Tarefa 2 (*"algo aconteceu o pc se desligou"*). O commit `d8b1f73` ficou
 gravado; o **resultado da passada morreu com a sessão** e foi **redespachado** na sessão seguinte.
 **Estamos na branch `painel-completo`**, com **1 tarefa completa e a 2ª a uma re-revisão de fechar**
-(de 12), árvore limpa, **1289/1289 em 81 arquivos**, `tsc` limpo, `npm run build` exit 0 — os três
-medidos por mim em 27/09 no `d8b1f73`. **NADA FOI AO AR** e nenhuma tarefa deste plano roda `vercel`.
+(de 12), árvore limpa, **1298/1298 em 82 arquivos**, `tsc` limpo, `npm run build` exit 0 — os três
+medidos por mim em 27/09 no `7c5698c`, junto com o harness inteiro (34 morreu, `--controles` exit 0
+com 5 controles e 12 autotestes). **NADA FOI AO AR** e nenhuma tarefa deste plano roda `vercel`.
 O `main` segue publicado e intacto.
 → Como retomar: o bloco **"▶ RETOMAR A RODADA DO PAINEL COMPLETO"**, logo abaixo.
 
@@ -95,13 +96,14 @@ falhou. A métrica da rodada: **ele fazia 4 coisas e precisava de mim para 40; o
 
 ### 3. O estado, medido — confira você mesmo, nunca repita o número deste arquivo
 
-`git checkout painel-completo`; `git status` limpo; `npm test -- --run` deve dar **1289/1289 em 81
-arquivos** (eram 1287 até a rodada 4b partir dois `it` em quatro).
+`git checkout painel-completo`; `git status` limpo; `npm test -- --run` deve dar **1298/1298 em 82
+arquivos** (1287 → 1289 quando a rodada 4b partiu dois `it` em quatro; → 1298 com os nove testes do
+guarda do próprio harness, na 4e).
 
 | tarefa | estado |
 |---|---|
 | **1 — o registro de campos, `aplicarCampo` com caminho/tipo/"não sei"** | ✅ completa (`dfeb005..50f71bf`), 1 rodada de fix, re-revisão limpa |
-| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 7 rodadas de fix aplicadas (`7c4ddf9..d8b1f73`); as rodadas 4, 4b, 4c e 4d endureceram o próprio instrumento depois de **nove `Critical` nele** — falta só a passada de confirmação, **redespachada** em 27/09; ver as seções 4 a 4e |
+| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 8 rodadas de fix aplicadas (`7c4ddf9..7c5698c`); as rodadas 4 a 4e endureceram o próprio instrumento depois de **treze `Critical` nele** — falta só a re-revisão da última onda, despachada em 27/09; ver as seções 4 a 4f. 🔴 **Regra de parada escrita na 4f**: sétima sabotagem que só a camada de dentro não pega vira minor diferido e a tarefa FECHA |
 | 3 — a porta de escrita aceita todo campo e passa pela coerência | ⬜ próxima |
 | 4 — `oculto`: esconder sem apagar | ⬜ |
 | 5 — a tela do lugar mostra a ficha inteira | ⬜ |
@@ -301,12 +303,97 @@ nas 34; `--controles` exit 0 com os 5 controles e os **5** autotestes.
 `tsc` exit 0, `npm run build` exit 0. Os números do harness estão sendo **remedidos** pela passada
 de confirmação; não os repito sem rodar.
 
-🟡 **A PASSADA DE CONFIRMAÇÃO FOI REDESPACHADA em 2026-09-27**, agora com **três** perguntas: os
-dois `Critical` fecharam de verdade, existe uma **sexta** sabotagem, e existe frase falsa? Sobrando
-só Minor, a Tarefa 2 **fecha** e eles vão para a triagem da revisão final da branch, junto com os
-onze que já estão lá. O próximo passo é a **Tarefa 3** (a porta de escrita), cujo brief **já foi
-auditado por mim**: sete defeitos achados, dois deles rulings (T3-R1 e T3-R2), em `task-3-brief.md`
-e no fim do `progress.md`.
+### 4f. 🔴 A RODADA 4e/5 — A SEXTA SABOTAGEM ERA A CARGA ÚTIL, E O GUARDA SAIU DO ARQUIVO (`7c5698c`)
+
+A passada de confirmação **não confirmou**: quatro `Critical`, oito `Important`, quatro `Minor`. E o
+achado central é justo — **a rodada anterior deu inventário aos GUARDAS e esqueceu a CARGA.**
+
+1. 🔴 **A sexta sabotagem: `MUTACOES` era a única lista do arquivo sem inventário** — a razão de o
+   arquivo existir. Cortar **31 das 34** entradas saía com `placar: 3 morreu (de 3)` e **exit 0**,
+   com os cinco controles, os cinco autotestes e os **dois** inventários verdes, porque o
+   denominador vinha do `length` do array que acabou de encolher. É **literalmente** o defeito que o
+   commit anterior declarou ter matado, consertado só no banner do `--controles`. É **DADO puro**.
+2. 🔴 **`mata: []` atravessava os TRÊS portões do `mata` por VACUIDADE** (`[] == null` é false, o
+   piso itera sobre zero nomes, `[].every()` é `true`) e a tabela saía com *"mata confere: sim"*,
+   exit 0. É o escape mais plausível **por acidente** logo depois do que a rodada passada fechou.
+3. 🔴 **O mais fino: o `--controles` exercita o CLASSIFICADOR e nunca a SENTENÇA.** O modo controle
+   dá `return` antes do veredito, então nada provava que "sobreviveu" vira **exit 2**. Apagando as
+   três linhas, um buraco **real** saía com **exit 0** imprimindo `🔴 SOBREVIVEU` — stdout idêntico,
+   só o código de saída diferente, **que é o que um dispatch lê.**
+4. 🔴 **Uma linha de DADO cegava um portão:** apagar `esperaMataConfere: false` deixava o portão do
+   `mata` sem controle **enquanto o banner seguia afirmando** que o instrumento "sabe acusar um
+   `mata` que não mata".
+
+🔴 **A DECISÃO DA RODADA NÃO É UMA CAMADA NOVA — É O LUGAR DELA.** Cinco rodadas o padrão foi o
+mesmo, e a razão estrutural é que o guarda morava **dentro do arquivo que a sabotagem edita**: quem
+corta as 34 entradas corta a lista cravada no mesmo movimento. Então o guarda **saiu de lá**:
+
+- **`--inventario`** imprime as TRÊS listas **reais** em JSON e sai, sem mutar nada;
+- **`tests/lib/harness-de-mutacao.test.ts`** crava à mão **34 ids + 5 controles + 12 autotestes + o
+  piso 51 + os dois arquivos medidos** — e roda em **`npm test`**, logo em **todo dispatch**.
+
+**A última camada não é mecanismo meu: é um teste normal.** É o mesmo idioma de
+`tests/lib/coerencia.test.ts:182` (*"o número é cravado à mão, como todo número deste projeto"*).
+
+**Provado vermelho com as sabotagens COORDENADAS** — as duas listas cortadas juntas, o único jeito de
+enganar o inventário de dentro:
+
+| sabotagem | harness `--inventario` | o guarda em `tests/` |
+|---|---|---|
+| corta 1 das 34 `MUTACOES` + a cravada | **exit 0 — CEGO** | **exit 1** |
+| corta 1 dos 12 `AUTOTESTES` + a cravada | **exit 0 — CEGO** | **exit 1** |
+| apaga `esperaMataConfere: false` + a cravada | **exit 0 — CEGO** | **exit 1** |
+| arquivo INTACTO (o controle) | exit 0 | exit 0 |
+
+A última linha é o que impede que isto seja um guarda sempre-vermelho. Arquivo restaurado byte a byte
+(md5 conferido) depois das três.
+
+🔴 **E O MEU CONSERTO NASCEU ERRADO DUAS VEZES, as duas achadas por MEDIÇÃO e não por leitura** — as
+duas da mesma espécie: **o guarda saindo com o código certo pelo motivo errado.** (a) O
+`veredito-mata-mente` declarava um teste que a própria mutação **também** derruba, então
+`mataConfere` saía `true` e ele saía **0**, não 2; o `mata` tem de nomear um teste **negativo** (dos
+que afirmam silêncio), que sobrevive a `return []`. (b) O `campo-de-controle-herdado` usava
+`mata: "a"` e por isso saía 1 **pelo piso de especificidade**, não pelo portão dos campos — ficava
+**verde** com o `hasOwnProperty` de volta. Com um `mata` legítimo: intacto sai 1 pelos campos,
+sabotado sai **0 com a entrada medida e morta**, que é o escape exato.
+
+**Mais quatro consertos de espécie conhecida:** o portão dos campos lia por `hasOwnProperty` e os
+consumidores leem pelo **protótipo** (`Object.create({piso: 1})` pulava e era medido com piso 1); a
+lista cravada pinava **referência** em vez de literal, e colapsar as quatro marcas num valor só
+deixava o inventário **mudo**; a marca do inventário era a única **sem autoteste** (agora tem três);
+e clonar um autoteste em cima do outro mantendo nome e marca passava (o par ficou **composto**).
+
+🔴 **TRÊS frases falsas, e a série de "duas rodadas sem nenhuma" QUEBRA aqui:** `:60` e `:95-96`
+diziam *"4 autotestes"* (o quinto nasceu no commit anterior — a primeira **eu** achei antes do
+re-revisor), e `:1486` dizia que `violacoesDoAcervo` casa **31** dos testes; medido contra os 51
+nomes reais, casa **33**.
+
+**Limite honesto:** esvaziar as **duas** listas ainda sai 0 no harness sozinho (`0 morreu de 0`);
+quem pega é o teste em `tests/`. Isso é **de propósito** e é a tese da rodada. E dois declinados do
+re-revisor viraram minor diferido: o ramo do `TIMEOUT_VITEST` nunca foi exercitado, e a restauração
+com finais de linha **mistos** segue latente (medido CR=LF nos dois arquivos, logo não dispara hoje).
+
+**Medido no arquivo final:** `--controles` exit 0 com os 5 controles e os **12** autotestes; `node
+scripts/mutar.mjs` = **34 morreu, 0 nas quatro categorias de falha**, exit 0, `mata confere` = sim
+nas 34, placar dizendo *"de 34 cravada(s) à mão"*; **1298/1298 em 82 arquivos** (eram 1289 em 81 — os
+nove do guarda novo); `tsc` exit 0; `npm run build` exit 0.
+
+🟡 **A RE-REVISÃO DESTA ONDA ESTÁ DESPACHADA, e a barra dela mudou de altura.** Nas cinco rodadas
+anteriores a pergunta era *"existe outra sabotagem?"*, e a resposta foi sempre sim, uma camada mais
+adentro — isso pode seguir para sempre. A pergunta agora é: **alguma sabotagem deixa um buraco REAL
+no `coerencia.ts` passar pelas DUAS camadas, o harness E o `npm test`?** Achado que derruba só a
+camada de dentro não é `Critical` — é o desenho funcionando.
+
+🔴 **E A REGRA DE PARADA, que é minha e está escrita para eu não me esconder dela:** se a re-revisão
+achar uma **sétima** sabotagem que só o harness sozinho não pega, ela entra como **minor diferido** e
+a Tarefa 2 **fecha**. Seis rodadas no instrumento com 10 das 12 tarefas da LEI dele esperando é
+desproporção, e a camada de fora (`npm test`, que roda em todo dispatch) é o ponto em que o retorno
+para de compensar. Só reabro se o achado for da classe (a): o harness carimbando "morreu" para uma
+mutação que a suíte **não** mata.
+
+O próximo passo é a **Tarefa 3** (a porta de escrita), cujo brief **já foi auditado por mim**: sete
+defeitos achados, dois deles rulings (T3-R1 e T3-R2), em `task-3-brief.md` e no fim do
+`progress.md`.
 
 🔴 **A SEXTA FRASE FALSA, e esta é minha — achada e medida nesta sessão, entra na onda de fix ache o
 revisor ou não:** `scripts/mutar.mjs:60`, na seção (a1) *"COMO RODAR"*, ainda diz **`+ 4 autotestes
