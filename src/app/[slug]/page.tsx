@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "../ficha.css";
 import { getFicha } from "@/lib/ficha";
 import { resolverEstado } from "@/lib/carimbo-estado";
+import { PRECO } from "@/lib/coerencia";
 import { rotuloPiso } from "@/lib/piso";
 import { vozDaFicha } from "@/lib/severidade";
 import { faseDe } from "@/lib/carimbo-fase";
@@ -95,7 +96,14 @@ export default async function Ficha({
   // menor do que o lugar cobra**. Passou despercebido porque a única ficha paga
   // do acervo cobra R$ 5 redondos. Errar pra menos em dinheiro é a família das
   // outras mentiras deste app, com a agulha em outro lugar.
-  const precoCurto = ficha.custo.valor?.match(/R\$\s?\d+(?:[.,]\d{2})?/)?.[0] ?? "Pago";
+  //
+  // 🔴 E O REGEX É IMPORTADO desde 2026-09-27, não escrito aqui. Ele era uma
+  // segunda cópia à mão, e um teste comparava as duas por texto — duas fontes
+  // pro mesmo fato, com um guarda por cima em vez de uma fonte só. A regra de
+  // coerência que recusa o chip divergente usa ESTE valor, então a tela e a
+  // porta de escrita passaram a concordar por construção. O porquê inteiro está
+  // no docblock do `PRECO`.
+  const precoCurto = ficha.custo.valor?.match(PRECO)?.[0] ?? "Pago";
   const restoCusto = ficha.custo.valor?.replace(precoCurto, "").replace(/^\s*[·-]?\s*/, "").trim();
 
   // 🔴 O chip vem da FICHA, não daqui. Ele era `${precoCurto} · portão`, com o

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { REGRAS, violacoesDoAcervo } from "@/lib/coerencia";
 import { loadAll } from "@/lib/ficha";
 import { DIAS, type Dia } from "@/lib/semana";
-import type { Ficha } from "@/types/ficha";
+import { fichaSchema, type Ficha } from "@/types/ficha";
 
 /** 🔴 O TESTE DO MÓDULO DE COERÊNCIA — e ele é o guarda da Task 2 inteira.
  *
@@ -342,6 +342,197 @@ describe("violacoesDoAcervo", () => {
       "ficha paga sem chip e com o custo por extenso foi acusada: a regra do preço " +
         "legível é sobre o CHIP, e aqui não há chip",
     ).not.toContain("preco-legivel-no-custo");
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🔴 RODADA DE CONSERTO DE 2026-09-27. Os casos abaixo nasceram de UM Critical
+  //  e de SETE mutações que sobreviveram às 33 asserções desta suíte. Nenhum
+  //  outro arquivo importa `@/lib/coerencia`, então estes dois arquivos são tudo
+  //  que pode matar uma mutação no módulo — o que torna cada furo aqui um furo
+  //  do projeto.
+  //
+  //  A espécie dominante é a mesma das seis da rodada anterior, um nível mais
+  //  fundo: **não basta provar que cada EXAME dispara; é preciso provar cada
+  //  GUARDA de silêncio e cada FRONTEIRA numérica.** Um `if (!campo) return []`
+  //  que ninguém exercita é um falso positivo esperando a 4ª ficha; uma
+  //  fronteira `<= 4` provada com 6 palavras deixa o 5 passar.
+  //
+  //  🔴 E DUAS DELAS ERAM FALSO POSITIVO QUE TRAVA O DONO — a classe mais cara
+  //  que este módulo pode ter, porque ele agora RECUSA GRAVAÇÃO: o app afirmando
+  //  demais sobre o que o João declarou, quando ele não declarou nada.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // 🔴 CRITICAL de 2026-09-27. `piso` é opcional DE PROPÓSITO: é fato de roteiro,
+  // e quem responde é quem conhece o lugar. Com `(f.piso ?? "")`, ficha sem piso
+  // fazia TODO piso citado na prosa virar "estranho" — duas das três fichas reais
+  // seriam recusadas com o campo em branco. O João escreve *"é estrada de barro,
+  // molhou não vá"* na voz, palavra dele, deixa o piso vazio, e a porta recusava
+  // a gravação dizendo que ele "declara o piso (nenhum)". Ele perdia a edição.
+  it("ficha SEM piso é silêncio, mesmo com a prosa nomeando um piso", () => {
+    for (const ficha of [rampa, veu, pedra]) {
+      const f = ficha();
+      delete f.piso;
+      expect(
+        violacoesDoAcervo(com(f)).filter((x) => x.regra === "prosa-bate-com-piso"),
+        `${f.slug} sem piso foi acusada de contradizer a própria prosa — ela não ` +
+          "declarou piso nenhum, e ausente é silêncio",
+      ).toEqual([]);
+    }
+  });
+
+  // 🔴 FALSO POSITIVO MEDIDO: com o `if (!f.secaRapido) continue` arrancado, duas
+  // fichas SEM o campo colidem em `""` e o app diz que os dois lugares "explicam
+  // o chão com a MESMA frase: """. Hoje só a Véu não tem o campo, então a
+  // mutação sobrevivia; no 4º lugar sem `secaRapido`, a porta travaria o dono.
+  it("duas fichas SEM secaRapido não emprestam frase uma da outra", () => {
+    const a = rampa();
+    const b = pedra();
+    delete a.secaRapido;
+    delete b.secaRapido;
+    expect(
+      violacoesDoAcervo([a, b, veu()]).filter((x) => x.regra === "frase-emprestada"),
+      "duas fichas sem a frase do relevo foram acusadas de ter a MESMA frase: o " +
+        "silêncio das duas virou um texto compartilhado",
+    ).toEqual([]);
+  });
+
+  // 🔴 O caso "os QUATRO textos" prova que cada um dos quatro dispara — NÃO que a
+  // lista é só esses quatro. Acrescentar `acesso` à lista sobrevivia a ele, e
+  // recusaria dois lugares que compartilhem "a estrada é de barro até o portão" —
+  // frase de CAMINHO, que dois lugares vizinhos podem legitimamente ter igual. O
+  // gêmeo abaixo é idêntico em TODOS os campos, então o número de violações de
+  // `texto-emprestado` é exatamente o tamanho da lista.
+  it("a lista dos textos que distinguem tem EXATAMENTE quatro campos", () => {
+    const gemeo = { ...rampa(), slug: "gemeo-sintetico" };
+    expect(
+      violacoesDoAcervo([rampa(), gemeo]).filter((x) => x.regra === "texto-emprestado").length,
+      "uma ficha idêntica a outra em TODOS os campos produziu um número de violações " +
+        "diferente de 4: ou um campo entrou na lista dos que distinguem (e aí o nome " +
+        "do caso `os QUATRO textos` ficou falso), ou um saiu",
+    ).toBe(4);
+  });
+
+  it("campo de prosa fora da lista pode ser igual em duas fichas", () => {
+    for (const campo of ["acesso", "avisos"] as const) {
+      const f = veu();
+      f[campo] = rampa()[campo];
+      expect(
+        violacoesDoAcervo(com(f)).filter((x) => x.regra === "texto-emprestado"),
+        `${campo} igual em duas fichas foi acusado: esse texto não existe pra ` +
+          "distinguir um lugar do outro, e dois lugares vizinhos podem chegar pela " +
+          "mesma estrada",
+      ).toEqual([]);
+    }
+  });
+
+  // Ficha GRÁTIS carregando `valor`/`curto` é o que o schema permite (os dois são
+  // opcionais e independem do `tag`). As quatro regras de custo só falam de quem
+  // COBRA — sem o `tag !== "pago"`, uma ficha grátis com chip seria acusada de
+  // não ter preço.
+  it("ficha grátis não é medida por regra de custo nenhuma", () => {
+    const f = rampa();
+    f.custo = { tag: "gratis", valor: "cinco reais", curto: "R$ 5 · portão" };
+    const regras = violacoesDoAcervo([f]).map((x) => x.regra);
+    for (const r of ["preco-legivel-no-custo", "chip-bate-com-preco", "chip-cabe-na-pilula",
+      "chip-nao-repete-a-linha"]) {
+      expect(regras, `ficha grátis foi acusada por ${r}`).not.toContain(r);
+    }
+  });
+
+  // As regras 1 e 2 são MUTUAMENTE EXCLUSIVAS de propósito: sem preço legível no
+  // custo não há o que comparar com o chip, e mostrar dois erros diferentes pro
+  // mesmo defeito faz o dono consertar duas vezes a mesma coisa.
+  it("custo sem preço legível dá UM erro, não dois", () => {
+    const f = rampa();
+    f.custo = { tag: "pago", valor: "cinco reais por pessoa", curto: "R$ 5" };
+    const v = violacoesDoAcervo([f]).filter((x) => x.regra.startsWith("preco-") || x.regra.startsWith("chip-"));
+    expect(v.map((x) => x.regra), "o mesmo defeito de custo produziu mais de uma frase")
+      .toEqual(["preco-legivel-no-custo"]);
+  });
+
+  // 🔴 A FRONTEIRA DO CHIP É 4, e a quebra da tabela usa 6 — `<= 5` sobrevivia a
+  // ela. Chip de 5 palavras estoura a pílula e passaria na porta.
+  it("o chip cabe com 4 palavras e não cabe com 5", () => {
+    const base = (curto: string) => {
+      const f = rampa();
+      f.custo = { tag: "pago", valor: "R$ 5 · portão da entrada", curto };
+      return violacoesDoAcervo([f]).filter((x) => x.regra === "chip-cabe-na-pilula");
+    };
+    expect(base("R$ 5 · portão"), "chip de 4 palavras foi recusado").toEqual([]);
+    expect(base("R$ 5 · portão grande").length, "chip de 5 palavras passou").toBe(1);
+  });
+
+  // 🔴 `abre === fecha` É ACUSADO, e a frase dele é OUTRA. `fechadoNaHora`
+  // (`src/lib/horario.ts:95`) lê horários iguais como **24h: nunca fecha**, não
+  // como travessia da meia-noite — dizer a esse dono que o app vai anunciar o
+  // lugar "aberto a noite toda e fechada o dia todo" seria descrever outro caso.
+  // Sem este par de asserções, trocar `<` por `<=` sobrevive.
+  it("horário igual em abre e fecha é acusado, e a frase fala de 24 horas", () => {
+    const f = rampa();
+    f.horario = { abre: "08:00", fecha: "08:00" };
+    const v = violacoesDoAcervo([f]).filter((x) => x.regra === "horario-invertido-sem-aviso");
+    expect(v.length, "abrir e fechar no mesmo horário passou batido").toBe(1);
+    expect(v[0].frase, "a frase do horário igual descreve o caso invertido").toContain("24 horas");
+    expect(v[0].frase).not.toContain("noite toda");
+  });
+
+  it("um minuto de faixa já é faixa normal, e passa calado", () => {
+    const f = rampa();
+    f.horario = { abre: "08:00", fecha: "08:01" };
+    expect(violacoesDoAcervo([f]).map((x) => x.regra)).not.toContain("horario-invertido-sem-aviso");
+  });
+
+  // 🔴 ELE DIGITA SEM ACENTO, e as duas regras da hora têm que enxergar. A quebra
+  // da tabela escreve "às", então `(?:às|as)` → `às` sobrevivia a ela — e a regra
+  // ficava cega justamente na grafia mais provável num teclado de celular.
+  it("a hora citada na prosa é lida com acento e sem acento", () => {
+    const semCampo = rampa(); // a Rampa não tem `horario`
+    semCampo.avisos = `${semCampo.avisos} O lugar fecha as 16h.`;
+    expect(
+      violacoesDoAcervo([semCampo]).map((x) => x.regra),
+      '"fecha as 16h" sem acento passou batido',
+    ).toContain("hora-de-fechar-sem-campo");
+
+    const comCampo = rampa();
+    comCampo.avisos = `${comCampo.avisos} O lugar fecha as 16h.`;
+    comCampo.horario = { abre: "05:00", fecha: "17:00" };
+    expect(
+      violacoesDoAcervo([comCampo]).map((x) => x.regra),
+      '"fecha as 16h" sem acento não foi comparado com o campo',
+    ).toContain("prosa-bate-com-hora-de-fechar");
+  });
+
+  // 🔴 A frase dizia ao dono que SEGUNDA-FEIRA não é dia da semana. É, claro que
+  // é; o que o app não reconhece é a grafia. E ela tem que mostrar as sete
+  // palavras que ele pode usar, senão ele adivinha de novo.
+  it("a frase do dia não reconhecido fala de GRAFIA e mostra os sete dias", () => {
+    const f = rampa();
+    f.dias = ["sab", "segunda" as Dia];
+    const v = violacoesDoAcervo([f]).find((x) => x.regra === "dia-repetido-ou-inventado")!;
+    expect(v.frase, "a frase continua negando que segunda seja dia da semana")
+      .not.toMatch(/não é dia da semana/i);
+    for (const d of DIAS) {
+      expect(v.frase, `a frase não mostra "${d}", que é uma das palavras que ele pode usar`)
+        .toContain(d);
+    }
+  });
+
+  // 🔴 A frase mandava "deixe a lista de dias vazia", e `dias` é
+  // `z.array(...).min(1).optional()`: lista VAZIA é inválida. Seguindo a
+  // instrução da tela, ele levava um segundo erro de outra natureza. Este caso
+  // amarra a frase ao schema — se um dia `[]` passar a valer, ele fica vermelho e
+  // a frase pode mudar.
+  it("a frase da semana inteira não manda esvaziar a lista, porque o schema recusa", () => {
+    expect(
+      fichaSchema.safeParse({ ...rampa(), dias: [] }).success,
+      "`dias: []` passou a ser válido — a frase desta regra pode ser reescrita",
+    ).toBe(false);
+
+    const f = rampa();
+    f.dias = [...DIAS];
+    const v = violacoesDoAcervo([f]).find((x) => x.regra === "semana-inteira-nao-declara")!;
+    expect(v.frase, "a frase manda o dono deixar vazio o que o schema recusa vazio")
+      .not.toMatch(/vazi[ao]/i);
   });
 
   // 🔴 RULING P3: a coerência enxerga o acervo INTEIRO, inclusive o que estiver

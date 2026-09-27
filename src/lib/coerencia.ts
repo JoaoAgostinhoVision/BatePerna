@@ -84,12 +84,35 @@ import type { Ficha } from "@/types/ficha";
  *  teste; `slug` é pra saber em que ficha mexer. */
 export type Violacao = { regra: string; slug: string; frase: string };
 
-/** O MESMO regex de `src/app/[slug]/page.tsx` — inclusive os centavos, que
- *  ficaram de fora até 2026-08-27 e faziam o chip anunciar menos do que o lugar
- *  cobra. Copiado de propósito e com o porquê ao lado: se o de lá mudar e o daqui
- *  não, o teste do fim de `tests/lib/coerencia-acervo.test.ts` acusa. A `page.tsx`
- *  monta o chip sozinha e não pode importar o módulo que a audita — a duplicação
- *  é deliberada, e aquele guarda é o preço dela. */
+/** 🔴 A ÚNICA FONTE DO QUE CONTA COMO PREÇO NESTE APP — e ela deixou de ser duas
+ *  em 2026-09-27.
+ *
+ *  Inclusive os centavos, que ficaram de fora até 2026-08-27: MEDIDO com uma
+ *  ficha de ensaio cobrando `R$ 12,50`, o regex antigo (`/R\$\s?\d+/`) casava só
+ *  `R$ 12` e o chip do topo **anunciava um preço menor do que o lugar cobra**.
+ *  Passou despercebido porque a única ficha paga do acervo cobra R$ 5 redondos.
+ *
+ *  ⚠️ **ELE ERA COPIADO À MÃO EM DOIS LUGARES** — aqui e em
+ *  `src/app/[slug]/page.tsx` —, e havia um guarda de teste comparando os dois,
+ *  justificado por "o teste não deve importar a implementação que audita, senão
+ *  vira auto-referência". **Aquele argumento não sobreviveu à extração desta
+ *  tarefa:** as duas cópias passaram a ser as duas DE PRODUÇÃO, e o teste
+ *  auditava uma contra a outra sem que nenhuma fosse a fonte. A versão seguinte
+ *  do comentário inventou um motivo novo — "a página não pode importar o módulo"
+ *  — que era **falso**: `page.tsx` é server component e já importa `@/lib/piso`,
+ *  `@/lib/semana`, `@/lib/horario` e o próprio `@/lib/ficha` (que carrega zod e
+ *  `node:fs`). Nada impedia o import, e o comentário era a espécie que este
+ *  commit foi caçar sobrevivendo dentro dele.
+ *
+ *  Decisão, na revisão de 2026-09-27: **a página importa este `PRECO`.** Sobra
+ *  uma cópia só, a classe de defeito do `R$ 12,50` deixa de existir por
+ *  construção, e o guarda que comparava as duas foi apagado por não ter mais o
+ *  que guardar. No lugar dele há um guarda de UMA LINHA de natureza diferente,
+ *  em `tests/lib/coerencia-acervo.test.ts`: o texto do regex só pode aparecer
+ *  **uma vez** em todo o `src/`, pra ninguém reinlinar a cópia de volta.
+ *
+ *  ⚠️ SEM a bandeira `g`, de propósito: um regex global carrega `lastIndex`
+ *  entre chamadas, e este é compartilhado por duas telas e treze regras. */
 export const PRECO = /R\$\s?\d+(?:[.,]\d{2})?/;
 
 /** Todo texto corrido da ficha, junto e em minúsculas — é sobre ele que as
@@ -294,20 +317,39 @@ const TABELA: readonly Regra[] = [
     // dado à vontade desde que troque a prosa junto, que é justamente o ponto.
     //
     // Molde: a asserção de `acesso` sustentando `carroComum`, em ficha.test.ts.
+    //
+    // 🔴 FICHA SEM `piso` É SILÊNCIO, E ISTO FOI UM CRITICAL (2026-09-27, revisão
+    // desta tarefa). A versão anterior fazia `(f.piso ?? "")`, e com o campo
+    // ausente TODO piso citado na prosa virava "estranho": **duas das três fichas
+    // reais seriam recusadas se o piso estivesse em branco.**
+    //
+    // Onde isso mordia, e é o pior lugar possível: o João cria um lugar novo do
+    // celular, escreve na voz *"é estrada de barro, molhou não vá"* — verdade,
+    // palavra dele — e não preenche `piso`, que é opcional DE PROPÓSITO (fato de
+    // roteiro; ver `src/lib/piso.ts`). A porta recusava a gravação dizendo que ele
+    // *"declara o piso (nenhum)"* — ele não declarou nada — e que *"uma das duas
+    // coisas está errada"* — nenhuma estava. Ele perdia a edição.
+    //
+    // É a linha vermelha do projeto INVERTIDA: em vez de o app afirmar demais
+    // sobre o lugar, o app afirmando demais sobre o que o DONO DISSE. O
+    // comportamento vinha do teste antigo, onde era só vermelho no laptop; nesta
+    // tarefa ele viraria trava no celular. Ausente é silêncio, como em toda outra
+    // regra daqui (`!f.secaRapido`, `!f.horario`, `!f.custo.curto`).
     regra: "prosa-bate-com-piso",
     achar: (fichas) =>
       fichas.flatMap((f) => {
+        if (!f.piso) return []; // ausente é silêncio: ele não declarou piso nenhum
         const prosa = prosaDe(f);
         // "asfalto-esburacado" e "asfalto-tapete" aparecem em prosa como duas
         // palavras; o valor do enum é hifenizado. Comparo pelo primeiro termo.
         const citados = PISOS.filter((p) => prosa.includes(p.split("-")[0]));
-        const estranhos = citados.filter((p) => p.split("-")[0] !== (f.piso ?? "").split("-")[0]);
+        const estranhos = citados.filter((p) => p.split("-")[0] !== f.piso!.split("-")[0]);
         if (estranhos.length === 0) return [];
         return [{
           slug: f.slug,
           // PENDENTE: redação minha, o João ainda não leu
           frase:
-            `${nomeDe(f)} declara o piso "${f.piso ?? "(nenhum)"}" e o texto da ficha fala de ` +
+            `${nomeDe(f)} declara o piso "${f.piso}" e o texto da ficha fala de ` +
             `${estranhos.join(", ")}. Uma das duas coisas está errada, e a tela mostra as duas ` +
             "juntas.",
         }];
@@ -321,21 +363,36 @@ const TABELA: readonly Regra[] = [
     //
     // Não proíbe a travessia: exige que ela esteja DITA na prosa, que é o mesmo
     // critério do piso acima — o dado incomum precisa de dono.
+    //
+    // 🔴 SÃO DUAS FRASES PORQUE SÃO DOIS COMPORTAMENTOS, e a versão anterior
+    // escrevia UMA e ela era FALSA num deles (achado na revisão de 2026-09-27).
+    // `fechadoNaHora` (`src/lib/horario.ts:95`) trata `abre === fecha` como
+    // **24h: nunca fecha** — não como travessia da meia-noite. Dizer a esse dono
+    // que o app vai anunciar o lugar "aberto a noite toda e fechado o dia todo"
+    // seria descrever o OUTRO caso. A fronteira `<` × `<=` é de propósito e tem
+    // teste nos dois lados.
     regra: "horario-invertido-sem-aviso",
     achar: (fichas) =>
       fichas.flatMap((f) => {
         if (!f.horario) return []; // ausente é silêncio: ficha sem horário nunca fecha
         const [ah, am] = f.horario.abre.split(":").map(Number);
         const [fh, fm] = f.horario.fecha.split(":").map(Number);
-        if (ah * 60 + am < fh * 60 + fm) return [];
+        const abre = ah * 60 + am;
+        const fecha = fh * 60 + fm;
+        if (abre < fecha) return [];
         if (/noite|madrugada|24 ?h|vinte e quatro/.test(prosaDe(f))) return [];
         return [{
           slug: f.slug,
-          // PENDENTE: redação minha, o João ainda não leu
-          frase:
-            `${nomeDe(f)} abre às ${f.horario.abre} e fecha às ${f.horario.fecha} — assim o app ` +
-            "vai anunciá-la aberta a noite toda e fechada o dia todo. Se for de propósito, diga " +
-            "isso no texto da ficha; se não for, os dois horários estão trocados.",
+          frase: abre === fecha
+            // PENDENTE: redação minha, o João ainda não leu
+            ? `${nomeDe(f)} abre e fecha no mesmo horário (${f.horario.abre}) — assim o app ` +
+              "entende que o lugar está aberto 24 horas e nunca fecha. Se for isso, diga no " +
+              "texto da ficha; se não for, um dos dois horários está errado."
+            // PENDENTE: redação minha, o João ainda não leu
+            : `${nomeDe(f)} abre às ${f.horario.abre} e fecha às ${f.horario.fecha} — assim o ` +
+              "app vai anunciá-la aberta a noite toda e fechada o dia todo. Se for de " +
+              "propósito, diga isso no texto da ficha; se não for, os dois horários estão " +
+              "trocados.",
         }];
       }),
   },
@@ -450,9 +507,16 @@ const TABELA: readonly Regra[] = [
           achados.push({
             slug: f.slug,
             // PENDENTE: redação minha, o João ainda não leu
+            // 🔴 A VERSÃO ANTERIOR DESTA FRASE DIZIA AO DONO QUE SEGUNDA-FEIRA
+            // NÃO É DIA DA SEMANA (achado na revisão de 2026-09-27). Ele digita
+            // "segunda" e lia *"isso não é dia da semana"* — é, claro que é. O
+            // que o app não reconhece é a GRAFIA, e a frase agora diz isso e
+            // mostra as sete palavras que ele pode usar. A lista sai de `DIAS`,
+            // nunca escrita à mão aqui.
             frase:
-              `${nomeDe(f)} tem ${inventados.join(", ")} na lista de dias, e isso não é dia da ` +
-              "semana. O app não vai saber que dia mostrar.",
+              `${nomeDe(f)} tem ${inventados.map((d) => `"${d}"`).join(", ")} na lista de dias, ` +
+              "e o app não reconhece essa grafia. As palavras que ele entende são: " +
+              `${DIAS.join(", ")}.`,
           });
         }
         return achados;
@@ -475,10 +539,15 @@ const TABELA: readonly Regra[] = [
         return [{
           slug: f.slug,
           // PENDENTE: redação minha, o João ainda não leu
+          // 🔴 A VERSÃO ANTERIOR MANDAVA FAZER O QUE O SCHEMA RECUSA (achado na
+          // revisão de 2026-09-27): dizia *"deixe a lista de dias vazia"*, e
+          // `dias` é `z.array(...).min(1).optional()` — lista VAZIA é inválida (o
+          // porquê está no comentário do campo: `[]` significaria "não abre
+          // nunca"). Seguindo a instrução da tela, ele levava um segundo erro, de
+          // outra natureza. O que ele tem que fazer é TIRAR o campo, não esvaziá-lo.
           frase:
             `${nomeDe(f)} declara os sete dias da semana, o que é o mesmo que não declarar dia ` +
-            "nenhum. Deixe a lista de dias vazia: o app só fala de dia quando o lugar folga em " +
-            "algum.",
+            "nenhum. Tire os dias da ficha: o app só fala de dia quando o lugar folga em algum.",
         }];
       }),
   },

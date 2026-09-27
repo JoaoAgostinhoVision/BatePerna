@@ -165,26 +165,62 @@ describe("coerência do acervo — varre TODAS as fichas, nunca uma lista de slu
     expect(das("janela-nao-zerada")).toEqual([]);
   });
 
-  // 🔴 O regex de preço está ESCRITO DUAS VEZES: em `src/lib/coerencia.ts` e em
-  // `page.tsx`. Duplicação deliberada — a página monta o chip sozinha e não pode
-  // importar o módulo que a audita, senão vira auto-referência (a espécie em que
-  // os dois lados da asserção vêm da mesma constante). Este guarda é o preço da
-  // duplicação: se um mudar sem o outro, o chip volta a poder divergir do ticket
-  // sem ninguém ver.
+  // 🔴 ESTE GUARDA SUBSTITUI, EM 2026-09-27, O "o regex de preço daqui é o mesmo
+  //  que a página usa pra montar o chip" — e a troca é de NATUREZA, não de forma.
   //
-  // ⚠️ MUDOU EM 2026-09-26, e o motivo está escrito porque a versão anterior
-  // desta frase ficaria FALSA: o `PRECO` deste arquivo era uma TERCEIRA cópia,
-  // escrita à mão aqui. Ele agora vem do módulo — que é a cópia de produção —, e
-  // com isso o guarda passou a comparar duas fontes de PRODUÇÃO, não mais uma de
-  // produção contra uma de teste. Fica mais forte, e não vira auto-referência:
-  // o que está sendo auditado é `page.tsx`, que não é de onde o `PRECO` veio.
-  it("o regex de preço daqui é o mesmo que a página usa pra montar o chip", () => {
+  //  O antigo comparava DUAS CÓPIAS à mão do mesmo regex (uma neste arquivo, uma
+  //  em `page.tsx`), justificado por "o teste não deve importar a implementação
+  //  que audita". Aquele argumento morreu com a extração das regras pro módulo:
+  //  as duas cópias passaram a ser as duas DE PRODUÇÃO, e o teste auditava uma
+  //  contra a outra sem que nenhuma fosse a fonte. A `page.tsx` agora IMPORTA o
+  //  `PRECO` de `src/lib/coerencia.ts` — é server component e já importava
+  //  `@/lib/piso`, `@/lib/semana` e `@/lib/ficha`, então nada impedia —, e com
+  //  uma cópia só a classe de defeito do `R$ 12,50` deixa de existir por
+  //  construção. O guarda antigo foi apagado por não ter mais o que guardar.
+  //
+  //  O que sobra pra guardar é OUTRA COISA: que ninguém reinline a cópia de
+  //  volta. Por isso a conta é de OCORRÊNCIAS no `src/` inteiro, e o número é 1.
+  //  Comentário fora pela mesma razão do bloco do waypoint lá embaixo — o
+  //  comentário do `PRECO` cita o regex antigo em prosa, e um guarda que lê
+  //  comentário não guarda nada.
+  it("o texto do regex de preço aparece UMA vez só em todo o src/", () => {
+    const SRC = path.join(process.cwd(), "src");
+    const semComentario = (s: string) =>
+      s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    function arquivos(dir: string): string[] {
+      return readdirSync(dir).flatMap((e) => {
+        const p = path.join(dir, e);
+        if (statSync(p).isDirectory()) return arquivos(p);
+        return /\.tsx?$/.test(e) ? [p] : [];
+      });
+    }
+    const todos = arquivos(SRC);
+    expect(todos.length, "não varreu arquivo nenhum do src/ — o guarda ficaria oco")
+      .toBeGreaterThanOrEqual(60);
+    const onde = todos
+      .filter((f) => semComentario(readFileSync(f, "utf8")).includes(PRECO.source))
+      .map((f) => path.relative(process.cwd(), f).split(path.sep).join("/"));
+    expect(
+      onde,
+      "o texto do regex de preço voltou a aparecer em mais de um lugar do `src/` (ou " +
+        "saiu do módulo): duas fontes pro mesmo fato, que é exatamente o que a " +
+        "importação de 2026-09-27 fechou. Quem precisa do regex IMPORTA `PRECO`.",
+    ).toEqual(["src/lib/coerencia.ts"]);
+  });
+
+  // NÃO-VACUIDADE do guarda acima: sem isto, renomear `precoCurto` na página (ou
+  // a página deixar de montar o chip) passaria sem ninguém notar, e o guarda
+  // continuaria verde provando só que o módulo tem o regex.
+  it("a página continua montando o chip a partir do PRECO importado", () => {
     const src = readFileSync(path.join(process.cwd(), "src", "app", "[slug]", "page.tsx"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/^\s*\/\/.*$/gm, "");
-    expect(src, "a tira de comentários comeu o arquivo — a asserção abaixo ficaria vazia")
+    expect(src, "a tira de comentários comeu o arquivo — as asserções abaixo ficariam vazias")
       .toContain("precoCurto");
-    expect(src, "o regex de preço da página mudou; atualize o PRECO de `src/lib/coerencia.ts` junto")
-      .toContain(PRECO.source);
+    expect(src, "a página parou de importar o PRECO: ou reinlinou o regex, ou o chip mudou de fonte")
+      .toContain('from "@/lib/coerencia"');
+    expect(src, "a página não usa mais o PRECO importado pra extrair o preço do custo")
+      .toContain("match(PRECO)");
   });
 });
 
