@@ -114,14 +114,28 @@ describe("PUT /api/admin/ficha", () => {
     expect(res.status).toBe(400);
   });
 
-  // 🔴 C2 da revisão do controlador: no nível da ROTA quem mata a M2
-  // (`CAMPOS_EDITAVEIS` ganhar "slug") é este teste com `campo: "piso"`, não
-  // um `campo: "slug"` — o teste de unidade em `editar-ficha.test.ts` é quem
-  // cobre "slug" diretamente.
-  it("campo fora da lista editável (piso): 400, e nada é gravado", async () => {
-    const res = await PUT(pedido({ slug: SLUG, campo: "piso", valor: "asfalto" }, cookieBom));
+  // 🔴 REANCORADO em 2026-09-26: a isca era `campo: "piso"`, e `piso` PASSOU
+  // A SER EDITÁVEL nesta rodada (entrou no registro de `campos-da-ficha.ts`).
+  // Quem guarda a trava agora é o `slug` — o campo que o registro recusa de
+  // propósito, porque trocá-lo renomeia o lugar e quebra todo link que já
+  // circula. Este é o teste de NÍVEL DE ROTA; o de unidade em
+  // `tests/lib/aplicar-campo.test.ts` cobre os outros recusados.
+  it("campo fora do registro do painel (slug): 400, e nada é gravado", async () => {
+    const res = await PUT(pedido({ slug: SLUG, campo: "slug", valor: "outro-lugar" }, cookieBom));
     expect(res.status).toBe(400);
     expect(await historico(c, SLUG)).toHaveLength(1);
+  });
+
+  // 🔴 O par do de cima, e ele é quem prova que a trava não virou um "recusa
+  // tudo": um caminho ANINHADO, que a rota não sabia alcançar até esta rodada,
+  // tem que atravessar a porta inteira e gravar. Sem ele, um registro vazio
+  // (ou um `return 400` no lugar da guarda) passaria verde no teste de cima.
+  it("campo aninhado que entrou no registro (custo.valor): 200, e grava", async () => {
+    const res = await PUT(pedido({ slug: SLUG, campo: "custo.valor", valor: "R$ 12,00" }, cookieBom));
+    expect(res.status).toBe(200);
+    const atual = await versaoAtual(c, SLUG);
+    expect(JSON.parse(atual!.doc).custo.valor).toBe("R$ 12,00");
+    expect(JSON.parse(atual!.doc).custo.tag).toBe("pago");
   });
 
   // 🔴 M5 do plano de mutação, medido no nível da ROTA com um SEGUNDO lugar

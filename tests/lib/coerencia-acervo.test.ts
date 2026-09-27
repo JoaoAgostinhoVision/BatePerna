@@ -353,17 +353,37 @@ describe("o 2º waypoint — o acervo não pode ter cadeia enquanto ninguém a l
     })),
   );
 
+  // 🔴 2026-09-26 (Task 1 do painel completo): `src/lib/campos-da-ficha.ts`
+  //  escreve `trajeto.waypoints[].nome` — o MOLDE do registro de campos, dentro
+  //  de uma string. Colchete VAZIO não lê índice nenhum (`waypoints[]` nem é
+  //  indexação válida em JS: quem lê a cadeia escreve um índice ali dentro), e
+  //  o registro guarda molde de propósito, porque quantos waypoints uma ficha
+  //  tem é DADO e não código. Então o molde sai da conta de LEITURAS — e, pra
+  //  ele não virar esconderijo de um leitor de verdade, o teste logo abaixo
+  //  prova que colchete vazio só existe naquele arquivo.
+  const molde = acessos.filter((a) => a.indice === "");
+  const leituras = acessos.filter((a) => a.indice !== "");
+
+  it("colchete vazio é o MOLDE do registro de campos, e só mora lá", () => {
+    expect(
+      [...new Set(molde.map((a) => a.arquivo))],
+      "`waypoints[]` fora do registro de campos: ou é molde em lugar errado, ou " +
+        "é a tira de comentários deixando passar coisa que não é molde",
+    ).toEqual(["src/lib/campos-da-ficha.ts"]);
+    expect(molde.map((a) => a.indice)).toEqual(["", "", "", ""]); // nome, lat, lng, nota
+  });
+
   it("o `src/` continua cego ao waypoint 2 em diante — a premissa do guarda abaixo", () => {
     // NÃO-VACUIDADE: sem este número, renomear o campo (ou a tira comer o
-    // arquivo) deixa `acessos` vazio e o laço seguinte passa sem ler nada.
+    // arquivo) deixa `leituras` vazio e o laço seguinte passa sem ler nada.
     // Cravado a mão de propósito, como o `fichas.length` no topo.
     expect(
-      acessos.length,
+      leituras.length,
       "nenhum acesso a `waypoints[...]` no src/ — ou o campo mudou de nome, ou a " +
         "tira de comentários comeu os arquivos. O teste abaixo ficaria oco.",
     ).toBeGreaterThanOrEqual(7);
 
-    const alem = acessos.filter((a) => a.indice !== "0");
+    const alem = leituras.filter((a) => a.indice !== "0");
     expect(
       alem.map((a) => `${a.arquivo} lê waypoints[${a.indice}]`),
       "alguém ensinou a tela a ler a cadeia de waypoints. Isto é BOA notícia — e " +

@@ -1,0 +1,277 @@
+import { PISOS } from "@/lib/piso";
+import { SEVERIDADES } from "@/lib/severidade";
+import { DIAS } from "@/lib/semana";
+import { fichaSchema, type Ficha } from "@/types/ficha";
+
+/** A ESPINHA DO PAINEL: um registro declarado de campos, e uma porta só que
+ *  grava qualquer um deles.
+ *
+ *  🔴 POR QUE REGISTRO E NÃO UM `if` (nem um array de nomes). Até 2026-09-26
+ *  isto era `CAMPOS_EDITAVEIS = ["voz"]` — uma lista escrita à mão. Este
+ *  projeto já pagou TRÊS vezes pela mesma doença: lista à mão fica cega ao que
+ *  cresceu, e o campo novo nasce invisível com a suíte verde. O remédio não é
+ *  cuidado, é PROVA: `tests/lib/campos-da-ficha.test.ts` caminha o
+ *  `fichaSchema` até as FOLHAS e compara contra este registro. Campo novo no
+ *  schema passa a nascer editável ou nascer justificado — nunca esquecido.
+ *
+ *  O que NÃO entra, e por quê, está em `FORA_DE_PROPOSITO` no arquivo de teste
+ *  (motivo escrito ao lado de cada um) e na §2.1 do desenho. */
+
+/** A espécie decide O INSTRUMENTO da tela, não o tipo em TypeScript.
+ *
+ *  - `prosa` — caixa de texto.
+ *  - `lista` — escolher de lista fechada; **nunca digitar**. Sempre com
+ *    `opcoes`, e as opções vêm de `PISOS`/`DIAS`/`SEVERIDADES`, nunca de uma
+ *    cópia repetida aqui.
+ *  - `booleano` — interruptor, com a frase que ele vira na tela ao lado.
+ *  - `hora` — seletor `HH:MM`; o schema tem regex e texto livre não passa.
+ *  - `numero` — número DE MOTOR (limiar de chuva, janelas): a tela mostra a
+ *    consequência ao vivo antes de gravar.
+ *  - `coord` — editado no MAPA, com pin arrastado. Duas formas convivem aqui
+ *    de propósito, porque o schema as declara diferentes: `condicao.coords` é
+ *    o PAR (`{lat, lng}`) e `trajeto.waypoints[].lat`/`.lng` são as METADES
+ *    (números soltos). Quem grava não precisa distinguir — o
+ *    `fichaSchema.parse` da porta recusa a forma errada no caminho errado. */
+export type EspecieCampo = "prosa" | "lista" | "booleano" | "hora" | "numero" | "coord";
+
+/** O bloco em que o campo aparece na tela do painel. Os nomes seguem os blocos
+ *  que a ficha pública já tem (`src/app/[slug]/page.tsx`): `acesso`, `avisos`,
+ *  `piso` e o trajeto moram todos dentro do bloco Trajeto, por isso `chegar`. */
+export type GrupoDaFicha = "voz" | "chegar" | "custo" | "quando" | "condicao" | "discriminador";
+
+export type CampoDaFicha = {
+  /** Caminho até a folha, com `.` entre os degraus. Pode ser um MOLDE: o
+   *  `[]` em `trajeto.waypoints[].nome` significa "qualquer índice". */
+  caminho: string;
+  especie: EspecieCampo;
+  /** O schema exige esta chave DENTRO do pai dela. Obrigatório não tem
+   *  "não sei" (§4.2 do desenho). */
+  obrigatorio: boolean;
+  grupo: GrupoDaFicha;
+  opcoes?: readonly string[];
+};
+
+export type ValorDeCampo = string | number | boolean | readonly string[] | { lat: number; lng: number };
+
+/** A marca de "qualquer índice" dentro de um caminho. */
+const MOLDE = "[]";
+
+/** 🔴 OS WAYPOINTS ENTRAM COMO MOLDE, NÃO COMO LISTA DE ÍNDICES. Quantos
+ *  waypoints uma ficha tem é DADO, não código: escrever
+ *  `trajeto.waypoints.7.nome` aqui seria cravar no código um número que mora
+ *  no banco. Quem expande o molde para os índices que uma ficha realmente tem
+ *  é `camposDaFicha(ficha)`. */
+// 🔴 O tipo é anotado à mão (`readonly CampoDaFicha[]`) DE PROPÓSITO, e o
+// `satisfies` fica junto: sem a anotação, o `as const` vaza a união de 29
+// literais pra fora do módulo e todo chamador que tenha um `string` na mão
+// (um caminho vindo do corpo de um `PUT`, uma chave de `Map` num teste) para
+// de compilar. O `satisfies` é quem continua conferindo cada entrada.
+export const CAMPOS_DA_FICHA: readonly CampoDaFicha[] = [
+  // — o que o lugar é, na voz de quem foi —
+  { caminho: "rotulo_escaneio", especie: "prosa", obrigatorio: true, grupo: "voz" },
+  { caminho: "promessa", especie: "prosa", obrigatorio: true, grupo: "voz" },
+  { caminho: "voz", especie: "prosa", obrigatorio: true, grupo: "voz" },
+  { caminho: "premio", especie: "prosa", obrigatorio: true, grupo: "voz" },
+
+  // — como se chega, e o que se encontra no caminho —
+  // O molde: `[]` é "qualquer índice". `nome`/`lat`/`lng` são obrigatórios
+  // DENTRO do waypoint; `nota` não é.
+  { caminho: "trajeto.waypoints[].nome", especie: "prosa", obrigatorio: true, grupo: "chegar" },
+  { caminho: "trajeto.waypoints[].lat", especie: "coord", obrigatorio: true, grupo: "chegar" },
+  { caminho: "trajeto.waypoints[].lng", especie: "coord", obrigatorio: true, grupo: "chegar" },
+  { caminho: "trajeto.waypoints[].nota", especie: "prosa", obrigatorio: false, grupo: "chegar" },
+  { caminho: "acesso", especie: "prosa", obrigatorio: true, grupo: "chegar" },
+  { caminho: "avisos", especie: "prosa", obrigatorio: true, grupo: "chegar" },
+  { caminho: "piso", especie: "lista", obrigatorio: false, grupo: "chegar", opcoes: PISOS },
+  { caminho: "carroComum", especie: "booleano", obrigatorio: false, grupo: "chegar" },
+
+  // — o que custa —
+  { caminho: "custo.tag", especie: "lista", obrigatorio: true, grupo: "custo", opcoes: ["gratis", "pago"] },
+  { caminho: "custo.valor", especie: "prosa", obrigatorio: false, grupo: "custo" },
+  { caminho: "custo.curto", especie: "prosa", obrigatorio: false, grupo: "custo" },
+
+  // — quando dá pra ir —
+  // 🔴 `abre` e `fecha` são `obrigatorio: true` e isso NÃO contradiz o
+  // `horario` ser opcional no schema: o bloco inteiro pode faltar, mas um
+  // bloco com só metade da faixa não passa no `fichaSchema`. O "não sei" do
+  // horário é tirar o BLOCO, e bloco não é campo — fica pra tarefa de tela.
+  { caminho: "horario.abre", especie: "hora", obrigatorio: true, grupo: "quando" },
+  { caminho: "horario.fecha", especie: "hora", obrigatorio: true, grupo: "quando" },
+  { caminho: "dias", especie: "lista", obrigatorio: false, grupo: "quando", opcoes: DIAS },
+
+  // — o que a chuva faz aqui —
+  { caminho: "condicao.coords", especie: "coord", obrigatorio: true, grupo: "condicao" },
+  { caminho: "condicao.regra.janela_previsao_horas", especie: "numero", obrigatorio: true, grupo: "condicao" },
+  { caminho: "condicao.regra.janela_passado_horas", especie: "numero", obrigatorio: true, grupo: "condicao" },
+  { caminho: "condicao.regra.limiar_mm", especie: "numero", obrigatorio: true, grupo: "condicao" },
+  { caminho: "condicao.severidade", especie: "lista", obrigatorio: true, grupo: "condicao", opcoes: SEVERIDADES },
+  { caminho: "condicao.regra_texto", especie: "prosa", obrigatorio: true, grupo: "condicao" },
+  { caminho: "condicao.ressalva_proxy", especie: "prosa", obrigatorio: true, grupo: "condicao" },
+  { caminho: "secaRapido", especie: "prosa", obrigatorio: false, grupo: "condicao" },
+
+  // — o que se olha na entrada pra decidir —
+  { caminho: "discriminador.formato", especie: "prosa", obrigatorio: true, grupo: "discriminador" },
+  { caminho: "discriminador.como_ler", especie: "prosa", obrigatorio: true, grupo: "discriminador" },
+  { caminho: "discriminador.permissao_abortar", especie: "prosa", obrigatorio: true, grupo: "discriminador" },
+] as const satisfies readonly CampoDaFicha[];
+
+/** `trajeto.waypoints.2.nome` → `trajeto.waypoints[].nome`. Todo degrau que é
+ *  só dígitos vira `[]` colado no degrau anterior. */
+function moldeDe(caminho: string): string {
+  let saida = "";
+  for (const degrau of caminho.split(".")) {
+    if (/^\d+$/.test(degrau)) saida += MOLDE;
+    else saida += saida === "" ? degrau : `.${degrau}`;
+  }
+  return saida;
+}
+
+/** Acha a entrada do registro para um caminho — CONCRETO ou molde.
+ *
+ *  ⚠️ A entrada devolvida é a do registro, então `.caminho` de um waypoint vem
+ *  com `[]`, não com o índice que você pediu. Quem precisa do caminho concreto
+ *  já o tem em mãos; quem precisa da lista concreta chama `camposDaFicha`. */
+export function campoPorCaminho(caminho: string): CampoDaFicha | undefined {
+  const exato = CAMPOS_DA_FICHA.find((c) => c.caminho === caminho);
+  if (exato) return exato;
+  const molde = moldeDe(caminho);
+  return CAMPOS_DA_FICHA.find((c) => c.caminho === molde);
+}
+
+function lerCaminho(raiz: unknown, degraus: readonly string[]): unknown {
+  let no: unknown = raiz;
+  for (const degrau of degraus) {
+    if (typeof no !== "object" || no === null) return undefined;
+    no = (no as Record<string, unknown>)[degrau];
+  }
+  return no;
+}
+
+/** O registro com os MOLDES EXPANDIDOS para os waypoints que ESTA ficha tem.
+ *
+ *  🔴 É esta função que as telas iteram — nunca `CAMPOS_DA_FICHA` cru, que
+ *  traz `[]` no lugar do índice e não dá pra gravar. Uma ficha com 3
+ *  waypoints devolve 3 conjuntos; nenhum `[]` sobra na saída. */
+export function camposDaFicha(ficha: Ficha): CampoDaFicha[] {
+  const saida: CampoDaFicha[] = [];
+  const jaExpandidos = new Set<string>();
+
+  for (const campo of CAMPOS_DA_FICHA) {
+    const corte = campo.caminho.indexOf(MOLDE);
+    if (corte < 0) {
+      saida.push(campo);
+      continue;
+    }
+    // Os moldes de uma mesma lista são expandidos JUNTOS, na posição do
+    // primeiro: o painel mostra o waypoint 0 inteiro, depois o 1 inteiro —
+    // não todos os nomes e depois todas as latitudes.
+    const prefixo = campo.caminho.slice(0, corte);
+    if (jaExpandidos.has(prefixo)) continue;
+    jaExpandidos.add(prefixo);
+
+    const lista = lerCaminho(ficha, prefixo.split("."));
+    if (!Array.isArray(lista)) throw new Error(`\`${prefixo}\` não é uma lista nesta ficha`);
+
+    const moldes = CAMPOS_DA_FICHA.filter((c) => c.caminho.startsWith(prefixo + MOLDE));
+    for (let i = 0; i < lista.length; i++) {
+      for (const molde of moldes) {
+        saida.push({ ...molde, caminho: `${prefixo}.${i}${molde.caminho.slice(corte + MOLDE.length)}` });
+      }
+    }
+  }
+  return saida;
+}
+
+function exigirCampo(caminho: string): CampoDaFicha {
+  if (caminho.includes(MOLDE)) {
+    throw new Error(`\`${caminho}\` é o molde, não um campo: diga o índice (\`trajeto.waypoints.0.nome\`)`);
+  }
+  const campo = campoPorCaminho(caminho);
+  // 🔴 LISTA BRANCA, e é de propósito. Sem ela, um corpo com `{"campo":"slug"}`
+  // renomearia o lugar e quebraria todo link que já circula.
+  if (!campo) throw new Error(`campo fora do registro do painel: \`${caminho}\``);
+  return campo;
+}
+
+/** 🔴 A REGRA MAIS IMPORTANTE DESTE ARQUIVO: `""` NUNCA CHEGA AO DOCUMENTO.
+ *
+ *  Caixa vazia é ERRO DE PREENCHIMENTO; "não sei" é outra ação, e ela REMOVE a
+ *  chave (`removerCampo`). Medido em `src/app/[slug]/page.tsx:105`:
+ *  `ficha.custo.curto ?? precoCurto` — o `??` não pega string vazia, então
+ *  gravar `""` deixaria o chip EM BRANCO na ficha pública em vez de cair no
+ *  preço. Vale pra todo campo opcional, e só-espaços conta como vazia. */
+function recusarVazio(caminho: string, valor: ValorDeCampo): void {
+  const vazia = (v: unknown) => typeof v === "string" && v.trim() === "";
+  if (vazia(valor) || (Array.isArray(valor) && valor.some(vazia))) {
+    // PENDENTE: redação minha, o João ainda não leu
+    throw new Error(`caixa vazia em \`${caminho}\`: escreva algo, ou diga "não sei" (que tira o campo)`);
+  }
+}
+
+/** Escreve (ou apaga) a folha de `degraus` devolvendo uma cópia — NUNCA muta o
+ *  que recebeu. Só os objetos do caminho tocado são copiados; os irmãos saem
+ *  pela mesma referência, que é o que faz "só o campo pedido muda". */
+function escrever(no: unknown, degraus: readonly string[], valor: unknown, remover: boolean): unknown {
+  const [degrau, ...resto] = degraus;
+
+  if (Array.isArray(no)) {
+    if (!/^\d+$/.test(degrau)) throw new Error(`\`${degrau}\` não é índice de uma lista`);
+    const i = Number(degrau);
+    // Índice que não existe não é criado: waypoint novo é outra ação, e
+    // inventar um aqui gravaria uma etapa vazia no trajeto de um lugar real.
+    if (i >= no.length) throw new Error(`não existe o item ${i} nesta lista (ela tem ${no.length})`);
+    if (resto.length === 0) throw new Error("remover ou trocar um item inteiro da lista não passa por aqui");
+    const copia = no.slice();
+    copia[i] = escrever(no[i], resto, valor, remover);
+    return copia;
+  }
+
+  if (typeof no !== "object" || no === null) throw new Error(`\`${degrau}\` não cabe: o degrau acima não é um objeto`);
+  const copia = { ...(no as Record<string, unknown>) };
+
+  if (resto.length === 0) {
+    if (remover) delete copia[degrau];
+    else copia[degrau] = valor;
+    return copia;
+  }
+
+  const filho = copia[degrau];
+  if (filho === undefined) {
+    // Nada a remover num bloco que já não existe.
+    if (remover) return no;
+    // Bloco opcional ausente (`horario`) é criado vazio e o `fichaSchema.parse`
+    // lá na porta decide se o resultado se sustenta — a recusa vem do schema,
+    // com o motivo real, em vez de um erro meu que adivinha.
+    copia[degrau] = escrever({}, resto, valor, false);
+    return copia;
+  }
+  copia[degrau] = escrever(filho, resto, valor, remover);
+  return copia;
+}
+
+/** Grava UM campo sobre o documento atual e devolve o JSON novo.
+ *
+ *  🔴 REVALIDA O DOCUMENTO INTEIRO, não só o campo: esta é a porta que impede
+ *  um formulário de gravar ficha quebrada, e ela é a única. Estoura em vez de
+ *  devolver algo meio certo — quem chama traduz o estouro em 400.
+ *
+ *  O `caminho` é CONCRETO (`trajeto.waypoints.0.nome`), nunca o molde. */
+export function aplicarCampo(docAtual: string, caminho: string, valor: ValorDeCampo): string {
+  exigirCampo(caminho);
+  recusarVazio(caminho, valor);
+  const atual = fichaSchema.parse(JSON.parse(docAtual));
+  return JSON.stringify(fichaSchema.parse(escrever(atual, caminho.split("."), valor, false)));
+}
+
+/** O "NÃO SEI": tira a chave do documento em vez de gravar vazio, e o app
+ *  passa a CALAR sobre aquilo. Campo obrigatório não tem "não sei" (§4.2).
+ *  Termina na mesma porta — o documento sem a chave tem que continuar válido. */
+export function removerCampo(docAtual: string, caminho: string): string {
+  const campo = exigirCampo(caminho);
+  if (campo.obrigatorio) {
+    // PENDENTE: redação minha, o João ainda não leu
+    throw new Error(`\`${caminho}\` é obrigatório: sem ele a ficha não existe, então não tem "não sei"`);
+  }
+  const atual = fichaSchema.parse(JSON.parse(docAtual));
+  return JSON.stringify(fichaSchema.parse(escrever(atual, caminho.split("."), undefined, true)));
+}

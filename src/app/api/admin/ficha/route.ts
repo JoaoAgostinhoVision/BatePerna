@@ -1,7 +1,7 @@
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
 import { getClient, gravarVersao, versaoAtual, versaoPorId } from "@/lib/db";
-import { aplicarCampo, eCampoEditavel } from "@/lib/editar-ficha";
+import { aplicarCampo, campoPorCaminho, type ValorDeCampo } from "@/lib/campos-da-ficha";
 import { fichaSchema } from "@/types/ficha";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  *  `ficha_versoes` — nunca um UPDATE (a tabela é append-only, ver `db.ts`).
  *
  *  🔴 A ORDEM DAS GUARDAS é a mesma das outras rotas do admin: config → sessão
- *  → corpo → domínio (`eCampoEditavel`, `versaoAtual`) → validação do
+ *  → corpo → domínio (`campoPorCaminho`, `versaoAtual`) → validação do
  *  documento inteiro (`aplicarCampo`) → grava. Painel desligado nunca gasta
  *  banco; sessão ruim nunca lê o campo pedido.
  *
@@ -110,7 +110,14 @@ export async function PUT(req: Request): Promise<Response> {
     return Response.json({ id }, { headers: { "cache-control": "no-store" } });
   }
 
-  if (typeof campo !== "string" || !eCampoEditavel(campo)) return new Response("", { status: 400 });
+  // 🔴 A LISTA BRANCA saiu de `CAMPOS_EDITAVEIS = ["voz"]` e virou o registro
+  // de `campos-da-ficha.ts` (2026-09-26). O que ela guarda é o mesmo: sem ela,
+  // um corpo com `{"campo":"slug"}` renomearia o lugar e quebraria todo link
+  // que já circula. `campoPorCaminho` resolve caminho aninhado e índice de
+  // waypoint (`trajeto.waypoints.0.nome`) pelo molde do registro.
+  if (typeof campo !== "string" || campoPorCaminho(campo) === undefined) {
+    return new Response("", { status: 400 });
+  }
 
   const versao = await versaoAtual(getClient(), slug);
   if (versao == null) return new Response("", { status: 400 });
@@ -118,10 +125,12 @@ export async function PUT(req: Request): Promise<Response> {
   // 🔴 `valor` chega como `unknown` e NÃO é coagido pra string aqui — se
   // fosse `String(valor)`, um número viraria texto válido e passaria pelo
   // schema, escondendo exatamente o defeito que `aplicarCampo` existe pra
-  // pegar. O estouro do schema (valor errado) é traduzido em 400 aqui.
+  // pegar. O `as ValorDeCampo` é asserção de tipo, não coerção: quem confere
+  // a forma de verdade é o `fichaSchema.parse` dentro de `aplicarCampo`, e o
+  // estouro dele (valor errado, caixa vazia) é traduzido em 400 aqui.
   let novoDoc: string;
   try {
-    novoDoc = aplicarCampo(versao.doc, campo, valor as string);
+    novoDoc = aplicarCampo(versao.doc, campo, valor as ValorDeCampo);
   } catch {
     return new Response("", { status: 400 });
   }
