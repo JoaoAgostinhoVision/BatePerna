@@ -370,10 +370,14 @@ uniforme** (bloco fala português nomeado, folha solta devolve erro de schema cr
 **depende** dessa inconsistência; e quatro `toThrow()` herdados do brief sobrevivem à própria
 mutação.
 
-🔴 **E duas frases falsas que os próprios commits desta rodada criaram, a consertar na onda de
-fix do fim:** `docs/RESUME.md` e `.claude/agents/painel-que-cresce.md` ainda afirmam
-`CAMPOS_EDITAVEIS = ["voz"]` em `src/lib/editar-ficha.ts:9`, e **esse arquivo foi apagado na Tarefa
-1**.
+🟢 **As duas frases falsas que os próprios commits desta rodada criaram estão CONSERTADAS** (em
+27/09, na sessão que retomou depois do PC desligar): `docs/RESUME.md` e
+`.claude/agents/painel-que-cresce.md` afirmavam `CAMPOS_EDITAVEIS = ["voz"]` em
+`src/lib/editar-ficha.ts:9`, e **esse arquivo foi apagado na Tarefa 1**. As citações antigas ficaram
+onde estavam, como registro do que foi medido em 26/09, mas cada uma agora diz o que mudou e para
+onde o código foi (`src/lib/campos-da-ficha.ts:397`). 🔴 **O número da autonomia (4 de 44) segue
+sendo de 26/09 e NÃO foi remedido** — remedir antes da Tarefa 3 pôr a porta de escrita no ar daria
+um número que não descreve nem o mundo velho nem o novo.
 
 ---
 
@@ -415,6 +419,16 @@ fix do fim:** `docs/RESUME.md` e `.claude/agents/painel-que-cresce.md` ainda afi
 
 ## 🔵 A LEI DELE, E O APP MEDIDO CONTRA ELA — o eixo aberto em 26/09
 
+> 🔴 **LEIA ISTO ANTES DA SEÇÃO INTEIRA: ela é o retrato de 26/09, ANTES da Tarefa 1, e o mundo que
+> ela descreve já mudou em parte.** `src/lib/editar-ficha.ts` **foi APAGADO na Tarefa 1** e com ele
+> `CAMPOS_EDITAVEIS = ["voz"]`; `aplicarCampo` mora agora em **`src/lib/campos-da-ficha.ts:397`**,
+> sabe **caminho aninhado** (`custo.valor`, `horario.abre`), sabe **tipo** (não só string) e tem o
+> `"não sei"` que **remove a chave** em vez de gravar `""`. As citações a `editar-ficha.ts` abaixo
+> ficam de propósito, como registro do que foi medido naquele dia — mas **nenhuma delas descreve o
+> código de hoje**. O número da autonomia (**4 de 44**) também é de 26/09: ele **não** foi remedido
+> depois da Tarefa 1, e remedi-lo só faz sentido quando a Tarefa 3 puser a porta de escrita no ar,
+> porque é ela que transforma o registro de campos em autonomia de verdade.
+
 🔴 **A LEI, palavras dele, e ela governa toda decisão de produto daqui pra frente:**
 
 > *"o normal de todo app é que os dados fiquem no banco, que possa ser incluso novos lugares e que
@@ -447,8 +461,9 @@ folha) + **11 ações** sobre o acervo.
 tirar aviso com prazo/efeito. **Tudo o mais é meu** — inclusive trocar o **preço** e o **horário**,
 que é o dado que apodrece mais rápido.
 
-Causa única de 32 dos 40: `CAMPOS_EDITAVEIS = ["voz"]`, **`src/lib/editar-ficha.ts:9`**. E 16 dos 17
-campos **não aparecem em tela nenhuma** do `/admin`.
+Causa única de 32 dos 40: `CAMPOS_EDITAVEIS = ["voz"]`, em `src/lib/editar-ficha.ts:9` — 🟢 **e esta
+causa já MORREU: a Tarefa 1 apagou o arquivo e a lista.** O que ainda não mudou é a outra metade: 16
+dos 17 campos **não aparecem em tela nenhuma** do `/admin`, e é a Tarefa 5 que abre isso.
 
 ### 🔴 A COISA QUE MAIS AFASTA O APP DA LEI — e não é o painel
 
@@ -476,11 +491,18 @@ A leitura, essa sim, **já é 100% banco** (`src/lib/ficha.ts:78-80`, com guarda
    custo for editável, apagar a caixa deixa o chip **em branco**, não devolve o preço. E
    `aplicarCampo` (`editar-ficha.ts:21-24`) só grava **string**. O painel precisa de um botão
    **"não sei, e o app cala"** separado da caixa vazia — isso é procedência, não detalhe.
+   🟢 **A segunda metade foi FEITA na Tarefa 1:** `aplicarCampo` (agora
+   `campos-da-ficha.ts:397`) grava outros tipos e o `"não sei"` **remove a chave**. 🔴 **A primeira
+   metade continua de pé** — o `??` de `src/app/[slug]/page.tsx:105` segue não pegando string
+   vazia, e ele passa a morder no dia em que a tela deixar gravar o chip do custo (Tarefa 6).
 3. 🟢 **A máquina já está quase pronta pros campos de texto.** `aplicarCampo` já é genérico e
    **revalida o documento inteiro**. O que prende tudo a `voz` são duas coisas pequenas: o array de
    um elemento em `editar-ficha.ts:9` e o `campo: "voz"` cravado em `EditorDeVoz.tsx:36`.
    ⚠️ **Mas só alcança chave de PRIMEIRO nível** (`{...atual, [campo]: valor}`) — `custo.valor`,
    `horario.abre`, `condicao.*` exigem ensinar caminho.
+   🟢 **Das duas coisas pequenas, a primeira já caiu** (o array e o arquivo não existem mais) e o
+   caminho aninhado **foi ensinado** na Tarefa 1. Sobra o `campo: "voz"` cravado em
+   `EditorDeVoz.tsx:36`, que é justamente o que a Tarefa 6 substitui por um editor por espécie.
 4. **Testes que cravam o acervo** (dado vazando pro código — violação direta da cláusula 3):
    `tests/app/MapaHome.test.tsx:354` crava `"3 trilhas fora do mapa"` → **o 4º lugar derruba a
    suíte** (tripwire deliberado, mas hoje é um programador obrigatório no caminho de criar);

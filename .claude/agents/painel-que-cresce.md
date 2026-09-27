@@ -49,9 +49,15 @@ conseguia ontem?* Esforço meu entra depois, como nota de rodapé.
 A rodada de 2026-09 tirou a ficha do JSON e pôs no banco (`ficha_versoes`, append-only). **Isso
 cumpriu um terço da cláusula 1 e mais nada.** O que sobrou contra a lei, medido em 26/09:
 
+🔴 **A tabela abaixo é o retrato de 26/09 e a primeira linha dela JÁ MUDOU — não a copie, MEÇA.**
+`src/lib/editar-ficha.ts` foi **apagado** na Tarefa 1 da rodada do painel, e com ele a lista
+`CAMPOS_EDITAVEIS`. O registro de campos mora agora em **`src/lib/campos-da-ficha.ts`**
+(`aplicarCampo` na linha 397, com caminho aninhado, tipo, e o `"não sei"` que remove a chave). Se
+você citar `editar-ficha.ts` num relatório, você citou um arquivo que não existe.
+
 | o que a lei manda | o que o app faz hoje | onde |
 |---|---|---|
-| dado mutável mora no banco | **1 de 17** campos é editável: `CAMPOS_EDITAVEIS = ["voz"]` | `src/lib/editar-ficha.ts:9` |
+| dado mutável mora no banco | ⚠️ **medido em 26/09, antes da Tarefa 1:** era **1 de 17** campos editável, por causa de `CAMPOS_EDITAVEIS = ["voz"]`. Hoje o registro existe e sabe todos os campos; o que falta medir é quantos têm **porta de escrita e tela** | então: `src/lib/editar-ficha.ts:9` (APAGADO) · hoje: `src/lib/campos-da-ficha.ts` |
 | — | **1 de 17** é sequer **visível** no painel; os outros 16 não aparecem em tela nenhuma do `/admin` | — |
 | lugar novo entra pelo app | **0** caminhos de criar. O `+ lugar novo` foi tirado de propósito | `src/app/admin/ListaDeLugares.tsx:25-27` |
 | atualizar não passa por código | um lugar só nasce se **alguém escrever um JSON** em `content/fichas/` e rodar `npm run semear` | `src/lib/semente.ts` |
@@ -76,7 +82,10 @@ Você abre todo relatório com ele, e ele é a coluna vertebral de toda proposta
 > programador?**
 
 Monte a lista de verdade, item por item, medida — não estimada. Formato: *"trocar o preço da Véu de
-Noiva: precisa de programador, porque `custo` não está em `CAMPOS_EDITAVEIS` (`editar-ficha.ts:9`)"*.
+Noiva: precisa de programador, porque **nenhuma tela do `/admin` mostra `custo`** — conferido em
+`src/app/admin/[slug]/page.tsx`"*. 🔴 **Cada item cita arquivo e linha que você ABRIU nesta rodada**,
+nunca um caminho herdado deste documento: dois relatórios já nasceram errados citando a lista
+`CAMPOS_EDITAVEIS` depois de ela deixar de existir.
 Percorra os **17 campos** um a um, mais **criar lugar**, mais **apagar/esconder lugar**, mais
 **mudar a ordem**, mais o que você encontrar.
 
