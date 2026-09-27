@@ -79,82 +79,127 @@ caractere em UTF-8 (o shell do Windows mastiga os acentos — faça a comparaç�
    **mínimo estrutural**, reusando valor que já existia no `admin.css` — zero cor nova, zero fonte nova,
    zero animação, conferido regra a regra na revisão. O visual é escolha dele.
 
-## 🔵 O PAINEL COMO PRODUTO — o eixo que ele abriu em 26/09, e o que o agente achou
+## 🔵 A LEI DELE, E O APP MEDIDO CONTRA ELA — o eixo aberto em 26/09
 
-**O pedido, palavras dele:** *"ainda não achei que o painel de controle está bom, poderias ver para
-desenvolver um agente para pensar nas melhores soluções do painel para substituir o que a gente estava
-fazendo na mão de escrever os locais um a um, acho que para um aplicativo de fato está muito longe (…)
-bote ele para pensar e evoluir a ideia"*
+🔴 **A LEI, palavras dele, e ela governa toda decisão de produto daqui pra frente:**
 
-Nasceu **`.claude/agents/painel-que-cresce.md`** (o 11º agente, família 2 — acha, propõe e recomenda;
-sem `Edit`/`Write`). Ele rodou uma vez, em 26/09. **Nada foi construído, e nada será sem a palavra dele.**
+> *"o normal de todo app é que os dados fiquem no banco, que possa ser incluso novos lugares e que
+> não seja sempre necessário mexer no código para atualizar dados mutáveis, era essa máxima que eu
+> preciso nesse app"*
 
-### O buraco, medido — e eu conferi os quatro números depois dele
+Três cláusulas: **dado mutável mora no BANCO** (nem arquivo do repo, nem constante, nem número
+cravado num teste) · **lugar novo entra pelo APP** · **atualizar dado não passa por código, build,
+deploy nem por mim.**
 
-| medida | valor | onde |
+### 🔴 A RÉGUA QUE A LEI IMPÕE, e eu já errei por não tê-la
+
+**Custo se mede na AUTONOMIA DELE, não no meu esforço.** A v1 do agente `painel-que-cresce` mediu em
+arquivos/testes/comandos, escreveu que pôr lugar novo era barato (*"1 arquivo JSON e 1 comando, nem
+precisa de deploy"*), e com isso **defendeu o status quo** — recomendando, de todas as coisas, uma
+tela só de LEITURA. Ele rejeitou: *"esse agente não está bom o suficiente"*. **"1 arquivo e 1
+comando" é barato pra quem tem terminal e IMPOSSÍVEL pra quem tem celular.**
+
+O teste que mata proposta ruim: **se a resposta a *"como o João faz isso sozinho?"* for *"ele pede
+pro Claude"*, a proposta falhou.** O agente foi reescrito com isso no topo (`76c6508`).
+
+### O NÚMERO DA AUTONOMIA — a métrica desta fase
+
+Inventário do agente (v2): as **33 respostas** que compõem uma ficha (os 17 campos abertos até a
+folha) + **11 ações** sobre o acervo.
+
+> ## Ele faz **4**. Precisa de mim para **40**.
+
+**As 4:** entrar no painel · reescrever a **voz** · voltar a uma versão antiga da voz · publicar e
+tirar aviso com prazo/efeito. **Tudo o mais é meu** — inclusive trocar o **preço** e o **horário**,
+que é o dado que apodrece mais rápido.
+
+Causa única de 32 dos 40: `CAMPOS_EDITAVEIS = ["voz"]`, **`src/lib/editar-ficha.ts:9`**. E 16 dos 17
+campos **não aparecem em tela nenhuma** do `/admin`.
+
+### 🔴 A COISA QUE MAIS AFASTA O APP DA LEI — e não é o painel
+
+**A única porta por onde um lugar NASCE é `loadAll()` lendo o DISCO** (`src/lib/ficha.ts:39`, chamada
+em `scripts/semear-fichas.ts:8` e em `tests/banco.ts:90`). Enquanto for a única:
+
+- a **cláusula 2 vale zero**;
+- a **cláusula 1 é encenação** — o banco é um cache do repositório, não a fonte;
+- e os **15 guardas de coerência auditam o disco**, então **lugar criado pelo painel nasceria fora
+  dos 15** (são eles que pegam chip de preço mentindo e ficha emprestando a frase de outra).
+  🔴 **Migrar os guardas pro banco é PRÉ-REQUISITO de segurança de qualquer caminho de criar**,
+  não polimento.
+
+A leitura, essa sim, **já é 100% banco** (`src/lib/ficha.ts:78-80`, com guarda em
+`tests/lib/sem-disco-em-producao.test.ts`). A máquina de ler está pronta; a de escrever é 1 de 33.
+
+### Achados que mudam decisão — todos conferidos por mim depois do agente
+
+1. 🔴 **Hoje CRIAR É PUBLICAR, e não existe rascunho.** `versoesAtuais` (`src/lib/db.ts:261-267`)
+   pega a última versão de cada slug **sem filtro nenhum**: o que está no banco está no ar. Um lugar
+   meio preenchido iria à tela na primeira linha gravada. Também é por isso que **esconder um lugar
+   não existe**.
+2. 🔴 **Defeito latente que só nasce quando o painel crescer:** `src/app/[slug]/page.tsx:105` faz
+   `ficha.custo.curto ?? precoCurto`. O `??` **não pega string vazia** — no dia em que o chip do
+   custo for editável, apagar a caixa deixa o chip **em branco**, não devolve o preço. E
+   `aplicarCampo` (`editar-ficha.ts:21-24`) só grava **string**. O painel precisa de um botão
+   **"não sei, e o app cala"** separado da caixa vazia — isso é procedência, não detalhe.
+3. 🟢 **A máquina já está quase pronta pros campos de texto.** `aplicarCampo` já é genérico e
+   **revalida o documento inteiro**. O que prende tudo a `voz` são duas coisas pequenas: o array de
+   um elemento em `editar-ficha.ts:9` e o `campo: "voz"` cravado em `EditorDeVoz.tsx:36`.
+   ⚠️ **Mas só alcança chave de PRIMEIRO nível** (`{...atual, [campo]: valor}`) — `custo.valor`,
+   `horario.abre`, `condicao.*` exigem ensinar caminho.
+4. **Testes que cravam o acervo** (dado vazando pro código — violação direta da cláusula 3):
+   `tests/app/MapaHome.test.tsx:354` crava `"3 trilhas fora do mapa"` → **o 4º lugar derruba a
+   suíte** (tripwire deliberado, mas hoje é um programador obrigatório no caminho de criar);
+   `tests/lib/coerencia-acervo.test.ts:374` **proíbe** 2º waypoint. E 247 referências aos três slugs
+   em 32 arquivos de teste — nenhuma quebra ao criar, todas quebram ao renomear ou esconder.
+5. **`modos` é campo MORTO** — uma única ocorrência em todo o `src/`: a linha que o declara
+   (`src/types/ficha.ts:47`). Obrigatório e lido por ninguém.
+6. ⚠️ `waypoints[0]` em **10 acessos de 8 arquivos**. Ordem do acervo é alfabética e cravada
+   (`src/lib/ficha-fonte.ts:12-16`). O histórico só extrai `voz` (`HistoricoDaVoz.tsx:20-27`).
+
+### 🔴 UM NÚMERO DO AGENTE QUE EU CONFERI E ESTÁ ERRADO
+
+Ele escreveu que o estágio C1 quebra **2 testes** (`route-admin-ficha.test.ts:121` e
+`editar-ficha.test.ts:30`). **Quebra ZERO.** Os dois usam `slug` e `piso` como isca, e o C1 abre só
+os seis campos de PROSA — `piso` continua fora da lista, os dois seguem verdes. (A v1 do agente
+tinha acertado isto; a v2 regrediu.) O que é verdade: quando um estágio futuro abrir `piso`, a trava
+contra o `slug` virar editável precisa ser **reancorada** em outro campo — e está escrito no
+comentário de `route-admin-ficha.test.ts:116-119`.
+
+### AS QUATRO ROTAS
+
+| rota | o que é | até onde chega |
 |---|---|---|
-| campos da ficha | **17** | `src/types/ficha.ts:46-189` |
-| campos que o painel edita | **1** (`voz`) | `src/lib/editar-ficha.ts:9` |
-| campos que o painel **mostra** | **1** — os outros 16 não aparecem em tela nenhuma do `/admin` | — |
-| caminhos de criar lugar | **0** | o `+ lugar novo` saiu de propósito: `admin/ListaDeLugares.tsx:25-27` |
+| **A — A MESA** | só edita o que existe: A1 prosa · A2 aninhados e listas · A3 números do motor · A4 geometria no mapa | para em **8**. **Nunca cumpre a cláusula 2** |
+| **B — A PORTA** | criar primeiro: B1 rascunho · B2 formulário + publicar · B3 o disco vira bootstrap | **40→39→7**. O B2 sozinho dá quase tudo que a Rota A dá em quatro estágios |
+| **C — A LEI INTEIRA** | A1·A2·A3 → **C4 = B1+B2** → A4 → C6 esconder sem apagar → C7 cadeia de waypoints | **40 → 1** (sobra a senha). Sete estágios |
+| **D — O ATALHO** | uma caixa com o JSON cru no painel | cumpre a **letra** da lei numa semana. 🔴 **O agente trouxe pra ser RECUSADO**, e eu concordo: vírgula errada apaga ficha, e lista fechada vira texto livre. *"Cumprir a letra da lei e perder o app é possível, e é isto."* Se alguém propuser "um editor de ficha genérico", é a Rota D com outro nome |
 
-### 🔴 Três achados que mudam decisão, os três conferidos por mim
+**Recomendação do agente: Rota C, começando pelo C1** — os seis campos de prosa + a ficha inteira à
+vista. **40 → 33**, a maior queda por custo de qualquer estágio. 1 arquivo novo, ~4 tocados,
+**0 testes quebrados** (corrigido acima), ~6 novos, schema intacto, sem semente, um
+`vercel --prod --yes`. Pede os **rótulos dos blocos** (`tres-redacoes`) e **olho em 375px**
+(`olho-de-tela`).
 
-1. **PÔR UM LUGAR NOVO NO AR NÃO PRECISA DE DEPLOY.** As páginas do acervo são todas `force-dynamic`
-   (`page.tsx:19`, `[slug]/page.tsx:23`, `trilhas/page.tsx:8`) e o acervo vem do banco. Basta o JSON em
-   `content/fichas/` e **`npm run semear`**. 🔴 **Isso derruba metade da premissa dele:** "escrever o
-   local na mão" é 1 arquivo e 1 comando. O caro nunca foi o JSON — foram as **24 perguntas** do
-   `docs/questionario-ficha.md` que só ele pode responder.
-2. **`modos` é campo MORTO.** Aparece **uma única vez em todo o `src/`**: a linha que o declara
-   (`src/types/ficha.ts:47`). Obrigatório em toda ficha, lido por ninguém. São **16 campos vivos + 1
-   peso morto**. Apagar é decisão dele (apagar campo é apagar coisa que já se disse).
-3. **Os 15 guardas de coerência do acervo auditam o DISCO, não o banco.** `tests/banco.ts:90` semeia o
-   banco de teste com `loadAll()`. **Lugar criado pelo painel nasceria fora do alcance dos 15** — são
-   eles que pegam chip de preço mentindo e ficha emprestando a frase de outra. Item de escopo
-   obrigatório de qualquer rota que crie ficha.
+🔵 **A TENSÃO QUE A ESCOLHA DELE RESOLVE, e que eu ponho por escrito porque o agente não pôs:**
+a Rota C deixa a **cláusula 2** — a que ele nomeou primeiro — valendo **zero até o quarto
+estágio**. A Rota B chega nela em dois. O argumento do agente pela C é real (o formulário de criar
+É o formulário de editar, então construí-lo em lugar que já existe é testá-lo onde o erro é
+visível e reversível) — mas a troca é **velocidade até a lei × risco de lugar meio preenchido no
+ar**, e essa é escolha dele.
 
-⚠️ **E um quarto, de manutenção:** `waypoints[0]` aparece em **10 lugares de 8 arquivos** (era "5" em
-doc antigo). Um segundo ponto de trajeto sumiria em silêncio nos oito.
+### 🔵 AS SETE PERGUNTAS QUE SÃO DELE — nenhuma respondida
 
-### A pergunta reescrita pelo agente, e as três coisas empilhadas
-
-> **"Como o painel deixa de ser um editor de um campo e vira o lugar onde eu descarrego o que sei de um
-> lugar — inclusive de um que ainda não está no app — sem ninguém escrever JSON e sem o app afirmar
-> nada que eu não disse?"**
-
-- **(a)** ele não consegue **ver** do celular o que o app diz de cada lugar (16 campos invisíveis);
-- **(b)** a ação que faria parecer app — *"conheci um lugar, quero pôr aqui"* — não tem nem botão;
-- **(c)** com **3 lugares**, qualquer painel parece um editor de 3 arquivos. E o acervo não é pequeno por
-  falta de tela: é pequeno porque cada lugar custa ele ter ido lá.
-
-### As três rotas, e a recomendação
-
-| rota | o que é | estágios |
-|---|---|---|
-| **1 — a ficha inteira na mão** | crescer por **alcance** | 1.1 ver os 16 · 1.2 os 5 campos de prosa · 1.3 enums e números com a consequência à vista · 1.4 a geometria no mapa |
-| **2 — o lugar novo primeiro** | crescer por **criar** | 2.1 rascunho que não vai ao ar · 2.2 publicar · 2.3 os 15 guardas passam a ver o banco |
-| **3 — o app pergunta** | crescer por **conversa** — fila de perguntas que o próprio app monta | 3.1 o questionário vira dado · 3.2 a fila na tela do lugar · 3.3 a fila aceita lugar que ainda não existe |
-
-🔴 **A Rota 3 atravessa a procedência de um jeito que as outras não:** fila de perguntas **empurra**,
-e responder sob pressão de lista é como fato plausível entra no lugar de fato conhecido. O remédio é um
-botão *"não sei, e o app cala"* tão grande quanto o de responder.
-
-**Recomendação do agente: Rota 1, estágio 1.1 — ver a ficha inteira no painel.** Não depende de nada,
-muda a experiência dele no mesmo dia, barateia todos os outros estágios e **não fecha porta nenhuma**.
-Custo: 1 arquivo novo + 2 tocados + 1 de teste, **0 testes quebrados, 0 mudança de schema**, um
-`vercel --prod --yes` sem semente. Pede duas coisas dele: os **rótulos dos blocos** (`tres-redacoes`) e
-**olhar 16 blocos em 375px** (`olho-de-tela`).
-
-### 🔵 AS SEIS PERGUNTAS QUE SÃO DELE — nenhuma respondida
-
-1. **O acervo está reaberto?** A frase de hoje soa como ele reabrindo o "fechado em três" de 09/09. Só a
-   Rota 2 precisa da resposta, e só antes do estágio 2.2.
-2. **Tem lugar esperando?** Se sim, muda tudo: pôr no ar pelo caminho de hoje é 1 arquivo + 1 comando.
-3. **Quais dos 16 campos o incomodam hoje?** A Rota 1 foi ordenada por custo de código; se o que irrita é
-   preço ou horário, o 1.3 sobe na fila.
-4. **Fila de perguntas ajuda ou pressiona?** É a diferença entre a Rota 3 ser a melhor e a pior.
-5. **As doze palavras de tela** seguem esperando — e todo estágio acima acrescenta palavras novas à fila.
-6. **`modos` morre?**
+1. **O acervo está reaberto?** (Fechado em três em 09/09.) A lei exige a **capacidade** mesmo que ele
+   nunca crie o quarto lugar — então a Rota C vale com qualquer resposta.
+2. **Tem lugar esperando na fila?** Se tem, o estágio de criar sobe na ordem.
+3. **Dos 32 campos, quais o irritam hoje?** Se for **preço e horário**, o C2 troca de lugar com o C1.
+4. **A senha fica no Vercel?** O agente recomenda que sim e a lei diz que não — *senha não é dado, é
+   chave, e chave do app morar no painel que ela protege é ruim*. Se ele concordar, o alvo é **39**.
+5. **`modos` morre?**
+6. **O 2º ponto de trajeto é coisa que ele quer?** O schema aceita há um ano e nenhum lugar tem.
+7. **As doze palavras de tela** seguem `PENDENTE` no ar — e **todo estágio acima acrescenta palavras
+   novas à fila**.
 
 ---
 
