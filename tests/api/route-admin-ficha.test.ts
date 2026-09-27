@@ -371,9 +371,22 @@ describe("PUT /api/admin/ficha — os três formatos são exaustivos e exclusivo
     expect(await historico(c, SLUG)).toHaveLength(1);
   });
 
-  it("corpo com valor E naoSei juntos: 400, e nada é gravado", async () => {
-    const res = await PUT(pedido({ slug: SLUG, campo: "voz", valor: "x", naoSei: true }, cookieBom));
+  // 🔴 O CAMPO AQUI É `piso` DE PROPÓSITO, E ISSO FOI MEDIDO, NÃO ESCOLHIDO NO
+  // ESCURO. O brief escrevia este caso com `campo: "voz"`, e ASSIM ELE PASSA
+  // PELO MOTIVO ERRADO: com a guarda arrancada, `voz` cairia em `removerCampo`,
+  // que estoura porque a voz é obrigatória — o teste continuaria verde vendo um
+  // 400 que não tem nada a ver com a exclusividade dos formatos. Medido: a
+  // mutação "aceita `valor` e `naoSei` juntos" SOBREVIVEU à versão com `voz`.
+  // Com `piso` — opcional — a mutação apaga o campo e devolve 200, e o caso
+  // morre. É a 48ª espécie: prova que passa por acidente do vizinho.
+  it("corpo com valor E naoSei juntos: 400, e o campo CONTINUA na ficha", async () => {
+    const res = await PUT(
+      pedido({ slug: SLUG, campo: "piso", valor: "asfalto-tapete", naoSei: true }, cookieBom),
+    );
     expect(res.status).toBe(400);
+    const doc = JSON.parse((await versaoAtual(c, SLUG))!.doc);
+    expect("piso" in doc, "corpo ambíguo não pode nem gravar nem apagar").toBe(true);
+    expect(doc.piso).toBe(ficha.piso);
     expect(await historico(c, SLUG)).toHaveLength(1);
   });
 
