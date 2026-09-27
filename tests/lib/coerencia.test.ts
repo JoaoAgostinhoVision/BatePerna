@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { REGRAS, violacoesDoAcervo } from "@/lib/coerencia";
 import { loadAll } from "@/lib/ficha";
-import { DIAS } from "@/lib/semana";
+import { DIAS, type Dia } from "@/lib/semana";
 import type { Ficha } from "@/types/ficha";
 
 /** 🔴 O TESTE DO MÓDULO DE COERÊNCIA — e ele é o guarda da Task 2 inteira.
@@ -253,6 +253,95 @@ describe("violacoesDoAcervo", () => {
       expect(v.frase.length, `${v.regra}: a frase é curta demais pra dizer o que está errado`)
         .toBeGreaterThan(20);
     }
+  });
+
+  // 🔴 OS CINCO CASOS ABAIXO NASCERAM DE MUTAÇÃO SOBREVIVENTE, medida nesta
+  // tarefa, e as cinco eram A MESMA ESPÉCIE: **regra que confere VÁRIAS coisas,
+  // provada por UMA só.** Uma quebra por regra não basta quando a regra tem
+  // mais de um exame dentro — desligar o exame não exercitado deixava a suíte
+  // verde. As mutações que sobreviveram até estes casos existirem:
+  //   - desligar o `janela_passado_horas` (a quebra só zerava a previsão);
+  //   - tirar `rotulo_escaneio` da lista de textos que distinguem;
+  //   - tirar `voz` da mesma lista (a quebra só copiava a `promessa`);
+  //   - desligar o exame do nome de dia inventado (a quebra só repetia o dia);
+  //   - arrancar a válvula de escape do horário invertido — a regra passava a
+  //     acusar um lugar que abre à noite DE PROPÓSITO, e nada reclamava.
+
+  it("a janela de chuva é conferida nos TRÊS números, um a um", () => {
+    for (const campo of ["janela_passado_horas", "janela_previsao_horas", "limiar_mm"] as const) {
+      const f = rampa();
+      f.condicao.regra[campo] = 0;
+      expect(
+        violacoesDoAcervo([f]).filter((x) => x.regra === "janela-nao-zerada").length,
+        `zerar ${campo} não produziu violação: esse exame da regra está desligado`,
+      ).toBe(1);
+    }
+  });
+
+  it("os QUATRO textos que distinguem um lugar do outro são conferidos, um a um", () => {
+    for (const campo of ["voz", "promessa", "premio", "rotulo_escaneio"] as const) {
+      const f = veu();
+      f[campo] = rampa()[campo];
+      expect(
+        violacoesDoAcervo(com(f)).filter((x) => x.regra === "texto-emprestado").length,
+        `copiar o campo ${campo} de uma ficha pra outra não produziu violação: esse ` +
+          "campo saiu da lista dos que distinguem um lugar do outro",
+      ).toBe(1);
+    }
+  });
+
+  // 🔴 O `as Dia` É O PONTO DESTE CASO, não um contorno de tipo. Hoje o
+  // `fichaSchema` barra um dia inventado, porque o enum é montado a partir de
+  // `DIAS` — mas a porta de escrita do painel chama este módulo com o que o
+  // DONO DIGITOU, e no dia em que o campo virar texto livre a única coisa entre
+  // "segunda" escrito por extenso e a tela é esta regra.
+  it("um nome de dia que não existe é pego, mesmo sem repetição nenhuma", () => {
+    const f = rampa();
+    f.dias = ["sab", "segunda" as Dia];
+    const v = violacoesDoAcervo([f]).filter((x) => x.regra === "dia-repetido-ou-inventado");
+    expect(v.length, "dia inventado sem repetição passou batido").toBe(1);
+    expect(v[0].frase).toContain("segunda");
+  });
+
+  // A regra do horário invertido NÃO PROÍBE a travessia da noite: ela exige que
+  // esteja DITA na ficha, que é o mesmo critério do piso. Sem este caso, quem
+  // arrancasse a válvula de escape faria o app recusar a gravação de um lugar
+  // que abre à noite de propósito — e a suíte ficaria verde, porque nenhuma
+  // ficha do acervo de hoje abre à noite.
+  it("a travessia da noite DITA na ficha passa — a regra exige o aviso, não proíbe o horário", () => {
+    const f = rampa();
+    f.horario = { abre: "17:00", fecha: "08:00" };
+    f.avisos = `${f.avisos} A visita é de madrugada: atravessa a noite inteira.`;
+    expect(violacoesDoAcervo([f]).map((x) => x.regra)).not.toContain("horario-invertido-sem-aviso");
+  });
+
+  // 🔴 AUSENTE É SILÊNCIO, e é a régua do projeto inteiro: ficha paga sem chip
+  // mostra só o preço extraído do custo, e o app CALA sobre onde se paga em vez
+  // de inventar um portão. As quatro regras de custo têm que deixar passar.
+  it("ficha paga SEM chip é silêncio, não violação", () => {
+    const f = rampa();
+    f.custo = { tag: "pago", valor: f.custo.valor };
+    const regras = violacoesDoAcervo([f]).map((x) => x.regra);
+    for (const r of ["preco-legivel-no-custo", "chip-bate-com-preco", "chip-cabe-na-pilula",
+      "chip-nao-repete-a-linha"]) {
+      expect(regras, `a ficha paga sem chip foi acusada por ${r} — ausente virou afirmação`)
+        .not.toContain(r);
+    }
+
+    // 🔴 E VALE TAMBÉM COM O CUSTO ESCRITO POR EXTENSO, o que parece contra-
+    // intuitivo até se olhar a tela: quem exige preço extraível é o CHIP, que é
+    // uma pílula de quatro palavras no topo. Sem chip não há nada pra ficar sem
+    // número — a página imprime "Pago" e ao lado o texto dele por inteiro, que a
+    // pessoa lê sem dificuldade. Este caso veio de uma mutação que sobreviveu
+    // (arrancar a condição `!f.custo.curto` da regra do preço legível), e ele
+    // prende a decisão em vez de deixá-la ser tomada por omissão.
+    const semNumero = rampa();
+    semNumero.custo = { tag: "pago", valor: "cinco reais por pessoa, cobrados no portão" };
+    expect(
+      violacoesDoAcervo([semNumero]).map((x) => x.regra),
+      "ficha paga sem chip e com o custo por extenso foi acusada: a regra do preço " +
+        "legível é sobre o CHIP, e aqui não há chip",
+    ).not.toContain("preco-legivel-no-custo");
   });
 
   // 🔴 RULING P3: a coerência enxerga o acervo INTEIRO, inclusive o que estiver
