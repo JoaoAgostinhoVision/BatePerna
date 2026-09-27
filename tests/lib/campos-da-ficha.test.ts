@@ -32,6 +32,17 @@ const FORA_DE_PROPOSITO = new Set([
 // precisão), este teste fica vermelho em vez de a folha nova nascer invisível.
 const EDITADOS_INTEIROS = new Map<string, readonly string[]>([["condicao.coords", ["lat", "lng"]]]);
 
+// O OUTRO tipo de entrada que não é folha, e ele é o OPOSTO do de cima (ruling
+// H1, 2026-09-26). Um BLOCO OPCIONAL inteiro (`horario`) entra no registro pra
+// carregar o "não sei" do bloco — mas ele NÃO engole as folhas: `horario.abre`
+// e `horario.fecha` continuam no registro por conta própria, cada uma com o
+// seu instrumento. Por isso é outra estrutura, e não mais uma linha em
+// `EDITADOS_INTEIROS`: a regra de cobertura das folhas é contrária.
+//
+// O valor é o conjunto EXATO de folhas do bloco, pelo mesmo motivo do outro:
+// folha nova lá dentro fica vermelha aqui em vez de nascer invisível.
+const BLOCOS_INTEIROS = new Map<string, readonly string[]>([["horario", ["abre", "fecha"]]]);
+
 type DefZod = {
   typeName: string;
   innerType?: z.ZodTypeAny;
@@ -75,7 +86,31 @@ function folhasDoSchema(tipo: z.ZodTypeAny, prefixo: string, saida: string[]): s
   return saida;
 }
 
+/** Toda chave OPCIONAL do schema que é um OBJETO — isto é, todo bloco que pode
+ *  faltar inteiro e cujas folhas são obrigatórias por dentro. É a espécie de
+ *  campo que o ruling H1 abriu, e a varredura existe pra ninguém ter que
+ *  procurar de novo à mão. */
+function blocosOpcionaisDoSchema(tipo: z.ZodTypeAny, prefixo: string, saida: string[]): string[] {
+  const nu = desembrulhar(tipo);
+  const d = def(nu);
+  if (d.typeName === "ZodObject") {
+    for (const [chave, filho] of Object.entries(d.shape!())) {
+      const caminho = prefixo === "" ? chave : `${prefixo}.${chave}`;
+      const dentro = desembrulhar(filho);
+      if (def(filho).typeName === "ZodOptional" && def(dentro).typeName === "ZodObject") saida.push(caminho);
+      blocosOpcionaisDoSchema(filho, caminho, saida);
+    }
+    return saida;
+  }
+  if (d.typeName === "ZodArray") {
+    const dentro = desembrulhar(d.type as z.ZodTypeAny);
+    if (def(dentro).typeName === "ZodObject") return blocosOpcionaisDoSchema(dentro, `${prefixo}[]`, saida);
+  }
+  return saida;
+}
+
 const FOLHAS = folhasDoSchema(fichaSchema, "", []);
+const BLOCOS_DO_SCHEMA = blocosOpcionaisDoSchema(fichaSchema, "", []);
 const NO_REGISTRO = new Set(CAMPOS_DA_FICHA.map((c) => c.caminho));
 
 function engolidaPorEntradaInteira(folha: string): boolean {
@@ -136,7 +171,7 @@ describe("o registro cobre o schema", () => {
   it("nenhuma entrada do registro é fantasma — ou é folha do schema, ou é entrada-inteira declarada", () => {
     const folhas = new Set(FOLHAS);
     const fantasmas = CAMPOS_DA_FICHA.map((c) => c.caminho).filter(
-      (p) => !folhas.has(p) && !EDITADOS_INTEIROS.has(p),
+      (p) => !folhas.has(p) && !EDITADOS_INTEIROS.has(p) && !BLOCOS_INTEIROS.has(p),
     );
     expect(fantasmas, "entrada do registro que não corresponde a nada no schema").toEqual([]);
   });
@@ -149,9 +184,51 @@ describe("o registro cobre o schema", () => {
     }
   });
 
+  // 🔴 RULING H1. Sem esta varredura, "só o `horario` é bloco opcional" seria
+  // uma frase minha — e frase escrita à mão é exatamente o que fica cega ao
+  // que cresceu. O schema é quem responde.
+  it("`horario` é o único bloco opcional do schema, e ele está no registro", () => {
+    expect(BLOCOS_DO_SCHEMA, "bloco opcional novo no schema: ou entra no registro como `bloco`, ou ganha um motivo escrito").toEqual([
+      "horario",
+    ]);
+    expect([...BLOCOS_INTEIROS.keys()]).toEqual(BLOCOS_DO_SCHEMA);
+  });
+
+  it("todo bloco engole EXATAMENTE as folhas declaradas, é espécie `bloco`, e NÃO é obrigatório", () => {
+    for (const [raiz, esperadas] of BLOCOS_INTEIROS) {
+      const dentro = FOLHAS.filter((f) => f.startsWith(`${raiz}.`)).map((f) => f.slice(raiz.length + 1));
+      expect(dentro.sort(), raiz).toEqual([...esperadas].sort());
+      expect(campoPorCaminho(raiz)?.especie, raiz).toBe("bloco");
+      // É a entrada do bloco que carrega o "não sei". Se ela fosse
+      // obrigatória, o bloco inteiro ficaria inalcançável de novo.
+      expect(campoPorCaminho(raiz)?.obrigatorio, raiz).toBe(false);
+    }
+  });
+
+  // 🔴 A DIFERENÇA ENTRE AS DUAS ESTRUTURAS, provada e não só comentada: o
+  // bloco NÃO engole a cobertura das folhas dele. `horario.abre` e
+  // `horario.fecha` têm entrada própria, cada uma com o seu instrumento — o
+  // contrário do `condicao.coords`, que engole `lat` e `lng`.
+  it("as folhas de um bloco continuam no registro, cada uma com o seu instrumento", () => {
+    for (const [raiz, folhas] of BLOCOS_INTEIROS) {
+      for (const folha of folhas) {
+        const entrada = campoPorCaminho(`${raiz}.${folha}`);
+        expect(entrada, `${raiz}.${folha}`).toBeDefined();
+        expect(entrada?.especie, `${raiz}.${folha}`).not.toBe("bloco");
+        // Se o bloco existe, as duas horas existem — cada folha é obrigatória
+        // DENTRO dele, e é por isso que o "não sei" mora um degrau acima.
+        expect(entrada?.obrigatorio, `${raiz}.${folha}`).toBe(true);
+      }
+    }
+    // As duas estruturas são disjuntas: nada pode ser bloco e entrada-inteira
+    // ao mesmo tempo, porque as regras de cobertura delas se contradizem.
+    const nos_dois = [...BLOCOS_INTEIROS.keys()].filter((b) => EDITADOS_INTEIROS.has(b));
+    expect(nos_dois).toEqual([]);
+  });
+
   it("o registro não está vazio nem é só a voz — senão os guardas acima passam ocos", () => {
     expect(CAMPOS_DA_FICHA.length).toBeGreaterThan(12);
-    expect(new Set(CAMPOS_DA_FICHA.map((c) => c.especie)).size).toBeGreaterThan(4);
+    expect(new Set(CAMPOS_DA_FICHA.map((c) => c.especie)).size).toBe(7);
     expect(new Set(CAMPOS_DA_FICHA.map((c) => c.grupo)).size).toBe(6);
   });
 

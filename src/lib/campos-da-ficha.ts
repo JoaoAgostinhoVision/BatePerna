@@ -27,12 +27,15 @@ import { fichaSchema, type Ficha } from "@/types/ficha";
  *  - `hora` — seletor `HH:MM`; o schema tem regex e texto livre não passa.
  *  - `numero` — número DE MOTOR (limiar de chuva, janelas): a tela mostra a
  *    consequência ao vivo antes de gravar.
+ *  - `bloco` — um BLOCO OPCIONAL inteiro (`horario`). Não se grava: a única
+ *    operação válida é `removerCampo`, o "não sei". Ver o comentário de
+ *    `BLOCOS_OPCIONAIS` mais abaixo.
  *  - `coord` — editado no MAPA, com pin arrastado. Duas formas convivem aqui
  *    de propósito, porque o schema as declara diferentes: `condicao.coords` é
  *    o PAR (`{lat, lng}`) e `trajeto.waypoints[].lat`/`.lng` são as METADES
  *    (números soltos). Quem grava não precisa distinguir — o
  *    `fichaSchema.parse` da porta recusa a forma errada no caminho errado. */
-export type EspecieCampo = "prosa" | "lista" | "booleano" | "hora" | "numero" | "coord";
+export type EspecieCampo = "prosa" | "lista" | "booleano" | "hora" | "numero" | "coord" | "bloco";
 
 /** O bloco em que o campo aparece na tela do painel. Os nomes seguem os blocos
  *  que a ficha pública já tem (`src/app/[slug]/page.tsx`): `acesso`, `avisos`,
@@ -91,10 +94,14 @@ export const CAMPOS_DA_FICHA: readonly CampoDaFicha[] = [
   { caminho: "custo.curto", especie: "prosa", obrigatorio: false, grupo: "custo" },
 
   // — quando dá pra ir —
-  // 🔴 `abre` e `fecha` são `obrigatorio: true` e isso NÃO contradiz o
-  // `horario` ser opcional no schema: o bloco inteiro pode faltar, mas um
-  // bloco com só metade da faixa não passa no `fichaSchema`. O "não sei" do
-  // horário é tirar o BLOCO, e bloco não é campo — fica pra tarefa de tela.
+  // 🔴 O BLOCO INTEIRO É UMA ENTRADA, e é ela que carrega o "não sei" do
+  // horário (ruling H1, 2026-09-26). `abre` e `fecha` são `obrigatorio: true`,
+  // e isso NÃO contradiz o `horario` ser opcional no schema: o bloco pode
+  // faltar, mas um bloco com só metade da faixa não é ficha. Sem esta entrada
+  // não existiria caminho nenhum pra dizer "este lugar não fecha por horário"
+  // — e a régua do app (`src/types/ficha.ts`, `src/lib/horario.ts:117`) é que
+  // ficha sem horário NUNCA fecha. A régua tem que ser alcançável do celular.
+  { caminho: "horario", especie: "bloco", obrigatorio: false, grupo: "quando" },
   { caminho: "horario.abre", especie: "hora", obrigatorio: true, grupo: "quando" },
   { caminho: "horario.fecha", especie: "hora", obrigatorio: true, grupo: "quando" },
   { caminho: "dias", especie: "lista", obrigatorio: false, grupo: "quando", opcoes: DIAS },
@@ -114,6 +121,25 @@ export const CAMPOS_DA_FICHA: readonly CampoDaFicha[] = [
   { caminho: "discriminador.como_ler", especie: "prosa", obrigatorio: true, grupo: "discriminador" },
   { caminho: "discriminador.permissao_abortar", especie: "prosa", obrigatorio: true, grupo: "discriminador" },
 ] as const satisfies readonly CampoDaFicha[];
+
+/** Os caminhos de espécie `bloco`. Derivado do registro, nunca repetido à mão.
+ *
+ *  🔴 `horario` É O ÚNICO HOJE, e isso foi MEDIDO, não suposto: o teste
+ *  "`horario` é o único bloco opcional do schema" caminha o `fichaSchema`
+ *  procurando toda chave OPCIONAL que é um objeto, e falha se aparecer outra.
+ *  Quem acrescentar um bloco opcional ao schema recebe o vermelho junto —
+ *  não precisa procurar de novo. (`condicao`, `custo`, `trajeto` e
+ *  `discriminador` são objetos OBRIGATÓRIOS: não têm "não sei" nenhum.) */
+const BLOCOS_OPCIONAIS: readonly string[] = CAMPOS_DA_FICHA.filter((c) => c.especie === "bloco").map(
+  (c) => c.caminho,
+);
+
+/** O bloco opcional que contém este caminho, se houver. É ele que a recusa de
+ *  "não sei" aponta: tirar `horario.abre` sozinho deixaria a ficha quebrada;
+ *  o que o dono quis dizer é tirar o `horario` inteiro. */
+function blocoQueContem(caminho: string): string | undefined {
+  return BLOCOS_OPCIONAIS.find((b) => caminho.startsWith(`${b}.`));
+}
 
 /** `trajeto.waypoints.2.nome` → `trajeto.waypoints[].nome`. Todo degrau que é
  *  só dígitos vira `[]` colado no degrau anterior. */
@@ -257,7 +283,16 @@ function escrever(no: unknown, degraus: readonly string[], valor: unknown, remov
  *
  *  O `caminho` é CONCRETO (`trajeto.waypoints.0.nome`), nunca o molde. */
 export function aplicarCampo(docAtual: string, caminho: string, valor: ValorDeCampo): string {
-  exigirCampo(caminho);
+  const campo = exigirCampo(caminho);
+  // 🔴 BLOCO NÃO SE GRAVA INTEIRO (ruling H1). Um `{abre, fecha}` de uma vez
+  // PASSARIA no `fichaSchema` — e é justamente por isso que a recusa mora
+  // aqui: gravar o objeto pulado por cima saltaria a validação campo a campo,
+  // que é o ponto inteiro do registro (o `hora` tem regex, o `lista` tem
+  // opções, e nada disso é conferido quando o objeto entra fechado).
+  if (campo.especie === "bloco") {
+    // PENDENTE: redação minha, o João ainda não leu
+    throw new Error(`\`${caminho}\` é um bloco: preencha os campos dele um a um, ou diga "não sei"`);
+  }
   recusarVazio(caminho, valor);
   const atual = fichaSchema.parse(JSON.parse(docAtual));
   return JSON.stringify(fichaSchema.parse(escrever(atual, caminho.split("."), valor, false)));
@@ -269,8 +304,13 @@ export function aplicarCampo(docAtual: string, caminho: string, valor: ValorDeCa
 export function removerCampo(docAtual: string, caminho: string): string {
   const campo = exigirCampo(caminho);
   if (campo.obrigatorio) {
+    const bloco = blocoQueContem(caminho);
     // PENDENTE: redação minha, o João ainda não leu
-    throw new Error(`\`${caminho}\` é obrigatório: sem ele a ficha não existe, então não tem "não sei"`);
+    throw new Error(
+      bloco
+        ? `\`${caminho}\` é obrigatório dentro de \`${bloco}\`: o "não sei" aqui é tirar o \`${bloco}\` inteiro`
+        : `\`${caminho}\` é obrigatório: sem ele a ficha não existe, então não tem "não sei"`,
+    );
   }
   const atual = fichaSchema.parse(JSON.parse(docAtual));
   return JSON.stringify(fichaSchema.parse(escrever(atual, caminho.split("."), undefined, true)));

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
 import { aplicarCampo, removerCampo } from "@/lib/campos-da-ficha";
 import { loadAll } from "@/lib/ficha";
+import { aberturaDaFicha, fechadoAgora } from "@/lib/horario";
+import { fichaSchema } from "@/types/ficha";
 
 // 🔴 C5 da revisão do controlador: `.find` sem guarda devolve `undefined`, e
 // `JSON.stringify(undefined)` é o VALOR `undefined` — que só estoura lá na
@@ -20,6 +22,16 @@ function estouro(fn: () => unknown): unknown {
   }
   throw new Error("não estourou, e devia");
 }
+
+// A Rampa não tem `horario` — quem tem é a Pedra Furada (05:00–17:00). O
+// `dias === undefined` é exigência do teste da CONSEQUÊNCIA lá embaixo: a hora
+// precisa ser a ÚNICA causa de fechamento, senão tirar o horário não muda a
+// resposta do motor e o teste mediria outra coisa.
+const comHora = loadAll().find((f) => f.horario !== undefined && f.dias === undefined);
+if (!comHora) {
+  throw new Error("nenhuma ficha do acervo tem `horario` sem `dias`; o bloco H1 ficaria sem prova");
+}
+const DOC_HORA = JSON.stringify(comHora);
 
 describe("aplicarCampo", () => {
   it("alcança chave de 1º nível", () => {
@@ -178,5 +190,76 @@ describe("removerCampo — o 'não sei'", () => {
     const antes = JSON.parse(DOC);
     const depois = JSON.parse(removerCampo(DOC, "piso"));
     expect({ ...depois, piso: antes.piso }).toEqual(antes);
+  });
+});
+
+// 🔴 RULING H1 (2026-09-26). Antes disto não existia caminho nenhum pra dizer
+// "este lugar não fecha por horário": `horario` é opcional no schema, mas
+// `abre` e `fecha` são obrigatórios DENTRO dele, então nenhuma remoção de
+// campo alcançava a régua "ficha sem horário NUNCA fecha". O bloco inteiro
+// virou entrada do registro, de espécie `bloco`.
+describe("o bloco opcional inteiro — o 'não sei' do horário", () => {
+  it("remover o bloco tira a chave, e o documento continua válido", () => {
+    const depois = JSON.parse(removerCampo(DOC_HORA, "horario"));
+    expect("horario" in depois).toBe(false);
+    expect(() => fichaSchema.parse(depois)).not.toThrow();
+  });
+
+  // 🔴 A CONSEQUÊNCIA DE VERDADE, medida no motor que a tela usa
+  // (`fechadoAgora`, `src/lib/horario.ts:117`) — não na presença da chave.
+  // Sem esta asserção, o teste de cima prova que uma chave sumiu do JSON e
+  // nada sobre o que o app passa a dizer.
+  it("o lugar DEIXA DE FECHAR por horário depois do 'não sei'", () => {
+    const seisDaTarde = { minutos: 18 * 60, dia: 3, epochS: 0 }; // 18h, quarta
+    const antes = fichaSchema.parse(JSON.parse(DOC_HORA));
+    expect(fechadoAgora(aberturaDaFicha(antes), seisDaTarde), "a premissa: às 18h ele fecha").toBe(true);
+
+    const depois = fichaSchema.parse(JSON.parse(removerCampo(DOC_HORA, "horario")));
+    expect(fechadoAgora(aberturaDaFicha(depois), seisDaTarde)).toBe(false);
+  });
+
+  it("só o bloco sai; todo o resto sai idêntico", () => {
+    const antes = JSON.parse(DOC_HORA);
+    const depois = JSON.parse(removerCampo(DOC_HORA, "horario"));
+    expect({ ...depois, horario: antes.horario }).toEqual(antes);
+  });
+
+  it("tirar o bloco de quem já não tem é inofensivo, e não inventa a chave", () => {
+    const depois = JSON.parse(removerCampo(DOC, "horario"));
+    expect("horario" in depois).toBe(false);
+    expect(depois).toEqual(JSON.parse(DOC));
+  });
+
+  // 🔴 ESTA É A RECUSA QUE O SCHEMA NÃO FARIA. `{abre, fecha}` bem formado
+  // PASSA no `fichaSchema` — se a guarda do registro sumir, esta chamada não
+  // estoura de jeito nenhum, e a mutação morre no `estouro()` e não num
+  // `toThrow()` de fachada.
+  it("gravar o bloco inteiro é RECUSADO, e quem recusa é o registro", () => {
+    const e = estouro(() => aplicarCampo(DOC_HORA, "horario", { abre: "06:00", fecha: "18:00" } as never));
+    expect(e).not.toBeInstanceOf(ZodError);
+    expect((e as Error).message).toContain("bloco");
+    expect((e as Error).message).toContain("horario");
+    // e o documento não mudou
+    expect(JSON.parse(DOC_HORA).horario).toEqual(comHora.horario);
+  });
+
+  it("gravar meia hora do bloco continua valendo — o bloco não trancou os campos", () => {
+    const depois = JSON.parse(aplicarCampo(DOC_HORA, "horario.abre", "06:00"));
+    expect(depois.horario.abre).toBe("06:00");
+    expect(depois.horario.fecha).toBe(comHora.horario!.fecha);
+  });
+
+  // 🔴 E A ARMADILHA DA M3 DE NOVO, no caso mais escorregadio do arquivo:
+  // `horario` sem `abre` TAMBÉM estoura no Zod. Um `toThrow()` aqui ficaria
+  // verde com a guarda do registro apagada, e o dono receberia um ZodError em
+  // inglês em vez de "o 'não sei' aqui é tirar o horario inteiro".
+  it("remover MEIA hora é recusado pelo REGISTRO, e a recusa aponta o bloco", () => {
+    for (const caminho of ["horario.abre", "horario.fecha"]) {
+      const e = estouro(() => removerCampo(DOC_HORA, caminho));
+      expect(e, caminho).not.toBeInstanceOf(ZodError);
+      expect((e as Error).message, caminho).toContain("obrigatório");
+      expect((e as Error).message, caminho).toContain(caminho);
+      expect((e as Error).message, caminho).toContain("tirar o `horario` inteiro");
+    }
   });
 });
