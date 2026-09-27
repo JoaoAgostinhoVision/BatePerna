@@ -24,6 +24,10 @@ let c: Client;
 let SLUG: string;
 let ficha: Ficha;
 let outra: Ficha;
+// 🔴 Task 3: o acervo INTEIRO, porque o portão de coerência compara uma ficha
+// com as outras — e dois dos guardas de lá precisam de um TERCEIRO lugar, não
+// só do par `ficha`/`outra`. Achado por nome, nunca por posição na lista.
+let acervo: Ficha[];
 let cookieBom: string;
 let PUT: typeof import("@/app/api/admin/ficha/route").PUT;
 
@@ -44,6 +48,7 @@ beforeEach(async () => {
   const fichas = await semearAcervo(c);
   ficha = fichas.find((f) => f.slug === "rampa-do-pepe")!;
   outra = fichas.find((f) => f.slug !== ficha.slug)!;
+  acervo = fichas;
   SLUG = ficha.slug;
 
   vi.stubEnv("ADMIN_SENHA", SENHA);
@@ -130,11 +135,23 @@ describe("PUT /api/admin/ficha", () => {
   // tudo": um caminho ANINHADO, que a rota não sabia alcançar até esta rodada,
   // tem que atravessar a porta inteira e gravar. Sem ele, um registro vazio
   // (ou um `return 400` no lugar da guarda) passaria verde no teste de cima.
+  //
+  // 🔴 A CARGA MUDOU NA TAREFA 3 (2026-09-27), e o caso continua provando a
+  // MESMA coisa. Ele gravava `custo.valor: "R$ 12,00"` numa ficha cujo chip diz
+  // "R$ 5 · portão" — **uma ficha que anuncia um preço no topo e cobra outro no
+  // ticket**, que é exatamente o defeito de `chip-bate-com-preco` (o chip
+  // anunciando um décimo do preço, auditoria de 03/09). Enquanto a coerência
+  // morava num arquivo de teste isso passava 200; com o portão na rota é 409, e
+  // o 409 está CERTO. Quem prova o 409 é o caso homônimo lá embaixo; aqui a
+  // carga passou a ser um valor que não mente — o mesmo preço, outra redação —
+  // porque o que este caso guarda é que um caminho ANINHADO atravessa a porta
+  // inteira e grava.
   it("campo aninhado que entrou no registro (custo.valor): 200, e grava", async () => {
-    const res = await PUT(pedido({ slug: SLUG, campo: "custo.valor", valor: "R$ 12,00" }, cookieBom));
+    const VALOR = "R$ 5 por pessoa · cobrado na portaria";
+    const res = await PUT(pedido({ slug: SLUG, campo: "custo.valor", valor: VALOR }, cookieBom));
     expect(res.status).toBe(200);
     const atual = await versaoAtual(c, SLUG);
-    expect(JSON.parse(atual!.doc).custo.valor).toBe("R$ 12,00");
+    expect(JSON.parse(atual!.doc).custo.valor).toBe(VALOR);
     expect(JSON.parse(atual!.doc).custo.tag).toBe("pago");
   });
 
@@ -309,5 +326,338 @@ describe("PUT /api/admin/ficha — voltar a uma versão (versaoId)", () => {
     const res = await PUT(req);
     expect(res.status).toBe(400);
     expect(await historico(c, SLUG)).toHaveLength(1);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Task 3 da rodada do painel completo (2026-09-27)
+//
+// 🔴 O QUE O STEP 0 MEDIU, E POR QUE ESTE CABEÇALHO EXISTE: dos oito casos que
+// o brief pedia, SEIS já passavam contra a rota INTACTA — caminho aninhado,
+// número/booleano, string vazia, campo fora do registro e os DOIS de `naoSei`
+// (estes últimos passavam pela porta ERRADA, porque `aplicarCampo(doc, campo,
+// undefined)` já apagava a chave sem passar por `removerCampo`). Caso que já
+// passava antes não prova implementação nenhuma, então os casos abaixo são os
+// que a tabela de mutação sustenta, e nenhum deles é cópia de um que já estava
+// verde.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** A ficha `f` com o chip do topo trocado — mentira de preço montada à mão pra
+ *  pôr violação no acervo SEM passar pela porta (é como ela chega de verdade:
+ *  pela semente, ou por "voltar" a uma versão que o acervo de hoje reprova). */
+const comChip = (f: Ficha, curto: string) => JSON.stringify({ ...f, custo: { ...f.custo, curto } });
+
+/** A ficha `f` SEM o bloco `horario`. */
+const semHorario = (f: Ficha) => {
+  const { horario: _fora, ...resto } = f;
+  return JSON.stringify(resto);
+};
+
+describe("PUT /api/admin/ficha — os três formatos são exaustivos e exclusivos", () => {
+  // 🔴 O QUARTO CAMINHO NÃO DECLARADO, e o Step 0 o mediu vivo: `{slug, campo:
+  // "piso"}` devolvia **200 e o `piso` sumia da ficha**. Era um "não sei"
+  // ACIDENTAL — não passava por `removerCampo`, então não tinha a checagem de
+  // campo obrigatório nem frase nenhuma —, e enquanto ele existisse os dois
+  // casos de `naoSei` do brief ficariam verdes SEM `naoSei` implementado.
+  //
+  // ⚠️ A asserção que importa é a SEGUNDA: 400 sozinho não distingue "recusou"
+  // de "recusou depois de apagar".
+  it("remoção acidental — corpo com campo e sem valor e sem naoSei: 400, e o campo CONTINUA na ficha", async () => {
+    const res = await PUT(pedido({ slug: SLUG, campo: "piso" }, cookieBom));
+    expect(res.status).toBe(400);
+    const doc = JSON.parse((await versaoAtual(c, SLUG))!.doc);
+    expect("piso" in doc, "o campo não pode ter sumido por um corpo malformado").toBe(true);
+    expect(doc.piso).toBe(ficha.piso);
+    expect(await historico(c, SLUG)).toHaveLength(1);
+  });
+
+  it("corpo com valor E naoSei juntos: 400, e nada é gravado", async () => {
+    const res = await PUT(pedido({ slug: SLUG, campo: "voz", valor: "x", naoSei: true }, cookieBom));
+    expect(res.status).toBe(400);
+    expect(await historico(c, SLUG)).toHaveLength(1);
+  });
+
+  // 🔴 `naoSei: false` é o irmão perigoso do de cima: lido por `in`, ele PEDIRIA
+  // remoção dizendo "não". Uma tela que mandasse a bandeira desligada apagaria
+  // o campo do dono.
+  it("naoSei: false — 400, e o campo CONTINUA na ficha", async () => {
+    const res = await PUT(pedido({ slug: SLUG, campo: "piso", naoSei: false }, cookieBom));
+    expect(res.status).toBe(400);
+    expect("piso" in JSON.parse((await versaoAtual(c, SLUG))!.doc)).toBe(true);
+    expect(await historico(c, SLUG)).toHaveLength(1);
+  });
+
+  it("corpo com naoSei e versaoId ao mesmo tempo: 400, e nada é gravado", async () => {
+    const v1 = await gravarVersao(c, SLUG, JSON.stringify(ficha), "semente", AGORA);
+    const antes = await historico(c, SLUG);
+    const res = await PUT(pedido({ slug: SLUG, campo: "piso", naoSei: true, versaoId: v1 }, cookieBom));
+    expect(res.status).toBe(400);
+    expect(await historico(c, SLUG)).toHaveLength(antes.length);
+  });
+});
+
+describe('PUT /api/admin/ficha — o "não sei" de verdade (removerCampo)', () => {
+  it("naoSei tira a chave, e o histórico ganha versão", async () => {
+    const res = await PUT(pedido({ slug: SLUG, campo: "piso", naoSei: true }, cookieBom));
+    expect(res.status).toBe(200);
+    expect("piso" in JSON.parse((await versaoAtual(c, SLUG))!.doc)).toBe(false);
+    expect(await historico(c, SLUG)).toHaveLength(2);
+  });
+
+  // 🔴 ESTE CASO TEM UMA ARMADILHA, e a asserção do CORPO é o que a desarma: com
+  // `aplicarCampo(doc, "voz", undefined)` — o caminho acidental de antes — ele
+  // também dava 400, mas por ZodError (`voz` é obrigatória no schema), com corpo
+  // VAZIO. Medir só o status provaria o schema, não a rota. A frase só existe
+  // dentro de `removerCampo`, então o corpo é a prova de que a rota passou por
+  // lá: é a diferença entre "deu erro" e "o dono foi informado de que este campo
+  // não tem 'não sei'".
+  it('naoSei em campo obrigatório: 400, nada gravado, e a frase diz que não tem "não sei"', async () => {
+    const res = await PUT(pedido({ slug: SLUG, campo: "voz", naoSei: true }, cookieBom));
+    expect(res.status).toBe(400);
+    expect(await res.text()).toMatch(/`voz` é obrigatório: sem ele a ficha não existe/);
+    expect(await historico(c, SLUG)).toHaveLength(1);
+  });
+
+  // 🔴 ZodError NÃO VAZA PRA TELA: quando a recusa vem do schema (e não de uma
+  // frase escrita à mão), o corpo é vazio. Sem isto, o dono leria
+  // `[{"code":"invalid_type",...}]` no celular.
+  it("valor de tipo errado: 400 com corpo VAZIO — o JSON do zod não vira texto de tela", async () => {
+    const res = await PUT(pedido({ slug: SLUG, campo: "voz", valor: 42 }, cookieBom));
+    expect(res.status).toBe(400);
+    expect(await res.text()).toBe("");
+    expect(await historico(c, SLUG)).toHaveLength(1);
+  });
+});
+
+describe("PUT /api/admin/ficha — o bloco horario, e a IDA E VOLTA", () => {
+  // `pedra-furada-de-venturosa` é a ficha que TEM `horario` e cuja prosa NÃO
+  // cita hora de fechar — tirar o bloco dela não mexe com a coerência, o que
+  // deixa estes casos medindo o bloco e mais nada.
+  const PEDRA = "pedra-furada-de-venturosa";
+
+  it("naoSei no bloco inteiro: 200, e o horário sai da ficha", async () => {
+    const res = await PUT(pedido({ slug: PEDRA, campo: "horario", naoSei: true }, cookieBom));
+    expect(res.status).toBe(200);
+    expect("horario" in JSON.parse((await versaoAtual(c, PEDRA))!.doc)).toBe(false);
+    expect(await historico(c, PEDRA)).toHaveLength(2);
+  });
+
+  // 🔴 A 47ª ESPÉCIE (duas portas em série): `campoPorCaminho("horario.abre")`
+  // ACHA a entrada, então a guarda da lista branca deixa passar; quem recusa é
+  // `aplicarCampo`. Só o status não distingue as duas — a frase, que nomeia o
+  // BLOCO, distingue.
+  it("horario.abre sozinho com o bloco AUSENTE: 400, e a recusa nomeia o bloco", async () => {
+    // A Rampa é a ficha do acervo que não tem `horario`.
+    expect(ficha.horario, "a premissa deste caso: a Rampa não tem horário").toBeUndefined();
+    const res = await PUT(pedido({ slug: SLUG, campo: "horario.abre", valor: "09:00" }, cookieBom));
+    expect(res.status).toBe(400);
+    expect(await res.text()).toMatch(/`horario` não está preenchido nesta ficha/);
+    expect(await historico(c, SLUG)).toHaveLength(1);
+  });
+
+  // 🔴🔴 A IDA E VOLTA — O CASO QUE A LEI DELE EXIGE. Sem ele, o "não sei" do
+  // horário é uma porta de mão única pela ROTA: o dono desliga o horário, muda
+  // de ideia, e religá-lo passa a exigir um desenvolvedor no banco. A emenda C1
+  // da Tarefa 1 consertou isso em `aplicarCampo`; aqui é a prova de que a
+  // consertou ONDE O CELULAR ALCANÇA.
+  it("tirar o horário e RELIGÁ-LO inteiro, tudo pela API: o bloco volta", async () => {
+    expect((await PUT(pedido({ slug: PEDRA, campo: "horario", naoSei: true }, cookieBom))).status).toBe(200);
+    expect("horario" in JSON.parse((await versaoAtual(c, PEDRA))!.doc)).toBe(false);
+
+    const volta = await PUT(
+      pedido({ slug: PEDRA, campo: "horario", valor: { abre: "08:00", fecha: "17:00" } }, cookieBom),
+    );
+    expect(volta.status, await volta.text()).toBe(200);
+    expect(JSON.parse((await versaoAtual(c, PEDRA))!.doc).horario).toEqual({ abre: "08:00", fecha: "17:00" });
+    expect(await historico(c, PEDRA)).toHaveLength(3);
+  });
+
+  // O par do de cima: com o bloco PRESENTE, gravar o objeto fechado por cima
+  // pularia a conferência folha a folha, e é recusado.
+  it("gravar o bloco horario quando ele JÁ existe: 400, e nada é gravado", async () => {
+    const res = await PUT(
+      pedido({ slug: PEDRA, campo: "horario", valor: { abre: "08:00", fecha: "17:00" } }, cookieBom),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.text()).toMatch(/`horario` já está preenchido/);
+    expect(await historico(c, PEDRA)).toHaveLength(1);
+  });
+
+  // 🔴 VALIDAÇÃO FOLHA A FOLHA (C1): a recusa nomeia `horario.abre`, não devolve
+  // um erro cru de schema sobre o objeto inteiro. É a diferença entre o dono
+  // saber qual das duas horas está errada e não saber.
+  it("religar o bloco com uma hora malformada: 400 nomeando horario.abre", async () => {
+    expect((await PUT(pedido({ slug: PEDRA, campo: "horario", naoSei: true }, cookieBom))).status).toBe(200);
+    const res = await PUT(
+      pedido({ slug: PEDRA, campo: "horario", valor: { abre: "8h", fecha: "17:00" } }, cookieBom),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.text()).toMatch(/`horario\.abre` não serve/);
+    expect(await historico(c, PEDRA)).toHaveLength(2); // ⬅ só a semente e o "não sei"
+  });
+});
+
+describe("PUT /api/admin/ficha — molde e waypoint concreto", () => {
+  // 🔴 A 47ª ESPÉCIE outra vez, e aqui ela é mais escorregadia: o molde ESTÁ no
+  // registro, então `campoPorCaminho` o acha e a guarda da lista branca deixa
+  // passar. Quem recusa é `exigirCampo`, uma porta abaixo. A frase é o que prova
+  // QUAL das duas recusou.
+  it("o molde do waypoint (trajeto.waypoints[].nome): 400, nada gravado, e a recusa nomeia o molde", async () => {
+    const res = await PUT(pedido({ slug: SLUG, campo: "trajeto.waypoints[].nome", valor: "x" }, cookieBom));
+    expect(res.status).toBe(400);
+    expect(await res.text()).toMatch(/é o molde, não um campo: diga o índice/);
+    expect(await historico(c, SLUG)).toHaveLength(1);
+    expect(JSON.parse((await versaoAtual(c, SLUG))!.doc).trajeto.waypoints[0].nome).toBe(
+      ficha.trajeto.waypoints[0].nome,
+    );
+  });
+
+  // O par: o caminho CONCRETO atravessa e grava. É dele que a tarefa da cadeia
+  // de trajeto vai depender, e nenhum caso do brief o tocava.
+  it("waypoint concreto (trajeto.waypoints.0.nota): 200, e grava só aquela folha", async () => {
+    const res = await PUT(
+      pedido({ slug: SLUG, campo: "trajeto.waypoints.0.nota", valor: "entrada pela porteira azul" }, cookieBom),
+    );
+    expect(res.status).toBe(200);
+    const doc = JSON.parse((await versaoAtual(c, SLUG))!.doc);
+    expect(doc.trajeto.waypoints[0].nota).toBe("entrada pela porteira azul");
+    expect(doc.trajeto.waypoints[0].nome).toBe(ficha.trajeto.waypoints[0].nome);
+  });
+});
+
+describe("PUT /api/admin/ficha — o portão da coerência", () => {
+  const VEU = "veu-de-noiva-de-bonito";
+  const nomeDoVeu = () => acervo.find((f) => f.slug === VEU)!.trajeto.waypoints[0].nome;
+
+  // 🔴 A RECUSA. O schema aceita `custo.curto: "R$ 1"` sem pestanejar — é uma
+  // string. Só a coerência vê que o chip do topo passaria a anunciar R$ 1 numa
+  // ficha que cobra R$ 5, que é o defeito de 03/09 (o chip anunciando um décimo
+  // do preço, com a suíte inteira verde).
+  //
+  // ⚠️ A asserção do corpo é na FRASE INTEIRA, não "o texto aparece em algum
+  // lugar": ela tem que nomear o lugar e os DOIS preços, senão o dono lê que
+  // algo está errado e não sabe o quê.
+  it("gravação que passa no schema e mente sobre o lugar: 409, nada gravado, e a frase volta", async () => {
+    const res = await PUT(pedido({ slug: SLUG, campo: "custo.curto", valor: "R$ 1" }, cookieBom));
+    expect(res.status).toBe(409);
+    const nome = ficha.trajeto.waypoints[0].nome;
+    expect(await res.text()).toMatch(
+      new RegExp(`O chip do topo de ${nome} diz R\\$ 1 e o custo completo diz R\\$ 5`),
+    );
+    expect(await historico(c, SLUG)).toHaveLength(1);
+  });
+
+  // 🔴🔴 O GUARDA DE SILÊNCIO, e ele é o mais importante deste arquivo.
+  //
+  // Sem ele, a mutação "recusa QUALQUER violação, não só a nova" sobrevive — e
+  // com ela **uma única incoerência preexistente no acervo tranca TODA gravação
+  // de TODO lugar, para sempre**, inclusive as que a consertariam. Numa PORTA o
+  // falso positivo é pior que o falso negativo: ele trava o dono de gravar uma
+  // VERDADE. É a 48ª espécie, e foi o defeito mais feio da Tarefa 2.
+  //
+  // O acervo sujo é montado por `gravarVersao` direto, que é como a sujeira
+  // chega de verdade: a semente, ou um "voltar" a uma versão que o acervo de
+  // hoje reprova (esse caminho grava verbatim e sem coerência, de propósito).
+  it("acervo que JÁ tem violação preexistente não tranca gravação legítima em outro lugar", async () => {
+    const veu = acervo.find((f) => f.slug === VEU)!;
+    // Tirar o `horario` do Véu põe uma violação REAL no acervo: a prosa dele diz
+    // "fecha às 17h", e sem campo o carimbo nunca fecha.
+    await gravarVersao(c, VEU, semHorario(veu), "semente", AGORA);
+
+    const res = await PUT(pedido({ slug: SLUG, campo: "voz", valor: "voz nova e honesta" }, cookieBom));
+
+    expect(res.status, await res.text()).toBe(200);
+    expect(JSON.parse((await versaoAtual(c, SLUG))!.doc).voz).toBe("voz nova e honesta");
+    expect(await historico(c, SLUG)).toHaveLength(2);
+  });
+
+  // 🔴 POR QUE A IDENTIDADE É `regra` + `slug` + `frase`, E NÃO SÓ A REGRA.
+  //
+  // Duas fichas, a MESMA regra: o Véu já viola `chip-bate-com-preco` (chip R$ 1,
+  // valor R$ 10), e a gravação introduz a violação da MESMA regra na Rampa (chip
+  // R$ 2, valor R$ 5). Comparando só pela regra, a violação nova sumiria no diff
+  // — a porta deixaria passar exatamente o defeito que ela existe pra pegar, e
+  // só porque outro lugar já tinha o mesmo tipo de problema.
+  it("a violação NOVA é recusada mesmo quando aquela MESMA regra já acusava outro lugar", async () => {
+    const veu = acervo.find((f) => f.slug === VEU)!;
+    await gravarVersao(c, VEU, comChip(veu, "R$ 1 · entrada"), "semente", AGORA);
+
+    const res = await PUT(pedido({ slug: SLUG, campo: "custo.curto", valor: "R$ 2" }, cookieBom));
+
+    expect(res.status).toBe(409);
+    const nome = ficha.trajeto.waypoints[0].nome;
+    expect(await res.text(), "a frase tem que ser a da RAMPA, não a do Véu").toMatch(
+      new RegExp(`O chip do topo de ${nome} diz R\\$ 2`),
+    );
+    expect(await historico(c, SLUG)).toHaveLength(1);
+  });
+
+  // O portão vale nos DOIS caminhos de gravação: tirar um campo também pode
+  // introduzir violação. Aqui o "não sei" no horário do Véu deixaria a prosa
+  // dele ("fecha às 17h") prometendo um fechamento que o carimbo nunca cumpre.
+  it('o "não sei" também passa pelo portão: remoção que introduz violação dá 409', async () => {
+    const res = await PUT(pedido({ slug: VEU, campo: "horario", naoSei: true }, cookieBom));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toMatch(
+      new RegExp(`O texto de ${nomeDoVeu()} diz que fecha às 17h, mas a ficha não tem horário preenchido`),
+    );
+    expect(await historico(c, VEU)).toHaveLength(1);
+    expect("horario" in JSON.parse((await versaoAtual(c, VEU))!.doc)).toBe(true);
+  });
+
+  // 🔴 VOLTAR NÃO PASSA PELA COERÊNCIA, e isso é deliberado desde a Task 7 da
+  // rodada passada: voltar a uma versão que o acervo de hoje reprova é decisão
+  // DELE, não erro novo. Rodar coerência aqui transformaria o arquivo histórico
+  // em algo que o dono não pode mais alcançar.
+  it("voltar a uma versão que o acervo de hoje reprova NÃO é barrado pela coerência", async () => {
+    const incoerente = await gravarVersao(c, SLUG, comChip(ficha, "R$ 1 · portão"), "semente", AGORA);
+    await gravarVersao(c, SLUG, JSON.stringify(ficha), "painel", AGORA + 10);
+
+    const res = await PUT(pedido({ slug: SLUG, versaoId: incoerente }, cookieBom));
+
+    expect(res.status, await res.text()).toBe(200);
+    expect(JSON.parse((await versaoAtual(c, SLUG))!.doc).custo.curto).toBe("R$ 1 · portão");
+  });
+
+  // 🔴 DOCUMENTO ILEGÍVEL DE OUTRO LUGAR NÃO TRANCA A GRAVAÇÃO DESTE. Sem o
+  // `try/catch` de `acervoComo`, um `doc` que não passa no `fichaSchema` de hoje
+  // derruba a gravação com exceção — e o dono fica impedido de editar o lugar A
+  // por causa de um defeito no lugar B, que ele não conserta sem editar.
+  it("documento ilegível de outro lugar no acervo não impede a gravação deste", async () => {
+    await gravarVersao(c, VEU, JSON.stringify({ slug: VEU }), "semente", AGORA);
+
+    const res = await PUT(pedido({ slug: SLUG, campo: "voz", valor: "continua editável" }, cookieBom));
+
+    expect(res.status, await res.text()).toBe(200);
+    expect(JSON.parse((await versaoAtual(c, SLUG))!.doc).voz).toBe("continua editável");
+  });
+
+  // 🔴🔴 A SAÍDA, E ELA É A RÉGUA DA LEI DELE: "atualizar dado mutável sem
+  // mexer no código".
+  //
+  // Medido nesta tarefa: com o portão no lugar, **trocar o preço de um lugar
+  // pago é impossível numa gravação só** — escrever `custo.valor` primeiro
+  // diverge do chip antigo, e escrever `custo.curto` primeiro diverge do valor
+  // antigo. Os dois lados dão 409, o que poderia parecer uma trava.
+  //
+  // Não é: o chip é OPCIONAL, então o caminho existe e é todo do celular — "não
+  // sei" no chip, preço novo, chip novo. Este caso é a prova de que ele existe,
+  // e o primeiro `expect` é a prova de que a fricção também é real (é o que o
+  // João precisa saber pra decidir a redação da frase).
+  it("trocar o preço do lugar é possível do celular: três gravações, nenhum desenvolvedor", async () => {
+    const VALOR_NOVO = "R$ 12 por pessoa · cobrado no portão da entrada";
+
+    const direto = await PUT(pedido({ slug: SLUG, campo: "custo.valor", valor: VALOR_NOVO }, cookieBom));
+    expect(direto.status, "de uma vez não dá — o chip antigo passaria a mentir").toBe(409);
+
+    expect((await PUT(pedido({ slug: SLUG, campo: "custo.curto", naoSei: true }, cookieBom))).status).toBe(200);
+    const comValor = await PUT(pedido({ slug: SLUG, campo: "custo.valor", valor: VALOR_NOVO }, cookieBom));
+    expect(comValor.status, await comValor.text()).toBe(200);
+    const comChipNovo = await PUT(pedido({ slug: SLUG, campo: "custo.curto", valor: "R$ 12 · portão" }, cookieBom));
+    expect(comChipNovo.status, await comChipNovo.text()).toBe(200);
+
+    const doc = JSON.parse((await versaoAtual(c, SLUG))!.doc);
+    expect(doc.custo.valor).toBe(VALOR_NOVO);
+    expect(doc.custo.curto).toBe("R$ 12 · portão");
   });
 });

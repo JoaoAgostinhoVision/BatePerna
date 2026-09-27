@@ -1,10 +1,80 @@
+import { ZodError } from "zod";
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
-import { getClient, gravarVersao, versaoAtual, versaoPorId } from "@/lib/db";
-import { aplicarCampo, campoPorCaminho, type ValorDeCampo } from "@/lib/campos-da-ficha";
-import { fichaSchema } from "@/types/ficha";
+import { type FichaVersao, getClient, gravarVersao, versaoAtual, versaoPorId, versoesAtuais } from "@/lib/db";
+import { aplicarCampo, campoPorCaminho, removerCampo, type ValorDeCampo } from "@/lib/campos-da-ficha";
+import { type Violacao, violacoesDoAcervo } from "@/lib/coerencia";
+import { type Ficha, fichaSchema } from "@/types/ficha";
 
 export const dynamic = "force-dynamic";
+
+const TEXTO = { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } as const;
+
+/** Traduz o estouro de `aplicarCampo`/`removerCampo` em 400 **com a frase no
+ *  corpo**.
+ *
+ *  🔴 ATÉ 2026-09-27 ESTA ROTA DEVOLVIA `""` EM TODO 400, e as frases de
+ *  `campos-da-ficha.ts` morriam aqui — MEDIDO no Step 0 da Tarefa 3:
+ *  `{campo: "horario.abre"}` numa ficha sem `horario` devolvia 400 com corpo
+ *  vazio. A frase existe justamente pra dizer ao dono O QUE FAZER
+ *  ("preencha o `horario` inteiro de uma vez"), e descartá-la na porta é a
+ *  régua inalcançável de novo: ele leva um 400 e não sabe o que mudou.
+ *
+ *  ⚠️ ZodError NÃO VAZA. A `message` dele é um JSON de `invalid_type`, que não
+ *  é português e não diz nada a ninguém — ali o corpo continua vazio. Todo
+ *  caminho que tem frase pra ele já a escreveu à mão (`recusarVazio`,
+ *  `validarFolha`, `gravarBloco`, `exigirCampo`); o que sobra pro zod é o
+ *  documento inteiro não fechando, e disso o dono não tem o que fazer campo a
+ *  campo. */
+function recusar400(erro: unknown): Response {
+  const frase = erro instanceof ZodError || !(erro instanceof Error) ? "" : erro.message;
+  return new Response(frase, { status: 400, headers: TEXTO });
+}
+
+/** A identidade COMPLETA de uma violação — `regra` **+** `slug` **+** `frase`.
+ *
+ *  🔴 POR QUE OS TRÊS, e não só a `regra`: duas fichas podem violar a MESMA
+ *  regra, e o acervo pode já carregar a violação de uma delas. Comparando só
+ *  pela regra, a violação nova da outra ficha sumiria no diff — a porta
+ *  deixaria passar exatamente o defeito que ela existe pra pegar. E a `frase`
+ *  entra porque uma mesma regra no mesmo slug muda de conteúdo quando o dado
+ *  muda (o chip dizia R$ 1, passou a dizer R$ 2): sem ela, trocar um valor
+ *  errado por outro valor errado atravessaria em silêncio. */
+function identidade(v: Violacao): string {
+  return JSON.stringify([v.regra, v.slug, v.frase]);
+}
+
+/** O acervo INTEIRO como fichas, com o documento de `slug` trocado por `doc`.
+ *
+ *  🔴 O ACERVO INTEIRO É EXIGÊNCIA DO MÓDULO DE COERÊNCIA (P3 da rodada): duas
+ *  das treze regras comparam uma ficha com as outras, e lugar escondido volta.
+ *
+ *  ⚠️ SE `slug` NÃO ESTIVER NO MAPA, ELE ENTRA — e isto é estado impossível
+ *  aqui (o `versaoAtual` lá embaixo já garantiu que existe versão deste lugar,
+ *  e ela vem da mesma tabela). Escrito em vez de implícito porque o dia em que
+ *  deixar de ser impossível — criar lugar, T11/T12 — é o dia em que a ficha
+ *  nova precisa ser conferida CONTRA o acervo, não ignorada por ele.
+ *
+ *  🔴 DOCUMENTO QUE NÃO ABRE FICA DE FORA, E ISSO É DELIBERADO. Um `doc` de
+ *  OUTRO lugar que não passe no `fichaSchema` de hoje derrubaria a gravação
+ *  inteira com exceção — e trancaria o dono de editar o lugar A por causa de
+ *  um defeito no lugar B, que ele não pode consertar sem... editar. A porta
+ *  mede contra o que ela consegue ler. O documento DESTE slug nunca cai aqui:
+ *  ele acabou de sair de `aplicarCampo`/`removerCampo`, que o parseiam. */
+function acervoComo(versoes: Map<string, FichaVersao>, slug: string, doc: string): Ficha[] {
+  const docs = new Map([...versoes].map(([s, v]) => [s, v.doc] as const));
+  docs.set(slug, doc);
+
+  const fichas: Ficha[] = [];
+  for (const texto of docs.values()) {
+    try {
+      fichas.push(fichaSchema.parse(JSON.parse(texto)));
+    } catch {
+      // ver o docblock: ilegível fica de fora, nunca tranca a gravação.
+    }
+  }
+  return fichas;
+}
 
 /** Grava um campo novo sobre a ficha de `slug`, como uma versão NOVA em
  *  `ficha_versoes` — nunca um UPDATE (a tabela é append-only, ver `db.ts`).
@@ -17,7 +87,22 @@ export const dynamic = "force-dynamic";
  *  🔴 Task 7 (2026-09-26): o corpo agora aceita DOIS formatos — `{slug,
  *  campo, valor}` (editar um campo, Task 6) OU `{slug, versaoId}` (voltar a
  *  uma versão antiga). Nunca os dois juntos, nunca nenhum dos dois — as duas
- *  guardas de cima (config, sessão) valem pros dois formatos igual. */
+ *  guardas de cima (config, sessão) valem pros dois formatos igual.
+ *
+ *  🔴 Task 3 da rodada do painel completo (2026-09-27): são TRÊS formatos, e a
+ *  ordem ganhou um degrau NOVO no fim — a COERÊNCIA DO ACERVO.
+ *
+ *   - `{slug, campo, valor}`   — grava aquele campo
+ *   - `{slug, campo, naoSei}`  — TIRA a chave (`naoSei` tem que ser `true`)
+ *   - `{slug, versaoId}`       — volta a uma versão (não passa pela coerência)
+ *
+ *  ⚠️ E EXISTIA UM QUARTO, NÃO DECLARADO, que esta tarefa fecha — medido no
+ *  Step 0: `{slug, campo: "piso"}`, **sem `valor` e sem `naoSei`**, gravava 200
+ *  e o campo SUMIA da ficha. `aplicarCampo(doc, "piso", undefined)` escrevia
+ *  `piso: undefined`, o zod aceitava (é `.optional()`) e o `JSON.stringify`
+ *  descartava a chave. Era um "não sei" ACIDENTAL: não passava por
+ *  `removerCampo`, então não tinha a checagem de campo obrigatório nem a frase
+ *  que diz o que fazer — um corpo malformado apagava dado de um lugar real. */
 export async function PUT(req: Request): Promise<Response> {
   // 🔴 404, não 401: painel desligado não anuncia que existe. Mesma regra da
   // rota de aviso, e vem ANTES da sessão pela mesma razão — sem ADMIN_SENHA
@@ -43,8 +128,14 @@ export async function PUT(req: Request): Promise<Response> {
   // `null` estoura na hora. Mesma guarda da rota de aviso.
   if (typeof body !== "object" || body === null) return new Response("", { status: 400 });
 
-  const corpo = body as { slug?: unknown; campo?: unknown; valor?: unknown; versaoId?: unknown };
-  const { slug, campo, valor, versaoId } = corpo;
+  const corpo = body as {
+    slug?: unknown;
+    campo?: unknown;
+    valor?: unknown;
+    naoSei?: unknown;
+    versaoId?: unknown;
+  };
+  const { slug, campo, valor, naoSei, versaoId } = corpo;
   if (typeof slug !== "string") return new Response("", { status: 400 });
 
   // 🔴 C6 da revisão do controlador: os dois formatos são MUTUAMENTE
@@ -53,7 +144,7 @@ export async function PUT(req: Request): Promise<Response> {
   // checagem lê exatamente o que chegou no corpo, não uma coincidência de
   // tipo. Nem os dois formatos juntos, nem nenhum dos dois: 400.
   const trazVersaoId = "versaoId" in corpo;
-  const trazCampo = "campo" in corpo || "valor" in corpo;
+  const trazCampo = "campo" in corpo || "valor" in corpo || "naoSei" in corpo;
   if (trazVersaoId === trazCampo) return new Response("", { status: 400 });
 
   if (trazVersaoId) {
@@ -110,6 +201,22 @@ export async function PUT(req: Request): Promise<Response> {
     return Response.json({ id }, { headers: { "cache-control": "no-store" } });
   }
 
+  // 🔴 EXATAMENTE UM DE `valor` OU `naoSei`, e é isto que fecha o quarto
+  // formato não declarado (ver o docblock). `in` e nunca `!== undefined`, pela
+  // mesma razão de `:51-54`: `{"valor": null}` é uma caixa que CHEGOU com
+  // conteúdo (e `aplicarCampo` a recusa dizendo o tipo), enquanto `valor`
+  // ausente é corpo malformado — dois consertos diferentes, e `!== undefined`
+  // os confundiria num só.
+  const trazValor = "valor" in corpo;
+  const trazNaoSei = "naoSei" in corpo;
+  if (trazValor === trazNaoSei) return new Response("", { status: 400 });
+
+  // 🔴 `naoSei` SÓ VALE `true` — decisão desta tarefa, que o brief não tomava.
+  // Com a leitura por `in`, um corpo `{campo: "piso", naoSei: false}` pediria
+  // REMOÇÃO dizendo "não" — a tela que mandasse a bandeira desligada apagaria o
+  // campo. Falha fechada: qualquer outra coisa é 400.
+  if (trazNaoSei && naoSei !== true) return new Response("", { status: 400 });
+
   // 🔴 A LISTA BRANCA saiu de `CAMPOS_EDITAVEIS = ["voz"]` e virou o registro
   // de `campos-da-ficha.ts` (2026-09-26). O que ela guarda é o mesmo: sem ela,
   // um corpo com `{"campo":"slug"}` renomearia o lugar e quebraria todo link
@@ -130,9 +237,55 @@ export async function PUT(req: Request): Promise<Response> {
   // estouro dele (valor errado, caixa vazia) é traduzido em 400 aqui.
   let novoDoc: string;
   try {
-    novoDoc = aplicarCampo(versao.doc, campo, valor as ValorDeCampo);
-  } catch {
-    return new Response("", { status: 400 });
+    novoDoc = trazNaoSei ? removerCampo(versao.doc, campo) : aplicarCampo(versao.doc, campo, valor as ValorDeCampo);
+  } catch (erro) {
+    return recusar400(erro);
+  }
+
+  // 🔴 O PORTÃO DA COERÊNCIA — o degrau que a Tarefa 3 acrescentou, e o que ele
+  // recusa é SÓ A VIOLAÇÃO QUE ESTA GRAVAÇÃO INTRODUZ.
+  //
+  // As treze regras de `coerencia.ts` moravam num arquivo de teste: rodavam no
+  // laptop, antes do deploy. Um lugar que o dono edite do celular numa terça de
+  // manhã nunca passava por nenhuma. Aqui elas rodam na hora da gravação.
+  //
+  // 🔴 POR QUE O DIFF, E NÃO "SE HOUVER VIOLAÇÃO, 409": uma única incoerência
+  // preexistente no acervo trancaria TODA gravação de TODO lugar, para sempre —
+  // inclusive as que a consertariam. E o caminho até lá já existe: `{slug,
+  // versaoId}` grava verbatim e sem coerência, de propósito, então voltar a uma
+  // versão que o acervo de hoje reprova põe uma violação no banco. Numa PORTA,
+  // falso positivo é pior que falso negativo: ele trava o dono de gravar uma
+  // VERDADE. A porta responde "você está introduzindo isto agora", nunca "o
+  // acervo tem um problema em algum lugar".
+  //
+  // 🔴 E POR QUE NÃO "FILTRAR PELO SLUG EDITADO", que seria mais simples: as
+  // duas regras que comparam fichas entre si (`frase-emprestada`,
+  // `texto-emprestado`) acusam UM dos dois lugares do par, e qual deles depende
+  // da ordem do acervo. Filtrar pelo slug editado deixaria passar exatamente a
+  // cópia de frase que a regra existe pra pegar.
+  //
+  // 🔴 LEITURA DIRETA — `versoesAtuais`, nunca `buscarFichas`/`getAllFichas`, e
+  // SEM `comPrazo`. Dois motivos medidos:
+  //   1. `buscarFichas` tem MEMÓRIA de módulo (`ultimaBoa`): uma porta que
+  //      medisse contra acervo LEMBRADO mediria contra uma leitura que as telas
+  //      públicas deixaram ali, e que o dono já pode ter reescrito. Guarda mede
+  //      AGORA.
+  //   2. `comPrazo` com fallback `new Map()` faria a porta falhar pro lado
+  //      PERMISSIVO: acervo vazio DESLIGA as duas regras que comparam fichas
+  //      entre si, e a frase emprestada passaria em silêncio sob lentidão do
+  //      banco. Numa tela de leitura, estourar o prazo significa "mostrar
+  //      menos"; numa porta, significaria "gravar sem conferir".
+  //  O custo é honesto e não é regressão: a gravação pode pendurar até o timeout
+  //  da plataforma — exatamente como o `versaoAtual` logo acima já pendura.
+  const versoes = await versoesAtuais(getClient());
+  const jaHavia = new Set(violacoesDoAcervo(acervoComo(versoes, slug, versao.doc)).map(identidade));
+  const introduzidas = violacoesDoAcervo(acervoComo(versoes, slug, novoDoc)).filter(
+    (v) => !jaHavia.has(identidade(v)),
+  );
+  // A primeira em ORDEM DE TABELA, que é a ordem da tela do dono: as regras de
+  // custo vêm na frente porque é onde o defeito mais caro já entrou.
+  if (introduzidas.length > 0) {
+    return new Response(introduzidas[0].frase, { status: 409, headers: TEXTO });
   }
 
   const id = await gravarVersao(getClient(), slug, novoDoc, "painel", agora);
