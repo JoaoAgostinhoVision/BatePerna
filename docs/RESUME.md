@@ -5,9 +5,9 @@
 🔴 **ÚLTIMA PARADA: 2026-09-27, E DESTA VEZ NÃO FOI PARADA — O PC DELE DESLIGOU SOZINHO** no meio
 da passada de confirmação da Tarefa 2 (*"algo aconteceu o pc se desligou"*). O commit `d8b1f73` ficou
 gravado; o **resultado da passada morreu com a sessão** e foi **redespachado** na sessão seguinte.
-**Estamos na branch `painel-completo`**, com **2 tarefas completas e a 3ª a uma re-revisão de fechar**
-(de 12), árvore limpa, **1330/1330 em 82 arquivos**, `tsc` limpo, `npm run build` exit 0 — os três
-medidos por mim em 27/09 no `0c7053f`. No `914e38a` eu também medi o harness inteiro (34 morreu,
+**Estamos na branch `painel-completo`**, com **3 tarefas completas** e a 4ª em execução
+(de 12), árvore limpa, **1332/1332 em 82 arquivos**, `tsc` limpo, `npm run build` exit 0 — os três
+medidos por mim em 27/09 no `72380a2`. No `914e38a` eu também medi o harness inteiro (34 morreu,
 `--controles` exit 0 com 6 controles e 16 autotestes). **NADA FOI AO AR** e nenhuma tarefa deste plano roda `vercel`.
 O `main` segue publicado e intacto.
 → Como retomar: o bloco **"▶ RETOMAR A RODADA DO PAINEL COMPLETO"**, logo abaixo.
@@ -104,8 +104,8 @@ guarda do próprio harness, na 4e; → 1304 com os seis que a 4f acrescentou a e
 |---|---|
 | **1 — o registro de campos, `aplicarCampo` com caminho/tipo/"não sei"** | ✅ completa (`dfeb005..50f71bf`), 1 rodada de fix, re-revisão limpa |
 | **2 — as 13 regras de coerência viram porta de produção** | ✅ **completa** (`7c4ddf9..914e38a`), **10 rodadas de fix**, e as sete últimas foram no PRÓPRIO INSTRUMENTO, depois de **dezesseis `Critical` nele**. A sétima passada não achou nada da classe que reabriria; ver as seções 4 a 4h. 🔴 **Ela ainda não tem consumidor de produção: a promessa dela só se cumpre na Tarefa 3** |
-| **3 — a porta de escrita aceita todo campo e passa pela coerência** | 🟡 **implementada e revisada** (`914e38a..0c7053f`): 1 `Critical` (a porta recusava RENOMEAR o lugar), 3 `Important`, 4 `Minor` — onda de fix aplicada e medida; falta a re-revisão dela. Ver a seção **5b** |
-| 4 — `oculto`: esconder sem apagar | ⬜ |
+| **3 — a porta de escrita aceita todo campo e passa pela coerência** | ✅ **completa** (`914e38a..72380a2`): 1 `Critical` (a porta recusava RENOMEAR o lugar), duas ondas de fix, re-revisão sem nenhuma das duas classes que reabririam — 26 renomeações sobre as 13 regras e 120 gravações legítimas sobre 6 sujeiras, ZERO recusas. Ver a seção **5b** |
+| **4 — `oculto`: esconder sem apagar** | 🟡 **em execução** — brief auditado em 27/09 antes do dispatch: **nove achados, DOIS `Critical`** (o plano muda o padrão de `versoesAtuais` e dois caminhos de produção já a usam — o portão de coerência e a semente) |
 | 5 — a tela do lugar mostra a ficha inteira | ⬜ |
 | 6 — um editor por espécie de campo | ⬜ |
 | 7 — o número de motor com a consequência ao vivo | ⬜ |
@@ -620,6 +620,47 @@ ar entre a segunda e a terceira gravação. As duas devem sair na **mesma** deci
 (irrelevante com 3 fichas, vira custo quando T11/T12 abrirem "criar lugar"); e `coerencia.ts:529` tem
 um ramo **inalcançável em produção** (a 52ª espécie) — o schema garante que `dias` nunca traz dia
 inventado, e a rota sempre parseia, então aquela frase vive só no teste que constrói `Ficha` por cast.
+
+### 5c. 🟢 A TAREFA 3 FECHOU, E 🟡 A TAREFA 4 COMEÇOU COM DOIS `Critical` NO PLANO
+
+**A re-revisão da onda da Tarefa 3 não achou nenhuma das duas classes que a reabririam** (porta
+recusando gravação legítima; porta aceitando incoerência introduzida), e mediu **largo**: 26
+renomeações sobre as 13 regras com acervo sujo e **120 gravações legítimas** sobre 6 sujeiras
+diferentes — **zero recusas do portão**. Ela também fechou a pergunta (b) por **enumeração**: 10 das
+13 regras emitem no máximo um achado por par, as duas que emitem mais têm **um slot por campo** (e uma
+gravação toca um campo), e a única com dois slots atrás de um campo só (`dias`) é barrada pelo
+`z.enum` dos dois lados.
+
+**Quatro consertos entraram antes de fechar** (`72380a2`), três deles minors da re-revisão e um que
+era **frase falsa minha** — oitava rodada em oito com frase falsa, e esta estava no comentário que
+explica a decisão central do commit anterior. O que mais vale: **o 409 falava do achado que a gravação
+NÃO tocou** (com a janela de chuva já zerada, zerar o limiar devolvia a frase da janela) — a
+forma-mensagem do mesmo defeito que gerou a onda. E **a régua nova do 400 não tinha prova**: um
+re-revisor voltou a régua anterior e a suíte inteira ficou verde, porque o caso que parecia guardá-la
+já existia antes.
+
+🔴 **A TAREFA 4 (`oculto`) FOI AUDITADA ANTES DO DISPATCH, e a auditoria achou NOVE coisas, duas
+`Critical` — as duas porque o plano muda o comportamento PADRÃO de `versoesAtuais` e não diz nada
+sobre os dois caminhos de produção que já a usam:**
+
+1. 🔴 **O portão de coerência da Tarefa 3 passaria a medir contra um acervo PARCIAL.** O buraco por
+   extenso: esconder o Véu → copiar a voz dele na Rampa (passa, porque o Véu saiu do acervo medido) →
+   mostrar o Véu de novo → **o acervo público fica com duas fichas dizendo a mesma coisa.** O
+   docblock da própria rota já avisava: *"lugar escondido volta"*.
+2. 🔴 **A semente ficaria cega e regravaria o acervo inteiro.** Ela decide se semeia com
+   `versoesAtuais`; um acervo todo escondido **parece vazio**, então `npm run semear` (ou o deploy)
+   põe versões novas visíveis por cima do que ele escondeu de propósito — **os lugares voltam ao ar.**
+
+E uma terceira que nasce no minuto em que a coluna existe: `gravarVersao` tem `oculto = false` por
+padrão, e a rota da ficha chama sem esse argumento — então **editar um campo DESESCONDERIA o lugar**.
+A ficha nova tem de **herdar** o estado da anterior.
+
+As outras seis: `Boolean(r.oculto)` é armadilha (`Boolean("0")` é `true`); `versaoAtual` e `historico`
+**não podem** filtrar, senão o painel perde o lugar oculto; o `ALTER TABLE` precisa de teste rodando
+`ensureSchema` **duas vezes** e de um teste de migração de verdade (tabela sem a coluna → linha antiga
+nasce visível); esconder já faz a página do lugar dar **404 de graça**, e de graça não é provado; a
+rota de visibilidade **não** passa pelo portão (e isso tem de ficar escrito, senão a próxima pessoa
+"conserta"); e a tabela de mutação do plano ganhou **cinco** linhas novas.
 
 ### 5. As três coisas que a rodada já deve a ele
 
