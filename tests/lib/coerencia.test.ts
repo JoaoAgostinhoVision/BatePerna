@@ -510,7 +510,14 @@ describe("violacoesDoAcervo", () => {
     expect(v[0].frase).not.toContain("24 horas");
   });
 
-  it("custo completo AUSENTE e custo ILEGÍVEL recebem frases diferentes", () => {
+  // 🔴 PARTIDOS EM DOIS na rodada 4/5 — 48ª espécie do catálogo: um `it` só,
+  // com as DUAS metades da bifurcação dentro, é provado por inteiro ou por
+  // nada. E tinha uma consequência medida: o harness de mutação só enxerga o
+  // NOME do `it`, então B2a (que força o ramo ilegível) e B2b (que força o
+  // ramo ausente) eram obrigados a declarar o MESMO teste em `mata`, sendo
+  // metades OPOSTAS. Com os quatro `it` separados, cada mutação declara o lado
+  // que ela desliga, e o dia em que uma virar cópia da outra o guarda acusa.
+  it("custo completo AUSENTE recebe a frase do campo vazio", () => {
     const ausente = rampa();
     ausente.custo = { tag: "pago", curto: "R$ 5 · portão" };
     const a = violacoesDoAcervo([ausente]).filter((x) => x.regra === "preco-legivel-no-custo");
@@ -518,17 +525,19 @@ describe("violacoesDoAcervo", () => {
     expect(a[0].frase, "a frase do campo ausente diz que ele escreveu algo")
       .not.toMatch(/escrito como/);
     expect(a[0].frase).toContain("vazio");
+  });
 
+  it("custo completo ILEGÍVEL mostra por extenso o que ele escreveu", () => {
     const ilegivel = rampa();
     ilegivel.custo = { tag: "pago", valor: "cinco reais por pessoa", curto: "R$ 5 · portão" };
     const b = violacoesDoAcervo([ilegivel]).filter((x) => x.regra === "preco-legivel-no-custo");
-    expect(b.length).toBe(1);
+    expect(b.length, "custo ilegível passou batido").toBe(1);
     expect(b[0].frase, "a frase do custo ilegível não mostra o que ele escreveu")
       .toContain("cinco reais por pessoa");
     expect(b[0].frase).not.toContain("vazio");
   });
 
-  it("chip SEM número e chip com número divergente recebem frases diferentes", () => {
+  it("chip SEM número recebe a frase de não mostrar preço nenhum", () => {
     const semNumero = rampa();
     semNumero.custo = { tag: "pago", valor: "R$ 5 · portão da entrada", curto: "no portão" };
     const a = violacoesDoAcervo([semNumero]).filter((x) => x.regra === "chip-bate-com-preco");
@@ -536,11 +545,13 @@ describe("violacoesDoAcervo", () => {
     expect(a[0].frase, 'a frase do chip sem número virou "diz nenhum preço"')
       .not.toMatch(/diz nenhum/);
     expect(a[0].frase).toContain("não mostra preço nenhum");
+  });
 
+  it("chip com número DIVERGENTE mostra os dois preços lado a lado", () => {
     const divergente = rampa();
     divergente.custo = { tag: "pago", valor: "R$ 10,00", curto: "R$ 5" };
     const b = violacoesDoAcervo([divergente]).filter((x) => x.regra === "chip-bate-com-preco");
-    expect(b.length).toBe(1);
+    expect(b.length, "chip divergente passou batido").toBe(1);
     expect(b[0].frase, "a frase do chip divergente não mostra os dois preços")
       .toMatch(/R\$ 5.*R\$ 10,00/);
     expect(b[0].frase).not.toContain("não mostra preço nenhum");

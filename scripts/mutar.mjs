@@ -40,10 +40,16 @@
  *                       teste inexistentes: uma mutação que era só troca de
  *                       comentário saiu "morreu" e o placar saiu limpo.
  *
- *  As quatro últimas são todas falha de medição, e qualquer uma delas faz o
- *  processo sair com código 2. As categorias "sem alvo" e "sem diff" existem
- *  porque a rodada 2/5 mediu "0 sem alvo" sem ter a categoria — sete mutações
- *  silenciosamente pararam de aplicar, e o placar não sabia disso. Ver (b).
+ *  Destas cinco, **três são falha de medição** — sem alvo, sem diff e sem
+ *  medição. "Sobreviveu" NÃO é: ali a medição deu certo e achou um buraco. (A
+ *  redação anterior dizia "as quatro últimas" e metia "sobreviveu" no balaio
+ *  — justamente a confusão que este arquivo existe pra impedir.) Qualquer uma
+ *  das quatro que não for "morreu" faz o processo sair com código 2.
+ *
+ *  As categorias "sem alvo" e "sem diff" existem porque a rodada 2/5 mediu
+ *  "0 sem alvo" sem ter a categoria — sete mutações silenciosamente pararam de
+ *  aplicar, e o placar não sabia disso. Ver (b).
+ *
  *
  *  ## (a1) COMO RODAR, E O QUE CADA CÓDIGO DE SAÍDA SIGNIFICA
  *
@@ -54,12 +60,14 @@
  *  Roda de qualquer pasta: a raiz sai do lugar deste arquivo, não do `cwd`.
  *
  *   - **0** — na rodada normal: todas morreram e todo `mata` declarado
- *     realmente falhou. No `--controles`: os três saíram na categoria que
- *     declararam.
- *   - **1** — recusa de começar ou de terminar: árvore suja nos arquivos
- *     envolvidos (antes ou depois), ou arquivo de teste que não existe mais.
+ *     realmente falhou. No `--controles`: os cinco saíram como declararam.
+ *   - **1** — recusa de COMEÇAR ou de terminar: árvore suja nos arquivos
+ *     envolvidos (antes ou depois); arquivo de teste que não existe mais; a
+ *     suíte de base já vermelha; a base executando menos testes que o piso
+ *     (arquivo renomeado ou `describe.skip`); ou um `mata` frouxo (nome que
+ *     casa zero ou mais de um teste real).
  *   - **2** — achado: sobreviveu / sem alvo / sem diff / sem medição, ou um
- *     `mata` declarado que não falhou, ou um controle fora da categoria.
+ *     `mata` declarado que não falhou, ou um controle fora do que declarou.
  *
  *  🔴 O `--controles` PRECISA poder ficar verde, e por isso ele não aplica a
  *  regra geral: lá "sobreviveu" e "sem medição" são o resultado CERTO. Um
@@ -70,16 +78,24 @@
  *   - **arquivo de teste que sumiu.** Os itens de `ARQUIVOS_DE_TESTE` são
  *     FILTROS do vitest, não caminhos: um nome que não casa com nada não dá
  *     erro, só some da rodada, e o placar fica com a mesma cara medindo
- *     metade. `main()` confere `existsSync` em cada um antes de começar.
- *   - **`mata` que não mata.** O campo `mata` de cada mutação é conferido
- *     contra TODAS as falhas da rodada (não só a primeira). Se o teste
- *     declarado não falhou, o processo sai com 2 — "morreu" é uma coisa,
- *     "morreu no teste desenhado pra ela" é outra, e a segunda é a que trava
- *     a 45ª espécie do catálogo (nome de teste fantasma na tabela).
+ *     metade. `main()` confere `existsSync` em cada um — inclusive nos
+ *     `arquivosDeTeste` de cada entrada — antes de começar.
+ *   - **teste PULADO.** O piso é conferido contra os testes EXECUTADOS, nunca
+ *     contra `numTotalTests`: um `describe.skip` deixa o total cheio, tudo em
+ *     `pending` e `success: true`, e a rodada mediria ZERO achando que mediu
+ *     tudo.
+ *   - **vermelho sem teste vermelho.** `success: false` com zero falhas
+ *     nomeadas é erro fora de teste, e vira "sem medição", não "morreu".
+ *   - **`mata` que não mata, e `mata` frouxo.** Ver (c).
  *   - **o próprio instrumento.** `node scripts/mutar.mjs --controles` roda
- *     três mutações de controle que TEM de sair "sobreviveu", "sem alvo" e
- *     "sem medição". Se qualquer uma sair diferente, exit 2. Sem isso,
- *     "34 morreram" e "o harness carimba morreu em tudo" são indistinguíveis.
+ *     **cinco** controles, um por guarda, cada um declarando o que tem de
+ *     sair. 🔴 A regra que os criou: **guarda sem controle é guarda que se
+ *     pode desligar em silêncio.** A rodada 4/5 criou os portões do `mata` e
+ *     do piso sem controle nenhum, e um re-revisor desligou os dois numa
+ *     cópia com os controles de então **verdes, exit 0**. Hoje as três
+ *     sabotagens (colapsar "sem medição" em "morreu"; forçar `mataConfere`
+ *     pra `true`; baixar o piso e cortar a lista pela metade) são pegas, cada
+ *     uma nomeando o controle que ela quebrou — medido em 27/09.
  *
  *  ## (b) A ARMADILHA DO CRLF, E COMO ESTE HARNESS A NEUTRALIZA
  *
@@ -119,11 +135,18 @@
  *     por coincidência. Três réguas diferentes, três respostas, e duas delas
  *     confortáveis.
  *
- *  Por isso a medição de fim de linha neste projeto se faz com `od`, e quando
- *  for com `grep`, com `-U` e aspas SIMPLES. O que confere é: o mount ser
- *  `binary` (`mount` → `C: on /c type ntfs (binary,noacl,posix=0,...)`) e o
- *  `wc -c` bater byte a byte com `fs.readFileSync(...).length` do Node (31289
- *  nos dois, em 27/09).
+ *  E há uma QUARTA forma de errar, que não é do `grep` e sim da unidade:
+ *  **`grep -Uc` conta LINHAS que têm CR; o `od` conta BYTES CR.** Elas só
+ *  coincidem porque `coerencia.ts` é CRLF uniforme. Num arquivo com um CR no
+ *  meio da linha (`printf "a\rb\r\nc\r\n"`), `grep -Uc` diz **2** e o `od`
+ *  diz **3** — e a que erra pra menos é a do `grep`. Para contar OCORRÊNCIAS
+ *  com grep, `grep -Uo` mais `wc -l`.
+ *
+ *  Resumindo a régua deste projeto: **`od` para contar bytes**; `grep` só com
+ *  `-U` e aspas SIMPLES, e sabendo que ele responde em linhas. O que confere
+ *  e não depende de nada disso: o mount ser `binary` (`mount` → `C: on /c type
+ *  ntfs (binary,noacl,posix=0,...)`) e o `wc -c` bater byte a byte com
+ *  `fs.readFileSync(...).length` do Node (31289 nos dois, em 27/09).
  *
  *  Este harness lê o arquivo com `fs.readFileSync(..., "utf8")`: bytes como
  *  eles são, sem tradução de fim de linha.
@@ -141,10 +164,30 @@
  *  `{ inicio, fim, espera, novo }` em linhas 1-indexadas do arquivo NORMAL-
  *  IZADO PRA LF; `espera` é o texto exato que deve estar ali — o harness
  *  RECUSA aplicar se não bater, e cai em "sem alvo"; `novo` é o texto que
- *  substitui, ou `null` para apagar as linhas), e `mata` (o nome do teste, ou
- *  parte dele, que se espera que morra — só documentação, o harness não força
- *  isso). Rode `node scripts/mutar.mjs <id>` sozinho pra conferir antes de
- *  integrar ao conjunto.
+ *  substitui, ou `null` para apagar as linhas), e `mata`.
+ *
+ *  🔴 **`mata` NÃO é mais documentação — é PORTÃO, desde a rodada 4/5.** (Esta
+ *  frase dizia "só documentação, o harness não força isso" e virou falsa no
+ *  mesmo commit que criou o portão; um re-revisor a pegou. É a terceira rodada
+ *  seguida com uma frase falsa escrita pelo próprio commit, sempre na parte
+ *  que ninguém re-lê.) O que ele exige hoje:
+ *
+ *   - é um nome de teste ou uma **lista** deles; quando é lista, **todos** têm
+ *     de ter falhado, e a conferência olha TODAS as falhas da rodada, não só a
+ *     primeira;
+ *   - cada nome tem de casar **exatamente UM** dos testes reais da base — zero
+ *     é fantasma (45ª espécie) e dois é ambíguo. `main()` mede a suíte antes de
+ *     mutar nada e recusa começar (código 1) se algum nome for frouxo. Sem
+ *     esse piso, `mata: "a"` casaria os 51 nomes e satisfaria o portão sempre;
+ *   - um `mata` declarado que NÃO falhou derruba a rodada com código 2.
+ *
+ *  Campos opcionais: `arquivosDeTeste` e `piso` (trocam a suíte e o piso só
+ *  daquela entrada — usados pelos controles), e, só em `CONTROLES`,
+ *  `esperaCategoria`, `esperaMataConfere`, `mataFantasmaDeProposito` e
+ *  `alvoInexistenteDeProposito`.
+ *
+ *  Rode `node scripts/mutar.mjs <id>` sozinho pra conferir antes de integrar.
+ *
  *
  *  ## Por que este arquivo é `.mjs` e não `.ts`
  *
@@ -197,7 +240,7 @@
  *    `chip-cabe-na-pilula` nem `chip-nao-repete-a-linha`.
  */
 
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
@@ -206,6 +249,10 @@ import { fileURLToPath } from "node:url";
 /** A raiz vem do LUGAR DO SCRIPT, não do `cwd`: assim `node
  *  scripts/mutar.mjs` funciona de qualquer pasta, e um `cd` errado no meio de
  *  uma sessão não faz o harness medir árvore nenhuma e ainda imprimir placar. */
+/** Teto por rodada de vitest. Sem ele, um vitest pendurado trava a rodada
+ *  inteira sem diagnostico nenhum; com ele, cai no `sem medicao` que ja existe. */
+const TIMEOUT_VITEST = 300_000;
+
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function lerLF(relativo) {
@@ -268,7 +315,11 @@ const MUTACOES = [
       espera: '  return TABELA.flatMap((r) => r.achar(fichas).map((a) => ({ regra: r.regra, ...a })));',
       novo: '  return [];',
     }],
-    mata: "cada uma das 13 regras dispara na quebra escrita pra ela",
+    mata: [
+      "o chip que não bate com o preço é pego",
+      "um nome de dia que não existe é pego, mesmo sem repetição nenhuma",
+      "a janela de chuva é conferida nos TRÊS números, um a um",
+    ],
   },
   {
     id: "M2",
@@ -738,7 +789,9 @@ const MUTACOES = [
     }],
     // A redação antiga trazia um sufixo entre parênteses (metade ausente)
     // que não existe no nome do teste — era prosa, e o guarda de `mata` pegou.
-    mata: "custo completo AUSENTE e custo ILEGÍVEL recebem frases diferentes",
+    mata: [
+      "custo completo AUSENTE recebe a frase do campo vazio",
+    ],
   },
   {
     id: "B2b",
@@ -751,7 +804,9 @@ const MUTACOES = [
     }],
     // A redação antiga trazia um sufixo entre parênteses (metade ilegível)
     // que não existe no nome do teste — era prosa, e o guarda de `mata` pegou.
-    mata: "custo completo AUSENTE e custo ILEGÍVEL recebem frases diferentes",
+    mata: [
+      "custo completo ILEGÍVEL mostra por extenso o que ele escreveu",
+    ],
   },
   {
     id: "B3a",
@@ -764,7 +819,9 @@ const MUTACOES = [
     }],
     // A redação antiga trazia um sufixo entre parênteses (metade sem número)
     // que não existe no nome do teste — era prosa, e o guarda de `mata` pegou.
-    mata: "chip SEM número e chip com número divergente recebem frases diferentes",
+    mata: [
+      "chip SEM número recebe a frase de não mostrar preço nenhum",
+    ],
   },
   {
     id: "B3b",
@@ -777,7 +834,9 @@ const MUTACOES = [
     }],
     // A redação antiga trazia um sufixo entre parênteses (metade divergente)
     // que não existe no nome do teste — era prosa, e o guarda de `mata` pegou.
-    mata: "chip SEM número e chip com número divergente recebem frases diferentes",
+    mata: [
+      "chip com número DIVERGENTE mostra os dois preços lado a lado",
+    ],
   },
 ];
 
@@ -809,23 +868,34 @@ const ARQUIVOS_DE_TESTE = [
   "tests/lib/coerencia-acervo.test.ts",
 ];
 
-/** O PISO: quantos testes estes dois arquivos somam quando tudo está no
- *  lugar. Medido em 2026-09-27 com `npx vitest run <os dois> --reporter=json`
- *  → `numTotalTests: 49`. Serve de guarda contra a rodada que mede MENOS do
- *  que o placar diz: se um arquivo sumir, for renomeado, ou se a mutação
- *  quebrar a COLETA de um deles, o total cai e a rodada vira "sem medição"
- *  em vez de "morreu". Se você acrescentar testes a estes arquivos, suba o
- *  número — ele é piso, não igualdade, justamente pra isso não travar.
- */
-const PISO_DE_TESTES = 49;
+/** O PISO: quantos testes estes dois arquivos somam quando tudo está no lugar.
+ *  Medido em 2026-09-27, depois de a rodada 4/5 partir dois `it` em quatro:
+ *  33 (`coerencia.test.ts`) + 18 (`coerencia-acervo.test.ts`) = **51**.
+ *
+ *  🔴 Ele é conferido contra os testes EXECUTADOS (passaram + falharam), nunca
+ *  contra `numTotalTests`. A diferença foi medida e importa: um `describe.skip`
+ *  deixa `numTotalTests` em 51 com os 51 em `pending` e `success: true` — o
+ *  piso nunca dispararia, e a rodada mediria ZERO achando que mediu tudo.
+ *
+ *  Se você acrescentar testes a estes arquivos, suba o número: `main()` mede a
+ *  base antes de mutar e RECUSA começar se o medido for menor que ele; um
+ *  medido MAIOR só avisa, porque aí o piso está velho mas não está mentindo. */
+const PISO_DE_TESTES = 51;
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AS TRÊS MUTAÇÕES DE CONTROLE — elas provam o INSTRUMENTO, não o código. Um
+// AS MUTAÇÕES DE CONTROLE — elas provam o INSTRUMENTO, não o código. Um
 // harness que carimba "morreu" em tudo dá exatamente o mesmo quadro de uma
 // suíte perfeita, e a rodada 3/5 só descobriu isso porque um re-revisor teve
 // de COPIAR o script para mexer nele. Agora são um comando:
 // `node scripts/mutar.mjs --controles`. Cada controle declara a categoria que
 // TEM de sair; se sair outra, o processo termina com código 2.
+//
+// 🔴 Cada guarda deste arquivo tem de ter um controle SEU. A rodada 4/5 criou
+// dois portões novos — o do `mata` e o do PISO — e nasceram os dois sem
+// controle: um re-revisor desligou cada um deles numa cópia e os três
+// controles daquele momento continuaram VERDES, exit 0. Daí `CTRL-MATA-ERRADO`
+// e `CTRL-PISO-BAIXO`. Guarda sem controle é guarda que se pode desligar em
+// silêncio.
 // ═══════════════════════════════════════════════════════════════════════════
 
 const CONTROLES = [
@@ -865,9 +935,44 @@ const CONTROLES = [
     // Aponta o vitest para um arquivo que não existe: nenhum relatório é
     // escrito. ANTES da rodada 4/5 isto saía como "morreu", com exit 0.
     arquivosDeTeste: ["tests/lib/ESTE-ARQUIVO-NAO-EXISTE.test.ts"],
+    alvoInexistenteDeProposito: true,
     piso: 0,
     esperaCategoria: "sem medição",
     mata: null,
+  },
+  {
+    id: "CTRL-PISO-BAIXO",
+    titulo: "CONTROLE: mede METADE da suíte (o outro ramo do `sem medição`)",
+    arquivo: COERENCIA,
+    edicoes: [{
+      inicio: 1, fim: 1,
+      espera: 'import { PISOS } from "@/lib/piso";',
+      novo: 'import { PISOS as PISOS } from "@/lib/piso";',
+    }],
+    // Os dois arquivos EXISTEM, então o `existsSync` não pega nada: o que
+    // pega é o piso, e é ele que este controle exercita. Um re-revisor baixou
+    // `PISO_DE_TESTES` para 0 e cortou a lista pela metade numa cópia; os três
+    // controles de então ficaram verdes medindo 31 dos 49 testes.
+    arquivosDeTeste: ["tests/lib/coerencia.test.ts"],
+    esperaCategoria: "sem medição",
+    mata: null,
+  },
+  {
+    id: "CTRL-MATA-ERRADO",
+    titulo: "CONTROLE: mutação que morre de verdade, com `mata` FANTASMA",
+    arquivo: COERENCIA,
+    edicoes: [{
+      inicio: 591, fim: 591,
+      espera: "  return TABELA.flatMap((r) => r.achar(fichas).map((a) => ({ regra: r.regra, ...a })));",
+      novo: "  return [];",
+    }],
+    // Ela morre — o que este controle prova é o OUTRO portão: que o harness
+    // percebe quando o teste DECLARADO não é o que falhou. Sem ele, dava para
+    // trocar `mataConfere` por `true` e tudo continuava verde.
+    mata: "ESTE TESTE NUNCA EXISTIU EM LUGAR NENHUM",
+    mataFantasmaDeProposito: true,
+    esperaCategoria: "morreu",
+    esperaMataConfere: false,
   },
 ];
 
@@ -890,7 +995,7 @@ function rodarVitest(arquivosDeTeste, piso) {
     execFileSync(
       "npx",
       ["vitest", "run", ...arquivosDeTeste, "--reporter=json", `--outputFile=${saida}`],
-      { cwd: RAIZ, encoding: "utf8", stdio: ["ignore", "ignore", "pipe"], shell: true },
+      { cwd: RAIZ, encoding: "utf8", stdio: ["ignore", "ignore", "pipe"], shell: true, timeout: TIMEOUT_VITEST },
     );
   } catch (erro) {
     // O vitest sai com código != 0 quando há teste vermelho — aí o relatório
@@ -900,35 +1005,51 @@ function rodarVitest(arquivosDeTeste, piso) {
     erroBruto = String(erro?.stderr ?? erro?.message ?? "").trim();
   }
 
-  if (!existsSync(saida)) {
-    return { medido: false, porque: "o vitest não escreveu relatório nenhum", erroBruto, falhas: [] };
-  }
-
-  let relatorio;
   try {
-    relatorio = JSON.parse(readFileSync(saida, "utf8"));
-  } catch (erro) {
-    return { medido: false, porque: `o relatório do vitest não é JSON válido (${erro.message})`, erroBruto, falhas: [] };
-  }
-
-  const total = relatorio.numTotalTests ?? 0;
-  if (total < piso) {
-    return {
-      medido: false,
-      porque: `o vitest rodou ${total} teste(s), e o piso medido destes arquivos é ${piso}`,
-      erroBruto,
-      falhas: [],
-    };
-  }
-
-  const falhas = [];
-  for (const arquivo of relatorio.testResults ?? []) {
-    for (const teste of arquivo.assertionResults ?? []) {
-      if (teste.status === "failed") falhas.push(teste.fullName ?? teste.title);
+    if (!existsSync(saida)) {
+      return { medido: false, porque: "o vitest não escreveu relatório nenhum", erroBruto, falhas: [] };
     }
+
+    let relatorio;
+    try {
+      relatorio = JSON.parse(readFileSync(saida, "utf8"));
+    } catch (erro) {
+      return { medido: false, porque: `o relatório do vitest não é JSON válido (${erro.message})`, erroBruto, falhas: [] };
+    }
+
+    // 🔴 EXECUTADOS, não `numTotalTests`: teste PULADO conta no total e não
+    // roda. Com um `describe.skip` o total continua cheio, `success` fica
+    // `true`, e a rodada mediria zero achando que mediu tudo.
+    const passados = relatorio.numPassedTests ?? 0;
+    const falhados = relatorio.numFailedTests ?? 0;
+    const executados = passados + falhados;
+    if (executados < piso) {
+      return {
+        medido: false,
+        porque: `o vitest EXECUTOU ${executados} teste(s) (de ${relatorio.numTotalTests ?? "?"} no total), e o piso é ${piso}`,
+        erroBruto,
+        falhas: [],
+      };
+    }
+
+    const falhas = [];
+    for (const arquivo of relatorio.testResults ?? []) {
+      for (const teste of arquivo.assertionResults ?? []) {
+        if (teste.status === "failed") falhas.push(teste.fullName ?? teste.title);
+      }
+    }
+
+    const passou = relatorio.success === true && falhados === 0;
+    // 🔴 Vermelho SEM falha nomeada não é "morreu": é o vitest quebrando fora
+    // de teste nenhum (`unhandledErrors`). Sem esta linha isso cairia em
+    // "morreu" com a coluna do teste vazia.
+    if (!passou && falhas.length === 0) {
+      return { medido: false, porque: "a suíte ficou vermelha mas nenhum teste falhou (erro fora de teste)", erroBruto, falhas: [] };
+    }
+    return { medido: true, passou, falhas, executados };
+  } finally {
+    try { if (existsSync(saida)) unlinkSync(saida); } catch { /* lixo em tmp não vale falhar uma rodada */ }
   }
-  const passou = relatorio.success === true && (relatorio.numFailedTests ?? 0) === 0;
-  return { medido: true, passou, falhas, total };
 }
 
 function rodarUma(mutacao) {
@@ -957,16 +1078,11 @@ function rodarUma(mutacao) {
     }
     if (r.passou) return { ...base, categoria: "sobreviveu", numstat };
 
-    // 🔴 Confere o `mata` contra TODAS as falhas, não só a primeira. Antes da
-    // rodada 4/5 o campo `mata` não era lido por ninguém: era prosa ao lado do
-    // código, e o placar imprimia só a PRIMEIRA falha, que em duas entradas
-    // (M4, M8) não era a declarada. "Morreu" é uma coisa; "morreu no teste
-    // desenhado pra ela" é outra — e é a que a 45ª espécie (nome de teste
-    // fantasma na tabela) ataca.
-    // `mata` pode ser um nome só ou uma LISTA — e quando é lista, TODOS
-    // têm de ter falhado. Nove entradas traziam prosa em volta do nome do
-    // teste ("o caso de cobertura novo, e ..."), que nunca casaria com
-    // `fullName` nenhum; a lista é o formato honesto pra elas.
+    // 🔴 Confere o `mata` contra TODAS as falhas, não só a primeira, e exige
+    // que TODOS os nomes declarados tenham falhado. Antes da rodada 4/5 o
+    // campo não era lido por ninguém: era prosa ao lado do código. "Morreu" é
+    // uma coisa; "morreu no teste desenhado pra ela" é outra, e é a segunda
+    // que trava a 45ª espécie do catálogo (nome de teste fantasma na tabela).
     const nomes = mutacao.mata == null ? null : (Array.isArray(mutacao.mata) ? mutacao.mata : [mutacao.mata]);
     const mataConfere = nomes === null ? null : nomes.every((n) => r.falhas.some((f) => f.includes(n)));
     return { ...base, categoria: "morreu", numstat, teste: r.falhas[0] ?? "", falhas: r.falhas, mataConfere };
@@ -976,6 +1092,39 @@ function rodarUma(mutacao) {
 }
 
 const CATEGORIAS = ["morreu", "sobreviveu", "sem alvo", "sem diff", "sem medição"];
+
+/** As últimas linhas que dizem alguma coisa. O stderr do `npx vitest` começa
+ *  com o aviso de depreciação do Vite e a lista de filtros; a CAUSA ("No test
+ *  files found, exiting with code 1") é a ÚLTIMA. A rodada 4/5 imprimia a
+ *  PRIMEIRA linha e mostrava o aviso inócuo no lugar do diagnóstico — no
+ *  caminho que existe justamente para diagnosticar. */
+function ultimasLinhas(texto, quantas) {
+  return String(texto ?? "").split("\n").map((l) => l.trim()).filter(Boolean).slice(-quantas);
+}
+
+/** Roda a suíte de base uma vez e devolve os nomes de todos os testes, pra
+ *  `verificarMata` ter contra o que conferir. */
+function nomesDosTestes() {
+  const saida = path.join(os.tmpdir(), `mutar-base-${process.pid}-${Date.now()}.json`);
+  try {
+    execFileSync(
+      "npx",
+      ["vitest", "run", ...ARQUIVOS_DE_TESTE, "--reporter=json", `--outputFile=${saida}`],
+      { cwd: RAIZ, encoding: "utf8", stdio: ["ignore", "ignore", "pipe"], shell: true, timeout: TIMEOUT_VITEST },
+    );
+  } catch { /* o relatório é que interessa */ }
+  if (!existsSync(saida)) return null;
+  try {
+    const relatorio = JSON.parse(readFileSync(saida, "utf8"));
+    const nomes = [];
+    for (const arquivo of relatorio.testResults ?? []) {
+      for (const teste of arquivo.assertionResults ?? []) nomes.push(teste.fullName ?? teste.title);
+    }
+    return { nomes, executados: (relatorio.numPassedTests ?? 0) + (relatorio.numFailedTests ?? 0), vermelho: relatorio.success !== true };
+  } finally {
+    try { if (existsSync(saida)) unlinkSync(saida); } catch { /* idem */ }
+  }
+}
 
 function main() {
   const pedido = process.argv.slice(2);
@@ -993,8 +1142,14 @@ function main() {
   // 🔴 Os itens de ARQUIVOS_DE_TESTE são FILTROS do vitest, não caminhos: um
   // nome que não casa com arquivo nenhum não dá erro, só some da rodada — e o
   // placar continua com a mesma cara, medindo metade. É a 44ª espécie (guarda
-  // cego ao que sumiu) aplicada ao próprio instrumento.
-  const sumidos = ARQUIVOS_DE_TESTE.filter((f) => !existsSync(path.join(RAIZ, f)));
+  // cego ao que sumiu) aplicada ao próprio instrumento. Os overrides por
+  // mutação entram no mesmo guarda, menos o único que aponta um arquivo
+  // inexistente DE PROPÓSITO.
+  const listas = [ARQUIVOS_DE_TESTE];
+  for (const m of alvo) {
+    if (m.arquivosDeTeste && !m.alvoInexistenteDeProposito) listas.push(m.arquivosDeTeste);
+  }
+  const sumidos = [...new Set(listas.flat())].filter((f) => !existsSync(path.join(RAIZ, f)));
   if (sumidos.length > 0) {
     console.error(`arquivo(s) de teste que não existem mais: ${sumidos.join(", ")}`);
     console.error("conserte a lista e o piso — rodar assim mede menos do que o placar diz.");
@@ -1008,6 +1163,44 @@ function main() {
     process.exit(1);
   }
 
+  // A base: mede a suíte limpa, confere o piso, e dá os nomes reais contra os
+  // quais cada `mata` declarado é validado.
+  const base = nomesDosTestes();
+  if (base === null) {
+    console.error("não consegui medir a suíte de base (o vitest não escreveu relatório).");
+    process.exit(1);
+  }
+  if (base.vermelho) {
+    console.error("a suíte de base já está VERMELHA antes de qualquer mutação — conserte antes.");
+    process.exit(1);
+  }
+  if (base.executados < PISO_DE_TESTES) {
+    console.error(`a base executou ${base.executados} testes e o piso é ${PISO_DE_TESTES}.`);
+    console.error("arquivo sumiu, foi renomeado, ou tem teste PULADO. Conserte a lista ou o piso.");
+    process.exit(1);
+  }
+  if (base.executados > PISO_DE_TESTES) {
+    console.log(`aviso: a base executou ${base.executados} testes e o piso ainda diz ${PISO_DE_TESTES} — suba o piso.`);
+  }
+
+  // 🔴 O PISO DE ESPECIFICIDADE do `mata`. Sem ele o portão do `mata` é
+  // satisfeito por substring solta: medido, `mata: "a"` casa os 51 nomes e
+  // `"violacoesDoAcervo"` casa 31 deles. Cada nome declarado tem de casar
+  // EXATAMENTE UM teste real — nem zero (fantasma), nem dois (ambíguo).
+  const frouxos = [];
+  for (const m of alvo) {
+    if (m.mata == null || m.mataFantasmaDeProposito) continue;
+    for (const n of Array.isArray(m.mata) ? m.mata : [m.mata]) {
+      const quantos = base.nomes.filter((t) => t.includes(n)).length;
+      if (quantos !== 1) frouxos.push(`${m.id}: "${n}" casa ${quantos} teste(s) — tem de casar exatamente 1`);
+    }
+  }
+  if (frouxos.length > 0) {
+    console.error("🔴 `mata` sem piso de especificidade — a tabela não prova o que diz provar:");
+    for (const linha of frouxos) console.error(`  ${linha}`);
+    process.exit(1);
+  }
+
   const linhas = [];
   const placar = Object.fromEntries(CATEGORIAS.map((c) => [c, 0]));
   const mataFalhou = [];
@@ -1017,11 +1210,14 @@ function main() {
     const r = rodarUma(mutacao);
     placar[r.categoria]++;
 
-    if (modoControle && r.categoria !== mutacao.esperaCategoria) {
-      controleFalhou.push(`${r.id}: esperava "${mutacao.esperaCategoria}", saiu "${r.categoria}"`);
-    }
-    if (r.mataConfere === false) {
-      mataFalhou.push(`${r.id}: declara matar "${mutacao.mata}", e esse teste não falhou`);
+    if (modoControle) {
+      if (r.categoria !== mutacao.esperaCategoria) {
+        controleFalhou.push(`${r.id}: esperava categoria "${mutacao.esperaCategoria}", saiu "${r.categoria}"`);
+      } else if (mutacao.esperaMataConfere !== undefined && r.mataConfere !== mutacao.esperaMataConfere) {
+        controleFalhou.push(`${r.id}: esperava mataConfere=${mutacao.esperaMataConfere}, saiu ${r.mataConfere}`);
+      }
+    } else if (r.mataConfere === false) {
+      mataFalhou.push(`${r.id}: declara matar ${JSON.stringify(mutacao.mata)}, e esse teste não falhou`);
     }
 
     linhas.push([
@@ -1047,7 +1243,7 @@ function main() {
     if (r.categoria === "sem diff") console.log("  🔴 SEM DIFF — a troca não mudou o arquivo");
     if (r.categoria === "sem medição") {
       console.log(`  🔴 SEM MEDIÇÃO — ${r.teste}`);
-      if (r.erroBruto) console.log(`     stderr do vitest: ${r.erroBruto.split("\n")[0]}`);
+      for (const linha of ultimasLinhas(r.erroBruto, 3)) console.log(`     stderr: ${linha}`);
     }
   }
 
@@ -1063,19 +1259,20 @@ function main() {
   }
 
   if (modoControle) {
-    // 🔴 No modo controle o placar "ruim" é o RESULTADO ESPERADO: os três
-    // controles têm de sair "sobreviveu", "sem alvo" e "sem medição". Aplicar
-    // aqui a regra geral (qualquer categoria != morreu ⇒ exit 2) faria este
-    // comando ser SEMPRE vermelho — e um guarda que nunca fica verde não é
-    // guarda, é ruído que todo mundo aprende a ignorar. Aqui só uma coisa
-    // reprova: um controle que saiu diferente do que declarou.
+    // 🔴 No modo controle o placar "ruim" é o RESULTADO ESPERADO: os controles
+    // têm de sair nas categorias que declaram. Aplicar aqui a regra geral
+    // (categoria != morreu ⇒ exit 2) faria este comando ser SEMPRE vermelho —
+    // e um guarda que nunca fica verde não é guarda, é ruído que todo mundo
+    // aprende a ignorar. Aqui só uma coisa reprova: um controle que saiu
+    // diferente do que declarou, em categoria ou em `mataConfere`.
     if (controleFalhou.length > 0) {
       console.error("\n🔴 CONTROLE FALHOU — o instrumento não sabe mais dizer o que promete:");
       for (const linha of controleFalhou) console.error(`  ${linha}`);
       process.exit(2);
     }
-    console.log("\n✅ os três controles saíram na categoria que declararam — o instrumento sabe");
-    console.log("   dizer sobreviveu, sem alvo e sem medição, e não só carimbar morreu.");
+    console.log(`\n✅ os ${alvo.length} controles saíram como declararam — o instrumento sabe dizer`);
+    console.log("   sobreviveu, sem alvo e sem medição (nos dois ramos), e sabe acusar um `mata`");
+    console.log("   que não mata. Não é um carimbador de 'morreu'.");
     return;
   }
 
