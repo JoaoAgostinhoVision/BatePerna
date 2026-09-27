@@ -855,3 +855,107 @@ describe("PUT /api/admin/ficha — o portão da coerência", () => {
     expect(doc.custo.curto).toBe("R$ 12 · portão");
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 ESTA ROTA E O LUGAR ESCONDIDO (Tarefa 4, 2026-09-27). A coluna `oculto`
+// nasceu noutro arquivo, mas ela muda DUAS coisas aqui, e as duas em silêncio se
+// ninguém escrever o argumento certo.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("PUT /api/admin/ficha — e o lugar escondido", () => {
+  const VEU = "veu-de-noiva-de-bonito";
+
+  /** Esconde um lugar como o painel fará: versão nova, MESMO documento,
+   *  `oculto = true`. Nunca um UPDATE. */
+  const esconder = (slug: string, doc: Ficha) =>
+    gravarVersao(c, slug, JSON.stringify(doc), "painel", AGORA + 5, true);
+
+  // 🔴 A1 — O PORTÃO DE COERÊNCIA TEM DE VER O ACERVO INTEIRO, INCLUSIVE O
+  // ESCONDIDO. É o P3 da rodada, e o buraco tem três passos: esconder o Véu →
+  // copiar a voz dele na Rampa → mostrar o Véu de novo → o acervo PÚBLICO fica
+  // com duas fichas dizendo a mesma coisa, que é exatamente o que
+  // `texto-emprestado` existe pra pegar. Esconder não apaga, e **lugar escondido
+  // volta**: se este portão medisse contra o acervo público, ele ficaria
+  // permissivo EM SILÊNCIO no minuto em que a coluna nasceu.
+  it("o portão vê o lugar ESCONDIDO: copiar a voz de um lugar oculto ainda dá 409", async () => {
+    const veu = acervo.find((f) => f.slug === VEU)!;
+    await esconder(VEU, veu);
+    expect(
+      (await versoesAtuais(c)).has(VEU),
+      "a premissa deste caso: pro leitor público o Véu já não está no acervo",
+    ).toBe(false);
+
+    const res = await PUT(pedido({ slug: SLUG, campo: "voz", valor: veu.voz }, cookieBom));
+
+    expect(res.status, await res.text()).toBe(409);
+    // E nada foi gravado: a voz da Rampa continua sendo a dela.
+    expect(JSON.parse((await versaoAtual(c, SLUG))!.doc).voz).toBe(ficha.voz);
+    expect(await historico(c, SLUG)).toHaveLength(1);
+  });
+
+  // 🔴 A4 — ESCONDER É TIRAR DO PÚBLICO, NÃO TIRAR DO DONO. A rota tem de
+  // continuar aceitando a edição de um lugar escondido, senão esconder tranca a
+  // ficha para sempre.
+  it("editar um campo de um lugar ESCONDIDO: 200, e a ficha muda", async () => {
+    await esconder(SLUG, ficha);
+
+    const res = await PUT(pedido({ slug: SLUG, campo: "voz", valor: "texto novo" }, cookieBom));
+
+    expect(res.status, await res.text()).toBe(200);
+    expect(JSON.parse((await versaoAtual(c, SLUG))!.doc).voz).toBe("texto novo");
+  });
+
+  // 🔴 E O OUTRO LADO DO MESMO CASO, que é o defeito de verdade: `gravarVersao`
+  // tem `oculto = false` por padrão, então uma rota que o chame SEM o argumento
+  // DESESCONDE o lugar a cada edição de campo. O dono esconde um lugar, conserta
+  // um typo pelo celular, e o lugar volta ao público sem ele pedir — uma decisão
+  // de produto tomada de carona por um argumento omitido. A versão nova HERDA a
+  // visibilidade da atual.
+  it("editar um campo de um lugar escondido NÃO o devolve ao ar", async () => {
+    await esconder(SLUG, ficha);
+
+    await PUT(pedido({ slug: SLUG, campo: "voz", valor: "texto novo" }, cookieBom));
+
+    expect((await versaoAtual(c, SLUG))!.oculto, "a edição de campo não pode desesconder").toBe(true);
+    expect((await versoesAtuais(c)).has(SLUG), "e o público continua sem ver").toBe(false);
+  });
+
+  // O ramo simétrico: num lugar que está NO AR, a edição não o esconde. Sem este
+  // caso, trocar a herança por um `true` cravado passaria verde no de cima.
+  it("editar um campo de um lugar que está no ar o mantém no ar", async () => {
+    await PUT(pedido({ slug: SLUG, campo: "voz", valor: "texto novo" }, cookieBom));
+
+    expect((await versaoAtual(c, SLUG))!.oculto).toBe(false);
+    expect((await versoesAtuais(c)).has(SLUG)).toBe(true);
+  });
+
+  // 🔴 "VOLTAR" RESTAURA O DOCUMENTO, NUNCA A VISIBILIDADE — e a que vale é a DE
+  // AGORA, não a que a versão antiga carregava. Se viesse da versão restaurada,
+  // voltar a uma versão de antes de o lugar ser escondido o devolveria AO AR em
+  // silêncio: a mesma família do defeito da semente, agora pela porta do arquivo
+  // histórico. Visibilidade só muda por /api/admin/visibilidade.
+  it('"voltar" num lugar escondido devolve o documento e NÃO devolve o lugar ao ar', async () => {
+    const antiga = await gravarVersao(
+      c, SLUG, JSON.stringify({ ...ficha, voz: "a voz de antes" }), "painel", AGORA + 1,
+    );
+    await esconder(SLUG, ficha);
+
+    const res = await PUT(pedido({ slug: SLUG, versaoId: antiga }, cookieBom));
+
+    expect(res.status, await res.text()).toBe(200);
+    const atual = await versaoAtual(c, SLUG);
+    expect(JSON.parse(atual!.doc).voz).toBe("a voz de antes");
+    expect(atual!.oculto, "voltar restaura o DOCUMENTO, nunca a visibilidade").toBe(true);
+  });
+
+  it('"voltar" num lugar que está no ar o mantém no ar', async () => {
+    const antiga = await gravarVersao(
+      c, SLUG, JSON.stringify({ ...ficha, voz: "a voz de antes" }), "painel", AGORA + 1,
+    );
+    await gravarVersao(c, SLUG, JSON.stringify(ficha), "painel", AGORA + 2);
+
+    const res = await PUT(pedido({ slug: SLUG, versaoId: antiga }, cookieBom));
+
+    expect(res.status, await res.text()).toBe(200);
+    expect((await versaoAtual(c, SLUG))!.oculto).toBe(false);
+  });
+});

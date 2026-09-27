@@ -16,7 +16,16 @@ import type { Ficha } from "@/types/ficha";
 export async function semear(
   client: Client, fichas: Ficha[], agora: number,
 ): Promise<{ semeados: string[]; pulados: string[] }> {
-  const jaTem = await versoesAtuais(client);
+  // 🔴 `incluirOcultos: true`, E ESTA LINHA É CRÍTICA. A pergunta daqui é "este
+  // lugar já tem ficha no banco?", e lugar ESCONDIDO tem. Com o filtro padrão de
+  // `versoesAtuais` (só o que está no ar), um acervo cujos lugares estão todos
+  // escondidos pareceria VAZIO daqui: `jaTem` viria sem nenhum slug, a semente
+  // regravaria tudo, e as versões novas nasceriam VISÍVEIS por cima do que o dono
+  // escondeu de propósito. Ele esconderia três lugares, o deploy seguinte
+  // rodaria `npm run semear`, e os três voltariam AO AR sem ninguém pedir — a
+  // mesma família do defeito que o "IDEMPOTENTE" do docstring acima existe pra
+  // impedir, entrando pela coluna nova.
+  const jaTem = await versoesAtuais(client, { incluirOcultos: true });
   const semeados: string[] = [];
   const pulados: string[] = [];
   for (const f of fichas) {

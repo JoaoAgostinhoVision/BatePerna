@@ -64,6 +64,34 @@ export async function ensureSchema(client: Client): Promise<void> {
   await client.execute(
     `CREATE INDEX IF NOT EXISTS ficha_versoes_por_lugar ON ficha_versoes (ficha_slug, id)`,
   );
+  await migrarColunaOculto(client);
+}
+
+/** A coluna `oculto` de `ficha_versoes`, por `ALTER TABLE` guardado.
+ *
+ *  🔴 ELA NÃO PODE NASCER NO `CREATE TABLE` ACIMA, e é por isso que esta
+ *  função existe: `ficha_versoes` JÁ ESTÁ EM PRODUÇÃO desde 2026-09-26, então
+ *  o `CREATE TABLE IF NOT EXISTS` não roda mais lá — acrescentar a coluna na
+ *  string dele mudaria o schema dos bancos NOVOS e deixaria o de produção sem a
+ *  coluna, que é o pior dos dois mundos.
+ *
+ *  🔴 E `ALTER TABLE ... ADD COLUMN` NÃO TEM `IF NOT EXISTS` NO SQLITE.
+ *  `ensureSchema` roda em TODO boot e o resto deste arquivo depende de ela ser
+ *  idempotente; sem o guarda, o SEGUNDO boot estouraria com "duplicate column
+ *  name: oculto" e derrubaria o app inteiro. O guarda pergunta ao próprio banco
+ *  (`PRAGMA table_info`) em vez de capturar a mensagem de erro do driver: a
+ *  mensagem é do driver e muda com a versão dele, o pragma é a pergunta de
+ *  verdade.
+ *
+ *  `DEFAULT 0` é o que faz toda linha JÁ GRAVADA nascer VISÍVEL — ninguém
+ *  escondeu nada antes de hoje, e o dono não pode encontrar o acervo inteiro
+ *  fora do ar depois de um deploy. `NOT NULL` pela mesma razão do `vence_em`
+ *  de `avisos`: numa coluna que decide o que está no ar, valor em branco é
+ *  uma pergunta sem resposta. */
+async function migrarColunaOculto(client: Client): Promise<void> {
+  const colunas = await client.execute(`PRAGMA table_info(ficha_versoes)`);
+  if (colunas.rows.some((c) => String(c.name) === "oculto")) return;
+  await client.execute(`ALTER TABLE ficha_versoes ADD COLUMN oculto INTEGER NOT NULL DEFAULT 0`);
 }
 
 export function inicioDoDiaRecife(agora: number): number {
@@ -207,6 +235,10 @@ export type FichaVersao = {
   doc: string;
   autor: AutorVersao;
   criado_em: number;
+  /** `true` = fora do público. NÃO é "apagado": a linha continua no histórico,
+   *  o painel continua editando o lugar, e a versão seguinte pode devolvê-lo ao
+   *  ar. Ver `versoesAtuais`. */
+  oculto: boolean;
 };
 
 function versaoDaLinha(r: Record<string, unknown>): FichaVersao {
@@ -216,16 +248,31 @@ function versaoDaLinha(r: Record<string, unknown>): FichaVersao {
     doc: String(r.doc),
     autor: String(r.autor) as AutorVersao,
     criado_em: Number(r.criado_em),
+    // 🔴 `Number(...) === 1`, NUNCA `Boolean(r.oculto)`. Se o driver devolver a
+    // coluna como STRING, `Boolean("0")` é `true` — e TODA ficha do acervo
+    // nasceria escondida, o app inteiro fora do ar sem ninguém pedir. Mesma
+    // régua das outras conversões desta função: à mão, e pro tipo certo.
+    oculto: Number(r.oculto) === 1,
   };
 }
 
+/** Grava uma versão NOVA — INSERT, nunca UPDATE (ver o comentário da tabela).
+ *
+ *  🔴 O `oculto` TEM DEFAULT `false` PRA NÃO MEXER NOS CHAMADORES ANTIGOS, E
+ *  ISSO É UMA ARMADILHA PARA QUEM GRAVA UMA EDIÇÃO. Quem grava versão nova de um
+ *  lugar QUE JÁ EXISTE tem de passar o `oculto` da versão ATUAL: com o default,
+ *  o dono esconde um lugar, conserta um typo pelo celular, e o lugar VOLTA AO AR
+ *  em silêncio. Visibilidade só muda pela porta que existe pra isso
+ *  (`POST /api/admin/visibilidade`) — nunca de carona numa edição de campo. É o
+ *  que `src/app/api/admin/ficha/route.ts` faz, com o porquê escrito lá. */
 export async function gravarVersao(
   client: Client, slug: string, doc: string, autor: AutorVersao, criadoEm: number,
+  oculto: boolean = false,
 ): Promise<number> {
   const r = await client.execute({
-    sql: `INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em)
-          VALUES (?, ?, ?, ?) RETURNING id`,
-    args: [slug, doc, autor, criadoEm],
+    sql: `INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em, oculto)
+          VALUES (?, ?, ?, ?, ?) RETURNING id`,
+    args: [slug, doc, autor, criadoEm, oculto ? 1 : 0],
   });
   return Number(r.rows[0].id);
 }
@@ -257,16 +304,59 @@ export async function versaoPorId(client: Client, id: number): Promise<FichaVers
 
 /** A versão atual de TODOS os lugares, numa consulta só — irmão do
  *  `avisosVigentes`, e pela mesma razão: N consultas no portão é o que esta
- *  família evita. */
-export async function versoesAtuais(client: Client): Promise<Map<string, FichaVersao>> {
+ *  família evita.
+ *
+ *  🔴 O PADRÃO É SÓ O QUE ESTÁ NO AR. Lugar cuja versão de maior `id` tem
+ *  `oculto = 1` NÃO SAI DAQUI — é assim que a home, o acervo e a página do
+ *  lugar param de mostrá-lo, sem nenhuma delas saber que "esconder" existe.
+ *
+ *  🔴 QUEM TEM DE PASSAR `{ incluirOcultos: true }`, E POR QUÊ (medido antes de
+ *  escrever a coluna, porque o padrão novo muda estes dois em silêncio):
+ *
+ *   1. **O portão de coerência** (`src/app/api/admin/ficha/route.ts`): duas das
+ *      treze regras comparam uma ficha com as outras, e **lugar escondido
+ *      volta**. Sem o acervo inteiro, o buraco é: esconder o Véu → copiar a voz
+ *      dele na Rampa (passa, o Véu não está mais no acervo medido) → mostrar o
+ *      Véu de novo → duas fichas públicas dizendo a mesma coisa.
+ *   2. **A semente** (`src/lib/semente.ts`): um acervo todo escondido pareceria
+ *      VAZIO, e `npm run semear` regravaria tudo VISÍVEL por cima do que o dono
+ *      escondeu de propósito.
+ *
+ *  🔴 E O FILTRO FICA **FORA** DA SUBCONSULTA, DE PROPÓSITO. Dentro dela
+ *  (`SELECT MAX(id) ... WHERE oculto <> 1`) o lugar escondido continuaria
+ *  aparecendo, servido pela última versão VISÍVEL — o dono esconderia o lugar e
+ *  o público continuaria vendo a ficha dele, uma versão atrasada. O `MAX(id)`
+ *  escolhe a versão que vale; só depois se pergunta se ela está no ar.
+ *
+ *  🔴 E É `oculto <> 1`, NÃO `oculto = 0`, PORQUE ESTA CONSULTA E O
+ *  `versaoDaLinha` LEEM A MESMA COLUNA E TÊM DE CONCORDAR. Lá a régua é
+ *  `Number(r.oculto) === 1` (ver o porquê ali), ou seja: **só `1` esconde, tudo
+ *  o mais está no ar**. Com `= 0` aqui, um valor estranho na coluna — texto, o
+ *  que um driver ou um escritor fora desta API produziria — sairia ESCONDIDO pro
+ *  público e VISÍVEL pro painel: duas respostas pra mesma pergunta sobre o mesmo
+ *  lugar, que é a espécie de defeito que este projeto já pagou três vezes. E o
+ *  lado escolhido é "no ar", porque é o estado de todo lugar que ninguém
+ *  escondeu, e porque o acervo inteiro sair do ar por um valor torto é o pior
+ *  desfecho possível. */
+export async function versoesAtuais(
+  client: Client,
+  opts: { incluirOcultos?: boolean } = {},
+): Promise<Map<string, FichaVersao>> {
   const r = await client.execute(
     `SELECT * FROM ficha_versoes WHERE id IN
-       (SELECT MAX(id) FROM ficha_versoes GROUP BY ficha_slug)`,
+       (SELECT MAX(id) FROM ficha_versoes GROUP BY ficha_slug)
+       ${opts.incluirOcultos ? "" : "AND oculto <> 1"}`,
   );
   return new Map(r.rows.map((l) => { const v = versaoDaLinha(l); return [v.ficha_slug, v]; }));
 }
 
-/** Tudo que já foi dito sobre UM lugar, do mais novo pro mais velho. */
+/** Tudo que já foi dito sobre UM lugar, do mais novo pro mais velho.
+ *
+ *  🔴 NÃO FILTRA `oculto`, e nem `versaoAtual` nem `versaoPorId` filtram —
+ *  esconder é tirar do PÚBLICO, não tirar do DONO. Se qualquer uma das três
+ *  passasse a filtrar, o painel deixaria de conseguir editar um lugar escondido
+ *  e o "voltar" morreria com ele: uma porta de mão única, que é o defeito que a
+ *  ruling C1 da Tarefa 1 desta rodada já pagou uma vez. */
 export async function historico(client: Client, slug: string): Promise<FichaVersao[]> {
   const r = await client.execute({
     sql: `SELECT * FROM ficha_versoes WHERE ficha_slug = ? ORDER BY id DESC`,

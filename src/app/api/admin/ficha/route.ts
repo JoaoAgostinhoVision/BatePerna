@@ -245,7 +245,20 @@ export async function PUT(req: Request): Promise<Response> {
       return new Response("", { status: 400, headers: TEXTO });
     }
 
-    const id = await gravarVersao(getClient(), slug, versao.doc, "painel", agora);
+    // 🔴 "VOLTAR" RESTAURA O DOCUMENTO, NUNCA A VISIBILIDADE — e a visibilidade
+    // que vale é a DE AGORA, não a que a versão antiga tinha. Se ela viesse de
+    // `versao.oculto`, voltar a uma versão de antes de o lugar ser escondido o
+    // devolveria AO AR em silêncio: a mesma família do defeito da semente, agora
+    // pela porta do arquivo histórico. E com o default `false` de
+    // `gravarVersao` seria pior — TODO "voltar" desesconderia.
+    //
+    // A leitura a mais é o preço, e é uma consulta indexada de uma linha na mesma
+    // tabela que o `versaoPorId` acima já leu. Ela nunca devolve `null` aqui (a
+    // versão de cima existe, logo o lugar tem versão), mas o `?? false` está
+    // escrito porque falha fechada num campo de visibilidade significa "no ar",
+    // que é o estado de todo lugar que ninguém escondeu.
+    const atual = await versaoAtual(getClient(), slug);
+    const id = await gravarVersao(getClient(), slug, versao.doc, "painel", agora, atual?.oculto ?? false);
     return Response.json({ id }, { headers: { "cache-control": "no-store" } });
   }
 
@@ -325,7 +338,16 @@ export async function PUT(req: Request): Promise<Response> {
   //      menos"; numa porta, significaria "gravar sem conferir".
   //  O custo é honesto e não é regressão: a gravação pode pendurar até o timeout
   //  da plataforma — exatamente como o `versaoAtual` logo acima já pendura.
-  const versoes = await versoesAtuais(getClient());
+  //
+  // 🔴 E `incluirOcultos: true`, DESDE A TAREFA 4 (2026-09-27): o acervo que este
+  // portão mede inclui os lugares ESCONDIDOS. É o P3 da rodada, e o buraco que ele
+  // fecha tem três passos: esconder o Véu → copiar a voz dele na Rampa (passaria,
+  // porque o Véu não estaria mais no acervo medido) → mostrar o Véu de novo → o
+  // acervo PÚBLICO fica com duas fichas dizendo a mesma coisa, que é exatamente o
+  // que `frase-emprestada` existe pra pegar. Esconder não apaga, e lugar
+  // escondido VOLTA — então a coerência nunca pode deixar de vê-lo. Medir contra
+  // acervo parcial seria a porta ficando permissiva EM SILÊNCIO.
+  const versoes = await versoesAtuais(getClient(), { incluirOcultos: true });
   const violacoesAntes = violacoesDoAcervo(acervoComo(versoes, slug, versao.doc));
   const antes = contarPares(violacoesAntes);
   const todasDepois = violacoesDoAcervo(acervoComo(versoes, slug, novoDoc));
@@ -350,6 +372,15 @@ export async function PUT(req: Request): Promise<Response> {
     return new Response(aDizer.frase, { status: 409, headers: TEXTO });
   }
 
-  const id = await gravarVersao(getClient(), slug, novoDoc, "painel", agora);
+  // 🔴 A VERSÃO NOVA HERDA A VISIBILIDADE DA ATUAL (`versao.oculto`), e sem este
+  // argumento a rota DESESCONDERIA o lugar a cada edição de campo: `gravarVersao`
+  // tem `oculto = false` por padrão. O dono esconde um lugar, conserta um typo na
+  // voz pelo celular, e o lugar VOLTA AO PÚBLICO sem ele pedir — uma decisão de
+  // produto tomada de carona por um argumento omitido.
+  //
+  // Visibilidade só muda pela porta que existe pra isso
+  // (`POST /api/admin/visibilidade`). Esta rota edita CONTEÚDO; nada aqui é um
+  // canal pra mudar o que está no ar.
+  const id = await gravarVersao(getClient(), slug, novoDoc, "painel", agora, versao.oculto);
   return Response.json({ id }, { headers: { "cache-control": "no-store" } });
 }

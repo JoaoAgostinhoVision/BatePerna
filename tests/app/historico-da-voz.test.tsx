@@ -10,8 +10,8 @@ const SLUG = "rampa-do-pepe";
 const AGORA = 1_758_200_000;
 
 const VERSOES = [
-  { id: 2, ficha_slug: SLUG, doc: JSON.stringify({ voz: "nova" }), autor: "painel" as const, criado_em: AGORA + 10 },
-  { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA },
+  { id: 2, ficha_slug: SLUG, doc: JSON.stringify({ voz: "nova" }), autor: "painel" as const, criado_em: AGORA + 10, oculto: false },
+  { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA, oculto: false },
 ];
 
 // 🔴 M4 DA REVISÃO FINAL (2026-09-26): `vi.restoreAllMocks()` NÃO desfaz
@@ -52,8 +52,8 @@ describe("HistoricoDaVoz", () => {
   // não pode tirar as OUTRAS versões da tela.
   it("versão com doc que não parseia não derruba a lista — mostra vazio só para ela", () => {
     const versoes = [
-      { id: 2, ficha_slug: SLUG, doc: "{ isto não é JSON", autor: "painel" as const, criado_em: AGORA + 10 },
-      { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA },
+      { id: 2, ficha_slug: SLUG, doc: "{ isto não é JSON", autor: "painel" as const, criado_em: AGORA + 10, oculto: false },
+      { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA, oculto: false },
     ];
     render(<HistoricoDaVoz versoes={versoes} />);
     expect(screen.getByText(/você, pelo painel/i), "a linha corrompida sumiu da lista").toBeTruthy();

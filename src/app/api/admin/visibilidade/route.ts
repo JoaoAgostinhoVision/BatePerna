@@ -1,0 +1,92 @@
+import { lerConfigAdmin } from "@/lib/admin-config";
+import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
+import { getClient, gravarVersao, versaoAtual } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+
+/** Esconder um lugar do público, e devolvê-lo ao ar — as duas pela MESMA porta,
+ *  e as duas como VERSÃO NOVA em `ficha_versoes`. Nunca um `UPDATE`, nunca um
+ *  `DELETE`: a tabela é append-only e é a única procedência que este projeto
+ *  tem desde que a ficha saiu do git (2026-09-24). "Escondido" é um estado da
+ *  versão de maior `id`, não uma linha que desapareceu.
+ *
+ *  O corpo é `{ slug, oculto: boolean }`. A ordem das guardas é a das rotas
+ *  irmãs do admin: config → sessão → corpo → domínio → grava.
+ *
+ *  🔴 A EXISTÊNCIA DO LUGAR É CONFERIDA COM `versaoAtual`, NUNCA COM `getFicha`.
+ *  A rota irmã de aviso usa `getFicha(slug)` pra isso, e aqui isso seria uma
+ *  PORTA DE MÃO ÚNICA: `getFicha` sai de `versoesAtuais`, que desde a Tarefa 4
+ *  esconde os ocultos por padrão — então o lugar escondido "não existiria" pra
+ *  esta rota, e `{ oculto: false }` levaria 400. O dono esconderia um lugar e
+ *  **nunca mais o devolveria ao ar sem um desenvolvedor**, que é exatamente o
+ *  que a lei dele proíbe (e a mesma forma do defeito que a ruling C1 da Tarefa 1
+ *  desta rodada já pagou uma vez, no "não sei" do horário).
+ *
+ *  🔴 O DOCUMENTO VAI VERBATIM, SEM `fichaSchema.parse`. Dois motivos, os dois
+ *  medidos como escolha:
+ *
+ *   1. Renormalizar REESCREVERIA O PASSADO — o zod descarta chave desconhecida
+ *      em silêncio (ver `src/types/ficha.ts`), então esconder um lugar apagaria
+ *      pra sempre campos antigos que a ficha ainda carregasse. É o mesmo
+ *      conserto que o "voltar" da rota de ficha já teve.
+ *   2. Exigir que o documento ABRA trancaria o dono justamente no caso em que
+ *      ele mais precisa desta porta: uma ficha que ficou ilegível (ou que o
+ *      schema de hoje reprova) é uma ficha que ele quer **tirar do ar agora**.
+ *      Uma porta que recusa esconder um lugar quebrado não serve pra nada.
+ *
+ *  🔴 E ESTA ROTA **NÃO** PASSA PELO PORTÃO DE COERÊNCIA DA TAREFA 3 — está
+ *  escrito pra ninguém acrescentar por zelo. Esconder só REMOVE uma ficha do
+ *  acervo público, e o portão de lá mede com `incluirOcultos: true` justamente
+ *  porque lugar escondido volta: o acervo que a coerência vê não muda de tamanho
+ *  quando alguém esconde. Rodar as treze regras aqui seria custo sem efeito
+ *  nenhum — e, pior, poderia recusar um esconder por causa de uma incoerência
+ *  preexistente, travando o dono de tirar do ar um lugar que ele quer fora. */
+export async function POST(req: Request): Promise<Response> {
+  // 🔴 404, não 401: painel desligado não anuncia que existe. Mesma regra das
+  // rotas irmãs, e vem ANTES da sessão pela mesma razão — sem ADMIN_SENHA não
+  // existe segredo pra validar sessão nenhuma.
+  const cfg = lerConfigAdmin(process.env);
+  if (!cfg.ligado) {
+    avisarDesligado(cfg);
+    return new Response("", { status: 404 });
+  }
+
+  const agora = Math.floor(Date.now() / 1000);
+  if (!sessaoValida(process.env, tokenDoCookie(req), agora)) {
+    return new Response("", { status: 401 });
+  }
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return new Response("", { status: 400 });
+  }
+  // `null` é JSON válido e não estoura o `catch` acima, mas destructurar `null`
+  // estoura na hora. Mesma guarda das rotas irmãs.
+  if (typeof body !== "object" || body === null) return new Response("", { status: 400 });
+
+  const { slug, oculto } = body as { slug?: unknown; oculto?: unknown };
+  if (typeof slug !== "string") return new Response("", { status: 400 });
+  // 🔴 `boolean` E NADA MAIS — nem `1`, nem `"true"`, nem ausente. Esta é a
+  // bandeira que decide se um lugar real está no ar; um corpo malformado não
+  // pode virar "esconde" nem "mostra" por coerção. Falha fechada, como o
+  // `naoSei !== true` da rota de ficha.
+  if (typeof oculto !== "boolean") return new Response("", { status: 400 });
+
+  const versao = await versaoAtual(getClient(), slug);
+  if (versao == null) return new Response("", { status: 400 });
+
+  // 🔴 PEDIR O ESTADO QUE JÁ VALE NÃO GRAVA NADA, e devolve 200. Toda linha de
+  // `ficha_versoes` é uma coisa que alguém DISSE sobre um lugar, e o histórico é
+  // a tela que o dono lê: um "esconder" sobre um lugar já escondido não disse
+  // nada de novo, e gravá-lo enche a tela dele de linhas sem conteúdo. O 200 é
+  // honesto — o estado pedido é o estado que vale — e o `id` devolvido é o da
+  // versão que JÁ o carrega, não o de uma linha nova que não existe.
+  if (versao.oculto === oculto) {
+    return Response.json({ id: versao.id }, { headers: { "cache-control": "no-store" } });
+  }
+
+  const id = await gravarVersao(getClient(), slug, versao.doc, "painel", agora, oculto);
+  return Response.json({ id }, { headers: { "cache-control": "no-store" } });
+}

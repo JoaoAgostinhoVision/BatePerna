@@ -1,4 +1,6 @@
+import { createClient, type Client } from "@libsql/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ensureSchema, gravarVersao, versoesAtuais } from "@/lib/db";
 import { buscarFichas, esquecerMemoria, PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
 import rampa from "../../content/fichas/rampa-do-pepe.json";
 
@@ -115,5 +117,71 @@ describe("buscarFichas", () => {
     await expect(
       buscarFichas(async () => new Map([["rampa-do-pepe", { doc: JSON.stringify(doc) }]])),
     ).rejects.toThrow(/divergente/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 ESCONDER O ÚLTIMO LUGAR VISÍVEL (Tarefa 4 da rodada do painel completo,
+// 2026-09-27).
+//
+// O C1 da revisão de 26/09 consertou este defeito pra tabela VAZIA; a coluna
+// `oculto` o traz de volta por uma porta nova, porque agora existe um jeito de o
+// acervo público ficar vazio com o banco de pé e cheio de linhas. Se a fonte
+// devolvesse `[]`, a home afirmaria em silêncio que **não existe trilha nenhuma
+// em Pernambuco** — e `[]` ainda ficaria memorizado como "última boa".
+//
+// 🔴 E ESTE BLOCO USA `versoesAtuais` DE VERDADE, contra um banco de verdade, em
+// vez de um `Map` montado à mão: o que ele mede é a JUNÇÃO das duas peças — o
+// filtro novo no SQL e o ramo de vazio em `buscarFichas`. Com um `Map` literal
+// os casos abaixo passariam mesmo se o filtro de `oculto` não existisse.
+//
+// ⚠️ A CÓPIA EM MEMÓRIA (`ultimaBoa`) pode fazer qualquer um destes passar por
+// ACIDENTE: ela vive no módulo, atravessa o arquivo de teste inteiro, e é servida
+// justamente quando a leitura falha ou vem vazia. O `beforeEach` do topo deste
+// arquivo chama `esquecerMemoria()`, e é isso que mantém estes casos honestos —
+// o caso do meio o chama de novo, à mão, porque ele mesmo esquenta a memória.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("buscarFichas contra o banco: lugar escondido", () => {
+  const doc = (slug: string) => JSON.stringify({ ...rampa, slug });
+
+  async function banco(): Promise<Client> {
+    const c = createClient({ url: ":memory:" });
+    await ensureSchema(c);
+    return c;
+  }
+
+  // 🔴 A PREMISSA MEDIDA, e sem ela os dois casos abaixo poderiam estar medindo
+  // um banco quebrado em vez do esconder: o MESMO arranjo, com o lugar no ar,
+  // entrega a ficha.
+  it("com o lugar no ar, a mesma leitura entrega a ficha", async () => {
+    const c = await banco();
+    await gravarVersao(c, "rampa-do-pepe", doc("rampa-do-pepe"), "semente", 1);
+    const fichas = await buscarFichas(() => versoesAtuais(c));
+    expect(fichas.map((f) => f.slug)).toEqual(["rampa-do-pepe"]);
+    c.close();
+  });
+
+  it("esconder o ÚNICO lugar faz a fonte ESTOURAR, nunca devolver lista vazia", async () => {
+    const c = await banco();
+    await gravarVersao(c, "rampa-do-pepe", doc("rampa-do-pepe"), "semente", 1);
+    await gravarVersao(c, "rampa-do-pepe", doc("rampa-do-pepe"), "painel", 2, true);
+    // A memória do módulo é o que faria este caso passar por acidente — e, pior,
+    // passar servindo a ficha ESCONDIDA. Esquecida à mão porque o caso de cima
+    // acabou de esquentá-la.
+    esquecerMemoria();
+    await expect(buscarFichas(() => versoesAtuais(c))).rejects.toThrow();
+    c.close();
+  });
+
+  // O outro lado, e é o caminho normal: esconder UM lugar não derruba o acervo.
+  it("esconder um lugar de dois deixa o outro no ar", async () => {
+    const c = await banco();
+    await gravarVersao(c, "rampa-do-pepe", doc("rampa-do-pepe"), "semente", 1);
+    await gravarVersao(c, "veu-de-noiva-de-bonito", doc("veu-de-noiva-de-bonito"), "semente", 1);
+    await gravarVersao(c, "rampa-do-pepe", doc("rampa-do-pepe"), "painel", 2, true);
+    esquecerMemoria();
+    const fichas = await buscarFichas(() => versoesAtuais(c));
+    expect(fichas.map((f) => f.slug)).toEqual(["veu-de-noiva-de-bonito"]);
+    c.close();
   });
 });
