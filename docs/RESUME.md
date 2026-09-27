@@ -94,7 +94,7 @@ arquivos**.
 | tarefa | estado |
 |---|---|
 | **1 — o registro de campos, `aplicarCampo` com caminho/tipo/"não sei"** | ✅ completa (`dfeb005..50f71bf`), 1 rodada de fix, re-revisão limpa |
-| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 4 rodadas de fix aplicadas (`7c4ddf9..cdeb69b`); a rodada 4 endureceu o próprio instrumento depois de dois `Critical` — falta só a re-revisão escopada dela, ver as seções 4 e 4b |
+| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 5 rodadas de fix aplicadas (`7c4ddf9..a698d43`); as rodadas 4 e 4b endureceram o próprio instrumento depois de cinco `Critical` **nele** — falta só a re-revisão escopada da 4b, ver as seções 4, 4b e 4c |
 | 3 — a porta de escrita aceita todo campo e passa pela coerência | ⬜ próxima |
 | 4 — `oculto`: esconder sem apagar | ⬜ |
 | 5 — a tela do lugar mostra a ficha inteira | ⬜ |
@@ -176,12 +176,39 @@ repo.
 medição**, exit 0, todos os `mata` conferem; `--controles` exit 0; 1287/1287 em 81 arquivos; `tsc`
 exit 0; `npm run build` exit 0.
 
-🟡 **O que falta para FECHAR a Tarefa 2:** a re-revisão escopada da rodada 4 (despachada para o
-mesmo revisor, com o pedido explícito de tentar derrubar cada conserto — e em especial de dizer se
-algum dos treze `mata` novos ficou **frouxo demais**, porque ali eu mudei a declaração para casar
-com a observação). Fechando limpa, a Tarefa 2 está completa e o próximo passo é a **Tarefa 3** (a
-porta de escrita), cujo brief **já foi auditado por mim** — sete defeitos achados, dois deles
-rulings (T3-R1 e T3-R2), em `task-3-brief.md` e no fim do `progress.md`.
+### 4c. 🔴 A RODADA 4b/5 — "CADA CONSERTO NASCEU SEM O GUARDA DE SI MESMO" (`a698d43`)
+
+A re-revisão da rodada 4 devolveu **7 itens + 3 achados novos**, e a frase com que ela fechou é o
+achado de verdade — **três `Critical`**:
+
+1. 🔴 **Os dois portões novos podiam ser desligados EM SILÊNCIO.** O re-revisor desligou cada um
+   numa cópia: forçar `mataConfere = true` com um `mata` fantasma, e baixar o piso para 0 cortando
+   a lista de arquivos pela metade. Nos **dois** casos os três controles de então ficaram
+   **verdes, exit 0** — um deles medindo 31 dos 49 testes. Nasceram `CTRL-MATA-ERRADO` e
+   `CTRL-PISO-BAIXO`, e a regra que ficou escrita no topo do arquivo: **guarda sem controle é
+   guarda que se pode desligar em silêncio.** As três sabotagens foram rodadas por mim; as três são
+   pegas, cada uma nomeando o controle que quebrou.
+2. 🔴 **A seção (c) do docblock ainda dizia que `mata` é "só documentação".** Falsa desde o commit
+   que criou o portão, e na única seção que alguém lê antes de escrever uma entrada nova. **Quarta
+   frase falsa da sequência, terceira rodada seguida** — sempre na parte que ninguém re-lê.
+3. 🔴 **O portão do `mata` não tinha piso de especificidade.** Era `includes` solto: medido,
+   `mata: "a"` casa os 51 testes. Agora a suíte é medida **antes** de mutar e cada nome declarado
+   tem de casar **exatamente um** teste real.
+
+**E dois `it` foram partidos em quatro** (48ª espécie, com consequência medida): `B2a/B2b` e
+`B3a/B3b` forçam metades **opostas** de uma bifurcação e eram obrigados a declarar o **mesmo**
+teste, porque as duas metades moravam num `it` só. Agora cada mutação declara o lado que desliga.
+
+**Medido:** `node scripts/mutar.mjs` → **34 morreu, 0 nas quatro categorias de falha**, exit 0,
+`mata confere` = sim nas 34; `--controles` → exit 0 com os cinco; **1289/1289 em 81 arquivos**
+(eram 1287 — os dois `it` partidos somaram dois); `tsc` exit 0; `npm run build` exit 0.
+
+🟡 **O que falta para FECHAR a Tarefa 2:** a re-revisão escopada da rodada 4b (despachada, com o
+pedido explícito de achar uma **quarta** sabotagem que passe pelos cinco controles, e de varrer o
+docblock atrás de frase falsa pela quarta rodada seguida). Fechando limpa — ou só com Minor, que vão
+para a triagem da revisão final da branch —, a Tarefa 2 está completa e o próximo passo é a
+**Tarefa 3** (a porta de escrita), cujo brief **já foi auditado por mim**: sete defeitos achados,
+dois deles rulings (T3-R1 e T3-R2), em `task-3-brief.md` e no fim do `progress.md`.
 
 🔵 **Uma recomendação registrada que é DELE, e que eu deixei fora do escopo de propósito:** medir
 **cobertura de ramo** nos testes (`@vitest/coverage-v8` com limiar) seria guarda automático contra a
