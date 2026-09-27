@@ -94,7 +94,7 @@ arquivos**.
 | tarefa | estado |
 |---|---|
 | **1 — o registro de campos, `aplicarCampo` com caminho/tipo/"não sei"** | ✅ completa (`dfeb005..50f71bf`), 1 rodada de fix, re-revisão limpa |
-| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 2 rodadas de fix aplicadas (`7c4ddf9..1227b6f`), re-revisão da rodada 2 **limpa no achado**. **Falta a rodada 3**, que é de MÉTODO, não de código — ver o primeiro passo |
+| **2 — as 13 regras de coerência viram porta de produção** | 🟡 **quase**: 3 rodadas de fix aplicadas (`7c4ddf9..cfa3482`); a rodada 3 (o harness versionado + as 34 re-rodadas + três frases falsas) está **feita** — falta só a re-revisão escopada dela, ver a seção 4 |
 | 3 — a porta de escrita aceita todo campo e passa pela coerência | ⬜ próxima |
 | 4 — `oculto`: esconder sem apagar | ⬜ |
 | 5 — a tela do lugar mostra a ficha inteira | ⬜ |
@@ -106,37 +106,43 @@ arquivos**.
 | 11 — criar lugar: o rascunho | ⬜ |
 | 12 — publicar o rascunho, e o que o app vai calar | ⬜ |
 
-### 4. 🔴 O PRIMEIRO PASSO: a rodada 3 da Tarefa 2 — três itens, e nenhum é de código
+### 4. 🟢 A RODADA 3 DA TAREFA 2 ESTÁ FEITA — 2026-09-27, commit `cfa3482`
 
-A re-revisão da rodada 2 **fechou o achado** (as três bifurcações de frase, seis colapsos medidos, os
-seis morrem). Mas ela derrubou duas conferências sobre o defeito de medição, e a rodada 3 foi
-despachada e **morreu com a pausa sem deixar nada** — árvore limpa, nenhum commit, `scripts/mutar.mjs`
-não chegou a existir. Redespache com os três itens:
+> A sessão anterior morreu **sem aviso** no meio dela (a tela fechou sozinha). O que ela deixou em
+> disco: `scripts/mutar.mjs` escrito e **não commitado**, mais o ledger. Não redespachei do zero —
+> o harness já existia e o que faltava era **medir**.
 
-**1. Reprovar o conjunto acumulado de mutações.** As *"28 mutações, 0 sobreviventes"* de `66b7af7`
-estão **sem valor até serem medidas**. Um checkout **fresco** daquele commit sai em **CRLF** (medido
-com `git worktree add --detach` + `od -c`), então o mecanismo do bug valia lá também; se a
-conferência do implementador foi **ler** um registro em vez de **re-rodar**, foi leitura e não
-medição; e se o harness daquele momento não tinha a categoria *"sem alvo"*, dizer *"0 sem alvo"* não
-significa nada. Rodar tudo contra o `HEAD` com o harness corrigido, árvore limpa, **uma linha por
-mutação**: alvo, `numstat` da aplicação, e a categoria (morreu / sobreviveu / sem-alvo / sem-diff).
-Se alguma voltar **sobreviveu** ou **sem-alvo**, é buraco real e o teste que mata se escreve ali.
+**Os três itens, fechados:**
 
-**2. 🔴 Versionar o harness de mutação em `scripts/mutar.mjs`.** Ele vivia num scratchpad efêmero e
-**não existe em lugar nenhum** — o re-revisor foi auditá-lo e não achou. Consequência: **todo o
-argumento de qualidade desta branch repousa em evidência que nenhum revisor posterior pode
-conferir.** Requisitos: fora do caminho de `npm test` e de `npm run build`, nunca deixa a árvore
-suja se interrompido, e o docblock explica as quatro categorias, por que *"sem alvo"* **não** é
-resultado, e a armadilha do CRLF (item 3).
+1. **O conjunto acumulado foi re-rodado contra o `HEAD`**, árvore limpa: **34 morreram, 0
+   sobreviveram, 0 sem alvo, 0 sem diff**. A tabela linha a linha (id · arquivo · categoria ·
+   `numstat` · teste que matou) está em `task-2-report.md`, seção *"RODADA 3/5 — O CONJUNTO
+   ACUMULADO"*. 🔴 **E o instrumento foi provado VERMELHO antes de eu acreditar no placar** — numa
+   cópia do script, uma mutação semanticamente nula saiu **sobreviveu** e uma de alvo inexistente
+   saiu **sem alvo**, as duas com `exit 2`. Um harness que sempre imprime "morreu" dá o mesmo
+   quadro; sem esse controle, `34 morreram` não valeria nada.
+2. **O harness está versionado** em `scripts/mutar.mjs`. Fora do caminho de `npm test`
+   (`vitest.config.ts` varre só `tests/**`) e de `tsc` (só `.ts`/`.tsx`); nada em `src/` o importa;
+   restaura o arquivo se interrompido (medido com `kill -INT` no meio de uma rodada: `git status`
+   sujo **durante**, vazio **depois**).
+3. **As frases falsas eram TRÊS, não uma.** (a) A causa do CRLF: o blob de `src/lib/coerencia.ts`
+   em **todos** os sete commits da branch é LF puro, `core.autocrlf` é `true` e não há
+   `.gitattributes` — é o **checkout** que sai em CRLF, sempre. (b) O *"placar anterior tinha 0 sem
+   alvo"* não prova nada: aquele harness **não tinha** a categoria, e não existe mais.
+   (c) 🔴 **A terceira eu mesmo escrevi no conserto, copiando sem medir:** que `grep`/`cat`/`sed`
+   deste Git Bash *"traduzem CRLF→LF e mentem"*. **Não mentem** — os mounts do MSYS aqui são
+   `binary`, e `grep`, `od` e `wc -c` dão todos 592. O que falhava era a **receita** do docblock,
+   `od -An -tx1 | grep -c '0d0a'`, que devolve **0 em qualquer arquivo, inclusive num 100% CRLF**,
+   porque o `od` separa os bytes por espaço. Régua que só sabia dar a resposta confortável.
 
-**3. Corrigir a frase falsa da causa do CRLF** no `task-2-report.md`: não foram *"as edições desta
-rodada"*. O blob em **todos** os commits da branch é puro LF — nunca houve CRLF commitado. `git
-config core.autocrlf` é **`true`** nesta máquina, então **qualquer** checkout sai em CRLF. O efeito
-estava certo, a causa errada, e a verdadeira é pior: não é acidente de uma rodada, é a condição
-padrão de toda sessão aqui.
+**Medido depois do commit:** 1287/1287 em 81 arquivos, `npx tsc --noEmit` exit 0, `npm run build`
+exit 0.
 
-Depois disso: re-revisão escopada da rodada 3, fechar a Tarefa 2, e seguir para a **Tarefa 3** (a
-porta de escrita), cujo brief já está extraído no workspace.
+🟡 **O que falta para FECHAR a Tarefa 2:** a re-revisão escopada da rodada 3 (despachada; cinco
+perguntas — o harness pode mentir? as 34 são as 34? alguma é vácua? sobrou frase falsa? o placar é
+reproduzível?). Fechando limpa, a Tarefa 2 está completa e o próximo passo é a **Tarefa 3** (a
+porta de escrita), cujo brief **já foi auditado por mim** — sete defeitos achados, dois deles
+rulings (T3-R1 e T3-R2), tudo em `task-3-brief.md` e no fim do `progress.md`.
 
 🔵 **Uma recomendação registrada que é DELE, e que eu deixei fora do escopo de propósito:** medir
 **cobertura de ramo** nos testes (`@vitest/coverage-v8` com limiar) seria guarda automático contra a
