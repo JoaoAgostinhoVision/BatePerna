@@ -120,9 +120,16 @@ guarda do próprio harness, na 4e; → 1304 com os seis que a 4f acrescentou a e
 
 ### 3b. ▶ O PRIMEIRO PASSO DESTA SESSÃO, sem inventar nada
 
-1. **Confira o estado** (nunca repita o número deste arquivo): `git status` limpo, `git log --oneline -1`
-   deve ser `d31bb8e`, `npm test -- --run` deve dar **1399/1399 em 85 arquivos**, `npx tsc --noEmit`
-   exit 0.
+1. **Confira o estado** (nunca repita o número deste arquivo): `git status` limpo, `npm test -- --run`
+   deve dar **1399/1399 em 85 arquivos**, `npx tsc --noEmit` exit 0. O último commit da sessão que
+   fechou é um **`docs(resume): …`** — se o `git log` mostrar qualquer commit de **código** depois
+   dele, alguém mexeu entre as sessões e o número acima não vale.
+   (🔴 Este item nasceu falso **duas vezes**, as duas por cravar um SHA: a primeira redação apontava o
+   HEAD de **antes** do commit do próprio handoff, e a correção envelheceu **no ato de ser
+   commitada**, porque o commit dela mudou o HEAD de novo. **SHA do "agora" é frase falsa com atraso
+   de um commit.** A régua que sobrevive é a FORMA do commit, não o número dele — e esta é a terceira
+   aparição da mesma espécie em um dia, junto com o bloco de entrada envelhecido e a contagem em
+   prosa.)
 2. **Despache a Tarefa 6** com o brief que já existe e já foi auditado:
    `.superpowers/sdd/2026-09-26-painel-completo/task-6-brief.md` — **dez achados, três `Critical`**:
    - um componente de **cliente** não pode importar `campos-da-ficha` (ele importa `zod` e o schema;
