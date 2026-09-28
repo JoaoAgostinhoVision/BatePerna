@@ -89,7 +89,10 @@
    viu nenhuma tela desta rodada. */
 
 /* Seção-irmã de `.adm-voz`/`.adm-historico`: mesmo `display: grid` de TODA
-   seção deste arquivo, e `gap`/`margin-top` idênticos aos daquela regra. */
+   seção deste arquivo, e `margin-top` idêntico ao daquela regra; o `gap` vem de
+   `.adm-painel` (1.2rem), que é o espaçamento ENTRE cartões — e cada grupo
+   aqui é um cartão. (A frase dizia que os DOIS vinham de `.adm-voz`, e o `gap`
+   de lá é .5rem: falso, medido na revisão.) */
 .adm-ficha-inteira { display: grid; gap: 1.2rem; margin-top: 1.2rem; }
 /* De `.adm-ficha h2` — o mesmo tamanho de título de seção do painel. */
 .adm-ficha-inteira h2 { font-size: 1.05rem; margin: 0; }

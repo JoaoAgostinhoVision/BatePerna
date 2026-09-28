@@ -138,7 +138,15 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     for (const c of camposDaFicha(semHorario)) {
       const marca = container.querySelector(`[data-testid="campo-${c.caminho}"] [data-rotulo]`);
       expect(marca, `${c.caminho} ficou sem rótulo dentro do bloco dele`).not.toBeNull();
+      // 🔴 A RÉGUA É O PONTO, e ela nasceu de duas tentativas erradas medidas.
+      // `not.toBe(c.caminho)` é frouxa: o ramo do ponto devolvia
+      // `Ponto 1 · trajeto.waypoints.0.nota`, que não é IGUAL ao caminho e
+      // mostrava o caminho cru na cara do dono. E `not.toContain(c.caminho)` é
+      // dura demais: o rótulo "A promessa" contém, com razão, a palavra
+      // `promessa`. O que nenhum rótulo desta tela pode ter é **caminho
+      // pontuado** — nenhum deles tem ponto, e todo caminho aninhado tem.
       expect(marca!.textContent, `${c.caminho} mostrou o caminho cru como rótulo`).not.toBe(c.caminho);
+      expect(marca!.textContent, `${c.caminho}: rótulo com ponto é caminho vazando`).not.toMatch(/\w\.\w/);
       expect(marca!.textContent, `${c.caminho} veio com rótulo vazio`).toBeTruthy();
     }
   });
@@ -299,10 +307,25 @@ describe("FichaInteira — o componente serve os três lugares", () => {
   it("nenhuma frase FIXA da tela nomeia um lugar do acervo", () => {
     const semAcento = (s: string) =>
       s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    // 🔴 O CERCO FICOU COM BURACO NA PRIMEIRA VERSÃO, e um re-revisor provou:
+    // ele filtrava por `p.length > 3` para não tropeçar nos conectivos do slug
+    // (`de`, `do`), e isso descartava **`veu`** — a palavra-chave da ficha mais
+    // nova do acervo. Medido: o rótulo `"O piso da via ate o Veu"` passava
+    // VERDE. E baixar o limiar sozinho não serve: com `> 2` o guarda fica
+    // vermelho por INOCÊNCIA, porque `includes` casa `veu` dentro de
+    // "cho**veu**".
+    //
+    // O conserto é casar por PALAVRA (fronteira), não por substring, e tirar os
+    // conectivos por LISTA em vez de por tamanho. Assim `veu` entra no cerco e
+    // "choveu" não dispara.
+    const CONECTIVOS = ["de", "do", "da", "dos", "das", "e"];
     const proibidas = [
-      ...new Set(ACERVO.flatMap((f) => f.slug.split("-")).filter((p) => p.length > 3)),
-    ].map(semAcento);
+      ...new Set(ACERVO.flatMap((f) => f.slug.split("-"))),
+    ]
+      .map(semAcento)
+      .filter((p) => !CONECTIVOS.includes(p));
     expect(proibidas.length, "nenhum radical de slug: o cerco ficaria oco").toBeGreaterThan(2);
+    expect(proibidas, "o radical curto do Véu tem de estar no cerco").toContain("veu");
 
     const fixas: string[] = [];
     for (const f of ACERVO) {
@@ -314,13 +337,35 @@ describe("FichaInteira — o componente serve os três lugares", () => {
     }
     expect(fixas.length, "nenhuma frase fixa foi lida: o cerco ficaria oco").toBeGreaterThan(30);
     for (const frase of fixas) {
+      // Palavras da frase, sem acento e sem pontuação: é a fronteira que
+      // impede "choveu" de acusar `veu`, e que faz `veu` sozinho acusar.
+      const palavrasDaFrase = new Set(
+        semAcento(frase)
+          .split(/[^a-z0-9]+/)
+          .filter((p) => p.length > 0),
+      );
       for (const palavra of proibidas) {
         expect(
-          semAcento(frase).includes(palavra),
+          palavrasDaFrase.has(palavra),
           `a frase fixa "${frase}" fala de um lugar (${palavra}) num componente que serve os três`,
         ).toBe(false);
       }
     }
+  });
+
+  // 🔴 O CONTROLE DO CERCO, e ele existe porque a primeira versão deste guarda
+  // tinha buraco: um cerco que casa por palavra pode ficar OCO por outro lado —
+  // se a fronteira for frouxa, "choveu" acusa `veu` e o guarda fica vermelho
+  // por inocência; se for dura demais, o nome do lugar passa. Estas duas linhas
+  // fixam os dois lados, com as frases que de fato estão na tela.
+  it("o cerco de nome de lugar acusa o nome e NÃO acusa a palavra que o contém", () => {
+    const semAcento = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const palavras = (frase: string) =>
+      new Set(semAcento(frase).split(/[^a-z0-9]+/).filter((p) => p.length > 0));
+
+    expect(palavras("Quantas horas pra trás olhar se choveu").has("veu"), "choveu NÃO é o Véu").toBe(false);
+    expect(palavras("O piso da via ate o Veu").has("veu"), "o Véu É o Véu").toBe(true);
+    expect(palavras("Parada 1 · O nome do ponto").has("rampa"), "sem nome de lugar aqui").toBe(false);
   });
 
 });
@@ -338,6 +383,19 @@ describe("FichaInteira — os guardas do que cresce: rótulo e CSS", () => {
     expect(classes.length, "nenhuma classe foi lida: o teste ficaria oco").toBeGreaterThan(0);
     for (const c of classes) {
       expect(regraDe(css, `.${c}`), `\`.${c}\` está na tela e não tem regra no admin.css`).not.toBeNull();
+    }
+
+    // 🔴 E A OUTRA DIREÇÃO, que a primeira versão deixou aberta (medido por um
+    // re-revisor: uma regra `.adm-campo-fantasma` acrescentada ao arquivo
+    // passava verde). Uma classe renomeada deixa a regra MORTA para sempre, e
+    // regra morta no `admin.css` é a mesma espécie do defeito que este bloco
+    // existe pra impedir, de cabeça pra baixo.
+    const daTela = new Set(classes.map((c) => `.adm-campo`).concat(classes.map((c) => `.${c}`)));
+    const regrasDoPrefixo = [...css.matchAll(/(\.adm-campo[a-z-]*|\.adm-grupo[a-z-]*|\.adm-ficha-inteira)\s*(?:,|\{)/g)]
+      .map((m) => m[1]);
+    expect(regrasDoPrefixo.length, "nenhuma regra desta tela foi lida: o guarda ficaria oco").toBeGreaterThan(5);
+    for (const regra of new Set(regrasDoPrefixo)) {
+      expect(daTela.has(regra), `\`${regra}\` tem regra no admin.css e classe nenhuma da tela a usa`).toBe(true);
     }
   });
 
@@ -369,6 +427,9 @@ describe("FichaInteira — os guardas do que cresce: rótulo e CSS", () => {
     for (const f of ACERVO) {
       for (const c of camposDaFicha(f)) {
         expect(rotuloDe(c.caminho), `${f.slug}: ${c.caminho} caiu no caminho cru`).not.toBe(c.caminho);
+        // A mesma régua do ponto: é ela que pega o `Ponto 1 · <caminho cru>`,
+        // que a asserção de cima deixava passar (medido na revisão).
+        expect(rotuloDe(c.caminho), `${f.slug}: ${c.caminho} vazou pontuado no rótulo`).not.toMatch(/\w\.\w/);
       }
     }
     // e o prefixo da parada de fato distingue duas paradas

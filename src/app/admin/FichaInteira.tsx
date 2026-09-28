@@ -58,6 +58,12 @@ import type { Ficha } from "@/types/ficha";
 //    "o custo" vira tag, valor e curto; "o horário" vira o bloco e as duas
 //    horas), o título não serve pra três blocos diferentes e a redação é
 //    MINHA, derivada da *Pergunta* daquela seção;
+//  - e onde o TÍTULO da seção é vago demais para virar pergunta na tela, o
+//    rótulo é a *Pergunta* dela: `carroComum` (o título é só "O carro") e
+//    `condicao.coords`. 🔴 Estas duas faltavam nesta lista, e sem elas a conta
+//    "a maior parte vem do título" era maioria de UMA unidade — medido na
+//    revisão desta tarefa: de 30 rótulos, 15 são o título exato, 1 é título
+//    mais esclarecimento, e 14 são redação minha;
 //  - 🔴 `condicao.severidade` NÃO TEM SEÇÃO NO QUESTIONÁRIO — nenhuma (medido
 //    em 2026-09-27: a palavra "severidade" não aparece naquele documento). O
 //    rótulo dele vem do docblock de `src/lib/severidade.ts` ("COM QUE FORÇA
@@ -88,10 +94,19 @@ const SIM = "Sim";
 const NAO = "Não";
 
 /** O prefixo do bloco de um campo que vive dentro de uma LISTA — hoje só os
- *  waypoints têm índice, e a palavra é a que o trajeto usa. Conta a partir de
- *  1: o dono não conta paradas do zero. */
+ *  waypoints têm índice. Conta a partir de **1**: o dono não conta pontos do
+ *  zero.
+ *
+ *  🔴 A REDAÇÃO ANTERIOR ERA `Parada N`, e o comentário dizia que *"a palavra é
+ *  a que o trajeto usa"* — **era falso, e um re-revisor mediu**: a palavra
+ *  "parada" não existe em lugar nenhum do app fora deste arquivo. O que o
+ *  trajeto usa é **ponto** (`### O nome do ponto` no questionário,
+ *  `className="waypoint"` e o bloco `📍 Trajeto` na ficha pública). Com
+ *  `Parada` o bloco saía `Parada 1 · O nome do ponto` — duas palavras para a
+ *  mesma coisa na mesma linha, que é o *"dois idiomas na mesma tela"* que este
+ *  arquivo condena duas vezes. */
 // PENDENTE: redação minha, o João ainda não leu
-const parada = (n: number): string => `Parada ${n}`;
+const parada = (n: number): string => `Ponto ${n}`;
 
 /** O título de cada grupo. Chaveado por `GrupoDaFicha`, então um grupo novo no
  *  registro NÃO compila até ganhar título aqui — o `Record` é o guarda, não a
@@ -167,7 +182,7 @@ export const ROTULOS: Record<string, string> = {
 
   // — o que a chuva faz aqui —
   // PENDENTE: redação minha, o João ainda não leu
-  "condicao.coords": "A coordenada de onde se mede a chuva",
+  "condicao.coords": "A coordenada de onde se mede a chuva, e onde o pin aparece no mapa da home",
   // PENDENTE: redação minha, o João ainda não leu
   "condicao.regra.janela_previsao_horas": "Quantas horas pra frente olhar se vem chuva",
   // PENDENTE: redação minha, o João ainda não leu
@@ -214,13 +229,13 @@ export const ROTULOS: Record<string, string> = {
  *  cobertura de rótulos fica vermelho antes de a tela mentir. */
 export const ROTULO_DO_PONTO: Record<string, string> = {
   // PENDENTE: redação minha, o João ainda não leu
-  nome: "O nome do ponto",
+  nome: "O nome",
   // PENDENTE: redação minha, o João ainda não leu
-  lat: "A latitude do ponto",
+  lat: "A latitude",
   // PENDENTE: redação minha, o João ainda não leu
-  lng: "A longitude do ponto",
+  lng: "A longitude",
   // PENDENTE: redação minha, o João ainda não leu
-  nota: "A nota do ponto",
+  nota: "A nota",
 };
 
 /** O par de coordenadas, quando o valor é o par e não uma metade solta.
