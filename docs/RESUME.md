@@ -5,9 +5,9 @@
 🔴 **ÚLTIMA PARADA: 2026-09-27, E DESTA VEZ NÃO FOI PARADA — O PC DELE DESLIGOU SOZINHO** no meio
 da passada de confirmação da Tarefa 2 (*"algo aconteceu o pc se desligou"*). O commit `d8b1f73` ficou
 gravado; o **resultado da passada morreu com a sessão** e foi **redespachado** na sessão seguinte.
-**Estamos na branch `painel-completo`**, com **4 tarefas completas** e a 5ª em execução
-(de 12), árvore limpa, **1378/1378 em 84 arquivos**, `tsc` limpo, `npm run build` exit 0 — os três
-medidos por mim em 27/09 no `0dcf4a5`. No `914e38a` eu também medi o harness inteiro (34 morreu,
+**Estamos na branch `painel-completo`**, com **5 tarefas completas** e a 6ª em execução
+(de 12), árvore limpa, **1399/1399 em 85 arquivos** (medido TRÊS vezes), `tsc` limpo, `npm run build`
+exit 0 — no `dfff50e`. No `914e38a` eu também medi o harness inteiro (34 morreu,
 `--controles` exit 0 com 6 controles e 16 autotestes). **NADA FOI AO AR** e nenhuma tarefa deste plano roda `vercel`.
 O `main` segue publicado e intacto.
 → Como retomar: o bloco **"▶ RETOMAR A RODADA DO PAINEL COMPLETO"**, logo abaixo.
@@ -106,8 +106,8 @@ guarda do próprio harness, na 4e; → 1304 com os seis que a 4f acrescentou a e
 | **2 — as 13 regras de coerência viram porta de produção** | ✅ **completa** (`7c4ddf9..914e38a`), **10 rodadas de fix**, e as sete últimas foram no PRÓPRIO INSTRUMENTO, depois de **dezesseis `Critical` nele**. A sétima passada não achou nada da classe que reabriria; ver as seções 4 a 4h. 🔴 **Ela ainda não tem consumidor de produção: a promessa dela só se cumpre na Tarefa 3** |
 | **3 — a porta de escrita aceita todo campo e passa pela coerência** | ✅ **completa** (`914e38a..72380a2`): 1 `Critical` (a porta recusava RENOMEAR o lugar), duas ondas de fix, re-revisão sem nenhuma das duas classes que reabririam — 26 renomeações sobre as 13 regras e 120 gravações legítimas sobre 6 sujeiras, ZERO recusas. Ver a seção **5b** |
 | **4 — `oculto`: esconder sem apagar** | ✅ **completa** (`3d88ea4..0dcf4a5`). Brief auditado antes do dispatch (9 achados, 2 `Critical`); o implementador achou **três coisas que a auditoria não tinha** e a revisão **nenhum `Critical`**. 17+12 mutações, todas mortas. Ver a seção **5d** |
-| **5 — a tela do lugar mostra a ficha inteira** | 🟡 **em execução** — brief auditado em 27/09: **nove achados, e o primeiro é que um teste do plano OBRIGA a implementação errada** (itera a lista crua, que tem MOLDES) |
-| 6 — um editor por espécie de campo | ⬜ |
+| **5 — a tela do lugar mostra a ficha inteira** | ✅ **completa** (`c1610c9..dfff50e`). A revisão achou **uma mutação sobrevivente na linha vermelha** (o cerco de nome de lugar tinha buraco na palavra `veu`) e quatro frases falsas, três delas em comentário de guarda. Ver **5f** |
+| **6 — um editor por espécie de campo** | 🟡 **em execução** |
 | 7 — o número de motor com a consequência ao vivo | ⬜ |
 | 8 — o mapa que arrasta o pin | ⬜ |
 | 9 — o histórico de qualquer campo, e o escondido na lista | ⬜ |
@@ -728,6 +728,47 @@ par simétrico.
 ⚠️ **E esta tarefa quase DOBRA a conta de palavras de tela esperando ele:** são ~20 rótulos novos mais a
 frase de ausência. Todas marcadas `PENDENTE`, todas num lugar só, e todas listadas por extenso no
 relatório dela.
+
+### 5f. 🟢 A TAREFA 5 FECHOU — 41 frases novas, e o cerco tinha buraco numa palavra de três letras
+
+A tela do painel mostra a **ficha inteira em grupos** (`FichaInteira.tsx`, render puro; os editores são
+a Tarefa 6 e encaixam aqui). O achado da minha auditoria — o teste do plano iterava a lista **crua**,
+com moldes — se confirmou: voltar a iterá-la mata **oito** testes.
+
+🔴 **A revisão achou UMA MUTAÇÃO SOBREVIVENTE, e na linha vermelha do projeto.** O guarda que impede
+uma frase fixa da tela de nomear um lugar montava o vocabulário proibido filtrando por tamanho (para
+não tropeçar em `de`/`do`) — e isso **descartava `veu`**. O rótulo *"O piso da via até o Véu"* passava
+**verde**. E baixar o limiar não serve: `includes` casa `veu` dentro de *"choveu"*, e o guarda ficaria
+vermelho por **inocência**. O conserto é casar por **palavra**, e nasceu **o controle do cerco** — as
+duas direções fixadas com as frases que estão na tela.
+
+**Quatro frases falsas, três delas em comentário de GUARDA** (o próximo leitor confiaria): *"a palavra
+é a que o trajeto usa"* sobre `Parada N` — **a palavra "parada" não existe no app**; o trajeto usa
+**ponto**, e `Parada 1 · O nome do ponto` era *"dois idiomas na mesma tela"*, que o próprio arquivo
+condena duas vezes (virou `Ponto N`). *"Sai daqui vermelho"* sobre o guarda do rótulo — a asserção era
+mais fraca que a frase; 🔴 **e o meu primeiro conserto foi PIOR** (`not.toContain` reprova *"A
+promessa"*, que contém `promessa` com razão): a régua certa é **o ponto**, porque rótulo nenhum tem e
+todo caminho aninhado tem. E a atribuição de um valor de CSS, e a receita de contar os `PENDENTE`.
+
+**Dois rótulos ganharam precisão porque viram PERGUNTA na Tarefa 6:** a coordenada da condição dizia
+**metade** do que o campo faz (é ela, e não a do trajeto, que planta o pin da trilha no mapa da home —
+o questionário põe isso em negrito); e o `carroComum`.
+
+🔴 **UM FLAKE FICA REGISTRADO, sem nome:** uma rodada da suíte saiu com **um arquivo vermelho**
+(1398 de 1399) e as **três** rodadas seguintes saíram 1399/1399. O nome morreu no `tail -6` da minha
+cadeia de medição — **cegueira minha, no instrumento, pela terceira vez nesta rodada**. A cadeia foi
+consertada para imprimir o nome dos vermelhos ANTES do resumo. O flake vai para a triagem da revisão
+final: teste que pode ficar verde por sorte.
+
+⚠️ **E a conta de copy: são 41 frases novas** (a minha estimativa dizia ~20). O projeto tem **67
+frases** esperando a leitura dele, em **84 marcadores** `PENDENTE` no `src/`.
+
+🔵 **DUAS COISAS QUE SÃO DELE, saídas desta tarefa:** o campo `condicao.severidade` **não tem seção
+nenhuma** no `docs/questionario-ficha.md` — a tela passa a fazer ao dono uma pergunta que o
+questionário nunca fez, e o rótulo saiu de um docblock de código (é **procedência**, a linha vermelha);
+e o guarda que proíbe 2º waypoint no acervo ficou com a **justificativa envelhecida** (*"sumiria da
+tela sem aviso"* — o painel agora mostra a cadeia inteira; a ficha pública continua mostrando só o
+primeiro). O guarda não é letra morta; a **mensagem** dele ficou falsa.
 
 ### 5. As três coisas que a rodada já deve a ele
 
