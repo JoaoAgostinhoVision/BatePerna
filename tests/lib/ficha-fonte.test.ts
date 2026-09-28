@@ -173,6 +173,37 @@ describe("buscarFichas contra o banco: lugar escondido", () => {
     c.close();
   });
 
+  // 🔴 O CAMINHO QUENTE, E ELE NÃO ESTAVA PROVADO — achado na revisão desta
+  // tarefa. O caso de cima chama `esquecerMemoria()` de propósito, então ele
+  // mede só a instância FRIA. Numa instância que já serviu uma visita, o `Map`
+  // vazio cai no MESMO ramo de "banco fora" e a cópia em memória continua
+  // servindo — inclusive o lugar que o dono acabou de esconder.
+  //
+  // Este caso PINA o comportamento de hoje; ele não o aprova. A pergunta "o que
+  // vale quando o banco está DE PÉ e o acervo visível está vazio" é a mesma
+  // decisão que já espera o João no `docs/RESUME.md`: **a cópia em memória não
+  // tem prazo**. Enquanto ela não tiver, esconder tudo não tira nada do ar numa
+  // instância quente, e isso é a única forma de "esconder" falhar em SILÊNCIO
+  // em vez de falhar alto. Se a decisão dele mudar isto, é ESTE caso que vira
+  // vermelho — e é ele que diz por quê.
+  it("instância QUENTE: esconder tudo não derruba o acervo, e a cópia em memória serve o escondido", async () => {
+    const c = await banco();
+    await gravarVersao(c, "rampa-do-pepe", doc("rampa-do-pepe"), "semente", 1);
+    // Esquenta a memória com o lugar NO AR.
+    const antes = await buscarFichas(() => versoesAtuais(c));
+    expect(antes.map((f) => f.slug)).toEqual(["rampa-do-pepe"]);
+
+    // Agora esconde. O banco está DE PÉ e o acervo visível ficou vazio.
+    await gravarVersao(c, "rampa-do-pepe", doc("rampa-do-pepe"), "painel", 2, true);
+    const depois = await buscarFichas(() => versoesAtuais(c));
+
+    expect(
+      depois.map((f) => f.slug),
+      "hoje a cópia em memória vence: o lugar escondido continua servido até a instância morrer",
+    ).toEqual(["rampa-do-pepe"]);
+    c.close();
+  });
+
   // O outro lado, e é o caminho normal: esconder UM lugar não derruba o acervo.
   it("esconder um lugar de dois deixa o outro no ar", async () => {
     const c = await banco();

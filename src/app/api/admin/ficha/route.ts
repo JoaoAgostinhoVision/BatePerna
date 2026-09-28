@@ -344,7 +344,10 @@ export async function PUT(req: Request): Promise<Response> {
   // fecha tem três passos: esconder o Véu → copiar a voz dele na Rampa (passaria,
   // porque o Véu não estaria mais no acervo medido) → mostrar o Véu de novo → o
   // acervo PÚBLICO fica com duas fichas dizendo a mesma coisa, que é exatamente o
-  // que `frase-emprestada` existe pra pegar. Esconder não apaga, e lugar
+  // que `texto-emprestado` existe pra pegar (a `voz` está em
+  // `TEXTOS_QUE_DISTINGUEM`; `frase-emprestada` é sobre o `secaRapido`, e esta
+  // linha dizia o nome ERRADO desde o brief que a pediu — medido em 27/09, com a
+  // regra que de fato acusa impressa na saída). Esconder não apaga, e lugar
   // escondido VOLTA — então a coerência nunca pode deixar de vê-lo. Medir contra
   // acervo parcial seria a porta ficando permissiva EM SILÊNCIO.
   const versoes = await versoesAtuais(getClient(), { incluirOcultos: true });

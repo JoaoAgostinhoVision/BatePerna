@@ -165,7 +165,10 @@ describe("POST /api/admin/visibilidade — esconder e mostrar", () => {
 
     const publico = await versoesAtuais(c);
     expect(publico.has(SLUG)).toBe(false);
-    expect(publico.size, "os outros lugares do acervo continuam no ar").toBeGreaterThan(0);
+    // 🔴 O número é cravado, não `> 0`: com três fichas semeadas e uma escondida
+    // sobram DUAS. O `> 0` distinguia "escondeu tudo", mas passava verde se o
+    // filtro comesse um vizinho.
+    expect(publico.size, "sobram DOIS lugares no ar, não apenas algum").toBe(2);
   });
 });
 
