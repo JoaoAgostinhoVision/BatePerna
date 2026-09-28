@@ -5,9 +5,9 @@
 🔴 **ÚLTIMA PARADA: 2026-09-27, E DESTA VEZ NÃO FOI PARADA — O PC DELE DESLIGOU SOZINHO** no meio
 da passada de confirmação da Tarefa 2 (*"algo aconteceu o pc se desligou"*). O commit `d8b1f73` ficou
 gravado; o **resultado da passada morreu com a sessão** e foi **redespachado** na sessão seguinte.
-**Estamos na branch `painel-completo`**, com **3 tarefas completas** e a 4ª em execução
-(de 12), árvore limpa, **1332/1332 em 82 arquivos**, `tsc` limpo, `npm run build` exit 0 — os três
-medidos por mim em 27/09 no `72380a2`. No `914e38a` eu também medi o harness inteiro (34 morreu,
+**Estamos na branch `painel-completo`**, com **4 tarefas completas** e a 5ª em execução
+(de 12), árvore limpa, **1378/1378 em 84 arquivos**, `tsc` limpo, `npm run build` exit 0 — os três
+medidos por mim em 27/09 no `0dcf4a5`. No `914e38a` eu também medi o harness inteiro (34 morreu,
 `--controles` exit 0 com 6 controles e 16 autotestes). **NADA FOI AO AR** e nenhuma tarefa deste plano roda `vercel`.
 O `main` segue publicado e intacto.
 → Como retomar: o bloco **"▶ RETOMAR A RODADA DO PAINEL COMPLETO"**, logo abaixo.
@@ -105,8 +105,8 @@ guarda do próprio harness, na 4e; → 1304 com os seis que a 4f acrescentou a e
 | **1 — o registro de campos, `aplicarCampo` com caminho/tipo/"não sei"** | ✅ completa (`dfeb005..50f71bf`), 1 rodada de fix, re-revisão limpa |
 | **2 — as 13 regras de coerência viram porta de produção** | ✅ **completa** (`7c4ddf9..914e38a`), **10 rodadas de fix**, e as sete últimas foram no PRÓPRIO INSTRUMENTO, depois de **dezesseis `Critical` nele**. A sétima passada não achou nada da classe que reabriria; ver as seções 4 a 4h. 🔴 **Ela ainda não tem consumidor de produção: a promessa dela só se cumpre na Tarefa 3** |
 | **3 — a porta de escrita aceita todo campo e passa pela coerência** | ✅ **completa** (`914e38a..72380a2`): 1 `Critical` (a porta recusava RENOMEAR o lugar), duas ondas de fix, re-revisão sem nenhuma das duas classes que reabririam — 26 renomeações sobre as 13 regras e 120 gravações legítimas sobre 6 sujeiras, ZERO recusas. Ver a seção **5b** |
-| **4 — `oculto`: esconder sem apagar** | 🟡 **em execução** — brief auditado em 27/09 antes do dispatch: **nove achados, DOIS `Critical`** (o plano muda o padrão de `versoesAtuais` e dois caminhos de produção já a usam — o portão de coerência e a semente) |
-| 5 — a tela do lugar mostra a ficha inteira | ⬜ |
+| **4 — `oculto`: esconder sem apagar** | ✅ **completa** (`3d88ea4..0dcf4a5`). Brief auditado antes do dispatch (9 achados, 2 `Critical`); o implementador achou **três coisas que a auditoria não tinha** e a revisão **nenhum `Critical`**. 17+12 mutações, todas mortas. Ver a seção **5d** |
+| **5 — a tela do lugar mostra a ficha inteira** | 🟡 **em execução** — brief auditado em 27/09: **nove achados, e o primeiro é que um teste do plano OBRIGA a implementação errada** (itera a lista crua, que tem MOLDES) |
 | 6 — um editor por espécie de campo | ⬜ |
 | 7 — o número de motor com a consequência ao vivo | ⬜ |
 | 8 — o mapa que arrasta o pin | ⬜ |
@@ -661,6 +661,73 @@ As outras seis: `Boolean(r.oculto)` é armadilha (`Boolean("0")` é `true`); `ve
 nasce visível); esconder já faz a página do lugar dar **404 de graça**, e de graça não é provado; a
 rota de visibilidade **não** passa pelo portão (e isso tem de ficar escrito, senão a próxima pessoa
 "conserta"); e a tabela de mutação do plano ganhou **cinco** linhas novas.
+
+### 5d. 🟢 A TAREFA 4 (`oculto`) FECHOU, E A MINHA AUDITORIA DELA ESTAVA INCOMPLETA
+
+**Esconder é uma VERSÃO NOVA** (`oculto = true`), nunca um `UPDATE` e nunca um `DELETE` — a tabela é a
+única procedência que este projeto tem. Rota nova: `POST /api/admin/visibilidade`.
+
+🔴 **Os dois `Critical` que a auditoria achou ANTES do dispatch, e que o plano não via** (os dois porque
+ele muda o padrão de `versoesAtuais`, e dois caminhos de produção já a usam): o **portão de coerência**
+passaria a medir contra acervo parcial (esconder → copiar a frase → mostrar de novo), e a **semente**
+ficaria cega e **devolveria ao ar** o que ele escondeu. A revisão provou os dois fechados **com controle
+negativo**: arrancando o `incluirOcultos` da rota, o mesmo roteiro dá 200 e **grava a duplicata**.
+
+🔴 **E a auditoria estava INCOMPLETA — três achados foram do implementador:**
+
+1. **Um SEGUNDO escritor:** o `"voltar"` a uma versão antiga também grava. Voltar a uma versão de antes
+   do esconder **devolveria o lugar ao ar em silêncio**. Hoje o documento volta e a visibilidade que
+   vale é a **de agora**.
+2. **As duas leituras da coluna divergiam** — o SQL lia `oculto = 0`, o JS lia `Number(…) === 1`. Um
+   valor torto sairia **escondido no público e visível no painel**: duas respostas para a mesma pergunta
+   sobre o mesmo lugar. Alinhou em `oculto <> 1`, e escolheu o lado **"no ar"**, porque o acervo inteiro
+   sair do ar por um valor torto é o pior desfecho. (O SQLite tem **afinidade**, não tipo: `'false'` fica
+   guardado como TEXTO.)
+3. **O filtro fica FORA da subconsulta do `MAX(id)`** — dentro, o lugar escondido **volta pela versão
+   visível anterior**. Esconder só a última versão não é esconder. Mover para dentro mata **7** testes.
+
+**Duas notas de método que valem mais que os consertos:** uma mutação **quase sobreviveu**
+(`Boolean(r.oculto)` é indistinguível de `Number(…) === 1` no driver local — só morre com **texto** na
+coluna); e o **`tsc` pegou SETE erros de tipo com a suíte 100% verde** (fixtures montadas à mão sem o
+campo novo). A suíte não substitui o `tsc`, e esta é a segunda vez na rodada.
+
+**A revisão não achou `Critical`.** Ela mediu que **esconder é porta de duas mãos hoje** (a rota funciona
+nos dois sentidos, e o guarda que impede alguém de "consertar" isso existe: ela confere existência com
+`versaoAtual`, nunca com o leitor público), varreu os quatro ramos da herança e verificou que **não
+existe caminho que esconda sem pedir** — lixo na coluna cai para **visível** nas duas leituras.
+
+**Três consertos entraram antes de fechar** (`0dcf4a5`), e o primeiro é meu: 🔴 **a frase falsa nasceu no
+MEU brief** — o comentário que explica a decisão `Critical` dizia `frase-emprestada` quando a regra é
+`texto-emprestado` (a `voz` está em `TEXTOS_QUE_DISTINGUEM`; a outra é sobre `secaRapido`). O
+implementador copiou o erro de mim, e o código passou a se contradizer contra o próprio teste dele.
+**Nona rodada em nove com frase falsa.** Os outros dois: o **caminho quente** do acervo vazio não tinha
+prova (numa instância que já serviu uma visita, esconder tudo **não tira nada do ar** — e o caso novo
+**pina** isso sem aprovar, apontando para a decisão do prazo da cópia em memória, que é dele); e uma
+asserção `> 0` virou número cravado.
+
+🔴 **DUAS PRÉ-CONDIÇÕES DA TAREFA 9, medidas, e ela não pode começar sem elas:**
+
+1. **`ultimaBoa` é UMA variável de módulo, sem chave por opção de leitura.** Um leitor de painel que
+   reuse `buscarFichas` com `incluirOcultos` grava ali o acervo **com** os ocultos, e a próxima leitura
+   pública que falhe **serve os escondidos**. Medido, com as três listas impressas. O painel tem de ler
+   por `versoesAtuais` direto — como o portão de coerência já faz, e pelo mesmo motivo escrito lá.
+2. **`src/app/admin/[slug]/page.tsx:125` confere existência com `getFicha`**, que filtra ocultos: a tela
+   do lugar escondido dá **404 para o dono**. O botão *"mostrar de novo"* não pode morar numa página que
+   404. (A Tarefa 5 deixa **um comentário** naquela linha; consertar é da 9.)
+
+### 5e. 🟡 A TAREFA 5 COMEÇOU, E UM TESTE DO PLANO OBRIGAVA A IMPLEMENTAÇÃO ERRADA
+
+O plano manda iterar `CAMPOS_DA_FICHA` e exigir um bloco por caminho. **Essa lista é a CRUA e ela tem
+MOLDES** (`trajeto.waypoints[].nome`): o teste exigiria um bloco para um caminho que não é campo de ficha
+nenhuma. O certo é `camposDaFicha(ficha)`, que expande os moldes em caminhos **concretos** e na ordem
+certa (o waypoint 0 inteiro, depois o 1). Mais oito achados, e dois valem aqui: a espécie **`bloco`** vem
+**ao lado** das folhas dela e não pode mostrar valor de folha (ela é o *"não sei"* do grupo `quando`); e
+o caso do *"campo ausente"* do plano **passa verde numa tela que escreve "não sei" em tudo** — precisa do
+par simétrico.
+
+⚠️ **E esta tarefa quase DOBRA a conta de palavras de tela esperando ele:** são ~20 rótulos novos mais a
+frase de ausência. Todas marcadas `PENDENTE`, todas num lugar só, e todas listadas por extenso no
+relatório dela.
 
 ### 5. As três coisas que a rodada já deve a ele
 
