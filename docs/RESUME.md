@@ -2,15 +2,18 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🔴 **ÚLTIMA PARADA: 2026-09-27, E DESTA VEZ NÃO FOI PARADA — O PC DELE DESLIGOU SOZINHO** no meio
-da passada de confirmação da Tarefa 2 (*"algo aconteceu o pc se desligou"*). O commit `d8b1f73` ficou
-gravado; o **resultado da passada morreu com a sessão** e foi **redespachado** na sessão seguinte.
-**Estamos na branch `painel-completo`**, com **5 tarefas completas** e a 6ª em execução
-(de 12), árvore limpa, **1399/1399 em 85 arquivos** (medido TRÊS vezes), `tsc` limpo, `npm run build`
-exit 0 — no `dfff50e`. No `914e38a` eu também medi o harness inteiro (34 morreu,
-`--controles` exit 0 com 6 controles e 16 autotestes). **NADA FOI AO AR** e nenhuma tarefa deste plano roda `vercel`.
-O `main` segue publicado e intacto.
-→ Como retomar: o bloco **"▶ RETOMAR A RODADA DO PAINEL COMPLETO"**, logo abaixo.
+🟡 **ÚLTIMA PARADA: 2026-09-27 à noite, A PEDIDO DELE** — *"gostaria de continuar na próxima
+sessão, deixe tudo pronto para ela"*. **Nada está em voo**: o implementador da Tarefa 6 foi
+**parado por mim antes de escrever uma linha** (a árvore estava limpa quando parou), porque o
+resultado de um subagente despachado **morre com a sessão** — foi o que custou duas vezes nesta mesma
+rodada.
+
+**Estamos na branch `painel-completo`**, com **5 das 12 tarefas completas**, árvore limpa,
+**1399/1399 em 85 arquivos**, `tsc` limpo, `npm run build` exit 0, HEAD `d31bb8e`. 🔴 **NADA FOI AO
+AR** — nenhuma tarefa deste plano roda `vercel`, e o `main` segue publicado e intacto.
+
+→ **Como retomar: o bloco "▶ RETOMAR A RODADA DO PAINEL COMPLETO", logo abaixo. O PRIMEIRO PASSO é
+redespachar a Tarefa 6, cujo brief já existe e já foi auditado.**
 
 🔴 **DUAS SESSÕES MORRERAM SEM AVISO nesta mesma tarefa** (a tela fechou na rodada 3, o PC desligou
 na 4d). As duas vezes o que sobreviveu foi o `git log` e o `RESUME.md`, e as duas vezes o que morreu
@@ -107,13 +110,42 @@ guarda do próprio harness, na 4e; → 1304 com os seis que a 4f acrescentou a e
 | **3 — a porta de escrita aceita todo campo e passa pela coerência** | ✅ **completa** (`914e38a..72380a2`): 1 `Critical` (a porta recusava RENOMEAR o lugar), duas ondas de fix, re-revisão sem nenhuma das duas classes que reabririam — 26 renomeações sobre as 13 regras e 120 gravações legítimas sobre 6 sujeiras, ZERO recusas. Ver a seção **5b** |
 | **4 — `oculto`: esconder sem apagar** | ✅ **completa** (`3d88ea4..0dcf4a5`). Brief auditado antes do dispatch (9 achados, 2 `Critical`); o implementador achou **três coisas que a auditoria não tinha** e a revisão **nenhum `Critical`**. 17+12 mutações, todas mortas. Ver a seção **5d** |
 | **5 — a tela do lugar mostra a ficha inteira** | ✅ **completa** (`c1610c9..dfff50e`). A revisão achou **uma mutação sobrevivente na linha vermelha** (o cerco de nome de lugar tinha buraco na palavra `veu`) e quatro frases falsas, três delas em comentário de guarda. Ver **5f** |
-| **6 — um editor por espécie de campo** | 🟡 **em execução** |
+| **6 — um editor por espécie de campo** | ⬜ **A PRÓXIMA, e o brief já está pronto e AUDITADO** (`task-6-brief.md`: dez achados, três `Critical`). Foi despachada em 27/09 e **parada por mim antes de escrever nada**, a pedido dele |
 | 7 — o número de motor com a consequência ao vivo | ⬜ |
 | 8 — o mapa que arrasta o pin | ⬜ |
 | 9 — o histórico de qualquer campo, e o escondido na lista | ⬜ |
 | 10 — a cadeia de waypoints | ⬜ |
 | 11 — criar lugar: o rascunho | ⬜ |
 | 12 — publicar o rascunho, e o que o app vai calar | ⬜ |
+
+### 3b. ▶ O PRIMEIRO PASSO DESTA SESSÃO, sem inventar nada
+
+1. **Confira o estado** (nunca repita o número deste arquivo): `git status` limpo, `git log --oneline -1`
+   deve ser `d31bb8e`, `npm test -- --run` deve dar **1399/1399 em 85 arquivos**, `npx tsc --noEmit`
+   exit 0.
+2. **Despache a Tarefa 6** com o brief que já existe e já foi auditado:
+   `.superpowers/sdd/2026-09-26-painel-completo/task-6-brief.md` — **dez achados, três `Critical`**:
+   - um componente de **cliente** não pode importar `campos-da-ficha` (ele importa `zod` e o schema;
+     iria tudo para o bundle do celular dele) → **tudo por props, e medir o tamanho da rota antes e
+     depois**;
+   - são **sete** espécies de campo e a tarefa constrói **quatro** (`numero` é a Tarefa 7, `coord` é a
+     8, `bloco` é caso próprio) → a escolha do editor sai de um `Record` que **não compila** sem
+     decisão;
+   - **a tela hoje convida a um ato que a porta NEGA**: com o `horario` ausente ela mostra três blocos
+     dizendo "não sei", e a porta recusa gravar uma folha nesse estado. Editor na folha = o dono digita,
+     aperta salvar e **leva recusa num campo que a tela ofereceu**.
+3. **O molde do dispatch** é o que funcionou nas Tarefas 4, 5 e 6: papel de engenheiro sênior, ponteiro
+   para o brief (que **vence o plano**), a régua das 52 espécies, as medições obrigatórias (suíte,
+   `tsc`, **`npm run build`**), `git add` por caminho, commit sem acentos com a linha de co-autoria, e
+   o relatório em oito itens — incluindo **todas as frases novas por extenso** e a **tabela de mutação
+   medida**.
+4. **Depois do relatório:** medir eu mesmo, despachar a **revisão**, aplicar a onda de fix com **prova
+   vermelha de cada conserto**, commitar, atualizar este arquivo, e **emendar na Tarefa 7 sem pausar**.
+   O método manda não parar entre tarefas — só se ele mandar, ou se aparecer decisão que é dele.
+
+🔴 **E a regra que esta rodada pagou três vezes: NÃO despache nada que você não vá conseguir esperar.**
+O resultado de um subagente **morre com a sessão**. Commite a rodada antes de despachar a seguinte, e
+escreva aqui o que está **em voo**.
 
 ### 4. 🟢 A RODADA 3 DA TAREFA 2 ESTÁ FEITA — 2026-09-27, commit `cfa3482`
 
@@ -770,21 +802,75 @@ e o guarda que proíbe 2º waypoint no acervo ficou com a **justificativa envelh
 tela sem aviso"* — o painel agora mostra a cadeia inteira; a ficha pública continua mostrando só o
 primeiro). O guarda não é letra morta; a **mensagem** dele ficou falsa.
 
-### 5. As três coisas que a rodada já deve a ele
+### 5. O QUE ESTÁ ESPERANDO ELE — SEIS coisas, e nenhuma trava o código
 
-1. 🔴 **27 palavras de tela novas esperando a leitura dele**, todas marcadas `// PENDENTE` (8 da
-   Tarefa 1, 19 da Tarefa 2) — **fora as 12 que já estão no ar** desde 26/09. As da Tarefa 2 são as
-   mais delicadas da rodada: são as **recusas de coerência**, que aparecem no celular dele no meio
-   de uma edição, quando ele acabou de errar. **Não entregar a lista por partes** — metade ainda
-   vai mudar de redação pelo caminho; entregar tudo por extenso, agrupado por tela, quando o
-   conjunto fechar.
-2. 🔵 **Jargão de equipe nas frases:** "pílula", "chip", "carimbo". Nenhuma aparece explicada em
-   tela nenhuma dele. É pauta **dele**, junto com a lista acima.
-3. 🔵 **Agrupamento de campos que pode ser dele:** `avisos` ficou no grupo *chegar* e `secaRapido`
-   no grupo *condição*, medido no layout da ficha pública. Não é erro; é tela, e ele pode querer
-   diferente. Vai junto com `olho-de-tela` no fim.
+🔴 **Medido em 27/09, e a conta que eu ia dar antes estava errada:** são **84 marcadores `PENDENTE`**
+no `src/`, dos quais **15 são anteriores a esta rodada** e **69 nasceram nela** (7 da Tarefa 1, 19 da
+Tarefa 2, 43 da Tarefa 5). A receita para recontar: `grep -rc "PENDENTE" src/ --include=*.ts
+--include=*.tsx | grep -v ":0"`.
+
+1. 🔴 **As palavras de tela — 67 frases**, todas marcadas. As da **Tarefa 2** são as mais delicadas:
+   são as **recusas de coerência**, que aparecem no celular dele no meio de uma edição, **quando ele
+   acabou de errar**. As da **Tarefa 5** são os ~30 rótulos da ficha inteira, que na Tarefa 6 viram
+   as **perguntas** que ele responde.
+   **Não entregar por partes** — a Tarefa 6 vai reescrever parte dos rótulos quando os campos ficarem
+   editáveis, e mostrar duas versões da mesma frase gasta o tempo dele. Entregar **tudo por extenso,
+   agrupado por tela**, quando o conjunto de telas fechar. (O método que funcionou em 10/09: eu
+   escrevo, mostro por extenso, **ele lê**, ele decide.)
+2. 🔴 **PROCEDÊNCIA — `condicao.severidade` não tem pergunta no questionário.** Medido: a palavra
+   "severidade" não aparece em `docs/questionario-ficha.md`, e a seção *"A condição"* diz *"quatro
+   perguntas"* para um bloco de **cinco** campos. A tela do painel passou a **fazer** essa pergunta ao
+   dono, com um rótulo que saiu de um docblock de código. É a linha vermelha do projeto: ou o
+   questionário ganha a pergunta (palavra dele), ou o rótulo muda, ou o campo sai da tela.
+3. 🔴 **O prazo da cópia em memória, e agora ele tem consequência medida.** `buscarFichas` guarda
+   `ultimaBoa` **sem teto**. Consequência nova: numa instância que já serviu uma visita, **esconder
+   tudo não tira nada do ar** — é a única forma de "esconder" falhar em **silêncio** em vez de falhar
+   alto. Há um teste que **pina** esse comportamento sem aprová-lo, e ele aponta para esta decisão.
+4. 🔵 **A ordem para trocar preço, e a irmã dela no horário.** Trocar o preço de um lugar exige **três
+   gravações** (chip e valor não podem divergir, então escrever qualquer um primeiro dá recusa), e o
+   caminho existe pelo celular (`"não sei"` no chip → preço novo → chip novo) **mas a frase da recusa
+   não diz essa ordem**. A mesma fricção existe para mudar a **hora de fechar**, e ali é pior: o campo
+   do meio é **obrigatório**, então ele teria de publicar uma frase descartável no ar entre a segunda e
+   a terceira gravação. **As duas saem na mesma decisão de redação.**
+5. 🔵 **Jargão de equipe nas frases:** "pílula", "chip", "carimbo". Nenhuma aparece explicada em tela
+   nenhuma dele.
+6. 🔵 **Olhar as telas novas no celular.** Nenhuma tela desta rodada foi vista por olho humano. O CSS
+   que entrou é o **mínimo estrutural**, com **zero valor novo** — conferido regra a regra por
+   revisão. O visual é escolha dele.
+
+🔵 **E duas menores, de tela:** `avisos` ficou no grupo *chegar* e `secaRapido` no grupo *condição*
+(medido no layout da ficha pública — não é erro, é escolha); e a justificativa do guarda que proíbe
+2º waypoint no acervo **envelheceu** (*"sumiria da tela sem aviso"* — o painel agora mostra a cadeia
+inteira; a ficha pública continua mostrando só o primeiro).
 
 ### 6. O que amarrar nos dispatches das tarefas que faltam
+
+🔴 **AS SEIS REGRAS QUE ESTA RODADA PAGOU, e que valem para TODO dispatch daqui pra frente:**
+
+1. **`npm run build` em todo dispatch que toque `src/app/`.** A branch já ficou **sem compilar** com a
+   suíte verde e o `tsc` limpo, e dois assentos de revisão passaram por cima.
+2. **O `tsc` não é redundante com a suíte.** Ele pegou **sete** erros de tipo com a suíte 100% verde
+   (Tarefa 4), e pegaria mais: fixture montada à mão não sente campo novo.
+3. **Auditar o brief ANTES de despachar.** Nas cinco tarefas que passaram por isso, a auditoria achou
+   defeito no plano **todas as vezes** — inclusive **dois `Critical`** na Tarefa 4 e um teste que
+   **obrigava a implementação errada** na 5. E duas vezes a auditoria estava **incompleta**, então o
+   brief tem de dizer: *"se eu errei, é achado, não conserto"*.
+4. **Toda frase de tela nova leva `// PENDENTE` e vai por extenso no relatório.** Copy é escolha dele.
+5. **Prova vermelha de cada conserto**, com o controle intacto verde ao lado. E **matriz** quando o
+   guarda confere mais de uma coisa: foi assim que apareceu a diagonal que provou que cada autoteste
+   de veredito pega **a sua** parcela.
+6. **`git add` por caminho, nunca `-A`**, e commit sem acentos com a linha de co-autoria.
+
+🔴 **AS DUAS PRÉ-CONDIÇÕES DA TAREFA 9** (medidas na revisão da Tarefa 4, e ela não começa sem elas):
+`ultimaBoa` é **uma** variável de módulo sem chave, então um leitor de painel que reuse `buscarFichas`
+com `incluirOcultos` faz o **público servir lugares escondidos** quando o banco cair — o painel tem de
+ler por `versoesAtuais` direto; e `src/app/admin/[slug]/page.tsx` confere existência com `getFicha`,
+que filtra ocultos, então **a tela do lugar escondido dá 404 para o dono** e o botão *"mostrar de
+novo"* não pode morar ali. (A Tarefa 5 deixou **um comentário** naquela linha.)
+
+⚠️ **E um flake sem nome** (seção 5f): se a suíte sair **1398/1399**, **anote o nome do arquivo
+vermelho** — é a informação que falta, e o `tail` da cadeia de medição comeu na primeira vez.
+
 
 - **T3 (a porta de escrita)** leva **dois** guardas: um provando que a rota **recusa** ficha
   incoerente, e outro provando que ela **NÃO** recusa ficha legítima **sem `piso`**. É na T3 que o
@@ -829,16 +915,23 @@ um número que não descreve nem o mundo velho nem o novo.
 > 🔴 **A regra de sempre:** *"continua"* significa **construir**, não levantar opções. Sem menu, sem
 > pergunta de abertura. Ele já disse: *"estás saindo do contexto"* / ***"o foco é o aplicativo"***.
 
-1. `git status` limpo; `npm test -- --run` — deve dar **1193/1193 em 79 arquivos**. Confira você mesmo;
-   nunca relate o número deste arquivo sem rodar.
-2. 🔴 **O laço de construção ACABOU e a rodada está NO AR. O que falta não é código — são três coisas
-   que são DELE**, logo abaixo: as doze palavras de tela, o prazo da cópia em memória, e olhar as três
-   telas novas no celular. **Não decida nenhuma delas sozinho, e não abra o dia com um menu delas** — se
-   ele disser "continua" sem tocar no assunto, a coisa certa é perguntar **uma**, a das palavras.
-3. 🔴 **EM 26/09 À NOITE ELE ABRIU EIXO NOVO: o painel.** *"ainda não achei que o painel de
-   controle está bom (…) para um aplicativo de fato está muito longe"*. Nasceu o agente
-   **`painel-que-cresce`** (o 11º) e ele já rodou — o relatório está na seção
-   "O PAINEL COMO PRODUTO", abaixo. **A recomendação espera a palavra dele; nada foi construído.**
+🔴 **ESTE BLOCO ESTAVA FALSO ATÉ 27/09 À NOITE** — ele mandava conferir `1193/1193 em 79 arquivos` e
+dizia que *"o laço de construção ACABOU e a rodada está NO AR"*. Isso era verdade da rodada da
+**ficha-no-banco**, que fechou em 26/09. A rodada do **painel** está em curso desde então, e o número
+é outro. Se você está lendo isto, o bloco foi reescrito; mas **a lição fica: o bloco de entrada é o
+que envelhece pior, porque é o único que ninguém re-lê antes de agir.**
+
+1. `git status` limpo; `npm test -- --run` — deve dar **1399/1399 em 85 arquivos**. **Confira você
+   mesmo; nunca relate o número deste arquivo sem rodar.** (E se uma rodada sair **1398/1399**, não é
+   susto: existe um **flake não identificado** registrado na seção 5f — anote o nome do arquivo
+   vermelho, que é a informação que falta.)
+2. 🔴 **O laço de construção ESTÁ EM CURSO: 5 de 12 tarefas.** O primeiro passo é **redespachar a
+   Tarefa 6** (os editores por espécie) — o brief dela existe e **já foi auditado**, em
+   `.superpowers/sdd/2026-09-26-painel-completo/task-6-brief.md`, com **dez achados, três
+   `Critical`**. Ver o item 3 da seção "▶ RETOMAR A RODADA DO PAINEL COMPLETO".
+3. 🔴 **NÃO abra o dia com um menu das coisas que são dele.** Elas estão na seção 5 e continuam
+   esperando; nenhuma trava o código. Se ele disser só *"continua"*, **construa** — e entregue a
+   lista de palavras quando o conjunto de telas fechar, não em pedaços.
 4. Todo dispatch que toque `src/app/` leva **`npm run build`** e `git add` por caminho (rulings P13/P8).
 5. Para publicar de novo: `npm run semear` (se a tabela puder estar vazia) e **`vercel --prod --yes`** —
    push no GitHub **não** publica neste repo. Veja o bloco "COMO ESTE PROJETO PUBLICA", acima.
