@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, cleanup, screen } from "@testing-library/react";
+import { render, cleanup, screen, within } from "@testing-library/react";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import type { Client } from "@libsql/client";
 import { bancoVazio, semearAcervo } from "../banco";
@@ -118,7 +118,34 @@ describe("/admin/[slug] — a porta e o conteúdo", () => {
     const { default: Lugar } = await import("@/app/admin/[slug]/page");
     const { container } = render(await Lugar({ params: Promise.resolve({ slug: ficha.slug }) }));
     expect(container.querySelector(".adm-painel")).not.toBeNull();
-    expect(screen.getByText(new RegExp(ficha.trajeto.waypoints[0].nome))).toBeTruthy();
+    // 🔴 A BUSCA É DENTRO DO PAINEL, e passou a ser na Task 5 (2026-09-27): o
+    // nome do ponto agora aparece DUAS vezes na página — o `<h2>` do painel e o
+    // bloco `campo-trajeto.waypoints.0.nome` da ficha inteira. `screen.getByText`
+    // estoura com dois achados, e afrouxar pra `getAllByText` provaria menos do
+    // que este teste provava (ele existe pra dizer que o BLOCO DO LUGAR
+    // apareceu). Escopar no `.adm-painel` mantém exatamente a mesma prova.
+    expect(
+      within(container.querySelector<HTMLElement>(".adm-painel")!).getByText(
+        new RegExp(ficha.trajeto.waypoints[0].nome),
+      ),
+    ).toBeTruthy();
+  });
+
+  // 🔴 Task 5 (2026-09-27): sem isto, apagar `<FichaInteira>` da página — o
+  // dono voltando a enxergar UM campo de 17 — passaria a suíte inteira verde.
+  // Mesmo molde do teste do `data-editor-voz` logo abaixo.
+  it("com cookie válido: a ficha inteira aparece, com os seis grupos", async () => {
+    const { getAllFichas } = await import("@/lib/ficha");
+    const fichas = await getAllFichas();
+    const ficha = fichas[0];
+    await comSessaoValida();
+    const { default: Lugar } = await import("@/app/admin/[slug]/page");
+    const { container } = render(await Lugar({ params: Promise.resolve({ slug: ficha.slug }) }));
+    expect(
+      container.querySelector(`[data-ficha-inteira="${ficha.slug}"]`),
+      "a ficha inteira sumiu da tela do lugar",
+    ).not.toBeNull();
+    expect(container.querySelectorAll('[data-testid^="grupo-"]').length).toBe(6);
   });
 
   // 🔴 I2 DA REVISÃO FINAL (2026-09-26): nada nesta suíte provava que

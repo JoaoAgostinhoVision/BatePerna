@@ -9,6 +9,7 @@ import { comPrazo } from "@/lib/cache-rotas";
 import { avisoVigente, getClient, historico, type AvisoLinha, type FichaVersao } from "@/lib/db";
 import CaixaDeSenha from "../CaixaDeSenha";
 import EditorDeVoz from "../EditorDeVoz";
+import FichaInteira from "../FichaInteira";
 import HistoricoDaVoz from "../HistoricoDaVoz";
 import PainelAdmin from "../PainelAdmin";
 import "../admin.css";
@@ -123,6 +124,15 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
 
   const { slug } = await params;
   const ficha = await getFicha(slug);
+  // 🔴 PRÉ-CONDIÇÃO DA TASK 9, E A TASK 5 NÃO A CONSERTA (ruling da auditoria
+  // do brief, 2026-09-27). Desde a Task 4 o `getFicha` FILTRA OS OCULTOS, então
+  // esta linha dá 404 num lugar escondido — **para o dono também**. Quando a
+  // Task 9 construir o botão "mostrar de novo" e a lista com os escondidos, a
+  // existência do lugar tem que passar a ser conferida por `versaoAtual` (que
+  // vê a última versão, oculta ou não) e não pelo getter que esconde: o botão
+  // de desfazer não pode morar numa página que 404 justamente quando ele é
+  // necessário. Mudar aqui agora é escopo de outra tarefa, e sem a lista dos
+  // escondidos não há teste que acompanhe a mudança.
   if (!ficha) notFound();
 
   const agora = Math.floor(Date.now() / 1000);
@@ -136,6 +146,11 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
     <main className="adm">
       <h1>Painel</h1>
       <PainelAdmin ficha={ficha} leitura={leitura} aviso={aviso} avisoErro={avisoErro} agora={agora} />
+      {/* A ficha inteira vem ANTES do editor da voz de propósito: a Task 6
+          absorve `EditorDeVoz` pra dentro do bloco `campo-voz` daqui e apaga
+          aquele componente, então esta é a posição final da tela — não uma
+          escada que alguém vai ter que desmontar depois. */}
+      <FichaInteira ficha={ficha} />
       <EditorDeVoz ficha={ficha} />
       {historicoErro && <p className="adm-erro" role="alert">{HISTORICO_ERRO_LEITURA}</p>}
       <HistoricoDaVoz versoes={versoes} />

@@ -81,3 +81,34 @@
 /* Convenção do arquivo inteiro (`.adm-vigente-texto`, `.adm-ficha h2`, …):
    parágrafo sem margin extra dentro de um `grid` que já tem `gap`. */
 .adm-historico-item p { margin: 0; }
+
+/* A FICHA INTEIRA (Task 5, 2026-09-27): a tela do lugar passou de UM campo de
+   17 pra todos os campos do registro, em grupos. MÍNIMO ESTRUTURAL — toda
+   regra abaixo REUSA um valor que já existe acima nesta folha, e não há cor
+   nova, fonte nova nem animação. O visual é escolha do dono, e ele ainda não
+   viu nenhuma tela desta rodada. */
+
+/* Seção-irmã de `.adm-voz`/`.adm-historico`: mesmo `display: grid` de TODA
+   seção deste arquivo, e `gap`/`margin-top` idênticos aos daquela regra. */
+.adm-ficha-inteira { display: grid; gap: 1.2rem; margin-top: 1.2rem; }
+/* De `.adm-ficha h2` — o mesmo tamanho de título de seção do painel. */
+.adm-ficha-inteira h2 { font-size: 1.05rem; margin: 0; }
+/* Cada grupo é um cartão: borda, raio, padding, grid e gap COPIADOS de
+   `.adm-ficha`, que é o cartão que o painel já usa pra uma seção de ficha. */
+.adm-grupo { display: grid; gap: .5rem; padding: 1rem; border: 1px solid #ccc; border-radius: 10px; }
+/* De `.adm-ficha h2` também: o título do grupo é um degrau abaixo no HTML
+   (`h3`), e o painel não tem um segundo tamanho pra reusar. */
+.adm-grupo h3 { font-size: 1.05rem; margin: 0; }
+/* De `.adm-rotulo` (rótulo em cima, conteúdo embaixo) com o `gap: .3rem` que
+   `.adm-vigente` e `.adm-historico-item` já usam. */
+.adm-campo { display: grid; gap: .3rem; }
+/* De `.adm-rotulo` — o mesmo tamanho de toda etiqueta de campo do painel. */
+.adm-campo-rotulo { font-size: .85rem; }
+/* De `.adm-vigente-texto`: parágrafo sem margin extra dentro de um `grid` que
+   já tem `gap`. Convenção do arquivo inteiro. */
+.adm-campo-valor { margin: 0; }
+/* De `.adm-ajuda` (que por sua vez veio de `.adm-lista-rodape` e
+   `.adm-vigente-meta`): a frase de ausência é texto de APOIO — menor e mais
+   clara que um valor de verdade, pra o dono distinguir o que ele escreveu do
+   que o app diz que não sabe. Nenhuma cor nova: é o mesmo #777. */
+.adm-campo-ausente { margin: 0; font-size: .85rem; color: #777; }
