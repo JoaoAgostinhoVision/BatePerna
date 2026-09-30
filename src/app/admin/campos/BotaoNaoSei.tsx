@@ -1,5 +1,6 @@
 "use client";
-import { usarGravacao } from "./gravar";
+import type { Gravacao } from "./gravar";
+import type { PropsDoEditor } from "./tipos";
 
 /** O "NÃO SEI" — a outra ação, a que TIRA a chave do documento pra o app parar
  *  de afirmar (§4.1 do desenho).
@@ -16,6 +17,25 @@ import { usarGravacao } from "./gravar";
  *  recusa com frase, mas oferecer o botão seria a tela convidando a um ato que
  *  a porta nega.
  *
+ *  🔴 E SÓ APARECE EM CAMPO QUE ESTÁ PREENCHIDO, o que é o mesmo princípio uma
+ *  camada abaixo: num campo JÁ AUSENTE este botão não nega nada, ele **não faz
+ *  nada**. Medido contra a porta de verdade: `removerCampo` sobre um caminho
+ *  que a ficha não tem devolve **o documento idêntico** — e a rota grava versão
+ *  nova sem comparar. O dono tocava, a página recarregava, **nada mudava**, e o
+ *  Histórico da voz ganhava uma linha *"você, pelo painel"* que não mudou uma
+ *  vírgula. A tela oferecendo um ato VAZIO é irmã da tela oferecendo um ato que
+ *  a porta nega, e custa a mesma confiança.
+ *
+ *  ⚠️ E ISTO NÃO TRANCA NINGUÉM DE GRAVAR UMA VERDADE: o estado que este botão
+ *  produziria (a chave fora do documento, o app calado) é **exatamente o estado
+ *  em que o campo já está**. Esconder um `no-op` não tira saída nenhuma do
+ *  dono; a saída dele pra dizer "não tem" num campo já vazio é não fazer nada,
+ *  porque o app já está calado. O guarda que amarra isto é o teste que roda
+ *  `removerCampo` de verdade em todo campo opcional AUSENTE das três fichas e
+ *  exige documento idêntico — se um dia `removerCampo` passar a fazer algo
+ *  nesse estado, aquele teste fica vermelho e este esconderijo deixa de ser
+ *  honesto. É a porta que decide, não este componente.
+ *
  *  🔴 E A PALAVRA MUDA NO BLOCO, de propósito. Num campo comum, tirar a chave é
  *  *"não sei"* — o dono não sabe, e o app cala. Num BLOCO opcional (`horario`
  *  é o único hoje) tirar o bloco é a **única** forma de dizer *"este lugar não
@@ -24,6 +44,14 @@ import { usarGravacao } from "./gravar";
  *  declarar ignorância quando o que ele está declarando é um FATO. Duas
  *  palavras, um botão, e teste pros dois ramos: frase montada por bifurcação
  *  com prova de um lado só é a 49ª espécie do catálogo deste projeto.
+ *
+ *  🔴 A GRAVAÇÃO VEM DE QUEM CHAMA, e isto é conserto medido: este componente
+ *  tinha `usarGravacao()` PRÓPRIO, então o `disabled={salvando}` do Salvar do
+ *  editor não o alcançava e os dois botões corriam entre si — dois `PUT`
+ *  simultâneos sobre a mesma ficha, último escreve, numa tabela append-only.
+ *  Com o `Gravacao` do editor, um `salvando` só governa os dois botões. E o
+ *  `role="alert"` também é um só: duas caixas de erro no mesmo bloco fariam a
+ *  tela dizer duas coisas sobre uma gravação.
  *
  *  ⚠️ SEM CONFIRMAÇÃO, e é escolha: a tabela de versões é append-only, o
  *  histórico da tela do lugar traz o "voltar", e o bloco VOLTA inteiro (ruling
@@ -34,35 +62,33 @@ export const NAO_SEI = "Não sei — o app cala sobre isto";
 // PENDENTE: redação minha, o João ainda não leu
 export const NAO_TEM = "Não tem — o app cala sobre isto";
 // PENDENTE: redação minha, o João ainda não leu
-const TIRANDO = "Tirando…";
+export const TIRANDO = "Tirando…";
 
 export default function BotaoNaoSei({
-  caminho,
+  campo,
+  valor,
   slug,
+  gravacao,
   bloco = false,
-}: {
-  caminho: string;
-  slug: string;
+}: PropsDoEditor & {
+  /** O `usarGravacao()` DO EDITOR — nunca um próprio, ver o docblock. */
+  gravacao: Gravacao;
   /** `true` só pra espécie `bloco` — troca a palavra, ver o docblock. */
   bloco?: boolean;
 }) {
-  const { erro, salvando, gravar } = usarGravacao();
+  const { salvando, gravar } = gravacao;
+  // 🔴 As duas saídas, e as duas são "a tela não oferece o que não vale":
+  // obrigatório é ato que a porta NEGA; já ausente é ato que não FAZ nada.
+  if (campo.obrigatorio || valor === undefined) return null;
   return (
-    <>
-      <button
-        type="button"
-        className="adm-editor-nao-sei"
-        data-nao-sei={caminho}
-        disabled={salvando}
-        onClick={() => void gravar({ slug, campo: caminho, naoSei: true })}
-      >
-        {salvando ? TIRANDO : bloco ? NAO_TEM : NAO_SEI}
-      </button>
-      {erro && (
-        <p className="adm-erro" role="alert">
-          {erro}
-        </p>
-      )}
-    </>
+    <button
+      type="button"
+      className="adm-editor-nao-sei"
+      data-nao-sei={campo.caminho}
+      disabled={salvando}
+      onClick={() => void gravar({ slug, campo: campo.caminho, naoSei: true })}
+    >
+      {salvando ? TIRANDO : bloco ? NAO_TEM : NAO_SEI}
+    </button>
   );
 }

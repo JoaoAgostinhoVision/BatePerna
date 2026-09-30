@@ -9,8 +9,15 @@ import type { PropsDoEditor } from "./tipos";
  *
  *  Quatro campos hoje: `piso`, `custo.tag`, `condicao.severidade` (uma opção) e
  *  `dias` (várias). As palavras chegam pela prop `campo.opcoes`, que o servidor
- *  tira de `PISOS`/`DIAS`/`SEVERIDADES` — este arquivo não conhece nenhum
- *  daqueles módulos, e não há cópia de vocabulário aqui.
+ *  lê do REGISTRO — este arquivo não conhece módulo de vocabulário nenhum, e
+ *  não há cópia de palavra aqui.
+ *
+ *  ⚠️ E O REGISTRO NÃO TEM UMA FONTE SÓ, que é o que a frase anterior deste
+ *  docblock afirmava (*"vêm de `PISOS`/`DIAS`/`SEVERIDADES`"*) e era FALSO:
+ *  três das quatro vêm daquelas listas, e `custo.tag` tem `opcoes:
+ *  ["gratis","pago"]` **literal** em `campos-da-ficha.ts:105` — segunda cópia
+ *  do `z.enum` de `types/ficha.ts:71`. A duplicação é dívida da Task 1 e não se
+ *  conserta aqui; a frase, sim.
  *
  *  🔴 DUAS FORMAS, PORQUE SÃO DUAS PERGUNTAS. "Qual é o piso?" é `<select>` (o
  *  seletor nativo do celular, uma resposta); "quais dias abre?" é caixa de
@@ -42,7 +49,8 @@ const jaEscolhidas = (valor: unknown): readonly string[] => {
 export default function EditorLista({ campo, valor, slug }: PropsDoEditor) {
   const opcoes = campo.opcoes ?? [];
   const [marcadas, setMarcadas] = useState<readonly string[]>(jaEscolhidas(valor));
-  const { erro, salvando, gravar, recusarAqui } = usarGravacao();
+  const gravacao = usarGravacao();
+  const { erro, salvando, gravar, recusarAqui } = gravacao;
 
   function salvar(): void {
     // A ordem do REGISTRO, não a dos toques — ver o docblock.
@@ -105,7 +113,7 @@ export default function EditorLista({ campo, valor, slug }: PropsDoEditor) {
       >
         {salvando ? SALVANDO : SALVAR}
       </button>
-      {!campo.obrigatorio && <BotaoNaoSei caminho={campo.caminho} slug={slug} />}
+      <BotaoNaoSei campo={campo} valor={valor} slug={slug} gravacao={gravacao} />
       {erro && (
         <p className="adm-erro" role="alert">
           {erro}

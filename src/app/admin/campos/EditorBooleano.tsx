@@ -25,7 +25,8 @@ import type { PropsDoEditor } from "./tipos";
  *  pergunta em `.adm-campo-rotulo`. */
 export default function EditorBooleano({ campo, valor, slug }: PropsDoEditor) {
   const [marcado, setMarcado] = useState<boolean | null>(typeof valor === "boolean" ? valor : null);
-  const { erro, salvando, gravar, recusarAqui } = usarGravacao();
+  const gravacao = usarGravacao();
+  const { erro, salvando, gravar, recusarAqui } = gravacao;
 
   function salvar(): void {
     // 🔴 `=== null`, nunca `!marcado`: `false` é resposta, e um `!` aqui
@@ -62,7 +63,7 @@ export default function EditorBooleano({ campo, valor, slug }: PropsDoEditor) {
       >
         {salvando ? SALVANDO : SALVAR}
       </button>
-      {!campo.obrigatorio && <BotaoNaoSei caminho={campo.caminho} slug={slug} />}
+      <BotaoNaoSei campo={campo} valor={valor} slug={slug} gravacao={gravacao} />
       {erro && (
         <p className="adm-erro" role="alert">
           {erro}

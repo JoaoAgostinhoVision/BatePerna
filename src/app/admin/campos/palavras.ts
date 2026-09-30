@@ -7,9 +7,9 @@
  *  lido por componentes `"use client"` (os editores) e por um de servidor
  *  (`FichaInteira`) — mesma razão que mantém `src/lib/piso.ts` puro.
  *
- *  A PROCEDÊNCIA de cada uma está ao lado. Duas delas vinham de
- *  `src/app/admin/EditorDeVoz.tsx` (apagado nesta tarefa) **sem marcador
- *  nenhum** — estavam na tela e não estavam na fila de leitura dele. Agora
+ *  A PROCEDÊNCIA de cada uma está ao lado. Duas delas vinham do
+ *  `EditorDeVoz.tsx` — que vivia em `src/app/admin/` e foi APAGADO nesta
+ *  tarefa, então o nome vem sem caminho — **sem marcador nenhum** — estavam na tela e não estavam na fila de leitura dele. Agora
  *  estão marcadas: marcar a mais é honesto, marcar a menos é a frase que sobe
  *  sem ninguém ler. */
 
@@ -40,7 +40,27 @@ export const NADA_ESCOLHIDO = "Escolha uma das opções.";
 /** A recusa de hora em branco. Ela DIZ O FORMATO porque o dono pode ter digitado
  *  "17h" num teclado de celular e o próprio controle de hora esvaziou o campo —
  *  sem o formato escrito, ele lê "escolha uma hora" olhando pra uma caixa onde
- *  acabou de escrever algo. */
+ *  acabou de escrever algo.
+ *
+ *  🔴 E O ALCANCE DELA TEM LIMITE, MEDIDO: ela cobre o que um `<input
+ *  type="time">` DE VERDADE produz (hora válida ou vazio). Num navegador que
+ *  **não implementa** `type=time`, o `type` cai para `text`, `"17h"` fica no
+ *  `value`, esta recusa não dispara (o campo não está em branco), e a porta
+ *  estoura um `ZodError` — que a rota devolve com **corpo vazio**, então o dono
+ *  lê *"Não consegui salvar."*, a frase menos informativa do app, exatamente
+ *  onde esta aqui prometia dizer o formato. **Esta frase não cobre aquele
+ *  caso, e o parágrafo existe pra ninguém achar que cobre.**
+ *
+ *  ⚠️ POR QUE NÃO UMA REGEX DE `HH:MM` AQUI: ela seria inalcançável em todo
+ *  ambiente que este projeto consegue medir (em jsdom o `type=time` funciona e
+ *  esvazia o valor), e o único teste capaz de deixá-la vermelha teria de
+ *  SOBRESCREVER o `type` que o componente declara — encenação. Condição que
+ *  nasce inalcançável com um teste que nunca fica vermelho por defeito é a 52ª
+ *  espécie do catálogo deste projeto. O que guarda o alcance é uma asserção em
+ *  `tests/app/admin-editores-de-campo.test.tsx` cravando que o instrumento é
+ *  `type="time"`: se ele deixar de ser, o caso fica vermelho e esta frase
+ *  precisa de outra decisão — que é de PRODUTO (a rota devolveria a frase do
+ *  `ZodError`?), não de render. */
 // PENDENTE: redação minha, o João ainda não leu
 export const HORA_VAZIA = "Escolha uma hora, no formato HH:MM.";
 

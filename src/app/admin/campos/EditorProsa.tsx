@@ -8,8 +8,9 @@ import type { PropsDoEditor } from "./tipos";
 /** A CAIXA DE TEXTO — o instrumento da espécie `prosa` (16 dos 30 campos do
  *  registro, incluindo a `voz`).
  *
- *  Este componente ABSORVEU `src/app/admin/EditorDeVoz.tsx`, que foi apagado na
- *  mesma tarefa. O que veio de lá, inteiro: estado local, `PUT`,
+ *  Este componente ABSORVEU o `EditorDeVoz.tsx` que vivia em `src/app/admin/`,
+ *  e que foi APAGADO na mesma tarefa — o nome vem sem caminho porque não há
+ *  arquivo pra abrir. O que veio de lá, inteiro: estado local, `PUT`,
  *  `location.reload()` no sucesso (agora em `./gravar`), e as duas frases de
  *  erro. O que ficou pra trás: o título de seção próprio ("A sua voz") e a
  *  linha de ajuda daquele campo — a tela agora chama cada campo pelo rótulo do
@@ -24,7 +25,8 @@ import type { PropsDoEditor } from "./tipos";
  *  vem da prop `valor`, e o rótulo vem do registro pela prop `campo.rotulo`. */
 export default function EditorProsa({ campo, valor, slug }: PropsDoEditor) {
   const [texto, setTexto] = useState(typeof valor === "string" ? valor : "");
-  const { erro, salvando, gravar, recusarAqui } = usarGravacao();
+  const gravacao = usarGravacao();
+  const { erro, salvando, gravar, recusarAqui } = gravacao;
 
   function salvar(): void {
     // `trim()` pra casar com a porta, que conta só-espaços como vazia.
@@ -56,7 +58,7 @@ export default function EditorProsa({ campo, valor, slug }: PropsDoEditor) {
       >
         {salvando ? SALVANDO : SALVAR}
       </button>
-      {!campo.obrigatorio && <BotaoNaoSei caminho={campo.caminho} slug={slug} />}
+      <BotaoNaoSei campo={campo} valor={valor} slug={slug} gravacao={gravacao} />
       {erro && (
         <p className="adm-erro" role="alert">
           {erro}

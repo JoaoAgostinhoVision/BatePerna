@@ -65,9 +65,12 @@ describe("HistoricoDaVoz", () => {
   });
 
   // 🔴 FIX ROUND 1 (2026-09-26): o `voltar()` — a superfície mais complexa do
-  // componente — estava inteiramente sem prova. Mesmo molde de
-  // `tests/app/editor-de-voz.test.tsx`: abre a versão, clica em voltar, prova
-  // o PUT exato e o `location.reload()` (nunca estado otimista).
+  // componente — estava inteiramente sem prova. O molde era o do
+  // `editor-de-voz.test.tsx`, que a Task 6 APAGOU junto com o componente (nome
+  // sem caminho: não há arquivo pra abrir); hoje ele vive em
+  // `tests/app/admin-editores-de-campo.test.tsx`
+  // (o `comRota`, com o `location.reload` dublado): abre a versão, clica em
+  // voltar, prova o PUT exato e o `location.reload()` (nunca estado otimista).
   it("voltar manda slug e versaoId em PUT, e recarrega a página", async () => {
     const fetchFalso = vi.fn().mockResolvedValue(Response.json({ id: 3 }));
     vi.stubGlobal("fetch", fetchFalso);

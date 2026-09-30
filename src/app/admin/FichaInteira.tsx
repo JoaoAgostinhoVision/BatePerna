@@ -380,6 +380,40 @@ export const LISTA_MULTIPLA: Record<string, boolean> = {
   "condicao.severidade": false,
 };
 
+/** O MOLDE de um caminho CONCRETO (`trajeto.waypoints.0.nome` →
+ *  `trajeto.waypoints[].nome`), que é a chave com que o registro fala.
+ *
+ *  🔴 ISTO EXISTE PORQUE A TABELA ACIMA É CHAVEADA PELO REGISTRO e esta tela
+ *  itera CAMPOS CONCRETOS. `camposDaFicha` expande `[]` nos índices que a ficha
+ *  tem e **não guarda de qual molde cada campo veio**, então um
+ *  `LISTA_MULTIPLA[campo.caminho]` com o caminho já expandido consultaria um
+ *  espaço de chaves que a tabela não usa. Hoje nenhuma das quatro listas é
+ *  molde, então aquilo estava certo **por acidente**: o dia em que uma `lista`
+ *  entrar dentro de `trajeto.waypoints[]`, a consulta devolveria `undefined`, o
+ *  editor renderizaria um `<select>` de UMA escolha pra um campo de várias, e o
+ *  guarda das duas direções continuaria **verde** (as duas pontas dele casam no
+ *  molde). Cobertura por acidente é a 50ª espécie do catálogo deste projeto; a
+ *  saída é as duas pontas falarem a MESMA chave, por construção.
+ *
+ *  O guarda que amarra isto não é este comentário: é o teste que exige
+ *  `moldeDe(concretizar(c.caminho)) === c.caminho` pra TODO campo do registro —
+ *  e o registro TEM moldes (`trajeto.waypoints[].*`), então ele fica vermelho se
+ *  esta função virar identidade. */
+export const moldeDe = (caminho: string): string =>
+  caminho
+    .split(".")
+    .reduce<string[]>((degraus, d) => {
+      if (/^\d+$/.test(d) && degraus.length > 0) degraus[degraus.length - 1] += "[]";
+      else degraus.push(d);
+      return degraus;
+    }, [])
+    .join(".");
+
+/** A multiplicidade de uma `lista` NUM CAMINHO CONCRETO, pela chave do
+ *  registro. `undefined` é "o registro tem uma lista que a tabela não declara"
+ *  — estado que o guarda das duas direções torna impossível. */
+export const multiploDe = (caminho: string): boolean | undefined => LISTA_MULTIPLA[moldeDe(caminho)];
+
 /** O INSTRUMENTO DE CADA ESPÉCIE. Chaveado por `EspecieCampo` pela mesma razão
  *  do `MOSTRAR`: **espécie nova no registro não compila até alguém decidir o
  *  instrumento dela** — em vez de nascer sem editor, invisível, com a suíte
@@ -457,7 +491,7 @@ function Bloco({
     caminho: campo.caminho,
     rotulo: rotuloDe(campo.caminho),
     obrigatorio: campo.obrigatorio,
-    ...(campo.opcoes ? { opcoes: campo.opcoes, multiplo: LISTA_MULTIPLA[campo.caminho] } : {}),
+    ...(campo.opcoes ? { opcoes: campo.opcoes, multiplo: multiploDe(campo.caminho) } : {}),
     ...(campo.especie === "bloco" ? { folhas: folhasDoBloco(campo.caminho) } : {}),
   };
 

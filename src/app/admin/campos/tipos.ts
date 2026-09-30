@@ -30,9 +30,11 @@ export type CampoNaTela = {
    *  `BotaoNaoSei` aparece — e a porta recusa igual, com frase, se a tela
    *  errar. */
   obrigatorio: boolean;
-  /** Só pra espécie `lista`: as palavras que o registro deixa escolher. Vêm de
-   *  `PISOS`/`DIAS`/`SEVERIDADES` por PROP — o editor não conhece nenhum
-   *  desses módulos. */
+  /** Só pra espécie `lista`: as palavras que o registro deixa escolher, por
+   *  PROP — o editor não conhece módulo de vocabulário nenhum. Três delas vêm
+   *  de `PISOS`/`DIAS`/`SEVERIDADES`; `custo.tag` tem a lista LITERAL no
+   *  registro (dívida da Task 1, ver o docblock do `EditorLista`), e dizer
+   *  "vêm de PISOS/DIAS/SEVERIDADES" sem essa ressalva era falso. */
   opcoes?: readonly string[];
   /** Só pra espécie `lista`: este campo guarda VÁRIAS opções (`dias`) ou uma
    *  (`piso`, `custo.tag`, `condicao.severidade`). Quem decide é

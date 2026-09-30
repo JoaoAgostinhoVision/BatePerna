@@ -22,7 +22,9 @@ import type { PropsDoEditor } from "./tipos";
  *
  *   - **bloco AUSENTE** — uma caixa por folha, as duas juntas, e um Salvar só.
  *     As folhas, nos blocos delas, não oferecem salvar nenhum (quem decide é
- *     `FichaInteira`).
+ *     `FichaInteira`). E o botão que TIRA o bloco não aparece aqui: tirar o que
+ *     já não está no documento é um `no-op` que grava uma versão idêntica no
+ *     histórico — quem decide isso é o `BotaoNaoSei`, no docblock dele.
  *   - **bloco PRESENTE** — nenhuma caixa aqui: cada folha tem o instrumento
  *     dela, e `aplicarCampo` no bloco presente é RECUSADO de propósito (gravar o
  *     objeto fechado por cima pularia a conferência folha a folha). O que o
@@ -43,7 +45,8 @@ export const BLOCO_JUNTO = "Estes campos entram juntos: um sozinho não vira fic
 export default function EditorBloco({ campo, valor, slug }: PropsDoEditor) {
   const folhas = campo.folhas ?? [];
   const [horas, setHoras] = useState<Readonly<Record<string, string>>>({});
-  const { erro, salvando, gravar, recusarAqui } = usarGravacao();
+  const gravacao = usarGravacao();
+  const { erro, salvando, gravar, recusarAqui } = gravacao;
   const ausente = valor === undefined;
 
   function salvar(): void {
@@ -85,7 +88,7 @@ export default function EditorBloco({ campo, valor, slug }: PropsDoEditor) {
           </button>
         </>
       )}
-      {!campo.obrigatorio && <BotaoNaoSei caminho={campo.caminho} slug={slug} bloco />}
+      <BotaoNaoSei campo={campo} valor={valor} slug={slug} gravacao={gravacao} bloco />
       {erro && (
         <p className="adm-erro" role="alert">
           {erro}

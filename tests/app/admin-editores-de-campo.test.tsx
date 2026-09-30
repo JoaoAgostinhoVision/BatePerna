@@ -1,17 +1,35 @@
+import { readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import FichaInteira, { LISTA_MULTIPLA } from "@/app/admin/FichaInteira";
-import { NAO_SEI, NAO_TEM } from "@/app/admin/campos/BotaoNaoSei";
+import ts from "typescript";
+import FichaInteira, { LISTA_MULTIPLA, moldeDe, multiploDe } from "@/app/admin/FichaInteira";
+import { NAO_SEI, NAO_TEM, TIRANDO } from "@/app/admin/campos/BotaoNaoSei";
+import { BLOCO_JUNTO } from "@/app/admin/campos/EditorBloco";
 import { ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
-import { CAIXA_VAZIA, HORA_VAZIA, NADA_ESCOLHIDO } from "@/app/admin/campos/palavras";
-import { CAMPOS_DA_FICHA, aplicarCampo, camposDaFicha } from "@/lib/campos-da-ficha";
+import {
+  CAIXA_VAZIA,
+  HORA_VAZIA,
+  NADA_ESCOLHIDO,
+  NAO,
+  SALVANDO,
+  SALVAR,
+  SIM,
+} from "@/app/admin/campos/palavras";
+import {
+  CAMPOS_DA_FICHA,
+  aplicarCampo,
+  camposDaFicha,
+  lerCaminho,
+  removerCampo,
+} from "@/lib/campos-da-ficha";
 import { getAllFichas } from "@/lib/ficha";
 import type { Ficha } from "@/types/ficha";
 import { bancoDeProducao } from "../banco";
 
 /** OS EDITORES POR ESPÉCIE (Task 6, 2026-09-30) — e este arquivo é também o
- *  destino dos quatro casos de `tests/app/editor-de-voz.test.tsx`, que morreu
- *  junto com o componente. **Suíte verde não prova contração: teste apagado não
+ *  destino dos quatro casos do `editor-de-voz.test.tsx`, que morreu junto com o
+ *  componente (o nome vem sem caminho porque não há arquivo pra abrir). **Suíte verde não prova contração: teste apagado não
  *  falha.** A tabela caso-a-caso está no relatório da tarefa; aqui, cada caso
  *  migrado leva a marca `⇦ editor-de-voz` no nome ou no comentário.
  *
@@ -166,24 +184,100 @@ describe('O "não sei" — a ação que TIRA a chave, e só em campo opcional', 
 
   // 🔴 M5 do plano, generalizado pro registro inteiro em vez de um campo só: a
   // mutação "o 'não sei' aparece em campo obrigatório" morre aqui, e morre
-  // também a inversa (campo opcional que perde o botão e vira campo sem saída).
-  it('aparece em TODO campo opcional com editor, e em NENHUM obrigatório', () => {
-    render(<FichaInteira ficha={semHorario} />);
-    let opcionais = 0;
+  // também a inversa (campo opcional PREENCHIDO que perde o botão e vira campo
+  // sem saída).
+  //
+  // 🔴 E SÃO TRÊS CLASSES, NÃO DUAS. A primeira versão deste guarda exigia o
+  // botão em todo campo opcional, inclusive nos JÁ AUSENTES — e ali ele é um
+  // `no-op` que grava uma versão IDÊNTICA no histórico append-only. As três
+  // classes, cada uma com contador próprio pra nenhuma ficar medindo zero.
+  it('o "não sei" aparece em campo opcional PREENCHIDO, e em nenhuma das outras duas classes', () => {
+    let preenchidos = 0;
+    let jaAusentes = 0;
     let obrigatorios = 0;
-    for (const c of camposDaFicha(semHorario)) {
-      if (bloco(c.caminho).querySelector("[data-editor]") === null) continue;
-      const botao = bloco(c.caminho).querySelector(`[data-nao-sei="${c.caminho}"]`);
-      if (c.obrigatorio) {
-        expect(botao, `${c.caminho} é obrigatório e a tela ofereceu "não sei" — a porta recusa`).toBeNull();
-        obrigatorios++;
-      } else {
-        expect(botao, `${c.caminho} é opcional e ficou sem saída de "não sei"`).not.toBeNull();
-        opcionais++;
+    for (const f of ACERVO) {
+      const { unmount } = render(<FichaInteira ficha={f} />);
+      for (const c of camposDaFicha(f)) {
+        const caixa = bloco(c.caminho);
+        if (caixa.querySelector("[data-editor]") === null) continue;
+        const botao = caixa.querySelector(`[data-nao-sei="${c.caminho}"]`);
+        if (c.obrigatorio) {
+          expect(botao, `${c.caminho} é obrigatório e a tela ofereceu "não sei" — a porta recusa`).toBeNull();
+          obrigatorios++;
+        } else if (caixa.hasAttribute("data-ausente")) {
+          expect(
+            botao,
+            `${c.caminho} já está ausente e a tela ofereceu "não sei" — o toque grava uma versão IDÊNTICA no histórico`,
+          ).toBeNull();
+          jaAusentes++;
+        } else {
+          expect(botao, `${c.caminho} é opcional, está preenchido, e ficou sem saída de "não sei"`).not.toBeNull();
+          preenchidos++;
+        }
+      }
+      unmount();
+    }
+    expect(preenchidos, "nenhum campo opcional PREENCHIDO foi medido: o caso ficaria oco").toBeGreaterThan(3);
+    expect(jaAusentes, "nenhum campo opcional JÁ AUSENTE foi medido: a classe nova ficaria oca").toBeGreaterThan(2);
+    expect(obrigatorios, "nenhum campo obrigatório foi medido: o caso ficaria oco").toBeGreaterThan(5);
+  });
+
+  // 🔴 AS DUAS ESPÉCIES DO DEFEITO, UMA CADA, na linha do item: o BLOCO
+  // (`horario` ausente na rampa-do-pepe, que mostrava a frase de ausência, o
+  // formulário das duas horas E o "Não tem" ao mesmo tempo) e o CAMPO COMUM
+  // (`dias` ausente).
+  it("BLOCO já ausente não oferece 'não tem' — o formulário das horas continua", () => {
+    expect(semHorario.horario, "esta ficha ganhou horário — o caso deixou de ser medido").toBeUndefined();
+    render(<FichaInteira ficha={semHorario} />);
+    expect(
+      bloco("horario").querySelector('[data-nao-sei="horario"]'),
+      "o bloco já ausente ofereceu tirar o que já não está lá",
+    ).toBeNull();
+    // e o que o bloco ausente TEM de oferecer continua ali
+    expect(bloco("horario").querySelector('[data-hora="horario.abre"]')).not.toBeNull();
+    expect(bloco("horario").querySelector('[data-salvar="horario"]')).not.toBeNull();
+  });
+
+  it("CAMPO COMUM já ausente não oferece 'não sei' — e com valor, oferece", () => {
+    // `dias` está ausente na ficha COM horário e presente na SEM — as duas
+    // pontas saem do acervo de verdade, sem ficha sintética.
+    expect(comHorario.dias, "esta ficha ganhou dias — o caso deixou de ser medido").toBeUndefined();
+    const { unmount } = render(<FichaInteira ficha={comHorario} />);
+    expect(
+      bloco("dias").querySelector('[data-nao-sei="dias"]'),
+      "o campo já ausente ofereceu tirar o que já não está lá",
+    ).toBeNull();
+    // e o instrumento continua: ele PODE responder, só não pode "não saber" duas vezes
+    expect(emCampo("dias").getAllByRole("checkbox").length).toBeGreaterThan(6);
+    unmount();
+
+    expect(semHorario.dias, "esta ficha perdeu os dias — o par simétrico deixou de ser medido").toBeTruthy();
+    render(<FichaInteira ficha={semHorario} />);
+    expect(bloco("dias").querySelector('[data-nao-sei="dias"]')).not.toBeNull();
+  });
+
+  // 🔴 O QUE AUTORIZA ESCONDER: a PORTA. Não é "o botão é feio ali" — é que o
+  // ato é VAZIO, e quem diz isso é `removerCampo` de verdade, sobre as fichas
+  // de verdade. Este guarda amarra o estado que a TELA usa pra esconder
+  // (`lerCaminho(...) === undefined`, o mesmo `data-ausente` do bloco) ao
+  // estado que a PORTA trata como ausente. Se um dia `removerCampo` passar a
+  // fazer algo num campo já ausente, este caso fica vermelho e o esconderijo
+  // deixa de ser honesto.
+  it("tirar um campo JÁ AUSENTE devolve o documento IDÊNTICO — é por isso que o botão não aparece", () => {
+    let medidos = 0;
+    for (const f of ACERVO) {
+      const doc = JSON.stringify(f);
+      for (const c of camposDaFicha(f)) {
+        if (c.obrigatorio) continue;
+        if (lerCaminho(f, c.caminho.split(".")) !== undefined) continue;
+        expect(
+          removerCampo(doc, c.caminho),
+          `removerCampo("${c.caminho}") mudou o documento num campo já ausente — o botão TERIA o que fazer`,
+        ).toBe(doc);
+        medidos++;
       }
     }
-    expect(opcionais, "nenhum campo opcional foi medido: o caso ficaria oco").toBeGreaterThan(3);
-    expect(obrigatorios, "nenhum campo obrigatório foi medido: o caso ficaria oco").toBeGreaterThan(5);
+    expect(medidos, "nenhum campo opcional ausente foi medido: o guarda ficaria oco").toBeGreaterThan(2);
   });
 
   // 🔴 A 49ª espécie do catálogo (bifurcação de frase com prova de um lado só):
@@ -463,6 +557,17 @@ describe("EditorHora — o seletor, e o que ele NÃO confere", () => {
     const { fetchFalso } = comRota();
     render(<FichaInteira ficha={comHorario} />);
     const caixa = bloco("horario.fecha").querySelector<HTMLInputElement>('[data-hora="horario.fecha"]')!;
+    // 🔴 O ALCANCE DA FRASE, CRAVADO: ela só cobre o que ESTE controle produz.
+    // Num navegador que não implementa `type=time` o controle cai para texto
+    // livre, `"17h"` chega à porta, volta um ZodError de corpo VAZIO e o dono lê
+    // `ERRO_GRAVAR` — a frase menos informativa do app, exatamente onde a
+    // `HORA_VAZIA` prometia dizer o formato. Isso está ESCRITO no docblock dela,
+    // e esta asserção é o que impede a promessa de crescer sem ninguém medir:
+    // o dia em que este `type` deixar de ser `time`, o caso fica vermelho.
+    expect(
+      caixa.type,
+      "o instrumento não é mais um seletor de hora: a recusa de cliente passou a ser alcançável por texto livre, e a frase da porta é a menos informativa do app",
+    ).toBe("time");
     fireEvent.change(caixa, { target: { value: "17h" } });
     expect(caixa.value, "o controle de hora aceitou texto livre — o caso mudou de natureza").toBe("");
     salvar("horario.fecha");
@@ -561,6 +666,150 @@ describe("O bloco `horario` — a tela não convida ao que a porta nega (A3)", (
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+/** 🔴 O A9 NOS OUTROS TRÊS INSTRUMENTOS — e ele estava provado só na CAIXA DE
+ *  TEXTO. Três mutações sobreviviam: `.then(() => setHora(""))` no `EditorHora`,
+ *  `setHoras({})` no `EditorBloco`, `setMarcadas([])` no `EditorLista`. O
+ *  comportamento de hoje está certo (`gravar.ts` não toca em estado de editor
+ *  nenhum); o que faltava era GUARDA — e o dia em que alguém "limpar o
+ *  formulário depois de gravar", o dono perde no celular o que acabou de
+ *  escolher, por um sinal ruim, **com a suíte verde**. É o defeito que faz
+ *  alguém parar de usar o painel.
+ *
+ *  As três recusas são FÁBRICAS, não instâncias: um `Response` só pode ter o
+ *  corpo lido uma vez, e reusar a mesma instância em quatro casos faria o
+ *  segundo cair no `catch` — o caso passaria verde medindo outra coisa. */
+describe("O que ele escolheu não some em recusa nenhuma — nos quatro instrumentos (A9)", () => {
+  const RECUSAS: readonly { nome: string; fazer: () => Response | Error }[] = [
+    { nome: "400 com frase", fazer: () => new Response("a porta recusou, com frase", { status: 400 }) },
+    { nome: "409 da coerência", fazer: () => new Response("o chip diz outra coisa", { status: 409 }) },
+    { nome: "sem rede", fazer: () => new TypeError("Failed to fetch") },
+  ];
+
+  /** Renderiza, deixa quem chama mexer e salvar, e espera a recusa aparecer no
+   *  bloco do campo. Devolve o `fetch` dublado, pra provar que a viagem
+   *  ACONTECEU (sem isto, uma recusa de CLIENTE passaria pelos casos abaixo
+   *  sem nunca exercitar o caminho da porta). */
+  function recusaEm(ficha: Ficha, resposta: Response | Error) {
+    const { fetchFalso } = comRota(resposta);
+    render(<FichaInteira ficha={ficha} />);
+    return { fetchFalso };
+  }
+
+  async function esperarAlerta(caminho: string): Promise<void> {
+    await waitFor(() => expect(bloco(caminho).querySelector('[role="alert"]')).not.toBeNull());
+  }
+
+  it("EditorHora: a hora escolhida continua no seletor, nas três recusas", async () => {
+    for (const r of RECUSAS) {
+      const { fetchFalso } = recusaEm(comHorario, r.fazer());
+      const caixa = (): HTMLInputElement =>
+        bloco("horario.fecha").querySelector<HTMLInputElement>('[data-hora="horario.fecha"]')!;
+      fireEvent.change(caixa(), { target: { value: "19:45" } });
+      salvar("horario.fecha");
+      await esperarAlerta("horario.fecha");
+      expect(fetchFalso, `${r.nome}: a viagem não aconteceu — o caso mediu uma recusa de cliente`).toHaveBeenCalled();
+      expect(caixa().value, `${r.nome}: a hora que ele acabou de escolher sumiu`).toBe("19:45");
+      cleanup();
+    }
+  });
+
+  it("EditorBloco: as DUAS horas continuam nas caixas, nas três recusas", async () => {
+    for (const r of RECUSAS) {
+      const { fetchFalso } = recusaEm(semHorario, r.fazer());
+      const caixa = (folha: string): HTMLInputElement =>
+        bloco("horario").querySelector<HTMLInputElement>(`[data-hora="horario.${folha}"]`)!;
+      fireEvent.change(caixa("abre"), { target: { value: "08:15" } });
+      fireEvent.change(caixa("fecha"), { target: { value: "17:45" } });
+      salvar("horario");
+      await esperarAlerta("horario");
+      expect(fetchFalso, `${r.nome}: a viagem não aconteceu`).toHaveBeenCalled();
+      expect(caixa("abre").value, `${r.nome}: a hora de abrir sumiu`).toBe("08:15");
+      expect(caixa("fecha").value, `${r.nome}: a hora de fechar sumiu`).toBe("17:45");
+      cleanup();
+    }
+  });
+
+  it("EditorLista de VÁRIOS: as marcações continuam marcadas, nas três recusas", async () => {
+    for (const r of RECUSAS) {
+      const { fetchFalso } = recusaEm(semHorario, r.fazer());
+      const caixa = (dia: string): HTMLInputElement =>
+        emCampo("dias").getByRole("checkbox", { name: dia }) as HTMLInputElement;
+      // desmarca o que o banco tem e marca outro, pra a asserção não poder
+      // passar verde com o editor remontado do valor da ficha
+      for (const d of semHorario.dias as readonly string[]) fireEvent.click(caixa(d));
+      fireEvent.click(caixa("qua"));
+      salvar("dias");
+      await esperarAlerta("dias");
+      expect(fetchFalso, `${r.nome}: a viagem não aconteceu`).toHaveBeenCalled();
+      expect(caixa("qua").checked, `${r.nome}: a marcação que ele acabou de fazer sumiu`).toBe(true);
+      for (const d of semHorario.dias as readonly string[]) {
+        expect(caixa(d).checked, `${r.nome}: ${d} voltou marcado — o editor foi remontado do banco`).toBe(false);
+      }
+      cleanup();
+    }
+  });
+
+  it("EditorLista de UMA: a escolha continua no seletor, nas três recusas", async () => {
+    for (const r of RECUSAS) {
+      const { fetchFalso } = recusaEm(semHorario, r.fazer());
+      const escolha = (): HTMLSelectElement =>
+        bloco("piso").querySelector<HTMLSelectElement>('[data-escolha="piso"]')!;
+      const outro = [...escolha().querySelectorAll("option")]
+        .map((o) => o.value)
+        .find((v) => v !== "" && v !== semHorario.piso)!;
+      fireEvent.change(escolha(), { target: { value: outro } });
+      salvar("piso");
+      await esperarAlerta("piso");
+      expect(fetchFalso, `${r.nome}: a viagem não aconteceu`).toHaveBeenCalled();
+      expect(escolha().value, `${r.nome}: a escolha que ele acabou de fazer sumiu`).toBe(outro);
+      cleanup();
+    }
+  });
+
+  it("EditorBooleano: a resposta marcada continua marcada, nas três recusas", async () => {
+    for (const r of RECUSAS) {
+      const { fetchFalso } = recusaEm(semHorario, r.fazer());
+      const radio = (nome: string): HTMLInputElement =>
+        emCampo("carroComum").getByRole("radio", { name: nome }) as HTMLInputElement;
+      fireEvent.click(radio("Não"));
+      salvar("carroComum");
+      await esperarAlerta("carroComum");
+      expect(fetchFalso, `${r.nome}: a viagem não aconteceu`).toHaveBeenCalled();
+      expect(radio("Não").checked, `${r.nome}: a resposta que ele acabou de marcar sumiu`).toBe(true);
+      cleanup();
+    }
+  });
+
+  // 🔴 M6: OS DOIS BOTÕES DO MESMO CAMPO NÃO CORREM ENTRE SI. O `BotaoNaoSei`
+  // tinha `usarGravacao()` próprio, então o `disabled={salvando}` do Salvar não
+  // o alcançava: dois toques davam dois `PUT` simultâneos sobre a mesma ficha,
+  // último escreve, numa tabela append-only onde os dois viram versão.
+  it("enquanto o campo grava, o 'não sei' do mesmo campo não manda um segundo PUT", () => {
+    const pendente = vi.fn((_url: string, _init: Requisicao) => new Promise<Response>(() => {}));
+    vi.stubGlobal("fetch", pendente);
+    vi.stubGlobal("location", { ...window.location, reload: vi.fn() });
+    render(<FichaInteira ficha={semHorario} />);
+    salvar("piso");
+    expect(pendente, "o Salvar não saiu: o caso mediria o botão errado").toHaveBeenCalledTimes(1);
+    const naoSei = bloco("piso").querySelector<HTMLButtonElement>('[data-nao-sei="piso"]')!;
+    expect(naoSei.disabled, 'o "não sei" ficou clicável durante a gravação do mesmo campo').toBe(true);
+    fireEvent.click(naoSei);
+    expect(pendente, "dois PUT simultâneos sobre a mesma ficha").toHaveBeenCalledTimes(1);
+  });
+
+  it("enquanto o 'não sei' tira o campo, o Salvar do mesmo campo não manda um segundo PUT", () => {
+    const pendente = vi.fn((_url: string, _init: Requisicao) => new Promise<Response>(() => {}));
+    vi.stubGlobal("fetch", pendente);
+    vi.stubGlobal("location", { ...window.location, reload: vi.fn() });
+    render(<FichaInteira ficha={semHorario} />);
+    fireEvent.click(bloco("piso").querySelector('[data-nao-sei="piso"]')!);
+    expect(pendente).toHaveBeenCalledTimes(1);
+    salvar("piso");
+    expect(pendente, "dois PUT simultâneos sobre a mesma ficha").toHaveBeenCalledTimes(1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 describe("Os guardas do que cresce — registro × instrumento", () => {
   // 🔴 A2 DO BRIEF: são SETE espécies e esta tarefa construiu CINCO. As duas que
   // faltam continuam em LEITURA, e isso tem de estar provado — senão a Task 7
@@ -608,6 +857,77 @@ describe("Os guardas do que cresce — registro × instrumento", () => {
     }
   });
 
+  /** O caminho CONCRETO de um molde do registro — `[]` no índice 0, que é o que
+   *  `camposDaFicha` produz numa ficha com um item. */
+  const concretizar = (molde: string): string => molde.replaceAll("[]", ".0");
+
+  // 🔴 A TABELA É CHAVEADA PELO REGISTRO E A TELA ITERA CAMPOS CONCRETOS, e
+  // isso era resolvido por ACIDENTE: `LISTA_MULTIPLA[campo.caminho]` com o
+  // caminho já expandido consulta um espaço de chaves que a tabela não usa.
+  // Hoje nenhuma das quatro listas é molde, então dava certo; uma `lista` dentro
+  // de `trajeto.waypoints[]` devolveria `undefined` (um `<select>` de UMA
+  // escolha pra um campo de VÁRIAS, trancando o dono), e o guarda das duas
+  // direções continuaria VERDE — as duas pontas dele casam no molde. 50ª
+  // espécie: cobertura por acidente.
+  //
+  // 🔴 ESTE É O GUARDA QUE A TORNA POR CONSTRUÇÃO, e ele é falsificável HOJE
+  // porque o registro TEM moldes: `moldeDe` virar identidade deixa este caso
+  // vermelho NOMEANDO o caminho que não voltou.
+  it("o caminho concreto de todo campo do registro volta ao molde que o registro declara", () => {
+    let moldes = 0;
+    for (const c of CAMPOS_DA_FICHA) {
+      if (c.caminho.includes("[]")) moldes++;
+      expect(
+        moldeDe(concretizar(c.caminho)),
+        `o caminho concreto de \`${c.caminho}\` não volta ao molde: a tela consultaria a tabela com uma chave que ela não tem`,
+      ).toBe(c.caminho);
+    }
+    expect(
+      moldes,
+      "o registro não tem molde nenhum: este guarda ficaria oco e a cobertura voltaria a ser por acidente",
+    ).toBeGreaterThan(1);
+  });
+
+  it("toda `lista` do registro resolve a multiplicidade pelo caminho CONCRETO — molde ou não", () => {
+    const listas = CAMPOS_DA_FICHA.filter((c) => c.especie === "lista");
+    expect(listas.length, "o registro perdeu as listas: o guarda ficaria oco").toBeGreaterThan(3);
+    for (const c of listas) {
+      expect(
+        multiploDe(concretizar(c.caminho)),
+        `\`${c.caminho}\`: a tela consultaria a multiplicidade pelo caminho concreto e receberia \`undefined\``,
+      ).toBe(LISTA_MULTIPLA[c.caminho]);
+      expect(multiploDe(concretizar(c.caminho))).not.toBeUndefined();
+    }
+  });
+
+  // E a ponta da TELA: o instrumento que aparece é o da multiplicidade
+  // resolvida, em toda lista de toda ficha do acervo.
+  it("cada lista na tela mostra o instrumento da multiplicidade resolvida", () => {
+    let medidas = 0;
+    let deVarios = 0;
+    for (const f of ACERVO) {
+      const { unmount } = render(<FichaInteira ficha={f} />);
+      for (const c of camposDaFicha(f).filter((x) => x.especie === "lista")) {
+        const m = multiploDe(c.caminho);
+        expect(m, `${c.caminho}: a tela não soube a multiplicidade deste campo`).not.toBeUndefined();
+        const caixas = emCampo(c.caminho).queryAllByRole("checkbox").length;
+        const escolha = bloco(c.caminho).querySelector(`[data-escolha="${c.caminho}"]`);
+        if (m === true) {
+          expect(caixas, `${c.caminho} é de vários e não ofereceu caixas de marcar`).toBeGreaterThan(1);
+          expect(escolha, `${c.caminho} é de vários e ofereceu um <select> de UMA escolha`).toBeNull();
+          deVarios++;
+        } else {
+          expect(escolha, `${c.caminho} é de uma e ficou sem <select>`).not.toBeNull();
+          expect(caixas, `${c.caminho} é de uma e ofereceu caixas de marcar`).toBe(0);
+        }
+        medidas++;
+      }
+      unmount();
+    }
+    expect(medidas, "nenhuma lista foi medida na tela: o guarda ficaria oco").toBeGreaterThan(5);
+    expect(deVarios, "nenhuma lista de VÁRIOS foi medida: só o ramo fácil ficaria provado").toBeGreaterThan(0);
+  });
+
   it("toda lista do registro tem multiplicidade declarada, e não há declaração sobrando", () => {
     const listas = CAMPOS_DA_FICHA.filter((c) => c.especie === "lista").map((c) => c.caminho);
     expect(listas.length, "o registro perdeu as listas: o guarda ficaria oco").toBeGreaterThan(3);
@@ -653,46 +973,187 @@ describe("Os guardas do que cresce — registro × instrumento", () => {
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe("Os editores servem os três lugares", () => {
-  // 🔴 A LINHA VERMELHA. O cerco de `admin-ficha-inteira.test.tsx` lê h2, h3,
-  // rótulo e a frase de ausência; os EDITORES trouxeram frases novas (botões,
-  // ajuda, opções) e elas têm de entrar no mesmo cerco. Mesmo molde: o
-  // vocabulário proibido sai dos radicais dos slugs do acervo, casado por
-  // PALAVRA (a fronteira que fez `veu` entrar e "choveu" não disparar).
-  it("nenhuma frase fixa de editor nomeia um lugar do acervo", () => {
-    const semAcento = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const semAcento = (s: string): string =>
+    s
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase();
+
+  /** O vocabulário proibido: os radicais dos slugs do acervo, sem os
+   *  conectivos. Sai do ACERVO, nunca de uma lista escrita aqui. */
+  const proibidas = (): string[] => {
     const CONECTIVOS = ["de", "do", "da", "dos", "das", "e"];
-    const proibidas = [...new Set(ACERVO.flatMap((f) => f.slug.split("-")))]
+    return [...new Set(ACERVO.flatMap((f) => f.slug.split("-")))]
       .map(semAcento)
       .filter((p) => !CONECTIVOS.includes(p));
-    expect(proibidas.length, "nenhum radical de slug: o cerco ficaria oco").toBeGreaterThan(2);
-    expect(proibidas, "o radical curto do Véu tem de estar no cerco").toContain("veu");
+  };
 
-    const fixas: string[] = [];
+  /** 🔴 A PASTA DOS EDITORES, LIDA DO DISCO. Nem uma lista de arquivos nem uma
+   *  lista de constantes: arquivo novo em `campos/` entra no cerco sozinho. */
+  const PASTA_DOS_EDITORES = path.join(process.cwd(), "src", "app", "admin", "campos");
+  const ARQUIVOS_DOS_EDITORES = readdirSync(PASTA_DOS_EDITORES).filter((a) => /\.tsx?$/.test(a));
+
+  /** Todo literal de string de um arquivo — pelo PARSER DO TYPESCRIPT, não por
+   *  regex.
+   *
+   *  🔴 POR QUE O PARSER: um varredor à mão sobre o texto do arquivo cai numa
+   *  das duas frestas que este projeto já pagou — ou tira os comentários e
+   *  CEGA a varredura (a tira de comentários comeu 69% de um arquivo dentro de
+   *  um guarda, em 25/09), ou não os tira e fica vermelho por causa de uma
+   *  frase escrita em PROSA num docblock (todos estes arquivos falam de
+   *  `horario` e do que a porta recusa, em português, e citam o lugar que não
+   *  tem horário). O parser resolve os dois de uma vez: ele enxerga literal
+   *  como literal e comentário como comentário, e é a mesma ferramenta que
+   *  compila o app. */
+  const literaisDe = (arquivo: string): string[] => {
+    const texto = readFileSync(path.join(PASTA_DOS_EDITORES, arquivo), "utf8");
+    const fonte = ts.createSourceFile(arquivo, texto, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const K = ts.SyntaxKind;
+    const DE_TEXTO: ts.SyntaxKind[] = [
+      K.StringLiteral,
+      K.NoSubstitutionTemplateLiteral,
+      K.TemplateHead,
+      K.TemplateMiddle,
+      K.TemplateTail,
+      K.JsxText,
+    ];
+    const saida: string[] = [];
+    const andar = (n: ts.Node): void => {
+      if (DE_TEXTO.includes(n.kind)) saida.push((n as ts.LiteralLikeNode).text);
+      ts.forEachChild(n, andar);
+    };
+    andar(fonte);
+    return saida;
+  };
+
+  /** As frases que ESTÃO NA TELA em repouso, das três fichas. Sem lista de
+   *  seletores: todo nó de TEXTO dentro de `[data-editor]`, mais os atributos
+   *  que um leitor de tela lê. Lista de seletores é lista à mão — e a primeira
+   *  versão deste cerco ficou com metade da cerca porque alguém teria de
+   *  lembrar de acrescentar `.adm-editor-ajuda` nela. */
+  const frasesNaTela = (): string[] => {
+    const saida: string[] = [];
+    const ATRIBUTOS = ["aria-label", "placeholder", "title"];
     for (const f of ACERVO) {
       const { container, unmount } = render(<FichaInteira ficha={f} />);
-      for (const sel of [
-        "[data-editor] button",
-        "[data-editor] label",
-        "[data-editor] option",
-        ".adm-editor-ajuda",
-      ]) {
-        for (const e of container.querySelectorAll(sel)) fixas.push(e.textContent ?? "");
-      }
-      // e os `aria-label`, que são texto de tela pra quem usa leitor
-      for (const e of container.querySelectorAll("[data-editor] [aria-label]")) {
-        fixas.push(e.getAttribute("aria-label") ?? "");
+      for (const editor of container.querySelectorAll("[data-editor]")) {
+        // 🔴 A ÚNICA EXCEÇÃO, E ELA FOI MEDIDA: o nó de texto filho de um
+        // `<textarea>` é o VALOR dele, que é a prosa da ficha — o React o
+        // renderiza como filho, e sem esta exceção o cerco lia *"A maior
+        // cachoeira de Bonito."* e ficava vermelho por INOCÊNCIA (a mesma
+        // armadilha do `veu` dentro de "choveu", pelo outro lado). A pergunta
+        // obrigatória — "que caso REAL esta exceção está comendo?" — tem
+        // resposta: uma frase FIXA escrita como filho de um `<textarea>`, que
+        // nenhum editor escreve e que seria `placeholder` (atributo, varrido
+        // logo abaixo) se alguém quisesse escrevê-la. E há controle: os
+        // valores das três fichas NÃO podem estar em `naTela`.
+        const andarilho = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, {
+          acceptNode: (n) =>
+            n.parentElement?.tagName === "TEXTAREA" ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+        });
+        for (let n = andarilho.nextNode(); n !== null; n = andarilho.nextNode()) {
+          const t = (n.textContent ?? "").trim();
+          if (t !== "") saida.push(t);
+        }
+        for (const e of [editor, ...editor.querySelectorAll("*")]) {
+          for (const a of ATRIBUTOS) {
+            const v = e.getAttribute(a);
+            if (v !== null && v.trim() !== "") saida.push(v);
+          }
+        }
       }
       unmount();
     }
-    expect(fixas.length, "nenhuma frase de editor foi lida: o cerco ficaria oco").toBeGreaterThan(60);
+    return saida;
+  };
 
+  /** 🔴 AS TREZE FRASES DE TELA QUE ESTA PASTA CUNHOU. Este arranjo NÃO é o
+   *  enumerador do cerco — ele é o CONTROLE DE COMPLETUDE dele. Cada uma é
+   *  importada do módulo onde mora, então uma frase que mude de texto continua
+   *  batendo; o que este controle pega é o ENUMERADOR ENCOLHER (a pasta lida
+   *  errado, o parser parando de ver um tipo de literal), que deixaria o cerco
+   *  verde com metade da cerca — foi exatamente o defeito da primeira versão,
+   *  que alcançava 6 destas 13. */
+  const CUNHADAS_AQUI = [
+    SIM,
+    NAO,
+    SALVAR,
+    SALVANDO,
+    TIRANDO,
+    NADA_ESCOLHIDO,
+    HORA_VAZIA,
+    CAIXA_VAZIA,
+    ERRO_GRAVAR,
+    ERRO_REDE,
+    NAO_SEI,
+    NAO_TEM,
+    BLOCO_JUNTO,
+  ];
+
+  /** As que aparecem EM REPOUSO nas três fichas — as outras só existem
+   *  salvando ou em recusa, e é por isso que o cerco não pode depender do
+   *  render. */
+  const EM_REPOUSO = [SIM, NAO, SALVAR, NAO_SEI, NAO_TEM, BLOCO_JUNTO];
+
+  // 🔴 A LINHA VERMELHA. O cerco de `admin-ficha-inteira.test.tsx` lê h2, h3,
+  // rótulo e a frase de ausência; os EDITORES trouxeram frases novas e elas têm
+  // de entrar no mesmo cerco. Mesmo molde: o vocabulário proibido sai dos
+  // radicais dos slugs do acervo, casado por PALAVRA (a fronteira que fez `veu`
+  // entrar e "choveu" não disparar).
+  //
+  // 🔴 E O ALCANCE É O PONTO. A primeira versão lia botão/label/option/ajuda de
+  // um render EM REPOUSO, e alcançava 6 das 13 frases: as SETE que só existem
+  // com o editor SALVANDO (`Salvando…`, `Tirando…`) ou em RECUSA (as três de
+  // cliente e as duas da porta) estavam FORA da cerca — e são justamente as que
+  // o dono lê no pior momento, num componente que serve os três lugares. Sete
+  // mutações sobreviveram àquela versão, todas medidas. Dirigir o render até
+  // cada um daqueles estados, editor por editor, seria encenação frágil (e
+  // deixaria de fora a frase que um editor novo cunhe amanhã); o alcance
+  // completo vem da FONTE — todo literal de todo arquivo da pasta, em qualquer
+  // estado, exportado ou não.
+  it("nenhuma frase fixa de editor nomeia um lugar do acervo", () => {
+    const proibido = proibidas();
+    expect(proibido.length, "nenhum radical de slug: o cerco ficaria oco").toBeGreaterThan(2);
+    expect(proibido, "o radical curto do Véu tem de estar no cerco").toContain("veu");
+
+    const daFonte = ARQUIVOS_DOS_EDITORES.flatMap(literaisDe);
+    const naTela = frasesNaTela();
+    const fixas = [...daFonte, ...naTela];
+
+    // ── OS CONTROLES DE COMPLETUDE DO ENUMERADOR ──────────────────────────
+    // Sem eles, um `fixas.length > 60` fica verde com o enumerador encolhido.
+    expect(
+      ARQUIVOS_DOS_EDITORES.length,
+      "a pasta dos editores foi lida vazia (ou quase): o cerco não enumerou nada",
+    ).toBeGreaterThan(8);
+    for (const frase of CUNHADAS_AQUI) {
+      expect(
+        daFonte,
+        `a varredura da FONTE não alcançou "${frase}": o enumerador encolheu, e o cerco ficaria com metade da cerca`,
+      ).toContain(frase);
+    }
+    for (const frase of EM_REPOUSO) {
+      expect(
+        naTela,
+        `a varredura da TELA não alcançou "${frase}": o enumerador do DOM encolheu`,
+      ).toContain(frase);
+    }
+    expect(naTela.length, "nenhuma frase de editor foi lida da tela: o cerco ficaria oco").toBeGreaterThan(60);
+    for (const f of ACERVO) {
+      expect(
+        naTela,
+        "a PROSA da ficha entrou no cerco: ele ficaria vermelho por inocência, falando de um lugar porque o DADO fala dele",
+      ).not.toContain(f.voz);
+    }
+
+    // ── A CERCA ───────────────────────────────────────────────────────────
     for (const frase of fixas) {
       const palavras = new Set(
         semAcento(frase)
           .split(/[^a-z0-9]+/)
           .filter((p) => p.length > 0),
       );
-      for (const palavra of proibidas) {
+      for (const palavra of proibido) {
         expect(
           palavras.has(palavra),
           `a frase de editor "${frase}" fala de um lugar (${palavra}) num componente que serve os três`,
@@ -709,10 +1170,19 @@ describe("Os editores servem os três lugares", () => {
   // por um comportamento CERTO: com o bloco ausente o editor dele mostra as duas
   // horas e um Salvar; com o bloco presente, só o botão que tira. Isso varia com
   // o DADO, que é o que um editor deve fazer, e não com o LUGAR, que é o que ele
-  // nunca pode fazer. Sem separar os dois, o caso ou fica vermelho por inocência
-  // ou é afrouxado pra deixar passar o defeito de verdade.
+  // nunca pode fazer.
+  //
+  // 🔴 E O NOME DELE PROMETIA A AJUDA SEM MEDIR A AJUDA — duas vezes. O `mapa`
+  // não a coletava, e mesmo coletando o caso era INALCANÇÁVEL POR CONSTRUÇÃO:
+  // a única ajuda de editor que existe hoje é a do bloco AUSENTE, e só UMA das
+  // três fichas tem o `horario` ausente, então a chave `horario:ausente`
+  // aparecia em uma ficha só e o laço a pulava. O corpus agora leva as três
+  // fichas TAMBÉM com o `horario` forçado a ausente — que é exatamente a
+  // pergunta do caso ("no mesmo estado"), e é o que põe a ajuda debaixo da
+  // comparação. O contador `comAjuda` prova que ela não mediu zero.
   it("o botão, a ajuda e o rótulo de um mesmo campo NO MESMO ESTADO são iguais nas três fichas", () => {
-    const porFicha = ACERVO.map((f) => {
+    const corpus: Ficha[] = [...ACERVO, ...ACERVO.map((f) => ({ ...f, horario: undefined }))];
+    const porFicha = corpus.map((f) => {
       const { container, unmount } = render(<FichaInteira ficha={f} />);
       const mapa = new Map<string, string>();
       for (const e of container.querySelectorAll("[data-editor]")) {
@@ -722,22 +1192,41 @@ describe("Os editores servem os três lugares", () => {
         const rotulos = [...e.querySelectorAll("[aria-label]")]
           .map((x) => x.getAttribute("aria-label"))
           .join("|");
-        mapa.set(`${caminho}:${estado}`, `${botoes}//${rotulos}`);
+        const ajudas = [...e.querySelectorAll(".adm-editor-ajuda")].map((a) => a.textContent).join("|");
+        mapa.set(`${caminho}:${estado}`, `${botoes}//${rotulos}//${ajudas}`);
       }
       unmount();
       return mapa;
     });
     expect(porFicha[0].size, "nenhum editor foi lido: o marcador `data-editor` sumiu").toBeGreaterThan(15);
-    let comparados = 0;
-    for (const outra of porFicha.slice(1)) {
-      for (const [chave, texto] of outra) {
-        if (!porFicha[0].has(chave)) continue;
-        comparados++;
-        expect(texto, `o texto do editor de ${chave} muda de lugar pra lugar`).toBe(porFicha[0].get(chave));
+
+    // 🔴 A comparação é POR CHAVE, entre todas as fichas que a têm — nunca
+    // "todas contra a primeira". Ancorada na primeira, uma chave que só
+    // existisse fora dela (é o caso de `horario:ausente` quando a ficha 0 tem
+    // horário) era silenciosamente pulada.
+    const porChave = new Map<string, string[]>();
+    for (const mapa of porFicha) {
+      for (const [chave, texto] of mapa) {
+        if (!porChave.has(chave)) porChave.set(chave, []);
+        porChave.get(chave)!.push(texto);
       }
     }
-    // 🔴 Sem esta linha o laço de cima pode não comparar NADA (duas fichas sem
-    // chave em comum) e o caso passa verde medindo zero.
+    let comparados = 0;
+    let comAjuda = 0;
+    for (const [chave, vistas] of porChave) {
+      if (vistas.length < 2) continue;
+      for (const texto of vistas.slice(1)) {
+        comparados++;
+        expect(texto, `o texto do editor de ${chave} muda de lugar pra lugar`).toBe(vistas[0]);
+      }
+      if (vistas[0].split("//")[2] !== "") comAjuda += vistas.length - 1;
+    }
+    // 🔴 Sem estas duas linhas o laço de cima pode não comparar NADA (duas
+    // fichas sem chave em comum) e o caso passa verde medindo zero.
     expect(comparados, "nenhum par foi comparado: o caso ficaria oco").toBeGreaterThan(30);
+    expect(
+      comAjuda,
+      "a AJUDA nunca entrou numa comparação: o nome do caso promete o que ele não mede",
+    ).toBeGreaterThan(0);
   });
 });
