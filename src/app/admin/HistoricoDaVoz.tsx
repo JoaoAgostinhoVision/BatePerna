@@ -39,8 +39,8 @@ function dataHora(criadoEm: number): string {
  *  versão, e procedência é a razão desta tabela existir.
  *
  *  🔴 NENHUM TEXTO SOBRE UM LUGAR ESPECÍFICO mora aqui — `versoes` chega por
- *  prop, como `ficha` chega em `EditorDeVoz`. Este componente serve QUALQUER
- *  lugar. */
+ *  prop, como `ficha` chega em `FichaInteira`. Este componente serve QUALQUER
+ *  lugar. (A frase dizia `EditorDeVoz`, que a Task 6 apagou.) */
 export default function HistoricoDaVoz({ versoes }: Props) {
   const [aberta, setAberta] = useState<number | null>(null);
   const [voltando, setVoltando] = useState<number | null>(null);

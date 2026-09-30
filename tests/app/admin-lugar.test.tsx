@@ -133,7 +133,7 @@ describe("/admin/[slug] — a porta e o conteúdo", () => {
 
   // 🔴 Task 5 (2026-09-27): sem isto, apagar `<FichaInteira>` da página — o
   // dono voltando a enxergar UM campo de 17 — passaria a suíte inteira verde.
-  // Mesmo molde do teste do `data-editor-voz` logo abaixo.
+  // Mesmo molde do teste do editor da voz logo abaixo.
   it("com cookie válido: a ficha inteira aparece, com os seis grupos", async () => {
     const { getAllFichas } = await import("@/lib/ficha");
     const fichas = await getAllFichas();
@@ -148,12 +148,18 @@ describe("/admin/[slug] — a porta e o conteúdo", () => {
     expect(container.querySelectorAll('[data-testid^="grupo-"]').length).toBe(6);
   });
 
-  // 🔴 I2 DA REVISÃO FINAL (2026-09-26): nada nesta suíte provava que
-  // `EditorDeVoz` e `HistoricoDaVoz` de fato aparecem na tela do lugar —
-  // apagar `<EditorDeVoz>` (o dono não pode editar nada), apagar
-  // `<HistoricoDaVoz>` (sem histórico, sem voltar) ou passar `versoes={[]}`
-  // sobreviviam à suíte inteira. `data-editor-voz` e `data-historico` são os
-  // marcadores que os dois componentes já expõem por prop.
+  // 🔴 I2 DA REVISÃO FINAL (2026-09-26): nada nesta suíte provava que o editor da
+  // voz e `HistoricoDaVoz` de fato aparecem na tela do lugar — apagar o editor
+  // (o dono não pode editar nada), apagar `<HistoricoDaVoz>` (sem histórico, sem
+  // voltar) ou passar `versoes={[]}` sobreviviam à suíte inteira.
+  //
+  // ⚠️ O MARCADOR MUDOU NA TASK 6 (2026-09-30), e o defeito medido é o MESMO.
+  // `EditorDeVoz` foi apagado: a voz passou a ser editada pelo `EditorProsa`,
+  // dentro do bloco `campo-voz` da ficha inteira. Então o que se mede é o
+  // instrumento DAQUELE campo (`[data-editor="voz"]` dentro de
+  // `[data-testid="campo-voz"]`) — e não só a presença da ficha inteira, que o
+  // caso de cima já cobre. Se os editores saíssem da ficha inteira, o dono
+  // voltaria a só LER a tela, com a suíte verde; é isso que esta asserção trava.
   it("com cookie válido: o editor da voz e o histórico aparecem, e o histórico não vem vazio", async () => {
     const { getAllFichas } = await import("@/lib/ficha");
     const { historico } = await import("@/lib/db");
@@ -163,7 +169,16 @@ describe("/admin/[slug] — a porta e o conteúdo", () => {
     const { default: Lugar } = await import("@/app/admin/[slug]/page");
     const { container } = render(await Lugar({ params: Promise.resolve({ slug: ficha.slug }) }));
 
-    expect(container.querySelector(`[data-editor-voz="${ficha.slug}"]`), "o editor da voz sumiu").not.toBeNull();
+    const blocoDaVoz = container.querySelector('[data-testid="campo-voz"]');
+    expect(blocoDaVoz, "o bloco da voz sumiu da tela do lugar").not.toBeNull();
+    expect(
+      blocoDaVoz!.querySelector('[data-editor="voz"]'),
+      "o editor da voz sumiu: o dono voltou a só LER a ficha",
+    ).not.toBeNull();
+    expect(
+      blocoDaVoz!.querySelector('[data-salvar="voz"]'),
+      "o editor da voz apareceu sem botão de gravar",
+    ).not.toBeNull();
     const historicoEl = container.querySelector("[data-historico]");
     expect(historicoEl, "o histórico sumiu").not.toBeNull();
 

@@ -108,27 +108,55 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
   // cima e não mostra NADA. Um caso por espécie do registro, e cada asserção
   // é `within(o bloco daquele campo)` — "está em algum lugar da tela" é a
   // espécie que o catálogo pegou em 25/09.
-  it("o VALOR de cada campo preenchido aparece DENTRO do bloco dele", () => {
+  //
+  // 🔴 A TASK 6 PARTIU ESTE CASO EM DOIS, e a razão é de desenho: onde o campo
+  // ganhou INSTRUMENTO, o valor mora DENTRO do controle (é o que o dono vai
+  // editar) e um `<p>` ao lado diria a mesma coisa duas vezes — então ali o que
+  // se mede é o valor do controle, não o texto do bloco. Onde não há instrumento
+  // (`numero` e `coord`, Tasks 7 e 8), o `<p>` de leitura continua igual.
+  it("o VALOR de cada campo preenchido aparece DENTRO do bloco dele — em `<p>` onde não há editor", () => {
     render(<FichaInteira ficha={semHorario} />);
-    const dentro = (caminho: string, texto: string) =>
+    const lido = (caminho: string, texto: string) =>
       expect(
         within(screen.getByTestId(`campo-${caminho}`)).getByText(texto),
         `${caminho} não mostrou o valor dentro do bloco`,
       ).toBeTruthy();
 
-    dentro("voz", semHorario.voz); // prosa
-    dentro("acesso", semHorario.acesso); // prosa
-    dentro("custo.valor", semHorario.custo.valor!); // prosa opcional PREENCHIDA
-    dentro("piso", semHorario.piso!); // lista
-    dentro("condicao.severidade", semHorario.condicao.severidade); // lista
-    dentro("dias", "sab, dom"); // lista de vários
-    dentro("carroComum", "Sim"); // booleano
-    dentro("condicao.regra.limiar_mm", String(semHorario.condicao.regra.limiar_mm)); // numero
-    dentro("trajeto.waypoints.0.lat", String(semHorario.trajeto.waypoints[0].lat)); // coord metade
-    dentro(
+    lido("condicao.regra.limiar_mm", String(semHorario.condicao.regra.limiar_mm)); // numero
+    lido("trajeto.waypoints.0.lat", String(semHorario.trajeto.waypoints[0].lat)); // coord metade
+    lido(
       "condicao.coords",
       `${semHorario.condicao.coords.lat}, ${semHorario.condicao.coords.lng}`,
     ); // coord par
+  });
+
+  it("o VALOR de cada campo COM instrumento aparece dentro do controle do bloco dele", () => {
+    render(<FichaInteira ficha={semHorario} />);
+    const naCaixa = (caminho: string, texto: string) =>
+      expect(
+        within(screen.getByTestId(`campo-${caminho}`)).getByDisplayValue(texto),
+        `${caminho} não trouxe o valor dentro do controle`,
+      ).toBeTruthy();
+
+    naCaixa("voz", semHorario.voz); // prosa
+    naCaixa("acesso", semHorario.acesso); // prosa
+    naCaixa("custo.valor", semHorario.custo.valor!); // prosa opcional PREENCHIDA
+    naCaixa("piso", semHorario.piso!); // lista de uma
+    naCaixa("condicao.severidade", semHorario.condicao.severidade); // lista de uma
+
+    // lista de VÁRIOS: o valor é o conjunto marcado, não um texto
+    const dias = within(screen.getByTestId("campo-dias"));
+    for (const d of semHorario.dias!) {
+      expect(
+        (dias.getByRole("checkbox", { name: d }) as HTMLInputElement).checked,
+        `${d} está na ficha e não veio marcado`,
+      ).toBe(true);
+    }
+    // booleano: a resposta marcada é a que a ficha diz
+    expect(semHorario.carroComum, "esta ficha perdeu o `carroComum`").toBe(true);
+    const carro = within(screen.getByTestId("campo-carroComum"));
+    expect((carro.getByRole("radio", { name: "Sim" }) as HTMLInputElement).checked).toBe(true);
+    expect((carro.getByRole("radio", { name: "Não" }) as HTMLInputElement).checked).toBe(false);
     // a espécie `hora` só a ficha que TEM horário pode provar, e está provada
     // no bloco "o bloco `horario`" mais abaixo.
   });
@@ -156,7 +184,13 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     render(<FichaInteira ficha={semPiso} />);
     const bloco = screen.getByTestId("campo-piso");
     expect(bloco).toBeTruthy();
-    expect(bloco.textContent).toMatch(/não sei|não diz/i);
+    // 🔴 O PARÁGRAFO DE AUSÊNCIA, não o `textContent` do bloco: desde a Task 6 o
+    // botão "Não sei — o app cala sobre isto" mora no mesmo bloco, e medir o
+    // texto todo faria este caso passar por causa do BOTÃO — "guarda que sai com
+    // o código certo pelo motivo errado", que mordeu três vezes nesta rodada.
+    const frase = bloco.querySelector(".adm-campo-ausente");
+    expect(frase, "o parágrafo de ausência sumiu do bloco").not.toBeNull();
+    expect(frase!.textContent).toMatch(/não sei|não diz/i);
     expect(bloco.hasAttribute("data-ausente")).toBe(true);
   });
 
@@ -167,6 +201,10 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     const { container } = render(<FichaInteira ficha={semHorario} />);
     const cheio = screen.getByTestId("campo-voz");
     expect(cheio.hasAttribute("data-ausente"), "campo preenchido veio marcado de ausente").toBe(false);
+    expect(cheio.querySelector(".adm-campo-ausente"), "campo cheio ganhou frase de ausência").toBeNull();
+    // `voz` é OBRIGATÓRIO, então não há botão de "não sei" nenhum neste bloco —
+    // é o que deixa a asserção de `textContent` continuar valendo depois da
+    // Task 6.
     expect(cheio.textContent).not.toMatch(/não sei|não diz/i);
 
     // 🔴 3, cravado e com motivo: nesta ficha faltam exatamente `horario`,
@@ -234,9 +272,12 @@ describe("FichaInteira — o bloco `horario`, que não é caixa de texto", () =>
       "o bloco repetiu a hora de abrir — a tela diz a mesma coisa duas vezes",
     ).not.toContain(comHorario.horario!.abre);
     expect(bloco.textContent).not.toContain(comHorario.horario!.fecha);
-    // as folhas continuam mostrando o valor delas, cada uma no bloco dela
-    expect(within(screen.getByTestId("campo-horario.abre")).getByText(comHorario.horario!.abre));
-    expect(within(screen.getByTestId("campo-horario.fecha")).getByText(comHorario.horario!.fecha));
+    // as folhas continuam mostrando o valor delas, cada uma no bloco dela — desde
+    // a Task 6 dentro do seletor de hora que as edita.
+    expect(within(screen.getByTestId("campo-horario.abre")).getByDisplayValue(comHorario.horario!.abre));
+    expect(
+      within(screen.getByTestId("campo-horario.fecha")).getByDisplayValue(comHorario.horario!.fecha),
+    );
   });
 
   // 🔴 A função itera o REGISTRO, não o documento: bloco ausente não faz as
@@ -250,7 +291,9 @@ describe("FichaInteira — o bloco `horario`, que não é caixa de texto", () =>
       const bloco = screen.getByTestId(`campo-${caminho}`);
       expect(bloco, `${caminho} sumiu da tela`).toBeTruthy();
       expect(bloco.hasAttribute("data-ausente"), `${caminho} não veio marcado`).toBe(true);
-      expect(bloco.textContent, caminho).toMatch(/não sei|não diz/i);
+      const frase = bloco.querySelector(".adm-campo-ausente");
+      expect(frase, `${caminho} perdeu o parágrafo de ausência`).not.toBeNull();
+      expect(frase!.textContent, caminho).toMatch(/não sei|não diz/i);
     }
   });
 });
@@ -391,9 +434,21 @@ describe("FichaInteira — os guardas do que cresce: rótulo e CSS", () => {
     // regra morta no `admin.css` é a mesma espécie do defeito que este bloco
     // existe pra impedir, de cabeça pra baixo.
     const daTela = new Set(classes.map((c) => `.adm-campo`).concat(classes.map((c) => `.${c}`)));
-    const regrasDoPrefixo = [...css.matchAll(/(\.adm-campo[a-z-]*|\.adm-grupo[a-z-]*|\.adm-ficha-inteira)\s*(?:,|\{)/g)]
-      .map((m) => m[1]);
+    // 🔴 `.adm-editor*` ENTROU NO ENUMERADOR NA TASK 6. Sem isso, uma regra
+    // `.adm-editor-fantasma` acrescentada à folha ficaria morta pra sempre com a
+    // suíte verde — o mesmo furo que um re-revisor mediu na Task 5, só num
+    // prefixo novo. Quem decide o alcance do guarda é o ENUMERADOR, não a lista
+    // de classes que a tela usa hoje.
+    const regrasDoPrefixo = [
+      ...css.matchAll(
+        /(\.adm-campo[a-z-]*|\.adm-grupo[a-z-]*|\.adm-editor[a-z-]*|\.adm-ficha-inteira)\s*(?:,|\{)/g,
+      ),
+    ].map((m) => m[1]);
     expect(regrasDoPrefixo.length, "nenhuma regra desta tela foi lida: o guarda ficaria oco").toBeGreaterThan(5);
+    expect(
+      regrasDoPrefixo.filter((r) => r.startsWith(".adm-editor")).length,
+      "nenhuma regra de editor foi lida: metade do guarda ficaria oca",
+    ).toBeGreaterThan(5);
     for (const regra of new Set(regrasDoPrefixo)) {
       expect(daTela.has(regra), `\`${regra}\` tem regra no admin.css e classe nenhuma da tela a usa`).toBe(true);
     }

@@ -177,7 +177,15 @@ export function campoPorCaminho(caminho: string): CampoDaFicha | undefined {
   return CAMPOS_DA_FICHA.find((c) => c.caminho === molde);
 }
 
-function lerCaminho(raiz: unknown, degraus: readonly string[]): unknown {
+/** O VALOR NUM CAMINHO, ou `undefined`. Índice de lista entra como degrau
+ *  normal (`arr["0"]` é `arr[0]`).
+ *
+ *  🔴 EXPORTADO NA TAREFA 6 (autorizado no A7 do brief), e o que ele apagou:
+ *  `FichaInteira.tsx` tinha um irmão de 7 linhas, o MESMO algoritmo, e a revisão
+ *  da Tarefa 5 mediu que os dois concordavam em 90 caminhos concretos + 22 casos
+ *  de borda. Duas respostas para a mesma pergunta é dívida — e a Tarefa 6 ia
+ *  precisar ler valor de novo, em mais um lugar. Uma pergunta, uma resposta. */
+export function lerCaminho(raiz: unknown, degraus: readonly string[]): unknown {
   let no: unknown = raiz;
   for (const degrau of degraus) {
     if (typeof no !== "object" || no === null) return undefined;

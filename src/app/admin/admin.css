@@ -37,38 +37,32 @@
 .adm-item-marca { font-size: .85rem; color: #555; text-align: right; }
 .adm-lista-rodape { font-size: .85rem; color: #777; margin-top: 1rem; }
 
-/* 🔴 I6 DA REVISÃO FINAL (2026-09-26): EditorDeVoz (Task 6) e HistoricoDaVoz
-   (Task 7) não tinham UMA regra sequer aqui — o `<textarea>` caía no default
-   do navegador (~20 colunas, 2 linhas, monoespaçado, sem borda do app) pra
-   escrever um parágrafo de prosa, e a lista do histórico vinha com marcador e
-   recuo padrão. Toda regra abaixo REUSA um valor que já existe acima nesta
-   folha — nenhuma cor, fonte ou animação nova. A ÚNICA exceção é o
-   `min-height` do textarea: não existe precedente de altura de campo neste
-   arquivo pra reusar, e o valor foi escolhido só grande o bastante pra caber
-   um parágrafo, não como escolha visual. */
+/* 🔴 I6 DA REVISÃO FINAL (2026-09-26): EditorDeVoz e HistoricoDaVoz não tinham
+   UMA regra sequer aqui — o `<textarea>` caía no default do navegador (~20
+   colunas, 2 linhas, monoespaçado, sem borda do app) pra escrever um parágrafo
+   de prosa, e a lista do histórico vinha com marcador e recuo padrão. Toda
+   regra abaixo REUSA um valor que já existe acima nesta folha — nenhuma cor,
+   fonte ou animação nova.
+
+   ⚠️ `EditorDeVoz` FOI APAGADO na Task 6 (2026-09-30) e as regras `.adm-voz*`
+   e `.adm-ajuda` saíram com ele: classe sem componente é regra morta, que é o
+   mesmo defeito deste bloco de cabeça pra baixo. O que elas governavam (a
+   caixa de prosa, a linha de apoio) virou `.adm-editor-caixa` e
+   `.adm-editor-ajuda`, no bloco dos editores lá embaixo, com os mesmos
+   valores. */
 
 /* Mesmo `display: grid` que TODA seção deste arquivo já usa (`.adm-painel`,
    `.adm-porta`, `.adm-ficha`, `.adm-rotulo`) — é o que dá largura cheia de
-   graça pros filhos (o textarea abaixo não precisa de `width` próprio) e um
-   gap previsível entre eles. `gap: .5rem` é o mesmo de `.adm-ficha`;
-   `margin-top: 1.2rem` é o mesmo espaçamento que `.adm-painel` já usa ENTRE
-   as seções de ficha — aqui vale entre `.adm-painel`, `.adm-voz` e
-   `.adm-historico`, que são irmãs dentro de `<main class="adm">`. */
-.adm-voz, .adm-historico { display: grid; gap: .5rem; margin-top: 1.2rem; }
+   graça pros filhos e um gap previsível entre eles. `gap: .5rem` é o mesmo de
+   `.adm-ficha`; `margin-top: 1.2rem` é o mesmo espaçamento que `.adm-painel`
+   já usa ENTRE as seções de ficha — aqui vale entre `.adm-painel`,
+   `.adm-ficha-inteira` e `.adm-historico`, que são irmãs dentro de
+   `<main class="adm">`. */
+.adm-historico { display: grid; gap: .5rem; margin-top: 1.2rem; }
 /* De `.adm-ficha h2`. */
-.adm-voz h2, .adm-historico h2 { font-size: 1.05rem; margin: 0; }
-/* De `.adm-lista-rodape` (tamanho) e `.adm-vigente-meta` (cor e margin: 0) —
-   é o mesmo registro de "texto de apoio, menor e mais claro". */
-.adm-ajuda { margin: 0; font-size: .85rem; color: #777; }
-/* Padding, fonte e borda de `.adm-rotulo textarea` — o mesmo campo que o
-   formulário de aviso já usa. `min-height` é o único valor novo desta folha
-   (ver nota acima). */
-.adm-voz textarea {
-  padding: .5rem; font-size: .95rem; border: 1px solid #999; border-radius: 8px;
-  min-height: 6rem;
-}
+.adm-historico h2 { font-size: 1.05rem; margin: 0; }
 /* De `.adm-ficha button` — o mesmo botão que todo o resto do painel usa. */
-.adm-voz button, .adm-historico button { padding: .6rem; font-size: .95rem; border-radius: 8px; }
+.adm-historico button { padding: .6rem; font-size: .95rem; border-radius: 8px; }
 /* De `.adm-lista` — mesma remoção de marcador/recuo que a lista de lugares
    já usa, mesmo `gap`. */
 .adm-historico ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
@@ -88,11 +82,12 @@
    nova, fonte nova nem animação. O visual é escolha do dono, e ele ainda não
    viu nenhuma tela desta rodada. */
 
-/* Seção-irmã de `.adm-voz`/`.adm-historico`: mesmo `display: grid` de TODA
-   seção deste arquivo, e `margin-top` idêntico ao daquela regra; o `gap` vem de
+/* Seção-irmã de `.adm-historico`: mesmo `display: grid` de TODA seção deste
+   arquivo, e `margin-top` idêntico ao daquela regra; o `gap` vem de
    `.adm-painel` (1.2rem), que é o espaçamento ENTRE cartões — e cada grupo
    aqui é um cartão. (A frase dizia que os DOIS vinham de `.adm-voz`, e o `gap`
-   de lá é .5rem: falso, medido na revisão.) */
+   de lá era .5rem: falso, medido na revisão da Task 5. `.adm-voz` foi apagada
+   na Task 6.) */
 .adm-ficha-inteira { display: grid; gap: 1.2rem; margin-top: 1.2rem; }
 /* De `.adm-ficha h2` — o mesmo tamanho de título de seção do painel. */
 .adm-ficha-inteira h2 { font-size: 1.05rem; margin: 0; }
@@ -110,8 +105,56 @@
 /* De `.adm-vigente-texto`: parágrafo sem margin extra dentro de um `grid` que
    já tem `gap`. Convenção do arquivo inteiro. */
 .adm-campo-valor { margin: 0; }
-/* De `.adm-ajuda` (que por sua vez veio de `.adm-lista-rodape` e
-   `.adm-vigente-meta`): a frase de ausência é texto de APOIO — menor e mais
+/* De `.adm-lista-rodape` (tamanho) e `.adm-vigente-meta` (cor e margin: 0) —
+   o mesmo registro de "texto de apoio" que a apagada `.adm-ajuda` usava: a
+   frase de ausência é texto de APOIO — menor e mais
    clara que um valor de verdade, pra o dono distinguir o que ele escreveu do
    que o app diz que não sabe. Nenhuma cor nova: é o mesmo #777. */
 .adm-campo-ausente { margin: 0; font-size: .85rem; color: #777; }
+
+/* OS EDITORES POR ESPÉCIE (Task 6, 2026-09-30): cada bloco de campo passou a
+   ter o instrumento que grava aquele campo sozinho. MÍNIMO ESTRUTURAL, mesma
+   régua do bloco de cima — toda regra abaixo REUSA um valor que já existe
+   nesta folha, e não há cor nova, fonte nova nem animação. O `min-height` da
+   caixa de prosa é o único valor sem precedente de altura neste arquivo, e ele
+   vem VERBATIM da regra `.adm-voz textarea` que esta tarefa apagou. */
+
+/* De `.adm-campo` (grid + gap .3rem): o instrumento é a linha de baixo do
+   bloco, e os pedaços dele (caixa, Salvar, "não sei") empilham com o mesmo
+   respiro que o rótulo já tem em relação ao valor. */
+.adm-editor { display: grid; gap: .3rem; }
+/* Padding, fonte e borda de `.adm-rotulo textarea` — o mesmo campo que o
+   formulário de aviso já usa. `min-height: 6rem` vem da `.adm-voz textarea`
+   apagada: só grande o bastante pra caber um parágrafo, não escolha visual. */
+.adm-editor-caixa {
+  padding: .5rem; font-size: .95rem; border: 1px solid #999; border-radius: 8px;
+  min-height: 6rem;
+}
+/* 🔴 UMA REGRA POR CLASSE, SEM AGRUPAR POR VÍRGULA — e isso não é estilo: o
+   leitor de CSS dos testes (`regraDe`, em `tests/css.ts`) exige `\s*{` depois do
+   seletor, de propósito, pra `.bp .cartao` não casar dentro de
+   `.bp .cartao, .bp .outro {`. Agrupadas, as quatro classes abaixo ficavam
+   SEM RÉGUA MEDÍVEL, e o guarda "toda classe que esta tela usa tem regra no
+   admin.css" as acusou na primeira rodada desta tarefa. As declarações repetem;
+   a alternativa era afrouxar o leitor, que é sempre pior. */
+/* De `.adm-rotulo textarea, .adm-rotulo select` — a mesma moldura de campo,
+   agora sem o `min-height`, porque um seletor tem a altura de uma linha. */
+.adm-editor-escolha { padding: .5rem; font-size: .95rem; border: 1px solid #999; border-radius: 8px; }
+/* Idem: a mesma moldura de `.adm-rotulo textarea, .adm-rotulo select`. */
+.adm-editor-hora { padding: .5rem; font-size: .95rem; border: 1px solid #999; border-radius: 8px; }
+/* De `.adm-ficha button` — o mesmo botão que todo o resto do painel usa. */
+.adm-editor-salvar { padding: .6rem; font-size: .95rem; border-radius: 8px; }
+/* De `.adm-ficha button` também: os dois botões do bloco são o mesmo botão. */
+.adm-editor-nao-sei { padding: .6rem; font-size: .95rem; border-radius: 8px; }
+/* Grid de `.adm-porta` com o `gap: .3rem` de `.adm-campo`, e `border: 0`/
+   `padding: 0`/`margin: 0` só pra tirar a moldura que o navegador põe em
+   `<fieldset>` por default — o cartão do grupo já é a moldura desta tela. */
+.adm-editor-opcoes { display: grid; gap: .3rem; border: 0; padding: 0; margin: 0; }
+/* `.adm-item-link` já usa `align-items: center` pra alinhar texto e marca numa
+   linha; aqui é a caixa de marcar e a palavra dela. `gap: .4rem` é o passo
+   entre o .3rem de `.adm-campo` e o .5rem de `.adm-ficha`, e é o espaço de um
+   caractere entre o controle e a palavra. */
+.adm-editor-opcao { display: flex; align-items: center; gap: .4rem; font-size: .95rem; }
+/* O mesmo registro de "texto de apoio, menor e mais claro" de
+   `.adm-campo-ausente`, `.adm-lista-rodape` e `.adm-vigente-meta`. */
+.adm-editor-ajuda { margin: 0; font-size: .85rem; color: #777; }

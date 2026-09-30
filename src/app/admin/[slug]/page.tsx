@@ -8,7 +8,6 @@ import { PRAZO_AVISO_MS, resolverEstado } from "@/lib/carimbo-estado";
 import { comPrazo } from "@/lib/cache-rotas";
 import { avisoVigente, getClient, historico, type AvisoLinha, type FichaVersao } from "@/lib/db";
 import CaixaDeSenha from "../CaixaDeSenha";
-import EditorDeVoz from "../EditorDeVoz";
 import FichaInteira from "../FichaInteira";
 import HistoricoDaVoz from "../HistoricoDaVoz";
 import PainelAdmin from "../PainelAdmin";
@@ -146,12 +145,11 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
     <main className="adm">
       <h1>Painel</h1>
       <PainelAdmin ficha={ficha} leitura={leitura} aviso={aviso} avisoErro={avisoErro} agora={agora} />
-      {/* A ficha inteira vem ANTES do editor da voz de propósito: a Task 6
-          absorve `EditorDeVoz` pra dentro do bloco `campo-voz` daqui e apaga
-          aquele componente, então esta é a posição final da tela — não uma
-          escada que alguém vai ter que desmontar depois. */}
+      {/* 🔴 A Task 6 (2026-09-30) FECHOU A ESCADA: `EditorDeVoz` foi apagado e a
+          `voz` passou a ser editada dentro do bloco `campo-voz` da ficha
+          inteira, pelo `EditorProsa`, como qualquer outro campo de prosa. Não
+          há mais um componente de tela pra um campo só. */}
       <FichaInteira ficha={ficha} />
-      <EditorDeVoz ficha={ficha} />
       {historicoErro && <p className="adm-erro" role="alert">{HISTORICO_ERRO_LEITURA}</p>}
       <HistoricoDaVoz versoes={versoes} />
     </main>

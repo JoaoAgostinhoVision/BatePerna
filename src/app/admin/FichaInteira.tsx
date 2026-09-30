@@ -1,13 +1,21 @@
 import {
   camposDaFicha,
+  lerCaminho,
   type CampoDaFicha,
   type EspecieCampo,
   type GrupoDaFicha,
 } from "@/lib/campos-da-ficha";
 import type { Ficha } from "@/types/ficha";
+import EditorBloco from "./campos/EditorBloco";
+import EditorBooleano from "./campos/EditorBooleano";
+import EditorHora from "./campos/EditorHora";
+import EditorLista from "./campos/EditorLista";
+import EditorProsa from "./campos/EditorProsa";
+import { NAO, SIM } from "./campos/palavras";
+import type { CampoNaTela, Editor } from "./campos/tipos";
 
-/** A FICHA INTEIRA NA TELA DO DONO (Task 5, 2026-09-27) — render puro, sem
- *  editor nenhum.
+/** A FICHA INTEIRA NA TELA DO DONO (Task 5, 2026-09-27) — e desde a Task 6
+ *  (2026-09-30) com o editor de cada espécie dentro do bloco do campo.
  *
  *  🔴 ELE ENXERGAVA UM CAMPO DE 17. Até hoje o painel de um lugar mostrava o
  *  carimbo, o aviso e uma caixa pra `voz`; os outros campos da ficha só
@@ -23,10 +31,23 @@ import type { Ficha } from "@/types/ficha";
  *  em que o painel deve mostrar (o waypoint 0 inteiro, depois o 1 inteiro).
  *  Há teste cravando que nenhum `[]` chega ao DOM.
  *
- *  🔴 SEM EDITOR, E ISSO É DESENHO, não pressa: os editores por espécie são a
- *  Task 6 e encaixam DENTRO de `Bloco` abaixo, no lugar do `<p>` do valor. O
- *  que esta tarefa fecha é "o dono vê a ficha inteira"; "o dono edita a ficha
- *  inteira" é a próxima.
+ *  🔴 ESTE ARQUIVO É DE SERVIDOR, E É O ÚNICO LADO QUE CONHECE O REGISTRO.
+ *  `@/lib/campos-da-ficha` começa com `import { z } from "zod"` e importa o
+ *  `fichaSchema` inteiro; os editores são `"use client"`. Se um deles importasse
+ *  o registro, o zod e o schema desceriam no bundle que o dono baixa no celular
+ *  pra trocar uma frase. Então tudo o que um editor precisa saber desce por
+ *  PROP, num objeto raso (`CampoNaTela`, em `./campos/tipos`), montado aqui. A
+ *  medição que guarda isso é o First Load JS de `/admin/[slug]` no
+ *  `npm run build` — comentário nenhum guarda.
+ *
+ *  🔴 QUAL INSTRUMENTO CADA ESPÉCIE GANHA SAI DE UM `Record<EspecieCampo, …>`
+ *  (`INSTRUMENTO`, abaixo), pela mesma razão do `MOSTRAR` e do
+ *  `TITULO_DO_GRUPO`: **espécie nova no registro não compila até alguém decidir
+ *  o instrumento dela.** Duas espécies seguem em LEITURA de propósito, e está
+ *  escrito qual tarefa as pega — `numero` (a Task 7, o número de motor com a
+ *  consequência ao vivo) e `coord` (a Task 8, o mapa que arrasta o pin). Elas
+ *  renderizam exatamente como antes desta tarefa, e há teste cravando isso: sem
+ *  ele, a Task 7 herdaria uma tela que parece quebrada.
  *
  *  ⚠️ NENHUM TEXTO SOBRE UM LUGAR ESPECÍFICO MORA AQUI. Este componente serve
  *  os três lugares do acervo e os que vierem: tudo que ele escreve na tela é
@@ -70,8 +91,11 @@ import type { Ficha } from "@/types/ficha";
 //    esta trilha fala quando choveu"), com "trilha" trocado por "lugar". Fica
 //    dito porque é uma pergunta que o app passa a FAZER na tela do dono sem o
 //    questionário nunca ter feito;
-//  - o resto (o título da tela, a frase de ausência, "Sim"/"Não", "Parada N")
-//    é redação minha sem fonte anterior.
+//  - o resto (o título da tela, a frase de ausência, "Ponto N") é redação
+//    minha sem fonte anterior. 🔴 "Sim"/"Não" SAÍRAM DESTE ARQUIVO na Task 6
+//    (foram pra `./campos/palavras`, ainda `PENDENTE`, porque o interruptor
+//    também as escreve) — junto com as frases novas dos editores, que moram
+//    lá e em cada arquivo de `./campos/`.
 //
 // 🔴 O QUE NÃO PODE ENTRAR AQUI: nome de lugar, substantivo de lugar
 // ("portão", "guarita", "parque") e qualquer fato de roteiro. Rótulo é sobre a
@@ -87,11 +111,11 @@ const AUSENTE = "Não sei — o app não diz nada sobre isto.";
 /** O "sim" de um booleano e o "sim" do bloco opcional são a MESMA palavra de
  *  propósito: as duas respondem a mesma forma de pergunta ("este lugar tem
  *  isto?"), e duas palavras diferentes pro mesmo sim seriam dois idiomas na
- *  mesma tela. */
-// PENDENTE: redação minha, o João ainda não leu
-const SIM = "Sim";
-// PENDENTE: redação minha, o João ainda não leu
-const NAO = "Não";
+ *  mesma tela.
+ *
+ *  🔴 AS DUAS MUDARAM DE ARQUIVO NA TASK 6 (estão em `./campos/palavras`, ainda
+ *  `PENDENTE`) porque o INTERRUPTOR também as escreve: a leitura e a escrita do
+ *  mesmo campo não podem falar duas línguas. */
 
 /** O prefixo do bloco de um campo que vive dentro de uma LISTA — hoje só os
  *  waypoints têm índice. Conta a partir de **1**: o dono não conta pontos do
@@ -259,9 +283,26 @@ function ehPar(valor: unknown): valor is { lat: number; lng: number } {
  *  palavra neutra nenhuma (o que existe pra severidade é a fala do CARIMBO,
  *  que embute um número da ficha). Traduzir duas e deixar duas em código
  *  cru seria dois idiomas na mesma tela; e cunhar as duas que faltam é copy
- *  nova sobre a voz dos lugares, que não se decide numa tarefa de render. A
- *  palavra de cada opção nasce na LISTA FECHADA do editor da Task 6, que é
- *  onde o dono escolhe — ali ela serve pra escolher, não só pra ler. */
+ *  nova sobre a voz dos lugares, que não se decide numa tarefa de render.
+ *
+ *  🔴 ESTA FRASE PROMETIA QUE "a palavra de cada opção nasce na LISTA FECHADA do
+ *  editor da Task 6" — E A TASK 6 NÃO A CUMPRIU. O `EditorLista` oferece as
+ *  opções pelo CÓDIGO delas (`barro`, `nao-va`, `sab`), as mesmas que este
+ *  `MOSTRAR` imprime, e por exatamente a razão do parágrafo acima: `custo.tag` e
+ *  `condicao.severidade` não têm palavra neutra nenhuma no app, e cunhá-las é
+ *  copy nova sobre um lugar real, que não se escreve sem o dono ler. Trocar o
+ *  arquivo onde a promessa mora não a torna paga. **Fica como dívida escrita, e
+ *  ela é de PALAVRA, não de código:** quatro listas, quatro conjuntos de opções
+ *  pra ele ler e batizar, e aí `rotuloPiso`/`rotuloDias` entram junto com as
+ *  duas que faltam — de uma vez, pra tela não falar dois idiomas no meio do
+ *  caminho.
+ *
+ *  ⚠️ NA TASK 6 O `<p>` DE LEITURA SÓ SOBRA ONDE NÃO HÁ INSTRUMENTO, ou onde o
+ *  instrumento não carrega o valor (o `bloco` — ver `INSTRUMENTO` abaixo). Nos
+ *  outros, quem mostra o valor é o próprio controle; um `<p>` ao lado da caixa
+ *  diria a mesma coisa duas vezes. As entradas de `prosa`/`lista`/`booleano`/
+ *  `hora` continuam aqui porque `bloco`, `numero` e `coord` ainda as usam e
+ *  porque o `Record` é o que trava espécie nova. */
 const MOSTRAR: Record<EspecieCampo, (valor: unknown) => string> = {
   prosa: (v) => String(v),
   hora: (v) => String(v),
@@ -282,18 +323,13 @@ const MOSTRAR: Record<EspecieCampo, (valor: unknown) => string> = {
 
 /** O valor que ESTA ficha tem neste caminho concreto, ou `undefined`.
  *
- *  ⚠️ É um caminhador de caminho próprio, e não o do `campos-da-ficha.ts`:
- *  aquele (`lerCaminho`) é privado do módulo, e esta tarefa não pode mexer
- *  naquele arquivo. Exportá-lo lá é o conserto certo, e é decisão de quem
- *  despacha — fica relatado. Índice de lista entra como degrau normal
- *  (`arr["0"]` é `arr[0]`), que é o mesmo atalho que o irmão usa. */
+ *  🔴 ERA UM CAMINHADOR PRÓPRIO DE 7 LINHAS, O MESMO ALGORITMO do `lerCaminho`
+ *  de `campos-da-ficha.ts` — a revisão da Task 5 mediu que os dois concordavam
+ *  em 90 caminhos concretos e 22 casos de borda, e a razão do irmão existir era
+ *  só que o de lá era privado do módulo. A Task 6 exportou o de lá (autorizado
+ *  no A7 do brief) e apagou este. Uma pergunta, uma resposta. */
 function lerValor(ficha: Ficha, caminho: string): unknown {
-  let no: unknown = ficha;
-  for (const degrau of caminho.split(".")) {
-    if (typeof no !== "object" || no === null) return undefined;
-    no = (no as Record<string, unknown>)[degrau];
-  }
-  return no;
+  return lerCaminho(ficha, caminho.split("."));
 }
 
 /** O índice da lista dentro de um caminho concreto (`trajeto.waypoints.0.nome`
@@ -319,15 +355,112 @@ export function rotuloDe(caminho: string): string {
   return `${parada(i + 1)} · ${ROTULO_DO_PONTO[folha] ?? caminho}`;
 }
 
-/** UM campo na tela: rótulo, e embaixo o valor ou a marca de ausente.
+/** 🔴 QUAL LISTA GUARDA VÁRIAS OPÇÕES, E POR QUE ISTO É UMA TABELA À MÃO.
+ *
+ *  `dias` é `readonly Dia[]`; `piso`, `custo.tag` e `condicao.severidade` são
+ *  UMA palavra. As quatro são `especie: "lista"` no registro, e o registro **não
+ *  diz** a multiplicidade — quem a declara é o `fichaSchema`, e ler o zod aqui
+ *  seria a segunda cópia do `tipoNoCaminho` que `campos-da-ficha.ts` já tem
+ *  (esta tarefa não pode mexer naquele arquivo além do `export` do `lerCaminho`).
+ *
+ *  E não dá pra deduzir do VALOR: `piso` e `dias` são opcionais, e num campo
+ *  ausente não há array nenhum pra olhar. Uma lista de vários renderizada como
+ *  escolha única **trancaria o dono de gravar "sab, dom"** — a linha vermelha
+ *  desta rodada —, então a tabela é o preço.
+ *
+ *  🔴 O QUE A TORNA HONESTA SÃO DOIS GUARDAS MEDIDOS, não este comentário:
+ *  um que fecha as DUAS direções contra as entradas `lista` do registro (lista à
+ *  mão cega ao que cresceu é a espécie que mais custou aqui), e outro que prova
+ *  cada VALOR contra a porta de escrita de verdade — `aplicarCampo` aceita a
+ *  forma que a tabela diz e recusa a outra. Tabela que mente sai vermelha. */
+export const LISTA_MULTIPLA: Record<string, boolean> = {
+  piso: false,
+  "custo.tag": false,
+  dias: true,
+  "condicao.severidade": false,
+};
+
+/** O INSTRUMENTO DE CADA ESPÉCIE. Chaveado por `EspecieCampo` pela mesma razão
+ *  do `MOSTRAR`: **espécie nova no registro não compila até alguém decidir o
+ *  instrumento dela** — em vez de nascer sem editor, invisível, com a suíte
+ *  verde.
+ *
+ *  `null` é "ainda só leitura", com a tarefa escrita ao lado. As duas que faltam
+ *  não são esquecimento: `numero` precisa da consequência ao vivo (o motor
+ *  rodando com o valor novo antes de gravar) e `coord` precisa do mapa com pin
+ *  arrastado — são as Tasks 7 e 8, e cada uma é um componente próprio.
+ *
+ *  `mostraOValor` é o que decide se o `<p>` de leitura sai: onde o controle já
+ *  traz o valor dentro dele, um `<p>` ao lado diria a mesma coisa duas vezes. O
+ *  `bloco` é a exceção e ela é de significado, não de estilo — com o bloco
+ *  PRESENTE o editor dele não mostra caixa nenhuma (só o botão que tira o bloco
+ *  inteiro), então quem responde "este lugar TEM horário?" continua sendo o
+ *  `<p>` com o `SIM` do `MOSTRAR`. */
+const INSTRUMENTO: Record<EspecieCampo, { Editor: Editor; mostraOValor: boolean } | null> = {
+  prosa: { Editor: EditorProsa, mostraOValor: true },
+  lista: { Editor: EditorLista, mostraOValor: true },
+  booleano: { Editor: EditorBooleano, mostraOValor: true },
+  hora: { Editor: EditorHora, mostraOValor: true },
+  bloco: { Editor: EditorBloco, mostraOValor: false },
+  numero: null, // Task 7 — o número de motor com a consequência ao vivo
+  coord: null, // Task 8 — o mapa com o pin que se arrasta
+};
+
+/** Os caminhos de espécie `bloco` DESTA ficha, tirados do registro expandido —
+ *  nunca uma lista escrita aqui. Irmão do `BLOCOS_OPCIONAIS` de
+ *  `campos-da-ficha.ts`, e pelo mesmo motivo: quem acrescentar um bloco ao
+ *  registro ganha o comportamento sem tocar neste arquivo. */
+const blocosDe = (campos: readonly CampoDaFicha[]): string[] =>
+  campos.filter((c) => c.especie === "bloco").map((c) => c.caminho);
+
+/** O bloco que CONTÉM este caminho, se houver (`horario.abre` → `horario`). */
+const blocoQueContem = (blocos: readonly string[], caminho: string): string | undefined =>
+  blocos.find((b) => caminho.startsWith(`${b}.`));
+
+/** UM campo na tela: rótulo, o valor (ou a marca de ausente), e o instrumento
+ *  que grava aquele campo sozinho.
  *
  *  🔴 AUSENTE É `undefined`, NADA MAIS. `carroComum: false` é uma AFIRMAÇÃO
  *  ("não chega") e aparece como "Não"; `""` nunca chega ao documento (a porta
  *  de escrita recusa caixa vazia). Um `!valor` aqui misturaria o `false` e o
- *  `0` com o silêncio — e `condicao.regra.limiar_mm` pode ser `0`. */
-function Bloco({ ficha, campo }: { ficha: Ficha; campo: CampoDaFicha }) {
+ *  `0` com o silêncio — e `condicao.regra.limiar_mm` pode ser `0`.
+ *
+ *  🔴 A MARCA DE AUSENTE CONTINUA SENDO ESCRITA MESMO COM EDITOR, e isso é o
+ *  ponto da tela: o bloco diz "não sei" em cima e oferece o instrumento embaixo.
+ *  O campo que o app cala tem que dizer que cala — se o editor aparecesse
+ *  sozinho, um campo vazio ficaria indistinguível de um campo nunca respondido.
+ *
+ *  🔴 E A FOLHA DE UM BLOCO AUSENTE NÃO GANHA EDITOR NENHUM (A3 do brief).
+ *  Com o `horario` ausente, a porta RECUSA `{campo: "horario.abre"}` com a frase
+ *  "preencha o `horario` inteiro de uma vez" — oferecer ali uma caixa de hora
+ *  com um Salvar seria a tela convidando a um ato que a porta nega. Quem oferece
+ *  as duas horas juntas é o editor DO BLOCO. */
+function Bloco({
+  ficha,
+  campo,
+  blocos,
+  folhasDoBloco,
+}: {
+  ficha: Ficha;
+  campo: CampoDaFicha;
+  blocos: readonly string[];
+  folhasDoBloco: (bloco: string) => CampoNaTela["folhas"];
+}) {
   const valor = lerValor(ficha, campo.caminho);
   const ausente = valor === undefined;
+
+  const bloco = blocoQueContem(blocos, campo.caminho);
+  const blocoAusente = bloco !== undefined && lerValor(ficha, bloco) === undefined;
+  const instrumento = blocoAusente ? null : INSTRUMENTO[campo.especie];
+
+  const naTela: CampoNaTela = {
+    caminho: campo.caminho,
+    rotulo: rotuloDe(campo.caminho),
+    obrigatorio: campo.obrigatorio,
+    ...(campo.opcoes ? { opcoes: campo.opcoes, multiplo: LISTA_MULTIPLA[campo.caminho] } : {}),
+    ...(campo.especie === "bloco" ? { folhas: folhasDoBloco(campo.caminho) } : {}),
+  };
+
   return (
     <div
       className="adm-campo"
@@ -340,14 +473,28 @@ function Bloco({ ficha, campo }: { ficha: Ficha; campo: CampoDaFicha }) {
       {ausente ? (
         <p className="adm-campo-ausente">{AUSENTE}</p>
       ) : (
-        <p className="adm-campo-valor">{MOSTRAR[campo.especie](valor)}</p>
+        (instrumento === null || !instrumento.mostraOValor) && (
+          <p className="adm-campo-valor">{MOSTRAR[campo.especie](valor)}</p>
+        )
       )}
+      {instrumento !== null && <instrumento.Editor campo={naTela} valor={valor} slug={ficha.slug} />}
     </div>
   );
 }
 
 export default function FichaInteira({ ficha }: { ficha: Ficha }) {
   const campos = camposDaFicha(ficha);
+  const blocos = blocosDe(campos);
+  const folhasDoBloco = (bloco: string): CampoNaTela["folhas"] =>
+    campos
+      .filter((c) => c.caminho.startsWith(`${bloco}.`))
+      .map((c) => ({
+        // A chave é o nome da folha DENTRO do bloco, que é o que `gravarBloco`
+        // espera no corpo do `PUT` — nunca o caminho completo.
+        chave: c.caminho.slice(bloco.length + 1),
+        caminho: c.caminho,
+        rotulo: rotuloDe(c.caminho),
+      }));
   // Os grupos SAEM DOS CAMPOS DESTA FICHA, na ordem em que o registro os
   // declara — nunca de uma lista de grupos escrita aqui. Duas consequências
   // que valem: grupo novo no registro aparece sozinho, e grupo sem campo
@@ -364,7 +511,13 @@ export default function FichaInteira({ ficha }: { ficha: Ficha }) {
           {campos
             .filter((c) => c.grupo === g)
             .map((c) => (
-              <Bloco key={c.caminho} ficha={ficha} campo={c} />
+              <Bloco
+                key={c.caminho}
+                ficha={ficha}
+                campo={c}
+                blocos={blocos}
+                folhasDoBloco={folhasDoBloco}
+              />
             ))}
         </section>
       ))}
