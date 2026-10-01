@@ -88,9 +88,15 @@ export const CAIXA_VAZIA = "Caixa vazia não grava: escreva algo.";
  *  resíduo real por um ganho nenhum.
  *  ──────────────────────────────────────────────────────────────────────────── */
 
-/** A recusa de um número que MENTE sobre o lugar — janela zero ou negativa,
- *  limiar zero. Uma frase só pros três, porque o defeito é um só e o conserto na
- *  mão dele é um só: pôr um número maior que zero.
+/** A recusa de um número que MENTE sobre o lugar — janela do PASSADO zero ou
+ *  negativa, limiar zero ou negativo. Uma frase só pros dois, porque o conserto
+ *  na mão dele é um só: pôr um número maior que zero.
+ *
+ *  🔴 ELA NÃO VALE MAIS PRA JANELA DE PREVISÃO. Desde 2026-10-01 (decisão do
+ *  João: "só olhar a chuva que já caiu") a previsão pode ser zero, e medido com
+ *  `avaliar` (previsão 0, passado 6, limiar 0.2) o lugar fecha com 5 mm uma hora
+ *  atrás e abre sem chuva — nenhuma das duas metades desta frase era verdade ali.
+ *  A previsão negativa tem frase própria (`JANELA_NEGATIVA`).
  *
  *  🔴 ELA DIZ O QUE ACONTECE, não "valor inválido". A procedência das duas
  *  metades:
@@ -103,11 +109,34 @@ export const CAIXA_VAZIA = "Caixa vazia não grava: escreva algo.";
  *     `fresco` — a janela invertida cega o motor pra chuva que caiu, e o aviso
  *     fica desligado em silêncio.
  *
- *  ⚠️ Ela NÃO cita nenhum dos três nomes de campo: o rótulo do campo está na
- *  linha de cima, e repeti-lo aqui faria a tela perguntar duas vezes. */
+ *  ⚠️ Ela NÃO cita nenhum dos nomes de campo: o rótulo do campo está na linha de
+ *  cima, e repeti-lo aqui faria a tela perguntar duas vezes. */
 // PENDENTE: redação minha, o João ainda não leu
 export const REGRA_QUE_MENTE =
   "Zero ou menos não é regra: assim o lugar passa a dizer não para sempre, ou nunca avisa. Use um número maior que zero.";
+
+/** A recusa da janela de PREVISÃO negativa — a única que sobrou pra ela depois
+ *  que o zero passou a valer (2026-10-01). Ela não diz "o lugar nunca fecha",
+ *  porque não é verdade: a janela do passado continua avisando. Diz o que é (não
+ *  existe janela negativa) e mostra a saída que ele provavelmente queria. */
+// PENDENTE: redação minha, o João ainda não leu
+export const JANELA_NEGATIVA =
+  "Janela negativa não existe. Use 0 pra olhar só a chuva que já caiu, ou um número maior que zero.";
+
+/** A recusa de uma janela acima do que o provedor de chuva aceita.
+ *
+ *  🔴 OS DOIS NÚMEROS DENTRO DELA SÃO OS TETOS de `src/lib/weather.ts`
+ *  (`TETO_PREVISAO_HORAS`, `TETO_PASSADO_HORAS`), medidos contra a Open-Meteo, e
+ *  estão escritos por extenso porque o cerco de completude só lê literal simples.
+ *  Há teste cravando que a frase contém os dois números das constantes — se o
+ *  teto mudar lá, ela fica vermelha.
+ *
+ *  *"a tela inicial fica sem informação de chuva pra todos os lugares"* é
+ *  medido: a busca da tela inicial é uma só, com a maior janela do acervo, e a
+ *  recusa do provedor dá "sem informação" a todo lugar (revisão da Tarefa 7). */
+// PENDENTE: redação minha, o João ainda não leu
+export const ALEM_DO_PROVEDOR =
+  "Esse número passa do que a previsão do tempo alcança: até 384 horas pra frente e 2232 pra trás. Com ele a tela inicial fica sem informação de chuva pra todos os lugares. Use um número menor.";
 
 /** A moldura da prévia — a frase que diz que o que vem a seguir é uma
  *  SIMULAÇÃO, e não o estado de agora.
@@ -127,19 +156,13 @@ export const COM_ESTE_NUMERO = "Com este número, a tela do lugar diria:";
 // PENDENTE: redação minha, o João ainda não leu
 export const PREVENDO = "Conferindo o que muda…";
 
-/** Quando não há chuva guardada pra este lugar — o motor nunca rodou aqui, ou a
- *  leitura que ele deixou não serve.
+/** A prévia não veio — o provedor de chuva recusou, a rede caiu, o prazo
+ *  estourou, ou a rota recusou. E ela NÃO esconde o botão de salvar: a prévia é
+ *  ajuda, não portão. O portão é a porta de escrita.
  *
- *  🔴 ELA EXISTE PRA A PRÉVIA NÃO INVENTAR UM CARIMBO. Sem leitura de chuva não
- *  há consequência a mostrar, e um `fresco` de reserva diria ao dono que o lugar
- *  está liberado. A frase diz de QUEM é a vez — não é dele, e não há nada que ele
- *  possa preencher pra resolver. */
-// PENDENTE: redação minha, o João ainda não leu
-export const SEM_LEITURA = "Ainda não tem chuva lida aqui, então não dá pra mostrar o que mudaria.";
-
-/** A prévia não veio — rede, prazo, ou recusa da rota. Separada da `SEM_LEITURA`
- *  porque o fato é outro: lá o app sabe que não sabe; aqui ele não chegou a
- *  perguntar. E ela NÃO esconde o botão de salvar: a prévia é ajuda, não portão.
- *  O portão é a porta de escrita. */
+ *  ⚠️ Até 2026-10-01 havia uma irmã, `SEM_LEITURA` (*"Ainda não tem chuva lida
+ *  aqui…"*), pra quando a chuva GUARDADA faltava. A prévia passou a buscar a
+ *  chuva ao vivo, aquele estado deixou de existir, e a frase foi apagada junto —
+ *  ela prometia um "ainda" que nada no sistema cumpria. */
 // PENDENTE: redação minha, o João ainda não leu
 export const PREVISAO_FALHOU = "Não consegui conferir o que muda.";

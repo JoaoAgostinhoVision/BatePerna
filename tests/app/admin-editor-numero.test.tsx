@@ -1,15 +1,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, configure, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import FichaInteira from "@/app/admin/FichaInteira";
+import { ESPERA_PREVIA_MS } from "@/app/admin/campos/EditorNumeroDeMotor";
 import { ERRO_GRAVAR } from "@/app/admin/campos/gravar";
 import {
+  ALEM_DO_PROVEDOR,
   CAIXA_VAZIA,
   COM_ESTE_NUMERO,
+  JANELA_NEGATIVA,
   PREVENDO,
   PREVISAO_FALHOU,
   REGRA_QUE_MENTE,
   SALVAR,
 } from "@/app/admin/campos/palavras";
+import { TETO_PASSADO_HORAS, TETO_PREVISAO_HORAS } from "@/lib/weather";
 import { CAMPOS_DA_FICHA, camposDaFicha } from "@/lib/campos-da-ficha";
 import { getAllFichas } from "@/lib/ficha";
 import type { Ficha } from "@/types/ficha";
@@ -44,7 +48,16 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
+
+// A prévia espera o dedo parar (`ESPERA_PREVIA_MS`) antes de perguntar: o
+// `waitFor` padrão de 1 s ficaria a meio segundo da borda.
+configure({ asyncUtilTimeout: 3_000 });
+
+/** Espera de relógio de verdade maior que a pausa da prévia — pra separar duas
+ *  digitações em duas perguntas. */
+const pausa = (): Promise<void> => new Promise((ok) => setTimeout(ok, ESPERA_PREVIA_MS + 50));
 
 await bancoDeProducao();
 const ACERVO = await getAllFichas();
@@ -65,6 +78,7 @@ const ROTA_FICHA = "/api/admin/ficha";
 const NUMEROS = CAMPOS_DA_FICHA.filter((c) => c.especie === "numero").map((c) => c.caminho);
 const LIMIAR = "condicao.regra.limiar_mm";
 const PASSADO = "condicao.regra.janela_passado_horas";
+const PREVISAO = "condicao.regra.janela_previsao_horas";
 
 const MARCA_DA_ROTA = "MARCA QUE SO A ROTA SABE";
 const SUB_DA_ROTA = "sub que so a rota sabe";
@@ -269,26 +283,16 @@ describe("A prévia — a consequência antes de gravar", () => {
     digitar(LIMIAR, "9");
 
     expect(previsaoDe(LIMIAR).textContent).toBe(PREVENDO);
+    await waitFor(() => expect(soltar).toBeDefined());
+    expect(previsaoDe(LIMIAR).textContent).toBe(PREVENDO);
     soltar(Response.json({ estado: "frio", marca: MARCA_DA_ROTA, sub: SUB_DA_ROTA }));
     await waitFor(() => expect(previsaoDe(LIMIAR).textContent).toContain(MARCA_DA_ROTA));
   });
 
-  // 🔴 A2 DO BRIEF: SEM CHUVA LIDA, A PRÉVIA CALA — e o que ela diz é que não
-  // sabe, nunca um carimbo inventado.
-  it("`semLeitura` da rota: a tela diz que não tem chuva lida, e fala nenhuma", async () => {
-    comRotas(() => Response.json({ semLeitura: true }));
-    render(<FichaInteira ficha={FICHA} />);
-
-    digitar(LIMIAR, "9");
-
-    await waitFor(() => expect(previsaoDe(LIMIAR).textContent).not.toBe(PREVENDO));
-    expect(previsaoDe(LIMIAR).textContent).toBe(
-      "Ainda não tem chuva lida aqui, então não dá pra mostrar o que mudaria.",
-    );
-    expect(previsaoDe(LIMIAR).textContent).not.toContain(COM_ESTE_NUMERO);
-  });
-
   for (const [nome, resposta] of [
+    // 🔴 O 503 é a rota dizendo que a chuva não veio (provedor recusou, caiu, ou
+    // estourou o prazo) — onda de conserto 1. Nunca vira carimbo.
+    ["a chuva não veio (503)", new Response("", { status: 503 })],
     ["a rota recusa", new Response("", { status: 400 })],
     ["a rota some", new Response("", { status: 500 })],
     ["a rede cai", new Error("sem rede")],
@@ -319,7 +323,10 @@ describe("A prévia — a consequência antes de gravar", () => {
     comRotas((valor) => new Promise<Response>((ok) => soltar.set(valor, ok)));
     render(<FichaInteira ficha={FICHA} />);
 
+    // Uma PAUSA entre os dois: sem ela a espera do dedo junta os dois numa
+    // pergunta só, e não haveria duas respostas pra chegarem fora de ordem.
     digitar(LIMIAR, "1");
+    await waitFor(() => expect(soltar.size).toBe(1));
     digitar(LIMIAR, "12");
     await waitFor(() => expect(soltar.size).toBe(2));
 
@@ -359,8 +366,30 @@ describe("A PRIMEIRA camada: o número que mente é recusado antes de qualquer v
     });
   }
 
-  it("nos três campos, não só num", () => {
+  // ⚠️ O NEGATIVO é recusado nos três; o ZERO, só nos dois que não são a
+  // previsão (decisão do João, 2026-10-01). E a previsão negativa tem frase
+  // própria: `REGRA_QUE_MENTE` diz "nunca avisa", e com a janela do passado
+  // viva isso é falso.
+  it("nos três campos, não só num — cada um com a SUA frase", () => {
+    const esperada: Record<string, string> = {
+      [PREVISAO]: JANELA_NEGATIVA,
+      [PASSADO]: REGRA_QUE_MENTE,
+      [LIMIAR]: REGRA_QUE_MENTE,
+    };
+    expect(Object.keys(esperada).sort(), "o registro ganhou ou perdeu um número").toEqual([...NUMEROS].sort());
     for (const caminho of NUMEROS) {
+      const { fetchFalso } = comRotas();
+      render(<FichaInteira ficha={FICHA} />);
+      digitar(caminho, "-5");
+      salvar(caminho);
+      expect(fetchFalso, `${caminho} mandou um negativo pra alguma rota`).not.toHaveBeenCalled();
+      expect(emCampo(caminho).getByRole("alert").textContent, caminho).toBe(esperada[caminho]);
+      cleanup();
+    }
+  });
+
+  it("zero nos dois que não são a previsão: recusado com `REGRA_QUE_MENTE`", () => {
+    for (const caminho of [PASSADO, LIMIAR]) {
       const { fetchFalso } = comRotas();
       render(<FichaInteira ficha={FICHA} />);
       digitar(caminho, "0");
@@ -505,5 +534,142 @@ describe("O editor de número serve os três lugares", () => {
       }
       unmount();
     }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe("A espera do dedo — uma pergunta por PAUSA, não por tecla (onda de conserto 1)", () => {
+  // 🔴 A PRÉVIA BUSCA CHUVA AO VIVO NO PROVEDOR EXTERNO, e o `onChange` do React
+  // dispara a cada tecla. Digitar `240` não pode virar três buscas — duas delas
+  // de números que ele nunca quis. O relógio falso mede a espera nos dois lados:
+  // nada antes dela, UMA pergunta (a do último número) depois.
+  it("digitar `2`, `24`, `240` depressa faz UMA pergunta só, com o último número, e só depois da espera", () => {
+    vi.useFakeTimers();
+    const { fetchFalso } = comRotas();
+    render(<FichaInteira ficha={FICHA} />);
+
+    digitar(PASSADO, "2");
+    digitar(PASSADO, "24");
+    digitar(PASSADO, "240");
+    act(() => {
+      vi.advanceTimersByTime(ESPERA_PREVIA_MS - 1);
+    });
+    expect(chamadas(fetchFalso, ROTA_PREVISAO), "perguntou antes de o dedo parar").toHaveLength(0);
+    // E enquanto espera, a tela já diz que está conferindo.
+    expect(previsaoDe(PASSADO).textContent).toBe(PREVENDO);
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(chamadas(fetchFalso, ROTA_PREVISAO), "uma pergunta por tecla").toHaveLength(1);
+    expect(corpoDe(chamadas(fetchFalso, ROTA_PREVISAO)[0]).valor).toBe(240);
+  });
+
+  it("a espera é de pelo menos 400 ms", () => {
+    expect(ESPERA_PREVIA_MS).toBeGreaterThanOrEqual(400);
+  });
+
+  // Voltar ao número gravado no meio da espera CANCELA a pergunta pendente.
+  it("voltar ao número gravado durante a espera cancela a pergunta", () => {
+    vi.useFakeTimers();
+    const { fetchFalso } = comRotas();
+    render(<FichaInteira ficha={FICHA} />);
+
+    digitar(LIMIAR, "9");
+    digitar(LIMIAR, String(FICHA.condicao.regra.limiar_mm));
+    act(() => {
+      vi.advanceTimersByTime(ESPERA_PREVIA_MS * 3);
+    });
+
+    expect(chamadas(fetchFalso, ROTA_PREVISAO), "a pergunta abandonada saiu mesmo assim").toHaveLength(0);
+    expect(previsaoDe(LIMIAR).textContent).toBe("");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe("Previsão ZERO vale — decisão do João, 2026-10-01 (\"só olhar a chuva que já caiu\")", () => {
+  it("previsão 0 NÃO é recusada: vai pra porta como número 0", async () => {
+    const { fetchFalso } = comRotas();
+    render(<FichaInteira ficha={FICHA} />);
+
+    digitar(PREVISAO, "0");
+    salvar(PREVISAO);
+
+    await waitFor(() => expect(chamadas(fetchFalso, ROTA_FICHA)).toHaveLength(1));
+    expect(emCampo(PREVISAO).queryByRole("alert"), "a tela recusou a previsão zero").toBeNull();
+    expect(corpoDe(chamadas(fetchFalso, ROTA_FICHA)[0])).toEqual({ slug: FICHA.slug, campo: PREVISAO, valor: 0 });
+  });
+
+  it("previsão 0 PEDE prévia — a consequência dela existe e é mostrada", async () => {
+    const { fetchFalso } = comRotas();
+    render(<FichaInteira ficha={FICHA} />);
+
+    digitar(PREVISAO, "0");
+
+    await waitFor(() => expect(previsaoDe(PREVISAO).textContent).toContain(MARCA_DA_ROTA));
+    expect(corpoDe(chamadas(fetchFalso, ROTA_PREVISAO)[0]).valor).toBe(0);
+  });
+
+  it("`REGRA_QUE_MENTE` nunca aparece pra previsão zero", () => {
+    comRotas();
+    render(<FichaInteira ficha={FICHA} />);
+    digitar(PREVISAO, "0");
+    salvar(PREVISAO);
+    expect(bloco(PREVISAO).textContent).not.toContain(REGRA_QUE_MENTE);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe("O teto do provedor (F2): recusado na tela, antes de qualquer viagem", () => {
+  // 🔴 A FRASE CARREGA OS DOIS NÚMEROS, e eles são os de `src/lib/weather.ts`.
+  // Ela é literal (o cerco de completude só lê literal simples); este caso é o
+  // que a amarra às constantes.
+  it("a frase do teto diz os dois tetos de `weather.ts`", () => {
+    expect(ALEM_DO_PROVEDOR).toContain(`${TETO_PREVISAO_HORAS} horas pra frente`);
+    expect(ALEM_DO_PROVEDOR).toContain(`${TETO_PASSADO_HORAS} pra trás`);
+  });
+
+  for (const [caminho, texto] of [
+    [PREVISAO, String(TETO_PREVISAO_HORAS + 1)],
+    [PREVISAO, "480"],
+    [PASSADO, String(TETO_PASSADO_HORAS + 1)],
+  ] as const) {
+    it(`${caminho} = ${texto}: recusado com a frase do teto, e NENHUMA rota é chamada`, async () => {
+      const { fetchFalso } = comRotas();
+      render(<FichaInteira ficha={FICHA} />);
+
+      digitar(caminho, texto);
+      salvar(caminho);
+      await pausa();
+
+      expect(fetchFalso, "um número acima do teto saiu pra alguma rota").not.toHaveBeenCalled();
+      expect(emCampo(caminho).getByRole("alert").textContent).toBe(ALEM_DO_PROVEDOR);
+    });
+  }
+
+  for (const [caminho, texto] of [
+    [PREVISAO, String(TETO_PREVISAO_HORAS)],
+    [PASSADO, String(TETO_PASSADO_HORAS)],
+  ] as const) {
+    it(`${caminho} = ${texto} (o teto exato) NÃO é recusado`, async () => {
+      const { fetchFalso } = comRotas();
+      render(<FichaInteira ficha={FICHA} />);
+
+      digitar(caminho, texto);
+      salvar(caminho);
+
+      await waitFor(() => expect(chamadas(fetchFalso, ROTA_FICHA)).toHaveLength(1));
+      expect(emCampo(caminho).queryByRole("alert")).toBeNull();
+    });
+  }
+
+  // O limiar não tem teto nesta onda (o limiar enorme é decisão de produto que
+  // ficou de fora): um limiar alto passa.
+  it("o limiar NÃO tem teto: 3000 vai pra porta", async () => {
+    const { fetchFalso } = comRotas();
+    render(<FichaInteira ficha={FICHA} />);
+    digitar(LIMIAR, "3000");
+    salvar(LIMIAR);
+    await waitFor(() => expect(chamadas(fetchFalso, ROTA_FICHA)).toHaveLength(1));
   });
 });

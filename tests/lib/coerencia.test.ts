@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { REGRAS, violacoesDoAcervo } from "@/lib/coerencia";
 import { loadAll } from "@/lib/ficha";
 import { DIAS, type Dia } from "@/lib/semana";
+import { TETO_PASSADO_HORAS, TETO_PREVISAO_HORAS } from "@/lib/weather";
 import { fichaSchema, type Ficha } from "@/types/ficha";
 
 /** 🔴 O TESTE DO MÓDULO DE COERÊNCIA — e ele é o guarda da Task 2 inteira.
@@ -127,9 +128,20 @@ const QUEBRAS: Record<string, () => Ficha[]> = {
     return com(f);
   },
 
+  // ⚠️ Até 2026-10-01 esta quebra zerava a janela de PREVISÃO — que passou a
+  // valer por decisão do João ("só olhar a chuva que já caiu"). Zerar o PASSADO
+  // continua sendo regra que nunca vê chuva caída.
   "janela-nao-zerada": () => {
     const f = pedra();
-    f.condicao.regra.janela_previsao_horas = 0;
+    f.condicao.regra.janela_passado_horas = 0;
+    return com(f);
+  },
+
+  // `480` no lugar de `48`: um dígito a mais, e a Open-Meteo recusa a busca da
+  // tela inicial inteira.
+  "janela-dentro-do-provedor": () => {
+    const f = pedra();
+    f.condicao.regra.janela_previsao_horas = 480;
     return com(f);
   },
 
@@ -162,7 +174,7 @@ describe("violacoesDoAcervo", () => {
   // `REGRAS` — fica verde quando a quebra escrita pra regra A dispara só a
   // regra B, e alguma outra quebra por acaso dispara a A. Aqui cada quebra é
   // cobrada pela SUA regra, uma a uma.
-  it("cada uma das 13 regras dispara na quebra escrita pra ela", () => {
+  it("cada uma das 14 regras dispara na quebra escrita pra ela", () => {
     expect(
       Object.keys(QUEBRAS).sort(),
       "ou nasceu regra sem quebra (a extração perdeu a prova dela), ou há quebra " +
@@ -180,11 +192,13 @@ describe("violacoesDoAcervo", () => {
   });
 
   // 🔴 O NÚMERO É CRAVADO À MÃO, como todo número deste projeto, e o porquê de
-  // ser 13 e não 15 está no docblock de `src/lib/coerencia.ts`. Sem ele,
-  // apagar uma regra E a quebra dela junto deixaria a suíte verde.
-  it("o módulo tem 13 regras, e cada identificador aparece uma vez só", () => {
-    expect(REGRAS.length, "uma regra entrou ou saiu do módulo sem passar por aqui").toBe(13);
-    expect(new Set(REGRAS).size, "duas regras com o mesmo identificador").toBe(13);
+  // a extração dar 13 e não 15 está no docblock de `src/lib/coerencia.ts` — a
+  // 14ª (`janela-dentro-do-provedor`) nasceu depois, na onda de conserto 1 da
+  // Tarefa 7. Sem ele, apagar uma regra E a quebra dela junto deixaria a suíte
+  // verde.
+  it("o módulo tem 14 regras, e cada identificador aparece uma vez só", () => {
+    expect(REGRAS.length, "uma regra entrou ou saiu do módulo sem passar por aqui").toBe(14);
+    expect(new Set(REGRAS).size, "duas regras com o mesmo identificador").toBe(14);
   });
 
   it("o chip que não bate com o preço é pego", () => {
@@ -225,7 +239,7 @@ describe("violacoesDoAcervo", () => {
 
   it("janela de chuva zerada é pega", () => {
     const f = rampa();
-    f.condicao.regra.janela_previsao_horas = 0;
+    f.condicao.regra.janela_passado_horas = 0;
     expect(violacoesDoAcervo([f]).map((x) => x.regra)).toContain("janela-nao-zerada");
   });
 
@@ -241,11 +255,11 @@ describe("violacoesDoAcervo", () => {
 
   // 🔴 A frase vai pra TELA DO DONO, no celular, no meio de uma edição. Se ela
   // trouxer o identificador da regra ou o slug cru, ele lê jargão em vez de ler
-  // o que está errado. Vale pras 13, não só pra uma.
+  // o que está errado. Vale pras 14, não só pra uma.
   it("nenhuma frase carrega o identificador da regra nem jargão de código", () => {
     const todas = Object.values(QUEBRAS).flatMap((quebrar) => violacoesDoAcervo(quebrar()));
     expect(todas.length, "nenhuma quebra produziu violação: o teste abaixo ficaria oco")
-      .toBeGreaterThanOrEqual(13);
+      .toBeGreaterThanOrEqual(14);
     for (const v of todas) {
       expect(v.frase, `${v.regra}: a frase repete o identificador da regra`).not.toContain(v.regra);
       expect(v.frase, `${v.regra}: a frase mostra o slug cru em vez do nome do lugar`)
@@ -267,14 +281,79 @@ describe("violacoesDoAcervo", () => {
   //   - arrancar a válvula de escape do horário invertido — a regra passava a
   //     acusar um lugar que abre à noite DE PROPÓSITO, e nada reclamava.
 
+  // ⚠️ A PREVISÃO ENTRA COM `-1`, não `0`: desde 2026-10-01 a previsão zero vale
+  // (decisão do João). O exame dela existe e recusa o negativo.
   it("a janela de chuva é conferida nos TRÊS números, um a um", () => {
-    for (const campo of ["janela_passado_horas", "janela_previsao_horas", "limiar_mm"] as const) {
+    for (const [campo, valor] of [
+      ["janela_passado_horas", 0],
+      ["janela_previsao_horas", -1],
+      ["limiar_mm", 0],
+    ] as const) {
       const f = rampa();
-      f.condicao.regra[campo] = 0;
+      f.condicao.regra[campo] = valor;
       expect(
         violacoesDoAcervo([f]).filter((x) => x.regra === "janela-nao-zerada").length,
-        `zerar ${campo} não produziu violação: esse exame da regra está desligado`,
+        `${campo} = ${valor} não produziu violação: esse exame da regra está desligado`,
       ).toBe(1);
+    }
+  });
+
+  // 🔴 PREVISÃO ZERO VALE — decisão do João, 2026-10-01: "só olhar a chuva que já
+  // caiu". Medido com `avaliar` (previsão 0, passado 6, limiar 0.2): 5 mm uma
+  // hora atrás → `frio`; seco → `fresco`. A regra fecha pelo passado.
+  it("previsão ZERO sozinha não é violação: a regra ainda fecha pelo passado", () => {
+    const f = rampa();
+    f.condicao.regra.janela_previsao_horas = 0;
+    expect(f.condicao.regra.janela_passado_horas, "a premissa: o passado está vivo").toBeGreaterThan(0);
+    expect(violacoesDoAcervo([f]).map((x) => x.regra)).not.toContain("janela-nao-zerada");
+  });
+
+  // 🔴 E O PAR QUE NUNCA FECHA CONTINUA RECUSADO: previsão 0 E passado 0 não vê
+  // chuva nenhuma. A frase que sai é a do PASSADO, e nesse par ela é verdade.
+  it("previsão 0 E passado 0: violação, com a frase de que o lugar nunca fecha", () => {
+    const f = rampa();
+    f.condicao.regra.janela_previsao_horas = 0;
+    f.condicao.regra.janela_passado_horas = 0;
+    const v = violacoesDoAcervo([f]).filter((x) => x.regra === "janela-nao-zerada");
+    expect(v).toHaveLength(1);
+    expect(v[0].frase).toContain("nunca fecha");
+    expect(v[0].frase).toContain("pra trás");
+  });
+
+  it("previsão NEGATIVA: a frase não diz que o lugar nunca fecha, e aponta o 0", () => {
+    const f = rampa();
+    f.condicao.regra.janela_previsao_horas = -5;
+    const v = violacoesDoAcervo([f]).filter((x) => x.regra === "janela-nao-zerada");
+    expect(v).toHaveLength(1);
+    expect(v[0].frase).not.toContain("nunca fecha");
+    expect(v[0].frase).toContain("-5 horas pra frente");
+    expect(v[0].frase).toContain("use 0");
+  });
+
+  // 🔴 O TETO DO PROVEDOR (onda de conserto 1 da Tarefa 7), nas duas janelas e
+  // nas duas direções: no teto passa, um acima é recusado, com o nome do lugar e
+  // o número que ele digitou.
+  it("a janela é conferida contra o teto do provedor, nas DUAS janelas, um a um", () => {
+    for (const [campo, teto, lado] of [
+      ["janela_previsao_horas", TETO_PREVISAO_HORAS, "pra frente"],
+      ["janela_passado_horas", TETO_PASSADO_HORAS, "pra trás"],
+    ] as const) {
+      const noTeto = rampa();
+      noTeto.condicao.regra[campo] = teto;
+      expect(
+        violacoesDoAcervo([noTeto]).filter((x) => x.regra === "janela-dentro-do-provedor"),
+        `${campo} = ${teto} (o teto exato) foi recusado`,
+      ).toEqual([]);
+
+      for (const acima of [teto + 1, teto + 0.5]) {
+        const f = rampa();
+        f.condicao.regra[campo] = acima;
+        const v = violacoesDoAcervo([f]).filter((x) => x.regra === "janela-dentro-do-provedor");
+        expect(v, `${campo} = ${acima} passou pelo teto`).toHaveLength(1);
+        expect(v[0].frase).toContain(f.trajeto.waypoints[0].nome);
+        expect(v[0].frase).toContain(`${acima} horas ${lado}`);
+        expect(v[0].frase).toContain(`${teto} horas`);
+      }
     }
   });
 

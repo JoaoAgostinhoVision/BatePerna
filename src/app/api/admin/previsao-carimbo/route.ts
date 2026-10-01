@@ -2,11 +2,12 @@ import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
 import { comPrazo } from "@/lib/cache-rotas";
 import { marcaDe, subDe } from "@/lib/carimbo-fase";
-import { getClient, getFreshness, versaoAtual } from "@/lib/db";
+import { violacoesDoAcervo } from "@/lib/coerencia";
+import { getClient, versaoAtual } from "@/lib/db";
 import { avaliar } from "@/lib/motor";
 import { vozDaFicha } from "@/lib/severidade";
-import { parsePrecip, type OpenMeteoResponse } from "@/lib/weather";
-import { fichaSchema, regraSchema, type Regra } from "@/types/ficha";
+import { TETO_PASSADO_HORAS, TETO_PREVISAO_HORAS, fetchPrecip } from "@/lib/weather";
+import { fichaSchema, regraSchema, type Ficha, type Regra } from "@/types/ficha";
 
 export const dynamic = "force-dynamic";
 
@@ -18,11 +19,13 @@ export const dynamic = "force-dynamic";
  *  mesmo ato — um campo, um valor — e duas línguas pro mesmo ato é como um
  *  editor acaba mandando uma forma pra uma porta e outra pra outra.
  *
- *  Resposta 200 em duas formas, e o cliente as distingue pelo campo `semLeitura`
- *  — nunca por adivinhação:
+ *  Respostas:
  *
- *   - `{ estado, marca, sub }`  — o carimbo que o lugar teria AGORA com esse número
- *   - `{ semLeitura: true }`    — o motor ainda não deixou chuva utilizável aqui
+ *   - `200 { estado, marca, sub }` — o carimbo que o lugar teria AGORA com esse número
+ *   - `503` de corpo vazio         — a chuva não veio (provedor recusou, caiu, ou
+ *                                    estourou o prazo). O cliente diz que não
+ *                                    conseguiu conferir; NUNCA um carimbo de reserva.
+ *   - `400` de corpo vazio         — o número mente, ou o pedido é ruim
  *
  *  🔴 A REGRA DA PRÉVIA É A REGRA GRAVADA COM **UM** NÚMERO TROCADO, e isto é
  *  mais do que economia de bytes. O plano pedia o corpo `{ slug, regra }`, com os
@@ -44,28 +47,30 @@ export const dynamic = "force-dynamic";
  *  `runMotor` chama por dentro. A regra continua tendo uma fonte só; o que não se
  *  reusa é o laço que grava.
  *
- *  🔴 A CHUVA VEM DO BANCO, NÃO DO CÉU — `freshness.previsao_bruta`, que é o
- *  `JSON.stringify(raw)` que o `runMotor` guardou, de volta em `Precip[]` por
- *  `parsePrecip`. Medido em 2026-09-30: antes desta rota **nada em `src/` relia
- *  aquela coluna**; o dado estava guardado e não servia a ninguém. Três razões, as
- *  três medidas:
+ *  🔴 A CHUVA VEM AO VIVO, PELA MESMA FUNÇÃO DA TELA PÚBLICA — `fetchPrecip(coords,
+ *  regra)`, a que `resolverEstado` (`src/lib/carimbo-estado.ts`) chama pra ficha
+ *  do lugar. **Onda de conserto 1 da Tarefa 7 (2026-10-01).** A primeira versão
+ *  lia `freshness.previsao_bruta`, e a premissa era falsa: medido em produção, a
+ *  tabela `freshness` tem ZERO linhas, porque quem a enche é só o cron
+ *  `/api/cron/motor`, e esse cron nunca foi agendado (não há `vercel.json`). A
+ *  prévia dizia "sem leitura" pra todo número, sempre — e no dia em que alguém
+ *  rodasse o motor uma vez, passaria a mentir com chuva velha.
  *
- *   1. **De graça.** Zero chamada externa por toque de tecla. Este projeto já
- *      perdeu uma rodada inteira (13/09) pra política de uso de um terceiro, e
- *      aquela política proibia pelo PADRÃO de uso, não pelo volume — uma prévia
- *      que busca previsão a cada dígito é exatamente um padrão de uso.
- *   2. **Honesta.** "A mesma chuva que o motor usou" é o que torna duas prévias
- *      COMPARÁVEIS. Com duas buscas, o dono mexeria no limiar e veria o carimbo
- *      mudar por causa do TEMPO que passou entre as duas respostas.
- *   3. **Determinística.** O teste injeta chuva conhecida e mede o código, não o
- *      céu. A prova do plano (*"limiar 999 e limiar 0.1 dão carimbos
- *      diferentes"*) só é verdadeira numa semana de chuva: numa semana seca os
- *      dois dão `fresco` e ela fica vermelha — ou verde por sorte, que é pior.
+ *  🔴 E COM A REGRA **CANDIDATA**, não a gravada: `buildUrl` tira `past_days` e
+ *  `forecast_days` da regra que recebe, então alargar a janela busca a série
+ *  alargada. Com a regra gravada (ou com uma série guardada pela regra antiga), a
+ *  prévia de uma janela maior mediria a BORDA da série e diria "Pode ir" sobre
+ *  chuva que ela não vê.
  *
- *  🔴 E ELA NÃO GRAVA NADA. Nem `ficha_versoes`, nem `freshness`. As duas únicas
- *  consultas são SELECTs de uma linha (`versaoAtual`, `getFreshness`), e há teste
- *  com espiã no `fetch` global provando que o provedor externo não é chamado —
- *  "não grava" por promessa não é prova.
+ *  ⚠️ O CUSTO DE PADRÃO DE USO no provedor: uma busca por PAUSA de digitação, não
+ *  por tecla — o editor espera o dedo parar (`ESPERA_PREVIA_MS`, no
+ *  `EditorNumeroDeMotor`) antes de pedir, e não pede nada pro número igual ao
+ *  gravado, pra caixa vazia, nem pro número que mente. É um dono, num painel.
+ *
+ *  🔴 E ELA NÃO GRAVA NADA. Nem `ficha_versoes`, nem `freshness`, nem chama
+ *  `runMotor`/`upsertFreshness`. A única consulta ao banco é o SELECT de
+ *  `versaoAtual`, e há teste conferindo que nenhuma instrução de escrita sai
+ *  dela — "não grava" por promessa não é prova.
  *
  *  🔴 A EXISTÊNCIA DO LUGAR SAI DE `versaoAtual`, NUNCA DE `getFicha`. É a lição
  *  que a rota de visibilidade já escreveu: `getFicha` sai de `versoesAtuais`, que
@@ -75,22 +80,24 @@ export const dynamic = "force-dynamic";
  *  A ordem das guardas é a das rotas irmãs do admin: config → sessão → corpo →
  *  domínio → responde. */
 
-/** Quanto a prévia espera a chuva guardada antes de responder "sem leitura".
+/** Quanto a prévia espera a chuva do provedor antes de desistir.
  *
- *  🔴 CONSTANTE PRÓPRIA, E A JUSTIFICATIVA NÃO É EMPRESTADA DO `PRAZO_AVISO_MS`
- *  — foi exatamente esse empréstimo que a revisão de 26/09 mandou desfazer na
- *  página do painel. O valor coincide e a consulta é do mesmo tipo (UMA linha,
- *  pela chave primária `ficha_slug`, no mesmo Turso), mas o CONTEXTO é outro e é
- *  ele que governa o número: isto roda com o dedo dele no teclado, entre dois
- *  toques, e o que está em jogo é por quanto tempo a prévia fica calada depois de
- *  ele mudar o número. Esperar mais faria a tela parecer travada no meio de uma
- *  digitação.
+ *  🔴 CONSTANTE PRÓPRIA, E A JUSTIFICATIVA NÃO É EMPRESTADA do `PRAZO_CLIMA_MS`
+ *  (o empréstimo de constante foi o que a revisão de 26/09 mandou desfazer). O
+ *  que governa este número: é uma requisição ao provedor externo, da Vercel, com
+ *  o dono parado olhando a caixa que ele acabou de mudar. Menos que isso e uma
+ *  rede ruim do lado de lá faria a prévia falhar à toa; mais que isso e a
+ *  resposta chegaria depois de ele já ter decidido gravar ou não. E o estouro não
+ *  custa nada a ele: a prévia é ajuda, o Salvar continua de pé.
  *
- *  🔴 E O ESTOURO CAI PRO LADO DE "NÃO SEI", nunca pro lado de um carimbo: o
- *  combinado é `null`, que entra no mesmo ramo de "não há leitura". Uma prévia que
- *  inventasse `fresco` sob lentidão do banco diria ao dono que o lugar está
- *  liberado — e esta é uma tela de decisão sobre lugar real. */
-const PRAZO_PREVISAO_MS = 2_000;
+ *  ⚠️ `fetchPrecip` não leva `AbortSignal`; `comPrazo` só deixa de esperar. A
+ *  resposta atrasada é descartada.
+ *
+ *  🔴 E O ESTOURO CAI PRO LADO DE "NÃO SEI", nunca pro lado de um carimbo: vira
+ *  503, e o cliente diz que não conseguiu conferir. Uma prévia que inventasse
+ *  `fresco` sob lentidão diria ao dono que o lugar está liberado — e esta é uma
+ *  tela de decisão sobre lugar real. */
+const PRAZO_PREVISAO_MS = 4_000;
 
 /** QUAIS CAMPOS DA TELA SÃO NÚMERO DE MOTOR, e a tabela SAI DO `regraSchema` —
  *  nunca de três caminhos escritos à mão aqui.
@@ -115,27 +122,34 @@ const FOLHA_DE = new Map<string, string>(
     .map((k) => [`condicao.regra.${k}`, k]),
 );
 
-/** A regra MENTE sobre o lugar? Três valores, um exame só, e é o MESMO exame que
- *  a regra `janela-nao-zerada` de `src/lib/coerencia.ts` faz na hora de gravar —
- *  de propósito: a prévia não pode mostrar carimbo de uma regra que a porta de
- *  escrita recusa, porque isso é a tela convidando a um ato que a porta nega (o
- *  mesmo defeito que `FichaInteira` já evita na folha de um bloco ausente).
+/** A RECUSA BARATA, antes do banco: o número que ele digitou, sozinho, já mente?
+ *  É o espelho, campo a campo, das duas regras de coerência que a porta de
+ *  escrita roda (`janela-nao-zerada` e `janela-dentro-do-provedor`); o exame da
+ *  regra INTEIRA, que é a garantia, vem depois, chamando aquelas regras de
+ *  verdade sobre a ficha candidata.
  *
- *  🔴 `> 0` E NADA MAIS, e o que isso DEIXA PASSAR é escolha medida: janela
- *  fracionária (`2.5`) passa, porque `avaliar` a usa sem reclamar e é um valor que
- *  um dono pode querer de verdade. Numa porta, falso positivo é pior que falso
- *  negativo: ele trava o dono de gravar uma verdade.
+ *  🔴 O CHÃO DEPENDE DO CAMPO. A janela de PREVISÃO pode ser zero — decisão do
+ *  João, 2026-10-01: "só olhar a chuva que já caiu". As outras duas não.
+ *  Fracionário passa (`2.5`): é número que um dono pode querer, e numa porta o
+ *  falso positivo trava o dono de gravar uma verdade.
  *
- *  `Number.isFinite` entra porque `JSON.parse("1e999")` devolve `Infinity`, e
- *  `Infinity > 0` é verdadeiro — sem ele, uma janela infinita somaria TODA a chuva
- *  da série e a prévia responderia com cara de resposta. É o mesmo estado que o
- *  `.finite()` do `regraSchema` fecha na porta de escrita. */
-function numeroQueNaoMente(n: unknown): n is number {
-  return typeof n === "number" && Number.isFinite(n) && n > 0;
+ *  🔴 O TETO É O DO PROVEDOR (`src/lib/weather.ts`): acima dele a busca de chuva
+ *  é recusada com 400, e a prévia nem chega a perguntar.
+ *
+ *  `Number.isFinite` entra porque `JSON.parse("1e999")` devolve `Infinity`. */
+function numeroQueNaoMente(folha: string, n: unknown): n is number {
+  if (typeof n !== "number" || !Number.isFinite(n)) return false;
+  if (folha === "janela_previsao_horas") return n >= 0 && n <= TETO_PREVISAO_HORAS;
+  if (folha === "janela_passado_horas") return n > 0 && n <= TETO_PASSADO_HORAS;
+  return n > 0;
 }
 
-/** Leitura de chuva guardada é leitura mentirosa — e esta ainda é a chuva de
- *  AGORA sob uma regra que o dono está mexendo. */
+/** As regras de coerência que olham a regra de chuva. A prévia roda AS MESMAS
+ *  que a porta de escrita roda — nunca uma cópia delas —, pra nunca mostrar o
+ *  carimbo de uma regra que a porta recusa. */
+const REGRAS_DA_CHUVA = ["janela-nao-zerada", "janela-dentro-do-provedor"];
+
+/** Chuva de agora sob uma regra que o dono está mexendo: guardar seria mentir. */
 const SEM_CACHE = { headers: { "cache-control": "no-store" } } as const;
 
 export async function POST(req: Request): Promise<Response> {
@@ -170,12 +184,12 @@ export async function POST(req: Request): Promise<Response> {
 
   // A recusa barata vem antes do banco: o número que ele acabou de digitar é o
   // único que esta requisição traz, e um zero não merece uma viagem ao Turso.
-  if (!numeroQueNaoMente(valor)) return new Response("", { status: 400 });
+  if (!numeroQueNaoMente(folha, valor)) return new Response("", { status: 400 });
 
   const versao = await versaoAtual(getClient(), slug);
   if (versao == null) return new Response("", { status: 400 });
 
-  let ficha;
+  let ficha: Ficha;
   try {
     ficha = fichaSchema.parse(JSON.parse(versao.doc));
   } catch {
@@ -192,33 +206,28 @@ export async function POST(req: Request): Promise<Response> {
   if (!forma.success) return new Response("", { status: 400 });
   const nova: Regra = forma.data;
 
-  // 🔴 OS TRÊS NÚMEROS, NÃO SÓ O EDITADO. Se a regra GRAVADA já mente num dos
-  // outros dois (um limiar zero herdado, p.ex.), não existe carimbo honesto a
-  // mostrar — e mostrar um daria ao dono a impressão de que a regra funciona.
-  // Isto NÃO o tranca: trocar justamente o número que mente dá uma candidata
-  // limpa, e a prévia volta a responder na mesma tecla.
-  if (
-    !numeroQueNaoMente(nova.janela_previsao_horas) ||
-    !numeroQueNaoMente(nova.janela_passado_horas) ||
-    !numeroQueNaoMente(nova.limiar_mm)
-  ) {
+  // 🔴 A REGRA INTEIRA, NÃO SÓ O NÚMERO EDITADO, e pelas MESMAS regras de
+  // coerência que a porta de escrita roda. Se a regra GRAVADA já mente num dos
+  // outros dois números (um limiar zero herdado, p.ex.), não existe carimbo
+  // honesto a mostrar. Isto NÃO o tranca: trocar justamente o número que mente dá
+  // uma candidata limpa, e a prévia volta a responder.
+  const fichaCandidata: Ficha = { ...ficha, condicao: { ...ficha.condicao, regra: nova } };
+  if (violacoesDoAcervo([fichaCandidata]).some((v) => REGRAS_DA_CHUVA.includes(v.regra))) {
     return new Response("", { status: 400 });
   }
 
-  const linha = await comPrazo(getFreshness(getClient(), slug), PRAZO_PREVISAO_MS, null);
-
-  // 🔴 AS TRÊS AUSÊNCIAS CAEM NO MESMO RAMO, e isso é decisão: sem linha de
-  // `freshness`, com a coluna em branco, e com uma série que não parseia, o FATO é
-  // o mesmo — o motor não deixou chuva utilizável pra este lugar — e a ação do dono
-  // é a mesma: esperar o motor rodar. Inventar um carimbo aqui seria a prévia
-  // afirmando sobre um lugar real sem ter lido chuva nenhuma.
-  let chuva;
-  try {
-    if (linha?.previsao_bruta == null) return Response.json({ semLeitura: true }, SEM_CACHE);
-    chuva = parsePrecip(JSON.parse(linha.previsao_bruta) as OpenMeteoResponse);
-  } catch {
-    return Response.json({ semLeitura: true }, SEM_CACHE);
-  }
+  // 🔴 A MESMA BUSCA DA TELA PÚBLICA, COM A REGRA CANDIDATA, e falha nunca vira
+  // carimbo: provedor recusando, rede caindo, série truncada (`parsePrecip`
+  // estoura) e prazo estourado caem todos em `null` → 503.
+  const chuva = await comPrazo(
+    fetchPrecip(ficha.condicao.coords, nova).then(
+      (r) => r.precips,
+      () => null,
+    ),
+    PRAZO_PREVISAO_MS,
+    null,
+  );
+  if (chuva === null) return new Response("", { status: 503, ...SEM_CACHE });
 
   const estado = avaliar(nova, chuva, agora);
 

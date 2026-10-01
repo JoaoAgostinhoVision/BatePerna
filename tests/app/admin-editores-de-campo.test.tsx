@@ -8,9 +8,11 @@ import { NAO_SEI, NAO_TEM, TIRANDO } from "@/app/admin/campos/BotaoNaoSei";
 import { BLOCO_JUNTO } from "@/app/admin/campos/EditorBloco";
 import { ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
 import {
+  ALEM_DO_PROVEDOR,
   CAIXA_VAZIA,
   COM_ESTE_NUMERO,
   HORA_VAZIA,
+  JANELA_NEGATIVA,
   NADA_ESCOLHIDO,
   NAO,
   PREVENDO,
@@ -18,7 +20,6 @@ import {
   REGRA_QUE_MENTE,
   SALVANDO,
   SALVAR,
-  SEM_LEITURA,
   SIM,
 } from "@/app/admin/campos/palavras";
 import {
@@ -1325,13 +1326,16 @@ describe("Os editores servem os três lugares", () => {
     NAO_SEI,
     NAO_TEM,
     BLOCO_JUNTO,
-    // As cinco do número de motor (Task 7). Nenhuma aparece EM REPOUSO: a
-    // prévia nasce vazia e as duas recusas só existem depois de um toque.
+    // As seis do número de motor (Task 7; na onda de conserto 1, 2026-10-01,
+    // `SEM_LEITURA` foi apagada e nasceram `JANELA_NEGATIVA` e
+    // `ALEM_DO_PROVEDOR`). Nenhuma aparece EM REPOUSO: a
+    // prévia nasce vazia e as três recusas só existem depois de um toque.
     REGRA_QUE_MENTE,
     COM_ESTE_NUMERO,
     PREVENDO,
-    SEM_LEITURA,
     PREVISAO_FALHOU,
+    JANELA_NEGATIVA,
+    ALEM_DO_PROVEDOR,
   ];
 
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem

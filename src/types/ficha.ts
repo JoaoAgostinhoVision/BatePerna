@@ -57,8 +57,10 @@ export const waypointSchema = z.object({
  *  (`2.5`). `avaliar` a usa sem reclamar e `buildUrl` a arredonda pra cima em
  *  dias; é um valor que um dono pode querer de verdade, e numa porta o falso
  *  positivo é pior que o falso negativo, porque trava o dono de gravar uma
- *  verdade. Quem recusa zero, negativo e limiar nulo é o portão de coerência,
- *  com frase. */
+ *  verdade. Quem recusa zero, negativo, limiar nulo e janela acima do teto do
+ *  provedor é o portão de coerência, com frase (`janela-nao-zerada` e
+ *  `janela-dentro-do-provedor`). ⚠️ Desde 2026-10-01 a janela de PREVISÃO pode
+ *  ser zero — decisão do João: "só olhar a chuva que já caiu". */
 export const regraSchema = z.object({
   tipo: z.literal("chuva_binaria"),
   janela_previsao_horas: z.number().finite(),

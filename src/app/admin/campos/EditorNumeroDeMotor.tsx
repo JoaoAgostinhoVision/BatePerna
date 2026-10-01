@@ -1,17 +1,30 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { TETO_PASSADO_HORAS, TETO_PREVISAO_HORAS } from "@/lib/weather";
 import { usarGravacao } from "./gravar";
 import {
+  ALEM_DO_PROVEDOR,
   CAIXA_VAZIA,
   COM_ESTE_NUMERO,
+  JANELA_NEGATIVA,
   PREVENDO,
   PREVISAO_FALHOU,
   REGRA_QUE_MENTE,
   SALVANDO,
   SALVAR,
-  SEM_LEITURA,
 } from "./palavras";
 import type { PropsDoEditor } from "./tipos";
+
+/** Quanto a prévia espera o dedo PARAR antes de perguntar ao servidor.
+ *
+ *  🔴 A PRÉVIA BUSCA CHUVA AO VIVO NO PROVEDOR EXTERNO (onda de conserto 1 da
+ *  Tarefa 7, 2026-10-01), e o `onChange` do React dispara a CADA TECLA: sem esta
+ *  espera, digitar `240` seriam três buscas, duas delas de números que ele nunca
+ *  quis. Este projeto já perdeu uma rodada inteira (13/09) pra política de uso de
+ *  um terceiro, que proibia pelo PADRÃO de uso. 500 ms é mais que o intervalo
+ *  entre duas teclas de quem digita um número (então `240` vira UMA busca) e
+ *  menos que a pausa de quem terminou e olha a tela. */
+export const ESPERA_PREVIA_MS = 500;
 
 /** O NÚMERO DE MOTOR, COM A CONSEQUÊNCIA AO VIVO — o instrumento da espécie
  *  `numero` (os três números que governam a regra de chuva).
@@ -44,19 +57,22 @@ import type { PropsDoEditor } from "./tipos";
  *  é dado de um lugar renderizado como se fosse frase fixa. Este arquivo não é o
  *  lugar de decidir isso.)
  *
- *  🔴 ZERO É RECUSADO AQUI, E AQUI NÃO É A GARANTIA. São três camadas, e cada uma
- *  faz uma coisa diferente:
- *   1. ESTA, que recusa antes de qualquer viagem (`REGRA_QUE_MENTE`) e poupa uma
- *      ida ao Turso numa rede de interior — há teste cravando que a rota **não foi
- *      chamada**;
+ *  🔴 O NÚMERO QUE MENTE É RECUSADO AQUI, E AQUI NÃO É A GARANTIA. (Desde
+ *  2026-10-01 "mentir" depende do campo: a janela de previsão aceita zero, e as
+ *  duas janelas têm teto — ver `recusaDe`.) São três camadas, e cada uma faz uma
+ *  coisa diferente:
+ *   1. ESTA, que recusa antes de qualquer viagem (`REGRA_QUE_MENTE`,
+ *      `JANELA_NEGATIVA`, `ALEM_DO_PROVEDOR`) e poupa uma ida ao servidor numa
+ *      rede de interior — há teste cravando que a rota **não foi chamada**;
  *   2. a ROTA DE PRÉVIA, que recusa com 400 pra nenhum cliente (nem um bundle
  *      velho no celular dele) conseguir uma prévia que endosse uma regra que
  *      mente;
- *   3. a PORTA DE ESCRITA, que é a garantia — e ela já existia antes desta tarefa:
- *      o portão de coerência de `PUT /api/admin/ficha` devolve **409** com a frase
- *      da regra `janela-nao-zerada` (*"O limite de chuva de X é 0 mm: qualquer
- *      orvalho fecha o lugar…"*). Medido: é por isso que o `regraSchema` NÃO
- *      ganhou `.min(1)` — ver o docblock dele em `src/types/ficha.ts`.
+ *   3. a PORTA DE ESCRITA, que é a garantia: o portão de coerência de
+ *      `PUT /api/admin/ficha` devolve **409** com a frase das regras
+ *      `janela-nao-zerada` (*"O limite de chuva de X é 0 mm: qualquer orvalho
+ *      fecha o lugar…"*) e `janela-dentro-do-provedor` (o teto). Medido: é por
+ *      isso que o `regraSchema` NÃO ganhou `.min(1)` — ver o docblock dele em
+ *      `src/types/ficha.ts`.
  *
  *  ⚠️ POR QUE NÃO HÁ CONFERÊNCIA DE FORMATO AQUI, e isto é a mesma medição do
  *  `EditorHora`. Medido em jsdom (2026-09-30), num `<input type="number">`:
@@ -98,35 +114,66 @@ import type { PropsDoEditor } from "./tipos";
 type Previsao =
   | { estado: "pedindo"; para: number }
   | { estado: "fala"; para: number; marca: string; sub: string }
-  | { estado: "semLeitura"; para: number }
   | { estado: "falhou"; para: number };
+
+/** A frase de recusa de um número, ou `null` se ele pode ir pra porta.
+ *
+ *  Espelho, campo a campo, das duas regras de coerência que a porta roda
+ *  (`janela-nao-zerada` e `janela-dentro-do-provedor`, em `src/lib/coerencia.ts`)
+ *  — a porta é a garantia; isto só poupa a viagem.
+ *   - a janela de PREVISÃO aceita zero (decisão do João, 2026-10-01: "só olhar a
+ *     chuva que já caiu") e recusa só o negativo;
+ *   - as outras duas recusam zero e negativo;
+ *   - as duas janelas recusam acima do teto do provedor (`src/lib/weather.ts`).
+ *  Fracionário NÃO entra — é valor que um dono pode querer de verdade.
+ *
+ *  ⚠️ O nome da folha sai do `campo.caminho` que o registro mandou; o editor não
+ *  importa o registro (a régua do bundle de `/admin/[slug]`). */
+function recusaDe(folha: string, n: number): string | null {
+  if (folha === "janela_previsao_horas") {
+    if (n < 0) return JANELA_NEGATIVA;
+    return n > TETO_PREVISAO_HORAS ? ALEM_DO_PROVEDOR : null;
+  }
+  if (!(n > 0)) return REGRA_QUE_MENTE;
+  if (folha === "janela_passado_horas" && n > TETO_PASSADO_HORAS) return ALEM_DO_PROVEDOR;
+  return null;
+}
 
 export default function EditorNumeroDeMotor({ campo, valor, slug }: PropsDoEditor) {
   const [texto, setTexto] = useState(typeof valor === "number" ? String(valor) : "");
   const [previsao, setPrevisao] = useState<Previsao | null>(null);
   const { erro, salvando, gravar, recusarAqui } = usarGravacao();
+  const folha = campo.caminho.slice(campo.caminho.lastIndexOf(".") + 1);
+
+  /** A pergunta que está esperando o dedo parar. Uma só de cada vez: cada tecla
+   *  cancela a anterior, e desmontar cancela a pendente. */
+  const espera = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelarEspera = (): void => {
+    if (espera.current !== null) clearTimeout(espera.current);
+    espera.current = null;
+  };
+  useEffect(() => cancelarEspera, []);
 
   /** O número que está na caixa, ou `null` se ela não tem número nenhum. */
   const numero = texto.trim() === "" || !Number.isFinite(Number(texto)) ? null : Number(texto);
 
-  /** Mesmo exame da rota e da regra `janela-nao-zerada`: zero, negativo e não
-   *  finito mentem sobre o lugar. Fracionário NÃO entra — é valor que um dono
-   *  pode querer de verdade, e travá-lo seria travar a gravação de uma verdade. */
-  const mente = numero !== null && !(numero > 0);
-
   function mudou(bruto: string): void {
     setTexto(bruto);
+    cancelarEspera();
     const n = bruto.trim() === "" || !Number.isFinite(Number(bruto)) ? null : Number(bruto);
-    // Caixa vazia e número que mente não pedem prévia: não há consequência
-    // honesta a mostrar, e a de um número que mente a rota recusa de qualquer
-    // forma. Número igual ao gravado também não — a consequência dele já está no
-    // carimbo do topo do painel.
-    if (n === null || !(n > 0) || n === valor) {
+    // Caixa vazia e número que a porta recusaria não pedem prévia: não há
+    // consequência honesta a mostrar, e a rota recusa de qualquer forma. Número
+    // igual ao gravado também não — a consequência dele já está no carimbo do
+    // topo do painel.
+    if (n === null || recusaDe(folha, n) !== null || n === valor) {
       setPrevisao(null);
       return;
     }
     setPrevisao({ estado: "pedindo", para: n });
-    void prever(n);
+    espera.current = setTimeout(() => {
+      espera.current = null;
+      void prever(n);
+    }, ESPERA_PREVIA_MS);
   }
 
   async function prever(n: number): Promise<void> {
@@ -139,18 +186,12 @@ export default function EditorNumeroDeMotor({ campo, valor, slug }: PropsDoEdito
         method: "POST",
         body: JSON.stringify({ slug, campo: campo.caminho, valor: n }),
       });
+      // 503 (a chuva não veio), 400 (recusa) ou qualquer outro: não conferiu.
       if (!r.ok) {
         pousar({ estado: "falhou", para: n });
         return;
       }
-      const corpo = (await r.json()) as { semLeitura?: boolean; marca?: string; sub?: string };
-      // `semLeitura` é a bandeira que a rota manda, nunca uma dedução a partir de
-      // campo faltando: as duas formas da resposta têm que ser distinguíveis sem
-      // adivinhação.
-      if (corpo.semLeitura === true) {
-        pousar({ estado: "semLeitura", para: n });
-        return;
-      }
+      const corpo = (await r.json()) as { marca?: string; sub?: string };
       pousar({ estado: "fala", para: n, marca: String(corpo.marca), sub: String(corpo.sub) });
     } catch {
       pousar({ estado: "falhou", para: n });
@@ -162,8 +203,9 @@ export default function EditorNumeroDeMotor({ campo, valor, slug }: PropsDoEdito
       recusarAqui(CAIXA_VAZIA);
       return;
     }
-    if (mente) {
-      recusarAqui(REGRA_QUE_MENTE);
+    const recusa = recusaDe(folha, numero);
+    if (recusa !== null) {
+      recusarAqui(recusa);
       return;
     }
     void gravar({ slug, campo: campo.caminho, valor: numero });
@@ -188,7 +230,6 @@ export default function EditorNumeroDeMotor({ campo, valor, slug }: PropsDoEdito
           verde. Vazia, ela não põe texto nenhum no corpus do cerco. */}
       <p className="adm-editor-previsao" data-previsao={campo.caminho} aria-live="polite">
         {previsao?.estado === "pedindo" && PREVENDO}
-        {previsao?.estado === "semLeitura" && SEM_LEITURA}
         {previsao?.estado === "falhou" && PREVISAO_FALHOU}
         {previsao?.estado === "fala" && `${COM_ESTE_NUMERO} ${previsao.marca} · ${previsao.sub}`}
       </p>

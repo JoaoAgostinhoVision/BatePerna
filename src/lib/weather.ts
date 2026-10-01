@@ -12,6 +12,28 @@ export type OpenMeteoResponse = {
 
 const H_PER_DAY = 24;
 
+/** 🔴 O TETO DAS DUAS JANELAS, e ele NÃO é nosso: é o da Open-Meteo.
+ *
+ *  `buildUrl`/`buildUrlMulti` pedem `forecast_days = ceil(previsão/24)` e
+ *  `past_days = ceil(passado/24)`. Medido por GET direto à API em 2026-10-01
+ *  (e antes, na revisão da Tarefa 7):
+ *
+ *    forecast_days=16 → 200 · forecast_days=17 → 400 "Allowed range 0 to 16"
+ *    past_days=93     → 200 · past_days=94     → 400 "Allowed range 0 to 93"
+ *    past_days=93 & forecast_days=16, juntos e em lote de duas coordenadas → 200
+ *
+ *  Logo: previsão ≤ 16 × 24 = 384 h e passado ≤ 93 × 24 = 2232 h. Um valor
+ *  fracionário acima disso (384.5) arredonda pra 17 dias e cai na recusa — por
+ *  isso o teto é em HORAS e a comparação é `>`.
+ *
+ *  🔴 E O RAIO DE DANO É O ACERVO INTEIRO: a tela inicial busca a chuva de todos
+ *  os lugares numa requisição só, com a MAIOR janela (`janelaMaxima`). Quem
+ *  recusa é a regra `janela-dentro-do-provedor` de `src/lib/coerencia.ts`, na
+ *  porta de escrita; o editor do painel recusa antes, pra poupar a viagem.
+ *  Se a Open-Meteo mudar o limite, é AQUI que se muda — e só aqui. */
+export const TETO_PREVISAO_HORAS = 16 * H_PER_DAY;
+export const TETO_PASSADO_HORAS = 93 * H_PER_DAY;
+
 export function buildUrl(
   coords: { lat: number; lng: number },
   regra: Regra,

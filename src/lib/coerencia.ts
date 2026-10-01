@@ -1,5 +1,6 @@
 import { PISOS } from "@/lib/piso";
 import { DIAS } from "@/lib/semana";
+import { TETO_PASSADO_HORAS, TETO_PREVISAO_HORAS } from "@/lib/weather";
 import type { Ficha } from "@/types/ficha";
 
 /** 🔴 A COERÊNCIA DO ACERVO, EM PRODUÇÃO — e é por isto que ela saiu dos testes.
@@ -55,6 +56,10 @@ import type { Ficha } from "@/types/ficha";
  *
  *  ⚠️ **Não é que duas regras tenham se perdido na extração.** Se alguém contar
  *  15 lá e 13 aqui e concluir isso, esta tabela é a resposta.
+ *
+ *  🔴 **E HOJE SÃO 14**: a 14ª (`janela-dentro-do-provedor`) não veio da
+ *  extração — nasceu na onda de conserto da Tarefa 7 (2026-10-01). A conta de
+ *  13 acima é a da extração, e continua certa como história.
  *
  *  ## 🔴 A ASSINATURA É DO ACERVO, NÃO DA FICHA
  *
@@ -112,7 +117,7 @@ export type Violacao = { regra: string; slug: string; frase: string };
  *  **uma vez** em todo o `src/`, pra ninguém reinlinar a cópia de volta.
  *
  *  ⚠️ SEM a bandeira `g`, de propósito: um regex global carrega `lastIndex`
- *  entre chamadas, e este é compartilhado por duas telas e treze regras. */
+ *  entre chamadas, e este é compartilhado por duas telas e pelas regras daqui. */
 export const PRECO = /R\$\s?\d+(?:[.,]\d{2})?/;
 
 /** Todo texto corrido da ficha, junto e em minúsculas — é sobre ele que as
@@ -468,7 +473,8 @@ const TABELA: readonly Regra[] = [
     //
     // ⚠️ UMA REGRA SÓ pros três números: é o mesmo defeito — "regra que nunca
     // fecha não é regra" — medido em campos irmãos da MESMA regra de chuva, e o
-    // conserto é um só.
+    // conserto é um só. (O nome ficou "nao-zerada" por história: desde
+    // 2026-10-01 a janela de PREVISÃO pode ser zero — ver o exame dela.)
     regra: "janela-nao-zerada",
     achar: (fichas) =>
       fichas.flatMap((f) => {
@@ -483,13 +489,20 @@ const TABELA: readonly Regra[] = [
               "nenhuma e o lugar nunca fecha.",
           });
         }
-        if (!(r.janela_previsao_horas > 0)) {
+        // 🔴 PREVISÃO ZERO É ACEITA — decisão do João, 2026-10-01: "só olhar a
+        // chuva que já caiu". Medido com `avaliar` (previsão 0, passado 6,
+        // limiar 0.2): 5 mm uma hora atrás → `frio`; seco → `fresco`. A regra
+        // continua fechando pelo passado, então a frase antiga ("o lugar nunca
+        // fecha") era FALSA pra este caso. O que nunca fecha é previsão 0 E
+        // passado 0 — e esse par continua recusado pelo exame de cima, cuja
+        // frase é verdadeira nele. Aqui sobra só o NEGATIVO (ou não-número).
+        if (!(r.janela_previsao_horas >= 0)) {
           achados.push({
             slug: f.slug,
             // PENDENTE: redação minha, o João ainda não leu
             frase:
-              `A regra de chuva de ${nomeDe(f)} olha 0 hora pra frente: assim ela nunca vê ` +
-              "chuva prevista e o lugar nunca fecha.",
+              `A regra de chuva de ${nomeDe(f)} olha ${r.janela_previsao_horas} horas pra frente, ` +
+              "e janela negativa não existe: use 0 pra olhar só a chuva que já caiu.",
           });
         }
         if (!(r.limiar_mm > 0)) {
@@ -575,9 +588,51 @@ const TABELA: readonly Regra[] = [
         }];
       }),
   },
+  {
+    // Mata: `janela_previsao_horas: 480` digitado no celular (um dígito a mais
+    // que `48`). Medido na revisão da Tarefa 7 e conferido de novo em
+    // 2026-10-01: a Open-Meteo recusa `forecast_days=17` e `past_days=94` com
+    // 400, e a busca da tela inicial é UMA requisição pra todos os lugares com a
+    // MAIOR janela do acervo (`janelaMaxima`) — então um número só tira a chuva
+    // de TODOS os lugares, não só deste. Nenhuma outra camada recusava: o schema
+    // só exige finito, `janela-nao-zerada` só olha o chão.
+    //
+    // 🔴 OS TETOS NÃO SÃO DESTE ARQUIVO: moram em `src/lib/weather.ts`, ao lado
+    // da URL que eles governam, com a medição escrita lá.
+    //
+    // ⚠️ É a 14ª regra e NÃO veio da extração dos testes (a tabela do topo
+    // conta 13 de lá): nasceu na onda de conserto da Tarefa 7.
+    regra: "janela-dentro-do-provedor",
+    achar: (fichas) =>
+      fichas.flatMap((f) => {
+        const r = f.condicao.regra;
+        const achados: Achado[] = [];
+        if (r.janela_previsao_horas > TETO_PREVISAO_HORAS) {
+          achados.push({
+            slug: f.slug,
+            // PENDENTE: redação minha, o João ainda não leu
+            frase:
+              `A regra de chuva de ${nomeDe(f)} olha ${r.janela_previsao_horas} horas pra frente, e a ` +
+              `previsão do tempo só vai até ${TETO_PREVISAO_HORAS} horas. Com esse número a busca de ` +
+              "chuva é recusada, e a tela inicial fica sem informação pra todos os lugares, não só este.",
+          });
+        }
+        if (r.janela_passado_horas > TETO_PASSADO_HORAS) {
+          achados.push({
+            slug: f.slug,
+            // PENDENTE: redação minha, o João ainda não leu
+            frase:
+              `A regra de chuva de ${nomeDe(f)} olha ${r.janela_passado_horas} horas pra trás, e o ` +
+              `histórico de chuva só volta ${TETO_PASSADO_HORAS} horas. Com esse número a busca de ` +
+              "chuva é recusada, e a tela inicial fica sem informação pra todos os lugares, não só este.",
+          });
+        }
+        return achados;
+      }),
+  },
 ];
 
-/** Os identificadores das 13 regras — DERIVADOS da tabela, nunca uma segunda
+/** Os identificadores das regras — DERIVADOS da tabela, nunca uma segunda
  *  lista. É o que o teste de não-vacuidade percorre pra provar que cada uma
  *  ainda dispara. */
 export const REGRAS: readonly string[] = TABELA.map((r) => r.regra);

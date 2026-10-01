@@ -99,6 +99,7 @@ describe("coerência do acervo — varre TODAS as fichas, nunca uma lista de slu
     "janela-nao-zerada",
     "dia-repetido-ou-inventado",
     "semana-inteira-nao-declara",
+    "janela-dentro-do-provedor",
   ];
 
   it("todas as regras do módulo são conferidas contra o acervo real, uma a uma", () => {
@@ -163,6 +164,13 @@ describe("coerência do acervo — varre TODAS as fichas, nunca uma lista de slu
 
   it("nenhuma ficha real tem janela de chuva zerada — regra que nunca fecha não é regra", () => {
     expect(das("janela-nao-zerada")).toEqual([]);
+  });
+
+  it("nenhuma ficha real pede janela além do que o provedor de chuva aceita", () => {
+    expect(
+      das("janela-dentro-do-provedor"),
+      "a busca da tela inicial é uma só, com a maior janela do acervo: uma ficha acima do teto tira a chuva de todos os lugares",
+    ).toEqual([]);
   });
 
   // 🔴 ESTE GUARDA SUBSTITUI, EM 2026-09-27, O "o regex de preço daqui é o mesmo

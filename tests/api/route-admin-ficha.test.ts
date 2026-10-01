@@ -959,3 +959,77 @@ describe("PUT /api/admin/ficha — e o lugar escondido", () => {
     expect((await versaoAtual(c, SLUG))!.oculto).toBe(false);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// A REGRA DE CHUVA NA PORTA — onda de conserto 1 da Tarefa 7 (2026-10-01).
+describe("PUT /api/admin/ficha — a regra de chuva: o teto do provedor e a previsão zero", () => {
+  const nomeDe = (f: Ficha) => f.trajeto.waypoints[0].nome;
+  const regraGravada = async () =>
+    (JSON.parse((await versaoAtual(c, SLUG))!.doc) as Ficha).condicao.regra;
+
+  // 🔴 F2: `480` no lugar de `48`. Antes desta onda a porta gravava com 200, e a
+  // busca da tela inicial (uma só, com a maior janela do acervo) passava a ser
+  // recusada pela Open-Meteo — todos os lugares sem informação.
+  for (const [campo, valor, lado] of [
+    ["janela_previsao_horas", 385, "pra frente"],
+    ["janela_previsao_horas", 480, "pra frente"],
+    ["janela_passado_horas", 2233, "pra trás"],
+  ] as const) {
+    it(`${campo} = ${valor}: 409 com a frase do teto, e nada gravado`, async () => {
+      const res = await PUT(pedido({ slug: SLUG, campo: `condicao.regra.${campo}`, valor }, cookieBom));
+
+      expect(res.status).toBe(409);
+      const frase = await res.text();
+      expect(frase).toContain(nomeDe(ficha));
+      expect(frase).toContain(`${valor} horas ${lado}`);
+      expect(frase).toContain("todos os lugares");
+      expect(await historico(c, SLUG)).toHaveLength(1);
+    });
+  }
+
+  it("no teto exato (384 pra frente, 2232 pra trás) a porta grava", async () => {
+    const a = await PUT(pedido({ slug: SLUG, campo: "condicao.regra.janela_previsao_horas", valor: 384 }, cookieBom));
+    expect(a.status, await a.text()).toBe(200);
+    const b = await PUT(pedido({ slug: SLUG, campo: "condicao.regra.janela_passado_horas", valor: 2232 }, cookieBom));
+    expect(b.status, await b.text()).toBe(200);
+    expect(await regraGravada()).toMatchObject({ janela_previsao_horas: 384, janela_passado_horas: 2232 });
+  });
+
+  // 🔴 DECISÃO DO JOÃO, 2026-10-01: previsão zero vale — "só olhar a chuva que
+  // já caiu". A porta grava.
+  it("previsão 0: a porta GRAVA (200)", async () => {
+    expect(ficha.condicao.regra.janela_passado_horas, "a premissa: o passado está vivo").toBeGreaterThan(0);
+
+    const res = await PUT(pedido({ slug: SLUG, campo: "condicao.regra.janela_previsao_horas", valor: 0 }, cookieBom));
+
+    expect(res.status, await res.text()).toBe(200);
+    expect((await regraGravada()).janela_previsao_horas).toBe(0);
+  });
+
+  // 🔴 E O PAR QUE NUNCA FECHA CONTINUA 409: com a previsão já zero, zerar o
+  // passado deixa a regra cega pra toda chuva — e a frase que ele lê diz isso.
+  it("previsão 0 E passado 0: 409, com a frase de que o lugar nunca fecha", async () => {
+    const semPrevisao = {
+      ...ficha,
+      condicao: { ...ficha.condicao, regra: { ...ficha.condicao.regra, janela_previsao_horas: 0 } },
+    };
+    await gravarVersao(c, SLUG, JSON.stringify(semPrevisao), "semente", AGORA);
+
+    const res = await PUT(pedido({ slug: SLUG, campo: "condicao.regra.janela_passado_horas", valor: 0 }, cookieBom));
+
+    expect(res.status).toBe(409);
+    const frase = await res.text();
+    expect(frase).toContain("pra trás");
+    expect(frase).toContain("nunca fecha");
+    expect((await regraGravada()).janela_passado_horas).toBe(ficha.condicao.regra.janela_passado_horas);
+  });
+
+  it("previsão negativa: 409, e a frase não diz que o lugar nunca fecha", async () => {
+    const res = await PUT(pedido({ slug: SLUG, campo: "condicao.regra.janela_previsao_horas", valor: -5 }, cookieBom));
+
+    expect(res.status).toBe(409);
+    const frase = await res.text();
+    expect(frase).not.toContain("nunca fecha");
+    expect(frase).toContain("use 0");
+  });
+});
