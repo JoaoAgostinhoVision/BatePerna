@@ -2,12 +2,22 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🟢 **ÚLTIMA PARADA: 2026-09-30. A TAREFA 6 FECHOU** — *"um editor por espécie de campo"*. Três
-commits: a implementação, e **duas** ondas de fix, porque a revisão achou **sete mutações
-sobreviventes na linha vermelha** e a re-revisão achou que o guarda que as fechou **podia ser
-desligado em silêncio por duas portas**. **Nada está em voo.**
+🟡 **ÚLTIMA PARADA: 2026-09-30 à noite, A PEDIDO DELE** — *"deixe tudo pronto para próxima sessão só
+pedir para continuar, quero dormir"*.
 
-**Estamos na branch `painel-completo`**, com **6 das 12 tarefas completas**, árvore limpa, `tsc`
+**As Tarefas 6 e 7 fecharam.** A 6 (*um editor por espécie de campo*) levou três commits — a
+implementação e **duas** ondas de fix, porque a revisão achou **sete mutações sobreviventes na linha
+vermelha** e a re-revisão achou que o guarda que as fechou **podia ser desligado em silêncio por duas
+portas**. A 7 (*o número de motor com a consequência ao vivo*) fechou em um commit, e nela **o
+implementador recusou uma autorização do meu brief e estava certo** — ver 5h.
+
+🔴 **NADA ESTÁ EM VOO, e a razão de estar escrito:** a **revisão da Tarefa 7 foi despachada e PARADA
+POR MIM antes de ela escrever uma linha**, quando ele pediu pra dormir — resultado de subagente
+**morre com a sessão**, e isso já matou duas sessões nesta mesma rodada. A árvore estava limpa quando
+parou. **O prompt dela está salvo em disco, pronto pra despachar sem reescrever:**
+`.superpowers/sdd/2026-09-26-painel-completo/task-7-review-PROMPT.md`.
+
+**Estamos na branch `painel-completo`**, com **7 das 12 tarefas completas**, árvore limpa, `tsc`
 limpo, `npm run build` exit 0. 🔴 **NADA FOI AO AR** — nenhuma tarefa deste plano roda `vercel`, e o
 `main` segue publicado e intacto.
 
@@ -17,9 +27,12 @@ arquivos** no fechamento da Tarefa 6, e esse número cresce a cada tarefa. A ré
 entre as sessões. Se mostrar commit de **código** depois dele, mexeram, e nenhum número daqui vale.
 (Esta linha já nasceu falsa **três vezes**, as três por cravar um SHA ou uma contagem em prosa.)
 
-→ **Como retomar: o bloco "▶ RETOMAR A RODADA DO PAINEL COMPLETO", logo abaixo. O PRIMEIRO PASSO é a
-Tarefa 7 — o número de motor com a consequência ao vivo — e o brief dela precisa ser AUDITADO antes
-do dispatch.**
+→ 🔴 **COMO RETOMAR, O PRIMEIRO PASSO, SEM PENSAR:** conferir que a árvore está limpa e que o topo do
+`git log` é `bc57565` (`feat(painel): o numero de motor...`), e **despachar o arquivo
+`task-7-review-PROMPT.md` como está**, num agente `general-purpose`/opus. **Não reescreva o prompt, não
+re-audite a Tarefa 7, não pule pra Tarefa 8.** Depois da revisão: medir eu mesmo, onda de fix com prova
+vermelha de cada conserto, commit, atualizar este arquivo, e **emendar na Tarefa 8 (o mapa que arrasta o
+pin) sem pausar**. Detalhe no bloco "▶ RETOMAR A RODADA DO PAINEL COMPLETO", logo abaixo.
 
 🔴 **DUAS SESSÕES MORRERAM SEM AVISO nesta mesma tarefa** (a tela fechou na rodada 3, o PC desligou
 na 4d). As duas vezes o que sobreviveu foi o `git log` e o `RESUME.md`, e as duas vezes o que morreu
@@ -117,8 +130,8 @@ guarda do próprio harness, na 4e; → 1304 com os seis que a 4f acrescentou a e
 | **4 — `oculto`: esconder sem apagar** | ✅ **completa** (`3d88ea4..0dcf4a5`). Brief auditado antes do dispatch (9 achados, 2 `Critical`); o implementador achou **três coisas que a auditoria não tinha** e a revisão **nenhum `Critical`**. 17+12 mutações, todas mortas. Ver a seção **5d** |
 | **5 — a tela do lugar mostra a ficha inteira** | ✅ **completa** (`c1610c9..dfff50e`). A revisão achou **uma mutação sobrevivente na linha vermelha** (o cerco de nome de lugar tinha buraco na palavra `veu`) e quatro frases falsas, três delas em comentário de guarda. Ver **5f** |
 | **6 — um editor por espécie de campo** | ✅ **completa** (`3466703..94e469b`), **duas ondas de fix**. A revisão achou **sete mutações sobreviventes na linha vermelha** (o cerco só olhava a tela EM REPOUSO, então as frases de *salvando* e de *recusa* estavam fora); a re-revisão achou que o cerco novo **podia ser desligado em silêncio por duas portas**. Ver a seção **5g** |
-| **7 — o número de motor com a consequência ao vivo** | ⬜ **A PRÓXIMA. O brief NÃO existe: escrever e AUDITAR antes de despachar** — e ver a **condição** que a Tarefa 6 deixou, em **5g** |
-| 8 — o mapa que arrasta o pin | ⬜ |
+| **7 — o número de motor com a consequência ao vivo** | 🟡 **CÓDIGO COMPLETO (`bc57565`), REVISÃO NÃO RODADA.** O brief foi escrito e auditado por mim, e o implementador **recusou uma autorização dele com medição, e estava certo**. Achou um buraco real que o meu brief não nomeou: `Infinity`. Ver **5h** |
+| **8 — o mapa que arrasta o pin** | ⬜ depois que a revisão da 7 fechar. O brief NÃO existe |
 | 9 — o histórico de qualquer campo, e o escondido na lista | ⬜ |
 | 10 — a cadeia de waypoints | ⬜ |
 | 11 — criar lugar: o rascunho | ⬜ |
@@ -135,14 +148,13 @@ guarda do próprio harness, na 4e; → 1304 com os seis que a 4f acrescentou a e
    de ser commitada**, porque o commit dela mudou o HEAD de novo — e a terceira por cravar a contagem
    da suíte. **SHA e contagem do "agora" são frases falsas com atraso de um commit.** A régua que
    sobrevive é a FORMA do commit.)
-2. **Escreva e AUDITE o brief da Tarefa 7** — *o número de motor com a consequência ao vivo*. 🔴 **O
-   brief não existe ainda**, diferente das Tarefas 4, 5 e 6. O método que pagou esta rodada:
-   **auditar a tabela de mutação do brief contra o código de HOJE, antes de despachar** — foi assim
-   que seis defeitos do meu próprio plano caíram antes de custar uma rodada, cinco deles da mesma
-   espécie (lista escrita à mão cega ao que cresceu).
-   🔴 **E a Tarefa 6 deixou uma CONDIÇÃO para esta, medida: ver a seção 5g.** Se o editor do número
-   buscar copy em `src/lib/`, o cerco de nome de lugar fica **verde medindo o conjunto errado** — e a
-   resposta está pronta, medida, e custa ~15 linhas.
+2. 🔴 **DESPACHE A REVISÃO DA TAREFA 7 — o prompt está pronto em disco e NÃO deve ser reescrito:**
+   `.superpowers/sdd/2026-09-26-painel-completo/task-7-review-PROMPT.md`, num agente
+   `general-purpose`/opus. Ela foi despachada em 30/09 e **parada por mim antes de escrever nada**, a
+   pedido dele. **Não re-audite a Tarefa 7, não pule pra Tarefa 8, não escreva brief novo.**
+   O prompt já leva, por escrito, a parte mais delicada: **o implementador recusou uma autorização do
+   meu brief e estava certo em três de quatro pontos** (ver 5h), e o prompt manda a revisão **não ir
+   leve por causa disso** — refazer a medição que sustenta a recusa em vez de aceitá-la.
 3. **O molde do dispatch** é o que funcionou nas Tarefas 4, 5 e 6: papel de engenheiro sênior, ponteiro
    para o brief (que **vence o plano**), a régua das espécies de prova fraca, as medições obrigatórias
    (suíte, `tsc`, **`npm run build`** e **o tamanho da rota `/admin/[slug]`**), `git add` por caminho,
@@ -1006,6 +1018,68 @@ linha *"você, pelo painel"* no histórico append-only que não mudou uma vírgu
 a isso (o "não tem" num campo já ausente) **foi fechado**; a porta não. **Fica para a Tarefa 9, que é o
 histórico.**
 
+### 5h. 🟡 A TAREFA 7 — CÓDIGO COMPLETO, REVISÃO NÃO RODADA. E O IMPLEMENTADOR ME CORRIGIU.
+
+**`bc57565`.** Os três números que governam o motor (`condicao.regra.janela_previsao_horas`,
+`janela_passado_horas`, `limiar_mm`) ganharam editor, e o dono **vê a consequência antes de gravar**:
+uma rota de prévia (`POST /api/admin/previsao-carimbo`) devolve o carimbo que o lugar teria com aquele
+número, **nas palavras da tela pública**, sem gravar nada.
+
+**Medido por mim no fechamento:** 1547/1547 em **87** arquivos, `tsc` exit 0, `npm run build` exit 0,
+`ƒ /admin/[slug]` **4.38 kB · 110 kB** (era 3.79 · 110), `ƒ /api/admin/previsao-carimbo` **153 B**,
+`shared by all` **104 kB inalterado**. Marcadores `// PENDENTE`: **91** em `src/`, **65** no painel,
+**18** em `campos/` — **+5 frases novas**, todas em `campos/palavras.ts`, dentro da árvore cercada.
+
+🔴 **O QUE MAIS IMPORTA DESTA TAREFA: EU ERREI A AUDITORIA DO MEU PRÓPRIO BRIEF, E ELE PROVOU.** Estão
+escritos aqui para a próxima sessão não repetir:
+
+1. 🔴 **A premissa do A3 era FALSA, e a direção que eu autorizei deixaria o app PIOR.** Eu escrevi que
+   a porta aceitava uma regra quebrada e autorizei restringir o `regraSchema`. **O portão de coerência
+   `janela-nao-zerada` (`src/lib/coerencia.ts:472`) já recusava zero e negativo desde a Tarefa 3, com
+   409 e frase que explica** — conferido por mim. Eu medi o schema e medi o `avaliar`, e **não medi a
+   rota de gravação**, que era onde a resposta estava. Se ele tivesse obedecido: a recusa que hoje
+   explica viraria **400 de corpo vazio** → o dono leria *"Não consegui salvar."*, a frase menos
+   informativa do app. **Medição dele: `1454 passed | 4 failed`.** Ele recusou e relatou. **Certo.**
+2. 🔴 **Eu li UMA ficha e afirmei TRÊS.** O brief dizia *"as três fichas têm `janela_previsao_horas: 3`,
+   `janela_passado_horas: 6`"*. Medido por mim depois: a **Pedra Furada é `2` e `3`**. É a espécie
+   "lista escrita à mão cega ao que cresceu" — **cometida dentro da auditoria que existe pra caçar essa
+   espécie**. (O `limiar_mm: 0.2` estava certo: aquele eu medi nas três, por `grep`.)
+3. 🔴 **O A10 tinha a polaridade do `mostraOValor` invertida** — quem produz duas fontes para o mesmo
+   número é `false`, não `true`.
+4. ⚠️ **E eu não nomeei o estado que estava aberto de verdade.**
+
+🔴 **O BURACO REAL, que ele achou e que o meu brief não nomeou: `Infinity`.** O portão testa `x > 0`, e
+**`Infinity > 0` é `true`** — então o portão não acusava. Medido por mim, ponta a ponta: `1e999` é
+sintaxe válida num `<input type="number">`, o `JSON.parse` entrega `Infinity`, passava pelo
+`z.number()` **e** pelo portão, e `JSON.stringify` grava **`"janela_previsao_horas":null`** no
+documento — que o schema não relê. **Resultado: o lugar sai do ar e o dono fica trancado fora do
+painel.** E **esta tarefa é a que põe esses números no celular dele**, então ela criou o caminho.
+Ele fechou com **`.finite()`** no `regraSchema`, e **só isso** — provado nos dois sentidos (mutações
+M14 e M19), 1458/1458 e zero guardas vermelhos.
+
+**As três camadas, e qual é a garantia:** o cliente recusa antes (`REGRA_QUE_MENTE`, pra poupar a
+viagem) · a rota de prévia recusa antes de tocar o banco (400) · **a porta de escrita é a garantia**
+(409 com a frase da coerência, que já existia). Mais o `.finite()` no schema.
+
+**A outra decisão de desenho dele, e é boa:** o corpo da prévia é **`{slug, campo, valor}`**, não
+`{slug, regra}` como o plano pedia — mesmo formato da porta de escrita; no formato do plano uma tela
+mal escrita poderia prever uma regra cujos **outros dois números não são os do documento**, descrevendo
+uma regra que não existe. E a chuva vem de **`freshness.previsao_bruta`** (que até aqui **nenhum
+chamador em `src/` relia**), nunca do provedor externo — o que torna o teste determinístico e a prévia
+honesta ("a mesma chuva que o motor usou"). Lugar sem leitura ainda devolve `semLeitura`, e a tela diz
+isso em vez de inventar carimbo.
+
+**19 mutações, 19 mortes** — e **duas sobreviveram primeiro**, cada uma virando prova nova: a recusa
+barata e o exame dos três números eram **duas portas em série** (arrancar a de cima deixava 15 casos de
+400 verdes; fechou com espiã no `c.execute`), e 🔴 **o `.finite()` que ele mesmo acrescentou nasceu sem
+prova**. Mais um defeito no harness dele, falhando pro lado confortável: ele exigia que o alvo
+*"tivesse saído"*, mas uma das mutações **acrescenta** linha — imprimiu `ALVO AUSENTE` sobre um patch
+que **aplicou**.
+
+🔴 **O QUE FALTA, e é o primeiro passo da próxima sessão:** **a revisão desta tarefa não rodou.** Foi
+despachada e parada por mim quando ele pediu pra dormir. **O prompt está pronto em
+`.superpowers/sdd/2026-09-26-painel-completo/task-7-review-PROMPT.md` — despache como está.**
+
 ---
 
 ## ▶ ELE DIGITOU "CONTINUA"? COMECE AQUI, SEM PERGUNTAR NADA.
@@ -1026,10 +1100,14 @@ que envelhece pior, porque é o único que ninguém re-lê antes de agir.**
    automático: existe um **flake não identificado** registrado na seção 5f — anote o nome do arquivo
    vermelho, que é a informação que falta. No fechamento da Tarefa 6 a suíte rodou seis vezes, todas
    verdes.)
-2. 🔴 **O laço de construção ESTÁ EM CURSO: 6 de 12 tarefas.** O primeiro passo é a **Tarefa 7** (o
-   número de motor com a consequência ao vivo) — e, diferente das Tarefas 4, 5 e 6, **o brief dela não
-   existe: escrever e AUDITAR antes de despachar**. Ver o item 2 da seção 3b e a **condição medida que
-   a Tarefa 6 deixou**, na seção **5g**.
+2. 🔴 **O laço de construção ESTÁ EM CURSO: 7 de 12 tarefas.** O primeiro passo é **despachar a
+   REVISÃO DA TAREFA 7**, cujo prompt está **pronto em disco e não deve ser reescrito**:
+   `.superpowers/sdd/2026-09-26-painel-completo/task-7-review-PROMPT.md`, num `general-purpose`/opus.
+   O código da 7 está completo e commitado (`bc57565`); **a revisão foi despachada em 30/09 e parada
+   por mim antes de escrever nada**, porque ele pediu pra dormir e resultado de subagente morre com a
+   sessão. **Não re-audite a 7, não pule pra 8, não escreva brief novo.** Ver as seções 3b e **5h** —
+   e 5h conta os **três erros que eu cometi na auditoria do meu próprio brief**, que o implementador
+   derrubou com medição.
 3. 🔴 **NÃO abra o dia com um menu das coisas que são dele.** Elas estão na seção 5 e continuam
    esperando; nenhuma trava o código. Se ele disser só *"continua"*, **construa** — e entregue a
    lista de palavras quando o conjunto de telas fechar, não em pedaços.
@@ -1556,6 +1634,21 @@ procedência deixar de ser disciplina minha e virar `git blame`.
 6. 🆕 **(30/09) As quatro listas fechadas do painel mostram o valor CRU** (`barro`, `nao-va`, `sab`,
    `gratis`) — nenhuma tem palavra neutra no app, e cunhá-las é copy nova sobre lugar real. Dívida de
    **palavra, não de código**, e as quatro devem ser batizadas de uma vez. **Não bloqueia nada.**
+
+🔴 **E AS PALAVRAS DE TELA ESPERANDO A LEITURA DELE CRESCERAM: +5 na Tarefa 7** (todas em
+`campos/palavras.ts`, todas `PENDENTE`, nenhuma no ar). São as frases do editor do número, e vale
+mostrar as duas que mais custam:
+
+| a frase | quando ele a vê |
+|---|---|
+| "Zero ou menos não é regra: assim o lugar passa a dizer não para sempre, ou nunca avisa. Use um número maior que zero." | ele digita `0` ou negativo num dos três números do motor |
+| "Com este número, a tela do lugar diria:" | a moldura da prévia — sem ela, ele leria a prévia como o estado de AGORA |
+| "Conferindo o que muda…" | enquanto a prévia carrega |
+| "Ainda não tem chuva lida aqui, então não dá pra mostrar o que mudaria." | o motor nunca rodou nesse lugar |
+| "Não consegui conferir o que muda." | a prévia falhou (diferente da de cima: lá o app sabe que não sabe) |
+
+A procedência de cada pedaço está em `task-7-report.md`, item 4 — e o pedaço *"ou nunca avisa"* é
+**medido**, não retórico: janela de passado negativa dá `fresco` com 5 mm de chuva uma hora atrás.
 
 ---
 
