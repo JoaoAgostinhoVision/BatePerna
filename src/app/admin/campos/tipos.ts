@@ -26,9 +26,10 @@ export type CampoNaTela = {
    *  `aria-label` do instrumento — nunca imprime um segundo rótulo visível, que
    *  duplicaria o `.adm-campo-rotulo` que o bloco já mostra. */
   rotulo: string;
-  /** Obrigatório não tem "não sei" (§4.2 do desenho). É o que decide se o
-   *  `BotaoNaoSei` aparece — e a porta recusa igual, com frase, se a tela
-   *  errar. */
+  /** Obrigatório não tem "não sei" (§4.2 do desenho). É UM dos dois estados que
+   *  escondem o `BotaoNaoSei`; o outro é o campo JÁ AUSENTE, onde o botão não
+   *  mudaria nada. Quem decide, nos dois casos, é o próprio `BotaoNaoSei`, num
+   *  lugar só — e a porta recusa igual, com frase, se a tela errar. */
   obrigatorio: boolean;
   /** Só pra espécie `lista`: as palavras que o registro deixa escolher, por
    *  PROP — o editor não conhece módulo de vocabulário nenhum. Três delas vêm

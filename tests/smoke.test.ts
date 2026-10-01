@@ -47,7 +47,7 @@ describe("as referências a arquivo do repo apontam pra arquivo que existe", () 
     expect(
       referencias.length,
       "nenhuma referência foi achada: a regex do guarda parou de casar e ele ficaria verde por vacuidade",
-    ).toBeGreaterThan(50);
+    ).toBeGreaterThan(150);
 
     for (const { onde, alvo } of referencias) {
       expect(

@@ -8,10 +8,10 @@
  *  (`FichaInteira`) — mesma razão que mantém `src/lib/piso.ts` puro.
  *
  *  A PROCEDÊNCIA de cada uma está ao lado. Duas delas vinham do
- *  `EditorDeVoz.tsx` — que vivia em `src/app/admin/` e foi APAGADO nesta
- *  tarefa, então o nome vem sem caminho — **sem marcador nenhum** — estavam na tela e não estavam na fila de leitura dele. Agora
- *  estão marcadas: marcar a mais é honesto, marcar a menos é a frase que sobe
- *  sem ninguém ler. */
+ *  `EditorDeVoz.tsx`, componente APAGADO nesta tarefa — o nome vem sem caminho
+ *  porque não há arquivo pra abrir. Estavam na tela **sem marcador nenhum**,
+ *  fora da fila de leitura dele; agora estão marcadas. Marcar a mais é honesto;
+ *  marcar a menos é a frase que sobe sem ninguém ler. */
 
 /** O "sim" de um booleano e o "sim" de um bloco opcional são a MESMA palavra de
  *  propósito: as duas respondem a mesma forma de pergunta ("este lugar tem

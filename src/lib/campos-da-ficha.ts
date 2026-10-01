@@ -22,8 +22,9 @@ import { fichaSchema, type Ficha } from "@/types/ficha";
  *
  *  - `prosa` — caixa de texto.
  *  - `lista` — escolher de lista fechada; **nunca digitar**. Sempre com
- *    `opcoes`, e as opções vêm de `PISOS`/`DIAS`/`SEVERIDADES`, nunca de uma
- *    cópia repetida aqui.
+ *    `opcoes`: três delas vêm de `PISOS`/`DIAS`/`SEVERIDADES`, e `custo.tag` tem
+ *    a lista LITERAL aqui mesmo, 80 linhas abaixo — dívida da Task 1, e dizer
+ *    que nenhuma é cópia repetida era falso.
  *  - `booleano` — interruptor, com a frase que ele vira na tela ao lado.
  *  - `hora` — seletor `HH:MM`; o schema tem regex e texto livre não passa.
  *  - `numero` — número DE MOTOR (limiar de chuva, janelas): a tela mostra a

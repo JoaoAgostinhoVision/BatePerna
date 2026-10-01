@@ -24,14 +24,15 @@ import {
   removerCampo,
 } from "@/lib/campos-da-ficha";
 import { getAllFichas } from "@/lib/ficha";
-import type { Ficha } from "@/types/ficha";
+import { type Ficha, fichaSchema } from "@/types/ficha";
 import { bancoDeProducao } from "../banco";
 
 /** OS EDITORES POR ESPÉCIE (Task 6, 2026-09-30) — e este arquivo é também o
  *  destino dos quatro casos do `editor-de-voz.test.tsx`, que morreu junto com o
- *  componente (o nome vem sem caminho porque não há arquivo pra abrir). **Suíte verde não prova contração: teste apagado não
- *  falha.** A tabela caso-a-caso está no relatório da tarefa; aqui, cada caso
- *  migrado leva a marca `⇦ editor-de-voz` no nome ou no comentário.
+ *  componente. O nome vem sem caminho porque não há arquivo pra abrir. **Suíte
+ *  verde não prova contração: teste apagado não falha.** A tabela caso-a-caso
+ *  está no relatório da tarefa; aqui, cada caso migrado leva a marca
+ *  `⇦ editor-de-voz` no nome ou no comentário.
  *
  *  🔴 QUASE TODO CASO RENDERIZA A `FichaInteira` INTEIRA e mede DENTRO do bloco
  *  do campo (`within(bloco("voz"))`), em vez de montar o editor solto com props
@@ -254,6 +255,58 @@ describe('O "não sei" — a ação que TIRA a chave, e só em campo opcional', 
     expect(semHorario.dias, "esta ficha perdeu os dias — o par simétrico deixou de ser medido").toBeTruthy();
     render(<FichaInteira ficha={semHorario} />);
     expect(bloco("dias").querySelector('[data-nao-sei="dias"]')).not.toBeNull();
+  });
+
+  // 🔴 FALSY NÃO É AUSÊNCIA, E AQUI A RÉGUA É A MAIS DURA DO PROJETO: não
+  // trancar o dono de declarar uma verdade. A condição que esconde o botão é
+  // `valor === undefined`, e as três fichas do acervo têm `carroComum: true` —
+  // então alargá-la com `|| valor === false || valor === ""` SOBREVIVIA a toda a
+  // suíte, porque o corpus de todo guarda deste arquivo é o acervo real. O
+  // estado está a UM TOQUE do dono: há caso aqui provando que o `EditorBooleano`
+  // manda `{campo:"carroComum", valor:false}`. Sob aquela mutação, no toque
+  // seguinte o botão DESAPARECE e ele fica trancado de voltar ao silêncio num
+  // campo em que `false` ("não dá pra ir de carro comum") e ausente ("ninguém
+  // disse") são coisas diferentes — o assunto do docblock inteiro do
+  // `EditorBooleano`. Não era defeito de comportamento; era guarda ausente.
+  it('campo opcional com valor FALSY mas PRESENTE continua oferecendo o "não sei" — `false` e `""` não são ausência', () => {
+    const casos = [
+      { nome: "carroComum: false", caminho: "carroComum", ficha: { ...semHorario, carroComum: false } },
+      {
+        nome: 'custo.curto: ""',
+        caminho: "custo.curto",
+        ficha: { ...semHorario, custo: { ...semHorario.custo, curto: "" } },
+      },
+    ];
+    for (const c of casos) {
+      // 🔴 O ESTADO É ALCANÇÁVEL, e quem diz é a PORTA: sem esta linha o caso
+      // poderia estar guardando a tela contra um estado que o banco não aceita.
+      expect(
+        () => fichaSchema.parse(c.ficha),
+        `${c.nome}: o schema recusa este estado — o caso mediria uma ficha impossível`,
+      ).not.toThrow();
+      const { unmount } = render(<FichaInteira ficha={c.ficha} />);
+      expect(
+        bloco(c.caminho).hasAttribute("data-ausente"),
+        `${c.nome}: a tela tratou um valor PRESENTE como ausência`,
+      ).toBe(false);
+      expect(
+        bloco(c.caminho).querySelector(`[data-nao-sei="${c.caminho}"]`),
+        `${c.nome}: a tela escondeu o "não sei" num campo PREENCHIDO — o dono ficou TRANCADO de voltar ao silêncio`,
+      ).not.toBeNull();
+      unmount();
+    }
+  });
+
+  // 🔴 A IRMÃ QUE NÃO EXISTE, e é a porta que diz: `dias: []` é INALCANÇÁVEL,
+  // porque `fichaSchema` tem `.min(1)` na lista. Guardar a tela contra ela seria
+  // guardar um estado que o banco nunca aceita; o guarda certo é este, contra a
+  // PORTA, e ele fica vermelho no dia em que o `.min(1)` cair — que é o dia em
+  // que a tela passa a precisar do caso de cima pra `dias` também.
+  it("`dias: []` a PORTA recusa — a lista vazia nem chega à tela", () => {
+    expect(
+      () => fichaSchema.parse({ ...semHorario, dias: [] }),
+      "o schema passou a aceitar lista vazia: `dias: []` virou estado alcançável e precisa do guarda de cima",
+    ).toThrow();
   });
 
   // 🔴 O QUE AUTORIZA ESCONDER: a PORTA. Não é "o botão é feio ali" — é que o
@@ -679,11 +732,31 @@ describe("O bloco `horario` — a tela não convida ao que a porta nega (A3)", (
  *  corpo lido uma vez, e reusar a mesma instância em quatro casos faria o
  *  segundo cair no `catch` — o caso passaria verde medindo outra coisa. */
 describe("O que ele escolheu não some em recusa nenhuma — nos quatro instrumentos (A9)", () => {
-  const RECUSAS: readonly { nome: string; fazer: () => Response | Error }[] = [
-    { nome: "400 com frase", fazer: () => new Response("a porta recusou, com frase", { status: 400 }) },
-    { nome: "409 da coerência", fazer: () => new Response("o chip diz outra coisa", { status: 409 }) },
-    { nome: "sem rede", fazer: () => new TypeError("Failed to fetch") },
+  /** 🔴 E CADA RECUSA LEVA A FRASE QUE A TELA TEM DE MOSTRAR. Esperar o
+   *  `[role="alert"]` APARECER não distingue caminho nenhum: sabotando
+   *  `gravar.ts` pra `if (!r.ok) throw`, toda recusa cai no `catch` e imprime
+   *  `ERRO_REDE` — e os cinco casos deste bloco ficavam VERDES, com o nome deles
+   *  prometendo "as três recusas" e medindo uma. A frase é o que prova QUAL
+   *  caminho produziu o alerta: o corpo da resposta no 400 e no 409 (a frase que
+   *  diz ao dono o que fazer, que a Tarefa 3 consertou), a frase própria só
+   *  quando não houve viagem.
+   *
+   *  🔴 A FRASE E O CORPO SAEM DO MESMO LUGAR (`daPorta`), senão os dois
+   *  desandam em silêncio e o caso volta a medir que "algum alerta apareceu". */
+  const daPorta = (frase: string, status: number) => ({ frase, fazer: () => new Response(frase, { status }) });
+  const RECUSAS: readonly { nome: string; frase: string; fazer: () => Response | Error }[] = [
+    { nome: "400 com frase", ...daPorta("a porta recusou, com frase", 400) },
+    { nome: "409 da coerência", ...daPorta("o chip diz outra coisa", 409) },
+    { nome: "sem rede", frase: ERRO_REDE, fazer: () => new TypeError("Failed to fetch") },
   ];
+
+  it("as três recusas têm frases DIFERENTES — sem isso a asserção da frase não distinguiria caminho nenhum", () => {
+    expect(RECUSAS.length, "o enumerador das recusas encolheu").toBe(3);
+    expect(
+      new Set(RECUSAS.map((r) => r.frase)).size,
+      "duas recusas com a MESMA frase: a asserção do alerta voltaria a medir só que algum alerta apareceu",
+    ).toBe(RECUSAS.length);
+  });
 
   /** Renderiza, deixa quem chama mexer e salvar, e espera a recusa aparecer no
    *  bloco do campo. Devolve o `fetch` dublado, pra provar que a viagem
@@ -695,8 +768,12 @@ describe("O que ele escolheu não some em recusa nenhuma — nos quatro instrume
     return { fetchFalso };
   }
 
-  async function esperarAlerta(caminho: string): Promise<void> {
+  async function esperarAlerta(caminho: string, frase: string): Promise<void> {
     await waitFor(() => expect(bloco(caminho).querySelector('[role="alert"]')).not.toBeNull());
+    expect(
+      bloco(caminho).querySelector('[role="alert"]')!.textContent,
+      "o alerta apareceu com a frase de OUTRO caminho: o caso não mede a recusa que o nome dele promete",
+    ).toBe(frase);
   }
 
   it("EditorHora: a hora escolhida continua no seletor, nas três recusas", async () => {
@@ -706,7 +783,7 @@ describe("O que ele escolheu não some em recusa nenhuma — nos quatro instrume
         bloco("horario.fecha").querySelector<HTMLInputElement>('[data-hora="horario.fecha"]')!;
       fireEvent.change(caixa(), { target: { value: "19:45" } });
       salvar("horario.fecha");
-      await esperarAlerta("horario.fecha");
+      await esperarAlerta("horario.fecha", r.frase);
       expect(fetchFalso, `${r.nome}: a viagem não aconteceu — o caso mediu uma recusa de cliente`).toHaveBeenCalled();
       expect(caixa().value, `${r.nome}: a hora que ele acabou de escolher sumiu`).toBe("19:45");
       cleanup();
@@ -721,7 +798,7 @@ describe("O que ele escolheu não some em recusa nenhuma — nos quatro instrume
       fireEvent.change(caixa("abre"), { target: { value: "08:15" } });
       fireEvent.change(caixa("fecha"), { target: { value: "17:45" } });
       salvar("horario");
-      await esperarAlerta("horario");
+      await esperarAlerta("horario", r.frase);
       expect(fetchFalso, `${r.nome}: a viagem não aconteceu`).toHaveBeenCalled();
       expect(caixa("abre").value, `${r.nome}: a hora de abrir sumiu`).toBe("08:15");
       expect(caixa("fecha").value, `${r.nome}: a hora de fechar sumiu`).toBe("17:45");
@@ -739,7 +816,7 @@ describe("O que ele escolheu não some em recusa nenhuma — nos quatro instrume
       for (const d of semHorario.dias as readonly string[]) fireEvent.click(caixa(d));
       fireEvent.click(caixa("qua"));
       salvar("dias");
-      await esperarAlerta("dias");
+      await esperarAlerta("dias", r.frase);
       expect(fetchFalso, `${r.nome}: a viagem não aconteceu`).toHaveBeenCalled();
       expect(caixa("qua").checked, `${r.nome}: a marcação que ele acabou de fazer sumiu`).toBe(true);
       for (const d of semHorario.dias as readonly string[]) {
@@ -759,7 +836,7 @@ describe("O que ele escolheu não some em recusa nenhuma — nos quatro instrume
         .find((v) => v !== "" && v !== semHorario.piso)!;
       fireEvent.change(escolha(), { target: { value: outro } });
       salvar("piso");
-      await esperarAlerta("piso");
+      await esperarAlerta("piso", r.frase);
       expect(fetchFalso, `${r.nome}: a viagem não aconteceu`).toHaveBeenCalled();
       expect(escolha().value, `${r.nome}: a escolha que ele acabou de fazer sumiu`).toBe(outro);
       cleanup();
@@ -773,7 +850,7 @@ describe("O que ele escolheu não some em recusa nenhuma — nos quatro instrume
         emCampo("carroComum").getByRole("radio", { name: nome }) as HTMLInputElement;
       fireEvent.click(radio("Não"));
       salvar("carroComum");
-      await esperarAlerta("carroComum");
+      await esperarAlerta("carroComum", r.frase);
       expect(fetchFalso, `${r.nome}: a viagem não aconteceu`).toHaveBeenCalled();
       expect(radio("Não").checked, `${r.nome}: a resposta que ele acabou de marcar sumiu`).toBe(true);
       cleanup();
@@ -988,13 +1065,47 @@ describe("Os editores servem os três lugares", () => {
       .filter((p) => !CONECTIVOS.includes(p));
   };
 
-  /** 🔴 A PASTA DOS EDITORES, LIDA DO DISCO. Nem uma lista de arquivos nem uma
-   *  lista de constantes: arquivo novo em `campos/` entra no cerco sozinho. */
-  const PASTA_DOS_EDITORES = path.join(process.cwd(), "src", "app", "admin", "campos");
-  const ARQUIVOS_DOS_EDITORES = readdirSync(PASTA_DOS_EDITORES).filter((a) => /\.tsx?$/.test(a));
+  /** 🔴 A ÁRVORE DO PAINEL, LIDA DO DISCO, RECURSIVA. Nem uma lista de arquivos
+   *  nem uma lista de constantes: arquivo novo em qualquer canto do painel entra
+   *  no cerco sozinho.
+   *
+   *  🔴 E ELA ERA UMA PASTA SÓ (`campos/`), o que trocou a fronteira do ESTADO
+   *  pela fronteira do DIRETÓRIO — e as duas metades deste cerco deviam cobrir
+   *  uma pela outra justamente ali. Medido: um módulo novo um nível acima de
+   *  `campos/`, com uma frase que nomeia um lugar, mostrada SÓ EM RECUSA dentro
+   *  de um editor, passava VERDE; a mesma frase em repouso ficava vermelha. O
+   *  buraco era a interseção *fora da pasta* **e** *fora do repouso* — e aquele
+   *  nível acima é precisamente onde o `EditorDeVoz` morava, e onde a próxima
+   *  tarefa pode pôr um editor novo. A árvore inteira fecha POR CONSTRUÇÃO, e o
+   *  custo foi MEDIDO antes de escolher: 17 arquivos, 533 literais, ZERO falso
+   *  positivo. (A alternativa — provar que toda frase que um editor renderiza em
+   *  qualquer estado vem do conjunto varrido — exigiria encenar os cinco
+   *  editores em quatro estados cada e carregar uma exceção escrita à mão por
+   *  rótulo do registro e por palavra de vocabulário: 38 delas hoje, crescendo a
+   *  cada campo novo. Lista à mão pra fechar um furo de lista à mão.) */
+  const RAIZ_DO_PAINEL = path.join(process.cwd(), "src", "app", "admin");
+  const arquivosDe = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? arquivosDe(path.join(dir, e.name)) : [path.join(dir, e.name)],
+    );
+  const ARQUIVOS_DO_PAINEL = arquivosDe(RAIZ_DO_PAINEL).filter((a) => /\.tsx?$/.test(a));
 
-  /** Todo literal de string de um arquivo — pelo PARSER DO TYPESCRIPT, não por
-   *  regex.
+  /** OS SEIS TIPOS DE LITERAL DE TEXTO que o parser distingue, e os seis contam:
+   *  uma frase pode ser escrita de qualquer uma destas formas dentro de um
+   *  editor. Toda entrada desta lista tem sentinela própria no caso logo abaixo
+   *  — sem isso, cinco das seis não tinham controle nenhum. */
+  const K = ts.SyntaxKind;
+  const DE_TEXTO: ts.SyntaxKind[] = [
+    K.StringLiteral,
+    K.NoSubstitutionTemplateLiteral,
+    K.TemplateHead,
+    K.TemplateMiddle,
+    K.TemplateTail,
+    K.JsxText,
+  ];
+
+  /** Todo literal de string de um texto de código — pelo PARSER DO TYPESCRIPT,
+   *  não por regex.
    *
    *  🔴 POR QUE O PARSER: um varredor à mão sobre o texto do arquivo cai numa
    *  das duas frestas que este projeto já pagou — ou tira os comentários e
@@ -1004,19 +1115,13 @@ describe("Os editores servem os três lugares", () => {
    *  `horario` e do que a porta recusa, em português, e citam o lugar que não
    *  tem horário). O parser resolve os dois de uma vez: ele enxerga literal
    *  como literal e comentário como comentário, e é a mesma ferramenta que
-   *  compila o app. */
-  const literaisDe = (arquivo: string): string[] => {
-    const texto = readFileSync(path.join(PASTA_DOS_EDITORES, arquivo), "utf8");
-    const fonte = ts.createSourceFile(arquivo, texto, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-    const K = ts.SyntaxKind;
-    const DE_TEXTO: ts.SyntaxKind[] = [
-      K.StringLiteral,
-      K.NoSubstitutionTemplateLiteral,
-      K.TemplateHead,
-      K.TemplateMiddle,
-      K.TemplateTail,
-      K.JsxText,
-    ];
+   *  compila o app.
+   *
+   *  🔴 E ELE RECEBE O TEXTO, não o caminho, só por um motivo: é isso que deixa
+   *  o varredor ser medido contra uma fonte-sentinela em vez de só contra os
+   *  arquivos do app. */
+  const literaisDoTexto = (nome: string, texto: string): string[] => {
+    const fonte = ts.createSourceFile(nome, texto, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const saida: string[] = [];
     const andar = (n: ts.Node): void => {
       if (DE_TEXTO.includes(n.kind)) saida.push((n as ts.LiteralLikeNode).text);
@@ -1025,6 +1130,59 @@ describe("Os editores servem os três lugares", () => {
     andar(fonte);
     return saida;
   };
+  const literaisDe = (arquivo: string): string[] => literaisDoTexto(arquivo, readFileSync(arquivo, "utf8"));
+
+  /** 🔴 A FONTE-SENTINELA DO VARREDOR, E ELA É INSTRUMENTO, NÃO COPY.
+   *
+   *  As treze frases de `CUNHADAS_AQUI` são TODAS `StringLiteral` — então cinco
+   *  dos seis tipos de `DE_TEXTO` não tinham controle nenhum: reduzir a lista a
+   *  `[K.StringLiteral]` deixava a suíte inteira VERDE. E eles têm dentes: o
+   *  `JsxText` foi medido dos dois lados (uma frase escrita como texto de `<span>`
+   *  dentro de um editor fica vermelha com o tipo ligado e passa com ele
+   *  desligado) e saía calado.
+   *
+   *  🔴 POR QUE ELA MORA AQUI, e não num arquivo do app: ela não é frase de tela
+   *  e não entra na fila de leitura do dono, porque NUNCA aparece numa tela — este
+   *  trecho não é importado por ninguém, não vai pro bundle e não é renderizado;
+   *  é só texto que o parser lê. E ela não nomeia lugar nenhum do acervo de
+   *  propósito: uma sentinela com nome de lugar deixaria o próprio cerco vermelho
+   *  acusando a sentinela. */
+  const FONTE_SENTINELA = [
+    'const aspas = "sentinela de aspas";',
+    "const crase = `sentinela de crase`;",
+    "const partido = `sentinela de cabeca ${0} sentinela de meio ${1} sentinela de cauda`;",
+    "const jsx = <span>sentinela de texto jsx</span>;",
+  ].join("\n");
+
+  /** Uma por tipo de `DE_TEXTO`, com o nome do tipo na mensagem — desligar
+   *  qualquer um deles diz QUAL forma de escrever uma frase saiu do cerco. */
+  const SENTINELAS: readonly { tipo: string; texto: string }[] = [
+    { tipo: "StringLiteral (aspas)", texto: "sentinela de aspas" },
+    { tipo: "NoSubstitutionTemplateLiteral (crase sem ${})", texto: "sentinela de crase" },
+    { tipo: "TemplateHead (antes do primeiro ${})", texto: "sentinela de cabeca " },
+    { tipo: "TemplateMiddle (entre dois ${})", texto: " sentinela de meio " },
+    { tipo: "TemplateTail (depois do último ${})", texto: " sentinela de cauda" },
+    { tipo: "JsxText (texto solto dentro de uma tag)", texto: "sentinela de texto jsx" },
+  ];
+
+  it("o varredor da FONTE vê os SEIS tipos de literal de texto, não só o de aspas", () => {
+    // 🔴 AS SENTINELAS PRIMEIRO, E A ORDEM É O CONSERTO DE UM DEFEITO MEDIDO: com
+    // a contagem na frente, desligar um tipo deixava este caso vermelho pela
+    // CONTAGEM e não pela sentinela — guarda que sai pelo motivo errado, a 50ª e
+    // a 51ª espécies do catálogo. Assim, tipo desligado diz QUAL forma saiu do
+    // cerco, e a contagem fica só pro caso inverso (tipo novo sem sentinela).
+    const achados = literaisDoTexto("sentinela.tsx", FONTE_SENTINELA);
+    for (const { tipo, texto } of SENTINELAS) {
+      expect(
+        achados,
+        `o varredor deixou de ver ${tipo}: uma frase de editor escrita nessa forma sai do cerco em silêncio`,
+      ).toContain(texto);
+    }
+    expect(
+      SENTINELAS.length,
+      "um tipo de literal entrou em `DE_TEXTO` sem sentinela própria: ele nasceria sem controle, que é o defeito que este caso fecha",
+    ).toBe(DE_TEXTO.length);
+  });
 
   /** As frases que ESTÃO NA TELA em repouso, das três fichas. Sem lista de
    *  seletores: todo nó de TEXTO dentro de `[data-editor]`, mais os atributos
@@ -1067,13 +1225,17 @@ describe("Os editores servem os três lugares", () => {
     return saida;
   };
 
-  /** 🔴 AS TREZE FRASES DE TELA QUE ESTA PASTA CUNHOU. Este arranjo NÃO é o
+  /** 🔴 AS TREZE FRASES DE TELA QUE O PAINEL EXPORTA. Este arranjo NÃO é o
    *  enumerador do cerco — ele é o CONTROLE DE COMPLETUDE dele. Cada uma é
    *  importada do módulo onde mora, então uma frase que mude de texto continua
-   *  batendo; o que este controle pega é o ENUMERADOR ENCOLHER (a pasta lida
+   *  batendo; o que este controle pega é o ENUMERADOR ENCOLHER (a árvore lida
    *  errado, o parser parando de ver um tipo de literal), que deixaria o cerco
    *  verde com metade da cerca — foi exatamente o defeito da primeira versão,
-   *  que alcançava 6 destas 13. */
+   *  que alcançava 6 destas 13.
+   *
+   *  🔴 E ELE É LISTA ESCRITA À MÃO, a 45ª espécie deste catálogo: pega o
+   *  enumerador encolher e NÃO pega uma frase nova que ninguém pôs aqui. O
+   *  portão de completude dele próprio é o caso logo abaixo. */
   const CUNHADAS_AQUI = [
     SIM,
     NAO,
@@ -1095,6 +1257,65 @@ describe("Os editores servem os três lugares", () => {
    *  render. */
   const EM_REPOUSO = [SIM, NAO, SALVAR, NAO_SEI, NAO_TEM, BLOCO_JUNTO];
 
+  /** 🔴 O PORTÃO DE COMPLETUDE DA LISTA DE CIMA — o que acusa quando uma frase
+   *  NOVA de editor não entra nela. Medido: exportar uma frase nova de um editor
+   *  e não pôr em `CUNHADAS_AQUI` deixava a suíte inteira verde, e a próxima
+   *  tarefa cunha editor.
+   *
+   *  🔴 A ENUMERAÇÃO É POR OUTRO CAMINHO, DE PROPÓSITO: ela lê o AST procurando
+   *  `export const NOME = "texto"` e tira o texto do nó do inicializador, sem
+   *  passar por `DE_TEXTO`. Se ela usasse a mesma lista, desligar um tipo
+   *  encolheria o portão E o enumerador juntos, e os dois ficariam verdes de mãos
+   *  dadas — que é a forma mais confortável de um instrumento falhar.
+   *
+   *  ⚠️ A ÚNICA EXCEÇÃO, E ELA É POR NOME RESERVADO: a configuração de segmento
+   *  do Next (`export const dynamic = "force-dynamic"` nas duas páginas do
+   *  painel). A pergunta obrigatória — "que caso REAL esta exceção está comendo?"
+   *  — tem resposta: uma frase de tela exportada com um destes seis nomes, que
+   *  são do framework e não do português. É preço nomeado, não filtro por
+   *  heurística (a 53ª espécie): um cerco que tentasse adivinhar "isto parece
+   *  configuração" comeria frase de verdade. */
+  const CONFIG_DO_NEXT = ["dynamic", "dynamicParams", "revalidate", "runtime", "fetchCache", "preferredRegion"];
+  const textoExportadoDe = (arquivo: string): { nome: string; texto: string }[] => {
+    const fonte = ts.createSourceFile(
+      arquivo,
+      readFileSync(arquivo, "utf8"),
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX,
+    );
+    const saida: { nome: string; texto: string }[] = [];
+    const andar = (n: ts.Node): void => {
+      if (ts.isVariableStatement(n) && n.modifiers?.some((m) => m.kind === K.ExportKeyword)) {
+        for (const d of n.declarationList.declarations) {
+          const valor = d.initializer;
+          if (valor && (ts.isStringLiteral(valor) || ts.isNoSubstitutionTemplateLiteral(valor))) {
+            saida.push({ nome: d.name.getText(fonte), texto: valor.text });
+          }
+        }
+      }
+      ts.forEachChild(n, andar);
+    };
+    andar(fonte);
+    return saida;
+  };
+
+  it("toda frase que o painel EXPORTA está no controle de completude do cerco", () => {
+    const exportadas = ARQUIVOS_DO_PAINEL.flatMap(textoExportadoDe).filter(
+      (e) => !CONFIG_DO_NEXT.includes(e.nome),
+    );
+    expect(
+      exportadas.length,
+      "nenhuma constante de texto foi achada na árvore do painel: o portão ficaria oco",
+    ).toBeGreaterThan(10);
+    for (const { nome, texto } of exportadas) {
+      expect(
+        CUNHADAS_AQUI,
+        `\`${nome}\` é frase que o painel cunhou e não entrou em CUNHADAS_AQUI — o controle de completude do cerco nasceria cego a ela`,
+      ).toContain(texto);
+    }
+  });
+
   // 🔴 A LINHA VERMELHA. O cerco de `admin-ficha-inteira.test.tsx` lê h2, h3,
   // rótulo e a frase de ausência; os EDITORES trouxeram frases novas e elas têm
   // de entrar no mesmo cerco. Mesmo molde: o vocabulário proibido sai dos
@@ -1109,23 +1330,23 @@ describe("Os editores servem os três lugares", () => {
   // mutações sobreviveram àquela versão, todas medidas. Dirigir o render até
   // cada um daqueles estados, editor por editor, seria encenação frágil (e
   // deixaria de fora a frase que um editor novo cunhe amanhã); o alcance
-  // completo vem da FONTE — todo literal de todo arquivo da pasta, em qualquer
-  // estado, exportado ou não.
-  it("nenhuma frase fixa de editor nomeia um lugar do acervo", () => {
+  // completo vem da FONTE — todo literal de todo arquivo da árvore do painel,
+  // em qualquer estado, exportado ou não.
+  it("nenhuma frase fixa do painel nomeia um lugar do acervo", () => {
     const proibido = proibidas();
     expect(proibido.length, "nenhum radical de slug: o cerco ficaria oco").toBeGreaterThan(2);
     expect(proibido, "o radical curto do Véu tem de estar no cerco").toContain("veu");
 
-    const daFonte = ARQUIVOS_DOS_EDITORES.flatMap(literaisDe);
+    const daFonte = ARQUIVOS_DO_PAINEL.flatMap(literaisDe);
     const naTela = frasesNaTela();
     const fixas = [...daFonte, ...naTela];
 
     // ── OS CONTROLES DE COMPLETUDE DO ENUMERADOR ──────────────────────────
     // Sem eles, um `fixas.length > 60` fica verde com o enumerador encolhido.
     expect(
-      ARQUIVOS_DOS_EDITORES.length,
-      "a pasta dos editores foi lida vazia (ou quase): o cerco não enumerou nada",
-    ).toBeGreaterThan(8);
+      ARQUIVOS_DO_PAINEL.length,
+      "a árvore do painel foi lida vazia (ou quase): o cerco não enumerou nada",
+    ).toBeGreaterThan(12);
     for (const frase of CUNHADAS_AQUI) {
       expect(
         daFonte,
@@ -1138,12 +1359,37 @@ describe("Os editores servem os três lugares", () => {
         `a varredura da TELA não alcançou "${frase}": o enumerador do DOM encolheu`,
       ).toContain(frase);
     }
-    expect(naTela.length, "nenhuma frase de editor foi lida da tela: o cerco ficaria oco").toBeGreaterThan(60);
+    expect(naTela.length, "nenhuma frase de editor foi lida da tela: o cerco ficaria oco").toBeGreaterThan(150);
     for (const f of ACERVO) {
       expect(
         naTela,
         "a PROSA da ficha entrou no cerco: ele ficaria vermelho por inocência, falando de um lugar porque o DADO fala dele",
       ).not.toContain(f.voz);
+    }
+
+    // ── AS DUAS METADES ESTÃO DENTRO DA CERCA ─────────────────────────────
+    // 🔴 E ISTO NÃO É REDUNDÂNCIA: tirar `...naTela` da linha que monta `fixas`
+    // deixava a suíte inteira VERDE. `EM_REPOUSO` prova que a tela CONTÉM as
+    // frases; nada provava que a tela está DENTRO da cerca — metade do cerco
+    // podia ser desplugada em silêncio, e é a metade que pega a frase vinda de
+    // fora da árvore varrida. A testemunha de cada metade é o que SÓ ela tem:
+    // com as duas compartilhando tudo, desplugar uma passaria igual, e por isso
+    // as duas testemunhas têm piso próprio.
+    const soDaFonte = [...new Set(daFonte.filter((x) => !naTela.includes(x)))];
+    const soDaTela = [...new Set(naTela.filter((x) => !daFonte.includes(x)))];
+    expect(
+      soDaFonte.length,
+      "a FONTE não trouxe nada que a TELA já não tivesse: a testemunha dela ficaria oca",
+    ).toBeGreaterThan(150);
+    expect(
+      soDaTela.length,
+      "a TELA não trouxe nada que a FONTE já não tivesse: a testemunha dela ficaria oca",
+    ).toBeGreaterThan(12);
+    for (const x of soDaFonte) {
+      expect(fixas, "a metade da FONTE ficou FORA da cerca: o cerco mede só o que a tela mostra").toContain(x);
+    }
+    for (const x of soDaTela) {
+      expect(fixas, "a metade da TELA ficou FORA da cerca: o cerco mede só o que está na fonte").toContain(x);
     }
 
     // ── A CERCA ───────────────────────────────────────────────────────────
@@ -1156,7 +1402,7 @@ describe("Os editores servem os três lugares", () => {
       for (const palavra of proibido) {
         expect(
           palavras.has(palavra),
-          `a frase de editor "${frase}" fala de um lugar (${palavra}) num componente que serve os três`,
+          `a frase fixa do painel "${frase}" fala de um lugar (${palavra}) num componente que serve os três`,
         ).toBe(false);
       }
     }
@@ -1223,7 +1469,7 @@ describe("Os editores servem os três lugares", () => {
     }
     // 🔴 Sem estas duas linhas o laço de cima pode não comparar NADA (duas
     // fichas sem chave em comum) e o caso passa verde medindo zero.
-    expect(comparados, "nenhum par foi comparado: o caso ficaria oco").toBeGreaterThan(30);
+    expect(comparados, "nenhum par foi comparado: o caso ficaria oco").toBeGreaterThan(80);
     expect(
       comAjuda,
       "a AJUDA nunca entrou numa comparação: o nome do caso promete o que ele não mede",
