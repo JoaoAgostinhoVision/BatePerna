@@ -158,3 +158,14 @@
 /* O mesmo registro de "texto de apoio, menor e mais claro" de
    `.adm-campo-ausente`, `.adm-lista-rodape` e `.adm-vigente-meta`. */
 .adm-editor-ajuda { margin: 0; font-size: .85rem; color: #777; }
+/* Idem `.adm-editor-hora`: a mesma moldura de campo de uma linha, porque é o
+   mesmo tipo de controle (um `<input>` nativo, não uma caixa de parágrafo). Sem
+   agrupar por vírgula com ela, pela razão escrita no bloco acima. */
+.adm-editor-numero { padding: .5rem; font-size: .95rem; border: 1px solid #999; border-radius: 8px; }
+/* A prévia é texto de apoio como `.adm-editor-ajuda`, com UMA diferença que não
+   é estética: ela fica no DOM e VAZIA em repouso (é região `aria-live`), e sem
+   `min-height` a linha apareceria e desapareceria empurrando o botão Salvar pra
+   cima e pra baixo embaixo do dedo dele. `1.2rem` é a altura de uma linha de
+   `.85rem` com o `line-height` padrão — reserva o espaço de exatamente uma
+   linha, que é o que a frase mais curta (`Conferindo o que muda…`) ocupa. */
+.adm-editor-previsao { margin: 0; font-size: .85rem; color: #777; min-height: 1.2rem; }

@@ -122,7 +122,9 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
         `${caminho} não mostrou o valor dentro do bloco`,
       ).toBeTruthy();
 
-    lido("condicao.regra.limiar_mm", String(semHorario.condicao.regra.limiar_mm)); // numero
+    // 🔴 `numero` SAIU DESTA LISTA NA TASK 7 e foi pro caso de baixo: o
+    // instrumento dele é um `<input type="number">`, que carrega o valor dentro
+    // de si, então um `<p>` ao lado seria duas fontes pro mesmo número.
     lido("trajeto.waypoints.0.lat", String(semHorario.trajeto.waypoints[0].lat)); // coord metade
     lido(
       "condicao.coords",
@@ -143,6 +145,12 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     naCaixa("custo.valor", semHorario.custo.valor!); // prosa opcional PREENCHIDA
     naCaixa("piso", semHorario.piso!); // lista de uma
     naCaixa("condicao.severidade", semHorario.condicao.severidade); // lista de uma
+    // 🔴 `numero` (Task 7): os TRÊS, não um de amostra — o limiar é fracionário
+    // (`0.2`) e as janelas são inteiras, e um editor que coagisse pra inteiro
+    // mostraria `0` no campo que decide se o lugar fecha.
+    naCaixa("condicao.regra.limiar_mm", String(semHorario.condicao.regra.limiar_mm));
+    naCaixa("condicao.regra.janela_passado_horas", String(semHorario.condicao.regra.janela_passado_horas));
+    naCaixa("condicao.regra.janela_previsao_horas", String(semHorario.condicao.regra.janela_previsao_horas));
 
     // lista de VÁRIOS: o valor é o conjunto marcado, não um texto
     const dias = within(screen.getByTestId("campo-dias"));

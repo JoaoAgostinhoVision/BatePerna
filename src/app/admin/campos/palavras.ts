@@ -75,3 +75,71 @@ export const HORA_VAZIA = "Escolha uma hora, no formato HH:MM.";
  *  ida ao Turso numa rede de interior. */
 // PENDENTE: redação minha, o João ainda não leu
 export const CAIXA_VAZIA = "Caixa vazia não grava: escreva algo.";
+
+/** ─────────────────────────────────────────────────────────────────────────────
+ *  AS PALAVRAS DO NÚMERO DE MOTOR (Task 7) — e a PROCEDÊNCIA de cada pedaço está
+ *  escrita ao lado de cada uma, porque três delas afirmam o que acontece com um
+ *  lugar real quando o número muda. Nenhuma é fala dele; todas são `PENDENTE`.
+ *
+ *  🔴 ELAS MORAM AQUI, E NÃO EM `src/lib/`, DE PROPÓSITO. O cerco de nome de
+ *  lugar varre todo literal de `src/app/admin/**`; copy de editor em `src/lib/`
+ *  é o resíduo que a Tarefa 6 mediu e declarou — e que só se fecharia seguindo o
+ *  grafo de imports. Pôr frase de editor fora desta árvore tornaria aquele
+ *  resíduo real por um ganho nenhum.
+ *  ──────────────────────────────────────────────────────────────────────────── */
+
+/** A recusa de um número que MENTE sobre o lugar — janela zero ou negativa,
+ *  limiar zero. Uma frase só pros três, porque o defeito é um só e o conserto na
+ *  mão dele é um só: pôr um número maior que zero.
+ *
+ *  🔴 ELA DIZ O QUE ACONTECE, não "valor inválido". A procedência das duas
+ *  metades:
+ *   - *"o lugar passa a dizer não para sempre"* vem da regra `janela-nao-zerada`
+ *     de `src/lib/coerencia.ts`, que é quem recusa isto na GRAVAÇÃO (*"qualquer
+ *     orvalho fecha o lugar, e o app passa a dizer não o ano inteiro"*) —
+ *     paráfrase minha daquela frase, encurtada pra caber do lado de um campo;
+ *   - *"ou nunca avisar"* é o outro lado, que eu MEDI rodando `avaliar`: com
+ *     `janela_passado_horas: -5` e 5 mm de chuva uma hora atrás o motor devolve
+ *     `fresco` — a janela invertida cega o motor pra chuva que caiu, e o aviso
+ *     fica desligado em silêncio.
+ *
+ *  ⚠️ Ela NÃO cita nenhum dos três nomes de campo: o rótulo do campo está na
+ *  linha de cima, e repeti-lo aqui faria a tela perguntar duas vezes. */
+// PENDENTE: redação minha, o João ainda não leu
+export const REGRA_QUE_MENTE =
+  "Zero ou menos não é regra: assim o lugar passa a dizer não para sempre, ou nunca avisa. Use um número maior que zero.";
+
+/** A moldura da prévia — a frase que diz que o que vem a seguir é uma
+ *  SIMULAÇÃO, e não o estado de agora.
+ *
+ *  🔴 SEM ELA A PRÉVIA MENTE POR FALTA DE CONTEXTO: o dono veria *"Não vá ·
+ *  barro · dá um tempo"* aparecer ao lado do campo e leria isso como o estado do
+ *  lugar AGORA — que é precisamente o que o carimbo de verdade, no topo do mesmo
+ *  painel, está dizendo com as mesmas palavras. As palavras depois dos dois
+ *  pontos não são minhas nem desta tela: elas vêm do motor, por
+ *  `src/lib/severidade.ts` e `src/lib/carimbo-fase.ts`, que são as MESMAS que a
+ *  tela pública imprime. É o ponto da prévia. */
+// PENDENTE: redação minha, o João ainda não leu
+export const COM_ESTE_NUMERO = "Com este número, a tela do lugar diria:";
+
+/** Enquanto a prévia não chegou. Irmã do `SALVANDO`, e pelo mesmo motivo: numa
+ *  rede de interior, campo que não responde parece campo quebrado. */
+// PENDENTE: redação minha, o João ainda não leu
+export const PREVENDO = "Conferindo o que muda…";
+
+/** Quando não há chuva guardada pra este lugar — o motor nunca rodou aqui, ou a
+ *  leitura que ele deixou não serve.
+ *
+ *  🔴 ELA EXISTE PRA A PRÉVIA NÃO INVENTAR UM CARIMBO. Sem leitura de chuva não
+ *  há consequência a mostrar, e um `fresco` de reserva diria ao dono que o lugar
+ *  está liberado. A frase diz de QUEM é a vez — não é dele, e não há nada que ele
+ *  possa preencher pra resolver. */
+// PENDENTE: redação minha, o João ainda não leu
+export const SEM_LEITURA = "Ainda não tem chuva lida aqui, então não dá pra mostrar o que mudaria.";
+
+/** A prévia não veio — rede, prazo, ou recusa da rota. Separada da `SEM_LEITURA`
+ *  porque o fato é outro: lá o app sabe que não sabe; aqui ele não chegou a
+ *  perguntar. E ela NÃO esconde o botão de salvar: a prévia é ajuda, não portão.
+ *  O portão é a porta de escrita. */
+// PENDENTE: redação minha, o João ainda não leu
+export const PREVISAO_FALHOU = "Não consegui conferir o que muda.";

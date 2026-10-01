@@ -351,3 +351,85 @@ describe("o bloco opcional inteiro — o 'não sei' do horário", () => {
     }
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+/** 🔴 O `.finite()` DO `regraSchema` (Task 7, 2026-09-30) — e este bloco existe
+ *  porque a restrição nasceu SEM PROVA: medido, apagar o `.finite()` deixava a
+ *  suíte inteira verde.
+ *
+ *  O estado que ele fecha ficou ALCANÇÁVEL DO CELULAR quando a Task 7 pôs um
+ *  `<input type="number">` na tela do dono: `1e999` é sintaxe válida de número de
+ *  ponto flutuante, e `JSON.parse` o entrega como `Infinity`. O que isso fazia,
+ *  medido ponta a ponta antes do `.finite()`: `aplicarCampo` ACEITAVA, o
+ *  documento novo ficava com `"janela_previsao_horas":null` (é o que
+ *  `JSON.stringify` faz com infinito) e esse documento NÃO RELIA — o lugar saía
+ *  do ar (o caminho de leitura é `fichaSchema.parse`) e o dono não conseguia
+ *  consertar pelo painel, que precisa ler a ficha pra mostrá-la. É a porta de mão
+ *  única que o ruling C1 da Tarefa 1 desta rodada já pagou uma vez. E o portão de
+ *  coerência não alcança: `!(Infinity > 0)` é `false`, então `janela-nao-zerada`
+ *  não acusa e a gravação sairia com 200. */
+describe("os três números do motor: `.finite()` e só", () => {
+  const NUMEROS = [
+    "condicao.regra.janela_previsao_horas",
+    "condicao.regra.janela_passado_horas",
+    "condicao.regra.limiar_mm",
+  ];
+  /** Infinito como ele CHEGA de verdade: pelo corpo de uma requisição. Escrever
+   *  `Infinity` à mão aqui mediria um valor que o JSON nunca transporta. */
+  const infinito = JSON.parse('{"v":1e999}').v as number;
+  const menosInfinito = JSON.parse('{"v":-1e999}').v as number;
+
+  it("infinito é RECUSADO nos três, e é a porta que recusa", () => {
+    expect(Number.isFinite(infinito), "a premissa: 1e999 chega como infinito").toBe(false);
+    for (const caminho of NUMEROS) {
+      for (const valor of [infinito, menosInfinito]) {
+        expect(
+          () => aplicarCampo(DOC, caminho, valor),
+          `${caminho} aceitou ${valor}: o documento ficaria com \`null\` e o lugar sairia do ar`,
+        ).toThrow();
+      }
+    }
+  });
+
+  // 🔴 E O CUSTO DE DEIXAR PASSAR, MEDIDO AQUI em vez de narrado num comentário:
+  // é este par que torna o caso de cima não-vácuo. Sem ele, "recusou" não diria
+  // POR QUE recusar importa.
+  it("o custo de aceitar infinito: viraria `null` no documento, e `null` não relê", () => {
+    expect(JSON.stringify({ janela_previsao_horas: infinito })).toBe('{"janela_previsao_horas":null}');
+    const quebrado = {
+      ...fichaBase,
+      condicao: { ...fichaBase.condicao, regra: { ...fichaBase.condicao.regra, janela_previsao_horas: null } },
+    };
+    expect(
+      () => fichaSchema.parse(JSON.parse(JSON.stringify(quebrado))),
+      "o documento com `null` na janela ainda relê: o custo acima não é o que está escrito",
+    ).toThrow(ZodError);
+  });
+
+  // 🔴 A DIREÇÃO QUE IMPORTA MAIS, e ela fica VERMELHA no dia em que alguém puser
+  // `.min(1)`/`.int()`/`.gt(0)` no `regraSchema` por zelo. Medido: aquela
+  // restrição deixa QUATRO casos vermelhos (dois do portão de coerência, dois de
+  // `loadAll`) e piora a tela — hoje zerar o limiar pelo painel devolve 409 com a
+  // frase da regra `janela-nao-zerada` (*"qualquer orvalho fecha o lugar…"*); com
+  // a restrição no schema, `aplicarCampo` estoura ANTES do portão e a rota
+  // devolve 400 de CORPO VAZIO, que na tela dele é "Não consegui salvar.".
+  // O guarda do zero pertence ao ACERVO, não ao schema — está escrito desde a
+  // Tarefa 2 no comentário de `janela-nao-zerada`.
+  for (const [nome, valor] of [
+    ["zero", 0],
+    ["negativo", -5],
+    ["fracionário", 2.5],
+    ["fração pequena", 0.05],
+    ["grande", 240],
+  ] as const) {
+    it(`${nome} PASSA pelo schema: quem recusa o que mente é o portão de coerência, com frase`, () => {
+      for (const caminho of NUMEROS) {
+        const novo = aplicarCampo(DOC, caminho, valor);
+        expect(
+          caminho.split(".").reduce<unknown>((o, k) => (o as Record<string, unknown>)[k], JSON.parse(novo)),
+          `${caminho} não gravou ${valor}`,
+        ).toBe(valor);
+      }
+    });
+  }
+});

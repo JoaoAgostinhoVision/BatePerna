@@ -9,11 +9,16 @@ import { BLOCO_JUNTO } from "@/app/admin/campos/EditorBloco";
 import { ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
 import {
   CAIXA_VAZIA,
+  COM_ESTE_NUMERO,
   HORA_VAZIA,
   NADA_ESCOLHIDO,
   NAO,
+  PREVENDO,
+  PREVISAO_FALHOU,
+  REGRA_QUE_MENTE,
   SALVANDO,
   SALVAR,
+  SEM_LEITURA,
   SIM,
 } from "@/app/admin/campos/palavras";
 import {
@@ -891,12 +896,31 @@ describe("Os guardas do que cresce — registro × instrumento", () => {
   // 🔴 A2 DO BRIEF: são SETE espécies e esta tarefa construiu CINCO. As duas que
   // faltam continuam em LEITURA, e isso tem de estar provado — senão a Task 7
   // herda uma tela que parece quebrada.
+  // 🔴 A TASK 7 TIROU `numero` DAQUI, e a lista de espécies que este par de
+  // casos tinha escrita à mão (`numero`/`coord` num, os outros QUATRO no outro)
+  // era a espécie "lista à mão cega ao que cresceu" com DUAS cabeças: construir
+  // um editor sem mexer nas duas listas deixava o campo novo fora dos dois
+  // guardas, em silêncio. Agora a partição sai do DOM — tem `[data-editor]` ou
+  // não tem —, os dois casos cobrem o registro INTEIRO por construção, e uma
+  // única asserção nomeia quais espécies ainda estão em leitura. É ela que fica
+  // vermelha no dia da Task 8, e é a única linha que alguém precisa mudar.
+  const SEM_EDITOR_AINDA = ["coord"];
+
+  /** A espécie que tem editor E `<p>` ao lado, e isso é de significado, não de
+   *  estilo: com o bloco PRESENTE o `EditorBloco` não mostra caixa nenhuma (só o
+   *  botão que tira o bloco inteiro), então quem responde "este lugar TEM
+   *  horário?" é o `<p>` com o `SIM`. Ver o `mostraOValor` do `INSTRUMENTO`. */
+  const MOSTRA_O_VALOR_AO_LADO = ["bloco"];
+
   it("espécie sem editor continua em LEITURA: o valor num `<p>`, e nenhum controle", () => {
     render(<FichaInteira ficha={semHorario} />);
-    const semEditor = camposDaFicha(semHorario).filter(
-      (c) => c.especie === "numero" || c.especie === "coord",
-    );
-    expect(semEditor.length, "o registro perdeu `numero`/`coord`: o caso ficaria oco").toBeGreaterThan(3);
+    const semEditor = camposDaFicha(semHorario).filter((c) => SEM_EDITOR_AINDA.includes(c.especie));
+    // 🔴 Medido, não estimado: as três fichas têm UM waypoint, então são 3
+    // campos `coord` (`condicao.coords` + `lat`/`lng` da parada). O piso é o
+    // número real menos nada — ele só existe pra o laço não medir zero no dia em
+    // que a Task 8 esvaziar esta lista, e naquele dia este caso tem de morrer
+    // junto com a linha de cima, não ficar verde medindo o vazio.
+    expect(semEditor.length, "nenhum campo em leitura: o caso ficaria oco").toBe(3);
     for (const c of semEditor) {
       const el = bloco(c.caminho);
       expect(
@@ -907,9 +931,6 @@ describe("Os guardas do que cresce — registro × instrumento", () => {
       expect(within(el).queryByRole("button"), `${c.caminho} ganhou botão`).toBeNull();
     }
     // e o valor está DENTRO do `<p>`, não em algum lugar da tela
-    expect(bloco("condicao.regra.limiar_mm").querySelector(".adm-campo-valor")!.textContent).toBe(
-      String(semHorario.condicao.regra.limiar_mm),
-    );
     expect(bloco("condicao.coords").querySelector(".adm-campo-valor")!.textContent).toBe(
       `${semHorario.condicao.coords.lat}, ${semHorario.condicao.coords.lng}`,
     );
@@ -917,21 +938,75 @@ describe("Os guardas do que cresce — registro × instrumento", () => {
 
   it("toda espécie COM editor tem o editor dentro do bloco do campo, e nenhum `<p>` repetindo", () => {
     render(<FichaInteira ficha={comHorario} />);
-    const comEditor = camposDaFicha(comHorario).filter((c) =>
-      ["prosa", "lista", "booleano", "hora"].includes(c.especie),
+    const comEditor = camposDaFicha(comHorario).filter((c) => !SEM_EDITOR_AINDA.includes(c.especie));
+    expect(comEditor.length, "o registro perdeu as espécies com editor: o caso ficaria oco").toBeGreaterThan(
+      20,
     );
-    expect(comEditor.length, "o registro perdeu as quatro espécies: o caso ficaria oco").toBeGreaterThan(15);
+    let semPeDuplicado = 0;
     for (const c of comEditor) {
       const el = bloco(c.caminho);
       expect(
         el.querySelector(`[data-editor="${c.caminho}"]`),
         `${c.caminho} ficou sem instrumento`,
       ).not.toBeNull();
+      if (MOSTRA_O_VALOR_AO_LADO.includes(c.especie)) {
+        expect(
+          el.querySelector(".adm-campo-valor"),
+          `${c.caminho}: o editor dele não carrega o valor, e o \`<p>\` que responde a pergunta sumiu`,
+        ).not.toBeNull();
+        continue;
+      }
       expect(
         el.querySelector(".adm-campo-valor"),
         `${c.caminho}: o valor aparece duas vezes — no \`<p>\` e dentro do controle`,
       ).toBeNull();
+      semPeDuplicado++;
     }
+    // Sem isto, pôr toda espécie em `MOSTRA_O_VALOR_AO_LADO` deixaria o laço
+    // verde sem conferir duplicação nenhuma.
+    expect(semPeDuplicado, "nenhum campo foi medido contra o valor duplicado").toBeGreaterThan(20);
+  });
+
+  // 🔴 O PORTÃO DA PARTIÇÃO, e sem ele os dois casos acima ficam verdes de mãos
+  // dadas: `SEM_EDITOR_AINDA` é lista à mão, e uma espécie nova no registro não
+  // entra nela sozinha. Este caso exige que TODO campo de TODA ficha do acervo
+  // caia num dos dois lados, pelo DOM, e que o lado "sem editor" seja
+  // exatamente a lista declarada — nos dois sentidos.
+  it("todo campo do registro cai num dos dois lados, e o lado SEM editor é só o declarado", () => {
+    const vistas = new Map<string, boolean>();
+    let medidos = 0;
+    for (const f of ACERVO) {
+      const { unmount } = render(<FichaInteira ficha={f} />);
+      for (const c of camposDaFicha(f)) {
+        const el = bloco(c.caminho);
+        // 🔴 CAMPO AUSENTE FICA DE FORA, e isso NÃO é afrouxar o portão: a folha
+        // de um bloco ausente não ganha editor de propósito (a porta recusa
+        // `horario.abre` sozinho, e oferecer ali uma caixa seria a tela
+        // convidando ao que a porta nega — ver o docblock do `Bloco`). Ali a
+        // ausência do editor é resposta ao DADO, não à espécie, e misturar os
+        // dois faria este portão recusar um comportamento certo. Quem guarda
+        // aquele estado é o `describe` do bloco `horario`.
+        if (el.hasAttribute("data-ausente")) continue;
+        const tem = el.querySelector(`[data-editor="${c.caminho}"]`) !== null;
+        const antes = vistas.get(c.especie);
+        expect(
+          antes === undefined || antes === tem,
+          `a espécie \`${c.especie}\` tem editor num campo preenchido e não tem noutro: a partição não é por espécie`,
+        ).toBe(true);
+        vistas.set(c.especie, tem);
+        medidos++;
+      }
+      unmount();
+    }
+    expect(medidos, "nenhum campo preenchido foi medido: o portão ficaria oco").toBeGreaterThan(60);
+    expect(vistas.size, "nem toda espécie do registro apareceu na tela: o portão mediria menos").toBe(7);
+    expect(
+      [...vistas]
+        .filter(([, tem]) => !tem)
+        .map(([e]) => e)
+        .sort(),
+      "a lista `SEM_EDITOR_AINDA` divergiu do que a tela de fato faz",
+    ).toEqual([...SEM_EDITOR_AINDA].sort());
   });
 
   /** O caminho CONCRETO de um molde do registro — `[]` no índice 0, que é o que
@@ -1250,6 +1325,13 @@ describe("Os editores servem os três lugares", () => {
     NAO_SEI,
     NAO_TEM,
     BLOCO_JUNTO,
+    // As cinco do número de motor (Task 7). Nenhuma aparece EM REPOUSO: a
+    // prévia nasce vazia e as duas recusas só existem depois de um toque.
+    REGRA_QUE_MENTE,
+    COM_ESTE_NUMERO,
+    PREVENDO,
+    SEM_LEITURA,
+    PREVISAO_FALHOU,
   ];
 
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem

@@ -10,6 +10,7 @@ import EditorBloco from "./campos/EditorBloco";
 import EditorBooleano from "./campos/EditorBooleano";
 import EditorHora from "./campos/EditorHora";
 import EditorLista from "./campos/EditorLista";
+import EditorNumeroDeMotor from "./campos/EditorNumeroDeMotor";
 import EditorProsa from "./campos/EditorProsa";
 import { NAO, SIM } from "./campos/palavras";
 import type { CampoNaTela, Editor } from "./campos/tipos";
@@ -43,11 +44,10 @@ import type { CampoNaTela, Editor } from "./campos/tipos";
  *  🔴 QUAL INSTRUMENTO CADA ESPÉCIE GANHA SAI DE UM `Record<EspecieCampo, …>`
  *  (`INSTRUMENTO`, abaixo), pela mesma razão do `MOSTRAR` e do
  *  `TITULO_DO_GRUPO`: **espécie nova no registro não compila até alguém decidir
- *  o instrumento dela.** Duas espécies seguem em LEITURA de propósito, e está
- *  escrito qual tarefa as pega — `numero` (a Task 7, o número de motor com a
- *  consequência ao vivo) e `coord` (a Task 8, o mapa que arrasta o pin). Elas
- *  renderizam exatamente como antes desta tarefa, e há teste cravando isso: sem
- *  ele, a Task 7 herdaria uma tela que parece quebrada.
+ *  o instrumento dela.** Desde a Task 7 (2026-09-30) sobra UMA em leitura, e está
+ *  escrito qual tarefa a pega — `coord`, a Task 8, o mapa que arrasta o pin. Ela
+ *  renderiza exatamente como antes daquela tarefa, e há teste cravando isso: sem
+ *  ele, a Task 8 herdaria uma tela que parece quebrada.
  *
  *  ⚠️ NENHUM TEXTO SOBRE UM LUGAR ESPECÍFICO MORA AQUI. Este componente serve
  *  os três lugares do acervo e os que vierem: tudo que ele escreve na tela é
@@ -419,24 +419,33 @@ export const multiploDe = (caminho: string): boolean | undefined => LISTA_MULTIP
  *  instrumento dela** — em vez de nascer sem editor, invisível, com a suíte
  *  verde.
  *
- *  `null` é "ainda só leitura", com a tarefa escrita ao lado. As duas que faltam
- *  não são esquecimento: `numero` precisa da consequência ao vivo (o motor
- *  rodando com o valor novo antes de gravar) e `coord` precisa do mapa com pin
- *  arrastado — são as Tasks 7 e 8, e cada uma é um componente próprio.
+ *  `null` é "ainda só leitura", com a tarefa escrita ao lado. A que falta não é
+ *  esquecimento: `coord` precisa do mapa com pin arrastado — é a Task 8, e é um
+ *  componente próprio.
  *
  *  `mostraOValor` é o que decide se o `<p>` de leitura sai: onde o controle já
  *  traz o valor dentro dele, um `<p>` ao lado diria a mesma coisa duas vezes. O
  *  `bloco` é a exceção e ela é de significado, não de estilo — com o bloco
  *  PRESENTE o editor dele não mostra caixa nenhuma (só o botão que tira o bloco
  *  inteiro), então quem responde "este lugar TEM horário?" continua sendo o
- *  `<p>` com o `SIM` do `MOSTRAR`. */
+ *  `<p>` com o `SIM` do `MOSTRAR`.
+ *
+ *  🔴 `numero` ENTROU COM `mostraOValor: true` (Task 7), e a decisão é a mesma
+ *  régua: o `<input type="number">` **é** o número. Um `<p>` ao lado repetindo
+ *  `6` seria duas fontes pra mesma pergunta, e no dia em que a caixa abrisse com
+ *  outro valor que o `<p>` — por um `useState` inicializado errado, por exemplo —
+ *  a tela mostraria dois números para um campo só, sem ninguém saber qual está no
+ *  banco. Custo da escolha: um campo de número ausente não teria valor nenhum na
+ *  tela — e ele não existe, porque os três são `obrigatorio: true` (o ramo
+ *  `ausente` do `Bloco` ganha do instrumento de qualquer forma, e há guarda
+ *  cravando as duas coisas). */
 const INSTRUMENTO: Record<EspecieCampo, { Editor: Editor; mostraOValor: boolean } | null> = {
   prosa: { Editor: EditorProsa, mostraOValor: true },
   lista: { Editor: EditorLista, mostraOValor: true },
   booleano: { Editor: EditorBooleano, mostraOValor: true },
   hora: { Editor: EditorHora, mostraOValor: true },
   bloco: { Editor: EditorBloco, mostraOValor: false },
-  numero: null, // Task 7 — o número de motor com a consequência ao vivo
+  numero: { Editor: EditorNumeroDeMotor, mostraOValor: true },
   coord: null, // Task 8 — o mapa com o pin que se arrasta
 };
 

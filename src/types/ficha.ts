@@ -10,11 +10,60 @@ export const waypointSchema = z.object({
   nota: z.string().optional(),
 });
 
+/** 🔴 OS TRÊS NÚMEROS QUE GOVERNAM O MOTOR, E O `.finite()` É A ÚNICA
+ *  RESTRIÇÃO AQUI — por medição, não por gosto (Task 7, 2026-09-30).
+ *
+ *  O `.finite()` fecha UMA coisa, e ela é um estado de caixa-preta que a Task 7
+ *  tornou alcançável do celular: `1e999` é sintaxe válida num
+ *  `<input type="number">`, o `JSON.parse` o entrega como `Infinity`, e
+ *  `Infinity` passava por `z.number()`. Medido, ponta a ponta, antes de esta
+ *  linha existir:
+ *
+ *    aplicarCampo(doc, "condicao.regra.janela_previsao_horas", Infinity)
+ *      → ACEITA, e o documento novo fica com `"janela_previsao_horas":null`
+ *        (é o que `JSON.stringify` faz com `Infinity`)
+ *      → e esse documento NÃO RELÊ: `invalid_type, expected number, received null`
+ *
+ *  O que isso significa na mão dele: o lugar **sai do ar** (o caminho de leitura
+ *  é `fichaSchema.parse` em `buscarFichas`/`getFicha`) e ele **não consegue
+ *  consertar pelo painel**, porque o painel precisa ler a ficha pra mostrá-la.
+ *  É a porta de mão única que o ruling C1 da Tarefa 1 desta rodada já pagou uma
+ *  vez. E o portão de coerência não alcança: `!(Infinity > 0)` é `false`, então
+ *  `janela-nao-zerada` não acusa nada e a gravação sai com 200.
+ *
+ *  🔴 E POR QUE NÃO `.int().min(1)` / `.gt(0)`, QUE É O QUE PARECE CERTO. Eu
+ *  medi, e deixa o app PIOR em três frentes:
+ *
+ *   1. **A recusa do zero vira muda.** Hoje zerar o limiar pelo painel devolve
+ *      **409** com *"O limite de chuva de X é 0 mm: qualquer orvalho fecha o
+ *      lugar, e o app passa a dizer não o ano inteiro."* — a regra
+ *      `janela-nao-zerada` de `src/lib/coerencia.ts`, que roda NA GRAVAÇÃO desde
+ *      a Tarefa 3. Com a restrição no schema, `aplicarCampo` estoura um
+ *      `ZodError` ANTES do portão, a rota devolve **400 de corpo vazio** (ela não
+ *      vaza `ZodError`, de propósito) e ele lê *"Não consegui salvar."*. A porta
+ *      fica mais estreita e a tela fica mais burra.
+ *   2. **Quatro casos vermelhos, medidos** (`npm test`, 1454/1458): os dois do
+ *      portão de coerência que provam o 409 e a frase certa, e dois de `loadAll`
+ *      que passam a morrer com um `ZodError` sobre um NÚMERO num guarda que é
+ *      sobre SLUG REPETIDO — guarda vermelho pelo motivo errado.
+ *   3. **O zod aceitar 0 é decisão escrita**, não esquecimento: está no
+ *      comentário de `janela-nao-zerada` (*"o zod aceita 0 de propósito (as
+ *      fixtures sintéticas usam), então o guarda pertence ao ACERVO, não ao
+ *      schema"*), e sete arquivos de teste usam `0/0/0` como fixture sintética.
+ *      Recusar no schema tornaria o ramo do limiar daquela regra
+ *      **inalcançável** — a 52ª espécie do catálogo deste projeto.
+ *
+ *  ⚠️ E O QUE ESTA LINHA DE PROPÓSITO **NÃO** RECUSA: janela fracionária
+ *  (`2.5`). `avaliar` a usa sem reclamar e `buildUrl` a arredonda pra cima em
+ *  dias; é um valor que um dono pode querer de verdade, e numa porta o falso
+ *  positivo é pior que o falso negativo, porque trava o dono de gravar uma
+ *  verdade. Quem recusa zero, negativo e limiar nulo é o portão de coerência,
+ *  com frase. */
 export const regraSchema = z.object({
   tipo: z.literal("chuva_binaria"),
-  janela_previsao_horas: z.number(),
-  janela_passado_horas: z.number(),
-  limiar_mm: z.number(),
+  janela_previsao_horas: z.number().finite(),
+  janela_passado_horas: z.number().finite(),
+  limiar_mm: z.number().finite(),
 });
 
 export const condicaoSchema = z.object({
