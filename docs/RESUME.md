@@ -2,18 +2,24 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🟡 **ÚLTIMA PARADA: 2026-09-27 à noite, A PEDIDO DELE** — *"gostaria de continuar na próxima
-sessão, deixe tudo pronto para ela"*. **Nada está em voo**: o implementador da Tarefa 6 foi
-**parado por mim antes de escrever uma linha** (a árvore estava limpa quando parou), porque o
-resultado de um subagente despachado **morre com a sessão** — foi o que custou duas vezes nesta mesma
-rodada.
+🟢 **ÚLTIMA PARADA: 2026-09-30. A TAREFA 6 FECHOU** — *"um editor por espécie de campo"*. Três
+commits: a implementação, e **duas** ondas de fix, porque a revisão achou **sete mutações
+sobreviventes na linha vermelha** e a re-revisão achou que o guarda que as fechou **podia ser
+desligado em silêncio por duas portas**. **Nada está em voo.**
 
-**Estamos na branch `painel-completo`**, com **5 das 12 tarefas completas**, árvore limpa,
-**1399/1399 em 85 arquivos**, `tsc` limpo, `npm run build` exit 0, HEAD `d31bb8e`. 🔴 **NADA FOI AO
-AR** — nenhuma tarefa deste plano roda `vercel`, e o `main` segue publicado e intacto.
+**Estamos na branch `painel-completo`**, com **6 das 12 tarefas completas**, árvore limpa, `tsc`
+limpo, `npm run build` exit 0. 🔴 **NADA FOI AO AR** — nenhuma tarefa deste plano roda `vercel`, e o
+`main` segue publicado e intacto.
 
-→ **Como retomar: o bloco "▶ RETOMAR A RODADA DO PAINEL COMPLETO", logo abaixo. O PRIMEIRO PASSO é
-redespachar a Tarefa 6, cujo brief já existe e já foi auditado.**
+🔴 **NÃO repita número nenhum deste arquivo: MEÇA.** `npm test -- --run` deu **1458/1458 em 85
+arquivos** no fechamento da Tarefa 6, e esse número cresce a cada tarefa. A régua que **não** envelhece
+é a **FORMA do último commit**: se o `git log` mostrar um `docs(resume): …` no topo, ninguém mexeu
+entre as sessões. Se mostrar commit de **código** depois dele, mexeram, e nenhum número daqui vale.
+(Esta linha já nasceu falsa **três vezes**, as três por cravar um SHA ou uma contagem em prosa.)
+
+→ **Como retomar: o bloco "▶ RETOMAR A RODADA DO PAINEL COMPLETO", logo abaixo. O PRIMEIRO PASSO é a
+Tarefa 7 — o número de motor com a consequência ao vivo — e o brief dela precisa ser AUDITADO antes
+do dispatch.**
 
 🔴 **DUAS SESSÕES MORRERAM SEM AVISO nesta mesma tarefa** (a tela fechou na rodada 3, o PC desligou
 na 4d). As duas vezes o que sobreviveu foi o `git log` e o `RESUME.md`, e as duas vezes o que morreu
@@ -110,8 +116,8 @@ guarda do próprio harness, na 4e; → 1304 com os seis que a 4f acrescentou a e
 | **3 — a porta de escrita aceita todo campo e passa pela coerência** | ✅ **completa** (`914e38a..72380a2`): 1 `Critical` (a porta recusava RENOMEAR o lugar), duas ondas de fix, re-revisão sem nenhuma das duas classes que reabririam — 26 renomeações sobre as 13 regras e 120 gravações legítimas sobre 6 sujeiras, ZERO recusas. Ver a seção **5b** |
 | **4 — `oculto`: esconder sem apagar** | ✅ **completa** (`3d88ea4..0dcf4a5`). Brief auditado antes do dispatch (9 achados, 2 `Critical`); o implementador achou **três coisas que a auditoria não tinha** e a revisão **nenhum `Critical`**. 17+12 mutações, todas mortas. Ver a seção **5d** |
 | **5 — a tela do lugar mostra a ficha inteira** | ✅ **completa** (`c1610c9..dfff50e`). A revisão achou **uma mutação sobrevivente na linha vermelha** (o cerco de nome de lugar tinha buraco na palavra `veu`) e quatro frases falsas, três delas em comentário de guarda. Ver **5f** |
-| **6 — um editor por espécie de campo** | ⬜ **A PRÓXIMA, e o brief já está pronto e AUDITADO** (`task-6-brief.md`: dez achados, três `Critical`). Foi despachada em 27/09 e **parada por mim antes de escrever nada**, a pedido dele |
-| 7 — o número de motor com a consequência ao vivo | ⬜ |
+| **6 — um editor por espécie de campo** | ✅ **completa** (`3466703..94e469b`), **duas ondas de fix**. A revisão achou **sete mutações sobreviventes na linha vermelha** (o cerco só olhava a tela EM REPOUSO, então as frases de *salvando* e de *recusa* estavam fora); a re-revisão achou que o cerco novo **podia ser desligado em silêncio por duas portas**. Ver a seção **5g** |
+| **7 — o número de motor com a consequência ao vivo** | ⬜ **A PRÓXIMA. O brief NÃO existe: escrever e AUDITAR antes de despachar** — e ver a **condição** que a Tarefa 6 deixou, em **5g** |
 | 8 — o mapa que arrasta o pin | ⬜ |
 | 9 — o histórico de qualquer campo, e o escondido na lista | ⬜ |
 | 10 — a cadeia de waypoints | ⬜ |
@@ -120,35 +126,39 @@ guarda do próprio harness, na 4e; → 1304 com os seis que a 4f acrescentou a e
 
 ### 3b. ▶ O PRIMEIRO PASSO DESTA SESSÃO, sem inventar nada
 
-1. **Confira o estado** (nunca repita o número deste arquivo): `git status` limpo, `npm test -- --run`
-   deve dar **1399/1399 em 85 arquivos**, `npx tsc --noEmit` exit 0. O último commit da sessão que
-   fechou é um **`docs(resume): …`** — se o `git log` mostrar qualquer commit de **código** depois
-   dele, alguém mexeu entre as sessões e o número acima não vale.
-   (🔴 Este item nasceu falso **duas vezes**, as duas por cravar um SHA: a primeira redação apontava o
-   HEAD de **antes** do commit do próprio handoff, e a correção envelheceu **no ato de ser
-   commitada**, porque o commit dela mudou o HEAD de novo. **SHA do "agora" é frase falsa com atraso
-   de um commit.** A régua que sobrevive é a FORMA do commit, não o número dele — e esta é a terceira
-   aparição da mesma espécie em um dia, junto com o bloco de entrada envelhecido e a contagem em
-   prosa.)
-2. **Despache a Tarefa 6** com o brief que já existe e já foi auditado:
-   `.superpowers/sdd/2026-09-26-painel-completo/task-6-brief.md` — **dez achados, três `Critical`**:
-   - um componente de **cliente** não pode importar `campos-da-ficha` (ele importa `zod` e o schema;
-     iria tudo para o bundle do celular dele) → **tudo por props, e medir o tamanho da rota antes e
-     depois**;
-   - são **sete** espécies de campo e a tarefa constrói **quatro** (`numero` é a Tarefa 7, `coord` é a
-     8, `bloco` é caso próprio) → a escolha do editor sai de um `Record` que **não compila** sem
-     decisão;
-   - **a tela hoje convida a um ato que a porta NEGA**: com o `horario` ausente ela mostra três blocos
-     dizendo "não sei", e a porta recusa gravar uma folha nesse estado. Editor na folha = o dono digita,
-     aperta salvar e **leva recusa num campo que a tela ofereceu**.
+1. **Confira o estado, MEDINDO** (nunca repita número deste arquivo): `git status` limpo,
+   `npx tsc --noEmit` exit 0, `npm run build` exit 0, e `npm test -- --run` **verde** — a contagem
+   cresce a cada tarefa, então o que você confere é que **nada está vermelho**, não um número.
+   A régua que não envelhece: **o topo do `git log` é um `docs(resume): …`**. Se houver commit de
+   **código** depois dele, alguém mexeu entre as sessões.
+   (🔴 Este item nasceu falso **três vezes**: duas por cravar um SHA — e a correção envelheceu **no ato
+   de ser commitada**, porque o commit dela mudou o HEAD de novo — e a terceira por cravar a contagem
+   da suíte. **SHA e contagem do "agora" são frases falsas com atraso de um commit.** A régua que
+   sobrevive é a FORMA do commit.)
+2. **Escreva e AUDITE o brief da Tarefa 7** — *o número de motor com a consequência ao vivo*. 🔴 **O
+   brief não existe ainda**, diferente das Tarefas 4, 5 e 6. O método que pagou esta rodada:
+   **auditar a tabela de mutação do brief contra o código de HOJE, antes de despachar** — foi assim
+   que seis defeitos do meu próprio plano caíram antes de custar uma rodada, cinco deles da mesma
+   espécie (lista escrita à mão cega ao que cresceu).
+   🔴 **E a Tarefa 6 deixou uma CONDIÇÃO para esta, medida: ver a seção 5g.** Se o editor do número
+   buscar copy em `src/lib/`, o cerco de nome de lugar fica **verde medindo o conjunto errado** — e a
+   resposta está pronta, medida, e custa ~15 linhas.
 3. **O molde do dispatch** é o que funcionou nas Tarefas 4, 5 e 6: papel de engenheiro sênior, ponteiro
-   para o brief (que **vence o plano**), a régua das 52 espécies, as medições obrigatórias (suíte,
-   `tsc`, **`npm run build`**), `git add` por caminho, commit sem acentos com a linha de co-autoria, e
-   o relatório em oito itens — incluindo **todas as frases novas por extenso** e a **tabela de mutação
-   medida**.
+   para o brief (que **vence o plano**), a régua das espécies de prova fraca, as medições obrigatórias
+   (suíte, `tsc`, **`npm run build`** e **o tamanho da rota `/admin/[slug]`**), `git add` por caminho,
+   commit sem acentos com a linha de co-autoria, e o relatório em oito itens — incluindo **todas as
+   frases novas por extenso** e a **tabela de mutação medida**.
+   🔴 **E uma linha que faltava no molde até a Tarefa 6, e custou uma auditoria:** o brief tem de
+   **nomear o arquivo do relatório** (`task-N-report.md`). As Tarefas 3, 4, 5 e 6 não escreveram
+   nenhum, e o revisor da 6 não pôde conferir a tabela de mutação contra relatório que não existia.
 4. **Depois do relatório:** medir eu mesmo, despachar a **revisão**, aplicar a onda de fix com **prova
-   vermelha de cada conserto**, commitar, atualizar este arquivo, e **emendar na Tarefa 7 sem pausar**.
-   O método manda não parar entre tarefas — só se ele mandar, ou se aparecer decisão que é dele.
+   vermelha de cada conserto**, commitar, atualizar este arquivo, e **emendar na tarefa seguinte sem
+   pausar**. O método manda não parar entre tarefas — só se ele mandar, ou se aparecer decisão que é
+   dele.
+   🔴 **E a prova vermelha tem de ser MINHA em algum ponto:** na Tarefa 2 o guarda nasceu errado três
+   vezes e só caiu quando **eu mesmo** o provei vermelho; prova de terceiro não bastou. Na Tarefa 6 eu
+   provei dois: o cerco acusando uma frase de recusa que nomeia lugar, e o botão do "não sei"
+   desaparecendo de um campo preenchido.
 
 🔴 **E a regra que esta rodada pagou três vezes: NÃO despache nada que você não vá conseguir esperar.**
 O resultado de um subagente **morre com a sessão**. Commite a rodada antes de despachar a seguinte, e
@@ -915,6 +925,87 @@ onde o código foi (`src/lib/campos-da-ficha.ts:397`). 🔴 **O número da auton
 sendo de 26/09 e NÃO foi remedido** — remedir antes da Tarefa 3 pôr a porta de escrita no ar daria
 um número que não descreve nem o mundo velho nem o novo.
 
+### 5g. 🟢 A TAREFA 6 FECHOU — 2026-09-30, três commits e DUAS ondas de fix
+
+**`3466703..94e469b`.** A tela do painel ganhou **um editor por espécie de campo**: prosa, lista
+fechada, booleano, hora, o botão "não sei", e um **editor de bloco que o plano não previa**. O
+`EditorDeVoz` foi absorvido e **apagado**, com os quatro casos de teste dele migrados um a um. A
+escolha do instrumento sai de um `Record<EspecieCampo, …>` que **não compila** se alguém acrescentar
+uma espécie sem decidir — provado pelo compilador: `| "cor"` em `EspecieCampo` dá `TS2741` em dois
+lugares.
+
+**O que o brief auditado evitou, e vale guardar:** com o `horario` ausente a tela mostrava três blocos
+dizendo "não sei", **e a porta recusa gravar uma folha nesse estado**. Editor em cada folha = o dono
+digita a hora, aperta salvar e **leva recusa num campo que a tela ofereceu**. A saída foi o editor no
+bloco, que pede as duas horas juntas; as folhas só editam quando o bloco existe. **A porta aceita
+exatamente essa forma, medido contra `aplicarCampo` de verdade.**
+
+🔴 **A revisão achou SETE MUTAÇÕES SOBREVIVENTES na linha vermelha, e a espécie é de ALCANCE.** O cerco
+que impede uma frase fixa de nomear um lugar do acervo lia uma lista de seletores de um render **em
+repouso** — então cobria 6 das 13 frases novas. As sete de fora são as que o dono lê no **pior
+momento**: *"Salvando…"*, *"Tirando…"* e as cinco de recusa (`<p role="alert">` não é botão, nem label,
+nem option). Um editor podia dizer *"Sem rede na Rampa"* com a suíte verde.
+
+🔴 **E a re-revisão achou que o cerco NOVO podia ser desligado em silêncio por DUAS portas** — a classe
+que mais custou a este projeto, dentro do instrumento feito para fechar um `Critical`:
+
+1. **A metade da TELA não estava DENTRO da cerca.** Um teste provava que ela *contém* as frases;
+   **nada** provava que ela estava *dentro* do conjunto cercado. Tirar `...naTela` ficava verde.
+   🔴 **E a receita que a re-revisão prescreveu era insuficiente** — contenção de um lado fica verde
+   quando a metade desplugada é a outra. Hoje cada metade tem **testemunha** (o que só ela traz) com
+   piso próprio, e desplugar qualquer uma sai vermelha dizendo **qual**.
+2. **Cinco dos seis tipos de literal não tinham controle**, porque as 13 frases são todas
+   `StringLiteral`. Hoje há uma **fonte-sentinela com uma frase por tipo**, e desligar um tipo sai
+   vermelho **nomeando o tipo**. 🔴 **O guarda nasceu vermelho pelo MOTIVO ERRADO** (pela contagem, não
+   pela sentinela) e foi reordenado — sentinelas primeiro, contagem no fim.
+
+**O alcance deixou de ser uma pasta e passou a ser a árvore do painel** (`src/app/admin/**`,
+recursivo): 17 arquivos, 533 literais, **zero falso positivo** medido. A alternativa (um controle do
+conjunto errado) custava **38 exceções à mão + 20 encenações** e deixava de fora exatamente a frase que
+um editor novo cunhasse. E nasceu o portão da **45ª espécie**: todo `export const NOME = "texto"` da
+árvore tem de entrar na lista de frases cunhadas — enumerado por **outro caminho no AST**, senão portão
+e enumerador encolhem juntos e ficam verdes de mãos dadas.
+
+🔴 **CONDIÇÃO MEDIDA PARA A TAREFA 7 — leia antes de escrever o brief dela.** O cerco cobre a **árvore
+do painel**. Uma frase que um editor importe de **fora** de `src/app/admin/**` (ex.
+`src/lib/palavras-novas.ts`) e renderize **só** salvando ou em recusa **continua fora da cerca**. A
+variante mais forte foi medida — seguir o **grafo de imports**: 38 arquivos, 1036 literais, também zero
+violação hoje, **~15 linhas** — e recusada por dois motivos medidos: exige resolvedor de módulos à mão
+que pode falhar **em silêncio** (a classe exata que a onda fechava), e faria este teste cercar metade de
+`src/lib/`. **Se o editor do número buscar copy em `src/lib/`, o resíduo vira real e a resposta está
+pronta.**
+
+**A régua mais dura do projeto apareceu, e passou:** o guarda que autoriza esconder o "não sei" não
+cobria `valor === false`, e **`carroComum: false` está a um toque do dono** — sob a mutação, depois de
+ele gravar `false`, o botão desaparecia e ele ficava **trancado de voltar ao silêncio**, num campo em
+que `false` e ausente são coisas diferentes. Hoje há caso para `false` e para `""`, cada um conferido
+**contra a porta** antes, para não guardar ficha impossível (`dias: []` o schema recusa, então o guarda
+é contra a porta e fica vermelho no dia em que o `.min(1)` cair).
+
+**Medido no fechamento:** 1458/1458 em 85 arquivos, `tsc` exit 0, `npm run build` exit 0,
+`ƒ /admin/[slug]` **3.79 kB · 110 kB** (era 2.52 kB · 108 kB antes da tarefa; `shared by all` **104 kB
+inalterado** — o `zod` não entrou no celular dele, e a régua discrimina: com o registro importado num
+`"use client"` a rota vai a **17.4 kB · 123 kB**).
+
+🔴 **Três defeitos de PROCESSO que esta tarefa expôs, e que o molde do dispatch tinha:**
+1. **Nenhum brief nomeava o arquivo do relatório.** As Tarefas 3 a 6 não escreveram nenhum, e o revisor
+   da 6 **não pôde conferir a tabela de mutação** contra relatório que não existia — ele disse "não
+   medi" e rodou 38 mutações próprias no lugar. Os relatórios desta tarefa foram salvos em disco **por
+   mim, depois da revisão** (`task-6-report.md`, `-review.md`, `-fix-report.md`, `-rereview.md`,
+   `-fix2-report.md`).
+2. **O harness de mutação do primeiro implementador revertia com `git checkout --`**, o que teria
+   **apagado as correções não commitadas da própria onda**. Ele pegou antes de rodar.
+3. **O CRLF mordeu três vezes**, e uma delas quase virou resultado: duas sabotagens multi-linha **não
+   aplicaram** e a saída era idêntica ao controle. O protocolo que ficou: **`grep` no arquivo patchado
+   ANTES de rodar**, e o harness sai com *"ALVO AUSENTE — não é resultado, é ausência de medição"*.
+
+🔴 **O que NÃO foi consertado, de propósito, e é decisão de escopo:** `src/app/api/admin/ficha/route.ts`
+chama `gravarVersao` **sem comparar com a versão vigente** — medido: `aplicarCampo` com o valor atual
+devolve documento **idêntico**, e `removerCampo` duas vezes também. Tocar Salvar sem mudar nada põe uma
+linha *"você, pelo painel"* no histórico append-only que não mudou uma vírgula. O botão que **convidava**
+a isso (o "não tem" num campo já ausente) **foi fechado**; a porta não. **Fica para a Tarefa 9, que é o
+histórico.**
+
 ---
 
 ## ▶ ELE DIGITOU "CONTINUA"? COMECE AQUI, SEM PERGUNTAR NADA.
@@ -928,14 +1019,17 @@ dizia que *"o laço de construção ACABOU e a rodada está NO AR"*. Isso era ve
 é outro. Se você está lendo isto, o bloco foi reescrito; mas **a lição fica: o bloco de entrada é o
 que envelhece pior, porque é o único que ninguém re-lê antes de agir.**
 
-1. `git status` limpo; `npm test -- --run` — deve dar **1399/1399 em 85 arquivos**. **Confira você
-   mesmo; nunca relate o número deste arquivo sem rodar.** (E se uma rodada sair **1398/1399**, não é
-   susto: existe um **flake não identificado** registrado na seção 5f — anote o nome do arquivo
-   vermelho, que é a informação que falta.)
-2. 🔴 **O laço de construção ESTÁ EM CURSO: 5 de 12 tarefas.** O primeiro passo é **redespachar a
-   Tarefa 6** (os editores por espécie) — o brief dela existe e **já foi auditado**, em
-   `.superpowers/sdd/2026-09-26-painel-completo/task-6-brief.md`, com **dez achados, três
-   `Critical`**. Ver o item 3 da seção "▶ RETOMAR A RODADA DO PAINEL COMPLETO".
+1. `git status` limpo; `npm test -- --run` **verde**, `npx tsc --noEmit` e `npm run build` exit 0.
+   🔴 **Confira que nada está vermelho — NÃO confira contra um número deste arquivo**, porque a
+   contagem cresce a cada tarefa e já nasceu falsa aqui três vezes. A régua que sobrevive: **o topo do
+   `git log` é um `docs(resume): …`**. (E se uma rodada sair com **um** teste vermelho, não é susto
+   automático: existe um **flake não identificado** registrado na seção 5f — anote o nome do arquivo
+   vermelho, que é a informação que falta. No fechamento da Tarefa 6 a suíte rodou seis vezes, todas
+   verdes.)
+2. 🔴 **O laço de construção ESTÁ EM CURSO: 6 de 12 tarefas.** O primeiro passo é a **Tarefa 7** (o
+   número de motor com a consequência ao vivo) — e, diferente das Tarefas 4, 5 e 6, **o brief dela não
+   existe: escrever e AUDITAR antes de despachar**. Ver o item 2 da seção 3b e a **condição medida que
+   a Tarefa 6 deixou**, na seção **5g**.
 3. 🔴 **NÃO abra o dia com um menu das coisas que são dele.** Elas estão na seção 5 e continuam
    esperando; nenhuma trava o código. Se ele disser só *"continua"*, **construa** — e entregue a
    lista de palavras quando o conjunto de telas fechar, não em pedaços.
@@ -1043,9 +1137,9 @@ A leitura, essa sim, **já é 100% banco** (`src/lib/ficha.ts:78-80`, com guarda
    um elemento em `editar-ficha.ts:9` e o `campo: "voz"` cravado em `EditorDeVoz.tsx:36`.
    ⚠️ **Mas só alcança chave de PRIMEIRO nível** (`{...atual, [campo]: valor}`) — `custo.valor`,
    `horario.abre`, `condicao.*` exigem ensinar caminho.
-   🟢 **Das duas coisas pequenas, a primeira já caiu** (o array e o arquivo não existem mais) e o
-   caminho aninhado **foi ensinado** na Tarefa 1. Sobra o `campo: "voz"` cravado em
-   `EditorDeVoz.tsx:36`, que é justamente o que a Tarefa 6 substitui por um editor por espécie.
+   🟢 **AS DUAS CAÍRAM, e esta linha está FECHADA.** O array e o `editar-ficha.ts` não existem mais, o
+   caminho aninhado foi ensinado na Tarefa 1, e **a Tarefa 6 apagou o `EditorDeVoz` inteiro**: cada
+   espécie de campo tem o seu editor, e o caminho vem do registro, não cravado em componente nenhum.
 4. **Testes que cravam o acervo** (dado vazando pro código — violação direta da cláusula 3):
    `tests/app/MapaHome.test.tsx:354` crava `"3 trilhas fora do mapa"` → **o 4º lugar derruba a
    suíte** (tripwire deliberado, mas hoje é um programador obrigatório no caminho de criar);
@@ -1125,28 +1219,52 @@ melhorou a decisão, e a única vez em que desviei do processo de propósito (e 
   a suíte verde e o `tsc` limpo, porque o `not-found.tsx` era a única página que lia banco sem isso — e
   **dois assentos de revisão passaram por cima**, porque nenhum dispatch meu pedia build.
 
-### 📣 DOZE PALAVRAS DE TELA ESPERANDO O JOÃO LER — todas marcadas `// PENDENTE`
+### 📣 AS PALAVRAS DE TELA ESPERANDO O JOÃO LER — a tabela à mão MORREU, e o comando a substitui
 
-🔴 **Eram "onze" até 26/09 à noite, e o número era falso: a tabela era lista escrita à mão,
-cega ao que cresceu.** `grep -rn PENDENTE src/app/admin/` devolve **doze** — faltava a de
-`admin/[slug]/page.tsx:43`. Conferir sempre pelo grep, nunca por esta tabela.
+🔴 **Aqui havia uma tabela escrita à mão, e ela apodreceu exatamente como a espécie que este projeto
+catalogou.** Nasceu "onze", virou "doze", e em 30/09 a Tarefa 6 deixou **quatro das doze linhas
+apontando para `admin/EditorDeVoz.tsx`, um arquivo APAGADO** — duas das frases listadas já tinham
+saído da tela. **Lista à mão cega ao que cresceu vira varredura**, e aqui a varredura sempre existiu:
+o marcador mora **na linha de cima da frase**. Então o comando é a lista:
+
+```bash
+grep -rn --include='*.ts' --include='*.tsx' -A1 "// PENDENTE" src/
+```
+
+🔴 **E o comando que este arquivo recomendava ANTES estava ERRADO, o que inflava a conta:**
+`grep -rn PENDENTE src/` casa **"INDEPENDENTE"**, que aparece em prosa de comentário. É a mesma
+armadilha de substring que fez `veu` entrar dentro de "choveu" e deixou um cerco com buraco. **A régua
+é `// PENDENTE`, com as duas barras.**
+
+**Medido em 2026-09-30, no fechamento da Tarefa 6** (e meça de novo, não copie):
+
+| onde | marcadores `// PENDENTE` |
+|---|---|
+| `src/` inteiro | **86** |
+| `src/app/admin/` (o painel) | **60** |
+| `src/app/admin/campos/` (os editores da Tarefa 6) | **13** |
+
+**Das 13 dos editores, 7 são genuinamente novas, 2 estavam NO AR sem marcador nenhum** (`"Salvar"` e
+`"Salvando…"`, inline no `EditorDeVoz`, nunca na fila dele), e 4 só mudaram de arquivo. Por extenso, as
+sete novas:
+
+| a frase | quando ele a vê |
+|---|---|
+| "Escolha uma das opções." | ele aperta salvar sem escolher nada, numa lista ou num interruptor |
+| "Escolha uma hora, no formato HH:MM." | ele aperta salvar com a hora em branco |
+| "Caixa vazia não grava: escreva algo." | ele apaga tudo de uma caixa de texto e aperta salvar |
+| "Não sei — o app cala sobre isto" | o botão, em campo comum opcional já preenchido |
+| "Não tem — o app cala sobre isto" | o mesmo botão, num BLOCO (tirar o horário é declarar um FATO, não ignorância) |
+| "Tirando…" | o botão enquanto tira |
+| "Estes campos entram juntos: um sozinho não vira ficha." | a ajuda do bloco de horário quando ele está vazio |
+
+🔴 **E DUAS frases MORRERAM na Tarefa 6** — a conta que ele vai ler mudou, então está escrito:
+- `"A sua voz"` — o campo passou a ser chamado pelo rótulo do registro (`"A voz"`), como os outros 29.
+- `"É o que só quem já foi sabe. Aparece entre aspas na ficha."` — **a única perda de conteúdo da
+  tarefa.** Era a ajuda daquele campo; um campo com ajuda entre 29 sem ajuda é duas línguas na mesma
+  tela, e escrever ajuda para os 30 é copy nova. **Se ele a quiser de volta, é uma linha.**
 
 Copy é escolha dele. Nada disto está publicado como se fosse a voz dele.
-
-| onde | a frase |
-|---|---|
-| `admin/ListaDeLugares.tsx:7` | "Toque num lugar pra ver e mudar o que o app diz dele." |
-| `admin/PainelAdmin.tsx:28` | "Não consegui ler o aviso publicado — a seção abaixo pode estar incompleta." |
-| `admin/EditorDeVoz.tsx:6` | "A sua voz" |
-| `admin/EditorDeVoz.tsx:8` | "É o que só quem já foi sabe. Aparece entre aspas na ficha." |
-| `admin/EditorDeVoz.tsx:10` | "Não consegui salvar." |
-| `admin/EditorDeVoz.tsx:12` | "Sem rede." |
-| `admin/HistoricoDaVoz.tsx:6` | "Histórico da voz" |
-| `admin/HistoricoDaVoz.tsx:8` | "você, pelo painel" / "acervo original" (o rótulo de autor, **por linha**) |
-| `admin/HistoricoDaVoz.tsx:10` | "voltar a esta" |
-| `admin/HistoricoDaVoz.tsx:12` | "Voltando…" |
-| `admin/HistoricoDaVoz.tsx:14` | "Não consegui voltar a esta versão." |
-| `admin/[slug]/page.tsx:43` | "Não consegui ler o histórico — pode estar incompleto." |
 
 ### 📜 AS RULINGS DESTA EXECUÇÃO ESTÃO VERSIONADAS
 
@@ -1430,6 +1548,14 @@ procedência deixar de ser disciplina minha e virar `git blame`.
 3. **Limite de tentativas por IP** — deixei de fora de propósito (senha de 24+ caracteres já cobre).
 4. **"Criar ficha nova pelo app"** — é a etapa 6, fora deste plano, e colide com a regra dele de
    09/09 (acervo fechado em 3).
+5. 🆕 **(30/09, Tarefa 6) A ajuda do campo da voz MORREU, e a volta dela é uma linha.** A frase era
+   *"É o que só quem já foi sabe. Aparece entre aspas na ficha."* Saiu porque um campo com ajuda entre
+   29 campos sem ajuda é duas línguas na mesma tela — mas isso é **decisão de palavra, e palavra é
+   dele**. As duas saídas: trazer só aquela de volta, ou escrever ajuda para os 30 (copy nova). **Não
+   bloqueia nada.**
+6. 🆕 **(30/09) As quatro listas fechadas do painel mostram o valor CRU** (`barro`, `nao-va`, `sab`,
+   `gratis`) — nenhuma tem palavra neutra no app, e cunhá-las é copy nova sobre lugar real. Dívida de
+   **palavra, não de código**, e as quatro devem ser batizadas de uma vez. **Não bloqueia nada.**
 
 ---
 
