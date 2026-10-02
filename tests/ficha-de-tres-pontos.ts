@@ -54,3 +54,13 @@ export const TRES_PONTOS: Ficha = fichaSchema.parse({
 /** Cópia PROFUNDA, sempre — o teste que muda um nome de etapa nunca pode sujar
  *  a fixture que o caso seguinte lê (C3 da auditoria da Tarefa 10). */
 export const tresPontos = (): Ficha => structuredClone(TRES_PONTOS);
+
+/** A MESMA ficha com DOIS pontos — o lugar e uma etapa. É o estado logo depois
+ *  do primeiro "acrescentar", o mais comum de todos, e a fronteira onde "tirar o
+ *  último" é tirar a ÚNICA etapa (onda de conserto 1 da Tarefa 10, Critical 2
+ *  da revisão: nenhuma prova exercitava este tamanho). Slug próprio, pra poder
+ *  morar no mesmo banco que a de três sem se confundir com ela. */
+export const doisPontos = (): Ficha => {
+  const f = tresPontos();
+  return { ...f, slug: "lugar-de-dois-pontos-teste", trajeto: { waypoints: f.trajeto.waypoints.slice(0, 2) } };
+};

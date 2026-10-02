@@ -100,23 +100,26 @@ export default function EditorCoordenada({ campo, valor, slug }: PropsDoEditor) 
 
 const entre = (v: number, min: number, max: number): number => Math.min(max, Math.max(min, v));
 
-function ComMapa({
-  campo,
+/** O MAPA COM O PIN QUE ARRASTA — a parte deste editor que desenha mosaico e
+ *  pin e traduz o dedo em coordenada. Exportada na Tarefa 10 (onda de conserto
+ *  1) pra o `EditorWaypoints` marcar o ponto NOVO no MESMO mapa, sem cópia: o
+ *  dono posiciona e confirma, e o que vai pra porta é a posição do pin.
+ *
+ *  Não grava nada e não guarda estado de coordenada: quem chama guarda `atual`
+ *  e recebe cada posição nova por `aoMover`, já arredondada a seis casas. O
+ *  mapa fica CENTRADO em `centro` (que não segue o pin), como sempre foi. */
+export function MapaDoPin({
   centro,
-  slug,
-  indice,
+  atual,
+  aoMover,
 }: {
-  campo: CampoNaTela;
   centro: Par;
-  slug: string;
-  /** O índice do ponto do trajeto, ou `null` pro par `condicao.coords`. */
-  indice: number | null;
+  atual: Par;
+  aoMover: (par: Par) => void;
 }) {
-  const [atual, setAtual] = useState<Par>(centro);
   /** O ponteiro que está arrastando, ou `null`. Só ELE move o pin: soltar,
    *  cancelar ou um segundo dedo não mexem em nada. */
   const arrastando = useRef<{ id: number | undefined } | null>(null);
-  const { erro, salvando, gravar } = usarGravacao();
 
   // O mosaico é o MESMO do `MapaEstatico`: tiles de um zoom a mais desenhados em
   // 1/MAPA_ESCALA. O pin, não — ele vive em pixels de layout no zoom do editor.
@@ -139,8 +142,83 @@ function ComMapa({
     const y = ((cy - caixa.top) * A) / caixa.height;
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
     const c = coordDaPosicao(x, y, centro, Z, L, A);
-    setAtual({ lat: seisCasas(c.lat), lng: seisCasas(c.lng) });
+    aoMover({ lat: seisCasas(c.lat), lng: seisCasas(c.lng) });
   }
+
+  return (
+    <div className="adm-editor-mapa" style={{ height: A }}>
+      <div
+        className="adm-editor-mapa-caixa"
+        data-testid="mapa-escolher"
+        style={{ width: L, height: A, marginLeft: -L / 2 }}
+        onPointerDown={(e) => {
+          // Só o botão principal (o dedo, a caneta, o clique esquerdo), e só o
+          // primeiro dedo: o direito abre menu, e um segundo dedo é pinça.
+          if (e.button !== 0 || e.isPrimary === false || arrastando.current !== null) return;
+          arrastando.current = { id: e.pointerId };
+          e.currentTarget.setPointerCapture?.(e.pointerId);
+          mover(e);
+        }}
+        onPointerMove={(e) => {
+          if (arrastando.current !== null && arrastando.current.id === e.pointerId) mover(e);
+        }}
+        onPointerUp={(e) => {
+          if (arrastando.current?.id === e.pointerId) arrastando.current = null;
+        }}
+        onPointerCancel={(e) => {
+          if (arrastando.current?.id === e.pointerId) arrastando.current = null;
+        }}
+      >
+        <div
+          className="adm-editor-mapa-tiles"
+          style={{ width: L * MAPA_ESCALA, height: A * MAPA_ESCALA, transform: `scale(${1 / MAPA_ESCALA})` }}
+        >
+          {tiles.map((t) => (
+            <img
+              key={`${t.z}/${t.x}/${t.y}`}
+              src={urlTile(t)}
+              alt=""
+              width={TILE_PX}
+              height={TILE_PX}
+              draggable={false}
+              style={{ left: t.left, top: t.top }}
+            />
+          ))}
+        </div>
+        <span
+          className="adm-editor-mapa-pin"
+          data-pin=""
+          aria-hidden="true"
+          style={{ left: pin.left, top: pin.top }}
+        />
+      </div>
+      {/* Atribuição ODbL — obrigação de licença, não copy. A mesma do `MapaEstatico`. */}
+      <a
+        className="adm-editor-mapa-osm"
+        href="https://www.openstreetmap.org/copyright"
+        target="_blank"
+        rel="noopener"
+      >
+        © OpenStreetMap
+      </a>
+    </div>
+  );
+}
+
+function ComMapa({
+  campo,
+  centro,
+  slug,
+  indice,
+}: {
+  campo: CampoNaTela;
+  centro: Par;
+  slug: string;
+  /** O índice do ponto do trajeto, ou `null` pro par `condicao.coords`. */
+  indice: number | null;
+}) {
+  const [atual, setAtual] = useState<Par>(centro);
+  const { erro, salvando, gravar } = usarGravacao();
 
   function salvar(): void {
     if (indice !== null) {
@@ -152,62 +230,7 @@ function ComMapa({
 
   return (
     <div className="adm-editor" data-editor={campo.caminho}>
-      <div className="adm-editor-mapa" style={{ height: A }}>
-        <div
-          className="adm-editor-mapa-caixa"
-          data-testid="mapa-escolher"
-          style={{ width: L, height: A, marginLeft: -L / 2 }}
-          onPointerDown={(e) => {
-            // Só o botão principal (o dedo, a caneta, o clique esquerdo), e só o
-            // primeiro dedo: o direito abre menu, e um segundo dedo é pinça.
-            if (e.button !== 0 || e.isPrimary === false || arrastando.current !== null) return;
-            arrastando.current = { id: e.pointerId };
-            e.currentTarget.setPointerCapture?.(e.pointerId);
-            mover(e);
-          }}
-          onPointerMove={(e) => {
-            if (arrastando.current !== null && arrastando.current.id === e.pointerId) mover(e);
-          }}
-          onPointerUp={(e) => {
-            if (arrastando.current?.id === e.pointerId) arrastando.current = null;
-          }}
-          onPointerCancel={(e) => {
-            if (arrastando.current?.id === e.pointerId) arrastando.current = null;
-          }}
-        >
-          <div
-            className="adm-editor-mapa-tiles"
-            style={{ width: L * MAPA_ESCALA, height: A * MAPA_ESCALA, transform: `scale(${1 / MAPA_ESCALA})` }}
-          >
-            {tiles.map((t) => (
-              <img
-                key={`${t.z}/${t.x}/${t.y}`}
-                src={urlTile(t)}
-                alt=""
-                width={TILE_PX}
-                height={TILE_PX}
-                draggable={false}
-                style={{ left: t.left, top: t.top }}
-              />
-            ))}
-          </div>
-          <span
-            className="adm-editor-mapa-pin"
-            data-pin=""
-            aria-hidden="true"
-            style={{ left: pin.left, top: pin.top }}
-          />
-        </div>
-        {/* Atribuição ODbL — obrigação de licença, não copy. A mesma do `MapaEstatico`. */}
-        <a
-          className="adm-editor-mapa-osm"
-          href="https://www.openstreetmap.org/copyright"
-          target="_blank"
-          rel="noopener"
-        >
-          © OpenStreetMap
-        </a>
-      </div>
+      <MapaDoPin centro={centro} atual={atual} aoMover={setAtual} />
       <p className="adm-editor-coord" data-testid="coord-atual">
         {`${atual.lat}, ${atual.lng}`}
       </p>

@@ -297,8 +297,19 @@ describe("os dias da semana, no acervo", () => {
  *  desenho tem dois furos catalogados neste projeto: a tira que come o arquivo
  *  (espécie 44) e a leitura que não tem colchete (`waypoints.map(...)`,
  *  `waypoints.slice(1)`, `const { waypoints } = ...`), que a regex nunca viu. O
- *  parser não confunde comentário nem string com código, e enxerga toda forma de
- *  tocar a lista. */
+ *  parser não confunde comentário nem string com código.
+ *
+ *  ⚠️ O QUE ELE VÊ, e não "toda forma" (a redação anterior dizia isso, e a
+ *  revisão da Tarefa 10 mediu duas que escapavam): o token `waypoints` como
+ *  propriedade (`x.waypoints`), como identificador solto (destruturação,
+ *  variável), e como CHAVE de acesso por colchete em string ou em template
+ *  literal sem substituição (`x["waypoints"]`, `` x[`waypoints`] `` — esta
+ *  fechada na onda de conserto 1). O que ele NÃO vê, de propósito, e está
+ *  escrito pra não virar esquecimento: acesso SEM o nome — `Object.values(
+ *  trajeto)[0][1]`, chave montada (`x["way" + "points"]`) — e um helper de um
+ *  arquivo que edita a cadeia, importado por um que fala do lugar (o guarda
+ *  olha o token dentro de cada arquivo). As três exigem código deliberadamente
+ *  evasivo; cercá-las pediria análise de tipos, não de texto. */
 describe("a cadeia de waypoints — o bloco Trajeto a lê, e o que fala do LUGAR continua no [0]", () => {
   const SRC = path.join(process.cwd(), "src");
 
@@ -372,7 +383,7 @@ describe("a cadeia de waypoints — o bloco Trajeto a lê, e o que fala do LUGAR
 
   /** Toda vez que o código TOCA a lista de waypoints, com o que faz com ela.
    *
-   *  - `x.waypoints[0]` (ou `x["waypoints"][0]`) → `"0"`: o lugar;
+   *  - `x.waypoints[0]` (ou `x["waypoints"][0]`, `` x[`waypoints`][0] ``) → `"0"`: o lugar;
    *  - qualquer outra coisa — `[1]`, `[i]`, `.map`, `.slice`, `.length`, o
    *    `const { waypoints } = ...` — → `"cadeia"`. Conservador de propósito:
    *    `.at(0)` também conta como cadeia, e quem quiser o lugar escreve `[0]`.
@@ -416,7 +427,7 @@ describe("a cadeia de waypoints — o bloco Trajeto a lê, e o que fala do LUGAR
           (ts.isPropertyAssignment(pai) && pai.name === no);
         if (!ehChave) expr = ts.isPropertyAccessExpression(pai) && pai.name === no ? pai : no;
       } else if (
-        ts.isStringLiteral(no) &&
+        (ts.isStringLiteral(no) || ts.isNoSubstitutionTemplateLiteral(no)) &&
         no.text === "waypoints" &&
         ts.isElementAccessExpression(no.parent) &&
         no.parent.argumentExpression === no
@@ -520,6 +531,10 @@ describe("a cadeia de waypoints — o bloco Trajeto a lê, e o que fala do LUGAR
     const de = (fonte: string) => acessosDe(fonte, "x.ts").map((a) => a.indice);
     expect(de("f.trajeto.waypoints[0].nome")).toEqual(["0"]);
     expect(de('f.trajeto["waypoints"][0].nome')).toEqual(["0"]);
+    // 🔴 m1 da revisão da Tarefa 10: a chave em template literal SEM
+    // substituição é a mesma string — e passava invisível.
+    expect(de("f.trajeto[`waypoints`][0].nome")).toEqual(["0"]);
+    expect(de("f.trajeto[`waypoints`][1].nome")).toEqual(["cadeia"]);
     expect(de("f.trajeto.waypoints[1].nome")).toEqual(["cadeia"]);
     expect(de("f.trajeto.waypoints[i].nome")).toEqual(["cadeia"]);
     expect(de("f.trajeto.waypoints.map((w) => w.nome)")).toEqual(["cadeia"]);

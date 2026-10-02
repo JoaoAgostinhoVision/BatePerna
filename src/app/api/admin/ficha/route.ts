@@ -155,8 +155,8 @@ function acervoComo(versoes: Map<string, FichaVersao>, slug: string, doc: string
  *   - `{slug, ponto, lat, lng}` — grava a coordenada INTEIRA do ponto `ponto`
  *     do trajeto, numa versão só (Tarefa 8, onda de conserto 1). O índice tem
  *     de existir; passa pela coerência e herda a visibilidade como as outras.
- *   - `{slug, acrescentarEtapa: {nome}}` — acrescenta um ponto no FIM do
- *     trajeto, com a coordenada copiada do último (Tarefa 10).
+ *   - `{slug, acrescentarEtapa: {nome, lat, lng}}` — acrescenta um ponto no FIM
+ *     do trajeto, na coordenada que o dono marcou no mapa (Tarefa 10, onda 1).
  *   - `{slug, tirarEtapa: N}` — tira o ÚLTIMO ponto; `N` tem de ser o índice
  *     dele e nunca `0`, que é o lugar (409 com frase) (Tarefa 10).
  *  As duas da Tarefa 10 passam pela coerência e herdam a visibilidade, pelo
@@ -326,21 +326,32 @@ export async function PUT(req: Request): Promise<Response> {
     }
     mudar = (doc) => gravarPonto(doc, ponto, lat, lng);
   } else if (trazAcrescentar) {
-    // 🔴 A FORMA: um objeto com EXATAMENTE a chave `nome`, texto. Chave a mais
-    // (`lat`, `nota`) é 400 sem frase — a coordenada do ponto novo é COPIADA do
-    // último, por decisão (ver `acrescentarEtapa`), e um corpo que traga a sua
-    // estaria pedindo outra coisa que esta porta não faz. Nome em branco passa
-    // daqui e é recusado lá dentro, COM frase, como toda caixa vazia.
+    // 🔴 A FORMA: um objeto com EXATAMENTE as chaves `nome` (texto), `lat` e
+    // `lng` (números). A coordenada é OBRIGATÓRIA desde a onda de conserto 1: é
+    // a que o dono marcou no mapa, e a porta nunca inventa nem copia uma (ver
+    // `acrescentarEtapa`). Chave a mais (`nota`) ou a menos é 400 sem frase;
+    // faixa e finitude são do schema, dentro de `acrescentarEtapa`. Nome em
+    // branco passa daqui e é recusado lá dentro, COM frase.
+    //
+    // ⚠️ O `typeof … !== "number"` de `lat`/`lng` é a PRIMEIRA de duas portas em
+    // série: sem ele, `undefined` ou texto chegam ao `fichaSchema.parse` de
+    // `acrescentarEtapa`, que recusa igual (400 vazio). MEDIDO na onda 1: a
+    // mutação que o arranca SOBREVIVE à suíte (espécie 47), e não há resposta
+    // observável que separe as duas. Ele fica porque é ele que dá o TIPO
+    // `number` à chamada; a garantia de coordenada válida é o schema.
+    const e = etapaNova as { nome?: unknown; lat?: unknown; lng?: unknown } | null;
     if (
-      typeof etapaNova !== "object" ||
-      etapaNova === null ||
-      Object.keys(etapaNova).length !== 1 ||
-      typeof (etapaNova as { nome?: unknown }).nome !== "string"
+      typeof e !== "object" ||
+      e === null ||
+      Object.keys(e).length !== 3 ||
+      typeof e.nome !== "string" ||
+      typeof e.lat !== "number" ||
+      typeof e.lng !== "number"
     ) {
       return new Response("", { status: 400, headers: TEXTO });
     }
-    const nome = (etapaNova as { nome: string }).nome;
-    mudar = (doc) => acrescentarEtapa(doc, nome);
+    const { nome, lat: latNova, lng: lngNova } = e as { nome: string; lat: number; lng: number };
+    mudar = (doc) => acrescentarEtapa(doc, nome, latNova, lngNova);
   } else if (trazTirar) {
     // 🔴 A FORMA: inteiro ≥ 0, pela mesma razão do `ponto` e do `versaoId`
     // (`1.5`, `-1` e `1e999`/`Infinity` não são índice de nada) — 400 sem frase.

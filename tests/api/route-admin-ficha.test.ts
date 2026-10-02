@@ -8,7 +8,7 @@ import { semearAcervo } from "../banco";
 import { fichaSchema, type Ficha } from "@/types/ficha";
 import type { Violacao } from "@/lib/coerencia";
 import { RECUSA_TIRAR_O_LUGAR } from "@/lib/campos-da-ficha";
-import { SEGUNDO, TERCEIRO, TRES_PONTOS, tresPontos } from "../ficha-de-tres-pontos";
+import { SEGUNDO, TERCEIRO, TRES_PONTOS, doisPontos, tresPontos } from "../ficha-de-tres-pontos";
 
 // 🔴 C1 da revisão do controlador: o molde real é `tests/api/route-admin-aviso.test.ts`
 // (o brief citava um caminho em `tests/app/` que não existe) — Request à mão,
@@ -1233,15 +1233,21 @@ describe("PUT /api/admin/ficha — as etapas do trajeto (`acrescentarEtapa` / `t
   const plantar = (f: Ficha, oculto = false) =>
     gravarVersao(c, f.slug, JSON.stringify(f), "semente", AGORA - 10, oculto);
   const docDe = async (slug: string) => JSON.parse((await versaoAtual(c, slug))!.doc) as Ficha;
+  /** 🔴 A POSIÇÃO QUE O DONO MARCOU NO MAPA (onda de conserto 1). Ela é
+   *  diferente de TODO ponto da fixture de propósito: um ponto novo que saísse
+   *  com a coordenada copiada de qualquer ponto existente falha a igualdade
+   *  exata. Até a onda 1 a porta COPIAVA a do último, e a ficha pública
+   *  afirmava como fato, com "Abrir no mapa", uma posição que ninguém deu. */
+  const MARCADO = { lat: -8.471234, lng: -36.271234 };
   const UM_PONTO: Ficha = {
     ...tresPontos(),
     slug: "lugar-de-um-ponto-teste",
     trajeto: { waypoints: [tresPontos().trajeto.waypoints[0]] },
   };
 
-  it("acrescentar: grava UMA versão com o ponto novo no FIM, na coordenada do último, e o lugar intocado", async () => {
+  it("acrescentar: grava UMA versão com o ponto novo no FIM, na coordenada que o DONO mandou, e o lugar intocado", async () => {
     await plantar(TRES_PONTOS);
-    const res = await PUT(pedido({ slug: T, acrescentarEtapa: { nome: "Quarto ponto" } }, cookieBom));
+    const res = await PUT(pedido({ slug: T, acrescentarEtapa: { nome: "Quarto ponto", ...MARCADO } }, cookieBom));
     expect(res.status, await res.text()).toBe(200);
     expect(await historico(c, T), "a fixture e UMA versão nova").toHaveLength(2);
     expect((await versaoAtual(c, T))!.autor).toBe("painel");
@@ -1251,35 +1257,38 @@ describe("PUT /api/admin/ficha — as etapas do trajeto (`acrescentarEtapa` / `t
     // 🔴 O LUGAR NÃO SE MEXE — nem nome, nem coordenada, nem posição.
     expect(w0).toEqual(TRES_PONTOS.trajeto.waypoints[0]);
     expect([w1.nome, w2.nome, w3.nome]).toEqual([SEGUNDO, TERCEIRO, "Quarto ponto"]);
-    // A coordenada nasce COPIADA do ponto anterior (o último), e o dono a ajusta
-    // pelo mapa da Tarefa 8. Sem nota: nota é do ponto, e nada é pré-preenchido.
-    expect(w3).toEqual({ nome: "Quarto ponto", lat: w2.lat, lng: w2.lng });
+    // A coordenada é EXATAMENTE a do corpo — a que o dono marcou no mapa —, e
+    // nunca uma cópia de outro ponto. Sem nota: nada é pré-preenchido.
+    expect(w3).toEqual({ nome: "Quarto ponto", ...MARCADO });
+    expect([w2.lat, w2.lng], "a premissa: a marcada não é a do último").not.toEqual([MARCADO.lat, MARCADO.lng]);
   });
 
   it("acrescentar num lugar de UM ponto: o lugar continua o primeiro, e o novo vira o segundo", async () => {
     await plantar(UM_PONTO);
-    const res = await PUT(pedido({ slug: UM_PONTO.slug, acrescentarEtapa: { nome: "Ponto marcador" } }, cookieBom));
+    const res = await PUT(pedido({ slug: UM_PONTO.slug, acrescentarEtapa: { nome: "Ponto marcador", ...MARCADO } }, cookieBom));
     expect(res.status, await res.text()).toBe(200);
     const pontos = (await docDe(UM_PONTO.slug)).trajeto.waypoints;
     expect(pontos.map((w) => w.nome)).toEqual([UM_PONTO.trajeto.waypoints[0].nome, "Ponto marcador"]);
+    // e a primeira etapa NÃO nasce em cima do destino (o Critical 1 da revisão)
+    expect(pontos[1]).toEqual({ nome: "Ponto marcador", ...MARCADO });
   });
 
   it("acrescentar herda a visibilidade: num lugar escondido, a versão nova continua escondida", async () => {
     await plantar(TRES_PONTOS, true);
-    const res = await PUT(pedido({ slug: T, acrescentarEtapa: { nome: "Quarto ponto" } }, cookieBom));
+    const res = await PUT(pedido({ slug: T, acrescentarEtapa: { nome: "Quarto ponto", ...MARCADO } }, cookieBom));
     expect(res.status, await res.text()).toBe(200);
     expect((await versaoAtual(c, T))!.oculto, "acrescentar ponto não pode desesconder").toBe(true);
   });
 
   it("acrescentar num lugar no ar o mantém no ar", async () => {
     await plantar(TRES_PONTOS);
-    await PUT(pedido({ slug: T, acrescentarEtapa: { nome: "Quarto ponto" } }, cookieBom));
+    await PUT(pedido({ slug: T, acrescentarEtapa: { nome: "Quarto ponto", ...MARCADO } }, cookieBom));
     expect((await versaoAtual(c, T))!.oculto).toBe(false);
   });
 
   it("acrescentar com nome em branco: 400 COM frase, e nada é gravado", async () => {
     await plantar(TRES_PONTOS);
-    const res = await PUT(pedido({ slug: T, acrescentarEtapa: { nome: "   " } }, cookieBom));
+    const res = await PUT(pedido({ slug: T, acrescentarEtapa: { nome: "   ", ...MARCADO } }, cookieBom));
     expect(res.status).toBe(400);
     expect((await res.text()).trim(), "a recusa tem de dizer o porquê").not.toBe("");
     expect(await historico(c, T)).toHaveLength(1);
@@ -1287,9 +1296,16 @@ describe("PUT /api/admin/ficha — as etapas do trajeto (`acrescentarEtapa` / `t
 
   for (const [nome, carga] of [
     ["texto em vez de objeto", "Quarto ponto"],
-    ["objeto sem nome", {}],
-    ["nome número", { nome: 4 }],
-    ["chave a mais (lat)", { nome: "Quarto ponto", lat: -8 }],
+    ["objeto vazio", {}],
+    ["sem nome", { lat: -8.47, lng: -36.27 }],
+    ["nome número", { nome: 4, lat: -8.47, lng: -36.27 }],
+    // 🔴 onda de conserto 1: a coordenada é OBRIGATÓRIA. Sem ela não existe
+    // ponto, e a porta não inventa uma.
+    ["só o nome (sem lat/lng)", { nome: "Quarto ponto" }],
+    ["sem lat", { nome: "Quarto ponto", lng: -36.27 }],
+    ["sem lng", { nome: "Quarto ponto", lat: -8.47 }],
+    ["lat texto", { nome: "Quarto ponto", lat: "-8.47", lng: -36.27 }],
+    ["chave a mais (nota)", { nome: "Quarto ponto", lat: -8.47, lng: -36.27, nota: "x" }],
     ["null", null],
   ] as const) {
     it(`acrescentar malformado (${nome}): 400 SEM frase, e nada é gravado`, async () => {
@@ -1298,6 +1314,42 @@ describe("PUT /api/admin/ficha — as etapas do trajeto (`acrescentarEtapa` / `t
       expect(res.status).toBe(400);
       expect(await res.text()).toBe("");
       expect(await historico(c, T)).toHaveLength(1);
+    });
+  }
+
+  it("acrescentar com coordenada fora do planeta: recusado, e nada é gravado", async () => {
+    await plantar(TRES_PONTOS);
+    const res = await PUT(pedido({ slug: T, acrescentarEtapa: { nome: "Quarto ponto", lat: 200, lng: -36 } }, cookieBom));
+    expect([400, 409]).toContain(res.status);
+    expect(await historico(c, T)).toHaveLength(1);
+  });
+
+  // 🔴 A FRONTEIRA DE DOIS PONTOS (Critical 2 da revisão). Lugar + UMA etapa é o
+  // estado logo depois do primeiro "acrescentar", e tirar o último ali é tirar a
+  // única etapa — o caso que mais vai acontecer, e o que nenhuma prova cobria.
+  it("tirar a ÚNICA etapa (trajeto de DOIS pontos): 200, UMA versão, e sobra só o lugar", async () => {
+    const dois = doisPontos();
+    await plantar(dois);
+    const res = await PUT(pedido({ slug: dois.slug, tirarEtapa: 1 }, cookieBom));
+    expect(res.status, await res.text()).toBe(200);
+    expect(await historico(c, dois.slug)).toHaveLength(2);
+    expect((await docDe(dois.slug)).trajeto.waypoints).toEqual([dois.trajeto.waypoints[0]]);
+  });
+
+  // 🔴 m3 da revisão: num trajeto de UM ponto, `tirarEtapa: 1` pede o Ponto 2,
+  // que NÃO EXISTE — e a resposta era a frase do lugar, sobre outro assunto.
+  // Agora é a recusa de item inexistente que a porta já tinha (a mesma de
+  // `escrever`), e o 3 num trajeto de 3 cai nela também.
+  for (const [quem, f, n, tem] of [
+    ["um ponto", () => UM_PONTO, 1, 1],
+    ["três pontos", () => TRES_PONTOS, 3, 3],
+  ] as const) {
+    it(`tirar um ponto que NÃO EXISTE (${n}, ${quem}): 400 com a frase do item inexistente`, async () => {
+      await plantar(f());
+      const res = await PUT(pedido({ slug: f().slug, tirarEtapa: n }, cookieBom));
+      expect(res.status).toBe(400);
+      expect(await res.text()).toBe(`não existe o item ${n} nesta lista (ela tem ${tem})`);
+      expect(await historico(c, f().slug)).toHaveLength(1);
     });
   }
 
@@ -1335,7 +1387,7 @@ describe("PUT /api/admin/ficha — as etapas do trajeto (`acrescentarEtapa` / `t
     });
   }
 
-  for (const n of [1, 3]) {
+  for (const n of [1]) {
     it(`tirar um ponto que não é o último (${n}, num trajeto de 3): 409 COM frase, e nada é gravado`, async () => {
       await plantar(TRES_PONTOS);
       const res = await PUT(pedido({ slug: T, tirarEtapa: n }, cookieBom));
@@ -1377,11 +1429,11 @@ describe("PUT /api/admin/ficha — as etapas do trajeto (`acrescentarEtapa` / `t
 
   // Mutuamente exclusivas com as outras formas — e ENTRE SI —, pela PRESENÇA da chave.
   for (const [nome, corpo] of [
-    ["acrescentar + tirar", { acrescentarEtapa: { nome: "x" }, tirarEtapa: 2 }],
-    ["acrescentar + campo/valor", { acrescentarEtapa: { nome: "x" }, campo: "voz", valor: "y" }],
-    ["acrescentar + naoSei", { acrescentarEtapa: { nome: "x" }, campo: "piso", naoSei: true }],
-    ["acrescentar + ponto", { acrescentarEtapa: { nome: "x" }, ponto: 0, lat: -8, lng: -36 }],
-    ["acrescentar + versaoId", { acrescentarEtapa: { nome: "x" }, versaoId: 1 }],
+    ["acrescentar + tirar", { acrescentarEtapa: { nome: "x", lat: -8.47, lng: -36.27 }, tirarEtapa: 2 }],
+    ["acrescentar + campo/valor", { acrescentarEtapa: { nome: "x", lat: -8.47, lng: -36.27 }, campo: "voz", valor: "y" }],
+    ["acrescentar + naoSei", { acrescentarEtapa: { nome: "x", lat: -8.47, lng: -36.27 }, campo: "piso", naoSei: true }],
+    ["acrescentar + ponto", { acrescentarEtapa: { nome: "x", lat: -8.47, lng: -36.27 }, ponto: 0, lat: -8, lng: -36 }],
+    ["acrescentar + versaoId", { acrescentarEtapa: { nome: "x", lat: -8.47, lng: -36.27 }, versaoId: 1 }],
     ["tirar + campo/valor", { tirarEtapa: 2, campo: "voz", valor: "y" }],
     ["tirar + ponto", { tirarEtapa: 2, ponto: 0, lat: -8, lng: -36 }],
     ["tirar + versaoId", { tirarEtapa: 2, versaoId: 1 }],
@@ -1431,7 +1483,7 @@ describe("PUT /api/admin/ficha — o portão de coerência vale pra TODA forma d
     ["campo/valor", { campo: "voz", valor: "outra voz marcadora" }],
     ["campo/naoSei", { campo: "trajeto.waypoints.1.nota", naoSei: true }],
     ["ponto", { ponto: 1, lat: -8.5, lng: -36.5 }],
-    ["acrescentarEtapa", { acrescentarEtapa: { nome: "Quarto ponto" } }],
+    ["acrescentarEtapa", { acrescentarEtapa: { nome: "Quarto ponto", lat: -8.47, lng: -36.27 } }],
     ["tirarEtapa", { tirarEtapa: 2 }],
   ];
 

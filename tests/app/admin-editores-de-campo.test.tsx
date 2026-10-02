@@ -6,7 +6,12 @@ import ts from "typescript";
 import FichaInteira, { LISTA_MULTIPLA, moldeDe, multiploDe } from "@/app/admin/FichaInteira";
 import { NAO_SEI, NAO_TEM, TIRANDO } from "@/app/admin/campos/BotaoNaoSei";
 import { BLOCO_JUNTO } from "@/app/admin/campos/EditorBloco";
-import { ACRESCENTAR_PONTO, DICA_DO_PONTO_NOVO, NOME_DO_PONTO_NOVO } from "@/app/admin/campos/EditorWaypoints";
+import {
+  ACRESCENTAR_PONTO,
+  DICA_DO_PONTO_NOVO,
+  NOME_DO_PONTO_NOVO,
+  TIRAR_MESMO,
+} from "@/app/admin/campos/EditorWaypoints";
 import { ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
 import {
   ALEM_DO_PROVEDOR,
@@ -1337,14 +1342,17 @@ describe("Os editores servem os três lugares", () => {
     MOSTRAR_DE_NOVO,
     // R2 da onda de conserto 1 da Task 9: a marca da versão que mostrou de novo.
     DE_VOLTA_AO_AR,
-    // As da cadeia do trajeto (Tarefa 10, 2026-10-01). As três aparecem EM
-    // REPOUSO em toda ficha (o editor existe com um ponto só), mas o render
-    // dos três lugares não é o que as cerca — é esta lista. O "Tirar o Ponto N"
+    // As da cadeia do trajeto (Tarefa 10, 2026-10-01). Só o botão de acrescentar
+    // aparece EM REPOUSO; o nome e a dica, depois de abrir (onda de conserto 1).
+    // De todo jeito, o render dos três lugares não é o que as cerca — é esta lista. O "Tirar o Ponto N"
     // é montado (`tirarPonto`), e a metade fixa dele ("Tirar o ") é texto que o
     // varredor da FONTE já lê como `TemplateHead`.
     NOME_DO_PONTO_NOVO,
     ACRESCENTAR_PONTO,
     DICA_DO_PONTO_NOVO,
+    // Onda de conserto 1 da Tarefa 10: o segundo toque do "tirar" (decisão do
+    // João). Só aparece depois do primeiro toque, nunca em repouso.
+    TIRAR_MESMO,
   ];
 
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem

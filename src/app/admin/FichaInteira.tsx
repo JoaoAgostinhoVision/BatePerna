@@ -574,6 +574,9 @@ export default function FichaInteira({ ficha }: { ficha: Ficha }) {
   // de ler a cadeia inteira. O servidor conta os pontos e escreve o rótulo do
   // último com a MESMA função dos blocos (`parada`); o editor só recebe props.
   const pontos = ficha.trajeto.waypoints.length;
+  // Onde o mapa do ponto novo COMEÇA (onda de conserto 1). Não é o valor do
+  // ponto novo: ele só vira dado se o dono confirmar o pin ali.
+  const ultimoPonto = ficha.trajeto.waypoints[pontos - 1];
   const ultimoDoTrajeto = campos.filter((c) => c.caminho.startsWith("trajeto.waypoints.")).at(-1)?.caminho;
   return (
     <section className="adm-ficha-inteira" data-ficha-inteira={ficha.slug}>
@@ -587,7 +590,12 @@ export default function FichaInteira({ ficha }: { ficha: Ficha }) {
               <Fragment key={c.caminho}>
                 <Bloco ficha={ficha} campo={c} blocos={blocos} folhasDoBloco={folhasDoBloco} />
                 {c.caminho === ultimoDoTrajeto && (
-                  <EditorWaypoints slug={ficha.slug} pontos={pontos} rotuloDoUltimo={parada(pontos)} />
+                  <EditorWaypoints
+                    slug={ficha.slug}
+                    pontos={pontos}
+                    rotuloDoUltimo={parada(pontos)}
+                    ultimo={{ lat: ultimoPonto.lat, lng: ultimoPonto.lng }}
+                  />
                 )}
               </Fragment>
             ))}

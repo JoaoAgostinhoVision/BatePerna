@@ -256,6 +256,11 @@ function recusarVazio(caminho: string, valor: ValorDeCampo): void {
   }
 }
 
+/** A recusa de índice que a lista não tem — uma frase só, pra `escrever` e pra
+ *  `tirarEtapa` (onda de conserto 1 da Tarefa 10: pedir o Ponto 2 de um trajeto
+ *  de um ponto respondia com a frase do LUGAR, que fala de outra coisa). */
+const itemInexistente = (i: number, tem: number): string => `não existe o item ${i} nesta lista (ela tem ${tem})`;
+
 /** Escreve (ou apaga) a folha de `degraus` devolvendo uma cópia — NUNCA muta o
  *  que recebeu. Só os objetos do caminho tocado são copiados; os irmãos saem
  *  pela mesma referência, que é o que faz "só o campo pedido muda". */
@@ -267,7 +272,7 @@ function escrever(no: unknown, degraus: readonly string[], valor: unknown, remov
     const i = Number(degrau);
     // Índice que não existe não é criado: waypoint novo é outra ação, e
     // inventar um aqui gravaria uma etapa vazia no trajeto de um lugar real.
-    if (i >= no.length) throw new Error(`não existe o item ${i} nesta lista (ela tem ${no.length})`);
+    if (i >= no.length) throw new Error(itemInexistente(i, no.length));
     if (resto.length === 0) throw new Error("remover ou trocar um item inteiro da lista não passa por aqui");
     const copia = no.slice();
     copia[i] = escrever(no[i], resto, valor, remover);
@@ -473,26 +478,30 @@ export const RECUSA_TIRAR_O_LUGAR = "O Ponto 1 é o próprio lugar: ele não sai
  *  🔴 SÓ NO FIM, e nunca antes do `[0]`: o primeiro ponto é O LUGAR, e um ponto
  *  inserido no início viraria o nome da home, o pin e a distância.
  *
- *  🔴 A COORDENADA NASCE COPIADA DO PONTO ANTERIOR (o último de agora), e é o
- *  dono quem a corrige no mapa da Tarefa 8 — que já serve qualquer
- *  `trajeto.waypoints.N.lat`. Não existe coordenada "neutra" pra inventar aqui:
- *  `0,0` é o Golfo da Guiné, e um ponto em branco não passa no schema. A cópia é
- *  o único ponto de partida que já é verdade sobre este trajeto, e ela cai a
- *  poucos metros de onde o dono vai arrastar.
+ *  🔴 A COORDENADA É A QUE O DONO MARCOU NO MAPA, e chega no corpo. Até a onda de
+ *  conserto 1 ela era COPIADA do último ponto (ruling C1 do brief, trocada pelo
+ *  próprio orquestrador): a ficha pública imprimia a cópia como fato Nível A, com
+ *  "Abrir no mapa", e na primeira etapa a cópia era a do PRÓPRIO destino — o app
+ *  afirmando uma posição que ninguém deu, sem nada que a distinguisse de uma
+ *  conferida. Agora não existe cópia de coordenada em lugar nenhum do caminho:
+ *  confirmar o pin sem mexer é o DONO afirmando aquela posição, e é aceito sem
+ *  heurística de "igual à anterior" (que comeria o caso real de duas etapas no
+ *  mesmo ponto). Faixa e finitude são do schema, como em `gravarPonto`.
  *
  *  Sem `nota`: nada é pré-preenchido (§4.4 da spec). O nome vem do dono e é
  *  gravado como chegou; em branco é recusado com frase, como toda caixa vazia. */
-export function acrescentarEtapa(docAtual: string, nome: string): string {
+export function acrescentarEtapa(docAtual: string, nome: string, lat: number, lng: number): string {
   if (nome.trim() === "") {
     // PENDENTE: redação minha, o João ainda não leu
     throw new Error("o ponto novo precisa de um nome: escreva algo");
   }
   const atual = fichaSchema.parse(JSON.parse(docAtual));
-  const pontos = atual.trajeto.waypoints;
-  const anterior = pontos[pontos.length - 1];
-  const novo = { nome, lat: anterior.lat, lng: anterior.lng };
+  const novo = { nome, lat, lng };
   return JSON.stringify(
-    fichaSchema.parse({ ...atual, trajeto: { ...atual.trajeto, waypoints: [...pontos, novo] } }),
+    fichaSchema.parse({
+      ...atual,
+      trajeto: { ...atual.trajeto, waypoints: [...atual.trajeto.waypoints, novo] },
+    }),
   );
 }
 
@@ -509,7 +518,12 @@ export function acrescentarEtapa(docAtual: string, nome: string): string {
 export function tirarEtapa(docAtual: string, indice: number): string {
   const atual = fichaSchema.parse(JSON.parse(docAtual));
   const pontos = atual.trajeto.waypoints;
-  if (indice < 1 || pontos.length === 1) throw new RecusaDoTrajeto(RECUSA_TIRAR_O_LUGAR);
+  // A ORDEM DAS TRÊS RECUSAS: o lugar primeiro (o `0` é sempre o lugar, até
+  // num trajeto de um ponto, onde ele também seria "o último"); depois o ponto
+  // que não existe (400, a frase de item inexistente — é pedido errado, não
+  // conflito); e por fim o ponto que existe mas não é o último (409).
+  if (indice < 1) throw new RecusaDoTrajeto(RECUSA_TIRAR_O_LUGAR);
+  if (indice >= pontos.length) throw new Error(itemInexistente(indice, pontos.length));
   if (indice !== pontos.length - 1) {
     throw new RecusaDoTrajeto(
       // PENDENTE: redação minha, o João ainda não leu
