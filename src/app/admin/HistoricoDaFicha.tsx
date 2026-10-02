@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
 import type { FichaVersao } from "@/lib/db";
+import { ESCONDIDO } from "./campos/palavras";
 
 // PENDENTE: redação minha, o João ainda não leu
-const TITULO = "Histórico da voz";
+const TITULO = "Histórico da ficha";
 // PENDENTE: redação minha, o João ainda não leu
 const AUTOR = { painel: "você, pelo painel", semente: "acervo original" } as const;
 // PENDENTE: redação minha, o João ainda não leu
@@ -13,7 +14,17 @@ const VOLTANDO = "Voltando…";
 // PENDENTE: redação minha, o João ainda não leu
 const ERRO_VOLTAR = "Não consegui voltar a esta versão.";
 
-type Props = { versoes: FichaVersao[] };
+/** Uma versão como a TELA a recebe: a linha do banco e, já resolvidos no
+ *  servidor, os RÓTULOS dos campos que ela mudou em relação à anterior.
+ *
+ *  🔴 OS RÓTULOS CHEGAM PRONTOS, e não é preguiça (B2 da auditoria da Task 9):
+ *  saber "que campo mudou" exige o registro de campos, que traz o zod; este
+ *  componente é `"use client"` e desce pro celular. A conta é
+ *  `camposQueMudaram` (`src/lib/campos-mudados.ts`), chamada pela página; o
+ *  rótulo é `rotuloDe`, a MESMA fonte que nomeia o bloco na ficha inteira. */
+export type VersaoNaTela = FichaVersao & { mudou: readonly string[] };
+
+type Props = { versoes: VersaoNaTela[] };
 
 /** A voz que um documento de versão guarda — nunca lança: uma linha antiga
  *  que não parseia mostra vazio em vez de derrubar a lista inteira. */
@@ -31,7 +42,13 @@ function dataHora(criadoEm: number): string {
 }
 
 /** O histórico do que já foi dito sobre UM lugar, e o botão que volta a uma
- *  versão antiga (Task 7, 2026-09-26). "Voltar" GRAVA uma versão nova com o
+ *  versão antiga (Task 7, 2026-09-26).
+ *
+ *  🔴 ERA `HistoricoDaVoz` ATÉ A TASK 9 (2026-10-01), e o nome dizia o defeito:
+ *  ele só sabia extrair a `voz`, então uma versão que mudou o preço aparecia
+ *  sem nada na linha — o dono não via o próprio trabalho. Hoje cada linha diz
+ *  QUE CAMPOS mudaram (`mudou`, resolvido no servidor) e se a versão está
+ *  ESCONDIDA. Abrir a linha ainda mostra a voz daquela versão, como antes. "Voltar" GRAVA uma versão nova com o
  *  conteúdo velho — nunca apaga nada; `ficha_versoes` é append-only (ver
  *  `src/lib/db.ts`).
  *
@@ -41,7 +58,7 @@ function dataHora(criadoEm: number): string {
  *  🔴 NENHUM TEXTO SOBRE UM LUGAR ESPECÍFICO mora aqui — `versoes` chega por
  *  prop, como `ficha` chega em `FichaInteira`. Este componente serve QUALQUER
  *  lugar. (A frase dizia `EditorDeVoz`, que a Task 6 apagou.) */
-export default function HistoricoDaVoz({ versoes }: Props) {
+export default function HistoricoDaFicha({ versoes }: Props) {
   const [aberta, setAberta] = useState<number | null>(null);
   const [voltando, setVoltando] = useState<number | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -69,10 +86,18 @@ export default function HistoricoDaVoz({ versoes }: Props) {
       <h2>{TITULO}</h2>
       <ul>
         {versoes.map((v) => (
-          <li key={v.id} data-versao={v.id}>
+          <li key={v.id} data-versao={v.id} data-testid={`versao-${v.id}`}>
             <button type="button" data-abrir-versao={v.id} onClick={() => setAberta(aberta === v.id ? null : v.id)}>
               {dataHora(v.criado_em)} — {AUTOR[v.autor]}
             </button>
+            {v.oculto && <span className="adm-marca-escondido">{ESCONDIDO}</span>}
+            {v.mudou.length > 0 && (
+              // 🔴 `<span>`, NÃO `<li>` aninhado: a linha da versão É o `<li>`, e
+              // há teste contando `li` do histórico contra as versões do banco.
+              <p className="adm-historico-mudou">
+                {v.mudou.map((rotulo) => <span key={rotulo}>{rotulo}</span>)}
+              </p>
+            )}
             {aberta === v.id && (
               <div className="adm-historico-item">
                 <p>{vozDaVersao(v.doc)}</p>

@@ -321,6 +321,9 @@ export async function versaoPorId(client: Client, id: number): Promise<FichaVers
  *   2. **A semente** (`src/lib/semente.ts`): um acervo todo escondido pareceria
  *      VAZIO, e `npm run semear` regravaria tudo VISÍVEL por cima do que o dono
  *      escondeu de propósito.
+ *   3. **A lista do painel** (`getAcervoDoDono`, em `src/lib/ficha.ts`; Task 9,
+ *      2026-10-01): esconder é tirar do PÚBLICO, não do dono — sem os ocultos
+ *      o lugar escondido sumia da lista dele, sem caminho de volta pela tela.
  *
  *  🔴 E O FILTRO FICA **FORA** DA SUBCONSULTA, DE PROPÓSITO. Dentro dela
  *  (`SELECT MAX(id) ... WHERE oculto <> 1`) o lugar escondido continuaria

@@ -177,3 +177,27 @@ export const PREVENDO = "Conferindo o que muda…";
  *  ela prometia um "ainda" que nada no sistema cumpria. */
 // PENDENTE: redação minha, o João ainda não leu
 export const PREVISAO_FALHOU = "Não consegui conferir o que muda.";
+
+/** ─────────────────────────────────────────────────────────────────────────────
+ *  AS PALAVRAS DO ESCONDER (Task 9, 2026-10-01). Nenhuma é fala dele; todas são
+ *  `PENDENTE`. Moram aqui porque três pedaços da tela as escrevem — a lista
+ *  (`ListaDeLugares`, servidor), o histórico e o botão (`"use client"`) — e uma
+ *  palavra com três cópias é como "escondido" e "oculto" acabam na mesma tela.
+ *
+ *  🔴 NENHUMA DIZ APAGAR, e há teste cravando isso. Esconder é uma VERSÃO NOVA
+ *  em `ficha_versoes` (append-only), desfaz com um toque, e nada sai do banco.
+ *  ──────────────────────────────────────────────────────────────────────────── */
+
+/** A marca de um lugar (na lista) ou de uma versão (no histórico) que está
+ *  fora do ar pro público. */
+// PENDENTE: redação minha, o João ainda não leu
+export const ESCONDIDO = "escondido";
+
+/** O botão com o lugar no ar. */
+// PENDENTE: redação minha, o João ainda não leu
+export const ESCONDER = "Esconder este lugar";
+
+/** O botão com o lugar escondido. O "de novo" diz que ele já esteve no ar e
+ *  volta como estava — nada se perdeu. */
+// PENDENTE: redação minha, o João ainda não leu
+export const MOSTRAR_DE_NOVO = "Mostrar de novo";

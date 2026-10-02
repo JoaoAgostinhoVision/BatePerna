@@ -3,13 +3,15 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { COOKIE_ADMIN, avisarDesligado, sessaoValida } from "@/lib/admin-guarda";
-import { getFicha } from "@/lib/ficha";
+import { getFichaDoDono } from "@/lib/ficha";
+import { camposQueMudaram } from "@/lib/campos-mudados";
 import { PRAZO_AVISO_MS, resolverEstado } from "@/lib/carimbo-estado";
 import { comPrazo } from "@/lib/cache-rotas";
 import { avisoVigente, getClient, historico, type AvisoLinha, type FichaVersao } from "@/lib/db";
 import CaixaDeSenha from "../CaixaDeSenha";
-import FichaInteira from "../FichaInteira";
-import HistoricoDaVoz from "../HistoricoDaVoz";
+import BotaoVisibilidade from "../BotaoVisibilidade";
+import FichaInteira, { rotuloDe } from "../FichaInteira";
+import HistoricoDaFicha, { type VersaoNaTela } from "../HistoricoDaFicha";
 import PainelAdmin from "../PainelAdmin";
 import "../admin.css";
 
@@ -27,7 +29,7 @@ const ESTOUROU = Symbol("prazo do aviso do admin");
 /** Irmão do `ESTOUROU` de cima, pro `historico` — mesma razão: `Symbol` não
  *  pode ser confundido nem com uma lista real (mesmo vazia) nem com o `null`
  *  de "leitura OK". */
-const ESTOUROU_HISTORICO = Symbol("prazo do historico da voz");
+const ESTOUROU_HISTORICO = Symbol("prazo do historico da ficha");
 
 /** Quanto o HISTÓRICO espera o banco antes de seguir sem ele.
  *
@@ -101,7 +103,7 @@ async function lerHistorico(slug: string): Promise<{ versoes: FichaVersao[]; err
  *  quem hoje monta o `PainelAdmin` — que passou a servir um lugar só. */
 export default async function Lugar({ params }: { params: Promise<{ slug: string }> }) {
   // 🔴 A GUARDA DE CONFIG VEM ANTES DE TUDO — antes da sessão e antes de
-  // tocar o banco (`getFicha`): painel desligado não anuncia que existe, nem
+  // tocar o banco (`getFichaDoDono`): painel desligado não anuncia que existe, nem
   // gasta banco. Mesma ordem da página irmã (`admin/page.tsx`).
   const cfg = lerConfigAdmin(process.env);
   if (!cfg.ligado) {
@@ -122,36 +124,44 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
   }
 
   const { slug } = await params;
-  const ficha = await getFicha(slug);
-  // 🔴 PRÉ-CONDIÇÃO DA TASK 9, E A TASK 5 NÃO A CONSERTA (ruling da auditoria
-  // do brief, 2026-09-27). Desde a Task 4 o `getFicha` FILTRA OS OCULTOS, então
-  // esta linha dá 404 num lugar escondido — **para o dono também**. Quando a
-  // Task 9 construir o botão "mostrar de novo" e a lista com os escondidos, a
-  // existência do lugar tem que passar a ser conferida por `versaoAtual` (que
-  // vê a última versão, oculta ou não) e não pelo getter que esconde: o botão
-  // de desfazer não pode morar numa página que 404 justamente quando ele é
-  // necessário. Mudar aqui agora é escopo de outra tarefa, e sem a lista dos
-  // escondidos não há teste que acompanhe a mudança.
-  if (!ficha) notFound();
+  // 🔴 A PRÉ-CONDIÇÃO QUE A TASK 5 DEIXOU ESCRITA AQUI, CUMPRIDA NA TASK 9
+  // (2026-10-01): a existência do lugar é conferida por `versaoAtual` (dentro de
+  // `getFichaDoDono`), que vê a última versão, escondida ou não — e não mais
+  // pelo `getFicha`, que filtra os ocultos e dava 404 pro DONO justamente na
+  // página onde mora o botão de mostrar o lugar de novo.
+  const doDono = await getFichaDoDono(slug);
+  if (!doDono) notFound();
+  const { ficha, oculto } = doDono;
 
   const agora = Math.floor(Date.now() / 1000);
-  const [leitura, { aviso, erro: avisoErro }, { versoes, erro: historicoErro }] = await Promise.all([
+  const [leitura, { aviso, erro: avisoErro }, { versoes: linhas, erro: historicoErro }] = await Promise.all([
     resolverEstado(ficha),
     lerAvisoVigente(slug, agora),
     lerHistorico(slug),
   ]);
 
+  // 🔴 "QUE CAMPO MUDOU" É CONTA DO SERVIDOR (B2 da auditoria da Task 9): o
+  // histórico é `"use client"` e não pode importar o registro de campos (zod no
+  // celular). As versões vêm da mais nova pra mais velha, então a anterior de
+  // cada uma é a SEGUINTE da lista; a última não tem anterior. Os rótulos são
+  // os de `rotuloDe`, a mesma fonte que nomeia o bloco na ficha inteira.
+  const versoes: VersaoNaTela[] = linhas.map((v, i) => ({
+    ...v,
+    mudou: camposQueMudaram(linhas[i + 1]?.doc ?? null, v.doc).map(rotuloDe),
+  }));
+
   return (
     <main className="adm">
       <h1>Painel</h1>
       <PainelAdmin ficha={ficha} leitura={leitura} aviso={aviso} avisoErro={avisoErro} agora={agora} />
+      <BotaoVisibilidade slug={slug} oculto={oculto} />
       {/* 🔴 A Task 6 (2026-09-30) FECHOU A ESCADA: `EditorDeVoz` foi apagado e a
           `voz` passou a ser editada dentro do bloco `campo-voz` da ficha
           inteira, pelo `EditorProsa`, como qualquer outro campo de prosa. Não
           há mais um componente de tela pra um campo só. */}
       <FichaInteira ficha={ficha} />
       {historicoErro && <p className="adm-erro" role="alert">{HISTORICO_ERRO_LEITURA}</p>}
-      <HistoricoDaVoz versoes={versoes} />
+      <HistoricoDaFicha versoes={versoes} />
     </main>
   );
 }

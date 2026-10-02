@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { COOKIE_ADMIN, avisarDesligado, sessaoValida } from "@/lib/admin-guarda";
-import { getAllFichas } from "@/lib/ficha";
+import { getAcervoDoDono } from "@/lib/ficha";
 import { resolverEstados } from "@/lib/carimbo-estado";
 import CaixaDeSenha from "./CaixaDeSenha";
 import ListaDeLugares from "./ListaDeLugares";
@@ -43,13 +43,18 @@ export default async function Admin() {
   }
 
   const agora = Math.floor(Date.now() / 1000);
-  const fichas = await getAllFichas();
+  // 🔴 B1 DA AUDITORIA DA TASK 9 (2026-10-01): o acervo do DONO, com os
+  // escondidos — NUNCA `getAllFichas`. Aquela filtra os ocultos (o lugar
+  // escondido sumia desta lista, sem caminho de volta pela tela) e memoriza o
+  // que lê pra home servir quando o banco cai; ligar os ocultos nela os poria na
+  // memória do público. Ver o docblock de `getAcervoDoDono`.
+  const { fichas, ocultos } = await getAcervoDoDono();
   const leituras = Object.fromEntries(await resolverEstados(fichas));
 
   return (
     <main className="adm">
       <h1>Painel</h1>
-      <ListaDeLugares fichas={fichas} leituras={leituras} agora={agora} />
+      <ListaDeLugares fichas={fichas} leituras={leituras} ocultos={ocultos} agora={agora} />
     </main>
   );
 }

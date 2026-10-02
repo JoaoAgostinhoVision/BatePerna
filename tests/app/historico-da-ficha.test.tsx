@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
-import HistoricoDaVoz from "@/app/admin/HistoricoDaVoz";
+import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import HistoricoDaFicha from "@/app/admin/HistoricoDaFicha";
 
 // 🔴 C3 da revisão do controlador: este arquivo (teste de TELA) fica em
 // `tests/app/`; o teste de ROTA acrescentado na Task 7 mora em
@@ -10,8 +10,8 @@ const SLUG = "rampa-do-pepe";
 const AGORA = 1_758_200_000;
 
 const VERSOES = [
-  { id: 2, ficha_slug: SLUG, doc: JSON.stringify({ voz: "nova" }), autor: "painel" as const, criado_em: AGORA + 10, oculto: false },
-  { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA, oculto: false },
+  { id: 2, ficha_slug: SLUG, doc: JSON.stringify({ voz: "nova" }), autor: "painel" as const, criado_em: AGORA + 10, oculto: false, mudou: [] },
+  { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA, oculto: false, mudou: [] },
 ];
 
 // 🔴 M4 DA REVISÃO FINAL (2026-09-26): `vi.restoreAllMocks()` NÃO desfaz
@@ -21,12 +21,12 @@ const VERSOES = [
 // se a ORDEM dos testes mudasse.
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-describe("HistoricoDaVoz", () => {
+describe("HistoricoDaFicha", () => {
   // 🔴 O autor é por LINHA, não fixo. Com rótulo fixo o João leria "você, pelo
   // painel" na frase que eu transcrevi em agosto — e a procedência, que é a
   // razão desta tabela existir, viraria decoração.
   it("mostra quem escreveu cada versão", () => {
-    render(<HistoricoDaVoz versoes={VERSOES} />);
+    render(<HistoricoDaFicha versoes={VERSOES} />);
     expect(screen.getByText(/você, pelo painel/i)).toBeTruthy();
     expect(screen.getByText(/acervo original/i)).toBeTruthy();
   });
@@ -38,7 +38,7 @@ describe("HistoricoDaVoz", () => {
   // verde. O texto só pode aparecer DEPOIS do clique que abre a linha —
   // antes, nem ele nem o da outra versão estão na tela.
   it("mostra o texto daquela versão só depois de abrir a linha, e é o texto CERTO", () => {
-    render(<HistoricoDaVoz versoes={VERSOES} />);
+    render(<HistoricoDaFicha versoes={VERSOES} />);
     expect(screen.queryByText("velha"), "o texto apareceu ANTES do clique").toBeNull();
     expect(screen.queryByText("nova"), "o texto apareceu ANTES do clique").toBeNull();
 
@@ -52,10 +52,10 @@ describe("HistoricoDaVoz", () => {
   // não pode tirar as OUTRAS versões da tela.
   it("versão com doc que não parseia não derruba a lista — mostra vazio só para ela", () => {
     const versoes = [
-      { id: 2, ficha_slug: SLUG, doc: "{ isto não é JSON", autor: "painel" as const, criado_em: AGORA + 10, oculto: false },
-      { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA, oculto: false },
+      { id: 2, ficha_slug: SLUG, doc: "{ isto não é JSON", autor: "painel" as const, criado_em: AGORA + 10, oculto: false, mudou: [] },
+      { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA, oculto: false, mudou: [] },
     ];
-    render(<HistoricoDaVoz versoes={versoes} />);
+    render(<HistoricoDaFicha versoes={versoes} />);
     expect(screen.getByText(/você, pelo painel/i), "a linha corrompida sumiu da lista").toBeTruthy();
     expect(screen.getByText(/acervo original/i), "a versão boa sumiu junto da corrompida").toBeTruthy();
 
@@ -77,7 +77,7 @@ describe("HistoricoDaVoz", () => {
     const reloadFalso = vi.fn();
     vi.stubGlobal("location", { ...window.location, reload: reloadFalso });
 
-    const { container } = render(<HistoricoDaVoz versoes={VERSOES} />);
+    const { container } = render(<HistoricoDaFicha versoes={VERSOES} />);
     fireEvent.click(container.querySelector('button[data-abrir-versao="1"]')!);
     fireEvent.click(container.querySelector('button[data-voltar-versao="1"]')!);
 
@@ -98,7 +98,7 @@ describe("HistoricoDaVoz", () => {
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(pendurado));
     vi.stubGlobal("location", { ...window.location, reload: vi.fn() });
 
-    const { container } = render(<HistoricoDaVoz versoes={VERSOES} />);
+    const { container } = render(<HistoricoDaFicha versoes={VERSOES} />);
     fireEvent.click(container.querySelector('button[data-abrir-versao="1"]')!);
     fireEvent.click(container.querySelector('button[data-voltar-versao="1"]')!);
 
@@ -112,7 +112,7 @@ describe("HistoricoDaVoz", () => {
 
   it("resposta que não é ok mostra a mensagem de erro ao voltar", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 400 })));
-    const { container } = render(<HistoricoDaVoz versoes={VERSOES} />);
+    const { container } = render(<HistoricoDaFicha versoes={VERSOES} />);
     fireEvent.click(container.querySelector('button[data-abrir-versao="1"]')!);
     fireEvent.click(container.querySelector('button[data-voltar-versao="1"]')!);
     await waitFor(() => screen.getByRole("alert"));
@@ -121,10 +121,69 @@ describe("HistoricoDaVoz", () => {
 
   it("fetch que rejeita mostra a mensagem de erro ao voltar", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("falhou")));
-    const { container } = render(<HistoricoDaVoz versoes={VERSOES} />);
+    const { container } = render(<HistoricoDaFicha versoes={VERSOES} />);
     fireEvent.click(container.querySelector('button[data-abrir-versao="1"]')!);
     fireEvent.click(container.querySelector('button[data-voltar-versao="1"]')!);
     await waitFor(() => screen.getByRole("alert"));
     expect(screen.getByRole("alert").textContent).toMatch(/não consegui voltar/i);
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Task 9 (2026-10-01): o histórico mostra QUAL CAMPO mudou, não só a voz.
+  //
+  // 🔴 O COMPONENTE RECEBE OS RÓTULOS PRONTOS (`mudou`), e não os calcula — B2
+  // da auditoria: ele é `"use client"` e o diff precisa do registro de campos
+  // (zod). As mutações do DIFF (M1, M2, M7) morrem em
+  // `tests/lib/campos-mudados.test.ts`; as daqui provam que a TELA põe cada
+  // rótulo NA LINHA DA VERSÃO certa, e nenhum na linha errada.
+  // ───────────────────────────────────────────────────────────────────────────
+  const vSemente = { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA, oculto: false, mudou: [] };
+  const vComVozNova = { ...vSemente, id: 2, autor: "painel" as const, criado_em: AGORA + 10, mudou: ["A voz"] };
+  const vComCustoNovo = { ...vSemente, id: 3, autor: "painel" as const, criado_em: AGORA + 20, mudou: ["O custo em três ou quatro palavras"] };
+  const vComVozECustoNovos = { ...vSemente, id: 4, autor: "painel" as const, criado_em: AGORA + 30, mudou: ["A voz", "O custo em três ou quatro palavras"] };
+
+  it("mostra o campo que mudou em cada versão, cada um NA LINHA da sua versão", () => {
+    render(<HistoricoDaFicha versoes={[vComCustoNovo, vComVozNova, vSemente]} />);
+    const linhaCusto = screen.getByTestId(`versao-${vComCustoNovo.id}`);
+    const linhaVoz = screen.getByTestId(`versao-${vComVozNova.id}`);
+    expect(within(linhaCusto).getByText(/custo/i)).toBeTruthy();
+    expect(within(linhaVoz).getByText(/a voz/i)).toBeTruthy();
+    // e não trocados: "está na tela" não basta, tem de estar na linha CERTA
+    expect(within(linhaCusto).queryByText(/a voz/i), "a voz apareceu na linha do custo").toBeNull();
+    expect(within(linhaVoz).queryByText(/custo/i), "o custo apareceu na linha da voz").toBeNull();
+  });
+
+  it("versão que mudou DOIS campos lista os dois", () => {
+    render(<HistoricoDaFicha versoes={[vComVozECustoNovos, vSemente]} />);
+    const linha = screen.getByTestId(`versao-${vComVozECustoNovos.id}`);
+    expect(within(linha).getByText(/a voz/i)).toBeTruthy();
+    expect(within(linha).getByText(/custo/i)).toBeTruthy();
+  });
+
+  // 🔴 O componente de antes só sabia da `voz`: uma versão que mudou o preço
+  // aparecia SEM NADA na linha, que é o mesmo que "nada mudou". A frase "nada
+  // mudou" nunca existiu na tela — então o `queryByText(/nada mudou/)` do plano
+  // seria vácuo (passaria com o defeito); a prova é o rótulo NA LINHA dela.
+  it("versão que mudou só o preço mostra o preço na linha dela", () => {
+    render(<HistoricoDaFicha versoes={[vComCustoNovo, vSemente]} />);
+    expect(within(screen.getByTestId(`versao-${vComCustoNovo.id}`)).getByText(/custo/i)).toBeTruthy();
+    expect(screen.queryByText(/nada mudou/i)).toBeNull();
+  });
+
+  it("linha de versão oculta é marcada como escondida, e a visível não", () => {
+    render(<HistoricoDaFicha versoes={[{ ...vSemente, id: 9, oculto: true }, vSemente]} />);
+    expect(within(screen.getByTestId("versao-9")).getByText(/escondid/i)).toBeTruthy();
+    expect(within(screen.getByTestId(`versao-${vSemente.id}`)).queryByText(/escondid/i)).toBeNull();
+  });
+
+  it("documento que não parseia mostra vazio em vez de derrubar a lista", () => {
+    render(<HistoricoDaFicha versoes={[{ ...vSemente, id: 7, doc: "{lixo" }, vSemente]} />);
+    expect(screen.getByTestId("versao-7")).toBeTruthy();
+    expect(screen.getByTestId(`versao-${vSemente.id}`)).toBeTruthy();
+  });
+
+  it("o título diz ficha, não voz", () => {
+    render(<HistoricoDaFicha versoes={[vSemente]} />);
+    expect(screen.getByRole("heading", { name: /histórico da ficha/i })).toBeTruthy();
   });
 });

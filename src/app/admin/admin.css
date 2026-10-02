@@ -37,7 +37,7 @@
 .adm-item-marca { font-size: .85rem; color: #555; text-align: right; }
 .adm-lista-rodape { font-size: .85rem; color: #777; margin-top: 1rem; }
 
-/* 🔴 I6 DA REVISÃO FINAL (2026-09-26): EditorDeVoz e HistoricoDaVoz não tinham
+/* 🔴 I6 DA REVISÃO FINAL (2026-09-26): EditorDeVoz e HistoricoDaVoz (hoje `HistoricoDaFicha`, renomeado na Task 9) não tinham
    UMA regra sequer aqui — o `<textarea>` caía no default do navegador (~20
    colunas, 2 linhas, monoespaçado, sem borda do app) pra escrever um parágrafo
    de prosa, e a lista do histórico vinha com marcador e recuo padrão. Toda
@@ -75,6 +75,18 @@
 /* Convenção do arquivo inteiro (`.adm-vigente-texto`, `.adm-ficha h2`, …):
    parágrafo sem margin extra dentro de um `grid` que já tem `gap`. */
 .adm-historico-item p { margin: 0; }
+
+/* O ESCONDER (Task 9, 2026-10-01). Mínimo estrutural, e cada valor REUSA um que
+   já existe nesta folha: a marca tem o tamanho e a cor de `.adm-item-marca`, o
+   botão é o de `.adm-historico button`, a seção é um `grid` como toda seção
+   daqui. Sem cor nova — o visual é escolha do dono, e ele não viu esta tela. */
+.adm-marca-escondido { font-size: .85rem; color: #555; }
+.adm-visibilidade { display: grid; gap: .3rem; }
+.adm-visibilidade p { margin: 0; }
+.adm-visibilidade button { padding: .6rem; font-size: .95rem; border-radius: 8px; }
+/* Os rótulos do que mudou numa versão, um ao lado do outro, com o mesmo
+   tamanho/cor da marca. */
+.adm-historico-mudou { display: flex; flex-wrap: wrap; gap: .3rem .8rem; margin: .3rem 0 0; font-size: .85rem; color: #555; }
 
 /* A FICHA INTEIRA (Task 5, 2026-09-27): a tela do lugar passou de UM campo de
    17 pra todos os campos do registro, em grupos. MÍNIMO ESTRUTURAL — toda

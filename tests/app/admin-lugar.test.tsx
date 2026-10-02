@@ -150,7 +150,7 @@ describe("/admin/[slug] — a porta e o conteúdo", () => {
 
   // 🔴 I2 DA REVISÃO FINAL (2026-09-26): nada nesta suíte provava que o editor da
   // voz e `HistoricoDaVoz` de fato aparecem na tela do lugar — apagar o editor
-  // (o dono não pode editar nada), apagar `<HistoricoDaVoz>` (sem histórico, sem
+  // (o dono não pode editar nada), apagar `<HistoricoDaVoz>` — hoje `<HistoricoDaFicha>`, renomeado na Task 9 — (sem histórico, sem
   // voltar) ou passar `versoes={[]}` sobreviviam à suíte inteira.
   //
   // ⚠️ O MARCADOR MUDOU NA TASK 6 (2026-09-30), e o defeito medido é o MESMO.
@@ -318,4 +318,66 @@ describe("/admin/[slug] — a porta e o conteúdo", () => {
       }
     },
   );
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Task 9 (2026-10-01): o lugar ESCONDIDO abre pro dono, e o botão de mostrar
+  // de novo mora aqui.
+  //
+  // 🔴 A PRÉ-CONDIÇÃO QUE A TASK 5 DEIXOU ESCRITA: desde a Task 4 o `getFicha`
+  // filtra os ocultos, e esta página o usava pra conferir se o lugar existe —
+  // então o lugar escondido dava 404 PRO DONO. Com a lista do painel agora
+  // mostrando o escondido (B1), o link dele levaria a um 404, e o botão de
+  // mostrar de novo moraria numa página que não abre justamente quando ele é
+  // necessário: porta de mão única.
+  // ───────────────────────────────────────────────────────────────────────────
+  const SLUG_ESCONDIDO = "rampa-do-pepe";
+
+  async function esconder(slug: string) {
+    const { gravarVersao, versaoAtual } = await import("@/lib/db");
+    const atual = (await versaoAtual(cliente, slug))!;
+    await gravarVersao(cliente, slug, atual.doc, "painel", Math.floor(Date.now() / 1000), true);
+  }
+
+  it("lugar escondido ABRE pro dono (não 404), marcado, com o botão de mostrar de novo", async () => {
+    await esconder(SLUG_ESCONDIDO);
+    await comSessaoValida();
+    const { default: Lugar } = await import("@/app/admin/[slug]/page");
+    const { container } = render(await Lugar({ params: Promise.resolve({ slug: SLUG_ESCONDIDO }) }));
+    expect(notFoundFalso).not.toHaveBeenCalled();
+    expect(container.querySelector(".adm-painel"), "o painel do lugar escondido não abriu").not.toBeNull();
+    const vis = container.querySelector("[data-visibilidade]") as HTMLElement | null;
+    expect(vis, "o botão de visibilidade sumiu da página do lugar").not.toBeNull();
+    expect(within(vis!).getByRole("button", { name: /mostrar de novo/i })).toBeTruthy();
+    expect(within(vis!).getByText(/escondid/i)).toBeTruthy();
+  });
+
+  it("lugar no ar: o botão é o de esconder, e nada diz escondido", async () => {
+    await comSessaoValida();
+    const { default: Lugar } = await import("@/app/admin/[slug]/page");
+    const { container } = render(await Lugar({ params: Promise.resolve({ slug: SLUG_ESCONDIDO }) }));
+    const vis = container.querySelector("[data-visibilidade]") as HTMLElement | null;
+    expect(vis).not.toBeNull();
+    expect(within(vis!).getByRole("button", { name: /esconder/i })).toBeTruthy();
+    expect(within(container).queryByText(/escondid/i)).toBeNull();
+  });
+
+  // 🔴 A PÁGINA calcula o "que mudou" (B2) e entrega os rótulos prontos. Sem
+  // este caso, uma página que passasse `mudou: []` pra toda versão — ou que
+  // esquecesse de chamar o diff — deixaria o componente provado e a tela vazia.
+  it("o histórico da página diz, na linha da versão nova, o campo que mudou", async () => {
+    const { gravarVersao, versaoAtual } = await import("@/lib/db");
+    const { rotuloDe } = await import("@/app/admin/FichaInteira");
+    const atual = (await versaoAtual(cliente, SLUG_ESCONDIDO))!;
+    const doc = { ...JSON.parse(atual.doc), custo: { ...JSON.parse(atual.doc).custo, curto: "outro custo" } };
+    const id = await gravarVersao(cliente, SLUG_ESCONDIDO, JSON.stringify(doc), "painel", Math.floor(Date.now() / 1000));
+    await comSessaoValida();
+    const { default: Lugar } = await import("@/app/admin/[slug]/page");
+    const { container } = render(await Lugar({ params: Promise.resolve({ slug: SLUG_ESCONDIDO }) }));
+
+    const rotulo = rotuloDe("custo.curto");
+    const linhaNova = container.querySelector(`[data-testid="versao-${id}"]`) as HTMLElement | null;
+    expect(linhaNova, "a versão nova não apareceu no histórico").not.toBeNull();
+    expect(within(linhaNova!).getByText(rotulo)).toBeTruthy();
+    expect(within(container.querySelector(`[data-testid="versao-${atual.id}"]`) as HTMLElement).queryByText(rotulo)).toBeNull();
+  });
 });

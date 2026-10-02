@@ -88,19 +88,28 @@ export async function buscarFichas(
   // pela chave) e a ficha (que lê o `slug` de dentro) discordariam sobre
   // qual morro é qual — a mesma classe de defeito, agora no leitor que roda
   // em produção.
-  const fichas = ordenarPorNome(
-    [...linhas.entries()].map(([slug, l]) => {
-      const doc = fichaSchema.parse(JSON.parse(l.doc));
-      if (doc.slug !== slug) {
-        throw new Error(
-          `Ficha divergente: o banco guarda esta versão sob "${slug}", mas o ` +
-            `documento diz "${doc.slug}" — a home e a ficha divergiriam sobre ` +
-            "qual lugar é qual.",
-        );
-      }
-      return doc;
-    }),
-  );
+  const fichas = ordenarPorNome([...linhas.entries()].map(([slug, l]) => fichaDaVersao(slug, l.doc)));
   ultimaBoa = fichas;
   return fichas;
+}
+
+/** O documento de UMA versão virando `Ficha` — com a trava do I5 (o `slug` de
+ *  dentro tem de ser o `ficha_slug` do banco).
+ *
+ *  🔴 SAIU DE DENTRO DE `buscarFichas` NA TASK 9 (2026-10-01), sem mudar uma
+ *  linha da conta, porque o painel passou a precisar dela SEM a memória: o
+ *  acervo do dono inclui os ESCONDIDOS, e passar por `buscarFichas` os poria em
+ *  `ultimaBoa` — a memória do PÚBLICO, que a home serve quando o banco cai (B1
+ *  da auditoria da Task 9). Uma conta, duas portas: a do público memoriza, a do
+ *  dono não. */
+export function fichaDaVersao(slug: string, docTexto: string): Ficha {
+  const doc = fichaSchema.parse(JSON.parse(docTexto));
+  if (doc.slug !== slug) {
+    throw new Error(
+      `Ficha divergente: o banco guarda esta versão sob "${slug}", mas o ` +
+        `documento diz "${doc.slug}" — a home e a ficha divergiriam sobre ` +
+        "qual lugar é qual.",
+    );
+  }
+  return doc;
 }

@@ -429,7 +429,7 @@ describe("FichaInteira — o componente serve os três lugares", () => {
 
 describe("FichaInteira — os guardas do que cresce: rótulo e CSS", () => {
   // 🔴 O DEFEITO I6 DA REVISÃO FINAL DE 26/09, que este arquivo não vai
-  // repetir: `EditorDeVoz` e `HistoricoDaVoz` nasceram SEM UMA REGRA sequer no
+  // repetir: `EditorDeVoz` e `HistoricoDaVoz` (hoje `HistoricoDaFicha`) nasceram SEM UMA REGRA sequer no
   // `admin.css` e a suíte inteira ficou verde — o `<textarea>` caía no default
   // do navegador na mão do dono. Classe que a tela usa e a folha não conhece
   // não é detalhe de estilo, é elemento sem forma nenhuma.

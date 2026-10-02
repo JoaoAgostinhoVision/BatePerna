@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { cache } from "react";
-import { getClient, versoesAtuais } from "@/lib/db";
-import { buscarFichas } from "@/lib/ficha-fonte";
+import { getClient, versaoAtual, versoesAtuais } from "@/lib/db";
+import { comPrazo } from "@/lib/cache-rotas";
+import { PRAZO_FICHA_MS, buscarFichas, fichaDaVersao } from "@/lib/ficha-fonte";
 import { fichaSchema, type Ficha } from "@/types/ficha";
 // `ordenarPorNome` mora em `ficha-fonte.ts` desde 2026-09-25 (Task 3 do plano
 // "ficha no banco"): ela foi pro único lugar que a usa em produção, junto do
@@ -85,4 +86,49 @@ export async function getFicha(slug: string): Promise<Ficha | null> {
 
 export async function getFichasComCondicao(): Promise<Ficha[]> {
   return (await getAllFichas()).filter((f) => f.condicao != null);
+}
+
+/** Sentinela do estouro do prazo nas leituras do DONO — `Symbol` pela mesma
+ *  razão do `ESTOUROU` de `admin/[slug]/page.tsx`: não se confunde com nenhuma
+ *  resposta real do banco, nem com `null` ("esse lugar não existe"). */
+const ESTOUROU_DONO = Symbol("prazo da leitura do dono");
+
+async function lerNoPrazo<T>(leitura: Promise<T>): Promise<T> {
+  const r = await comPrazo<T | typeof ESTOUROU_DONO>(leitura, PRAZO_FICHA_MS, ESTOUROU_DONO);
+  if (r === ESTOUROU_DONO) throw new Error("O banco não respondeu a tempo à leitura do painel.");
+  return r;
+}
+
+/** O ACERVO DO DONO: todo lugar, inclusive os ESCONDIDOS, e quais estão
+ *  escondidos (Task 9, 2026-10-01, B1 da auditoria).
+ *
+ *  🔴 POR QUE NÃO `getAllFichas`. Aquela é a leitura do PÚBLICO: filtra os
+ *  ocultos (então o lugar escondido sumia da lista do próprio dono, sem caminho
+ *  de volta pela tela) e MEMORIZA o que leu em `ultimaBoa`, que a home serve
+ *  quando o banco cai. Ligar `incluirOcultos` naquele caminho poria o escondido
+ *  na memória do público — e no primeiro tropeço do Turso a home o mostraria de
+ *  volta. Por isso esta leitura é OUTRA porta: lê com `incluirOcultos`, usa a
+ *  MESMA conta de documento (`fichaDaVersao`) e não toca na memória.
+ *
+ *  🔴 SEM MEMÓRIA, ENTÃO BANCO FORA É ERRO, não lista velha. É a tela de quem
+ *  edita: mostrar uma versão antiga pra quem vai mudá-la é pior que a página de
+ *  erro. O prazo é o mesmo do público (`PRAZO_FICHA_MS`). */
+export async function getAcervoDoDono(): Promise<{ fichas: Ficha[]; ocultos: Set<string> }> {
+  const linhas = await lerNoPrazo(versoesAtuais(getClient(), { incluirOcultos: true }));
+  const fichas = ordenarPorNome([...linhas.entries()].map(([slug, v]) => fichaDaVersao(slug, v.doc)));
+  const ocultos = new Set([...linhas.values()].filter((v) => v.oculto).map((v) => v.ficha_slug));
+  return { fichas, ocultos };
+}
+
+/** UM lugar, pro DONO — escondido ou não. `null` só quando o lugar não existe.
+ *
+ *  🔴 A EXISTÊNCIA É CONFERIDA COM `versaoAtual`, NUNCA COM `getFicha` — a
+ *  pré-condição que a Task 5 deixou escrita em `admin/[slug]/page.tsx`: o
+ *  `getFicha` filtra os ocultos, e a página do lugar escondido dava 404 pro
+ *  dono, justamente a página onde mora o botão de mostrá-lo de novo. Mesma
+ *  regra da rota `api/admin/visibilidade`. */
+export async function getFichaDoDono(slug: string): Promise<{ ficha: Ficha; oculto: boolean } | null> {
+  const v = await lerNoPrazo(versaoAtual(getClient(), slug));
+  if (v == null) return null;
+  return { ficha: fichaDaVersao(slug, v.doc), oculto: v.oculto };
 }

@@ -42,6 +42,7 @@ describe("ListaDeLugares", () => {
       <ListaDeLugares
         fichas={FICHAS}
         leituras={Object.fromEntries(FICHAS.map((f) => [f.slug, leituraSeca]))}
+        ocultos={new Set()}
         agora={1_758_000_000}
       />,
     );
@@ -61,7 +62,7 @@ describe("ListaDeLugares", () => {
   //      variedade nenhuma).
   it("o rótulo de cada lugar é o do selo público daquele lugar", () => {
     const leituras = Object.fromEntries(FICHAS.map((f) => [f.slug, leituraFria]));
-    render(<ListaDeLugares fichas={FICHAS} leituras={leituras} agora={SAB_MEIODIA} />);
+    render(<ListaDeLugares fichas={FICHAS} leituras={leituras} ocultos={new Set()} agora={SAB_MEIODIA} />);
 
     const marcas = FICHAS.map((f) => marcaAgora(f, leituraFria, SAB_MEIODIA));
     expect(new Set(marcas).size, "acervo sem variedade de voz não prova nada aqui").toBeGreaterThan(1);
@@ -77,6 +78,27 @@ describe("ListaDeLugares", () => {
       // lugares (M5).
       const escapada = marcaEsperada.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       expect(within(item!).getByText(new RegExp(escapada, "i"))).not.toBeNull();
+    }
+  });
+
+  // 🔴 TASK 9 (2026-10-01): o lugar escondido continua na lista do DONO, e
+  // marcado. Esconder é tirar do PÚBLICO; se sumisse também daqui, o dono não
+  // acharia mais o lugar pra mostrá-lo de novo — porta de mão única.
+  //
+  // ⚠️ ISTO PROVA O COMPONENTE, não a página. Ele recebe `ocultos` pronto, então
+  // passaria verde com a página real ainda lendo o acervo FILTRADO (B1 da
+  // auditoria). A prova de que a página entrega o escondido é a de
+  // `tests/app/admin-page.test.tsx` ("o lugar escondido aparece na lista do dono").
+  it("lugar escondido aparece na lista do painel, marcado — e só ele", () => {
+    const SLUG = FICHAS[1].slug;
+    const leituras = Object.fromEntries(FICHAS.map((f) => [f.slug, leituraSeca]));
+    render(<ListaDeLugares fichas={FICHAS} leituras={leituras} ocultos={new Set([SLUG])} agora={1_758_000_000} />);
+    expect(FICHAS.length, "sem outros lugares o laço de baixo não prova nada").toBeGreaterThan(1);
+    const item = screen.getByTestId(`lugar-${SLUG}`);
+    expect(within(item).getByText(/escondid/i)).not.toBeNull();
+    // ⬅ e os outros NÃO ganham a marca — senão "marcado" prova nada (M4)
+    for (const f of FICHAS.filter((x) => x.slug !== SLUG)) {
+      expect(within(screen.getByTestId(`lugar-${f.slug}`)).queryByText(/escondid/i), `${f.slug} veio marcado`).toBeNull();
     }
   });
 });

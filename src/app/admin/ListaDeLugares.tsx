@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { marcaAgora } from "./marca-agora";
+import { ESCONDIDO } from "./campos/palavras";
 
 // PENDENTE: redação minha, o João ainda não leu
 const RODAPE_LISTA = "Toque num lugar pra ver e mudar o que o app diz dele.";
@@ -9,6 +10,10 @@ const RODAPE_LISTA = "Toque num lugar pra ver e mudar o que o app diz dele.";
 type Props = {
   fichas: Ficha[];
   leituras: Record<string, LeituraCarimbo>;
+  /** Os slugs ESCONDIDOS do público (Task 9). Obrigatório de propósito: quem
+   *  monta a lista tem de dizer quais estão escondidos, e uma página que
+   *  esquecesse não compila — em vez de mostrar todos como se estivessem no ar. */
+  ocultos: ReadonlySet<string>;
   agora: number;
 };
 
@@ -24,17 +29,23 @@ type Props = {
  *
  *  🔴 SEM O "+ lugar novo" da maquete que o João aprovou: criar ficha é rodada
  *  futura (spec §6), e um botão que não abre nada é pior que nenhum botão —
- *  ele promete, e a promessa quebrada é do app. */
-export default function ListaDeLugares({ fichas, leituras, agora }: Props) {
+ *  ele promete, e a promessa quebrada é do app.
+ *
+ *  🔴 O LUGAR ESCONDIDO ESTÁ NA LISTA, MARCADO (Task 9, 2026-10-01). Esconder
+ *  tira do PÚBLICO, não do dono: sem ele aqui, não haveria caminho pela tela
+ *  até o botão de mostrá-lo de novo. Quem entrega o escondido é a página
+ *  (`getAcervoDoDono`); este componente só marca o que recebe. */
+export default function ListaDeLugares({ fichas, leituras, ocultos, agora }: Props) {
   return (
     <>
       <ul className="adm-lista">
         {fichas.map((f) => {
           const leitura = leituras[f.slug];
           return (
-            <li key={f.slug} className="adm-item" data-lugar={f.slug}>
+            <li key={f.slug} className="adm-item" data-lugar={f.slug} data-testid={`lugar-${f.slug}`}>
               <Link href={`/admin/${f.slug}`} className="adm-item-link">
                 <span className="adm-item-nome">{f.trajeto.waypoints[0].nome}</span>
+                {ocultos.has(f.slug) && <span className="adm-marca-escondido">{ESCONDIDO}</span>}
                 {leitura && <span className="adm-item-marca">{marcaAgora(f, leitura, agora)}</span>}
               </Link>
             </li>

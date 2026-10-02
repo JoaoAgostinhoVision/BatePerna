@@ -11,9 +11,12 @@ import {
   ALEM_DO_PROVEDOR,
   CAIXA_VAZIA,
   COM_ESTE_NUMERO,
+  ESCONDER,
+  ESCONDIDO,
   HORA_VAZIA,
   JANELA_NEGATIVA,
   JANELA_PASSADO_NEGATIVA,
+  MOSTRAR_DE_NOVO,
   NADA_ESCOLHIDO,
   NAO,
   PREVENDO,
@@ -1325,6 +1328,11 @@ describe("Os editores servem os três lugares", () => {
     JANELA_NEGATIVA,
     JANELA_PASSADO_NEGATIVA,
     ALEM_DO_PROVEDOR,
+    // As do esconder (Task 9, 2026-10-01). `ESCONDIDO` aparece em repouso só
+    // num lugar ESCONDIDO; os dois botões, um em cada estado.
+    ESCONDIDO,
+    ESCONDER,
+    MOSTRAR_DE_NOVO,
   ];
 
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem

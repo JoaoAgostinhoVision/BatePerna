@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, cleanup, screen } from "@testing-library/react";
+import { render, cleanup, screen, within } from "@testing-library/react";
 import CaixaDeSenha from "@/app/admin/CaixaDeSenha";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import type { Client } from "@libsql/client";
@@ -189,5 +189,75 @@ describe("/admin — a porta", () => {
     const { container } = render(await Admin());
     expect(container.querySelector('input[type="password"]')).not.toBeNull();
     expect(container.querySelector(".adm-lista")).toBeNull();
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // 🔴 B1 DA AUDITORIA DA TASK 9 (2026-10-01) — A PROVA É NA PÁGINA.
+  //
+  // Até aqui a página lia `getAllFichas()`, que passa por `versoesAtuais` SEM
+  // `incluirOcultos` — o filtro do PÚBLICO. O dono escondia um lugar e ele
+  // sumia da lista DELE, sem caminho de volta pela tela. O teste do componente
+  // (`admin-lista.test.tsx`) entrega `ocultos` pronto e passaria verde com a
+  // página ainda escondendo; por isso este roda a página inteira contra o banco.
+  // ───────────────────────────────────────────────────────────────────────────
+  const SLUG_ESCONDIDO = "rampa-do-pepe";
+
+  async function esconder(slug: string) {
+    const { gravarVersao, versaoAtual } = await import("@/lib/db");
+    const atual = (await versaoAtual(cliente, slug))!;
+    expect(atual, `a premissa: ${slug} está no banco de teste`).not.toBeNull();
+    await gravarVersao(cliente, slug, atual.doc, "painel", Math.floor(Date.now() / 1000), true);
+  }
+
+  async function comSessao() {
+    const { criarSessao, DURACAO_SESSAO_S } = await import("@/lib/admin-sessao");
+    const token = criarSessao(SEGREDO, Math.floor(Date.now() / 1000), DURACAO_SESSAO_S);
+    cookiesFalso.mockResolvedValue({ get: (nome: string) => (nome === COOKIE_ADMIN ? { value: token } : undefined) });
+  }
+
+  it("o lugar escondido aparece na lista do dono, marcado — e os outros não", async () => {
+    await esconder(SLUG_ESCONDIDO);
+    await comSessao();
+    const { default: Admin } = await import("@/app/admin/page");
+    const { container } = render(await Admin());
+
+    const item = container.querySelector(`[data-testid="lugar-${SLUG_ESCONDIDO}"]`) as HTMLElement | null;
+    expect(item, "o lugar escondido sumiu da lista do próprio dono").not.toBeNull();
+    expect(within(item!).getByText(/escondid/i)).toBeTruthy();
+
+    const outros = [...container.querySelectorAll<HTMLElement>('[data-testid^="lugar-"]')].filter(
+      (el) => el !== item,
+    );
+    expect(outros.length, "sem os outros lugares na lista, o laço abaixo não prova nada").toBeGreaterThan(0);
+    for (const el of outros) {
+      expect(within(el).queryByText(/escondid/i), `${el.dataset.testid} veio marcado sem estar escondido`).toBeNull();
+    }
+  });
+
+  // 🔴 E A HOME CONTINUA SEM ELE — inclusive pela memória. `getAllFichas` guarda
+  // a última leitura boa (`ultimaBoa`, em `ficha-fonte.ts`) e a serve quando o
+  // banco cai. Se o painel lesse o acervo COM ocultos por aquele caminho, a
+  // memória do PÚBLICO passaria a carregar o escondido, e no primeiro tropeço do
+  // Turso a home o mostraria de volta (M6). Por isso: home lê (memória boa),
+  // painel lê, banco cai, home lê de novo — da memória — e o lugar não está lá.
+  it("a home continua sem ele — nem pela memória, depois que o painel leu", async () => {
+    await esconder(SLUG_ESCONDIDO);
+    await comSessao();
+    const { getAllFichas } = await import("@/lib/ficha");
+    const daHome = await getAllFichas();
+    expect(daHome.map((f) => f.slug), "a premissa: a home lida com o banco de pé já não tem o lugar").not.toContain(
+      SLUG_ESCONDIDO,
+    );
+
+    const { default: Admin } = await import("@/app/admin/page");
+    render(await Admin());
+
+    // o banco cai: daqui pra frente a home só tem a memória
+    cliente = { execute: () => Promise.reject(new Error("banco fora")) } as unknown as Client;
+    const daMemoria = await getAllFichas();
+    expect(daMemoria.length, "a premissa: a home foi servida pela memória, não estourou").toBeGreaterThan(0);
+    expect(daMemoria.map((f) => f.slug), "o painel pôs o escondido na memória do público").not.toContain(
+      SLUG_ESCONDIDO,
+    );
   });
 });
