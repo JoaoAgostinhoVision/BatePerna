@@ -157,6 +157,39 @@ describe("POST /api/admin/aviso", () => {
   });
 });
 
+// 🔴 R1 DA ONDA DE CONSERTO 1 DA TASK 9 (2026-10-01): esconder tira do PÚBLICO,
+// nunca do DONO. A página do lugar escondido abre pro dono desde a Task 9, e o
+// formulário de aviso mora nela — com a rota conferindo o lugar por `getFicha`
+// (que filtra os ocultos) o dono lia "Não consegui publicar." pra SEMPRE, e a
+// frase sugere falha passageira. Decisão do orquestrador: o aviso de um lugar
+// escondido fica gravado e vale quando ele voltar ao ar; publicar aviso NÃO
+// desesconde nada.
+describe("POST /api/admin/aviso num lugar ESCONDIDO", () => {
+  const SLUG = "rampa-do-pepe";
+
+  async function esconder() {
+    const { gravarVersao, versaoAtual } = await import("@/lib/db");
+    const atual = (await versaoAtual(client, SLUG))!;
+    await gravarVersao(client, SLUG, atual.doc, "painel", Math.floor(Date.now() / 1000), true);
+  }
+
+  it("200, o aviso fica gravado, o lugar CONTINUA escondido e o público continua sem ele", async () => {
+    await esconder();
+    const { POST } = await import("@/app/api/admin/aviso/route");
+    const res = await POST(comSessao({ slug: SLUG, texto: "em reforma", efeito: "fechado", venceEm: daquiAUmaHora() }));
+    expect(res.status, "a porta do dono recusou um lugar que só está escondido do público").toBe(200);
+
+    const a = await avisoVigente(client, SLUG, Math.floor(Date.now() / 1000));
+    expect(a?.texto).toBe("em reforma");
+
+    const { versaoAtual } = await import("@/lib/db");
+    expect((await versaoAtual(client, SLUG))!.oculto, "publicar aviso desescondeu o lugar").toBe(true);
+
+    const { getAllFichas } = await import("@/lib/ficha");
+    expect((await getAllFichas()).map((f) => f.slug), "o público passou a ver o escondido").not.toContain(SLUG);
+  });
+});
+
 describe("DELETE /api/admin/aviso", () => {
   it("com sessão, retira o aviso publicado — e ele deixa de ser vigente", async () => {
     const { POST, DELETE } = await import("@/app/api/admin/aviso/route");

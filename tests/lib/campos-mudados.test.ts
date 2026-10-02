@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { camposQueMudaram } from "@/lib/campos-mudados";
+import { atoDeVisibilidade, camposQueMudaram } from "@/lib/campos-mudados";
 import { loadAll } from "@/lib/ficha";
 
 /** O "que campo mudou" de uma versão pra anterior (Task 9, 2026-10-01).
@@ -119,5 +119,28 @@ describe("camposQueMudaram", () => {
     const nova = { ...RAMPA, dias: [...(RAMPA.dias ?? [])].reverse() };
     expect(RAMPA.dias!.length, "a premissa: a Rampa tem mais de um dia").toBeGreaterThan(1);
     expect(camposQueMudaram(doc(RAMPA), doc(nova))).toEqual(["dias"]);
+  });
+});
+
+/** 🔴 R2 DA ONDA DE CONSERTO 1 DA TASK 9 (2026-10-01): o histórico marca o ATO,
+ *  não o estado. Antes a marca "escondido" vinha do `oculto` da versão, então
+ *  toda edição feita com o lugar escondido a carregava, e a versão que MOSTROU
+ *  o lugar de novo aparecia sem nada — o dono perdia a trilha de quando o
+ *  lugar voltou ao ar. Decisão do orquestrador: marca só quando o `oculto`
+ *  MUDOU em relação à versão anterior. */
+describe("atoDeVisibilidade", () => {
+  it("a versão que escondeu: 'escondeu'", () => {
+    expect(atoDeVisibilidade(false, true)).toBe("escondeu");
+  });
+  it("a versão que mostrou de novo: 'mostrou'", () => {
+    expect(atoDeVisibilidade(true, false)).toBe("mostrou");
+  });
+  it("edição com o lugar JÁ escondido (e edição com ele no ar): sem marca", () => {
+    expect(atoDeVisibilidade(true, true)).toBeNull();
+    expect(atoDeVisibilidade(false, false)).toBeNull();
+  });
+  it("a semente (sem anterior) só leva marca se nasceu escondida", () => {
+    expect(atoDeVisibilidade(null, true)).toBe("escondeu");
+    expect(atoDeVisibilidade(null, false)).toBeNull();
   });
 });

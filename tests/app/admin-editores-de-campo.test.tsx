@@ -11,6 +11,7 @@ import {
   ALEM_DO_PROVEDOR,
   CAIXA_VAZIA,
   COM_ESTE_NUMERO,
+  DE_VOLTA_AO_AR,
   ESCONDER,
   ESCONDIDO,
   HORA_VAZIA,
@@ -1333,6 +1334,8 @@ describe("Os editores servem os três lugares", () => {
     ESCONDIDO,
     ESCONDER,
     MOSTRAR_DE_NOVO,
+    // R2 da onda de conserto 1 da Task 9: a marca da versão que mostrou de novo.
+    DE_VOLTA_AO_AR,
   ];
 
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem

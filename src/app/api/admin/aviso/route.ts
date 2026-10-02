@@ -1,7 +1,6 @@
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
-import { getClient, inserirAviso, retirarAviso, type EfeitoAviso } from "@/lib/db";
-import { getFicha } from "@/lib/ficha";
+import { getClient, inserirAviso, retirarAviso, versaoAtual, type EfeitoAviso } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +35,17 @@ export async function POST(req: Request): Promise<Response> {
   const { slug, texto, efeito, venceEm } = body as {
     slug?: unknown; texto?: unknown; efeito?: unknown; venceEm?: unknown;
   };
-  if (typeof slug !== "string" || (await getFicha(slug)) == null) return new Response("", { status: 400 });
+  // 🔴 A EXISTÊNCIA DO LUGAR SAI DE `versaoAtual`, NUNCA DE `getFicha` (R1 da onda
+  // de conserto 1 da Task 9, 2026-10-01) — a mesma regra das rotas irmãs
+  // (`visibilidade`, `previsao-carimbo`). `getFicha` filtra os ocultos, e a
+  // página do lugar escondido abre pro dono desde a Task 9 com este formulário
+  // dentro: o dono escrevia o aviso e lia "Não consegui publicar." pra sempre.
+  // Esconder tira do PÚBLICO, nunca do DONO. O aviso gravado num lugar
+  // escondido vale quando ele voltar ao ar, e gravá-lo NÃO desesconde nada:
+  // esta rota não toca em `ficha_versoes`.
+  if (typeof slug !== "string" || (await versaoAtual(getClient(), slug)) == null) {
+    return new Response("", { status: 400 });
+  }
   if (typeof texto !== "string" || texto.trim() === "") return new Response("", { status: 400 });
   if (typeof efeito !== "string" || !EFEITOS.includes(efeito as EfeitoAviso)) {
     return new Response("", { status: 400 });

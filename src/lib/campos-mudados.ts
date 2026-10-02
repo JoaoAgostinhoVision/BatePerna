@@ -96,3 +96,19 @@ function mesmoValor(x: unknown, y: unknown): boolean {
   if (kx.length !== ky.length) return false;
   return kx.every((k) => Object.prototype.hasOwnProperty.call(y, k) && mesmoValor((x as Record<string, unknown>)[k], (y as Record<string, unknown>)[k]));
 }
+
+/** O ATO DE VISIBILIDADE de uma versão: ela ESCONDEU o lugar, MOSTROU de novo,
+ *  ou nenhum dos dois (R2 da onda de conserto 1 da Task 9, 2026-10-01).
+ *
+ *  🔴 O HISTÓRICO MARCA O ATO, NÃO O ESTADO — decisão do orquestrador. Com a
+ *  marca vinda do `oculto` da versão, toda edição feita com o lugar escondido a
+ *  carregava, e a versão que MOSTROU o lugar de novo aparecia sem nada: o dono
+ *  perdia a trilha de quando o lugar voltou ao ar.
+ *
+ *  `anterior === null` é a primeira versão do lugar: ela só leva marca se
+ *  NASCEU escondida — aí o ato de esconder aconteceu nela. */
+export function atoDeVisibilidade(anterior: boolean | null, atual: boolean): "escondeu" | "mostrou" | null {
+  if (anterior === null) return atual ? "escondeu" : null;
+  if (anterior === atual) return null;
+  return atual ? "escondeu" : "mostrou";
+}

@@ -380,4 +380,50 @@ describe("/admin/[slug] — a porta e o conteúdo", () => {
     expect(within(linhaNova!).getByText(rotulo)).toBeTruthy();
     expect(within(container.querySelector(`[data-testid="versao-${atual.id}"]`) as HTMLElement).queryByText(rotulo)).toBeNull();
   });
+
+  // 🔴 R2 DA ONDA DE CONSERTO 1 (2026-10-01): a marca é do ATO, na PÁGINA. Os
+  // quatro casos de `atoDeVisibilidade`, pela página inteira contra o banco:
+  // semente sem marca, a versão que escondeu ("escondido"), uma edição feita com
+  // o lugar já escondido (sem marca, mas com o rótulo do que mudou) e a versão
+  // que mostrou de novo ("de volta ao ar").
+  it("o histórico marca o ATO: escondeu, editou escondido (sem marca), mostrou de novo", async () => {
+    const { gravarVersao, versaoAtual } = await import("@/lib/db");
+    const semente = (await versaoAtual(cliente, SLUG_ESCONDIDO))!;
+    const t = Math.floor(Date.now() / 1000);
+    const idEscondeu = await gravarVersao(cliente, SLUG_ESCONDIDO, semente.doc, "painel", t, true);
+    const editado = JSON.parse(semente.doc);
+    editado.custo = { ...editado.custo, curto: "outro custo" };
+    const idEditou = await gravarVersao(cliente, SLUG_ESCONDIDO, JSON.stringify(editado), "painel", t, true);
+    const idMostrou = await gravarVersao(cliente, SLUG_ESCONDIDO, JSON.stringify(editado), "painel", t, false);
+    await comSessaoValida();
+    const { default: Lugar } = await import("@/app/admin/[slug]/page");
+    const { container } = render(await Lugar({ params: Promise.resolve({ slug: SLUG_ESCONDIDO }) }));
+
+    const linha = (id: number) => container.querySelector(`[data-testid="versao-${id}"]`) as HTMLElement;
+    const MARCAS = /escondid|de volta ao ar/i;
+    expect(within(linha(semente.id)).queryByText(MARCAS), "a semente no ar levou marca").toBeNull();
+    expect(within(linha(idEscondeu)).getByText(/escondid/i)).toBeTruthy();
+    expect(within(linha(idEditou)).queryByText(MARCAS), "a edição com o lugar escondido levou marca de ato").toBeNull();
+    const { rotuloDe } = await import("@/app/admin/FichaInteira");
+    expect(within(linha(idEditou)).getByText(rotuloDe("custo.curto"))).toBeTruthy();
+    expect(within(linha(idMostrou)).getByText(/de volta ao ar/i)).toBeTruthy();
+    expect(within(linha(idMostrou)).queryByText(/escondid/i)).toBeNull();
+  });
+
+  // O quarto caso: a semente que NASCEU escondida leva a marca — ela não tem
+  // anterior, e o ato de esconder aconteceu nela. (Banco `:memory:` deste
+  // arquivo; o `DELETE` é do helper de teste, não do app — a tabela é
+  // append-only em produção.)
+  it("a semente que nasceu escondida leva a marca 'escondido'", async () => {
+    const { gravarVersao, versaoAtual } = await import("@/lib/db");
+    const doc = (await versaoAtual(cliente, SLUG_ESCONDIDO))!.doc;
+    await cliente.execute({ sql: "DELETE FROM ficha_versoes WHERE ficha_slug = ?", args: [SLUG_ESCONDIDO] });
+    const id = await gravarVersao(cliente, SLUG_ESCONDIDO, doc, "semente", Math.floor(Date.now() / 1000), true);
+    await comSessaoValida();
+    const { default: Lugar } = await import("@/app/admin/[slug]/page");
+    const { container } = render(await Lugar({ params: Promise.resolve({ slug: SLUG_ESCONDIDO }) }));
+    const linha = container.querySelector(`[data-testid="versao-${id}"]`) as HTMLElement;
+    expect(linha, "a única versão sumiu do histórico").not.toBeNull();
+    expect(within(linha).getByText(/escondid/i)).toBeTruthy();
+  });
 });

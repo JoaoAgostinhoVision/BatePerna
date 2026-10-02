@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { FichaVersao } from "@/lib/db";
-import { ESCONDIDO } from "./campos/palavras";
+import { DE_VOLTA_AO_AR, ESCONDIDO } from "./campos/palavras";
 
 // PENDENTE: redação minha, o João ainda não leu
 const TITULO = "Histórico da ficha";
@@ -22,7 +22,14 @@ const ERRO_VOLTAR = "Não consegui voltar a esta versão.";
  *  componente é `"use client"` e desce pro celular. A conta é
  *  `camposQueMudaram` (`src/lib/campos-mudados.ts`), chamada pela página; o
  *  rótulo é `rotuloDe`, a MESMA fonte que nomeia o bloco na ficha inteira. */
-export type VersaoNaTela = FichaVersao & { mudou: readonly string[] };
+export type VersaoNaTela = FichaVersao & {
+  mudou: readonly string[];
+  /** O ATO desta versão sobre a visibilidade (`atoDeVisibilidade`, no
+   *  servidor). 🔴 A marca sai DAQUI, nunca de `oculto`: o estado marcaria
+   *  toda edição feita com o lugar escondido, e a versão que mostrou de novo
+   *  ficaria sem nada (R2 da onda de conserto 1). */
+  ato: "escondeu" | "mostrou" | null;
+};
 
 type Props = { versoes: VersaoNaTela[] };
 
@@ -47,8 +54,8 @@ function dataHora(criadoEm: number): string {
  *  🔴 ERA `HistoricoDaVoz` ATÉ A TASK 9 (2026-10-01), e o nome dizia o defeito:
  *  ele só sabia extrair a `voz`, então uma versão que mudou o preço aparecia
  *  sem nada na linha — o dono não via o próprio trabalho. Hoje cada linha diz
- *  QUE CAMPOS mudaram (`mudou`, resolvido no servidor) e se a versão está
- *  ESCONDIDA. Abrir a linha ainda mostra a voz daquela versão, como antes. "Voltar" GRAVA uma versão nova com o
+ *  QUE CAMPOS mudaram (`mudou`, resolvido no servidor) e se a versão
+ *  ESCONDEU o lugar ou o MOSTROU de novo (`ato` — o ato, não o estado). Abrir a linha ainda mostra a voz daquela versão, como antes. "Voltar" GRAVA uma versão nova com o
  *  conteúdo velho — nunca apaga nada; `ficha_versoes` é append-only (ver
  *  `src/lib/db.ts`).
  *
@@ -90,7 +97,8 @@ export default function HistoricoDaFicha({ versoes }: Props) {
             <button type="button" data-abrir-versao={v.id} onClick={() => setAberta(aberta === v.id ? null : v.id)}>
               {dataHora(v.criado_em)} — {AUTOR[v.autor]}
             </button>
-            {v.oculto && <span className="adm-marca-escondido">{ESCONDIDO}</span>}
+            {v.ato === "escondeu" && <span className="adm-marca-escondido">{ESCONDIDO}</span>}
+            {v.ato === "mostrou" && <span className="adm-marca-escondido">{DE_VOLTA_AO_AR}</span>}
             {v.mudou.length > 0 && (
               // 🔴 `<span>`, NÃO `<li>` aninhado: a linha da versão É o `<li>`, e
               // há teste contando `li` do histórico contra as versões do banco.

@@ -91,7 +91,7 @@ describe("POST /api/admin/visibilidade — esconder e mostrar", () => {
   });
 
   // 🔴 A PORTA DE MÃO ÚNICA QUE ESTE CASO EXISTE PRA IMPEDIR. A rota irmã de
-  // aviso confere a existência do lugar com `getFicha(slug)`, que sai de
+  // aviso conferia (até a onda de conserto 1 da Task 9) a existência do lugar com `getFicha(slug)`, que sai de
   // `versoesAtuais` — e desde esta tarefa `versoesAtuais` esconde os ocultos por
   // padrão. Se esta rota fizesse o mesmo, o lugar escondido "não existiria" pra
   // ela: `{oculto:false}` levaria 400 e o dono NUNCA mais devolveria o lugar ao

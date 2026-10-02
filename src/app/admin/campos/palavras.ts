@@ -188,8 +188,9 @@ export const PREVISAO_FALHOU = "Não consegui conferir o que muda.";
  *  em `ficha_versoes` (append-only), desfaz com um toque, e nada sai do banco.
  *  ──────────────────────────────────────────────────────────────────────────── */
 
-/** A marca de um lugar (na lista) ou de uma versão (no histórico) que está
- *  fora do ar pro público. */
+/** Na lista, a marca de um lugar que ESTÁ fora do ar pro público (estado). No
+ *  histórico, a marca da versão que o ESCONDEU (ato — R2 da onda de conserto 1
+ *  da Task 9): edições feitas com ele já escondido não a levam. */
 // PENDENTE: redação minha, o João ainda não leu
 export const ESCONDIDO = "escondido";
 
@@ -201,3 +202,9 @@ export const ESCONDER = "Esconder este lugar";
  *  volta como estava — nada se perdeu. */
 // PENDENTE: redação minha, o João ainda não leu
 export const MOSTRAR_DE_NOVO = "Mostrar de novo";
+
+/** A marca da versão que MOSTROU o lugar de novo, no histórico (R2 da onda de
+ *  conserto 1 da Task 9). Irmã de `ESCONDIDO`, que marca a versão que escondeu:
+ *  as duas marcam o ATO, nunca o estado. */
+// PENDENTE: redação minha, o João ainda não leu
+export const DE_VOLTA_AO_AR = "de volta ao ar";

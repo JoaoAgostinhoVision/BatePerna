@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { COOKIE_ADMIN, avisarDesligado, sessaoValida } from "@/lib/admin-guarda";
 import { getFichaDoDono } from "@/lib/ficha";
-import { camposQueMudaram } from "@/lib/campos-mudados";
+import { atoDeVisibilidade, camposQueMudaram } from "@/lib/campos-mudados";
 import { PRAZO_AVISO_MS, resolverEstado } from "@/lib/carimbo-estado";
 import { comPrazo } from "@/lib/cache-rotas";
 import { avisoVigente, getClient, historico, type AvisoLinha, type FichaVersao } from "@/lib/db";
@@ -148,6 +148,9 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
   const versoes: VersaoNaTela[] = linhas.map((v, i) => ({
     ...v,
     mudou: camposQueMudaram(linhas[i + 1]?.doc ?? null, v.doc).map(rotuloDe),
+    // 🔴 O ATO, não o estado (R2 da onda de conserto 1): marca só a versão em
+    // que o `oculto` MUDOU em relação à anterior.
+    ato: atoDeVisibilidade(linhas[i + 1]?.oculto ?? null, v.oculto),
   }));
 
   return (

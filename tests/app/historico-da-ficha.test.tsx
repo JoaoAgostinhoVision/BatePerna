@@ -10,8 +10,8 @@ const SLUG = "rampa-do-pepe";
 const AGORA = 1_758_200_000;
 
 const VERSOES = [
-  { id: 2, ficha_slug: SLUG, doc: JSON.stringify({ voz: "nova" }), autor: "painel" as const, criado_em: AGORA + 10, oculto: false, mudou: [] },
-  { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA, oculto: false, mudou: [] },
+  { id: 2, ficha_slug: SLUG, doc: JSON.stringify({ voz: "nova" }), autor: "painel" as const, criado_em: AGORA + 10, oculto: false, mudou: [], ato: null },
+  { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA, oculto: false, mudou: [], ato: null },
 ];
 
 // 🔴 M4 DA REVISÃO FINAL (2026-09-26): `vi.restoreAllMocks()` NÃO desfaz
@@ -52,8 +52,8 @@ describe("HistoricoDaFicha", () => {
   // não pode tirar as OUTRAS versões da tela.
   it("versão com doc que não parseia não derruba a lista — mostra vazio só para ela", () => {
     const versoes = [
-      { id: 2, ficha_slug: SLUG, doc: "{ isto não é JSON", autor: "painel" as const, criado_em: AGORA + 10, oculto: false, mudou: [] },
-      { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA, oculto: false, mudou: [] },
+      { id: 2, ficha_slug: SLUG, doc: "{ isto não é JSON", autor: "painel" as const, criado_em: AGORA + 10, oculto: false, mudou: [], ato: null },
+      { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA, oculto: false, mudou: [], ato: null },
     ];
     render(<HistoricoDaFicha versoes={versoes} />);
     expect(screen.getByText(/você, pelo painel/i), "a linha corrompida sumiu da lista").toBeTruthy();
@@ -137,7 +137,7 @@ describe("HistoricoDaFicha", () => {
   // `tests/lib/campos-mudados.test.ts`; as daqui provam que a TELA põe cada
   // rótulo NA LINHA DA VERSÃO certa, e nenhum na linha errada.
   // ───────────────────────────────────────────────────────────────────────────
-  const vSemente = { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA, oculto: false, mudou: [] };
+  const vSemente = { id: 1, ficha_slug: SLUG, doc: JSON.stringify({ voz: "velha" }), autor: "semente" as const, criado_em: AGORA, oculto: false, mudou: [], ato: null };
   const vComVozNova = { ...vSemente, id: 2, autor: "painel" as const, criado_em: AGORA + 10, mudou: ["A voz"] };
   const vComCustoNovo = { ...vSemente, id: 3, autor: "painel" as const, criado_em: AGORA + 20, mudou: ["O custo em três ou quatro palavras"] };
   const vComVozECustoNovos = { ...vSemente, id: 4, autor: "painel" as const, criado_em: AGORA + 30, mudou: ["A voz", "O custo em três ou quatro palavras"] };
@@ -170,10 +170,28 @@ describe("HistoricoDaFicha", () => {
     expect(screen.queryByText(/nada mudou/i)).toBeNull();
   });
 
-  it("linha de versão oculta é marcada como escondida, e a visível não", () => {
-    render(<HistoricoDaFicha versoes={[{ ...vSemente, id: 9, oculto: true }, vSemente]} />);
+  // 🔴 R2 DA ONDA DE CONSERTO 1: a marca é do ATO (`ato`, resolvido no
+  // servidor por `atoDeVisibilidade`), NUNCA do estado (`oculto`). A versão de
+  // id 10 tem `oculto: true` e nenhum ato — é uma edição feita com o lugar já
+  // escondido —, e não pode levar marca: é ela que prova que o componente não
+  // voltou a ler `v.oculto`.
+  it("a versão que escondeu diz 'escondido', a que mostrou diz 'de volta ao ar', e a edição com ele escondido não diz nada", () => {
+    render(
+      <HistoricoDaFicha
+        versoes={[
+          { ...vSemente, id: 11, oculto: false, ato: "mostrou" },
+          { ...vSemente, id: 10, oculto: true, ato: null },
+          { ...vSemente, id: 9, oculto: true, ato: "escondeu" },
+          vSemente,
+        ]}
+      />,
+    );
     expect(within(screen.getByTestId("versao-9")).getByText(/escondid/i)).toBeTruthy();
-    expect(within(screen.getByTestId(`versao-${vSemente.id}`)).queryByText(/escondid/i)).toBeNull();
+    expect(within(screen.getByTestId("versao-9")).queryByText(/de volta ao ar/i)).toBeNull();
+    expect(within(screen.getByTestId("versao-11")).getByText(/de volta ao ar/i)).toBeTruthy();
+    expect(within(screen.getByTestId("versao-11")).queryByText(/escondid/i)).toBeNull();
+    expect(within(screen.getByTestId("versao-10")).queryByText(/escondid|de volta ao ar/i), "edição com o lugar escondido levou marca de ato").toBeNull();
+    expect(within(screen.getByTestId(`versao-${vSemente.id}`)).queryByText(/escondid|de volta ao ar/i)).toBeNull();
   });
 
   it("documento que não parseia mostra vazio em vez de derrubar a lista", () => {

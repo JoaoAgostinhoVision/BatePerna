@@ -14,7 +14,8 @@ export const dynamic = "force-dynamic";
  *  irmãs do admin: config → sessão → corpo → domínio → grava.
  *
  *  🔴 A EXISTÊNCIA DO LUGAR É CONFERIDA COM `versaoAtual`, NUNCA COM `getFicha`.
- *  A rota irmã de aviso usa `getFicha(slug)` pra isso, e aqui isso seria uma
+ *  A rota irmã de aviso usava `getFicha(slug)` pra isso (até a onda de conserto 1
+ *  da Task 9, que a passou pra `versaoAtual` pelo mesmo motivo), e aqui seria uma
  *  PORTA DE MÃO ÚNICA: `getFicha` sai de `versoesAtuais`, que desde a Tarefa 4
  *  esconde os ocultos por padrão — então o lugar escondido "não existiria" pra
  *  esta rota, e `{ oculto: false }` levaria 400. O dono esconderia um lugar e

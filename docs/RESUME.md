@@ -1250,7 +1250,7 @@ A leitura, essa sim, **já é 100% banco** (`src/lib/ficha.ts:78-80`, com guarda
 5. **`modos` é campo MORTO** — uma única ocorrência em todo o `src/`: a linha que o declara
    (`src/types/ficha.ts:47`). Obrigatório e lido por ninguém.
 6. ⚠️ `waypoints[0]` em **10 acessos de 8 arquivos**. Ordem do acervo é alfabética e cravada
-   (`src/lib/ficha-fonte.ts:12-16`). O histórico só extrai `voz` (`HistoricoDaVoz.tsx:20-27`).
+   (`src/lib/ficha-fonte.ts:12-16`). O histórico só extrai `voz` (`HistoricoDaVoz.tsx:20-27`). ⚠️ *[velho: a Tarefa 9 (`90ea83d`) mudou isso — o componente virou `HistoricoDaFicha.tsx` e cada versão diz QUE CAMPOS mudaram, por `camposQueMudaram` (`src/lib/campos-mudados.ts`).]*
 
 ### 🔴 UM NÚMERO DO AGENTE QUE EU CONFERI E ESTÁ ERRADO
 
