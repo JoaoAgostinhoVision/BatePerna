@@ -32,8 +32,8 @@ import type { Ficha } from "@/types/ficha";
  *  | "alguma ficha exercita o campo [dias]" | **fica lá**, pela mesma razão |
  *  | "o regex de preço daqui é o mesmo que a página usa" | **fica lá**: compara DOIS ARQUIVOS DE CÓDIGO (este módulo e `[slug]/page.tsx`), lendo o disco. Não é fato de ficha nenhuma, e produção não lê o disco |
  *  | "colchete vazio é o MOLDE do registro de campos" | **fica lá**: varre o `src/`, não o acervo |
- *  | "o `src/` continua cego ao waypoint 2 em diante" | **fica lá**: varre o `src/`, e MUDA DE NATUREZA na tarefa da cadeia de trajeto |
- *  | "nenhuma ficha do acervo tem 2º waypoint" | **fica lá**: cai a mão naquela mesma tarefa, e mexer nela aqui esconderia a mudança |
+ *  | "o `src/` continua cego ao waypoint 2 em diante" | **ficou lá**: varre o `src/`, e MUDOU DE NATUREZA na Tarefa 10 (a cadeia de trajeto) — hoje prova que o bloco Trajeto lê a cadeia e que quem fala do lugar continua no `[0]` |
+ *  | "nenhuma ficha do acervo tem 2º waypoint" | **ficou lá** até a Tarefa 10, e lá **caiu a mão**: a razão dela era a tela cega à cadeia |
  *  | os 10 casos restantes | viraram **13 regras** |
  *
  *  Os 10 casos restantes rendem 13 porque **três deles juntavam, num `it(` só,

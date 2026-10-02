@@ -2,7 +2,16 @@ import { ZodError } from "zod";
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
 import { type FichaVersao, getClient, gravarVersao, versaoAtual, versaoPorId, versoesAtuais } from "@/lib/db";
-import { aplicarCampo, campoPorCaminho, gravarPonto, removerCampo, type ValorDeCampo } from "@/lib/campos-da-ficha";
+import {
+  RecusaDoTrajeto,
+  acrescentarEtapa,
+  aplicarCampo,
+  campoPorCaminho,
+  gravarPonto,
+  removerCampo,
+  tirarEtapa,
+  type ValorDeCampo,
+} from "@/lib/campos-da-ficha";
 import { type Violacao, violacoesDoAcervo } from "@/lib/coerencia";
 import { type Ficha, fichaSchema } from "@/types/ficha";
 
@@ -137,7 +146,7 @@ function acervoComo(versoes: Map<string, FichaVersao>, slug: string, doc: string
  *  uma versão antiga). Nunca os dois juntos, nunca nenhum dos dois — as duas
  *  guardas de cima (config, sessão) valem pros dois formatos igual.
  *
- *  🔴 Task 3 da rodada do painel completo (2026-09-27): eram TRÊS formatos (hoje são quatro, ver a lista), e a
+ *  🔴 Task 3 da rodada do painel completo (2026-09-27): eram TRÊS formatos (hoje são seis, ver a lista), e a
  *  ordem ganhou um degrau NOVO no fim — a COERÊNCIA DO ACERVO.
  *
  *   - `{slug, campo, valor}`   — grava aquele campo
@@ -146,6 +155,12 @@ function acervoComo(versoes: Map<string, FichaVersao>, slug: string, doc: string
  *   - `{slug, ponto, lat, lng}` — grava a coordenada INTEIRA do ponto `ponto`
  *     do trajeto, numa versão só (Tarefa 8, onda de conserto 1). O índice tem
  *     de existir; passa pela coerência e herda a visibilidade como as outras.
+ *   - `{slug, acrescentarEtapa: {nome}}` — acrescenta um ponto no FIM do
+ *     trajeto, com a coordenada copiada do último (Tarefa 10).
+ *   - `{slug, tirarEtapa: N}` — tira o ÚLTIMO ponto; `N` tem de ser o índice
+ *     dele e nunca `0`, que é o lugar (409 com frase) (Tarefa 10).
+ *  As duas da Tarefa 10 passam pela coerência e herdam a visibilidade, pelo
+ *  MESMO caminho das outras (ver `mudar`).
  *
  *  ⚠️ E EXISTIA UM QUARTO, NÃO DECLARADO, que esta tarefa fecha — medido no
  *  Step 0: `{slug, campo: "piso"}`, **sem `valor` e sem `naoSei`**, gravava 200
@@ -188,8 +203,11 @@ export async function PUT(req: Request): Promise<Response> {
     ponto?: unknown;
     lat?: unknown;
     lng?: unknown;
+    acrescentarEtapa?: unknown;
+    tirarEtapa?: unknown;
   };
-  const { slug, campo, valor, naoSei, versaoId, ponto, lat, lng } = corpo;
+  const { slug, campo, valor, naoSei, versaoId, ponto, lat, lng, acrescentarEtapa: etapaNova, tirarEtapa: etapaFora } =
+    corpo;
   if (typeof slug !== "string") return new Response("", { status: 400, headers: TEXTO });
 
   // 🔴 C6 da revisão do controlador: os dois formatos são MUTUAMENTE
@@ -198,7 +216,8 @@ export async function PUT(req: Request): Promise<Response> {
   // checagem lê exatamente o que chegou no corpo, não uma coincidência de
   // tipo. Nem os dois formatos juntos, nem nenhum dos dois: 400.
   //
-  // 🔴 DESDE A TAREFA 8 (onda de conserto 1) SÃO TRÊS FAMÍLIAS DE CHAVE, e
+  // 🔴 DESDE A TAREFA 8 (onda de conserto 1) ERAM TRÊS FAMÍLIAS DE CHAVE (CINCO
+  // desde a Tarefa 10, ver logo abaixo), e
   // EXATAMENTE UMA tem de estar presente. A família `ponto` (`ponto`/`lat`/`lng`)
   // grava a coordenada de um ponto do trajeto ATÔMICA. Forma nova entra aqui
   // como mais uma linha `traz…` e mais um item da contagem — e a contagem é o
@@ -206,7 +225,12 @@ export async function PUT(req: Request): Promise<Response> {
   const trazVersaoId = "versaoId" in corpo;
   const trazCampo = "campo" in corpo || "valor" in corpo || "naoSei" in corpo;
   const trazPonto = "ponto" in corpo || "lat" in corpo || "lng" in corpo;
-  if ([trazVersaoId, trazCampo, trazPonto].filter(Boolean).length !== 1) {
+  // 🔴 TAREFA 10: mais duas famílias, uma chave cada. Acrescentar e tirar são
+  // famílias SEPARADAS (e não uma chave `etapa` com dois modos) pra que um corpo
+  // com as duas caia na contagem como qualquer outro corpo misto.
+  const trazAcrescentar = "acrescentarEtapa" in corpo;
+  const trazTirar = "tirarEtapa" in corpo;
+  if ([trazVersaoId, trazCampo, trazPonto, trazAcrescentar, trazTirar].filter(Boolean).length !== 1) {
     return new Response("", { status: 400, headers: TEXTO });
   }
 
@@ -280,9 +304,11 @@ export async function PUT(req: Request): Promise<Response> {
   // 🔴 CADA FORMA DE EDIÇÃO VIRA UMA TRANSFORMAÇÃO DO DOCUMENTO ATUAL (`mudar`),
   // e daqui pra baixo todas passam pelo MESMO caminho: a versão atual, a
   // transformação (que estoura com frase → 400), o portão de coerência (409) e
-  // a gravação que herda a visibilidade. Forma nova (a Tarefa 10 traz
+  // a gravação que herda a visibilidade. Forma nova (a Tarefa 10 trouxe
   // `acrescentarEtapa`/`tirarEtapa`) confere a FORMA do corpo no seu ramo e
-  // devolve o seu `mudar` — nunca um caminho próprio até o banco.
+  // devolve o seu `mudar` — nunca um caminho próprio até o banco. Há prova de
+  // que CADA forma passa pelo portão, com uma regra fantasma que acusa qualquer
+  // mudança (`tests/api/route-admin-ficha.test.ts`, C7 da Tarefa 10).
   let mudar: (doc: string) => string;
   if (trazPonto) {
     // 🔴 A FORMA DO CORPO, conferida aqui; a faixa e a finitude de `lat`/`lng`
@@ -299,6 +325,31 @@ export async function PUT(req: Request): Promise<Response> {
       return new Response("", { status: 400, headers: TEXTO });
     }
     mudar = (doc) => gravarPonto(doc, ponto, lat, lng);
+  } else if (trazAcrescentar) {
+    // 🔴 A FORMA: um objeto com EXATAMENTE a chave `nome`, texto. Chave a mais
+    // (`lat`, `nota`) é 400 sem frase — a coordenada do ponto novo é COPIADA do
+    // último, por decisão (ver `acrescentarEtapa`), e um corpo que traga a sua
+    // estaria pedindo outra coisa que esta porta não faz. Nome em branco passa
+    // daqui e é recusado lá dentro, COM frase, como toda caixa vazia.
+    if (
+      typeof etapaNova !== "object" ||
+      etapaNova === null ||
+      Object.keys(etapaNova).length !== 1 ||
+      typeof (etapaNova as { nome?: unknown }).nome !== "string"
+    ) {
+      return new Response("", { status: 400, headers: TEXTO });
+    }
+    const nome = (etapaNova as { nome: string }).nome;
+    mudar = (doc) => acrescentarEtapa(doc, nome);
+  } else if (trazTirar) {
+    // 🔴 A FORMA: inteiro ≥ 0, pela mesma razão do `ponto` e do `versaoId`
+    // (`1.5`, `-1` e `1e999`/`Infinity` não são índice de nada) — 400 sem frase.
+    // O `0` PASSA DAQUI de propósito: ele é um índice bem escrito, e a recusa
+    // dele é de DOMÍNIO (é o lugar), com frase e 409, dentro de `tirarEtapa`.
+    if (typeof etapaFora !== "number" || !Number.isInteger(etapaFora) || etapaFora < 0) {
+      return new Response("", { status: 400, headers: TEXTO });
+    }
+    mudar = (doc) => tirarEtapa(doc, etapaFora);
   } else {
     // 🔴 EXATAMENTE UM DE `valor` OU `naoSei`, e é isto que fecha o quarto
     // formato não declarado (ver o docblock). `in` e nunca `!== undefined`, pela
@@ -341,6 +392,10 @@ export async function PUT(req: Request): Promise<Response> {
   try {
     novoDoc = mudar(versao.doc);
   } catch (erro) {
+    // 🔴 A recusa que é do TRAJETO DE AGORA (tirar o lugar, tirar um ponto que
+    // não é o último) volta 409 COM a frase, no padrão das recusas da coerência
+    // — ver `RecusaDoTrajeto`. Todo o resto é 400, como sempre foi.
+    if (erro instanceof RecusaDoTrajeto) return new Response(erro.message, { status: 409, headers: TEXTO });
     return recusar400(erro);
   }
 

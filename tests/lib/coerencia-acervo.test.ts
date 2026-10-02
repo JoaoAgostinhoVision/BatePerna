@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 import { getAllFichas } from "@/lib/ficha";
 import { bancoDeProducao } from "../banco";
 import { PRECO, REGRAS, violacoesDoAcervo } from "@/lib/coerencia";
@@ -268,29 +269,37 @@ describe("os dias da semana, no acervo", () => {
   });
 });
 
-/** 🔴 O 2º WAYPOINT — a cadeia que o schema aceita e a tela engole em silêncio.
+/** 🔴 A CADEIA DE WAYPOINTS — quem a lê, e quem tem de continuar no LUGAR.
  *
- *  `src/types/ficha.ts` declara `waypoints: z.array(...).min(1)`. **Nenhum
- *  leitor do `src/` lê além do `[0]`**: o cartão da home, o pin do mapa, a
- *  lista de `/trilhas`, o cabeçalho da ficha e a medição de distância pegam
- *  todos o primeiro ponto e param ali. Uma ficha com três waypoints carrega,
- *  valida, passa na suíte — e o app mostra **um**. Os pontos 2 e 3 somem sem
- *  erro, sem log, sem nada na tela: a espécie "dado que carrega, valida, tem
- *  teste — e nunca aparece" (2026-09-09), agora com o agravante de que o dado
- *  seria conteúdo DELE, escrito à mão e perdido calado.
+ *  `src/types/ficha.ts` declara `waypoints: z.array(...).min(1)`. Até a Tarefa 10
+ *  do painel completo (2026-10-01) **nenhum leitor do `src/` lia além do
+ *  `[0]`**, e este bloco guardava isso com dois testes: um que media a cegueira
+ *  do `src/` e outro que proibia o acervo de ter 2º ponto — porque um ponto que
+ *  carrega, valida e nunca aparece na tela era conteúdo DELE perdido calado.
  *
- *  ⚠️ Isto **não é um teste de produto**: não decide que o app deve mostrar a
- *  cadeia nem que não deve. Ele só impede que a decisão seja tomada por
- *  omissão, no dia em que uma ficha nova tiver dois pontos.
+ *  🔴 A TAREFA 10 ENSINOU A TELA A LER A CADEIA (spec §6), e os dois mudaram de
+ *  natureza, exatamente como o comentário antigo mandava:
+ *   - "nenhuma ficha do acervo tem 2º waypoint" **caiu a mão**: a razão dela era
+ *     a cegueira, e a cegueira acabou no bloco Trajeto da ficha;
+ *   - "o `src/` continua cego ao waypoint 2" **inverteu**: agora prova que o
+ *     bloco Trajeto ENXERGA a cadeia, e que os arquivos que falam DO LUGAR
+ *     continuam no `[0]`.
  *
- *  🔴 E ele guarda a PRÓPRIA JUSTIFICATIVA, que é a lição de 2026-09-03 ("o
- *  guarda prova que a pergunta existe, nunca que a justificativa dela ainda é
- *  verdadeira"): o primeiro teste abaixo mede se o `src/` continua cego ao
- *  `[1..]`. No dia em que alguém ENSINAR a tela a ler a cadeia, ele fica
- *  vermelho primeiro — e aí o segundo teste é que deve cair, de propósito e a
- *  mão, junto com este comentário.
- */
-describe("o 2º waypoint — o acervo não pode ter cadeia enquanto ninguém a lê", () => {
+ *  🔴 A DISTINÇÃO QUE DECIDE TUDO: `waypoints[0]` é O LUGAR; `waypoints[1..]`
+ *  são AS ETAPAS DO CAMINHO até ele. O nome na home, o pin do mapa, a ordem do
+ *  acervo, a distância "daqui", o nome nas frases da coerência — todos falam do
+ *  lugar. Um deles aprendendo a ler a cadeia sem alguém pensar no assunto é o
+ *  defeito que a R7 da spec descreve: a home mostrando o nome de uma etapa do
+ *  caminho em vez do nome do destino.
+ *
+ *  🔴 E O GUARDA LÊ PELO PARSER DO TYPESCRIPT, não por regex. O guarda anterior
+ *  tirava comentário com regex e casava `waypoints[...]` em texto — e esse
+ *  desenho tem dois furos catalogados neste projeto: a tira que come o arquivo
+ *  (espécie 44) e a leitura que não tem colchete (`waypoints.map(...)`,
+ *  `waypoints.slice(1)`, `const { waypoints } = ...`), que a regex nunca viu. O
+ *  parser não confunde comentário nem string com código, e enxerga toda forma de
+ *  tocar a lista. */
+describe("a cadeia de waypoints — o bloco Trajeto a lê, e o que fala do LUGAR continua no [0]", () => {
   const SRC = path.join(process.cwd(), "src");
 
   function arquivosDeFonte(dir: string): string[] {
@@ -301,70 +310,271 @@ describe("o 2º waypoint — o acervo não pode ter cadeia enquanto ninguém a l
     });
   }
 
-  /** Comentário fora, e pelos dois motivos já pagos neste repositório: o bloco
-   *  de `geo.ts` cita `trajeto.waypoints[0]` em prosa (a espécie "guarda de
-   *  fonte lendo o COMENTÁRIO"), e uma linha comentada com `waypoints[1]`
-   *  acusaria um leitor que não existe. O preço da tira é a espécie
-   *  "tira-de-comentários que come o arquivo" — por isso a contagem abaixo. */
+  const rel = (f: string) => path.relative(process.cwd(), f).split(path.sep).join("/");
+  const ARQUIVOS = arquivosDeFonte(SRC).map((f) => ({ arquivo: rel(f), fonte: readFileSync(f, "utf8") }));
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // O MOLDE — este caso continua igual desde a Task 1 e é independente da
+  // inversão: `src/lib/campos-da-ficha.ts` escreve `trajeto.waypoints[].nome`,
+  // o MOLDE do registro, dentro de uma string. Ele vive aqui porque mede o mesmo
+  // texto; a tira de comentários dele é a mesma de antes.
+  // ───────────────────────────────────────────────────────────────────────────
   const semComentario = (s: string) =>
     s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-
-  const acessos = arquivosDeFonte(SRC).flatMap((f) =>
-    [...semComentario(readFileSync(f, "utf8")).matchAll(/waypoints\s*\[([^\]]*)\]/g)].map((m) => ({
-      arquivo: path.relative(process.cwd(), f).split(path.sep).join("/"),
-      indice: m[1].trim(),
-    })),
+  const molde = ARQUIVOS.flatMap(({ arquivo, fonte }) =>
+    [...semComentario(fonte).matchAll(/waypoints\s*\[([^\]]*)\]/g)]
+      .filter((m) => m[1].trim() === "")
+      .map(() => arquivo),
   );
-
-  // 🔴 2026-09-26 (Task 1 do painel completo): `src/lib/campos-da-ficha.ts`
-  //  escreve `trajeto.waypoints[].nome` — o MOLDE do registro de campos, dentro
-  //  de uma string. Colchete VAZIO não lê índice nenhum (`waypoints[]` nem é
-  //  indexação válida em JS: quem lê a cadeia escreve um índice ali dentro), e
-  //  o registro guarda molde de propósito, porque quantos waypoints uma ficha
-  //  tem é DADO e não código. Então o molde sai da conta de LEITURAS — e, pra
-  //  ele não virar esconderijo de um leitor de verdade, o teste logo abaixo
-  //  prova que colchete vazio só existe naquele arquivo.
-  const molde = acessos.filter((a) => a.indice === "");
-  const leituras = acessos.filter((a) => a.indice !== "");
 
   it("colchete vazio é o MOLDE do registro de campos, e só mora lá", () => {
     expect(
-      [...new Set(molde.map((a) => a.arquivo))],
+      [...new Set(molde)],
       "`waypoints[]` fora do registro de campos: ou é molde em lugar errado, ou " +
         "é a tira de comentários deixando passar coisa que não é molde",
     ).toEqual(["src/lib/campos-da-ficha.ts"]);
-    expect(molde.map((a) => a.indice)).toEqual(["", "", "", ""]); // nome, lat, lng, nota
+    expect(molde).toHaveLength(4); // nome, lat, lng, nota
   });
 
-  it("o `src/` continua cego ao waypoint 2 em diante — a premissa do guarda abaixo", () => {
-    // NÃO-VACUIDADE: sem este número, renomear o campo (ou a tira comer o
-    // arquivo) deixa `leituras` vazio e o laço seguinte passa sem ler nada.
-    // Cravado a mão de propósito, como o `fichas.length` no topo.
-    expect(
-      leituras.length,
-      "nenhum acesso a `waypoints[...]` no src/ — ou o campo mudou de nome, ou a " +
-        "tira de comentários comeu os arquivos. O teste abaixo ficaria oco.",
-    ).toBeGreaterThanOrEqual(7);
+  // ───────────────────────────────────────────────────────────────────────────
+  // A CLASSIFICAÇÃO — fechada. Todo arquivo do `src/` que TOCA a lista de
+  // waypoints mora em exatamente uma destas três, e um arquivo novo que a toque
+  // fica vermelho até alguém decidir onde ele mora.
+  // ───────────────────────────────────────────────────────────────────────────
 
-    const alem = leituras.filter((a) => a.indice !== "0");
-    expect(
-      alem.map((a) => `${a.arquivo} lê waypoints[${a.indice}]`),
-      "alguém ensinou a tela a ler a cadeia de waypoints. Isto é BOA notícia — e " +
-        "significa que o guarda seguinte (o acervo só pode ter 1 ponto por ficha) " +
-        "perdeu a razão de existir e deve cair a mão, junto com o comentário dele.",
-    ).toEqual([]);
-  });
+  /** Os que falam DO LUGAR: toda leitura é `waypoints[0]`, e só isso. São os
+   *  sete que a spec §6 lista (fora o `page.tsx`, que é misto) MAIS a
+   *  `coerencia.ts`, que nasceu depois da spec (Tarefa 3) e lê o `[0]` pro nome
+   *  do lugar nas frases das regras — o comentário dela diz por quê. A spec
+   *  contava 8 arquivos; com a coerência são 9 (8 cegos + o misto). */
+  const CEGOS = [
+    "src/app/CartaoTrilha.tsx",
+    "src/app/ListaDoAcervo.tsx",
+    "src/app/MapaHome.tsx",
+    "src/app/admin/ListaDeLugares.tsx",
+    "src/app/admin/PainelAdmin.tsx",
+    "src/lib/coerencia.ts",
+    "src/lib/ficha-fonte.ts",
+    "src/lib/geo.ts",
+  ];
 
-  it("nenhuma ficha do acervo tem 2º waypoint — ele sumiria da tela sem aviso", () => {
-    for (const f of fichas) {
-      const extras = f.trajeto.waypoints.slice(1);
-      expect(
-        extras.map((w) => w.nome),
-        `${f.slug} tem ${f.trajeto.waypoints.length} waypoints e o app mostra só ` +
-          `"${f.trajeto.waypoints[0].nome}". Os pontos acima sumiriam da tela sem ` +
-          "erro nenhum. Antes de acrescentá-los, a cadeia precisa de um lugar pra " +
-          "aparecer — isso é decisão de produto, não conserto de teste.",
-      ).toEqual([]);
+  /** O MISTO: o `h1` e o cartão de compartilhar falam do lugar (`[0]`), e o
+   *  bloco Trajeto fala do caminho (a cadeia). A regra: fora do elemento
+   *  `data-bloco="trajeto"`, só `[0]`; dentro dele, a cadeia TEM de ser lida. */
+  const MISTO = "src/app/[slug]/page.tsx";
+
+  /** Os que existem PRA EDITAR a cadeia: o registro de campos (acrescentar e
+   *  tirar ponto) e a tela do painel que conta os pontos. Nenhuma regra de
+   *  leitura — mas a lista é fechada como as outras. */
+  const ENXERGAM = ["src/app/admin/FichaInteira.tsx", "src/lib/campos-da-ficha.ts"];
+
+  type Acesso = { indice: "0" | "cadeia"; noTrajeto: boolean; linha: number };
+
+  /** Toda vez que o código TOCA a lista de waypoints, com o que faz com ela.
+   *
+   *  - `x.waypoints[0]` (ou `x["waypoints"][0]`) → `"0"`: o lugar;
+   *  - qualquer outra coisa — `[1]`, `[i]`, `.map`, `.slice`, `.length`, o
+   *    `const { waypoints } = ...` — → `"cadeia"`. Conservador de propósito:
+   *    `.at(0)` também conta como cadeia, e quem quiser o lugar escreve `[0]`.
+   *
+   *  NÃO É LEITURA, e fica de fora: a chave de um tipo (`waypoints: readonly
+   *  ...[]` em `geo.ts`) e a chave de um objeto literal (o `z.object` do schema,
+   *  e o documento que `campos-da-ficha.ts` monta). Comentário e string nunca
+   *  entram — o parser não os vê como código. */
+  function acessosDe(fonte: string, arquivo: string): Acesso[] {
+    const sf = ts.createSourceFile(
+      arquivo,
+      fonte,
+      ts.ScriptTarget.Latest,
+      true,
+      arquivo.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+    );
+    const saida: Acesso[] = [];
+
+    const dentroDoTrajeto = (no: ts.Node): boolean => {
+      for (let p: ts.Node | undefined = no.parent; p; p = p.parent) {
+        if (!ts.isJsxElement(p)) continue;
+        const ehTrajeto = p.openingElement.attributes.properties.some(
+          (a) =>
+            ts.isJsxAttribute(a) &&
+            a.name.getText(sf) === "data-bloco" &&
+            a.initializer !== undefined &&
+            ts.isStringLiteral(a.initializer) &&
+            a.initializer.text === "trajeto",
+        );
+        if (ehTrajeto) return true;
+      }
+      return false;
+    };
+
+    const visitar = (no: ts.Node): void => {
+      let expr: ts.Node | null = null;
+      if (ts.isIdentifier(no) && no.text === "waypoints") {
+        const pai = no.parent;
+        const ehChave =
+          (ts.isPropertySignature(pai) && pai.name === no) ||
+          (ts.isPropertyAssignment(pai) && pai.name === no);
+        if (!ehChave) expr = ts.isPropertyAccessExpression(pai) && pai.name === no ? pai : no;
+      } else if (
+        ts.isStringLiteral(no) &&
+        no.text === "waypoints" &&
+        ts.isElementAccessExpression(no.parent) &&
+        no.parent.argumentExpression === no
+      ) {
+        expr = no.parent;
+      }
+
+      if (expr) {
+        const pai = expr.parent;
+        const ehZero =
+          ts.isElementAccessExpression(pai) &&
+          pai.expression === expr &&
+          ts.isNumericLiteral(pai.argumentExpression) &&
+          pai.argumentExpression.text === "0";
+        saida.push({
+          indice: ehZero ? "0" : "cadeia",
+          noTrajeto: dentroDoTrajeto(expr),
+          linha: sf.getLineAndCharacterOfPosition(expr.getStart(sf)).line + 1,
+        });
+      }
+      ts.forEachChild(no, visitar);
+    };
+    visitar(sf);
+    return saida;
+  }
+
+  /** O VEREDITO, separado da varredura pra poder ser provado com entrada
+   *  sintética (os casos "o guarda acusa…" lá embaixo). Devolve a lista de
+   *  problemas; vazia é verde. */
+  function problemas(porArquivo: ReadonlyMap<string, readonly Acesso[]>): string[] {
+    const saida: string[] = [];
+    const classificados = [...CEGOS, MISTO, ...ENXERGAM].sort();
+    const tocam = [...porArquivo].filter(([, a]) => a.length > 0).map(([f]) => f).sort();
+
+    for (const f of tocam) {
+      if (!classificados.includes(f)) {
+        saida.push(
+          `${f} toca a lista de waypoints e não está classificado: decida se ele fala do ` +
+            "LUGAR (CEGOS, só `[0]`), do CAMINHO (o bloco Trajeto) ou se EDITA a cadeia (ENXERGAM).",
+        );
+      }
     }
+    for (const f of classificados) {
+      if (!tocam.includes(f)) {
+        saida.push(`${f} está classificado e não toca mais a lista: a classificação ficou velha.`);
+      }
+    }
+    for (const f of CEGOS) {
+      for (const a of porArquivo.get(f) ?? []) {
+        if (a.indice !== "0") {
+          saida.push(
+            `${f}:${a.linha} lê a CADEIA, e este arquivo fala do LUGAR. \`waypoints[0]\` é o ` +
+              "lugar; do `[1]` em diante são etapas do caminho até ele (spec §6, R7).",
+          );
+        }
+      }
+    }
+    const misto = porArquivo.get(MISTO) ?? [];
+    for (const a of misto) {
+      if (a.indice !== "0" && !a.noTrajeto) {
+        saida.push(`${MISTO}:${a.linha} lê a cadeia FORA do bloco Trajeto — só ele fala do caminho.`);
+      }
+    }
+    if (!misto.some((a) => a.indice === "cadeia" && a.noTrajeto)) {
+      saida.push(`${MISTO}: o bloco Trajeto não lê mais a cadeia — as etapas sumiriam da ficha.`);
+    }
+    if (!misto.some((a) => a.indice === "0" && !a.noTrajeto)) {
+      saida.push(`${MISTO}: fora do bloco Trajeto ninguém lê mais o \`[0]\` — o nome do lugar saiu de lá?`);
+    }
+    return saida;
+  }
+
+  const REAL = new Map(ARQUIVOS.map(({ arquivo, fonte }) => [arquivo, acessosDe(fonte, arquivo)] as const));
+
+  it("a varredura enumera o `src/` de verdade — e o número sai impresso", () => {
+    // 🔴 NÃO-VACUIDADE: uma varredura que enumera ZERO arquivos deixa o veredito
+    // abaixo sem nada pra ler (espécie catalogada). O piso é folgado; a prova
+    // que fecha é o veredito exigir que CADA arquivo classificado seja achado.
+    console.log(`[guarda da cadeia] arquivos enumerados em src/: ${ARQUIVOS.length}`);
+    expect(ARQUIVOS.length, "a varredura do src/ ficou oca").toBeGreaterThanOrEqual(80);
+    expect(ARQUIVOS.map((a) => a.arquivo)).toContain(MISTO);
+  });
+
+  it("o bloco Trajeto lê a cadeia, e o que fala do LUGAR continua no [0]", () => {
+    expect(problemas(REAL)).toEqual([]);
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // 🔴 O GUARDA PROVADO VERMELHO, com entrada sintética. Sem isto, um veredito
+  // afrouxado ("aceita qualquer arquivo lendo a cadeia", M3 da Tarefa 10) e um
+  // `acessosDe` que nunca devolve `cadeia` passariam verdes no caso de cima,
+  // porque o `src/` de hoje está certo.
+  // ───────────────────────────────────────────────────────────────────────────
+  const com = (troca: Record<string, string>): Map<string, Acesso[]> => {
+    const m = new Map(REAL);
+    for (const [arquivo, fonte] of Object.entries(troca)) m.set(arquivo, acessosDe(fonte, arquivo));
+    return m;
+  };
+
+  it("a leitura: `[0]` é o lugar; `[1]`, `.map`, `.slice`, `.length` e destruturação são a cadeia", () => {
+    const de = (fonte: string) => acessosDe(fonte, "x.ts").map((a) => a.indice);
+    expect(de("f.trajeto.waypoints[0].nome")).toEqual(["0"]);
+    expect(de('f.trajeto["waypoints"][0].nome')).toEqual(["0"]);
+    expect(de("f.trajeto.waypoints[1].nome")).toEqual(["cadeia"]);
+    expect(de("f.trajeto.waypoints[i].nome")).toEqual(["cadeia"]);
+    expect(de("f.trajeto.waypoints.map((w) => w.nome)")).toEqual(["cadeia"]);
+    expect(de("f.trajeto.waypoints.slice(1)")).toEqual(["cadeia"]);
+    expect(de("f.trajeto.waypoints.length")).toEqual(["cadeia"]);
+    expect(de("const { waypoints } = f.trajeto;")).toEqual(["cadeia"]);
+    // e o que NÃO é leitura: comentário, string, chave de tipo e de objeto
+    expect(de("// f.trajeto.waypoints[1]\n/* waypoints.map */ const s = 'waypoints[2]';")).toEqual([]);
+    expect(de("type T = { waypoints: number[] }; const o = { waypoints: [] };")).toEqual([]);
+  });
+
+  it("o guarda acusa um arquivo do LUGAR que aprende a ler a cadeia", () => {
+    const fonte = "export const n = (f) => f.trajeto.waypoints[1].nome;";
+    expect(problemas(com({ "src/app/CartaoTrilha.tsx": fonte })).join("\n")).toMatch(
+      /CartaoTrilha\.tsx:1 lê a CADEIA/,
+    );
+    const lista = "export const n = (f) => f.trajeto.waypoints.map((w) => w.nome);";
+    expect(problemas(com({ "src/lib/ficha-fonte.ts": lista })).join("\n")).toMatch(/ficha-fonte\.ts:1 lê a CADEIA/);
+  });
+
+  it("o guarda acusa um arquivo NOVO que toca a lista sem ser classificado", () => {
+    const fonte = "export const n = (f) => f.trajeto.waypoints[0].nome;";
+    // O caminho é MONTADO, e não escrito por extenso, porque o arquivo não existe
+    // de propósito — escrito inteiro, o guarda de `tests/smoke.test.ts` (que
+    // exige que todo caminho citado exista) o leria como referência morta.
+    const novo = ["src", "app", "Novo.tsx"].join("/");
+    expect(problemas(com({ [novo]: fonte })).join("\n")).toMatch(/Novo\.tsx toca a lista/);
+  });
+
+  it("o guarda acusa a página que lê a cadeia FORA do bloco Trajeto", () => {
+    const fonte = [
+      "export default function P({ f }) {",
+      "  const etapas = f.trajeto.waypoints.slice(1);",
+      "  const lugar = f.trajeto.waypoints[0];",
+      '  return <div><h1>{lugar.nome}</h1><div data-bloco="trajeto">{f.trajeto.waypoints.length}</div></div>;',
+      "}",
+    ].join("\n");
+    expect(problemas(com({ [MISTO]: fonte }))).toEqual([
+      `${MISTO}:2 lê a cadeia FORA do bloco Trajeto — só ele fala do caminho.`,
+    ]);
+  });
+
+  it("o guarda acusa a página cujo bloco Trajeto voltou a ler só o [0]", () => {
+    const fonte = [
+      "export default function P({ f }) {",
+      "  const wp = f.trajeto.waypoints[0];",
+      '  return <div data-bloco="trajeto">{wp.nome}</div>;',
+      "}",
+    ].join("\n");
+    expect(problemas(com({ [MISTO]: fonte })).join("\n")).toMatch(/o bloco Trajeto não lê mais a cadeia/);
+  });
+
+  it("o guarda acusa a varredura que não acha nada", () => {
+    expect(problemas(new Map()).length, "zero arquivos não pode ser verde").toBeGreaterThanOrEqual(
+      CEGOS.length + 1 + ENXERGAM.length,
+    );
   });
 });

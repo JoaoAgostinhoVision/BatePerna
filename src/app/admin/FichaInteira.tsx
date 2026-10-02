@@ -5,6 +5,7 @@ import {
   type EspecieCampo,
   type GrupoDaFicha,
 } from "@/lib/campos-da-ficha";
+import { Fragment } from "react";
 import type { Ficha } from "@/types/ficha";
 import EditorBloco from "./campos/EditorBloco";
 import EditorBooleano from "./campos/EditorBooleano";
@@ -13,6 +14,7 @@ import EditorHora from "./campos/EditorHora";
 import EditorLista from "./campos/EditorLista";
 import EditorNumeroDeMotor from "./campos/EditorNumeroDeMotor";
 import EditorProsa from "./campos/EditorProsa";
+import EditorWaypoints from "./campos/EditorWaypoints";
 import { NAO, SIM } from "./campos/palavras";
 import type { CampoNaTela, Editor } from "./campos/tipos";
 
@@ -567,6 +569,12 @@ export default function FichaInteira({ ficha }: { ficha: Ficha }) {
   // ordem em que o dono lê a ficha, e a §3 do desenho), e há teste cravando a
   // sequência das seis.
   const grupos = [...new Set(campos.map((c) => c.grupo))];
+  // 🔴 A CADEIA DO TRAJETO (Tarefa 10): o editor que acrescenta e tira pontos
+  // mora logo DEPOIS do último campo do último ponto — é ali que o dono acabou
+  // de ler a cadeia inteira. O servidor conta os pontos e escreve o rótulo do
+  // último com a MESMA função dos blocos (`parada`); o editor só recebe props.
+  const pontos = ficha.trajeto.waypoints.length;
+  const ultimoDoTrajeto = campos.filter((c) => c.caminho.startsWith("trajeto.waypoints.")).at(-1)?.caminho;
   return (
     <section className="adm-ficha-inteira" data-ficha-inteira={ficha.slug}>
       <h2>{TITULO}</h2>
@@ -576,13 +584,12 @@ export default function FichaInteira({ ficha }: { ficha: Ficha }) {
           {campos
             .filter((c) => c.grupo === g)
             .map((c) => (
-              <Bloco
-                key={c.caminho}
-                ficha={ficha}
-                campo={c}
-                blocos={blocos}
-                folhasDoBloco={folhasDoBloco}
-              />
+              <Fragment key={c.caminho}>
+                <Bloco ficha={ficha} campo={c} blocos={blocos} folhasDoBloco={folhasDoBloco} />
+                {c.caminho === ultimoDoTrajeto && (
+                  <EditorWaypoints slug={ficha.slug} pontos={pontos} rotuloDoUltimo={parada(pontos)} />
+                )}
+              </Fragment>
             ))}
         </section>
       ))}

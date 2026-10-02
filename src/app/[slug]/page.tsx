@@ -307,6 +307,56 @@ export default async function Ficha({
                 <a className="maplink" href={mapa} target="_blank" rel="noopener">Abrir no mapa</a>
               </div>
             </div>
+            {/* 🔴 A CADEIA (Tarefa 10, spec §6) — e ela é lida AQUI DENTRO, e só
+                aqui. `waypoints[0]` é O LUGAR (o cartão de cima, com mapa e
+                distância); `waypoints[1..]` são AS ETAPAS DO CAMINHO até ele.
+                Este bloco é o único da ficha que fala do caminho, então é o
+                único da tela PÚBLICA que lê além do `[0]` — o `h1`, o cartão da home, a ordem do
+                acervo e a distância continuam no lugar.
+
+                A leitura fica ESCRITA DENTRO DO JSX do bloco, e não numa
+                constante lá em cima, de propósito: o guarda de
+                `tests/lib/coerencia-acervo.test.ts` mede pelo parser do
+                TypeScript que toda leitura da cadeia neste arquivo mora dentro
+                do elemento `data-bloco="trajeto"`. Uma constante no topo da
+                função seria a cadeia vazando pro resto da página.
+
+                Um ponto só: nada é desenhado — nem lista vazia, nem lista de um
+                item que repetiria o lugar. O destino NÃO entra na lista: ele já
+                é o cartão de cima, e contá-lo de novo como etapa seria o lugar
+                aparecendo duas vezes.
+
+                Cada etapa reaproveita o `.wp-body` do cartão do lugar (mesma
+                anatomia: nome, nota Nível B, coordenada Nível A, "Abrir no
+                mapa"), sem o mapa estático — um mosaico por etapa pesaria a
+                ficha no celular, e o link já leva ao mapa daquele ponto. */}
+            {ficha.trajeto.waypoints.length > 1 && (
+              <>
+                {/* PENDENTE: redação minha, o João ainda não leu */}
+                <div className="k etapas-k">No caminho até lá</div>
+                <ol className="etapas">
+                  {ficha.trajeto.waypoints.slice(1).map((etapa, i) => (
+                    <li key={i} className="waypoint etapa">
+                      <div className="wp-body">
+                        <div>
+                          <div className="t">{etapa.nome}</div>
+                          {etapa.nota && <div className="n" data-nivel="b">{etapa.nota}</div>}
+                          <div className="coord">{etapa.lat}, {etapa.lng}</div>
+                        </div>
+                        <a
+                          className="maplink"
+                          href={`https://www.google.com/maps/search/?api=1&query=${etapa.lat},${etapa.lng}`}
+                          target="_blank"
+                          rel="noopener"
+                        >
+                          Abrir no mapa
+                        </a>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </>
+            )}
           </div>
 
           <div className="sec" data-nivel="b">

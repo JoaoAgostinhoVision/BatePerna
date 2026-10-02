@@ -447,6 +447,80 @@ export function gravarPonto(docAtual: string, indice: number, lat: number, lng: 
   return JSON.stringify(fichaSchema.parse(escrever(comLat, [...base, "lng"], lng, false)));
 }
 
+/** A RECUSA QUE NÃO É DE FORMA, É DO TRAJETO DE AGORA — e por isso vira 409, não
+ *  400 (Tarefa 10). A rota a reconhece pela CLASSE e devolve a `message` com
+ *  409, no padrão das recusas da coerência: o pedido estava bem escrito, mas
+ *  pede algo que este trajeto não deixa (tirar o lugar; tirar um ponto que não é
+ *  o último — o que acontece quando a tela do dono está velha e o trajeto já
+ *  mudou por outro aparelho).
+ *
+ *  ⚠️ Subclasse de `Error` DE PROPÓSITO: o `recusar400` da rota só deixa vazar
+ *  `message` de `Error` exato, então se a rota esquecer de tratar esta classe a
+ *  frase NÃO vaza por acidente com o código errado — vira 400 vazio, e o teste
+ *  que exige 409 com a frase fica vermelho. */
+export class RecusaDoTrajeto extends Error {}
+
+/** 🔴 O PONTO 1 É O LUGAR. `waypoints[0]` é o que a home mostra, o pin do mapa,
+ *  a ordem do acervo e a distância — tirá-lo pela ação de "tirar o último"
+ *  trocaria o lugar pela primeira etapa do caminho até ele, em silêncio, em
+ *  todas as telas. "Ponto 1" é a palavra do painel (`FichaInteira`), que conta
+ *  os pontos a partir de 1. */
+// PENDENTE: redação minha, o João ainda não leu
+export const RECUSA_TIRAR_O_LUGAR = "O Ponto 1 é o próprio lugar: ele não sai do trajeto.";
+
+/** ACRESCENTA UM PONTO NO FIM do trajeto e devolve o JSON novo (Tarefa 10).
+ *
+ *  🔴 SÓ NO FIM, e nunca antes do `[0]`: o primeiro ponto é O LUGAR, e um ponto
+ *  inserido no início viraria o nome da home, o pin e a distância.
+ *
+ *  🔴 A COORDENADA NASCE COPIADA DO PONTO ANTERIOR (o último de agora), e é o
+ *  dono quem a corrige no mapa da Tarefa 8 — que já serve qualquer
+ *  `trajeto.waypoints.N.lat`. Não existe coordenada "neutra" pra inventar aqui:
+ *  `0,0` é o Golfo da Guiné, e um ponto em branco não passa no schema. A cópia é
+ *  o único ponto de partida que já é verdade sobre este trajeto, e ela cai a
+ *  poucos metros de onde o dono vai arrastar.
+ *
+ *  Sem `nota`: nada é pré-preenchido (§4.4 da spec). O nome vem do dono e é
+ *  gravado como chegou; em branco é recusado com frase, como toda caixa vazia. */
+export function acrescentarEtapa(docAtual: string, nome: string): string {
+  if (nome.trim() === "") {
+    // PENDENTE: redação minha, o João ainda não leu
+    throw new Error("o ponto novo precisa de um nome: escreva algo");
+  }
+  const atual = fichaSchema.parse(JSON.parse(docAtual));
+  const pontos = atual.trajeto.waypoints;
+  const anterior = pontos[pontos.length - 1];
+  const novo = { nome, lat: anterior.lat, lng: anterior.lng };
+  return JSON.stringify(
+    fichaSchema.parse({ ...atual, trajeto: { ...atual.trajeto, waypoints: [...pontos, novo] } }),
+  );
+}
+
+/** TIRA O ÚLTIMO PONTO do trajeto e devolve o JSON novo (Tarefa 10).
+ *
+ *  🔴 `indice` TEM DE SER O DO ÚLTIMO, e não é redundância: é a tela dizendo QUAL
+ *  ponto ela mostrou ao dono. Se o trajeto mudou por outro aparelho desde que a
+ *  tela abriu, o "último" de agora é outro ponto — e tirar sem conferir apagaria
+ *  um ponto que ele não viu. Recusa com frase, e o `reload` mostra o de agora.
+ *
+ *  🔴 E O `[0]` NUNCA SAI — nem quando é o único (onde `0` também seria "o
+ *  último"): ver `RECUSA_TIRAR_O_LUGAR`. Nada se perde de verdade: a versão
+ *  anterior fica em `ficha_versoes`, e "voltar" a devolve. */
+export function tirarEtapa(docAtual: string, indice: number): string {
+  const atual = fichaSchema.parse(JSON.parse(docAtual));
+  const pontos = atual.trajeto.waypoints;
+  if (indice < 1 || pontos.length === 1) throw new RecusaDoTrajeto(RECUSA_TIRAR_O_LUGAR);
+  if (indice !== pontos.length - 1) {
+    throw new RecusaDoTrajeto(
+      // PENDENTE: redação minha, o João ainda não leu
+      `Só o último ponto sai: este trajeto tem ${pontos.length} pontos, e o último é o Ponto ${pontos.length}.`,
+    );
+  }
+  return JSON.stringify(
+    fichaSchema.parse({ ...atual, trajeto: { ...atual.trajeto, waypoints: pontos.slice(0, -1) } }),
+  );
+}
+
 /** O "NÃO SEI": tira a chave do documento em vez de gravar vazio, e o app
  *  passa a CALAR sobre aquilo. Campo obrigatório não tem "não sei" (§4.2).
  *  Termina na mesma porta — o documento sem a chave tem que continuar válido. */

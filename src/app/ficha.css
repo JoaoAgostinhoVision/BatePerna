@@ -273,6 +273,11 @@ html, body { background: var(--ground); }
 .bp .wp-body .fatos { font-size: .78rem; color: var(--ink-soft); margin-top: .3rem; }
 .bp .maplink { flex: none; text-decoration: none; font-weight: 650; font-size: .82rem; color: #fff; background: var(--accent); padding: .5rem .8rem; border-radius: 10px; white-space: nowrap; }
 .bp .maplink:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* A cadeia do trajeto (Tarefa 10): as etapas do caminho, abaixo do cartão do
+   lugar. Cada uma reaproveita o `.waypoint`/`.wp-body` do cartão de cima, sem o
+   mapa; a lista só ganha espaço entre os itens e perde o marcador. */
+.bp .etapas-k { margin-top: .8rem; }
+.bp .etapas { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
 
 /* distância: convite discreto, resposta discreta — o carimbo continua sendo
    a coisa mais alta da ficha */

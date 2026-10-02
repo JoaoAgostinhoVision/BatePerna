@@ -5,7 +5,10 @@ import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
 import { ensureSchema, gravarVersao, historico, versaoAtual, versoesAtuais } from "@/lib/db";
 import { semearAcervo } from "../banco";
-import type { Ficha } from "@/types/ficha";
+import { fichaSchema, type Ficha } from "@/types/ficha";
+import type { Violacao } from "@/lib/coerencia";
+import { RECUSA_TIRAR_O_LUGAR } from "@/lib/campos-da-ficha";
+import { SEGUNDO, TERCEIRO, TRES_PONTOS, tresPontos } from "../ficha-de-tres-pontos";
 
 // 🔴 C1 da revisão do controlador: o molde real é `tests/api/route-admin-aviso.test.ts`
 // (o brief citava um caminho em `tests/app/` que não existe) — Request à mão,
@@ -30,6 +33,26 @@ let outra: Ficha;
 let acervo: Ficha[];
 let cookieBom: string;
 let PUT: typeof import("@/app/api/admin/ficha/route").PUT;
+
+// 🔴 A REGRA FANTASMA (C7 da auditoria da Tarefa 10). Nenhuma regra real olha
+// coordenada nem a cadeia do trajeto, então nenhuma gravação de PONTO ou de ETAPA
+// consegue provar, com regra real, que passa pelo portão de coerência. O dublê
+// SOMA à lista real uma regra que o caso liga quando quer — e desligada (`null`,
+// o padrão) a rota mede exatamente o que mediria em produção. É `vi.hoisted`
+// porque o `vi.mock` sobe pro topo do arquivo antes de qualquer `let`.
+const fantasma = vi.hoisted(() => ({
+  regra: null as null | ((fichas: readonly Ficha[]) => Violacao[]),
+}));
+vi.mock("@/lib/coerencia", async (io) => {
+  const mod = await io<typeof import("@/lib/coerencia")>();
+  return {
+    ...mod,
+    violacoesDoAcervo: (fichas: readonly Ficha[]) => [
+      ...mod.violacoesDoAcervo(fichas),
+      ...(fantasma.regra?.(fichas) ?? []),
+    ],
+  };
+});
 
 vi.mock("@/lib/db", async (io) => {
   const mod = await io<typeof import("@/lib/db")>();
@@ -60,6 +83,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  fantasma.regra = null;
   c.close();
   vi.unstubAllEnvs();
   vi.useRealTimers();
@@ -1190,6 +1214,258 @@ describe("PUT /api/admin/ficha — coordenada fora do planeta não entra", () =>
   // O controle: a faixa não tranca coordenada de verdade, inclusive nas bordas.
   it("as bordas da faixa entram (lat ±90, lng ±180)", async () => {
     const res = await PUT(pedido({ slug: SLUG, campo: "condicao.coords", valor: { lat: -90, lng: 180 } }, cookieBom));
+    expect(res.status, await res.text()).toBe(200);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 A CADEIA DO TRAJETO PELO CELULAR (Tarefa 10, C1 da auditoria). Até aqui a
+// porta gravava UM campo de um ponto que JÁ existia, e não havia como criar o
+// `waypoints[1]`: a cadeia só nasceria por semente, que é código — o contrário da
+// lei do projeto. Duas formas novas, e só duas: ACRESCENTAR um ponto no FIM e
+// TIRAR o ÚLTIMO. `waypoints[0]` é O LUGAR, e nenhuma das duas o toca.
+//
+// Todo lugar daqui é FIXTURE (`tests/ficha-de-tres-pontos.ts`), plantado no banco
+// `:memory:` do arquivo: nenhum lugar real ganha etapa, nem em teste.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("PUT /api/admin/ficha — as etapas do trajeto (`acrescentarEtapa` / `tirarEtapa`)", () => {
+  const T = TRES_PONTOS.slug;
+  const plantar = (f: Ficha, oculto = false) =>
+    gravarVersao(c, f.slug, JSON.stringify(f), "semente", AGORA - 10, oculto);
+  const docDe = async (slug: string) => JSON.parse((await versaoAtual(c, slug))!.doc) as Ficha;
+  const UM_PONTO: Ficha = {
+    ...tresPontos(),
+    slug: "lugar-de-um-ponto-teste",
+    trajeto: { waypoints: [tresPontos().trajeto.waypoints[0]] },
+  };
+
+  it("acrescentar: grava UMA versão com o ponto novo no FIM, na coordenada do último, e o lugar intocado", async () => {
+    await plantar(TRES_PONTOS);
+    const res = await PUT(pedido({ slug: T, acrescentarEtapa: { nome: "Quarto ponto" } }, cookieBom));
+    expect(res.status, await res.text()).toBe(200);
+    expect(await historico(c, T), "a fixture e UMA versão nova").toHaveLength(2);
+    expect((await versaoAtual(c, T))!.autor).toBe("painel");
+
+    const [w0, w1, w2, w3, ...resto] = (await docDe(T)).trajeto.waypoints;
+    expect(resto).toEqual([]);
+    // 🔴 O LUGAR NÃO SE MEXE — nem nome, nem coordenada, nem posição.
+    expect(w0).toEqual(TRES_PONTOS.trajeto.waypoints[0]);
+    expect([w1.nome, w2.nome, w3.nome]).toEqual([SEGUNDO, TERCEIRO, "Quarto ponto"]);
+    // A coordenada nasce COPIADA do ponto anterior (o último), e o dono a ajusta
+    // pelo mapa da Tarefa 8. Sem nota: nota é do ponto, e nada é pré-preenchido.
+    expect(w3).toEqual({ nome: "Quarto ponto", lat: w2.lat, lng: w2.lng });
+  });
+
+  it("acrescentar num lugar de UM ponto: o lugar continua o primeiro, e o novo vira o segundo", async () => {
+    await plantar(UM_PONTO);
+    const res = await PUT(pedido({ slug: UM_PONTO.slug, acrescentarEtapa: { nome: "Ponto marcador" } }, cookieBom));
+    expect(res.status, await res.text()).toBe(200);
+    const pontos = (await docDe(UM_PONTO.slug)).trajeto.waypoints;
+    expect(pontos.map((w) => w.nome)).toEqual([UM_PONTO.trajeto.waypoints[0].nome, "Ponto marcador"]);
+  });
+
+  it("acrescentar herda a visibilidade: num lugar escondido, a versão nova continua escondida", async () => {
+    await plantar(TRES_PONTOS, true);
+    const res = await PUT(pedido({ slug: T, acrescentarEtapa: { nome: "Quarto ponto" } }, cookieBom));
+    expect(res.status, await res.text()).toBe(200);
+    expect((await versaoAtual(c, T))!.oculto, "acrescentar ponto não pode desesconder").toBe(true);
+  });
+
+  it("acrescentar num lugar no ar o mantém no ar", async () => {
+    await plantar(TRES_PONTOS);
+    await PUT(pedido({ slug: T, acrescentarEtapa: { nome: "Quarto ponto" } }, cookieBom));
+    expect((await versaoAtual(c, T))!.oculto).toBe(false);
+  });
+
+  it("acrescentar com nome em branco: 400 COM frase, e nada é gravado", async () => {
+    await plantar(TRES_PONTOS);
+    const res = await PUT(pedido({ slug: T, acrescentarEtapa: { nome: "   " } }, cookieBom));
+    expect(res.status).toBe(400);
+    expect((await res.text()).trim(), "a recusa tem de dizer o porquê").not.toBe("");
+    expect(await historico(c, T)).toHaveLength(1);
+  });
+
+  for (const [nome, carga] of [
+    ["texto em vez de objeto", "Quarto ponto"],
+    ["objeto sem nome", {}],
+    ["nome número", { nome: 4 }],
+    ["chave a mais (lat)", { nome: "Quarto ponto", lat: -8 }],
+    ["null", null],
+  ] as const) {
+    it(`acrescentar malformado (${nome}): 400 SEM frase, e nada é gravado`, async () => {
+      await plantar(TRES_PONTOS);
+      const res = await PUT(pedido({ slug: T, acrescentarEtapa: carga }, cookieBom));
+      expect(res.status).toBe(400);
+      expect(await res.text()).toBe("");
+      expect(await historico(c, T)).toHaveLength(1);
+    });
+  }
+
+  it("tirar o ÚLTIMO: grava UMA versão sem ele, e os outros intocados", async () => {
+    await plantar(TRES_PONTOS);
+    const res = await PUT(pedido({ slug: T, tirarEtapa: 2 }, cookieBom));
+    expect(res.status, await res.text()).toBe(200);
+    expect(await historico(c, T)).toHaveLength(2);
+    expect((await versaoAtual(c, T))!.autor).toBe("painel");
+    expect((await docDe(T)).trajeto.waypoints).toEqual(TRES_PONTOS.trajeto.waypoints.slice(0, 2));
+  });
+
+  it("tirar herda a visibilidade: num lugar escondido, a versão nova continua escondida", async () => {
+    await plantar(TRES_PONTOS, true);
+    const res = await PUT(pedido({ slug: T, tirarEtapa: 2 }, cookieBom));
+    expect(res.status, await res.text()).toBe(200);
+    expect((await versaoAtual(c, T))!.oculto, "tirar ponto não pode desesconder").toBe(true);
+  });
+
+  // 🔴 O `[0]` É O LUGAR. A porta recusa com 409 e a frase que diz POR QUÊ — e
+  // nos DOIS formatos de ficha: com um ponto só (onde `0` também seria "o
+  // último", e só a regra do lugar o segura) e com três (onde a frase tem de ser
+  // a do LUGAR, não a de "só o último sai").
+  for (const [quem, f] of [
+    ["um ponto", () => UM_PONTO],
+    ["três pontos", () => TRES_PONTOS],
+  ] as const) {
+    it(`tirar o ponto 0 (${quem}): 409 com a frase do lugar, e nada é gravado`, async () => {
+      await plantar(f());
+      const res = await PUT(pedido({ slug: f().slug, tirarEtapa: 0 }, cookieBom));
+      expect(res.status).toBe(409);
+      expect(await res.text()).toBe(RECUSA_TIRAR_O_LUGAR);
+      expect(await historico(c, f().slug)).toHaveLength(1);
+      expect((await docDe(f().slug)).trajeto.waypoints[0]).toEqual(f().trajeto.waypoints[0]);
+    });
+  }
+
+  for (const n of [1, 3]) {
+    it(`tirar um ponto que não é o último (${n}, num trajeto de 3): 409 COM frase, e nada é gravado`, async () => {
+      await plantar(TRES_PONTOS);
+      const res = await PUT(pedido({ slug: T, tirarEtapa: n }, cookieBom));
+      expect(res.status).toBe(409);
+      const frase = await res.text();
+      expect(frase.trim()).not.toBe("");
+      expect(frase, "a frase do lugar é outra recusa").not.toBe(RECUSA_TIRAR_O_LUGAR);
+      expect(await historico(c, T)).toHaveLength(1);
+    });
+  }
+
+  for (const [nome, carga] of [
+    ["texto", "2"],
+    ["fracionário", 1.5],
+    ["negativo", -1],
+    ["null", null],
+  ] as const) {
+    it(`tirar malformado (${nome}): 400 SEM frase, e nada é gravado`, async () => {
+      await plantar(TRES_PONTOS);
+      const res = await PUT(pedido({ slug: T, tirarEtapa: carga }, cookieBom));
+      expect(res.status).toBe(400);
+      expect(await res.text()).toBe("");
+      expect(await historico(c, T)).toHaveLength(1);
+    });
+  }
+
+  it("tirar com índice que o JSON.parse vira Infinity: 400, e nada é gravado", async () => {
+    await plantar(TRES_PONTOS);
+    const res = await PUT(
+      new Request("http://x/api/admin/ficha", {
+        method: "PUT",
+        headers: { cookie: `${COOKIE_ADMIN}=${cookieBom}` },
+        body: `{"slug":"${T}","tirarEtapa":1e999}`,
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(await historico(c, T)).toHaveLength(1);
+  });
+
+  // Mutuamente exclusivas com as outras formas — e ENTRE SI —, pela PRESENÇA da chave.
+  for (const [nome, corpo] of [
+    ["acrescentar + tirar", { acrescentarEtapa: { nome: "x" }, tirarEtapa: 2 }],
+    ["acrescentar + campo/valor", { acrescentarEtapa: { nome: "x" }, campo: "voz", valor: "y" }],
+    ["acrescentar + naoSei", { acrescentarEtapa: { nome: "x" }, campo: "piso", naoSei: true }],
+    ["acrescentar + ponto", { acrescentarEtapa: { nome: "x" }, ponto: 0, lat: -8, lng: -36 }],
+    ["acrescentar + versaoId", { acrescentarEtapa: { nome: "x" }, versaoId: 1 }],
+    ["tirar + campo/valor", { tirarEtapa: 2, campo: "voz", valor: "y" }],
+    ["tirar + ponto", { tirarEtapa: 2, ponto: 0, lat: -8, lng: -36 }],
+    ["tirar + versaoId", { tirarEtapa: 2, versaoId: 1 }],
+    ["tirar + lat solta", { tirarEtapa: 2, lat: -8 }],
+  ] as const) {
+    it(`corpo misto (${nome}): 400, e nada é gravado`, async () => {
+      await plantar(TRES_PONTOS);
+      const res = await PUT(pedido({ slug: T, ...corpo }, cookieBom));
+      expect(res.status).toBe(400);
+      expect(await historico(c, T)).toHaveLength(1);
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 TODA FORMA DE CORPO PASSA PELO PORTÃO DE COERÊNCIA (C7, herdado da Tarefa
+// 8). A rota tem UM caminho até o banco pra toda forma de edição (`mudar` → o
+// portão → `gravarVersao`), e o risco é uma forma nova ganhar um atalho. Com
+// regra real ninguém prova isso pra PONTO nem pra ETAPA, porque nenhuma regra
+// olha coordenada nem cadeia. A regra FANTASMA acusa o lugar sempre que o
+// documento dele MUDA — então toda edição válida dela vira uma violação
+// INTRODUZIDA, e tem de voltar 409 com a frase, sem gravar.
+//
+// O controle de cada caso (a mesma edição SEM a fantasma → 200) é o que impede o
+// 409 de ser outra recusa qualquer com a mesma cara.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("PUT /api/admin/ficha — o portão de coerência vale pra TODA forma de corpo", () => {
+  const T = TRES_PONTOS.slug;
+  const FRASE_FANTASMA = "frase da regra fantasma deste arquivo";
+
+  beforeEach(async () => {
+    await gravarVersao(c, T, JSON.stringify(TRES_PONTOS), "semente", AGORA - 10);
+  });
+
+  /** Acusa o lugar `T` sempre que o documento dele não é mais o da fixture —
+   *  comparado DEPOIS do `fichaSchema.parse`, que é como a rota o entrega à
+   *  coerência (a ordem das chaves é a do schema). */
+  function ligarFantasma(): void {
+    const base = JSON.stringify(fichaSchema.parse(TRES_PONTOS));
+    fantasma.regra = (fichas) =>
+      fichas
+        .filter((f) => f.slug === T && JSON.stringify(f) !== base)
+        .map((f) => ({ regra: "regra-fantasma", slug: f.slug, frase: FRASE_FANTASMA }));
+  }
+
+  const FORMAS: [string, Record<string, unknown>][] = [
+    ["campo/valor", { campo: "voz", valor: "outra voz marcadora" }],
+    ["campo/naoSei", { campo: "trajeto.waypoints.1.nota", naoSei: true }],
+    ["ponto", { ponto: 1, lat: -8.5, lng: -36.5 }],
+    ["acrescentarEtapa", { acrescentarEtapa: { nome: "Quarto ponto" } }],
+    ["tirarEtapa", { tirarEtapa: 2 }],
+  ];
+
+  for (const [nome, corpo] of FORMAS) {
+    it(`${nome}: com a regra fantasma ligada, 409 com a frase dela, e nada é gravado`, async () => {
+      ligarFantasma();
+      const res = await PUT(pedido({ slug: T, ...corpo }, cookieBom));
+      expect(res.status).toBe(409);
+      expect(await res.text()).toBe(FRASE_FANTASMA);
+      expect(await historico(c, T)).toHaveLength(1);
+    });
+
+    it(`${nome}: o controle — sem a fantasma, a MESMA edição grava (200)`, async () => {
+      const res = await PUT(pedido({ slug: T, ...corpo }, cookieBom));
+      expect(res.status, await res.text()).toBe(200);
+      expect(await historico(c, T)).toHaveLength(2);
+    });
+  }
+
+  // ⚠️ A EXCEÇÃO, escrita como prova pra não virar esquecimento: "voltar" grava
+  // VERBATIM e NÃO passa pela coerência, de propósito (ver o comentário do
+  // portão na rota — voltar a uma versão que o acervo de hoje reprova é
+  // permitido, e é por isso que o portão mede DIFERENÇA e não "tem violação").
+  it("versaoId: NÃO passa pelo portão, de propósito — com a fantasma ligada, volta igual (200)", async () => {
+    const antiga = await gravarVersao(
+      c,
+      T,
+      JSON.stringify({ ...TRES_PONTOS, voz: "uma voz antiga marcadora" }),
+      "painel",
+      AGORA - 5,
+    );
+    await gravarVersao(c, T, JSON.stringify(TRES_PONTOS), "painel", AGORA - 1);
+    ligarFantasma();
+    const res = await PUT(pedido({ slug: T, versaoId: antiga }, cookieBom));
     expect(res.status, await res.text()).toBe(200);
   });
 });
