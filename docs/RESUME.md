@@ -2,25 +2,57 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🟢 **SESSÃO DE 2026-10-01 — AS TAREFAS 7 A 10 FECHARAM; a 11 está sendo despachada** (10: etapas do trajeto — a etapa nasce na posição que ELE marca, nada copiado, "Tirar" pede dois toques; 9: escondido aparece na lista do dono, histórico marca o ATO; 8: pin arrastável, ponto do trajeto grava ATÔMICO, zoom 13 só no painel por decisão dele, coordenada com faixa no schema; fecha em `fa9debc`, 1664/1664).** Branch `painel-completo`,
-**10 de 12 completas**. Medido por mim no fechamento da 7: `tsc` 0, **1610/1610 em 87**,
-`npm run build` 0 (`/admin/[slug]` 4.62 kB / 110 kB), `mutar.mjs` 42/42. **Nada foi ao ar.**
+🟡 **ÚLTIMA PARADA: 2026-10-01, A PEDIDO DELE** — *"deixe tudo pronto para a próxima sessão"*.
 
-- A revisão da 7 achou **2 Critical que vinham do MEU brief**: a prévia lia a chuva de `freshness`, tabela
-  que **produção nunca enche** (não há `vercel.json`, o `/api/cron/motor` nunca roda; a tela pública busca ao
-  vivo) — agora a prévia busca AO VIVO pela mesma `fetchPrecip`; e **sem teto nas janelas**, um número acima
-  do provedor (384 h / 2232 h, medidos na API) derrubava o carimbo da home inteira — virou a 14ª regra de
-  coerência. Duas ondas de fix, as duas re-revisadas limpas.
-- **Três decisões DELE nesta sessão** (perguntas diretas): previsão 0 **vale**, passado 0 **vale** (só o par
-  0/0 é recusado), e na tela pública a janela zerada **corta o pedaço**, sem palavra nova.
-- 🔴 **Copy esperando ele ler antes de publicar:** as frases recortadas e 7 frases `PENDENTE` do painel/porta,
-  por extenso em `.superpowers/sdd/2026-09-26-painel-completo/task-7-report.md` ("Onda de conserto 2").
-- Os briefs das **Tarefas 8, 9 e 10 já foram AUDITADOS** (achados anexados no fim de cada `task-N-brief.md`,
-  rulings no `progress.md`). O pior: hoje **o lugar escondido some da lista do painel** (lê pela fonte pública)
-  — conserto vai na 9.
+**Branch `painel-completo`, 10 de 12 tarefas completas, NADA NO AR.** Medido por mim na parada: árvore
+limpa, `tsc` 0, **1783/1783 em 93 arquivos**, `npm run build` 0. A régua que não envelhece: se o topo do
+`git log` for `docs(resume): ...`, ninguém mexeu entre as sessões; se houver commit de código depois, meça tudo
+de novo.
 
-→ **SE A SESSÃO MORRER:** o `progress.md` diz o que está em voo. Se a última linha do ledger for "Task N: BASE ... despachado",
-`git log` decide: commit `feat(painel): ...` da tarefa N existe → revisar; não existe e árvore limpa → redespachar a N.
+→ 🔴 **O PRIMEIRO PASSO, SEM PENSAR:** conferir árvore limpa e topo do log em `docs(resume): o handoff de
+01/10...`, e **despachar `.superpowers/sdd/2026-09-26-painel-completo/task-11-dispatch-PROMPT.md` COMO ESTÁ**
+(general-purpose, opus, background). O implementador da 11 foi **despachado e PARADO por mim antes de escrever
+uma linha** — resultado de subagente morre com a sessão. Não reescreva o prompt, não re-audite o brief (já
+auditado: E1–E9). Depois: medir eu mesmo, revisão, onda de fix com prova vermelha, re-revisão, commit, este
+arquivo — e **emendar na Tarefa 12 sem pausar** (brief já auditado: G1–G7; o G1 é o mais grave: colisão de slug
+pela leitura pública gravaria versão no histórico de um lugar ESCONDIDO e o desesconderia). Depois da 12: o bloco
+"Depois da última tarefa" do fim do `task-12-brief.md` (revisão final da branch no modelo mais capaz COM `npm run
+build`, os quatro agentes do projeto, copy pro João, UM deploy, `conferir-no-ar`, olhos dele no celular).
+
+**O que a sessão de 01/10 fez (Tarefas 7 a 10, cada uma com revisão + onda(s) de fix + re-revisão limpa):**
+- **7** — a prévia do número de motor lia chuva de `freshness`, que **produção nunca enche** (sem `vercel.json`,
+  o cron nunca roda): agora busca AO VIVO pela mesma `fetchPrecip` da tela pública. Teto das janelas (384 h /
+  2232 h, medidos na API) virou a 14ª regra de coerência.
+- **8** — pin arrastável no mapa; o ponto do trajeto grava **atômico** (forma `{slug, ponto, lat, lng}`);
+  coordenada com faixa no schema; zoom 13 (~19 m/px) só no painel.
+- **9** — o lugar escondido **voltou pra lista do dono** (sumia: a página lia pela fonte pública); histórico mostra
+  qualquer campo e marca o ATO de esconder/mostrar; aviso grava em lugar escondido.
+- **10** — etapas do trajeto: acrescentar no fim / tirar a última, `[0]` intocável. 🔴 **A revisão barrou a 1ª
+  versão na LINHA VERMELHA, e o defeito era MEU:** minha ruling mandava copiar a coordenada do ponto anterior, e a
+  ficha pública a mostrava como fato com "Abrir no mapa". Agora a etapa nasce onde ELE marca no mapa.
+
+🔴 **A lição da sessão (três vezes, as três minhas):** as rulings que EU escrevi na auditoria dos briefs foram a
+fonte de 2 Critical na 7 (mediu a tabela, não a produção), do I2 da 8 (dois PUTs em série) e do Critical de linha
+vermelha da 10 (copiar coordenada). Auditar o brief achou dezenas de defeitos do PLANO — e as minhas próprias
+decisões passaram sem a mesma desconfiança. A pergunta que faltou nas três: *"o que a tela PÚBLICA / a PRODUÇÃO
+mostra se esta decisão estiver errada?"*
+
+**Decisões DELE nesta sessão (perguntas diretas):** previsão 0 vale; passado 0 vale (só o par 0/0 é recusado); na
+tela pública a janela zerada corta o pedaço, sem palavra nova; zoom mais perto só no painel; "Tirar" etapa pede
+dois toques.
+
+**Esperando ele (nada disso bloqueia a 11/12):**
+- **Copy `PENDENTE`** — cada frase nova da rodada, por extenso, está no relatório de cada tarefa
+  (`task-7-report.md` "Onda de conserto 2", `task-9-report.md`, `task-10-report.md`). Novas desta sessão, entre
+  outras: "escondido", "Esconder este lugar", "Mostrar de novo", "Histórico da ficha", "de volta ao ar", "Tirar
+  mesmo?", "Arraste o pin até onde fica o ponto novo.", "No caminho até lá", e as frases de recusa do teto.
+- Com passado 0 o carimbo pode dizer "molhado"/"barro" antes de a chuva cair (já acontecia em todo frio por
+  previsão) — consertar exige palavra.
+- Aviso de lugar escondido continua vencendo enquanto escondido.
+- A ficha pública mostra coordenada + "Abrir no mapa" por etapa; ele pode preferir só nome e nota.
+
+O ledger com todas as rulings e minors diferidos: `.superpowers/sdd/2026-09-26-painel-completo/progress.md`
+(git-ignorado — o item 9 do pós-rodada manda copiar as rulings pra `docs/`).
 
 ---
 
