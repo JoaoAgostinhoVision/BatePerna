@@ -2,8 +2,8 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🟢 **SESSÃO DE 2026-10-01 — AS TAREFAS 7, 8 E 9 FECHARAM; a 10 está sendo despachada** (9: escondido aparece na lista do dono, histórico marca o ATO; 8: pin arrastável, ponto do trajeto grava ATÔMICO, zoom 13 só no painel por decisão dele, coordenada com faixa no schema; fecha em `fa9debc`, 1664/1664).** Branch `painel-completo`,
-**9 de 12 completas**. Medido por mim no fechamento da 7: `tsc` 0, **1610/1610 em 87**,
+🟢 **SESSÃO DE 2026-10-01 — AS TAREFAS 7 A 10 FECHARAM; a 11 está sendo despachada** (10: etapas do trajeto — a etapa nasce na posição que ELE marca, nada copiado, "Tirar" pede dois toques; 9: escondido aparece na lista do dono, histórico marca o ATO; 8: pin arrastável, ponto do trajeto grava ATÔMICO, zoom 13 só no painel por decisão dele, coordenada com faixa no schema; fecha em `fa9debc`, 1664/1664).** Branch `painel-completo`,
+**10 de 12 completas**. Medido por mim no fechamento da 7: `tsc` 0, **1610/1610 em 87**,
 `npm run build` 0 (`/admin/[slug]` 4.62 kB / 110 kB), `mutar.mjs` 42/42. **Nada foi ao ar.**
 
 - A revisão da 7 achou **2 Critical que vinham do MEU brief**: a prévia lia a chuva de `freshness`, tabela
