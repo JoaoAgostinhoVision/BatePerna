@@ -2,6 +2,30 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
+🟢 **SESSÃO DE 2026-10-01 — A TAREFA 7 FECHOU, e a 8 está sendo despachada.** Branch `painel-completo`,
+**8 de 12 tarefas a caminho** (7 completas). Medido por mim no fechamento da 7: `tsc` 0, **1610/1610 em 87**,
+`npm run build` 0 (`/admin/[slug]` 4.62 kB / 110 kB), `mutar.mjs` 42/42. **Nada foi ao ar.**
+
+- A revisão da 7 achou **2 Critical que vinham do MEU brief**: a prévia lia a chuva de `freshness`, tabela
+  que **produção nunca enche** (não há `vercel.json`, o `/api/cron/motor` nunca roda; a tela pública busca ao
+  vivo) — agora a prévia busca AO VIVO pela mesma `fetchPrecip`; e **sem teto nas janelas**, um número acima
+  do provedor (384 h / 2232 h, medidos na API) derrubava o carimbo da home inteira — virou a 14ª regra de
+  coerência. Duas ondas de fix, as duas re-revisadas limpas.
+- **Três decisões DELE nesta sessão** (perguntas diretas): previsão 0 **vale**, passado 0 **vale** (só o par
+  0/0 é recusado), e na tela pública a janela zerada **corta o pedaço**, sem palavra nova.
+- 🔴 **Copy esperando ele ler antes de publicar:** as frases recortadas e 7 frases `PENDENTE` do painel/porta,
+  por extenso em `.superpowers/sdd/2026-09-26-painel-completo/task-7-report.md` ("Onda de conserto 2").
+- Os briefs das **Tarefas 8, 9 e 10 já foram AUDITADOS** (achados anexados no fim de cada `task-N-brief.md`,
+  rulings no `progress.md`). O pior: hoje **o lugar escondido some da lista do painel** (lê pela fonte pública)
+  — conserto vai na 9.
+
+→ **SE A SESSÃO MORRER:** o `progress.md` diz o que está em voo. Se a última linha for "Task 8 despachada",
+`git log` decide: commit `feat(painel): o pin...` existe → revisar; não existe e árvore limpa → redespachar a 8.
+
+---
+
+⚪ **O bloco abaixo é a parada ANTERIOR (30/09) — vale como história, não como instrução.**
+
 🟡 **ÚLTIMA PARADA: 2026-09-30 à noite, A PEDIDO DELE** — *"deixe tudo pronto para próxima sessão só
 pedir para continuar, quero dormir"*.
 
