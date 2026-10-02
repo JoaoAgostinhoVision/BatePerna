@@ -629,7 +629,7 @@ describe("PUT /api/admin/ficha — o portão da coerência", () => {
   // que trocar `[regra, slug, frase]` por `[regra, slug]` **ou** por
   // `[regra, frase]` deixava a suíte inteira VERDE. E era a `frase` ali que
   // trancava o dono de renomear o lugar, porque o nome do lugar aparece na frase
-  // das treze regras.
+  // de todas as regras.
   //
   // Os quatro casos abaixo morrem em mutações DIFERENTES, de propósito:
   //   (1) e (2) morrem se a `frase` (ou qualquer coisa que varie com o nome do
@@ -669,9 +669,11 @@ describe("PUT /api/admin/ficha — o portão da coerência", () => {
   });
 
   it("a SEGUNDA violação da mesma regra no MESMO lugar é recusada — o portão conta, não agrupa", async () => {
-    // 🔴 `janela-nao-zerada` empurra UM achado por número zerado. Com o limiar já
-    // zerado no acervo, zerar TAMBÉM a janela do passado leva o par de 1 para 2.
-    // Comparando CONJUNTO de pares, isto passaria em silêncio: o par já existia.
+    // 🔴 `janela-nao-zerada` empurra UM achado por número que mente. Com o limiar
+    // já zerado no acervo, pôr TAMBÉM a janela do passado negativa leva o par de
+    // 1 para 2. Comparando CONJUNTO de pares, isto passaria em silêncio: o par já
+    // existia. (Até 2026-10-01 o segundo número era o passado ZERO — que passou a
+    // valer sozinho, por decisão do João; o negativo continua mentindo.)
     const comLimiarZero = {
       ...ficha,
       condicao: { ...ficha.condicao, regra: { ...ficha.condicao.regra, limiar_mm: 0 } },
@@ -679,7 +681,7 @@ describe("PUT /api/admin/ficha — o portão da coerência", () => {
     await gravarVersao(c, SLUG, JSON.stringify(comLimiarZero), "semente", AGORA);
 
     const res = await PUT(
-      pedido({ slug: SLUG, campo: "condicao.regra.janela_passado_horas", valor: 0 }, cookieBom),
+      pedido({ slug: SLUG, campo: "condicao.regra.janela_passado_horas", valor: -1 }, cookieBom),
     );
 
     expect(res.status).toBe(409);
@@ -691,13 +693,14 @@ describe("PUT /api/admin/ficha — o portão da coerência", () => {
 
   it("o 409 fala do achado que a gravação INTRODUZIU, não do que já estava lá", async () => {
     // 🔴 A regra da chuva emite um achado por número zerado, e os três moram no
-    // MESMO par `(regra, slug)`. Com a janela do passado já zerada no acervo,
+    // MESMO par `(regra, slug)`. Com a janela do passado já negativa no acervo
+    // (era ZERADA até 2026-10-01, quando o passado zero passou a valer),
     // zerar o LIMIAR fazia a porta devolver a frase da JANELA — o dono mexia num
     // número e lia sobre o outro. É a forma-mensagem do defeito que gerou esta
     // onda: "ele pede pra consertar X e a porta responde sobre Y".
     const comJanelaZero = {
       ...ficha,
-      condicao: { ...ficha.condicao, regra: { ...ficha.condicao.regra, janela_passado_horas: 0 } },
+      condicao: { ...ficha.condicao, regra: { ...ficha.condicao.regra, janela_passado_horas: -1 } },
     };
     await gravarVersao(c, SLUG, JSON.stringify(comJanelaZero), "semente", AGORA);
 
@@ -708,7 +711,7 @@ describe("PUT /api/admin/ficha — o portão da coerência", () => {
     expect(frase, "a frase tem que falar do LIMITE, que é o que ele acabou de zerar").toContain(
       "O limite de chuva",
     );
-    expect(frase, "e não pode falar da janela, que já estava zerada antes").not.toContain("pra trás");
+    expect(frase, "e não pode falar da janela, que já mentia antes").not.toContain("pra trás");
   });
 
   it("a MESMA contagem com valor errado DIFERENTE passa — a escolha está escrita, e é de propósito", async () => {
@@ -962,14 +965,16 @@ describe("PUT /api/admin/ficha — e o lugar escondido", () => {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // A REGRA DE CHUVA NA PORTA — onda de conserto 1 da Tarefa 7 (2026-10-01).
-describe("PUT /api/admin/ficha — a regra de chuva: o teto do provedor e a previsão zero", () => {
+describe("PUT /api/admin/ficha — a regra de chuva: o teto do provedor e as janelas zero", () => {
   const nomeDe = (f: Ficha) => f.trajeto.waypoints[0].nome;
   const regraGravada = async () =>
     (JSON.parse((await versaoAtual(c, SLUG))!.doc) as Ficha).condicao.regra;
 
   // 🔴 F2: `480` no lugar de `48`. Antes desta onda a porta gravava com 200, e a
   // busca da tela inicial (uma só, com a maior janela do acervo) passava a ser
-  // recusada pela Open-Meteo — todos os lugares sem informação.
+  // recusada pela Open-Meteo — todos os lugares PÚBLICOS sem informação.
+  // ⚠️ A frase não afirma isso desde a onda de conserto 2: é falso pra lugar
+  // oculto (a home não o lê). Ela diz só o que vale sempre: a busca é recusada.
   for (const [campo, valor, lado] of [
     ["janela_previsao_horas", 385, "pra frente"],
     ["janela_previsao_horas", 480, "pra frente"],
@@ -982,7 +987,8 @@ describe("PUT /api/admin/ficha — a regra de chuva: o teto do provedor e a prev
       const frase = await res.text();
       expect(frase).toContain(nomeDe(ficha));
       expect(frase).toContain(`${valor} horas ${lado}`);
-      expect(frase).toContain("todos os lugares");
+      expect(frase).toContain("a busca de chuva é recusada");
+      expect(frase, "a frase voltou a afirmar o que é falso pra lugar oculto").not.toContain("todos os lugares");
       expect(await historico(c, SLUG)).toHaveLength(1);
     });
   }
@@ -1022,6 +1028,42 @@ describe("PUT /api/admin/ficha — a regra de chuva: o teto do provedor e a prev
     expect(frase).toContain("pra trás");
     expect(frase).toContain("nunca fecha");
     expect((await regraGravada()).janela_passado_horas).toBe(ficha.condicao.regra.janela_passado_horas);
+  });
+
+  // 🔴 DECISÃO DO JOÃO, 2026-10-01, simétrica: passado zero vale também — a regra
+  // fecha pela previsão. A porta grava.
+  it("passado 0: a porta GRAVA (200)", async () => {
+    expect(ficha.condicao.regra.janela_previsao_horas, "a premissa: a previsão está viva").toBeGreaterThan(0);
+
+    const res = await PUT(pedido({ slug: SLUG, campo: "condicao.regra.janela_passado_horas", valor: 0 }, cookieBom));
+
+    expect(res.status, await res.text()).toBe(200);
+    expect((await regraGravada()).janela_passado_horas).toBe(0);
+  });
+
+  // O par pelo OUTRO lado: com o passado já zero, zerar a previsão é o que fecha
+  // o par — e a frase que sai é a mesma, verdadeira nele.
+  it("passado 0 E previsão 0 (zerando a previsão por último): 409, nunca fecha", async () => {
+    const semPassado = {
+      ...ficha,
+      condicao: { ...ficha.condicao, regra: { ...ficha.condicao.regra, janela_passado_horas: 0 } },
+    };
+    await gravarVersao(c, SLUG, JSON.stringify(semPassado), "semente", AGORA);
+
+    const res = await PUT(pedido({ slug: SLUG, campo: "condicao.regra.janela_previsao_horas", valor: 0 }, cookieBom));
+
+    expect(res.status).toBe(409);
+    expect(await res.text()).toContain("nunca fecha");
+    expect((await regraGravada()).janela_previsao_horas).toBe(ficha.condicao.regra.janela_previsao_horas);
+  });
+
+  it("passado negativo: 409, e a frase não diz que o lugar nunca fecha", async () => {
+    const res = await PUT(pedido({ slug: SLUG, campo: "condicao.regra.janela_passado_horas", valor: -5 }, cookieBom));
+
+    expect(res.status).toBe(409);
+    const frase = await res.text();
+    expect(frase).not.toContain("nunca fecha");
+    expect(frase).toContain("-5 horas pra trás");
   });
 
   it("previsão negativa: 409, e a frase não diz que o lugar nunca fecha", async () => {

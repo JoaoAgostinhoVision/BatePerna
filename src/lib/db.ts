@@ -314,7 +314,7 @@ export async function versaoPorId(client: Client, id: number): Promise<FichaVers
  *  escrever a coluna, porque o padrão novo muda estes dois em silêncio):
  *
  *   1. **O portão de coerência** (`src/app/api/admin/ficha/route.ts`): duas das
- *      treze regras comparam uma ficha com as outras, e **lugar escondido
+ *      regras comparam uma ficha com as outras, e **lugar escondido
  *      volta**. Sem o acervo inteiro, o buraco é: esconder o Véu → copiar a voz
  *      dele na Rampa (passa, o Véu não está mais no acervo medido) → mostrar o
  *      Véu de novo → duas fichas públicas dizendo a mesma coisa.

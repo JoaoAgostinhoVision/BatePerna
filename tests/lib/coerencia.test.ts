@@ -128,12 +128,14 @@ const QUEBRAS: Record<string, () => Ficha[]> = {
     return com(f);
   },
 
-  // ⚠️ Até 2026-10-01 esta quebra zerava a janela de PREVISÃO — que passou a
-  // valer por decisão do João ("só olhar a chuva que já caiu"). Zerar o PASSADO
-  // continua sendo regra que nunca vê chuva caída.
+  // ⚠️ Até 2026-10-01 esta quebra zerava UMA janela. Cada uma passou a valer
+  // zero sozinha (decisões do João, no mesmo dia: a previsão, e depois o
+  // passado, simétrico). O que continua sendo regra que nunca vê chuva nenhuma
+  // é o PAR: as duas janelas em zero.
   "janela-nao-zerada": () => {
     const f = pedra();
     f.condicao.regra.janela_passado_horas = 0;
+    f.condicao.regra.janela_previsao_horas = 0;
     return com(f);
   },
 
@@ -240,6 +242,7 @@ describe("violacoesDoAcervo", () => {
   it("janela de chuva zerada é pega", () => {
     const f = rampa();
     f.condicao.regra.janela_passado_horas = 0;
+    f.condicao.regra.janela_previsao_horas = 0;
     expect(violacoesDoAcervo([f]).map((x) => x.regra)).toContain("janela-nao-zerada");
   });
 
@@ -281,11 +284,12 @@ describe("violacoesDoAcervo", () => {
   //   - arrancar a válvula de escape do horário invertido — a regra passava a
   //     acusar um lugar que abre à noite DE PROPÓSITO, e nada reclamava.
 
-  // ⚠️ A PREVISÃO ENTRA COM `-1`, não `0`: desde 2026-10-01 a previsão zero vale
-  // (decisão do João). O exame dela existe e recusa o negativo.
+  // ⚠️ AS DUAS JANELAS ENTRAM COM `-1`, não `0`: desde 2026-10-01 cada janela
+  // vale zero sozinha (decisões do João). O exame de cada uma existe e recusa o
+  // negativo; o par 0/0 tem caso próprio, abaixo.
   it("a janela de chuva é conferida nos TRÊS números, um a um", () => {
     for (const [campo, valor] of [
-      ["janela_passado_horas", 0],
+      ["janela_passado_horas", -1],
       ["janela_previsao_horas", -1],
       ["limiar_mm", 0],
     ] as const) {
@@ -318,6 +322,39 @@ describe("violacoesDoAcervo", () => {
     expect(v).toHaveLength(1);
     expect(v[0].frase).toContain("nunca fecha");
     expect(v[0].frase).toContain("pra trás");
+  });
+
+  // 🔴 PASSADO ZERO VALE — decisão do João, 2026-10-01, simétrica à da
+  // previsão. Medido com `avaliar` (passado 0, previsão 6, limiar 0.2): 5 mm uma
+  // hora adiante → `frio`; seco → `fresco`. A regra fecha pela previsão.
+  it("passado ZERO sozinho não é violação: a regra ainda fecha pela previsão", () => {
+    const f = rampa();
+    f.condicao.regra.janela_passado_horas = 0;
+    expect(f.condicao.regra.janela_previsao_horas, "a premissa: a previsão está viva").toBeGreaterThan(0);
+    expect(violacoesDoAcervo([f]).map((x) => x.regra)).not.toContain("janela-nao-zerada");
+  });
+
+  // O par visto pelo outro lado: passado 0 com previsão NEGATIVA também nunca
+  // fecha (nenhuma hora adiante entra na soma), e as duas frases saem — a do
+  // par e a do negativo.
+  it("passado 0 E previsão negativa: as duas frases, a do par e a do negativo", () => {
+    const f = rampa();
+    f.condicao.regra.janela_passado_horas = 0;
+    f.condicao.regra.janela_previsao_horas = -2;
+    const frases = violacoesDoAcervo([f]).filter((x) => x.regra === "janela-nao-zerada").map((x) => x.frase);
+    expect(frases).toHaveLength(2);
+    expect(frases.some((x) => x.includes("nunca fecha"))).toBe(true);
+    expect(frases.some((x) => x.includes("-2 horas pra frente"))).toBe(true);
+  });
+
+  it("passado NEGATIVO: a frase não diz que o lugar nunca fecha, e diz o número", () => {
+    const f = rampa();
+    f.condicao.regra.janela_passado_horas = -5;
+    const v = violacoesDoAcervo([f]).filter((x) => x.regra === "janela-nao-zerada");
+    expect(v).toHaveLength(1);
+    expect(v[0].frase).not.toContain("nunca fecha");
+    expect(v[0].frase).toContain("-5 horas pra trás");
+    expect(v[0].frase).toContain("janela negativa não existe");
   });
 
   it("previsão NEGATIVA: a frase não diz que o lugar nunca fecha, e aponta o 0", () => {

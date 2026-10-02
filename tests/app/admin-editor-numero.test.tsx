@@ -8,12 +8,14 @@ import {
   CAIXA_VAZIA,
   COM_ESTE_NUMERO,
   JANELA_NEGATIVA,
+  JANELA_PASSADO_NEGATIVA,
   PREVENDO,
   PREVISAO_FALHOU,
   REGRA_QUE_MENTE,
   SALVAR,
 } from "@/app/admin/campos/palavras";
 import { TETO_PASSADO_HORAS, TETO_PREVISAO_HORAS } from "@/lib/weather";
+import { avaliar } from "@/lib/motor";
 import { CAMPOS_DA_FICHA, camposDaFicha } from "@/lib/campos-da-ficha";
 import { getAllFichas } from "@/lib/ficha";
 import type { Ficha } from "@/types/ficha";
@@ -349,31 +351,32 @@ describe("A PRIMEIRA camada: o número que mente é recusado antes de qualquer v
     ["negativo", "-5"],
     ["zero fracionário", "0.0"],
   ] as const) {
+    // ⚠️ No LIMIAR, e não mais no passado: desde 2026-10-01 a janela do passado
+    // zero vale (decisão do João, simétrica à da previsão).
     it(`${nome}: recusado na tela, e NENHUMA das duas rotas é chamada`, () => {
       const { fetchFalso } = comRotas();
       render(<FichaInteira ficha={FICHA} />);
 
-      digitar(PASSADO, texto);
-      salvar(PASSADO);
+      digitar(LIMIAR, texto);
+      salvar(LIMIAR);
 
       // 🔴 AS DUAS ROTAS, nomeadas: é isto que prova que a recusa é DAQUI e não da
       // rota. Um teste que só visse "não gravou" não saberia quem recusou.
       expect(chamadas(fetchFalso, ROTA_FICHA), "o número que mente foi mandado pra porta").toHaveLength(0);
       expect(chamadas(fetchFalso, ROTA_PREVISAO), "pediu prévia de uma regra que mente").toHaveLength(0);
       // E a FRASE, não só o `role=alert`: sem isto, qualquer recusa passa verde.
-      expect(emCampo(PASSADO).getByRole("alert").textContent).toBe(REGRA_QUE_MENTE);
-      expect(emCampo(PASSADO).getByRole("alert").textContent).not.toBe(CAIXA_VAZIA);
+      expect(emCampo(LIMIAR).getByRole("alert").textContent).toBe(REGRA_QUE_MENTE);
+      expect(emCampo(LIMIAR).getByRole("alert").textContent).not.toBe(CAIXA_VAZIA);
     });
   }
 
-  // ⚠️ O NEGATIVO é recusado nos três; o ZERO, só nos dois que não são a
-  // previsão (decisão do João, 2026-10-01). E a previsão negativa tem frase
-  // própria: `REGRA_QUE_MENTE` diz "nunca avisa", e com a janela do passado
-  // viva isso é falso.
+  // ⚠️ O NEGATIVO é recusado nos três; o ZERO, só no limiar (decisões do João,
+  // 2026-10-01: cada janela vale zero sozinha). E cada janela negativa tem frase
+  // própria: `REGRA_QUE_MENTE` fala de zero, e zero ali vale.
   it("nos três campos, não só num — cada um com a SUA frase", () => {
     const esperada: Record<string, string> = {
       [PREVISAO]: JANELA_NEGATIVA,
-      [PASSADO]: REGRA_QUE_MENTE,
+      [PASSADO]: JANELA_PASSADO_NEGATIVA,
       [LIMIAR]: REGRA_QUE_MENTE,
     };
     expect(Object.keys(esperada).sort(), "o registro ganhou ou perdeu um número").toEqual([...NUMEROS].sort());
@@ -388,8 +391,21 @@ describe("A PRIMEIRA camada: o número que mente é recusado antes de qualquer v
     }
   });
 
-  it("zero nos dois que não são a previsão: recusado com `REGRA_QUE_MENTE`", () => {
-    for (const caminho of [PASSADO, LIMIAR]) {
+  // 🔴 `REGRA_QUE_MENTE` SÓ SOBROU PRO LIMIAR, e a frase tem de ser verdade
+  // sobre ele — MEDIDA no motor, não suposta. Ela dizia "…para sempre, ou nunca
+  // avisa"; o "nunca avisa" era a medição da janela do passado negativa. Com o
+  // limiar zero ou negativo o lugar SÓ diz não, mesmo sem chuva nenhuma.
+  it("a frase do limiar é verdade no motor: zero ou menos só diz não", () => {
+    for (const limiar_mm of [0, -1]) {
+      const regra = { tipo: "chuva_binaria" as const, janela_previsao_horas: 6, janela_passado_horas: 6, limiar_mm };
+      expect(avaliar(regra, [], 1_000_000), `limiar ${limiar_mm} sem chuva`).toBe("frio");
+    }
+    expect(REGRA_QUE_MENTE).toContain("dizer não para sempre");
+    expect(REGRA_QUE_MENTE, "a metade que só valia pra janela negativa voltou").not.toContain("nunca avisa");
+  });
+
+  it("zero só no limiar: recusado com `REGRA_QUE_MENTE`", () => {
+    for (const caminho of [LIMIAR]) {
       const { fetchFalso } = comRotas();
       render(<FichaInteira ficha={FICHA} />);
       digitar(caminho, "0");
@@ -620,6 +636,40 @@ describe("Previsão ZERO vale — decisão do João, 2026-10-01 (\"só olhar a c
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+describe("Passado ZERO vale — decisão do João, 2026-10-01 (simétrica à da previsão)", () => {
+  it("passado 0 NÃO é recusado: vai pra porta como número 0", async () => {
+    const { fetchFalso } = comRotas();
+    render(<FichaInteira ficha={FICHA} />);
+
+    digitar(PASSADO, "0");
+    salvar(PASSADO);
+
+    await waitFor(() => expect(chamadas(fetchFalso, ROTA_FICHA)).toHaveLength(1));
+    expect(emCampo(PASSADO).queryByRole("alert"), "a tela recusou o passado zero").toBeNull();
+    expect(corpoDe(chamadas(fetchFalso, ROTA_FICHA)[0])).toEqual({ slug: FICHA.slug, campo: PASSADO, valor: 0 });
+  });
+
+  it("passado 0 PEDE prévia — a consequência dela existe e é mostrada", async () => {
+    const { fetchFalso } = comRotas();
+    render(<FichaInteira ficha={FICHA} />);
+
+    digitar(PASSADO, "0");
+
+    await waitFor(() => expect(previsaoDe(PASSADO).textContent).toContain(MARCA_DA_ROTA));
+    expect(corpoDe(chamadas(fetchFalso, ROTA_PREVISAO)[0]).valor).toBe(0);
+  });
+
+  // 🔴 O BRIEF DA ONDA 2: `REGRA_QUE_MENTE` não pode aparecer pro passado zero.
+  it("`REGRA_QUE_MENTE` nunca aparece pro passado zero", () => {
+    comRotas();
+    render(<FichaInteira ficha={FICHA} />);
+    digitar(PASSADO, "0");
+    salvar(PASSADO);
+    expect(bloco(PASSADO).textContent).not.toContain(REGRA_QUE_MENTE);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 describe("O teto do provedor (F2): recusado na tela, antes de qualquer viagem", () => {
   // 🔴 A FRASE CARREGA OS DOIS NÚMEROS, e eles são os de `src/lib/weather.ts`.
   // Ela é literal (o cerco de completude só lê literal simples); este caso é o
@@ -627,6 +677,14 @@ describe("O teto do provedor (F2): recusado na tela, antes de qualquer viagem", 
   it("a frase do teto diz os dois tetos de `weather.ts`", () => {
     expect(ALEM_DO_PROVEDOR).toContain(`${TETO_PREVISAO_HORAS} horas pra frente`);
     expect(ALEM_DO_PROVEDOR).toContain(`${TETO_PASSADO_HORAS} pra trás`);
+  });
+
+  // 🔴 n3 da re-revisão (onda de conserto 2): a frase afirmava que a tela
+  // inicial ficava sem informação "pra todos os lugares" — falso pra lugar
+  // OCULTO, que a home não lê. Saiu por subtração; este caso não a deixa voltar.
+  it("a frase do teto não afirma o que não vale pra lugar oculto", () => {
+    expect(ALEM_DO_PROVEDOR).not.toContain("todos os lugares");
+    expect(ALEM_DO_PROVEDOR).not.toContain("tela inicial");
   });
 
   for (const [caminho, texto] of [

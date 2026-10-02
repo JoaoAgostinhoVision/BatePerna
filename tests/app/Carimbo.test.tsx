@@ -1128,3 +1128,64 @@ describe("Carimbo — StrictMode e desmontagem", () => {
     gritou.mockRestore();
   });
 });
+
+// 🔴 JANELA ZERADA CORTA O PEDAÇO DELA, SEM PALAVRA NOVA (decisão do João,
+// 2026-10-01). Desde que cada janela de chuva pode ser zero sozinha, a frase
+// inteira imprimiria "nada previsto pras próximas ~0h" e, no ramo molhado, "(ou
+// vem chuva nas próximas ~0h)" — uma causa que a regra nem olha. Igualdade na
+// frase inteira (não `not.toContain("~0h")`): a ausência sozinha ficaria verde
+// com a `.reason` sumida. Mutações alvo: voltar a frase inteira (imprime ~0h),
+// e no passado zero esquecer a maiúscula ou deixar o "(ou …)".
+describe("Carimbo — janela zerada corta o pedaço dela", () => {
+  const razao = (c: HTMLElement) => c.querySelector(".reason")?.textContent;
+  const viva = (c: HTMLElement) => c.querySelector(".live")?.textContent;
+
+  it("as duas janelas vivas: a frase inteira, como sempre", () => {
+    const seco = montar({ estado: "fresco", pass: 6, fut: 3 }).container;
+    expect(razao(seco)).toBe("Sem chuva nas últimas ~6h e nada previsto pras próximas ~3h.");
+    expect(viva(seco)).toBe("lido da chuva agora · 6h atrás + 3h à frente");
+    cleanup();
+    const molhado = montar({ estado: "frio", pass: 6, fut: 3 }).container;
+    expect(razao(molhado)).toBe("Choveu nas últimas ~6h (ou vem chuva nas próximas ~3h).");
+    expect(viva(molhado)).toBe("lido da chuva agora · 6h atrás + 3h à frente");
+  });
+
+  it("previsão zero: sai o pedaço da previsão, nas duas frases e na linha viva", () => {
+    const seco = montar({ estado: "fresco", pass: 6, fut: 0 }).container;
+    expect(razao(seco)).toBe("Sem chuva nas últimas ~6h.");
+    expect(viva(seco)).toBe("lido da chuva agora · 6h atrás");
+    cleanup();
+    const molhado = montar({ estado: "frio", pass: 6, fut: 0 }).container;
+    expect(razao(molhado)).toBe("Choveu nas últimas ~6h.");
+    expect(viva(molhado)).toBe("lido da chuva agora · 6h atrás");
+  });
+
+  it("passado zero: sai o pedaço do passado, e o que sobra recomeça com maiúscula", () => {
+    const seco = montar({ estado: "fresco", pass: 0, fut: 3 }).container;
+    expect(razao(seco)).toBe("Nada previsto pras próximas ~3h.");
+    expect(viva(seco)).toBe("lido da chuva agora · 3h à frente");
+    cleanup();
+    const molhado = montar({ estado: "frio", pass: 0, fut: 3 }).container;
+    expect(razao(molhado)).toBe("Vem chuva nas próximas ~3h.");
+    expect(viva(molhado)).toBe("lido da chuva agora · 3h à frente");
+  });
+
+  it("o recorte não come a frase da ficha: relevo e piso continuam depois", () => {
+    const seco = montar({ estado: "fresco", pass: 0, fut: 3, secaRapido: "Escorre rápido." }).container;
+    expect(razao(seco)).toBe("Nada previsto pras próximas ~3h. Escorre rápido.");
+    cleanup();
+    const molhado = montar({ estado: "frio", pass: 6, fut: 0, piso: "barro" }).container;
+    expect(razao(molhado)).toBe("Choveu nas últimas ~6h. O barro segura água — risco de atolar.");
+  });
+
+  it("nenhuma combinação com UMA janela zerada imprime \"0h\"", () => {
+    for (const estado of ["fresco", "frio"] as const) {
+      for (const [pass, fut] of [[6, 0], [0, 3]] as const) {
+        const { container } = montar({ estado, pass, fut });
+        expect(container.textContent, `${estado} ${pass}/${fut}`).not.toMatch(/(^|[^\d])0h/);
+        expect(container.querySelector(".reason"), `${estado} ${pass}/${fut}: a razão sumiu`).not.toBeNull();
+        cleanup();
+      }
+    }
+  });
+});

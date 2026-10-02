@@ -51,7 +51,7 @@ import { PRECO, REGRAS, violacoesDoAcervo } from "@/lib/coerencia";
  *  ela mora.
  *
  *  Que o MÓDULO ainda sabe ACUSAR é outra pergunta, e ela tem outro arquivo:
- *  `tests/lib/coerencia.test.ts`, onde há uma quebra escrita pra cada uma das 13
+ *  `tests/lib/coerencia.test.ts`, onde há uma quebra escrita pra cada uma das
  *  regras. Um módulo que devolvesse `[]` pra tudo passaria aqui com louvor. */
 
 // O acervo vem do BANCO desde 2026-09-25 — semeado a partir de

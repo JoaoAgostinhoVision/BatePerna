@@ -65,7 +65,10 @@ export type Fala = { marca: string; sub: string };
  *  vizinho. */
 const FALA_MOLHADA: Record<Severidade, (horasPassado: number) => Fala> = {
   "nao-va": () => ({ marca: "Não vá", sub: "barro · dá um tempo" }),
-  espera: (h) => ({ marca: `Espera ${h}h`, sub: "molhado · espera passar" }),
+  // 🔴 Passado ZERO corta o número (decisão do João, 2026-10-01: janela zerada
+  // corta o pedaço dela, sem palavra nova). Desde que a janela do passado pode
+  // ser zero, isto imprimiria "Espera 0h"; o recorte deixa a fala dele, "Espera".
+  espera: (h) => ({ marca: h > 0 ? `Espera ${h}h` : "Espera", sub: "molhado · espera passar" }),
   cuidado: () => ({ marca: "Vá com cuidado", sub: "molhado · sem pressa" }),
 };
 

@@ -88,32 +88,32 @@ export const CAIXA_VAZIA = "Caixa vazia não grava: escreva algo.";
  *  resíduo real por um ganho nenhum.
  *  ──────────────────────────────────────────────────────────────────────────── */
 
-/** A recusa de um número que MENTE sobre o lugar — janela do PASSADO zero ou
- *  negativa, limiar zero ou negativo. Uma frase só pros dois, porque o conserto
- *  na mão dele é um só: pôr um número maior que zero.
+/** A recusa de um LIMIAR que mente sobre o lugar — zero ou negativo.
  *
- *  🔴 ELA NÃO VALE MAIS PRA JANELA DE PREVISÃO. Desde 2026-10-01 (decisão do
- *  João: "só olhar a chuva que já caiu") a previsão pode ser zero, e medido com
- *  `avaliar` (previsão 0, passado 6, limiar 0.2) o lugar fecha com 5 mm uma hora
- *  atrás e abre sem chuva — nenhuma das duas metades desta frase era verdade ali.
- *  A previsão negativa tem frase própria (`JANELA_NEGATIVA`).
+ *  🔴 ELA NÃO VALE MAIS PRA JANELA NENHUMA. Desde 2026-10-01 (decisões do João:
+ *  "só olhar a chuva que já caiu", e depois o espelho dela pro passado) cada
+ *  janela pode ser zero sozinha, e medido com `avaliar` nenhuma das duas metades
+ *  da frase antiga era verdade ali: previsão 0 fecha com chuva caída e abre sem
+ *  ela; passado 0 fecha com chuva prevista e abre sem ela. Janela negativa tem
+ *  frase própria (`JANELA_NEGATIVA`, `JANELA_PASSADO_NEGATIVA`).
  *
- *  🔴 ELA DIZ O QUE ACONTECE, não "valor inválido". A procedência das duas
- *  metades:
- *   - *"o lugar passa a dizer não para sempre"* vem da regra `janela-nao-zerada`
- *     de `src/lib/coerencia.ts`, que é quem recusa isto na GRAVAÇÃO (*"qualquer
- *     orvalho fecha o lugar, e o app passa a dizer não o ano inteiro"*) —
- *     paráfrase minha daquela frase, encurtada pra caber do lado de um campo;
- *   - *"ou nunca avisar"* é o outro lado, que eu MEDI rodando `avaliar`: com
- *     `janela_passado_horas: -5` e 5 mm de chuva uma hora atrás o motor devolve
- *     `fresco` — a janela invertida cega o motor pra chuva que caiu, e o aviso
- *     fica desligado em silêncio.
+ *  🔴 E A SEGUNDA METADE SAIU (onda de conserto 2, por subtração). Ela dizia
+ *  *"…para sempre, ou nunca avisa"*, e o *"ou nunca avisa"* era a medição da
+ *  janela do passado NEGATIVA (`-5` cegava o motor pra chuva caída). Sobrando só
+ *  o limiar, medido com `avaliar`: limiar 0 e limiar -1, sem chuva nenhuma, dão
+ *  `frio` os dois — o limiar zero ou negativo só diz não, nunca deixa de avisar.
+ *
+ *  🔴 ELA DIZ O QUE ACONTECE, não "valor inválido". *"o lugar passa a dizer não
+ *  para sempre"* vem da regra `janela-nao-zerada` de `src/lib/coerencia.ts`, que
+ *  é quem recusa isto na GRAVAÇÃO (*"qualquer orvalho fecha o lugar, e o app
+ *  passa a dizer não o ano inteiro"*) — paráfrase minha daquela frase, encurtada
+ *  pra caber do lado de um campo.
  *
  *  ⚠️ Ela NÃO cita nenhum dos nomes de campo: o rótulo do campo está na linha de
  *  cima, e repeti-lo aqui faria a tela perguntar duas vezes. */
 // PENDENTE: redação minha, o João ainda não leu
 export const REGRA_QUE_MENTE =
-  "Zero ou menos não é regra: assim o lugar passa a dizer não para sempre, ou nunca avisa. Use um número maior que zero.";
+  "Zero ou menos não é regra: assim o lugar passa a dizer não para sempre. Use um número maior que zero.";
 
 /** A recusa da janela de PREVISÃO negativa — a única que sobrou pra ela depois
  *  que o zero passou a valer (2026-10-01). Ela não diz "o lugar nunca fecha",
@@ -123,6 +123,15 @@ export const REGRA_QUE_MENTE =
 export const JANELA_NEGATIVA =
   "Janela negativa não existe. Use 0 pra olhar só a chuva que já caiu, ou um número maior que zero.";
 
+/** A recusa da janela do PASSADO negativa — a única que sobrou pra ela depois
+ *  que o zero passou a valer (decisão do João, 2026-10-01, simétrica à da
+ *  previsão). É a irmã de cima MENOS o *"pra olhar só a chuva que já caiu"*, que
+ *  é a fala dele sobre a PREVISÃO zero e aqui seria falsa: o passado zero olha só
+ *  a chuva prevista. Não acrescenta palavra que a irmã não tenha. */
+// PENDENTE: redação minha, o João ainda não leu
+export const JANELA_PASSADO_NEGATIVA =
+  "Janela negativa não existe. Use 0 ou um número maior que zero.";
+
 /** A recusa de uma janela acima do que o provedor de chuva aceita.
  *
  *  🔴 OS DOIS NÚMEROS DENTRO DELA SÃO OS TETOS de `src/lib/weather.ts`
@@ -131,12 +140,14 @@ export const JANELA_NEGATIVA =
  *  Há teste cravando que a frase contém os dois números das constantes — se o
  *  teto mudar lá, ela fica vermelha.
  *
- *  *"a tela inicial fica sem informação de chuva pra todos os lugares"* é
- *  medido: a busca da tela inicial é uma só, com a maior janela do acervo, e a
- *  recusa do provedor dá "sem informação" a todo lugar (revisão da Tarefa 7). */
+ *  ⚠️ ELA DIZIA *"Com ele a tela inicial fica sem informação de chuva pra todos
+ *  os lugares."*, e a frase saiu por subtração (onda de conserto 2, 2026-10-01):
+ *  é falsa pra lugar OCULTO — a home lê `getAllFichas`, que o filtra, então a
+ *  janela dele não entra na busca da home enquanto ele estiver escondido. A
+ *  recusa continua certa; a frase só não afirma o que não vale sempre. */
 // PENDENTE: redação minha, o João ainda não leu
 export const ALEM_DO_PROVEDOR =
-  "Esse número passa do que a previsão do tempo alcança: até 384 horas pra frente e 2232 pra trás. Com ele a tela inicial fica sem informação de chuva pra todos os lugares. Use um número menor.";
+  "Esse número passa do que a previsão do tempo alcança: até 384 horas pra frente e 2232 pra trás. Use um número menor.";
 
 /** A moldura da prévia — a frase que diz que o que vem a seguir é uma
  *  SIMULAÇÃO, e não o estado de agora.

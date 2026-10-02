@@ -13,6 +13,7 @@ import {
   COM_ESTE_NUMERO,
   HORA_VAZIA,
   JANELA_NEGATIVA,
+  JANELA_PASSADO_NEGATIVA,
   NADA_ESCOLHIDO,
   NAO,
   PREVENDO,
@@ -1210,7 +1211,7 @@ describe("Os editores servem os três lugares", () => {
 
   /** 🔴 A FONTE-SENTINELA DO VARREDOR, E ELA É INSTRUMENTO, NÃO COPY.
    *
-   *  As treze frases de `CUNHADAS_AQUI` são TODAS `StringLiteral` — então cinco
+   *  As frases de `CUNHADAS_AQUI` são TODAS `StringLiteral` — então cinco
    *  dos seis tipos de `DE_TEXTO` não tinham controle nenhum: reduzir a lista a
    *  `[K.StringLiteral]` deixava a suíte inteira VERDE. E eles têm dentes: o
    *  `JsxText` foi medido dos dois lados (uma frase escrita como texto de `<span>`
@@ -1301,13 +1302,13 @@ describe("Os editores servem os três lugares", () => {
     return saida;
   };
 
-  /** 🔴 AS TREZE FRASES DE TELA QUE O PAINEL EXPORTA. Este arranjo NÃO é o
+  /** 🔴 AS FRASES DE TELA QUE O PAINEL EXPORTA. Este arranjo NÃO é o
    *  enumerador do cerco — ele é o CONTROLE DE COMPLETUDE dele. Cada uma é
    *  importada do módulo onde mora, então uma frase que mude de texto continua
    *  batendo; o que este controle pega é o ENUMERADOR ENCOLHER (a árvore lida
    *  errado, o parser parando de ver um tipo de literal), que deixaria o cerco
    *  verde com metade da cerca — foi exatamente o defeito da primeira versão,
-   *  que alcançava 6 destas 13.
+   *  que alcançava 6 das 13 que existiam então.
    *
    *  🔴 E ELE É LISTA ESCRITA À MÃO, a 45ª espécie deste catálogo: pega o
    *  enumerador encolher e NÃO pega uma frase nova que ninguém pôs aqui. O
@@ -1326,15 +1327,16 @@ describe("Os editores servem os três lugares", () => {
     NAO_SEI,
     NAO_TEM,
     BLOCO_JUNTO,
-    // As seis do número de motor (Task 7; na onda de conserto 1, 2026-10-01,
+    // As do número de motor (Task 7; na onda de conserto 1, 2026-10-01,
     // `SEM_LEITURA` foi apagada e nasceram `JANELA_NEGATIVA` e
-    // `ALEM_DO_PROVEDOR`). Nenhuma aparece EM REPOUSO: a
-    // prévia nasce vazia e as três recusas só existem depois de um toque.
+    // `ALEM_DO_PROVEDOR`; na onda 2, `JANELA_PASSADO_NEGATIVA`). Nenhuma aparece
+    // EM REPOUSO: a prévia nasce vazia e as recusas só existem depois de um toque.
     REGRA_QUE_MENTE,
     COM_ESTE_NUMERO,
     PREVENDO,
     PREVISAO_FALHOU,
     JANELA_NEGATIVA,
+    JANELA_PASSADO_NEGATIVA,
     ALEM_DO_PROVEDOR,
   ];
 
@@ -1409,7 +1411,7 @@ describe("Os editores servem os três lugares", () => {
   // entrar e "choveu" não disparar).
   //
   // 🔴 E O ALCANCE É O PONTO. A primeira versão lia botão/label/option/ajuda de
-  // um render EM REPOUSO, e alcançava 6 das 13 frases: as SETE que só existem
+  // um render EM REPOUSO, e alcançava 6 das 13 frases de então: as SETE que só existem
   // com o editor SALVANDO (`Salvando…`, `Tirando…`) ou em RECUSA (as três de
   // cliente e as duas da porta) estavam FORA da cerca — e são justamente as que
   // o dono lê no pior momento, num componente que serve os três lugares. Sete

@@ -397,13 +397,14 @@ describe("POST /api/admin/previsao-carimbo — a camada da ROTA recusa a regra q
   // chamada); isto é a recusa que vale pra qualquer cliente, inclusive um bundle
   // velho no celular dele. A garantia é a porta de escrita (409 com frase).
   //
-  // ⚠️ A janela de PREVISÃO zero NÃO está aqui: desde 2026-10-01 ela vale (ver
-  // o bloco da previsão zero, abaixo).
+  // ⚠️ NENHUMA JANELA ZERO está aqui: desde 2026-10-01 cada uma vale sozinha
+  // (ver os blocos da previsão zero e do passado zero, abaixo). O par 0/0 é
+  // recusado pelo exame da regra INTEIRA, que tem caso próprio.
   const MENTEM: [string, unknown][] = [
     ["janela_previsao_horas", -5],
     ["janela_previsao_horas", -0.5],
-    ["janela_passado_horas", 0],
     ["janela_passado_horas", -5],
+    ["janela_passado_horas", -0.5],
     ["limiar_mm", 0],
     ["limiar_mm", -5],
   ];
@@ -479,11 +480,13 @@ describe("POST /api/admin/previsao-carimbo — a camada da ROTA recusa a regra q
     expect(conserto.corpo.marca).toBe("Não vá");
   });
 
-  // 🔴 O EXAME DA REGRA INTEIRA OLHA OS TRÊS NÚMEROS, cada um por si — com a
-  // janela do passado gravada zero e com o teto estourado na janela de previsão
-  // gravada. Sem estes, o exame podia olhar só o limiar e o caso de cima passaria.
+  // 🔴 O EXAME DA REGRA INTEIRA OLHA OS TRÊS NÚMEROS, cada um por si — com o
+  // par de janelas gravado em zero, com o passado gravado negativo e com o teto
+  // estourado nas janelas gravadas. Sem estes, o exame podia olhar só o limiar e
+  // o caso de cima passaria.
   for (const [nome, regraGravada] of [
-    ["janela do passado gravada zero", { janela_passado_horas: 0 }],
+    ["as duas janelas gravadas em zero", { janela_passado_horas: 0, janela_previsao_horas: 0 }],
+    ["janela do passado gravada negativa", { janela_passado_horas: -1 }],
     ["janela de previsão gravada acima do teto", { janela_previsao_horas: TETO_PREVISAO_HORAS + 24 }],
     ["janela do passado gravada acima do teto", { janela_passado_horas: TETO_PASSADO_HORAS + 24 }],
   ] as const) {
@@ -547,6 +550,40 @@ describe("POST /api/admin/previsao-carimbo — previsão ZERO vale (decisão do 
     const prevista = await prever(RAMPA, "janela_previsao_horas", 0);
     expect(prevista.status).toBe(200);
     expect(prevista.corpo.estado, "a previsão zero olhou chuva prevista").toBe("fresco");
+  });
+});
+
+describe("POST /api/admin/previsao-carimbo — passado ZERO vale (decisão do João, 2026-10-01)", () => {
+  // 🔴 O ESPELHO DA PREVISÃO ZERO. Com o passado zero, a previsão continua
+  // fechando o lugar: chuva prevista → "Não vá"; chuva só caída → "Pode ir".
+  // Medido com `avaliar` antes (passado 0, previsão 6, limiar 0.2).
+  it("passado 0: carimbo de verdade, que fecha com chuva prevista e ignora a caída", async () => {
+    ceu({ 1: 5 });
+    const prevista = await prever(RAMPA, "janela_passado_horas", 0);
+    expect(prevista.status, "a prévia recusou o passado zero").toBe(200);
+    expect(prevista.corpo.estado, "com chuva prevista, o passado zero deixou de fechar").toBe("frio");
+    // `buildUrl` arredonda pra 1 dia no mínimo — o provedor não recebe 0.
+    expect(pedidos()[0].searchParams.get("past_days")).toBe("1");
+
+    ceu(CHUVA_ATRAS);
+    const caida = await prever(RAMPA, "janela_passado_horas", 0);
+    expect(caida.status).toBe(200);
+    expect(caida.corpo.estado, "o passado zero olhou chuva caída").toBe("fresco");
+  });
+
+  // 🔴 E O PAR NÃO PASSA POR AQUI: com a previsão gravada zero, zerar o passado
+  // é a regra que nunca fecha. A recusa barata não vê isso (um número só); quem
+  // vê é o exame da regra inteira — e a prévia não busca chuva pra ela.
+  it("passado 0 com a previsão gravada zero: 400, sem perguntar ao provedor", async () => {
+    const rampa = exigir(RAMPA);
+    const semPrevisao = {
+      ...rampa,
+      condicao: { ...rampa.condicao, regra: { ...rampa.condicao.regra, janela_previsao_horas: 0 } },
+    };
+    await gravarVersao(c, RAMPA, JSON.stringify(semPrevisao), "semente", AGORA);
+
+    expect((await prever(RAMPA, "janela_passado_horas", 0)).status).toBe(400);
+    expect(espiaoFetch).not.toHaveBeenCalled();
   });
 });
 

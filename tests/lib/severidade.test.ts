@@ -62,6 +62,14 @@ describe("falaMolhada: cada trilha fala com a força que a ficha DELA declara", 
     expect(falaMolhada("espera", 6).marca).toContain("6");
   });
 
+  // 🔴 PASSADO ZERO (decisão do João, 2026-10-01: cada janela pode ser zero, e a
+  // janela zerada CORTA o pedaço dela na tela, sem palavra nova). Mutação alvo:
+  // voltar a `Espera ${h}h` sempre — a tela diria "Espera 0h".
+  it("passado zero: o nível `espera` corta o número e não diz \"0h\"", () => {
+    expect(falaMolhada("espera", 0).marca).toBe("Espera");
+    expect(falaMolhada("espera", 0).sub).toBe(falaMolhada("espera", 6).sub);
+  });
+
   // MUTAÇÃO M11: a `sub` de `espera` voltar a ser "barro · dá um tempo" — a
   // herança que saiu em 10/09 porque `barro` é MATERIAL (dono: `chuvaNoPiso` em
   // piso.ts) e "dá um tempo" era paráfrase minha de nenhuma fala literal dele.

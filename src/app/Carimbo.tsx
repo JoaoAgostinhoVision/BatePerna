@@ -270,7 +270,7 @@ export default function Carimbo({
     fase === "fechado" ? "a chuva não decide agora"
     : fase === "conferindo" ? "conferindo a chuva agora"
     : fase === "sem-informacoes" ? "toque pra conferir"
-    : `lido da chuva agora · ${pass}h atrás + ${fut}h à frente`;
+    : ["lido da chuva agora", janelasLidas(pass, fut)].filter(Boolean).join(" · ");
 
   const miolo = (
     <>
@@ -444,15 +444,46 @@ function motivo(
     );
   }
   const chuva = chuvaNoPiso(piso);
+  // 🔴 JANELA ZERADA CORTA O PEDAÇO DELA, E SÓ CORTA (decisão do João,
+  // 2026-10-01). Desde que cada janela pode ser zero sozinha, a frase inteira
+  // imprimiria "nada previsto pras próximas ~0h" — e no ramo molhado, "(ou vem
+  // chuva nas próximas ~0h)", uma causa que a regra nem olha. O conserto é
+  // RECORTE da frase que já existe, sem palavra nova: tirar o pedaço da janela
+  // zerada, e no caso do passado zero recomeçar o que sobra com maiúscula e sem
+  // o "(ou …)". As duas janelas em zero juntas a porta recusa (`janela-nao-zerada`),
+  // e se chegassem aqui a frase de chuva calaria inteira — calar é o lado certo.
+  const olhaAtras = pass > 0;
+  const olhaAFrente = fut > 0;
   return estado === "fresco" ? (
     <>
-      Sem chuva nas últimas <b>~{pass}h</b> e nada previsto pras próximas <b>~{fut}h</b>.
+      {olhaAtras && olhaAFrente ? (
+        <>Sem chuva nas últimas <b>~{pass}h</b> e nada previsto pras próximas <b>~{fut}h</b>.</>
+      ) : olhaAtras ? (
+        <>Sem chuva nas últimas <b>~{pass}h</b>.</>
+      ) : olhaAFrente ? (
+        <>Nada previsto pras próximas <b>~{fut}h</b>.</>
+      ) : null}
       {secaRapido ? ` ${secaRapido}` : ""}
     </>
   ) : (
     <>
-      Choveu nas últimas <b>~{pass}h</b> (ou vem chuva nas próximas <b>~{fut}h</b>).
+      {olhaAtras && olhaAFrente ? (
+        <>Choveu nas últimas <b>~{pass}h</b> (ou vem chuva nas próximas <b>~{fut}h</b>).</>
+      ) : olhaAtras ? (
+        <>Choveu nas últimas <b>~{pass}h</b>.</>
+      ) : olhaAFrente ? (
+        <>Vem chuva nas próximas <b>~{fut}h</b>.</>
+      ) : null}
       {chuva ? ` ${chuva}` : ""}
     </>
   );
+}
+
+/** As janelas que a linha viva cita — "6h atrás + 3h à frente" —, com a janela
+ *  zerada CORTADA, pela mesma decisão e pelo mesmo recorte da `motivo`: com a
+ *  previsão 0, "6h atrás"; com o passado 0, "3h à frente". Sem palavra nova. */
+function janelasLidas(pass: number, fut: number): string {
+  return [pass > 0 ? `${pass}h atrás` : "", fut > 0 ? `${fut}h à frente` : ""]
+    .filter(Boolean)
+    .join(" + ");
 }

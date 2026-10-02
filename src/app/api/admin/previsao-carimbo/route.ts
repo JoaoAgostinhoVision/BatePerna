@@ -128,8 +128,10 @@ const FOLHA_DE = new Map<string, string>(
  *  regra INTEIRA, que é a garantia, vem depois, chamando aquelas regras de
  *  verdade sobre a ficha candidata.
  *
- *  🔴 O CHÃO DEPENDE DO CAMPO. A janela de PREVISÃO pode ser zero — decisão do
- *  João, 2026-10-01: "só olhar a chuva que já caiu". As outras duas não.
+ *  🔴 O CHÃO DEPENDE DO CAMPO. As duas JANELAS podem ser zero — decisões do
+ *  João, 2026-10-01: "só olhar a chuva que já caiu", e o espelho dela pro
+ *  passado. O limiar não. As duas janelas em zero JUNTAS não são deste exame
+ *  (ele só vê um número): quem as recusa é o exame da regra inteira, abaixo.
  *  Fracionário passa (`2.5`): é número que um dono pode querer, e numa porta o
  *  falso positivo trava o dono de gravar uma verdade.
  *
@@ -140,7 +142,7 @@ const FOLHA_DE = new Map<string, string>(
 function numeroQueNaoMente(folha: string, n: unknown): n is number {
   if (typeof n !== "number" || !Number.isFinite(n)) return false;
   if (folha === "janela_previsao_horas") return n >= 0 && n <= TETO_PREVISAO_HORAS;
-  if (folha === "janela_passado_horas") return n > 0 && n <= TETO_PASSADO_HORAS;
+  if (folha === "janela_passado_horas") return n >= 0 && n <= TETO_PASSADO_HORAS;
   return n > 0;
 }
 
@@ -183,7 +185,7 @@ export async function POST(req: Request): Promise<Response> {
   if (folha === undefined) return new Response("", { status: 400 });
 
   // A recusa barata vem antes do banco: o número que ele acabou de digitar é o
-  // único que esta requisição traz, e um zero não merece uma viagem ao Turso.
+  // único que esta requisição traz, e um número que mente não merece uma viagem ao Turso.
   if (!numeroQueNaoMente(folha, valor)) return new Response("", { status: 400 });
 
   const versao = await versaoAtual(getClient(), slug);

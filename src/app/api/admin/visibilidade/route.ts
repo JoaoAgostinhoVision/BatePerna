@@ -38,7 +38,7 @@ export const dynamic = "force-dynamic";
  *  escrito pra ninguém acrescentar por zelo. Esconder só REMOVE uma ficha do
  *  acervo público, e o portão de lá mede com `incluirOcultos: true` justamente
  *  porque lugar escondido volta: o acervo que a coerência vê não muda de tamanho
- *  quando alguém esconde. Rodar as treze regras aqui seria custo sem efeito
+ *  quando alguém esconde. Rodar as regras de coerência aqui seria custo sem efeito
  *  nenhum — e, pior, poderia recusar um esconder por causa de uma incoerência
  *  preexistente, travando o dono de tirar do ar um lugar que ele quer fora. */
 export async function POST(req: Request): Promise<Response> {

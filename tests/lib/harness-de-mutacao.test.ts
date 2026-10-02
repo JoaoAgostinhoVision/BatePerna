@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
  *
  *  `scripts/mutar.mjs` é o harness de mutação do `src/lib/coerencia.ts`: ele
  *  troca trechos do módulo por versões erradas e afirma que a suíte MORRE em
- *  cada troca. É ele que sustenta a frase "as 13 regras de coerência estão
+ *  cada troca. É ele que sustenta a frase "as regras de coerência estão
  *  provadas". SETE rodadas seguidas, um revisor conseguiu DESLIGAR em silêncio o
  *  portão que a rodada anterior tinha acabado de criar, sempre com os controles
  *  verdes e `exit 0` — e nas duas últimas o portão desligado era um guarda DESTE
@@ -32,7 +32,7 @@ import { describe, expect, it } from "vitest";
  *  todo número deste projeto").
  *
  *  🔴 E POR QUE ELE NÃO IMPORTA O HARNESS: `scripts/mutar.mjs` roda `main()` no
- *  fim do módulo, então `import` dele executaria a bateria inteira (34 mutações
+ *  fim do módulo, então `import` dele executaria a bateria inteira (42 mutações
  *  × a suíte). Por isso o harness ganhou `--inventario`, que imprime as TRÊS
  *  listas REAIS em JSON e sai sem mutar nada. As listas impressas são as de
  *  verdade, nunca as cravadas — se fossem as cravadas, isto compararia a lista
@@ -86,6 +86,11 @@ const MUTACOES_CRAVADAS = [
   "M12", "M13", "M14", "M15",
   "N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N9", "N10", "N11", "N12",
   "B1a", "B1b", "B2a", "B2b", "B3a", "B3b",
+  // Onda de conserto 2 da Tarefa 7 (2026-10-01): a 14ª regra (o teto) e a
+  // aceitação dos dois zeros — as provas saíram da tabela do relatório e
+  // entraram no instrumento.
+  "T1", "T2", "T3", "T4",
+  "Z1", "Z2", "Z3", "Z4",
 ];
 
 const CONTROLES_CRAVADOS = [
@@ -162,11 +167,11 @@ describe("o harness de mutação do coerencia.ts", () => {
   // arquivo: reordenar entradas não muda substância nenhuma, e um guarda que
   // fica vermelho por reordenação ensina a ignorá-lo. O que ele não perdoa é
   // entrada que SOME, entrada que APARECE e nome repetido.
-  it("tem as 34 mutações cravadas à mão, nem uma a menos", () => {
+  it("tem as 42 mutações cravadas à mão, nem uma a menos", () => {
     const { mutacoes } = inventario();
     expect([...mutacoes.map((m) => m.id)].sort()).toEqual([...MUTACOES_CRAVADAS].sort());
-    expect(mutacoes).toHaveLength(34);
-    expect(new Set(mutacoes.map((m) => m.id)).size).toBe(34);
+    expect(mutacoes).toHaveLength(42);
+    expect(new Set(mutacoes.map((m) => m.id)).size).toBe(42);
   });
 
   it("tem os 6 controles de categoria e os 16 autotestes", () => {
@@ -220,20 +225,21 @@ describe("o harness de mutação do coerencia.ts", () => {
     expect(new Set(controles.map((c) => c.afirma)).size).toBe(6);
     expect(new Set(autotestes.map((a) => a.afirma)).size).toBe(16);
     const substancias = mutacoes.map((m) => m.afirma);
-    expect(new Set(substancias).size).toBe(34);
-    // 🔴 34 de 34 desde que a TROCA entrou na substância — e aqui vai a parte
+    expect(new Set(substancias).size).toBe(42);
+    // 🔴 42 de 42 (eram 34 de 34) desde que a TROCA entrou na substância — e aqui vai a parte
     // desconfortável, medida: `N11` e `B1a` são a MESMA mutação semântica
     // (colapsam a bifurcação na linha 415, as duas escrevendo `frase: true`), e
     // o que as distingue nesta contagem é só o COMENTÁRIO dentro do `novo`. Ou
     // seja: 34 distintas aqui NÃO significa 34 trocas distintas no módulo — são
     // 33, como o docblock do harness diz. A distinção da 34ª é cosmética, está
     // escrita, e é melhor assim do que uma contagem que parece semântica e não é.
+    // (Com as 8 da onda de conserto 2: 42 distintas aqui, 41 trocas no módulo.)
     const na410 = mutacoes.filter((m) => m.afirma.includes("@415-415") && m.afirma.includes("frase: true"));
     expect([...na410.map((m) => m.id)].sort()).toEqual(["B1a", "N11"]);
   });
 
-  it("as 34 mutações mutam os arquivos que dizem mutar — 33 no módulo, 1 na página", () => {
-    // 🔴 `ARQUIVOS_ENVOLVIDOS` deriva de `MUTACOES`, e só UMA das 34 entradas
+  it("as 42 mutações mutam os arquivos que dizem mutar — 41 no módulo, 1 na página", () => {
+    // 🔴 `ARQUIVOS_ENVOLVIDOS` deriva de `MUTACOES`, e só UMA das entradas
     // muta `src/app/[slug]/page.tsx`: apagar ou repontar essa uma tira o
     // arquivo do guarda de árvore suja, em silêncio.
     const { mutacoes } = inventario();
@@ -242,7 +248,7 @@ describe("o harness de mutação do coerencia.ts", () => {
       const arquivo = m.afirma.split("@")[0];
       porArquivo[arquivo] = (porArquivo[arquivo] ?? 0) + 1;
     }
-    expect(porArquivo).toEqual({ "src/lib/coerencia.ts": 33, "src/app/[slug]/page.tsx": 1 });
+    expect(porArquivo).toEqual({ "src/lib/coerencia.ts": 41, "src/app/[slug]/page.tsx": 1 });
   });
 
   it("toda mutação declara qual teste ela mata — nenhuma com `mata` ausente ou vazio", () => {
@@ -268,9 +274,9 @@ describe("o harness de mutação do coerencia.ts", () => {
     expect(c?.afirma).toBe(CONTROLES_SUBSTANCIA["CTRL-MATA-ERRADO"]);
   });
 
-  it("mede a suíte inteira do coerencia: o piso é 51 nos dois arquivos", () => {
+  it("mede a suíte inteira do coerencia: o piso é 59 nos dois arquivos", () => {
     const { piso, arquivosDeTeste } = inventario();
-    expect(piso).toBe(51);
+    expect(piso).toBe(59);
     expect(arquivosDeTeste).toEqual([
       "tests/lib/coerencia.test.ts",
       "tests/lib/coerencia-acervo.test.ts",

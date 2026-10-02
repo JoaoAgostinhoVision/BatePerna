@@ -43,7 +43,7 @@ function recusar400(erro: unknown): Response {
  *
  *  🔴 A REDAÇÃO ANTERIOR USAVA A `frase`, E ISSO TRANCAVA O DONO DE RENOMEAR O
  *  LUGAR. Medido por um re-revisor em 2026-09-27, com requisições de verdade: o
- *  nome do lugar (`trajeto.waypoints[0].nome`) aparece na frase de **todas as 13
+ *  nome do lugar (`trajeto.waypoints[0].nome`) aparece na frase de **todas as
  *  regras** (é o `nomeDe(f)` de `coerencia.ts`). Então, numa ficha que já tinha
  *  qualquer violação preexistente, renomear o lugar mudava a frase daquela
  *  violação, a identidade deixava de casar, e o diff classificava como
@@ -95,7 +95,7 @@ function contarPares(violacoes: Violacao[]): Map<string, number> {
 /** O acervo INTEIRO como fichas, com o documento de `slug` trocado por `doc`.
  *
  *  🔴 O ACERVO INTEIRO É EXIGÊNCIA DO MÓDULO DE COERÊNCIA (P3 da rodada): duas
- *  das treze regras comparam uma ficha com as outras, e lugar escondido volta.
+ *  das regras comparam uma ficha com as outras, e lugar escondido volta.
  *
  *  ⚠️ SE `slug` NÃO ESTIVER NO MAPA, ELE ENTRA — e isto é estado impossível
  *  aqui (o `versaoAtual` lá embaixo já garantiu que existe versão deste lugar,
@@ -306,7 +306,7 @@ export async function PUT(req: Request): Promise<Response> {
   // 🔴 O PORTÃO DA COERÊNCIA — o degrau que a Tarefa 3 acrescentou, e o que ele
   // recusa é SÓ A VIOLAÇÃO QUE ESTA GRAVAÇÃO INTRODUZ.
   //
-  // As treze regras de `coerencia.ts` moravam num arquivo de teste: rodavam no
+  // As regras de `coerencia.ts` moravam num arquivo de teste: rodavam no
   // laptop, antes do deploy. Um lugar que o dono edite do celular numa terça de
   // manhã nunca passava por nenhuma. Aqui elas rodam na hora da gravação.
   //

@@ -7,6 +7,7 @@ import {
   CAIXA_VAZIA,
   COM_ESTE_NUMERO,
   JANELA_NEGATIVA,
+  JANELA_PASSADO_NEGATIVA,
   PREVENDO,
   PREVISAO_FALHOU,
   REGRA_QUE_MENTE,
@@ -58,11 +59,11 @@ export const ESPERA_PREVIA_MS = 500;
  *  lugar de decidir isso.)
  *
  *  🔴 O NÚMERO QUE MENTE É RECUSADO AQUI, E AQUI NÃO É A GARANTIA. (Desde
- *  2026-10-01 "mentir" depende do campo: a janela de previsão aceita zero, e as
- *  duas janelas têm teto — ver `recusaDe`.) São três camadas, e cada uma faz uma
+ *  2026-10-01 "mentir" depende do campo: as duas janelas aceitam zero, e as
+ *  duas têm teto — ver `recusaDe`.) São três camadas, e cada uma faz uma
  *  coisa diferente:
  *   1. ESTA, que recusa antes de qualquer viagem (`REGRA_QUE_MENTE`,
- *      `JANELA_NEGATIVA`, `ALEM_DO_PROVEDOR`) e poupa uma ida ao servidor numa
+ *      `JANELA_NEGATIVA`, `JANELA_PASSADO_NEGATIVA`, `ALEM_DO_PROVEDOR`) e poupa uma ida ao servidor numa
  *      rede de interior — há teste cravando que a rota **não foi chamada**;
  *   2. a ROTA DE PRÉVIA, que recusa com 400 pra nenhum cliente (nem um bundle
  *      velho no celular dele) conseguir uma prévia que endosse uma regra que
@@ -123,8 +124,14 @@ type Previsao =
  *  — a porta é a garantia; isto só poupa a viagem.
  *   - a janela de PREVISÃO aceita zero (decisão do João, 2026-10-01: "só olhar a
  *     chuva que já caiu") e recusa só o negativo;
- *   - as outras duas recusam zero e negativo;
+ *   - a janela do PASSADO também (decisão dele no mesmo dia, simétrica);
+ *   - o limiar recusa zero e negativo;
  *   - as duas janelas recusam acima do teto do provedor (`src/lib/weather.ts`).
+ *
+ *  ⚠️ O PAR QUE NUNCA FECHA (as DUAS janelas em zero) NÃO É RECUSADO AQUI, e não
+ *  pode ser: este editor só conhece o número da sua caixa. Quem o recusa é a
+ *  porta (409, com a frase de que o lugar nunca fecha) — e a rota de prévia, que
+ *  responde 400 e a tela diz que não conseguiu conferir.
  *  Fracionário NÃO entra — é valor que um dono pode querer de verdade.
  *
  *  ⚠️ O nome da folha sai do `campo.caminho` que o registro mandou; o editor não
@@ -134,9 +141,11 @@ function recusaDe(folha: string, n: number): string | null {
     if (n < 0) return JANELA_NEGATIVA;
     return n > TETO_PREVISAO_HORAS ? ALEM_DO_PROVEDOR : null;
   }
-  if (!(n > 0)) return REGRA_QUE_MENTE;
-  if (folha === "janela_passado_horas" && n > TETO_PASSADO_HORAS) return ALEM_DO_PROVEDOR;
-  return null;
+  if (folha === "janela_passado_horas") {
+    if (n < 0) return JANELA_PASSADO_NEGATIVA;
+    return n > TETO_PASSADO_HORAS ? ALEM_DO_PROVEDOR : null;
+  }
+  return n > 0 ? null : REGRA_QUE_MENTE;
 }
 
 export default function EditorNumeroDeMotor({ campo, valor, slug }: PropsDoEditor) {

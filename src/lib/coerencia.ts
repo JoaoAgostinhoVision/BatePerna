@@ -21,7 +21,7 @@ import type { Ficha } from "@/types/ficha";
  *  não disse — é a linha vermelha deste projeto, e este módulo passa a ser
  *  quem a guarda em tempo de execução.
  *
- *  ## 🔴 POR QUE SÃO 13 REGRAS E NÃO 15
+ *  ## 🔴 POR QUE A EXTRAÇÃO DEU 13 REGRAS E NÃO 15
  *
  *  O arquivo de teste de onde elas vieram tinha, na véspera desta extração, 15
  *  casos `it(`. **13 viraram regra aqui, e a conta fecha assim:**
@@ -466,21 +466,37 @@ const TABELA: readonly Regra[] = [
       }),
   },
   {
-    // Mata: zerar as duas janelas de chuva na ficha real — o carimbo passa a
-    // imprimir "Sem chuva nas últimas ~0h e nada previsto pras próximas ~0h", que é uma regra que
-    // nunca diz não. O zod aceita 0 de propósito (as fixtures sintéticas usam),
-    // então o guarda pertence ao ACERVO, não ao schema.
+    // Mata: zerar as duas janelas de chuva na ficha real — uma regra que não vê
+    // chuva nenhuma e nunca diz não. O zod aceita 0 de propósito (as fixtures
+    // sintéticas usam), então o guarda pertence ao ACERVO, não ao schema.
     //
     // ⚠️ UMA REGRA SÓ pros três números: é o mesmo defeito — "regra que nunca
     // fecha não é regra" — medido em campos irmãos da MESMA regra de chuva, e o
     // conserto é um só. (O nome ficou "nao-zerada" por história: desde
-    // 2026-10-01 a janela de PREVISÃO pode ser zero — ver o exame dela.)
+    // 2026-10-01 CADA janela pode ser zero sozinha — ver os exames abaixo.)
     regra: "janela-nao-zerada",
     achar: (fichas) =>
       fichas.flatMap((f) => {
         const r = f.condicao.regra;
         const achados: Achado[] = [];
-        if (!(r.janela_passado_horas > 0)) {
+        // 🔴 PASSADO ZERO É ACEITO — decisão do João, 2026-10-01, simétrica à
+        // da previsão. Medido com `avaliar` (passado 0, previsão 6, limiar 0.2):
+        // 5 mm uma hora adiante → `frio`; seco → `fresco`. A regra fecha pela
+        // previsão. Aqui sobra só o NEGATIVO (ou não-número).
+        if (!(r.janela_passado_horas >= 0)) {
+          achados.push({
+            slug: f.slug,
+            // PENDENTE: redação minha, o João ainda não leu
+            frase:
+              `A regra de chuva de ${nomeDe(f)} olha ${r.janela_passado_horas} horas pra trás, ` +
+              "e janela negativa não existe.",
+          });
+        }
+        // O PAR QUE NUNCA FECHA: passado 0 E previsão sem nada pra frente (0, ou
+        // negativa — que o exame de baixo também acusa). Medido com `avaliar`:
+        // passado 0 e previsão 0 dão `fresco` com chuva atrás E adiante. Nesse
+        // par, e só nele, a frase é verdadeira.
+        if (r.janela_passado_horas === 0 && !(r.janela_previsao_horas > 0)) {
           achados.push({
             slug: f.slug,
             // PENDENTE: redação minha, o João ainda não leu
@@ -494,7 +510,7 @@ const TABELA: readonly Regra[] = [
         // limiar 0.2): 5 mm uma hora atrás → `frio`; seco → `fresco`. A regra
         // continua fechando pelo passado, então a frase antiga ("o lugar nunca
         // fecha") era FALSA pra este caso. O que nunca fecha é previsão 0 E
-        // passado 0 — e esse par continua recusado pelo exame de cima, cuja
+        // passado 0 — e esse par é recusado pelo exame do par, logo acima, cuja
         // frase é verdadeira nele. Aqui sobra só o NEGATIVO (ou não-número).
         if (!(r.janela_previsao_horas >= 0)) {
           achados.push({
@@ -594,14 +610,20 @@ const TABELA: readonly Regra[] = [
     // 2026-10-01: a Open-Meteo recusa `forecast_days=17` e `past_days=94` com
     // 400, e a busca da tela inicial é UMA requisição pra todos os lugares com a
     // MAIOR janela do acervo (`janelaMaxima`) — então um número só tira a chuva
-    // de TODOS os lugares, não só deste. Nenhuma outra camada recusava: o schema
+    // de TODOS os lugares PÚBLICOS, não só deste. Nenhuma outra camada recusava: o schema
     // só exige finito, `janela-nao-zerada` só olha o chão.
+    //
+    // ⚠️ AS FRASES NÃO DIZEM "todos os lugares", e é subtração (onda de
+    // conserto 2, 2026-10-01): a home lê `getAllFichas`, que filtra o lugar
+    // OCULTO, então a janela de um lugar escondido não derruba ninguém enquanto
+    // ele estiver escondido. A recusa continua certa (desesconder derrubaria),
+    // mas a frase só afirma o que vale sempre: a busca é recusada.
     //
     // 🔴 OS TETOS NÃO SÃO DESTE ARQUIVO: moram em `src/lib/weather.ts`, ao lado
     // da URL que eles governam, com a medição escrita lá.
     //
     // ⚠️ É a 14ª regra e NÃO veio da extração dos testes (a tabela do topo
-    // conta 13 de lá): nasceu na onda de conserto da Tarefa 7.
+    // conta as 13 de lá): nasceu na onda de conserto da Tarefa 7.
     regra: "janela-dentro-do-provedor",
     achar: (fichas) =>
       fichas.flatMap((f) => {
@@ -614,7 +636,7 @@ const TABELA: readonly Regra[] = [
             frase:
               `A regra de chuva de ${nomeDe(f)} olha ${r.janela_previsao_horas} horas pra frente, e a ` +
               `previsão do tempo só vai até ${TETO_PREVISAO_HORAS} horas. Com esse número a busca de ` +
-              "chuva é recusada, e a tela inicial fica sem informação pra todos os lugares, não só este.",
+              "chuva é recusada.",
           });
         }
         if (r.janela_passado_horas > TETO_PASSADO_HORAS) {
@@ -624,7 +646,7 @@ const TABELA: readonly Regra[] = [
             frase:
               `A regra de chuva de ${nomeDe(f)} olha ${r.janela_passado_horas} horas pra trás, e o ` +
               `histórico de chuva só volta ${TETO_PASSADO_HORAS} horas. Com esse número a busca de ` +
-              "chuva é recusada, e a tela inicial fica sem informação pra todos os lugares, não só este.",
+              "chuva é recusada.",
           });
         }
         return achados;
