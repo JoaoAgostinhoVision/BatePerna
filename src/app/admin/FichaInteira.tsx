@@ -268,7 +268,11 @@ export const ROTULO_DO_PONTO: Record<string, string> = {
 function ehPar(valor: unknown): valor is { lat: number; lng: number } {
   if (typeof valor !== "object" || valor === null) return false;
   const p = valor as { lat?: unknown; lng?: unknown };
-  return typeof p.lat === "number" && typeof p.lng === "number";
+  // 🔴 FINITOS, não só `number` (onda de conserto 1 da Task 8, R3): `NaN` e
+  // `Infinity` são `typeof "number"`, e um par com `lng: Infinity` descia como
+  // `ponto` pro editor, cujo laço de tiles nunca terminava (medido: heap out of
+  // memory). Fora de forma, o editor cai no estado vazio.
+  return Number.isFinite(p.lat) && Number.isFinite(p.lng);
 }
 
 /** COMO CADA ESPÉCIE VIRA TEXTO. Chaveado por `EspecieCampo`, pela mesma razão
@@ -462,17 +466,19 @@ const blocosDe = (campos: readonly CampoDaFicha[]): string[] =>
 const blocoQueContem = (blocos: readonly string[], caminho: string): string | undefined =>
   blocos.find((b) => caminho.startsWith(`${b}.`));
 
-/** O PAR de um ponto do trajeto, pra a linha `.lat` dele — e só pra ela.
+/** O ÍNDICE e o PAR de um ponto do trajeto, pra a linha `.lat` dele — e só pra ela.
  *
  *  🔴 A METADE `.lat` CARREGA O MAPA DO PONTO, e o mapa precisa dos dois números
  *  pra pôr o pin; o editor não lê a ficha (é `"use client"` e só conhece a
- *  prop), então o par desce montado daqui, raso. A linha `.lng` NÃO recebe —
+ *  prop), então o par desce montado daqui, raso — com o ÍNDICE, que é o que a
+ *  porta pede pra gravar o ponto inteiro num `PUT` só. A linha `.lng` NÃO recebe —
  *  é isso que deixa um mapa por ponto, e há teste contando. `condicao.coords`
  *  também não: lá o `valor` já é o par. */
-function parDoPonto(ficha: Ficha, caminho: string): Pick<CampoNaTela, "par"> {
+function pontoDoTrajeto(ficha: Ficha, caminho: string): Pick<CampoNaTela, "ponto"> {
   if (!caminho.endsWith(".lat")) return {};
+  const indice = indiceDe(caminho);
   const ponto = lerValor(ficha, caminho.slice(0, -".lat".length));
-  return ehPar(ponto) ? { par: { lat: ponto.lat, lng: ponto.lng } } : {};
+  return indice !== null && ehPar(ponto) ? { ponto: { indice, lat: ponto.lat, lng: ponto.lng } } : {};
 }
 
 /** UM campo na tela: rótulo, o valor (ou a marca de ausente), e o instrumento
@@ -517,7 +523,7 @@ function Bloco({
     obrigatorio: campo.obrigatorio,
     ...(campo.opcoes ? { opcoes: campo.opcoes, multiplo: multiploDe(campo.caminho) } : {}),
     ...(campo.especie === "bloco" ? { folhas: folhasDoBloco(campo.caminho) } : {}),
-    ...(campo.especie === "coord" ? parDoPonto(ficha, campo.caminho) : {}),
+    ...(campo.especie === "coord" ? pontoDoTrajeto(ficha, campo.caminho) : {}),
   };
 
   return (

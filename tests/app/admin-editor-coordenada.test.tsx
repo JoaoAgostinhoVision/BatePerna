@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import FichaInteira from "@/app/admin/FichaInteira";
 import { ERRO_GRAVAR } from "@/app/admin/campos/gravar";
 import { SALVAR } from "@/app/admin/campos/palavras";
-import { MAPA_ALTURA_PX, MAPA_LARGURA_PX, MAPA_ZOOM, coordDaPosicao } from "@/lib/mapa";
+import { MAPA_ALTURA_PX, MAPA_LARGURA_PX, MAPA_ZOOM_EDITOR, TILE_PX, coordDaPosicao } from "@/lib/mapa";
 import { camposDaFicha } from "@/lib/campos-da-ficha";
 import { getAllFichas } from "@/lib/ficha";
 import type { Ficha } from "@/types/ficha";
@@ -19,21 +19,32 @@ import { bancoDeProducao } from "../banco";
  *
  *  🔴 A ESPÉCIE TEM DUAS FORMAS (A1): `condicao.coords` é o PAR `{lat,lng}`;
  *  `trajeto.waypoints.N.lat` e `.lng` são METADES. A linha `.lat` ganha o mapa
- *  (com o pin no par daquele ponto) e grava as DUAS metades em série; a linha
- *  `.lng` mostra só o número — dois mapas pro mesmo ponto seriam duas fontes.
+ *  (com o pin no par daquele ponto) e grava o ponto INTEIRO num `PUT` só, pela
+ *  forma `{slug, ponto, lat, lng}` da porta (onda de conserto 1, R1 — antes
+ *  eram dois `PUT`s em série, e uma falha no meio publicava um ponto que ninguém
+ *  escolheu); a linha `.lng` mostra só o número — dois mapas pro mesmo ponto
+ *  seriam duas fontes.
  *
  *  🔴 O PONTEIRO É DISPARADO COMO `MouseEvent` DE TIPO `pointer*`, e não por
  *  `fireEvent.pointerDown`, e isso foi MEDIDO (A5): o jsdom 25 deste repositório
  *  não tem `PointerEvent` (`typeof window.PointerEvent === "undefined"`), e o
  *  `fireEvent.pointerDown` cai no `Event` cru, que JOGA FORA `clientX`/`clientY`.
  *  O React escuta o TIPO `pointerdown` e lê `clientX` do evento nativo, então um
- *  `MouseEvent("pointerdown", {clientX})` chega inteiro. O caso "o ponteiro
- *  chega com os números" prova que não é o atalho que está sendo medido.
+ *  `MouseEvent("pointerdown", {clientX})` chega inteiro. Quem prova que os
+ *  números chegam é o caso de DIREÇÃO E FINITUDE ("arrastar pra CIMA aumenta a
+ *  latitude…"): com os números perdidos o pin não sai do lugar e ele fica
+ *  vermelho. (Esta frase citava um caso "o ponteiro chega com os números" que
+ *  nunca existiu — achado da revisão, M5.)
  *
  *  🔴 A CAIXA NA TELA TEM METADE DO TAMANHO DE LAYOUT (A7). O
  *  `getBoundingClientRect` é dublado com 240×100 pra uma caixa de layout de
  *  480×200: um editor que usasse o pixel de TELA como pixel de layout poria o
- *  pin no lugar errado, e a conta exata abaixo fica vermelha. */
+ *  pin no lugar errado, e a conta exata abaixo fica vermelha.
+ *
+ *  🔴 E SÃO DUAS CAIXAS DUBLADAS, não uma (onda 1, R6): a caixa de LAYOUT (onde
+ *  o ponteiro é convertido) e a MOLDURA que a corta (a parte que o dono vê). O
+ *  pin fica preso à interseção das duas — no celular a caixa de 480px é maior
+ *  que a tela, e um pin na parte cortada seria um pin invisível. */
 
 afterEach(() => {
   cleanup();
@@ -86,16 +97,24 @@ function lido(caminho: string): { lat: number; lng: number } {
   return c;
 }
 
-function dublarRect(el: HTMLElement): void {
+type Caixa = { left: number; top: number; width: number; height: number };
+function dublarRect(el: HTMLElement, r: Caixa = RECT): void {
   el.getBoundingClientRect = () =>
     ({
-      ...RECT,
-      x: RECT.left,
-      y: RECT.top,
-      right: RECT.left + RECT.width,
-      bottom: RECT.top + RECT.height,
+      ...r,
+      x: r.left,
+      y: r.top,
+      right: r.left + r.width,
+      bottom: r.top + r.height,
       toJSON: () => ({}),
     }) as DOMRect;
+}
+
+/** A caixa de layout E a moldura visível. Por padrão as duas são o `RECT` (a
+ *  moldura mostra a caixa inteira). */
+function dublarCaixas(mapa: HTMLElement, caixa: Caixa = RECT, moldura: Caixa = caixa): void {
+  dublarRect(mapa, caixa);
+  dublarRect(mapa.parentElement!, moldura);
 }
 
 const ponteiro = (el: HTMLElement, tipo: string, p: { clientX: number; clientY: number }): void => {
@@ -105,7 +124,7 @@ const ponteiro = (el: HTMLElement, tipo: string, p: { clientX: number; clientY: 
 /** Encosta no centro da caixa e arrasta até `ALVO`, soltando lá. */
 function arrastar(caminho: string): void {
   const mapa = mapaEm(caminho)!;
-  dublarRect(mapa);
+  dublarCaixas(mapa);
   ponteiro(mapa, "pointerdown", naTela({ x: L / 2, y: A / 2 }));
   ponteiro(mapa, "pointermove", naTela({ x: (L / 2 + ALVO.x) / 2, y: (A / 2 + ALVO.y) / 2 }));
   ponteiro(mapa, "pointermove", naTela(ALVO));
@@ -131,7 +150,7 @@ const corpos = (f: ReturnType<typeof comRota>["fetchFalso"]) =>
 /** A coordenada que o ALVO tem de virar, pela função pura — com o centro do
  *  mapa sendo o valor que está no banco. */
 const esperado = (centro: { lat: number; lng: number }) =>
-  coordDaPosicao(ALVO.x, ALVO.y, centro, MAPA_ZOOM, L, A);
+  coordDaPosicao(ALVO.x, ALVO.y, centro, MAPA_ZOOM_EDITOR, L, A);
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe("EditorCoordenada — o par `condicao.coords`", () => {
@@ -251,11 +270,10 @@ describe("EditorCoordenada — as metades de um ponto do trajeto", () => {
     expect(lido(LAT0)).not.toEqual(outra.condicao.coords);
   });
 
-  it("arrastar no ponto do trajeto não grava; salvar grava as DUAS metades, em série, com a coordenada nova", async () => {
-    let soltarPrimeiro: (r: Response) => void = () => {};
-    const { fetchFalso, reloadFalso } = comRota((n) =>
-      n === 0 ? new Promise<Response>((ok) => (soltarPrimeiro = ok)) : Promise.resolve(Response.json({ id: 2 })),
-    );
+  // 🔴 R1 DA ONDA 1: UM `PUT`, com o ponto inteiro. O teste anterior provava
+  // dois `PUT`s em série — a ruling que a revisão derrubou.
+  it("arrastar no ponto do trajeto não grava; salvar grava o ponto INTEIRO num PUT só, com a coordenada nova", async () => {
+    const { fetchFalso, reloadFalso } = comRota();
     render(<FichaInteira ficha={FICHA} />);
     arrastar(LAT0);
     expect(fetchFalso, "arrastar gravou sem o dono confirmar").not.toHaveBeenCalled();
@@ -266,26 +284,20 @@ describe("EditorCoordenada — as metades de um ponto do trajeto", () => {
     expect(mostrado.lng).toBeCloseTo(e.lng, 6);
 
     salvar(LAT0);
-    // EM SÉRIE: a longitude só sai depois que a latitude voltou
-    expect(fetchFalso).toHaveBeenCalledTimes(1);
-    soltarPrimeiro(Response.json({ id: 1 }));
     await waitFor(() => expect(reloadFalso).toHaveBeenCalled());
     expect(corpos(fetchFalso)).toEqual([
-      { url: "/api/admin/ficha", metodo: "PUT", corpo: { slug: FICHA.slug, campo: LAT0, valor: mostrado.lat } },
-      { url: "/api/admin/ficha", metodo: "PUT", corpo: { slug: FICHA.slug, campo: LNG0, valor: mostrado.lng } },
+      { url: "/api/admin/ficha", metodo: "PUT", corpo: { slug: FICHA.slug, ponto: 0, lat: mostrado.lat, lng: mostrado.lng } },
     ]);
   });
 
-  it("se a segunda metade falhar, a tela diz que não salvou e não recarrega", async () => {
-    const { fetchFalso, reloadFalso } = comRota((n) =>
-      Promise.resolve(n === 0 ? Response.json({ id: 1 }) : new Response("", { status: 500 })),
-    );
+  it("se o PUT do ponto falhar, a tela diz que não salvou e não recarrega", async () => {
+    const { fetchFalso, reloadFalso } = comRota(() => Promise.resolve(new Response("", { status: 500 })));
     render(<FichaInteira ficha={FICHA} />);
     arrastar(LAT0);
     salvar(LAT0);
     expect((await within(bloco(LAT0)).findByRole("alert")).textContent).toBe(ERRO_GRAVAR);
-    expect(fetchFalso).toHaveBeenCalledTimes(2);
-    expect(reloadFalso, "recarregou com metade do ponto gravada").not.toHaveBeenCalled();
+    expect(fetchFalso).toHaveBeenCalledTimes(1);
+    expect(reloadFalso).not.toHaveBeenCalled();
   });
 });
 
@@ -303,5 +315,144 @@ describe("EditorCoordenada — o que ele NÃO tem", () => {
       expect(el.queryByRole("textbox"), c.caminho).toBeNull();
       expect(el.queryByPlaceholderText(/buscar|endereço|procurar/i), c.caminho).toBeNull();
     }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 ONDA DE CONSERTO 1 (R4, achado I1 da revisão): O PIN E O MOSAICO NA MESMA
+// GEOMETRIA. O dono põe o pin EM CIMA DO QUE VÊ (a entrada da trilha, a ponte);
+// se o mosaico desalinhar do pin, a coordenada gravada é outra e ninguém nota.
+// Duas mutações sobreviviam à suíte inteira: tiles com `scale(1)` e tiles no zoom
+// do pin em vez do zoom dos tiles.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("EditorCoordenada — o pin está em cima do mosaico", () => {
+  /** Mercator na forma CLÁSSICA, `(1 − ln(tan φ + sec φ)/π)/2`, escrita aqui DE
+   *  PROPÓSITO: o pin é posicionado por `posicaoNaCaixa` (que usa a forma em
+   *  seno de `pontoNoMundo`), e uma prova que usasse a mesma função concordaria
+   *  consigo mesma. */
+  const mundo = (c: { lat: number; lng: number }, z: number) => {
+    const n = TILE_PX * 2 ** z;
+    const fi = (c.lat * Math.PI) / 180;
+    return {
+      x: ((c.lng + 180) / 360) * n,
+      y: ((1 - Math.log(Math.tan(fi) + 1 / Math.cos(fi)) / Math.PI) / 2) * n,
+    };
+  };
+
+  for (const caminho of [PAR, LAT0]) {
+    it(`${caminho}: depois do arrasto, o número mostrado cai no mosaico exatamente sob o pin`, () => {
+      render(<FichaInteira ficha={FICHA} />);
+      arrastar(caminho);
+      const c = lido(caminho);
+      const caixa = mapaEm(caminho)!;
+      const camada = caixa.querySelector(".adm-editor-mapa-tiles") as HTMLElement;
+      const escala = Number(/scale\(([^)]+)\)/.exec(camada.style.transform)![1]);
+      const imgs = [...camada.querySelectorAll("img")];
+      expect(imgs.length, "nenhum tile desenhado: o caso mediria o vazio").toBeGreaterThan(0);
+      // O zoom sai da URL do tile — o que o OSM de fato desenha.
+      const z = Number(/\/(\d+)\/\d+\/\d+\.png$/.exec(imgs[0].getAttribute("src")!)![1]);
+      const w = mundo(c, z);
+      const tx = Math.floor(w.x / TILE_PX);
+      const ty = Math.floor(w.y / TILE_PX);
+      const img = imgs.find((i) => i.getAttribute("src")!.endsWith(`/${z}/${tx}/${ty}.png`));
+      expect(img, `o ponto mostrado (${z}/${tx}/${ty}) não está em tile nenhum desenhado`).toBeDefined();
+      const x = (parseFloat(img!.style.left) + (w.x - tx * TILE_PX)) * escala;
+      const y = (parseFloat(img!.style.top) + (w.y - ty * TILE_PX)) * escala;
+      const pin = pinEm(caminho);
+      expect(Math.abs(x - parseFloat(pin.style.left)), "pin e mosaico desalinhados no eixo x").toBeLessThan(1);
+      expect(Math.abs(y - parseFloat(pin.style.top)), "pin e mosaico desalinhados no eixo y").toBeLessThan(1);
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 ONDA 1, R6 (achados M1, M2, M6): o pin preso à parte VISÍVEL, e o pin que só
+// anda com o dedo encostado.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("EditorCoordenada — onde o pin pode ir, e quando", () => {
+  /** O caso real do celular: a caixa de layout tem os 480px dela (rect.width ===
+   *  L) e começa 60px à esquerda da moldura, que mostra só 360px. */
+  const CAIXA = { left: -60, top: 20, width: L, height: A };
+  const MOLDURA = { left: 0, top: 20, width: 360, height: A };
+  const esperadoEm = (x: number, y: number) =>
+    coordDaPosicao(x, y, FICHA.condicao.coords, MAPA_ZOOM_EDITOR, L, A);
+
+  it("arrastar pra fora da tela prende o pin na borda VISÍVEL da caixa, nos dois lados e embaixo", () => {
+    render(<FichaInteira ficha={FICHA} />);
+    const mapa = mapaEm(PAR)!;
+    dublarCaixas(mapa, CAIXA, MOLDURA);
+    ponteiro(mapa, "pointerdown", { clientX: 180, clientY: 120 });
+
+    ponteiro(mapa, "pointermove", { clientX: 1000, clientY: 120 });
+    // borda direita VISÍVEL: clientX 360 → layout 360 − (−60) = 420, não 480
+    expect(parseFloat(pinEm(PAR).style.left)).toBeCloseTo(420, 1);
+    let c = lido(PAR);
+    expect(c.lat).toBeCloseTo(esperadoEm(420, 100).lat, 6);
+    expect(c.lng).toBeCloseTo(esperadoEm(420, 100).lng, 6);
+
+    ponteiro(mapa, "pointermove", { clientX: -500, clientY: 1000 });
+    // borda esquerda visível: clientX 0 → layout 60; embaixo: layout 200
+    expect(parseFloat(pinEm(PAR).style.left)).toBeCloseTo(60, 1);
+    expect(parseFloat(pinEm(PAR).style.top)).toBeCloseTo(A, 1);
+    c = lido(PAR);
+    expect(c.lat).toBeCloseTo(esperadoEm(60, A).lat, 6);
+    expect(c.lng).toBeCloseTo(esperadoEm(60, A).lng, 6);
+  });
+
+  it("passar o ponteiro por cima SEM encostar não move o pin", () => {
+    render(<FichaInteira ficha={FICHA} />);
+    const mapa = mapaEm(PAR)!;
+    dublarCaixas(mapa);
+    ponteiro(mapa, "pointermove", naTela(ALVO));
+    expect(lido(PAR)).toEqual(FICHA.condicao.coords);
+  });
+
+  for (const fim of ["pointerup", "pointercancel"]) {
+    it(`depois de ${fim}, mover o ponteiro não move mais o pin`, () => {
+      render(<FichaInteira ficha={FICHA} />);
+      const mapa = mapaEm(PAR)!;
+      dublarCaixas(mapa);
+      ponteiro(mapa, "pointerdown", naTela({ x: L / 2, y: A / 2 }));
+      ponteiro(mapa, fim, naTela({ x: L / 2, y: A / 2 }));
+      ponteiro(mapa, "pointermove", naTela(ALVO));
+      expect(lido(PAR)).toEqual(FICHA.condicao.coords);
+    });
+  }
+
+  it("o botão direito do mouse não põe o pin", () => {
+    render(<FichaInteira ficha={FICHA} />);
+    const mapa = mapaEm(PAR)!;
+    dublarCaixas(mapa);
+    fireEvent(mapa, new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 2, ...naTela(ALVO) }));
+    ponteiro(mapa, "pointermove", naTela(ALVO));
+    expect(lido(PAR)).toEqual(FICHA.condicao.coords);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 ONDA 1, R3 (achado M3): `typeof === "number"` aceita `NaN` e `Infinity`, e
+// `lng: Infinity` fazia o laço de tiles nunca terminar (a revisão mediu: heap
+// out of memory). Valor fora de forma cai no estado vazio, como o contrato de
+// `PropsDoEditor` promete.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("EditorCoordenada — coordenada não finita no documento", () => {
+  for (const [nome, coords] of [
+    ["lat NaN", { lat: NaN, lng: -36 }],
+    ["lat Infinity", { lat: Infinity, lng: -36 }],
+    ["lng Infinity", { lat: -8, lng: Infinity }],
+  ] as const) {
+    it(`condicao.coords com ${nome}: sem mapa e sem número, e a tela não cai`, () => {
+      const torta = { ...FICHA, condicao: { ...FICHA.condicao, coords } } as Ficha;
+      render(<FichaInteira ficha={torta} />);
+      expect(mapaEm(PAR)).toBeNull();
+      expect(atualEm(PAR)).toBe("");
+    });
+  }
+
+  it("ponto do trajeto com lng Infinity: a linha da latitude fica sem mapa", () => {
+    const wp = { ...FICHA.trajeto.waypoints[0], lng: Infinity };
+    const torta = { ...FICHA, trajeto: { ...FICHA.trajeto, waypoints: [wp] } } as Ficha;
+    render(<FichaInteira ficha={torta} />);
+    expect(mapaEm(LAT0)).toBeNull();
   });
 });

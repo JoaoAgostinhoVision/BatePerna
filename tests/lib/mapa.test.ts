@@ -7,6 +7,7 @@ import {
   MAPA_ESCALA,
   MAPA_LARGURA_PX,
   MAPA_ZOOM,
+  MAPA_ZOOM_EDITOR,
   TILE_PX,
   metrosPorPixel,
   pontoNoMundo,
@@ -579,5 +580,25 @@ describe("coordDaPosicao — o inverso de posicaoNaCaixa", () => {
     const c = coordDaPosicao(L / 2, A / 2, CENTRO, Z, L, A);
     expect(c.lat).toBeCloseTo(CENTRO.lat, 9);
     expect(c.lng).toBeCloseTo(CENTRO.lng, 9);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Task 8, onda de conserto 1 (R5): o zoom do mapa do PAINEL, que é outro.
+// Decisão do João (2026-10-01): "bem mais perto; pra chegar longe, salva e abre
+// de novo" — uns 10 a 20 m por pixel. A ficha pública continua em MAPA_ZOOM.
+describe("MAPA_ZOOM_EDITOR — o zoom de pôr o pin", () => {
+  it("na latitude do acervo (~−8°) dá entre 10 e 20 metros por pixel", () => {
+    const m = metrosPorPixel(-8, MAPA_ZOOM_EDITOR);
+    expect(m).toBeGreaterThanOrEqual(10);
+    expect(m).toBeLessThanOrEqual(20);
+  });
+
+  it("é mais perto que o da ficha pública, e os tiles dele são inteiros", () => {
+    expect(MAPA_ZOOM_EDITOR).toBeGreaterThan(MAPA_ZOOM);
+    expect(Number.isInteger(zoomDeTiles(MAPA_ZOOM_EDITOR))).toBe(true);
+    expect(zoomDeTiles(MAPA_ZOOM_EDITOR)).toBe(MAPA_ZOOM_EDITOR + Math.log2(MAPA_ESCALA));
+    // e o padrão continua sendo o da ficha pública
+    expect(zoomDeTiles()).toBe(MAPA_ZOOM + Math.log2(MAPA_ESCALA));
   });
 });

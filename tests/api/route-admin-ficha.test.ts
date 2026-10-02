@@ -1075,3 +1075,121 @@ describe("PUT /api/admin/ficha — a regra de chuva: o teto do provedor e as jan
     expect(frase).toContain("use 0");
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 O PONTO DO TRAJETO GRAVA ATÔMICO (Tarefa 8, onda de conserto 1, R1). A
+// ruling anterior mandava DOIS `PUT`s em série (`.lat` e `.lng`), e uma falha de
+// rede no meio publicava um ponto que ninguém escolheu (latitude nova com
+// longitude velha). A forma `{slug, ponto, lat, lng}` grava as duas folhas numa
+// versão só, ou nenhuma.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("PUT /api/admin/ficha — a forma `{slug, ponto, lat, lng}`", () => {
+  const NOVO = { lat: -8.123456, lng: -36.654321 };
+
+  it("grava a latitude E a longitude do ponto numa versão só, com autor painel", async () => {
+    const res = await PUT(pedido({ slug: SLUG, ponto: 0, ...NOVO }, cookieBom));
+    expect(res.status, await res.text()).toBe(200);
+    expect(await historico(c, SLUG), "duas versões: a semente e UMA nova").toHaveLength(2);
+    const atual = await versaoAtual(c, SLUG);
+    expect(atual!.autor).toBe("painel");
+    const doc = JSON.parse(atual!.doc) as Ficha;
+    expect(doc.trajeto.waypoints[0].lat).toBe(NOVO.lat);
+    expect(doc.trajeto.waypoints[0].lng).toBe(NOVO.lng);
+    // e o resto do ponto (e da ficha) não mudou
+    expect(doc.trajeto.waypoints[0].nome).toBe(ficha.trajeto.waypoints[0].nome);
+    expect(doc.condicao.coords).toEqual(ficha.condicao.coords);
+    expect(doc.voz).toBe(ficha.voz);
+  });
+
+  it("a versão nova herda a visibilidade: ponto gravado num lugar escondido não o devolve ao ar", async () => {
+    await gravarVersao(c, SLUG, JSON.stringify(ficha), "painel", AGORA + 5, true);
+    const res = await PUT(pedido({ slug: SLUG, ponto: 0, ...NOVO }, cookieBom));
+    expect(res.status, await res.text()).toBe(200);
+    expect((await versaoAtual(c, SLUG))!.oculto).toBe(true);
+  });
+
+  // Mutuamente exclusiva com as outras três formas, pela PRESENÇA da chave.
+  for (const [nome, corpo] of [
+    ["ponto + campo/valor", { ponto: 0, ...NOVO, campo: "voz", valor: "x" }],
+    ["ponto + versaoId", { ponto: 0, ...NOVO, versaoId: 1 }],
+    ["ponto + naoSei", { ponto: 0, ...NOVO, naoSei: true }],
+    ["campo/valor + lat", { campo: "trajeto.waypoints.0.lat", valor: NOVO.lat, lat: NOVO.lat }],
+    ["campo/valor + lng", { campo: "trajeto.waypoints.0.lng", valor: NOVO.lng, lng: NOVO.lng }],
+  ] as const) {
+    it(`corpo misto (${nome}): 400, e nada é gravado`, async () => {
+      const res = await PUT(pedido({ slug: SLUG, ...corpo }, cookieBom));
+      expect(res.status).toBe(400);
+      expect(await historico(c, SLUG)).toHaveLength(1);
+    });
+  }
+
+  for (const [nome, corpo] of [
+    ["sem lat", { ponto: 0, lng: NOVO.lng }],
+    ["sem lng", { ponto: 0, lat: NOVO.lat }],
+    ["sem ponto", { ...NOVO }],
+    ["ponto texto", { ponto: "0", ...NOVO }],
+    ["ponto fracionário", { ponto: 0.5, ...NOVO }],
+    ["ponto negativo", { ponto: -1, ...NOVO }],
+    ["lat texto", { ponto: 0, lat: "-8.1", lng: NOVO.lng }],
+  ] as const) {
+    it(`corpo malformado (${nome}): 400 SEM frase (a forma do corpo é da rota), e nada é gravado`, async () => {
+      const res = await PUT(pedido({ slug: SLUG, ...corpo }, cookieBom));
+      expect(res.status).toBe(400);
+      // 🔴 Corpo vazio: quem recusou foi a conferência de FORMA da rota, não a
+      // escrita lá embaixo (que recusaria `0.5` com frase própria). Sem isto, a
+      // conferência de inteiro podia sumir e o caso ficaria verde pelo motivo
+      // errado.
+      expect(await res.text()).toBe("");
+      expect(await historico(c, SLUG)).toHaveLength(1);
+    });
+  }
+
+  it("ponto que a ficha não tem: 400 COM frase, e não cria ponto", async () => {
+    const n = ficha.trajeto.waypoints.length;
+    const res = await PUT(pedido({ slug: SLUG, ponto: n, ...NOVO }, cookieBom));
+    expect(res.status).toBe(400);
+    expect((await res.text()).trim(), "a recusa tem de dizer o porquê").not.toBe("");
+    expect(await historico(c, SLUG)).toHaveLength(1);
+    expect(JSON.parse((await versaoAtual(c, SLUG))!.doc).trajeto.waypoints).toHaveLength(n);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 COORDENADA FINITA E NA FAIXA, NO SCHEMA (Tarefa 8, onda 1, R2). Até aqui
+// `{lng: 1e999}` era ACEITO, o documento gravado (`null`) não relia e o lugar
+// saía do ar — o mesmo buraco que a Task 7 fechou nos números do motor. E
+// `{lat: 200}` gravava um ponto fora do planeta.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("PUT /api/admin/ficha — coordenada fora do planeta não entra", () => {
+  const cru = (texto: string): Request =>
+    new Request("http://x/api/admin/ficha", {
+      method: "PUT",
+      headers: { cookie: `${COOKIE_ADMIN}=${cookieBom}` },
+      body: texto,
+    });
+  const LNG = -36.8;
+  const casos: [string, () => Request][] = [
+    ["par com lat 200", () => pedido({ slug: SLUG, campo: "condicao.coords", valor: { lat: 200, lng: LNG } }, cookieBom)],
+    ["par com lng 500", () => pedido({ slug: SLUG, campo: "condicao.coords", valor: { lat: -8, lng: 500 } }, cookieBom)],
+    ["par com lng 1e999", () => cru(`{"slug":"${SLUG}","campo":"condicao.coords","valor":{"lat":-8,"lng":1e999}}`)],
+    ["metade lat 200", () => pedido({ slug: SLUG, campo: "trajeto.waypoints.0.lat", valor: 200 }, cookieBom)],
+    ["metade lng 500", () => pedido({ slug: SLUG, campo: "trajeto.waypoints.0.lng", valor: 500 }, cookieBom)],
+    ["metade lat 1e999", () => cru(`{"slug":"${SLUG}","campo":"trajeto.waypoints.0.lat","valor":1e999}`)],
+    ["ponto com lat 200", () => pedido({ slug: SLUG, ponto: 0, lat: 200, lng: LNG }, cookieBom)],
+    ["ponto com lng 500", () => pedido({ slug: SLUG, ponto: 0, lat: -8, lng: 500 }, cookieBom)],
+    ["ponto com lng 1e999", () => cru(`{"slug":"${SLUG}","ponto":0,"lat":-8,"lng":1e999}`)],
+  ];
+  for (const [nome, req] of casos) {
+    it(`${nome}: recusado antes de gravar`, async () => {
+      const res = await PUT(req());
+      expect([400, 409], `status ${res.status}`).toContain(res.status);
+      expect(await historico(c, SLUG)).toHaveLength(1);
+    });
+  }
+
+  // O controle: a faixa não tranca coordenada de verdade, inclusive nas bordas.
+  it("as bordas da faixa entram (lat ±90, lng ±180)", async () => {
+    const res = await PUT(pedido({ slug: SLUG, campo: "condicao.coords", valor: { lat: -90, lng: 180 } }, cookieBom));
+    expect(res.status, await res.text()).toBe(200);
+  });
+});

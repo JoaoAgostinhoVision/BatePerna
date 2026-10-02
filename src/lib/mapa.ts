@@ -105,9 +105,23 @@ export function urlTile(t: { z: number; x: number; y: number }): string {
  *  de 2 — fora disso o zoom fica fracionário, toda URL de tile 404 e o mapa
  *  fica em branco sem erro nenhum. Exportado (em vez de inline no componente)
  *  pra esse invariante ter teste. */
-export function zoomDeTiles(): number {
-  return MAPA_ZOOM + Math.log2(MAPA_ESCALA);
+export function zoomDeTiles(z: number = MAPA_ZOOM): number {
+  return z + Math.log2(MAPA_ESCALA);
 }
+
+/** O zoom do mapa de PÔR O PIN, no painel do dono — e só lá. A ficha pública
+ *  continua em `MAPA_ZOOM` (11, ~75 m/px), que responde "onde fica".
+ *
+ *  🔴 DECISÃO DO JOÃO (2026-10-01), não minha: "bem mais perto; pra chegar
+ *  longe, salva e abre de novo" — uns 10 a 20 metros por pixel. No 11 o dedo
+ *  errava a entrada de uma trilha por dezenas de metros. Medido com
+ *  `metrosPorPixel(-8, 13)` (a latitude do acervo): **~18,9 m/px**, e a caixa
+ *  de 480px cobre ~9 km. O 14 daria ~9,5 m/px, abaixo da faixa que ele pediu.
+ *  Há teste cravando a faixa, não o número.
+ *
+ *  Os tiles seguem a mesma régua da ficha: só os que a caixa mostra
+ *  (`tilesParaCaixa`), nunca download em lote — a Tile Usage Policy do OSM. */
+export const MAPA_ZOOM_EDITOR = 13;
 
 /** Altura do mapa na home. Mais baixo que o da ficha (200px) porque aqui ele
  *  divide a tela com a decisão: o carimbo do primeiro cartão tem que nascer

@@ -2,7 +2,7 @@ import { ZodError } from "zod";
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
 import { type FichaVersao, getClient, gravarVersao, versaoAtual, versaoPorId, versoesAtuais } from "@/lib/db";
-import { aplicarCampo, campoPorCaminho, removerCampo, type ValorDeCampo } from "@/lib/campos-da-ficha";
+import { aplicarCampo, campoPorCaminho, gravarPonto, removerCampo, type ValorDeCampo } from "@/lib/campos-da-ficha";
 import { type Violacao, violacoesDoAcervo } from "@/lib/coerencia";
 import { type Ficha, fichaSchema } from "@/types/ficha";
 
@@ -137,12 +137,15 @@ function acervoComo(versoes: Map<string, FichaVersao>, slug: string, doc: string
  *  uma versão antiga). Nunca os dois juntos, nunca nenhum dos dois — as duas
  *  guardas de cima (config, sessão) valem pros dois formatos igual.
  *
- *  🔴 Task 3 da rodada do painel completo (2026-09-27): são TRÊS formatos, e a
+ *  🔴 Task 3 da rodada do painel completo (2026-09-27): eram TRÊS formatos (hoje são quatro, ver a lista), e a
  *  ordem ganhou um degrau NOVO no fim — a COERÊNCIA DO ACERVO.
  *
  *   - `{slug, campo, valor}`   — grava aquele campo
  *   - `{slug, campo, naoSei}`  — TIRA a chave (`naoSei` tem que ser `true`)
  *   - `{slug, versaoId}`       — volta a uma versão (não passa pela coerência)
+ *   - `{slug, ponto, lat, lng}` — grava a coordenada INTEIRA do ponto `ponto`
+ *     do trajeto, numa versão só (Tarefa 8, onda de conserto 1). O índice tem
+ *     de existir; passa pela coerência e herda a visibilidade como as outras.
  *
  *  ⚠️ E EXISTIA UM QUARTO, NÃO DECLARADO, que esta tarefa fecha — medido no
  *  Step 0: `{slug, campo: "piso"}`, **sem `valor` e sem `naoSei`**, gravava 200
@@ -182,8 +185,11 @@ export async function PUT(req: Request): Promise<Response> {
     valor?: unknown;
     naoSei?: unknown;
     versaoId?: unknown;
+    ponto?: unknown;
+    lat?: unknown;
+    lng?: unknown;
   };
-  const { slug, campo, valor, naoSei, versaoId } = corpo;
+  const { slug, campo, valor, naoSei, versaoId, ponto, lat, lng } = corpo;
   if (typeof slug !== "string") return new Response("", { status: 400, headers: TEXTO });
 
   // 🔴 C6 da revisão do controlador: os dois formatos são MUTUAMENTE
@@ -191,9 +197,18 @@ export async function PUT(req: Request): Promise<Response> {
   // `JSON.parse` nunca produz `undefined` como valor de chave presente — a
   // checagem lê exatamente o que chegou no corpo, não uma coincidência de
   // tipo. Nem os dois formatos juntos, nem nenhum dos dois: 400.
+  //
+  // 🔴 DESDE A TAREFA 8 (onda de conserto 1) SÃO TRÊS FAMÍLIAS DE CHAVE, e
+  // EXATAMENTE UMA tem de estar presente. A família `ponto` (`ponto`/`lat`/`lng`)
+  // grava a coordenada de um ponto do trajeto ATÔMICA. Forma nova entra aqui
+  // como mais uma linha `traz…` e mais um item da contagem — e a contagem é o
+  // que impede um corpo de pedir duas coisas de uma vez.
   const trazVersaoId = "versaoId" in corpo;
   const trazCampo = "campo" in corpo || "valor" in corpo || "naoSei" in corpo;
-  if (trazVersaoId === trazCampo) return new Response("", { status: 400, headers: TEXTO });
+  const trazPonto = "ponto" in corpo || "lat" in corpo || "lng" in corpo;
+  if ([trazVersaoId, trazCampo, trazPonto].filter(Boolean).length !== 1) {
+    return new Response("", { status: 400, headers: TEXTO });
+  }
 
   if (trazVersaoId) {
     // 🔴 M1 DA REVISÃO FINAL (2026-09-26): `typeof versaoId !== "number"`
@@ -262,29 +277,55 @@ export async function PUT(req: Request): Promise<Response> {
     return Response.json({ id }, { headers: { "cache-control": "no-store" } });
   }
 
-  // 🔴 EXATAMENTE UM DE `valor` OU `naoSei`, e é isto que fecha o quarto
-  // formato não declarado (ver o docblock). `in` e nunca `!== undefined`, pela
-  // mesma razão de `:51-54`: `{"valor": null}` é uma caixa que CHEGOU com
-  // conteúdo (e `aplicarCampo` a recusa dizendo o tipo), enquanto `valor`
-  // ausente é corpo malformado — dois consertos diferentes, e `!== undefined`
-  // os confundiria num só.
-  const trazValor = "valor" in corpo;
-  const trazNaoSei = "naoSei" in corpo;
-  if (trazValor === trazNaoSei) return new Response("", { status: 400, headers: TEXTO });
+  // 🔴 CADA FORMA DE EDIÇÃO VIRA UMA TRANSFORMAÇÃO DO DOCUMENTO ATUAL (`mudar`),
+  // e daqui pra baixo todas passam pelo MESMO caminho: a versão atual, a
+  // transformação (que estoura com frase → 400), o portão de coerência (409) e
+  // a gravação que herda a visibilidade. Forma nova (a Tarefa 10 traz
+  // `acrescentarEtapa`/`tirarEtapa`) confere a FORMA do corpo no seu ramo e
+  // devolve o seu `mudar` — nunca um caminho próprio até o banco.
+  let mudar: (doc: string) => string;
+  if (trazPonto) {
+    // 🔴 A FORMA DO CORPO, conferida aqui; a faixa e a finitude de `lat`/`lng`
+    // são do schema, que revalida o documento inteiro dentro de `gravarPonto`.
+    // `ponto` inteiro ≥ 0 pela mesma razão do `versaoId`: `1.5`, `-1` e `1e999`
+    // (que o `JSON.parse` vira `Infinity`) não são índice de nada.
+    if (
+      typeof ponto !== "number" ||
+      !Number.isInteger(ponto) ||
+      ponto < 0 ||
+      typeof lat !== "number" ||
+      typeof lng !== "number"
+    ) {
+      return new Response("", { status: 400, headers: TEXTO });
+    }
+    mudar = (doc) => gravarPonto(doc, ponto, lat, lng);
+  } else {
+    // 🔴 EXATAMENTE UM DE `valor` OU `naoSei`, e é isto que fecha o quarto
+    // formato não declarado (ver o docblock). `in` e nunca `!== undefined`, pela
+    // mesma razão de `:51-54`: `{"valor": null}` é uma caixa que CHEGOU com
+    // conteúdo (e `aplicarCampo` a recusa dizendo o tipo), enquanto `valor`
+    // ausente é corpo malformado — dois consertos diferentes, e `!== undefined`
+    // os confundiria num só.
+    const trazValor = "valor" in corpo;
+    const trazNaoSei = "naoSei" in corpo;
+    if (trazValor === trazNaoSei) return new Response("", { status: 400, headers: TEXTO });
 
-  // 🔴 `naoSei` SÓ VALE `true` — decisão desta tarefa, que o brief não tomava.
-  // Com a leitura por `in`, um corpo `{campo: "piso", naoSei: false}` pediria
-  // REMOÇÃO dizendo "não" — a tela que mandasse a bandeira desligada apagaria o
-  // campo. Falha fechada: qualquer outra coisa é 400.
-  if (trazNaoSei && naoSei !== true) return new Response("", { status: 400, headers: TEXTO });
+    // 🔴 `naoSei` SÓ VALE `true` — decisão desta tarefa, que o brief não tomava.
+    // Com a leitura por `in`, um corpo `{campo: "piso", naoSei: false}` pediria
+    // REMOÇÃO dizendo "não" — a tela que mandasse a bandeira desligada apagaria o
+    // campo. Falha fechada: qualquer outra coisa é 400.
+    if (trazNaoSei && naoSei !== true) return new Response("", { status: 400, headers: TEXTO });
 
-  // 🔴 A LISTA BRANCA saiu de `CAMPOS_EDITAVEIS = ["voz"]` e virou o registro
-  // de `campos-da-ficha.ts` (2026-09-26). O que ela guarda é o mesmo: sem ela,
-  // um corpo com `{"campo":"slug"}` renomearia o lugar e quebraria todo link
-  // que já circula. `campoPorCaminho` resolve caminho aninhado e índice de
-  // waypoint (`trajeto.waypoints.0.nome`) pelo molde do registro.
-  if (typeof campo !== "string" || campoPorCaminho(campo) === undefined) {
-    return new Response("", { status: 400, headers: TEXTO });
+    // 🔴 A LISTA BRANCA saiu de `CAMPOS_EDITAVEIS = ["voz"]` e virou o registro
+    // de `campos-da-ficha.ts` (2026-09-26). O que ela guarda é o mesmo: sem ela,
+    // um corpo com `{"campo":"slug"}` renomearia o lugar e quebraria todo link
+    // que já circula. `campoPorCaminho` resolve caminho aninhado e índice de
+    // waypoint (`trajeto.waypoints.0.nome`) pelo molde do registro.
+    if (typeof campo !== "string" || campoPorCaminho(campo) === undefined) {
+      return new Response("", { status: 400, headers: TEXTO });
+    }
+    mudar = (doc) =>
+      trazNaoSei ? removerCampo(doc, campo) : aplicarCampo(doc, campo, valor as ValorDeCampo);
   }
 
   const versao = await versaoAtual(getClient(), slug);
@@ -298,7 +339,7 @@ export async function PUT(req: Request): Promise<Response> {
   // estouro dele (valor errado, caixa vazia) é traduzido em 400 aqui.
   let novoDoc: string;
   try {
-    novoDoc = trazNaoSei ? removerCampo(versao.doc, campo) : aplicarCampo(versao.doc, campo, valor as ValorDeCampo);
+    novoDoc = mudar(versao.doc);
   } catch (erro) {
     return recusar400(erro);
   }

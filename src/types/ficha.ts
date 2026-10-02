@@ -3,10 +3,21 @@ import { PISOS } from "@/lib/piso";
 import { SEVERIDADES } from "@/lib/severidade";
 import { DIAS } from "@/lib/semana";
 
+/** 🔴 UMA COORDENADA DO PLANETA: finita e na faixa (Tarefa 8, onda de conserto
+ *  1, R2). Até 2026-10-01 era `z.number()` cru, e a revisão mediu os dois buracos
+ *  pela porta de escrita: `{lng: 1e999}` era ACEITO, o documento gravado
+ *  (`JSON.stringify(Infinity)` é `null`) não relia, e o lugar saía do ar com o
+ *  painel incapaz de abri-lo — o mesmo defeito que a Task 7 fechou com
+ *  `.finite()` nos números do motor; e `{lat: 200}` gravava um ponto fora do
+ *  planeta. Vale pra `condicao.coords` e pra todo ponto do trajeto, em toda forma
+ *  de escrita, porque mora no schema que as três portas revalidam. */
+export const latSchema = z.number().finite().min(-90).max(90);
+export const lngSchema = z.number().finite().min(-180).max(180);
+
 export const waypointSchema = z.object({
   nome: z.string(),
-  lat: z.number(),
-  lng: z.number(),
+  lat: latSchema,
+  lng: lngSchema,
   nota: z.string().optional(),
 });
 
@@ -71,7 +82,7 @@ export const regraSchema = z.object({
 });
 
 export const condicaoSchema = z.object({
-  coords: z.object({ lat: z.number(), lng: z.number() }),
+  coords: z.object({ lat: latSchema, lng: lngSchema }),
   regra: regraSchema,
   // COM QUE FORÇA esta trilha fala quando choveu. A `regra` acima diz SE
   // choveu; este campo diz o que isso significa AQUI — e são coisas diferentes,

@@ -426,6 +426,27 @@ export function aplicarCampo(docAtual: string, caminho: string, valor: ValorDeCa
   return JSON.stringify(fichaSchema.parse(escrever(atual, caminho.split("."), valor, false)));
 }
 
+/** Grava a COORDENADA INTEIRA de um ponto do trajeto — `lat` e `lng` juntas,
+ *  numa versão só — e devolve o JSON novo (Tarefa 8, onda de conserto 1, R1).
+ *
+ *  🔴 POR QUE ISTO EXISTE AO LADO DE `aplicarCampo`: o ponto guarda a
+ *  coordenada em DUAS folhas, e gravar cada uma num `PUT` deixava uma janela em
+ *  que o documento no ar tinha a latitude nova com a longitude velha — um ponto
+ *  que ninguém escolheu, publicado pela ficha `force-dynamic` na hora, se a rede
+ *  caísse entre os dois. Aqui as duas folhas entram no MESMO documento, ou
+ *  nenhuma.
+ *
+ *  O índice tem de existir: isto não cria ponto (acrescentar etapa é outra
+ *  ação, e o `escrever` recusa com frase). Faixa e finitude são do schema
+ *  (`latSchema`/`lngSchema`), que revalida o documento inteiro como em toda
+ *  forma de escrita. O `indice` chega já conferido como inteiro ≥ 0 pela rota. */
+export function gravarPonto(docAtual: string, indice: number, lat: number, lng: number): string {
+  const atual = fichaSchema.parse(JSON.parse(docAtual));
+  const base = ["trajeto", "waypoints", String(indice)];
+  const comLat = escrever(atual, [...base, "lat"], lat, false);
+  return JSON.stringify(fichaSchema.parse(escrever(comLat, [...base, "lng"], lng, false)));
+}
+
 /** O "NÃO SEI": tira a chave do documento em vez de gravar vazio, e o app
  *  passa a CALAR sobre aquilo. Campo obrigatório não tem "não sei" (§4.2).
  *  Termina na mesma porta — o documento sem a chave tem que continuar válido. */
