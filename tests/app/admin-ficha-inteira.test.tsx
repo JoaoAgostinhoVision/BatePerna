@@ -112,20 +112,26 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
   // 🔴 A TASK 6 PARTIU ESTE CASO EM DOIS, e a razão é de desenho: onde o campo
   // ganhou INSTRUMENTO, o valor mora DENTRO do controle (é o que o dono vai
   // editar) e um `<p>` ao lado diria a mesma coisa duas vezes — então ali o que
-  // se mede é o valor do controle, não o texto do bloco. Onde não há instrumento
-  // (`numero` e `coord`, Tasks 7 e 8), o `<p>` de leitura continua igual.
-  it("o VALOR de cada campo preenchido aparece DENTRO do bloco dele — em `<p>` onde não há editor", () => {
+  // se mede é o valor do controle, não o texto do bloco.
+  //
+  // 🔴 NA TASK 8 A ÚLTIMA ESPÉCIE SEM INSTRUMENTO (`coord`) GANHOU O MAPA, e este
+  // caso deixou de medir `<p>` de leitura: o número da coordenada agora mora no
+  // `coord-atual` DO EDITOR, embaixo do mapa. As três linhas `coord` têm três
+  // formas diferentes de mostrar, e as três são medidas — a `.lat` de um ponto
+  // mostra o PAR do ponto (é ela que carrega o mapa dele), a `.lng` só o número
+  // dela. O que ainda tem `<p>` (o `bloco` presente) está medido no `describe`
+  // do bloco `horario`.
+  it("o VALOR de cada campo `coord` aparece DENTRO do bloco dele, no número embaixo do mapa", () => {
     render(<FichaInteira ficha={semHorario} />);
     const lido = (caminho: string, texto: string) =>
       expect(
-        within(screen.getByTestId(`campo-${caminho}`)).getByText(texto),
+        screen.getByTestId(`campo-${caminho}`).querySelector('[data-testid="coord-atual"]')?.textContent,
         `${caminho} não mostrou o valor dentro do bloco`,
-      ).toBeTruthy();
+      ).toBe(texto);
 
-    // 🔴 `numero` SAIU DESTA LISTA NA TASK 7 e foi pro caso de baixo: o
-    // instrumento dele é um `<input type="number">`, que carrega o valor dentro
-    // de si, então um `<p>` ao lado seria duas fontes pro mesmo número.
-    lido("trajeto.waypoints.0.lat", String(semHorario.trajeto.waypoints[0].lat)); // coord metade
+    const wp = semHorario.trajeto.waypoints[0];
+    lido("trajeto.waypoints.0.lat", `${wp.lat}, ${wp.lng}`); // coord metade, com o mapa do ponto
+    lido("trajeto.waypoints.0.lng", String(wp.lng)); // coord metade, só o número
     lido(
       "condicao.coords",
       `${semHorario.condicao.coords.lat}, ${semHorario.condicao.coords.lng}`,
@@ -429,7 +435,16 @@ describe("FichaInteira — os guardas do que cresce: rótulo e CSS", () => {
   // não é detalhe de estilo, é elemento sem forma nenhuma.
   it("toda classe que esta tela usa tem regra no `admin.css`", () => {
     const css = semComentarios("admin/admin.css");
-    const { container } = render(<FichaInteira ficha={semHorario} />);
+    // 🔴 AS DUAS FICHAS, NÃO UMA (Task 8). Com `coord` ganhando editor, o
+    // `.adm-campo-valor` passou a existir SÓ no bloco `horario` PRESENTE — e
+    // `semHorario` não tem horário, então medir uma ficha só acusava a regra
+    // como morta quando ela está viva na outra. Medido: o vermelho era esse.
+    const { container } = render(
+      <>
+        <FichaInteira ficha={semHorario} />
+        <FichaInteira ficha={comHorario} />
+      </>,
+    );
     const classes = [...new Set([...container.querySelectorAll("[class]")].flatMap((e) => [...e.classList]))];
     expect(classes.length, "nenhuma classe foi lida: o teste ficaria oco").toBeGreaterThan(0);
     for (const c of classes) {

@@ -21,6 +21,7 @@ import {
   RAIO_ALVO_TOQUE_PX,
   ZOOM_MINIMO,
   ZOOM_MINIMO_HOME_COM_VOCE,
+  coordDaPosicao,
   enquadrar,
   enquadrarComVoce,
   foraDaJanela,
@@ -536,5 +537,47 @@ describe("foraDaJanela: quantas trilhas o mapa não mostra", () => {
         expect(foraDaJanela([dentro], centro, z, L, A)).toBe(0);
       });
     }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Task 8 (painel): o inverso de `posicaoNaCaixa`, que o pin arrastado usa.
+// 🔴 A prova é a IDA-E-VOLTA, nunca um valor cravado — e cada caso abaixo
+// existe porque a ida-e-volta SOZINHA deixa passar uma forma de erro.
+describe("coordDaPosicao — o inverso de posicaoNaCaixa", () => {
+  const CENTRO = { lat: -8.52, lng: -36.87 };
+  const Z = MAPA_ZOOM;
+  const L = MAPA_LARGURA_PX;
+  const A = MAPA_ALTURA_PX;
+
+  it("coordDaPosicao é o inverso exato de posicaoNaCaixa", () => {
+    for (const c of [CENTRO, { lat: -8.5, lng: -36.9 }, { lat: -8.55, lng: -36.84 }]) {
+      const p = posicaoNaCaixa(c, CENTRO, Z, L, A);
+      const volta = coordDaPosicao(p.left, p.top, CENTRO, Z, L, A);
+      expect(volta.lat).toBeCloseTo(c.lat, 6);
+      expect(volta.lng).toBeCloseTo(c.lng, 6);
+    }
+  });
+
+  // 🔴 Sem isto, uma função que devolve sempre o centro passa no caso de cima
+  // no ponto de prova que É o centro.
+  it("posições diferentes dão coordenadas diferentes", () => {
+    const a = coordDaPosicao(10, 10, CENTRO, Z, L, A);
+    const b = coordDaPosicao(200, 150, CENTRO, Z, L, A);
+    expect(a.lat).not.toBeCloseTo(b.lat, 6);
+    expect(a.lng).not.toBeCloseTo(b.lng, 6);
+  });
+
+  it("top maior é latitude MENOR, left maior é longitude MAIOR — o norte fica em cima", () => {
+    expect(coordDaPosicao(50, 10, CENTRO, Z, L, A).lat).toBeGreaterThan(coordDaPosicao(50, 190, CENTRO, Z, L, A).lat);
+    expect(coordDaPosicao(400, 50, CENTRO, Z, L, A).lng).toBeGreaterThan(coordDaPosicao(10, 50, CENTRO, Z, L, A).lng);
+  });
+
+  // 🔴 O centro da caixa é o centro do mapa, por definição. Se isto falhar,
+  // o deslocamento está trocado ou esquecido e todo pin arrastado cai torto.
+  it("o centro da caixa devolve o centro do mapa", () => {
+    const c = coordDaPosicao(L / 2, A / 2, CENTRO, Z, L, A);
+    expect(c.lat).toBeCloseTo(CENTRO.lat, 9);
+    expect(c.lng).toBeCloseTo(CENTRO.lng, 9);
   });
 });

@@ -169,3 +169,34 @@
    `.85rem` com o `line-height` padrão — reserva o espaço de exatamente uma
    linha, que é o que a frase mais curta (`Conferindo o que muda…`) ocupa. */
 .adm-editor-previsao { margin: 0; font-size: .85rem; color: #777; min-height: 1.2rem; }
+
+/* O MAPA QUE ARRASTA O PIN (Task 8, 2026-10-01). As quatro primeiras regras
+   repetem, verbatim, a geometria do mapa da ficha pública em `ficha.css`
+   (`.bp .wp-mapa`, `.wp-tiles`, `.wp-tiles-in`, `.wp-tiles-in img`): a caixa
+   de layout tem largura FIXA e fica centrada dentro de uma moldura fluida que
+   corta a sobra — no celular estreito ele vê o meio do mapa, que é onde o pin
+   nasce. Sem a cor de superfície de lá (`var(--surface-2)` não existe nesta
+   folha): o `#eee` é o fundo de "ainda não carregou". */
+.adm-editor-mapa { position: relative; overflow: hidden; background: #eee; border-radius: 8px; }
+/* 🔴 `touch-action: none` NÃO É ENFEITE: sem ele o dedo arrastando no mapa
+   rola a PÁGINA no celular e o navegador cancela o ponteiro no meio do arrasto
+   (`pointercancel`). O preço: rolar a página com o dedo em cima do mapa não
+   funciona — o mapa tem 200px de altura e o resto da tela rola normalmente. */
+.adm-editor-mapa-caixa { position: absolute; top: 0; left: 50%; overflow: hidden; touch-action: none; cursor: crosshair; }
+.adm-editor-mapa-tiles { position: absolute; top: 0; left: 0; transform-origin: 0 0; pointer-events: none; }
+.adm-editor-mapa-tiles img { position: absolute; display: block; max-width: none; width: 256px; height: 256px; }
+/* A gota do `.bp .wp-pin`, com a mesma conta de `margin-top` (a ponta cai em
+   cima da coordenada, ver o comentário lá), só que posicionada por `left`/`top`
+   em pixels — aqui o pin anda. Cor fixa: no painel não há carimbo pra repetir.
+   `pointer-events: none` pra o dedo em cima do pin continuar caindo na caixa. */
+.adm-editor-mapa-pin { position: absolute; width: 18px; height: 18px; margin: -21.7px 0 0 -9px;
+  background: #b3261e; border: 2px solid #fff; border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg); box-shadow: 0 2px 6px rgba(0,0,0,.35); pointer-events: none; }
+/* O crédito ODbL, como `.bp .wp-osm`: canto inferior direito, por cima dos tiles. */
+.adm-editor-mapa-osm { position: absolute; right: 0; bottom: 0; padding: .25rem .45rem;
+  font-size: .64rem; text-decoration: none; color: #555; background: rgba(255,255,255,.78);
+  border-top-left-radius: 6px; }
+/* O número que o dono confere: o registro de texto de apoio de
+   `.adm-editor-ajuda`, em fonte de largura fixa pra os dígitos não dançarem
+   enquanto ele arrasta. */
+.adm-editor-coord { margin: 0; font-size: .85rem; color: #777; font-variant-numeric: tabular-nums; }

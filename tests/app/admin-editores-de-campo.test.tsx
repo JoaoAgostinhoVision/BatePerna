@@ -906,7 +906,11 @@ describe("Os guardas do que cresce — registro × instrumento", () => {
   // não tem —, os dois casos cobrem o registro INTEIRO por construção, e uma
   // única asserção nomeia quais espécies ainda estão em leitura. É ela que fica
   // vermelha no dia da Task 8, e é a única linha que alguém precisa mudar.
-  const SEM_EDITOR_AINDA = ["coord"];
+  // 🔴 A TASK 8 ESVAZIOU ESTA LISTA (`coord` ganhou o mapa). Ela continua
+  // existindo porque é o lado declarado do portão da partição, lá embaixo: uma
+  // espécie nova no registro que nascer sem editor deixa aquele portão vermelho
+  // até alguém pô-la aqui, com a tarefa que a pega escrita ao lado.
+  const SEM_EDITOR_AINDA: string[] = [];
 
   /** A espécie que tem editor E `<p>` ao lado, e isso é de significado, não de
    *  estilo: com o bloco PRESENTE o `EditorBloco` não mostra caixa nenhuma (só o
@@ -914,29 +918,12 @@ describe("Os guardas do que cresce — registro × instrumento", () => {
    *  horário?" é o `<p>` com o `SIM`. Ver o `mostraOValor` do `INSTRUMENTO`. */
   const MOSTRA_O_VALOR_AO_LADO = ["bloco"];
 
-  it("espécie sem editor continua em LEITURA: o valor num `<p>`, e nenhum controle", () => {
-    render(<FichaInteira ficha={semHorario} />);
-    const semEditor = camposDaFicha(semHorario).filter((c) => SEM_EDITOR_AINDA.includes(c.especie));
-    // 🔴 Medido, não estimado: as três fichas têm UM waypoint, então são 3
-    // campos `coord` (`condicao.coords` + `lat`/`lng` da parada). O piso é o
-    // número real menos nada — ele só existe pra o laço não medir zero no dia em
-    // que a Task 8 esvaziar esta lista, e naquele dia este caso tem de morrer
-    // junto com a linha de cima, não ficar verde medindo o vazio.
-    expect(semEditor.length, "nenhum campo em leitura: o caso ficaria oco").toBe(3);
-    for (const c of semEditor) {
-      const el = bloco(c.caminho);
-      expect(
-        el.querySelector(".adm-campo-valor"),
-        `${c.caminho} perdeu o \`<p>\` de leitura e ficou sem mostrar nada`,
-      ).not.toBeNull();
-      expect(el.querySelector("[data-editor]"), `${c.caminho} ganhou editor sem decisão`).toBeNull();
-      expect(within(el).queryByRole("button"), `${c.caminho} ganhou botão`).toBeNull();
-    }
-    // e o valor está DENTRO do `<p>`, não em algum lugar da tela
-    expect(bloco("condicao.coords").querySelector(".adm-campo-valor")!.textContent).toBe(
-      `${semHorario.condicao.coords.lat}, ${semHorario.condicao.coords.lng}`,
-    );
-  });
+  // 🔴 O CASO "espécie sem editor continua em LEITURA" MORREU NA TASK 8, como o
+  // comentário dele prometia: ele existia pra provar que `coord` renderizava
+  // igual enquanto esperava o mapa, e com `SEM_EDITOR_AINDA` vazia ele mediria
+  // o vazio. O que ele guardava de verdade continua guardado: o portão da
+  // partição (mais abaixo) exige que o lado SEM editor seja EXATAMENTE a lista
+  // declarada — hoje, nenhuma espécie.
 
   it("toda espécie COM editor tem o editor dentro do bloco do campo, e nenhum `<p>` repetindo", () => {
     render(<FichaInteira ficha={comHorario} />);

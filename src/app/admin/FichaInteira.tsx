@@ -8,6 +8,7 @@ import {
 import type { Ficha } from "@/types/ficha";
 import EditorBloco from "./campos/EditorBloco";
 import EditorBooleano from "./campos/EditorBooleano";
+import EditorCoordenada from "./campos/EditorCoordenada";
 import EditorHora from "./campos/EditorHora";
 import EditorLista from "./campos/EditorLista";
 import EditorNumeroDeMotor from "./campos/EditorNumeroDeMotor";
@@ -44,10 +45,8 @@ import type { CampoNaTela, Editor } from "./campos/tipos";
  *  🔴 QUAL INSTRUMENTO CADA ESPÉCIE GANHA SAI DE UM `Record<EspecieCampo, …>`
  *  (`INSTRUMENTO`, abaixo), pela mesma razão do `MOSTRAR` e do
  *  `TITULO_DO_GRUPO`: **espécie nova no registro não compila até alguém decidir
- *  o instrumento dela.** Desde a Task 7 (2026-09-30) sobra UMA em leitura, e está
- *  escrito qual tarefa a pega — `coord`, a Task 8, o mapa que arrasta o pin. Ela
- *  renderiza exatamente como antes daquela tarefa, e há teste cravando isso: sem
- *  ele, a Task 8 herdaria uma tela que parece quebrada.
+ *  o instrumento dela.** Desde a Task 8 (2026-10-01) nenhuma sobra em leitura:
+ *  `coord`, a última, ganhou o mapa que arrasta o pin.
  *
  *  ⚠️ NENHUM TEXTO SOBRE UM LUGAR ESPECÍFICO MORA AQUI. Este componente serve
  *  os três lugares do acervo e os que vierem: tudo que ele escreve na tela é
@@ -300,9 +299,9 @@ function ehPar(valor: unknown): valor is { lat: number; lng: number } {
  *  ⚠️ NA TASK 6 O `<p>` DE LEITURA SÓ SOBRA ONDE NÃO HÁ INSTRUMENTO, ou onde o
  *  instrumento não carrega o valor (o `bloco` — ver `INSTRUMENTO` abaixo). Nos
  *  outros, quem mostra o valor é o próprio controle; um `<p>` ao lado da caixa
- *  diria a mesma coisa duas vezes. As entradas de `prosa`/`lista`/`booleano`/
- *  `hora` continuam aqui porque `bloco`, `numero` e `coord` ainda as usam e
- *  porque o `Record` é o que trava espécie nova. */
+ *  diria a mesma coisa duas vezes. Desde a Task 8 (`coord` ganhou o mapa) só o
+ *  `bloco` passa por este mapa; as outras seis entradas continuam aqui porque o
+ *  `Record` é o que trava espécie nova. */
 const MOSTRAR: Record<EspecieCampo, (valor: unknown) => string> = {
   prosa: (v) => String(v),
   hora: (v) => String(v),
@@ -419,9 +418,8 @@ export const multiploDe = (caminho: string): boolean | undefined => LISTA_MULTIP
  *  instrumento dela** — em vez de nascer sem editor, invisível, com a suíte
  *  verde.
  *
- *  `null` é "ainda só leitura", com a tarefa escrita ao lado. A que falta não é
- *  esquecimento: `coord` precisa do mapa com pin arrastado — é a Task 8, e é um
- *  componente próprio.
+ *  `null` seria "ainda só leitura", com a tarefa escrita ao lado. Desde a Task 8
+ *  nenhuma espécie está assim.
  *
  *  `mostraOValor` é o que decide se o `<p>` de leitura sai: onde o controle já
  *  traz o valor dentro dele, um `<p>` ao lado diria a mesma coisa duas vezes. O
@@ -446,7 +444,11 @@ const INSTRUMENTO: Record<EspecieCampo, { Editor: Editor; mostraOValor: boolean 
   hora: { Editor: EditorHora, mostraOValor: true },
   bloco: { Editor: EditorBloco, mostraOValor: false },
   numero: { Editor: EditorNumeroDeMotor, mostraOValor: true },
-  coord: null, // Task 8 — o mapa com o pin que se arrasta
+  // 🔴 `coord` ENTROU NA TASK 8 com `mostraOValor: true`: o editor mostra o
+  // número embaixo do mapa (é o que o dono confere), e um `<p>` ao lado seria
+  // o mesmo número duas vezes. As DUAS formas da espécie (o par e as metades
+  // de um ponto) estão no docblock do `EditorCoordenada`.
+  coord: { Editor: EditorCoordenada, mostraOValor: true },
 };
 
 /** Os caminhos de espécie `bloco` DESTA ficha, tirados do registro expandido —
@@ -459,6 +461,19 @@ const blocosDe = (campos: readonly CampoDaFicha[]): string[] =>
 /** O bloco que CONTÉM este caminho, se houver (`horario.abre` → `horario`). */
 const blocoQueContem = (blocos: readonly string[], caminho: string): string | undefined =>
   blocos.find((b) => caminho.startsWith(`${b}.`));
+
+/** O PAR de um ponto do trajeto, pra a linha `.lat` dele — e só pra ela.
+ *
+ *  🔴 A METADE `.lat` CARREGA O MAPA DO PONTO, e o mapa precisa dos dois números
+ *  pra pôr o pin; o editor não lê a ficha (é `"use client"` e só conhece a
+ *  prop), então o par desce montado daqui, raso. A linha `.lng` NÃO recebe —
+ *  é isso que deixa um mapa por ponto, e há teste contando. `condicao.coords`
+ *  também não: lá o `valor` já é o par. */
+function parDoPonto(ficha: Ficha, caminho: string): Pick<CampoNaTela, "par"> {
+  if (!caminho.endsWith(".lat")) return {};
+  const ponto = lerValor(ficha, caminho.slice(0, -".lat".length));
+  return ehPar(ponto) ? { par: { lat: ponto.lat, lng: ponto.lng } } : {};
+}
 
 /** UM campo na tela: rótulo, o valor (ou a marca de ausente), e o instrumento
  *  que grava aquele campo sozinho.
@@ -502,6 +517,7 @@ function Bloco({
     obrigatorio: campo.obrigatorio,
     ...(campo.opcoes ? { opcoes: campo.opcoes, multiplo: multiploDe(campo.caminho) } : {}),
     ...(campo.especie === "bloco" ? { folhas: folhasDoBloco(campo.caminho) } : {}),
+    ...(campo.especie === "coord" ? parDoPonto(ficha, campo.caminho) : {}),
   };
 
   return (

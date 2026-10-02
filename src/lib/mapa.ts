@@ -231,6 +231,29 @@ export function posicaoNaCaixa(
   return { left: larguraPx / 2 + (p.x - o.x), top: alturaPx / 2 + (p.y - o.y) };
 }
 
+/** O inverso exato de `posicaoNaCaixa`: um ponto da caixa, em pixels de CSS
+ *  de LAYOUT (não de tela — quem converte o ponteiro é o componente), volta a
+ *  ser coordenada. É o que o pin arrastado do painel usa (Task 8).
+ *
+ *  Não reimplementa Mercator: desfaz o deslocamento do centro e entrega o
+ *  ponto do mundo às inversas que já existem (`latDoMundo`/`lngDoMundo`).
+ *  O `z` e o tamanho têm de ser OS MESMOS com que o pin foi posicionado — é o
+ *  que faz a ida-e-volta fechar, e há teste cravando isso. */
+export function coordDaPosicao(
+  left: number,
+  top: number,
+  centro: Coord,
+  z: number,
+  larguraPx: number,
+  alturaPx: number,
+): Coord {
+  const o = pontoNoMundo(centro, z);
+  return {
+    lat: latDoMundo(o.y + (top - alturaPx / 2), z),
+    lng: lngDoMundo(o.x + (left - larguraPx / 2), z),
+  };
+}
+
 /** O zoom abaixo do qual o mapa da home para de afastar quando VOCÊ está na
  *  conta.
  *

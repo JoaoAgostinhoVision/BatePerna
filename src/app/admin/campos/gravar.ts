@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-/** A GRAVAÇÃO DE UM CAMPO, UMA VEZ SÓ — o que os cinco editores desta pasta
+/** A GRAVAÇÃO DE UM CAMPO, UMA VEZ SÓ — o que os editores desta pasta
  *  compartilham.
  *
  *  🔴 O PADRÃO ERA O DO `EditorDeVoz`, COPIADO E NÃO REINVENTADO (A8 do
@@ -38,8 +38,15 @@ export type Gravacao = {
   salvando: boolean;
   /** Manda o corpo pra porta. O corpo é montado por quem chama, porque cada
    *  espécie manda uma forma diferente (`valor` texto, `valor` lista, `valor`
-   *  objeto do bloco, `naoSei: true`) — e a porta lê exatamente o que chegou. */
-  gravar: (corpo: Record<string, unknown>) => Promise<void>;
+   *  objeto do bloco, `naoSei: true`) — e a porta lê exatamente o que chegou.
+   *
+   *  🔴 MAIS DE UM CORPO É UMA GRAVAÇÃO SÓ, EM SÉRIE (Task 8). O ponto de um
+   *  trajeto guarda a coordenada em DUAS folhas (`.lat` e `.lng`), e a porta
+   *  grava um campo por `PUT`. Cada corpo só sai depois que o anterior voltou
+   *  `ok`; a primeira recusa para a fila e mostra a frase dela, e o
+   *  `location.reload()` só acontece quando TODOS passaram — a tela nunca diz
+   *  que salvou com metade de um ponto gravada. Salvar de novo regrava tudo. */
+  gravar: (...corpos: Record<string, unknown>[]) => Promise<void>;
   /** Recusa DAQUI, sem viagem nenhuma.
    *
    *  🔴 ISTO NÃO É A GARANTIA, e a distinção importa: a garantia é a porta, que
@@ -54,18 +61,20 @@ export function usarGravacao(): Gravacao {
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
-  async function gravar(corpo: Record<string, unknown>): Promise<void> {
+  async function gravar(...corpos: Record<string, unknown>[]): Promise<void> {
     if (salvando) return;
     setErro(null);
     setSalvando(true);
     try {
-      const r = await fetch("/api/admin/ficha", { method: "PUT", body: JSON.stringify(corpo) });
-      if (r.ok) {
-        location.reload();
-        return;
+      for (const corpo of corpos) {
+        const r = await fetch("/api/admin/ficha", { method: "PUT", body: JSON.stringify(corpo) });
+        if (!r.ok) {
+          const frase = (await r.text()).trim();
+          setErro(frase === "" ? ERRO_GRAVAR : frase);
+          return;
+        }
       }
-      const frase = (await r.text()).trim();
-      setErro(frase === "" ? ERRO_GRAVAR : frase);
+      location.reload();
     } catch {
       setErro(ERRO_REDE);
     } finally {

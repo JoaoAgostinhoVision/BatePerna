@@ -46,6 +46,13 @@ export type CampoNaTela = {
    *  que `gravarBloco` espera no corpo; `caminho` é o caminho completo, pro
    *  marcador de teste. */
   folhas?: readonly { chave: string; caminho: string; rotulo: string }[];
+  /** Só pra espécie `coord`, e só na METADE `.lat` de um ponto do trajeto: o
+   *  PAR daquele ponto, montado no servidor (Task 8). A metade sozinha é um
+   *  número, e o mapa precisa dos dois pra pôr o pin; é a linha `.lat` que
+   *  carrega o mapa do ponto e grava as duas metades. A linha `.lng` NÃO recebe
+   *  isto — dois mapas pro mesmo ponto seriam duas fontes pra mesma pergunta.
+   *  `condicao.coords` também não: lá o `valor` já É o par. */
+  par?: { lat: number; lng: number };
 };
 
 /** 🔴 `valor` É `unknown` DE PROPÓSITO. Ele vem do documento que está no banco,
