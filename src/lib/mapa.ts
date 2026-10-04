@@ -112,16 +112,51 @@ export function zoomDeTiles(z: number = MAPA_ZOOM): number {
 /** O zoom do mapa de PÔR O PIN, no painel do dono — e só lá. A ficha pública
  *  continua em `MAPA_ZOOM` (11, ~75 m/px), que responde "onde fica".
  *
- *  🔴 DECISÃO DO JOÃO (2026-10-01), não minha: "bem mais perto; pra chegar
- *  longe, salva e abre de novo" — uns 10 a 20 metros por pixel. No 11 o dedo
- *  errava a entrada de uma trilha por dezenas de metros. Medido com
- *  `metrosPorPixel(-8, 13)` (a latitude do acervo): **~18,9 m/px**, e a caixa
- *  de 480px cobre ~9 km. O 14 daria ~9,5 m/px, abaixo da faixa que ele pediu.
- *  Há teste cravando a faixa, não o número.
+ *  🔴 DECISÃO DO JOÃO (2026-10-01), não minha: "bem mais perto" — uns 10 a 20
+ *  metros por pixel. No 11 o dedo errava a entrada de uma trilha por dezenas de
+ *  metros. Medido com `metrosPorPixel(-8, 13)` (a latitude do acervo): **~18,9
+ *  m/px**, e a caixa de 480px cobre ~9 km. O 14 daria ~9,5 m/px, abaixo da
+ *  faixa que ele pediu. Há teste cravando a faixa, não o número.
  *
- *  Os tiles seguem a mesma régua da ficha: só os que a caixa mostra
- *  (`tilesParaCaixa`), nunca download em lote — a Tile Usage Policy do OSM. */
+ *  🔴 DESDE A TAREFA 11f (2026-10-04) ESTE NÚMERO É O PORTÃO DO SALVAR, não o
+ *  zoom fixo do mapa. A outra metade da decisão de 10/01 — "pra chegar longe,
+ *  salva e abre de novo" — foi SUBSTITUÍDA a pedido dele ("era bom ter um mapa e
+ *  a pessoa arrastar para a localização correta"): o mapa agora anda (arrastar o
+ *  fundo) e aproxima/afasta (+/−), entre `MAPA_ZOOM_EDITOR_MIN` e
+ *  `MAPA_ZOOM_EDITOR_MAX`. A precisão que ele pediu fica pelo portão: o Salvar
+ *  só liga com a vista neste zoom ou mais perto (no z7 um dedo errado por 10 px
+ *  é ~12 km). A emenda está no arquivo de rulings versionado.
+ *
+ *  Os tiles seguem a mesma régua da ficha: só os que a vista ATUAL mostra
+ *  (`tilesParaCaixa`), pedidos quando a vista muda — nunca download em lote nem
+ *  pré-carregamento, a Tile Usage Policy do OSM. */
 export const MAPA_ZOOM_EDITOR = 13;
+
+/** O mais afastado que o mapa de pôr o pin vai, com o −. Na latitude do acervo
+ *  (~−8°), ~1,2 km/px: a caixa de 480px cobre ~580 km e o celular (~350px)
+ *  ~420 km — a região inteira em volta de um lugar, pra achar a cidade quando a
+ *  vista não começou nela. É também o piso da vista que cai no acervo
+ *  (`vistaDoAcervo`, em `src/lib/vista-do-mapa.ts`). Um JULGAMENTO, não uma
+ *  medida de aparelho: há teste cravando a largura, não o número. */
+export const MAPA_ZOOM_EDITOR_MIN = 7;
+
+/** O mais perto que o +, sem pinça, alcança: dois degraus além do portão
+ *  (~4,7 m/px). O OSM desenha até o 19, e `zoomDeTiles` soma 1 — o 15 pede
+ *  tiles do 16, que existem. */
+export const MAPA_ZOOM_EDITOR_MAX = MAPA_ZOOM_EDITOR + 2;
+
+/** Quanto o dedo pode andar, em pixels de TELA, e o gesto ainda ser um TOQUE
+ *  (que põe o pin). Passou disto, é arrasto do fundo (que move a vista e não põe
+ *  pin nenhum) — I3 da auditoria da Tarefa 11f. */
+export const TOQUE_MAX_PX = 8;
+
+/** Onde fica o MEIO da gota do pin, acima da ponta (que é a coordenada), em
+ *  pixels de layout. Sai do `.adm-editor-mapa-pin` de `admin.css`: a gota tem
+ *  18px (`box-sizing: border-box`, do preflight) e `margin-top: -21.7px`, então
+ *  o meio está a 21,7 − 9 = 12,7px acima da ponta. Há teste ligando este número
+ *  àquela regra. É do meio da GOTA VISÍVEL — e não da ponta, que o dedo tampa —
+ *  que se mede o alvo de pegar o pin (`RAIO_ALVO_TOQUE_PX`). */
+export const GOTA_ACIMA_DA_PONTA_PX = 12.7;
 
 /** Altura do mapa na home. Mais baixo que o da ficha (200px) porque aqui ele
  *  divide a tela com a decisão: o carimbo do primeiro cartão tem que nascer

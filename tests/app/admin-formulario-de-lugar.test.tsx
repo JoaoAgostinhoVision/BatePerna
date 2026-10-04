@@ -28,6 +28,17 @@ import {
 import EditorProsa from "@/app/admin/campos/EditorProsa";
 import { ERRO_REDE } from "@/app/admin/campos/gravar";
 import { HORA_VAZIA } from "@/app/admin/campos/palavras";
+import { APROXIMAR, MARQUE_NO_MAPA, VISTA_SEM_CIDADE } from "@/app/admin/campos/EditorCoordenada";
+import { ESTADO_DO_APP } from "@/lib/lugares";
+import { vistaDoAcervo } from "@/lib/vista-do-mapa";
+import {
+  MAPA_ALTURA_PX,
+  MAPA_LARGURA_PX,
+  MAPA_ZOOM,
+  MAPA_ZOOM_EDITOR,
+  coordDaPosicao,
+  zoomDeTiles,
+} from "@/lib/mapa";
 import { LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
 import { regraDe, semComentarios } from "../css";
 import { bancoVazio, semearAcervo } from "../banco";
@@ -74,7 +85,37 @@ vi.mock("@/lib/db", async (real) => ({
 
 let token: string;
 
+/** 🔴 A BUSCA DE CIDADE DA VISTA, DUBLADA (Tarefa 11f). Numa pergunta de mapa
+ *  sem ponto, a PÁGINA (servidor) pergunta ao serviço de geocoding onde fica a
+ *  cidade do rascunho — só pra saber onde a câmera começa. Aqui a resposta é de
+ *  MARCADORES, com o homônimo de outro estado PRIMEIRO, como o serviço real faz
+ *  (C2 da auditoria). Nenhum teste deste arquivo sai pra rede: o `fetch`
+ *  padrão recusa qualquer outra URL. */
+const CIDADE_NO_MAPA = { lat: -8.31, lng: -36.42 };
+const GEOCODING = {
+  results: [
+    { name: CIDADE, admin1: "Estado Marcador", country: "Brasil", latitude: -23.4, longitude: -46.6 },
+    { name: CIDADE, admin1: ESTADO_DO_APP, country: "Brasil", latitude: CIDADE_NO_MAPA.lat, longitude: CIDADE_NO_MAPA.lng },
+  ],
+};
+const ehGeocoding = (url: string): boolean => url.startsWith("https://geocoding-api.open-meteo.com/");
+let buscasDeCidade: string[] = [];
+let respostaDaCidade: () => Response = () => Response.json(GEOCODING);
+function geocodingFalso(url: string): Response {
+  buscasDeCidade.push(url);
+  return respostaDaCidade();
+}
+
 beforeEach(async () => {
+  buscasDeCidade = [];
+  respostaDaCidade = () => Response.json(GEOCODING);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => {
+      if (ehGeocoding(url)) return geocodingFalso(url);
+      throw new Error(`fetch sem dublê neste teste: ${url}`);
+    }),
+  );
   cliente = bancoVazio();
   await semearAcervo(cliente);
   notFoundFalso.mockClear();
@@ -143,6 +184,9 @@ async function comRotaDeVerdade() {
   const rota = await import("@/app/api/admin/rascunho/route");
   const chamadas: { url: string; metodo: string; corpo: Record<string, unknown> }[] = [];
   const fetchFalso = vi.fn(async (url: string, init: { method: string; body: string }) => {
+    // A busca de cidade da vista é do SERVIDOR da página, não do formulário:
+    // não entra em `chamadas` (que são o que a TELA mandou pra porta).
+    if (ehGeocoding(url)) return geocodingFalso(url);
     chamadas.push({ url, metodo: init.method, corpo: JSON.parse(init.body) });
     const req = new Request(`http://x${url}`, {
       method: init.method,
@@ -226,8 +270,14 @@ describe("/admin/novo — as perguntas", () => {
     const total = await porTodasAsTelas((n) => {
       const aqui = naTela();
       expect(aqui, `a tela ${n} não tem exatamente uma pergunta`).toHaveLength(1);
-      // 🔴 UM SALVAR POR TELA (Tarefa 11d): a lacuna que deixou o I-B passar.
-      expect(document.querySelectorAll("[data-salvar]"), `a tela ${n} (${aqui[0]}) não tem UM Salvar`).toHaveLength(1);
+      // 🔴 UM SALVAR POR TELA (Tarefa 11d): a lacuna que deixou o I-B passar. E
+      // NENHUM na de mapa sem ponto (Tarefa 11f, M4): ali o Salvar só nasce
+      // com o toque dele — antes, ele gravaria o centro da vista.
+      const salvares = campoDe(aqui[0]).especie === "coord" ? 0 : 1;
+      expect(
+        document.querySelectorAll("[data-salvar]"),
+        `a tela ${n} (${aqui[0]}) não tem ${salvares} Salvar`,
+      ).toHaveLength(salvares);
       vistas.push(aqui[0]);
       expect(screen.getByText(posicaoNaTela(n, campos.length)), `tela ${n}`).toBeTruthy();
       // e nenhum molde cru chega à tela
@@ -371,6 +421,16 @@ describe("/admin/novo — as perguntas", () => {
     await porTodasAsTelas((n, container) => {
       const [m] = naTela();
       const caixas = [...container.querySelectorAll<HTMLInputElement>("input, textarea, select")];
+      // A de mapa não tem caixa nenhuma (Tarefa 11f): o "nada pré-preenchido"
+      // dela é o mapa SEM PIN e o número vazio.
+      if (campoDe(m).especie === "coord") {
+        expect(caixas, `a tela ${n} (${m}) voltou a ter caixa de número`).toHaveLength(0);
+        expect(within(pergunta(m)).getByTestId("mapa-escolher")).toBeTruthy();
+        expect(pergunta(m).querySelector("[data-pin]"), `pin que ninguém pôs em ${m}`).toBeNull();
+        expect(within(pergunta(m)).getByTestId("coord-atual").textContent).toBe("");
+        lidas++;
+        return;
+      }
       expect(caixas.length, `a tela ${n} não tem caixa nenhuma`).toBeGreaterThan(0);
       for (const caixa of caixas) {
         lidas++;
@@ -783,51 +843,140 @@ describe("/admin/novo — responder, sair e voltar", () => {
     expect((fetchFalso.mock.calls[0] as unknown as [string])[0]).toBe("/api/admin/ficha");
   });
 
-  // A coordenada de um lugar novo NÃO tem de onde o mapa começar — e começar
-  // num ponto qualquer seria um ponto que ninguém deu, salvo com um toque. Ela
-  // entra DIGITADA (é o que o questionário pergunta: "a latitude e a
-  // longitude"), e só depois o mapa aparece, centrado no que ele digitou.
-  it("coordenada sem resposta: duas caixas de número, sem mapa; gravada, o mapa", async () => {
+  // ═════════════════════════════════════════════════════════════════════════
+  // 🔴 A COORDENADA SE MARCA NO MAPA (Tarefa 11f, pedido dele: "latitude e
+  // longitude, era bom ter um mapa e a pessoa arrastar para a localização
+  // correta — que horror"). Até a 11f ela entrava DIGITADA em duas caixas.
+  // Agora o mapa nasce SEM PIN na vista que a página calculou (a cidade do
+  // rascunho, achada só no estado do app), e o ponto é o TOQUE dele.
+  // ═════════════════════════════════════════════════════════════════════════
+
+  /** A caixa do mapa como a TELA a desenha (metade do tamanho de layout), e a
+   *  moldura mostrando-a inteira — o mesmo dublê de `admin-editor-coordenada`. */
+  const RECT = { left: 10, top: 20, width: MAPA_LARGURA_PX / 2, height: MAPA_ALTURA_PX / 2 };
+  function dublar(el: HTMLElement): void {
+    el.getBoundingClientRect = () =>
+      ({ ...RECT, x: RECT.left, y: RECT.top, right: RECT.left + RECT.width, bottom: RECT.top + RECT.height, toJSON: () => ({}) }) as DOMRect;
+  }
+  /** Um TOQUE no ponto (x, y) de LAYOUT da caixa: encosta e solta no mesmo lugar. */
+  function tocar(caminho: string, x: number, y: number): void {
+    const mapa = within(pergunta(caminho)).getByTestId("mapa-escolher");
+    dublar(mapa);
+    dublar(mapa.parentElement!);
+    const p = { clientX: RECT.left + x / 2, clientY: RECT.top + y / 2 };
+    fireEvent(mapa, new MouseEvent("pointerdown", { bubbles: true, cancelable: true, ...p }));
+    fireEvent(mapa, new MouseEvent("pointerup", { bubbles: true, cancelable: true, ...p }));
+  }
+  const numero = (caminho: string): string => within(pergunta(caminho)).getByTestId("coord-atual").textContent ?? "";
+  const salvarDe = (caminho: string): HTMLButtonElement | null =>
+    pergunta(caminho).querySelector<HTMLButtonElement>(`[data-salvar="${caminho}"]`);
+  const zoomNaTela = (caminho: string): number =>
+    Number(/\/(\d+)\/\d+\/\d+\.png$/.exec(pergunta(caminho).querySelector("img")!.getAttribute("src")!)![1]);
+  const seis = (n: number): number => Number(n.toFixed(6));
+
+  it("M4: o ponto do lugar — mapa SEM PIN na cidade dele (a de Pernambuco), sem Salvar; o toque, aproximar, Salvar grava o TOQUE", async () => {
     await lugarNovo();
-    const { chamadas } = await comRotaDeVerdade();
-    const primeira = await telaDe("trajeto.waypoints.0.lat");
-    const ponto = pergunta("trajeto.waypoints.0.lat");
-    expect(within(ponto).queryByTestId("mapa-escolher"), "um mapa sem ponto começaria num lugar inventado").toBeNull();
-    const [lat, lng] = within(ponto).getAllByRole("spinbutton");
-    fireEvent.change(lat, { target: { value: "-8.1" } });
-    fireEvent.change(lng, { target: { value: "-35.2" } });
-    fireEvent.click(within(ponto).getByRole("button", { name: /salvar/i }));
-    await waitFor(() => expect(chamadas).toHaveLength(1));
-    expect(chamadas[0].corpo).toEqual({ slug: S, ponto: 0, lat: -8.1, lng: -35.2 });
-    primeira.unmount();
-
-    const segunda = await telaDe("condicao.coords");
-    const chuva = pergunta("condicao.coords");
-    const [clat, clng] = within(chuva).getAllByRole("spinbutton");
-    fireEvent.change(clat, { target: { value: "-8.3" } });
-    fireEvent.change(clng, { target: { value: "-35.4" } });
-    fireEvent.click(within(chuva).getByRole("button", { name: /salvar/i }));
-    await waitFor(() => expect(chamadas).toHaveLength(2));
-    expect(chamadas[1].corpo).toEqual({ slug: S, campo: "condicao.coords", valor: { lat: -8.3, lng: -35.4 } });
-
-    segunda.unmount();
-    const terceira = await telaDe("trajeto.waypoints.0.lat");
-    expect(within(pergunta("trajeto.waypoints.0.lat")).getByTestId("mapa-escolher")).toBeTruthy();
-    terceira.unmount();
-    await telaDe("condicao.coords");
-    expect(within(pergunta("condicao.coords")).getByTestId("mapa-escolher")).toBeTruthy();
-  });
-
-  it("caixa de coordenada vazia não grava", async () => {
-    await lugarNovo();
-    const { fetchFalso } = await comRotaDeVerdade();
+    const { chamadas, assign } = await comRotaDeVerdade();
     await telaDe("trajeto.waypoints.0.lat");
-    const ponto = pergunta("trajeto.waypoints.0.lat");
-    fireEvent.change(within(ponto).getAllByRole("spinbutton")[0], { target: { value: "-8.1" } });
-    fireEvent.click(within(ponto).getByRole("button", { name: /salvar/i }));
-    expect(within(ponto).getByRole("alert")).toBeTruthy();
-    expect(fetchFalso).not.toHaveBeenCalled();
+    const P = "trajeto.waypoints.0.lat";
+    // sem pin, sem número, sem Salvar — e a ajuda de marcar
+    expect(pergunta(P).querySelector("[data-pin]"), "um pin que ninguém pôs").toBeNull();
+    expect(numero(P)).toBe("");
+    expect(salvarDe(P), "Salvar sem toque gravaria o centro da vista").toBeNull();
+    expect(within(pergunta(P)).getByText(MARQUE_NO_MAPA)).toBeTruthy();
+    expect(within(pergunta(P)).queryAllByRole("spinbutton"), "as caixas de número voltaram").toHaveLength(0);
+    // a vista é a CIDADE, no zoom da ficha pública — e a do estado do app, não o
+    // homônimo que veio primeiro na resposta
+    expect(buscasDeCidade).toHaveLength(1);
+    expect(new URL(buscasDeCidade[0]).searchParams.get("name")).toBe(CIDADE);
+    expect(zoomNaTela(P)).toBe(zoomDeTiles(MAPA_ZOOM));
+    tocar(P, MAPA_LARGURA_PX / 2, MAPA_ALTURA_PX / 2);
+    expect(numero(P), "o centro da vista não é a cidade de Pernambuco").toBe(
+      `${seis(CIDADE_NO_MAPA.lat)}, ${seis(CIDADE_NO_MAPA.lng)}`,
+    );
+    // o ponto de verdade é outro toque, longe do centro
+    tocar(P, 400, 40);
+    const e = coordDaPosicao(400, 40, CIDADE_NO_MAPA, MAPA_ZOOM, MAPA_LARGURA_PX, MAPA_ALTURA_PX);
+    const tocado = { lat: seis(e.lat), lng: seis(e.lng) };
+    expect(numero(P)).toBe(`${tocado.lat}, ${tocado.lng}`);
+    // afastado (z11): o Salvar existe e está desligado (C1); clicar não manda nada
+    expect(salvarDe(P)!.disabled).toBe(true);
+    fireEvent.click(salvarDe(P)!);
+    expect(chamadas).toHaveLength(0);
+    for (let z = MAPA_ZOOM; z < MAPA_ZOOM_EDITOR; z++) fireEvent.click(within(pergunta(P)).getByRole("button", { name: APROXIMAR }));
+    expect(salvarDe(P)!.disabled).toBe(false);
+    fireEvent.click(salvarDe(P)!);
+    await waitFor(() => expect(chamadas).toHaveLength(1));
+    expect(chamadas[0].corpo).toEqual({ slug: S, ponto: 0, ...tocado });
+    expect(tocado, "gravou o centro da vista").not.toEqual(CIDADE_NO_MAPA);
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(S, posDe(P) + 1)));
+    // e o rascunho tem o ponto DELE
+    const doc = JSON.parse((await lerRascunho(cliente, S))!.doc);
+    expect({ lat: doc.trajeto.waypoints[0].lat, lng: doc.trajeto.waypoints[0].lng }).toEqual(tocado);
   });
+
+  it("gravado, a pergunta volta com o pin no ponto dele, e sem buscar cidade nenhuma", async () => {
+    await lugarNovo();
+    const doc = JSON.parse(docDoLugarNovo(S, NOME, CIDADE));
+    doc.trajeto.waypoints[0] = { ...doc.trajeto.waypoints[0], lat: -8.42, lng: -36.21 };
+    await salvarRascunho(cliente, S, JSON.stringify(doc), 2);
+    await comRotaDeVerdade();
+    await telaDe("trajeto.waypoints.0.lat");
+    const P = "trajeto.waypoints.0.lat";
+    expect(pergunta(P).querySelector("[data-pin]")).not.toBeNull();
+    expect(numero(P)).toBe("-8.42, -36.21");
+    expect(zoomNaTela(P)).toBe(zoomDeTiles(MAPA_ZOOM_EDITOR));
+    expect(salvarDe(P)!.disabled).toBe(false);
+    expect(buscasDeCidade).toHaveLength(0);
+  });
+
+  // M2: a coordenada da CHUVA começa no ponto 0 que ele já marcou — sem rede.
+  it("a chuva, com o ponto 0 marcado: a vista começa NELE, perto, sem buscar a cidade; tocar e salvar grava o toque", async () => {
+    await lugarNovo();
+    const doc = JSON.parse(docDoLugarNovo(S, NOME, CIDADE));
+    const P0 = { lat: -8.42, lng: -36.21 };
+    doc.trajeto.waypoints[0] = { ...doc.trajeto.waypoints[0], ...P0 };
+    await salvarRascunho(cliente, S, JSON.stringify(doc), 2);
+    const { chamadas } = await comRotaDeVerdade();
+    await telaDe("condicao.coords");
+    const C = "condicao.coords";
+    expect(buscasDeCidade).toHaveLength(0);
+    expect(zoomNaTela(C)).toBe(zoomDeTiles(MAPA_ZOOM_EDITOR));
+    expect(salvarDe(C)).toBeNull();
+    tocar(C, 120, 150);
+    const e = coordDaPosicao(120, 150, P0, MAPA_ZOOM_EDITOR, MAPA_LARGURA_PX, MAPA_ALTURA_PX);
+    const tocado = { lat: seis(e.lat), lng: seis(e.lng) };
+    expect(salvarDe(C)!.disabled, "perto, o Salvar tinha de ligar com o toque").toBe(false);
+    fireEvent.click(salvarDe(C)!);
+    await waitFor(() => expect(chamadas).toHaveLength(1));
+    expect(chamadas[0].corpo).toEqual({ slug: S, campo: C, valor: tocado });
+    expect(tocado).not.toEqual(P0);
+  });
+
+  for (const [caso, resposta] of [
+    ["só em outro estado", () => Response.json({ results: [GEOCODING.results[0]] })],
+    ["serviço fora (503)", () => new Response("", { status: 503 })],
+  ] as const) {
+    it(`cidade não achada (${caso}): a vista cai no ACERVO, e a tela diz que não achou a cidade`, async () => {
+      respostaDaCidade = resposta;
+      await lugarNovo();
+      await comRotaDeVerdade();
+      await telaDe("trajeto.waypoints.0.lat");
+      const P = "trajeto.waypoints.0.lat";
+      expect(buscasDeCidade).toHaveLength(1);
+      expect(within(pergunta(P)).getByText(VISTA_SEM_CIDADE)).toBeTruthy();
+      expect(pergunta(P).querySelector("[data-pin]")).toBeNull();
+      expect(salvarDe(P)).toBeNull();
+      // o quadro dos lugares no ar — os do BANCO deste teste —, e não o homônimo
+      const linhas = await (await import("@/lib/db")).versoesAtuais(cliente);
+      const acervo = [...linhas.values()].map((v) => JSON.parse(v.doc).condicao.coords);
+      expect(acervo.length, "acervo vazio: o caso mediria o ramo de sem mapa").toBeGreaterThan(0);
+      const quadro = vistaDoAcervo(acervo)!;
+      expect(zoomNaTela(P)).toBe(zoomDeTiles(quadro.z));
+      tocar(P, MAPA_LARGURA_PX / 2, MAPA_ALTURA_PX / 2);
+      expect(numero(P)).toBe(`${seis(quadro.centro.lat)}, ${seis(quadro.centro.lng)}`);
+    });
+  }
 
   // A prévia do carimbo pede ao servidor o carimbo do LUGAR com o número novo;
   // um rascunho não tem lugar no ar, e a resposta seria sempre "não consegui
@@ -1008,7 +1157,10 @@ describe("/admin — a lista ganha a porta do lugar novo e a dos rascunhos", () 
 // relatório; esta é a que roda em todo `npm test`.
 describe("o bundle do celular", () => {
   const RAIZ = path.join(process.cwd(), "src");
-  const PROIBIDOS = ["@/lib/campos-da-ficha", "@/types/ficha", "zod"];
+  // `@/lib/lugares` e `@/lib/vista-do-mapa` (Tarefa 11f, I1): a vista do mapa
+  // é calculada no SERVIDOR; uma busca de cidade no celular faria a vista pular
+  // depois do toque.
+  const PROIBIDOS = ["@/lib/campos-da-ficha", "@/types/ficha", "zod", "@/lib/lugares", "@/lib/vista-do-mapa"];
 
   /** Os módulos de valor alcançáveis a partir de `inicio`, e cada especificador
    *  de import visto no caminho. */
@@ -1052,14 +1204,20 @@ describe("o bundle do celular", () => {
     // controle de não-vacuidade: o caminhante seguiu os editores de verdade
     expect(arquivos.some((a) => a.endsWith("EditorProsa.tsx")), "o caminhante não seguiu os imports").toBe(true);
     for (const p of PROIBIDOS) expect(especificadores, `o formulário de cliente alcança ${p}`).not.toContain(p);
+    // e por caminho relativo também (um `./lugares` de dentro de `src/lib/`)
+    for (const f of ["lugares.ts", "vista-do-mapa.ts"]) {
+      expect(arquivos.some((x) => x.endsWith(path.join("lib", f))), `o formulário de cliente alcança ${f}`).toBe(false);
+    }
   });
 
   // 🔴 E O CAMINHANTE ENXERGA O PROIBIDO quando ele está lá: a página de
   // servidor importa o registro (pelas perguntas), e o mesmo caminhante tem de
   // achá-lo. Sem isto, um caminhante cego passaria o caso de cima.
   it("controle: o mesmo caminhante acha o registro a partir da página de servidor", () => {
-    const { especificadores } = alcancaveis(path.join(RAIZ, "app", "admin", "novo", "page.tsx"));
+    const { arquivos, especificadores } = alcancaveis(path.join(RAIZ, "app", "admin", "novo", "page.tsx"));
     expect(especificadores).toContain("@/lib/campos-da-ficha");
+    expect(especificadores).toContain("@/lib/vista-do-mapa");
+    expect(arquivos.some((x) => x.endsWith(path.join("lib", "lugares.ts")))).toBe(true);
   });
 });
 

@@ -11,6 +11,14 @@ import {
   NOME_DO_PONTO_NOVO,
   TIRAR_MESMO,
 } from "@/app/admin/campos/EditorWaypoints";
+import {
+  AFASTAR,
+  APROXIMAR,
+  APROXIME_PRA_SALVAR,
+  MARQUE_NO_MAPA,
+  SEM_VISTA,
+  VISTA_SEM_CIDADE,
+} from "@/app/admin/campos/EditorCoordenada";
 import { ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
 import {
   ANTERIOR,
@@ -783,6 +791,48 @@ describe("EditorFaixas — o horário inteiro, a lista de faixas (Tarefa 11c)", 
     expect(corpoDe(fetchFalso)).toEqual({ slug: comHorario.slug, campo: "horario", valor: ALMOCO });
   });
 
+  // 🔴 M-1 DA REVISÃO DA 11d (ruling do orquestrador): "+ outra faixa" põe a
+  // faixa nova no FIM, e a porta recusa lista fora da ordem do dia — a de 6h–8h
+  // acrescentada depois da de 14h–17h voltava recusada, e no celular o dono teria
+  // de redigitar as duas pra trocá-las de lugar. O editor ORDENA pelo `abre`
+  // antes de gravar; a porta continua recusando lista fora de ordem que chegue
+  // por outro caminho (`tests/lib/aplicar-campo.test.ts`, "sobreposta, fora de
+  // ordem…").
+  it("faixa mais cedo acrescentada no fim: o Salvar manda a lista na ordem do dia", async () => {
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={{ ...comHorario, horario: [ALMOCO[1]] }} />);
+    fireEvent.click(mais()!);
+    fireEvent.change(caixa(1, "abre"), { target: { value: "06:00" } });
+    fireEvent.change(caixa(1, "fecha"), { target: { value: "08:00" } });
+    salvar("horario");
+    await waitFor(() => expect(fetchFalso).toHaveBeenCalled());
+    expect(corpoDe(fetchFalso).valor).toEqual([{ abre: "06:00", fecha: "08:00" }, ALMOCO[1]]);
+  });
+
+  // 🔴 M-4 DA REVISÃO DA 11d: com duas faixas, as caixas têm de dizer DE QUAL
+  // faixa são — sem o número, as quatro caixas teriam dois nomes repetidos.
+  it("com duas faixas, o nome de cada caixa diz a faixa; com uma, não há número", () => {
+    const { unmount } = render(<FichaInteira ficha={{ ...comHorario, horario: ALMOCO }} />);
+    const nomes = [caixa(0, "abre"), caixa(0, "fecha"), caixa(1, "abre"), caixa(1, "fecha")].map((c) =>
+      c.getAttribute("aria-label"),
+    );
+    expect(new Set(nomes).size, `nomes repetidos: ${nomes.join(" | ")}`).toBe(4);
+    expect(nomes.map((n) => n!.slice(-2))).toEqual([" 1", " 1", " 2", " 2"]);
+    unmount();
+    render(<FichaInteira ficha={comHorario} />);
+    expect(caixa(0, "abre").getAttribute("aria-label")).not.toMatch(/\d$/);
+  });
+
+  // 🔴 M-5 DA REVISÃO DA 11d: a ajuda das horas que entram juntas é do horário
+  // AUSENTE; com horário, as caixas já trazem as horas dele.
+  it("a ajuda 'as horas entram juntas' aparece sem horário, e só sem horário", () => {
+    const { unmount } = render(<FichaInteira ficha={semHorario} />);
+    expect(bloco("horario").querySelector(".adm-editor-ajuda")?.textContent).toBe(HORAS_JUNTAS);
+    unmount();
+    render(<FichaInteira ficha={comHorario} />);
+    expect(bloco("horario").querySelector(".adm-editor-ajuda")).toBeNull();
+  });
+
   it("do almoço pra uma faixa: tirar, um Salvar — a lista que sobrou", async () => {
     const { fetchFalso } = comRota();
     render(<FichaInteira ficha={{ ...comHorario, horario: ALMOCO }} />);
@@ -1420,6 +1470,16 @@ describe("Os editores servem os três lugares", () => {
     PROXIMA,
     RESPONDIDA,
     SEM_RESPOSTA,
+    // Tarefa 11f: o mapa de pôr o pin anda, e nasce sem pin quando não há ponto.
+    // Nas três fichas (todas com ponto) só o nome do + e do − está na tela em
+    // repouso, e como `aria-label`, não como texto; a ajuda de aproximar só
+    // depois do −; as outras três, só sem ponto (o lugar novo).
+    MARQUE_NO_MAPA,
+    APROXIME_PRA_SALVAR,
+    VISTA_SEM_CIDADE,
+    SEM_VISTA,
+    APROXIMAR,
+    AFASTAR,
   ];
 
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem

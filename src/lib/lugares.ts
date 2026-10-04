@@ -42,6 +42,34 @@ export function urlBusca(q: string): string {
   return `https://geocoding-api.open-meteo.com/v1/search?${params.toString()}`;
 }
 
+/** O ESTADO DO APP. O BatePerna é de Pernambuco: este nome é ESCOPO DO PRODUTO,
+ *  não fato de lugar nenhum. É contra ele que a vista do mapa de pôr o pin
+ *  confere a cidade achada (`cidadeNoEstado`, em `./vista-do-mapa.ts`) — a busca
+ *  devolve homônimos de outros estados ANTES do de Pernambuco (medido pela
+ *  auditoria da Tarefa 11f em 2026-10-04: o 1º resultado de três nomes de
+ *  cidade do sertão era de SP, MG e BA). É o `admin1` que o serviço devolve. */
+export const ESTADO_DO_APP = "Pernambuco";
+
+/** Quantos resultados a busca da VISTA pede. Não é o `QUANTOS` da tela
+ *  pública: lá a pessoa ESCOLHE na lista; aqui ninguém escolhe, e a cidade
+ *  certa precisa estar na lista pra ser achada. Com 5, um nome repetido em cinco
+ *  estados empurra a de Pernambuco pra fora. O serviço aceita até 100. */
+const QUANTOS_DA_VISTA = 20;
+
+/** A busca da cidade de onde o mapa de pôr o pin COMEÇA (Tarefa 11f, C2 da
+ *  auditoria): só o Brasil, e uma lista longa. É feita no SERVIDOR, e o que
+ *  ela acha é só o centro da vista — nunca um ponto gravado. */
+export function urlBuscaCidade(q: string): string {
+  const params = new URLSearchParams({
+    name: q,
+    count: String(QUANTOS_DA_VISTA),
+    language: "pt",
+    format: "json",
+    countryCode: "BR",
+  });
+  return `https://geocoding-api.open-meteo.com/v1/search?${params.toString()}`;
+}
+
 /** Só vira lugar o que tem coordenada numérica.
  *
  *  Item sem `latitude` viraria `{lat: undefined}`, e daí todo km da home sai

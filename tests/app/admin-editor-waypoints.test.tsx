@@ -9,7 +9,8 @@ import {
   tirarPonto,
 } from "@/app/admin/campos/EditorWaypoints";
 import { CAIXA_VAZIA, SALVAR } from "@/app/admin/campos/palavras";
-import { MAPA_ALTURA_PX, MAPA_LARGURA_PX } from "@/lib/mapa";
+import { AFASTAR, APROXIMAR, APROXIME_PRA_SALVAR } from "@/app/admin/campos/EditorCoordenada";
+import { MAPA_ALTURA_PX, MAPA_LARGURA_PX, MAPA_ZOOM_EDITOR, coordDaPosicao } from "@/lib/mapa";
 import { getAllFichas } from "@/lib/ficha";
 import type { Ficha } from "@/types/ficha";
 import { TRES_PONTOS, doisPontos } from "../ficha-de-tres-pontos";
@@ -168,6 +169,40 @@ describe("EditorWaypoints — acrescentar no FIM, na posição que o DONO marcou
         corpo: { slug: TRES_PONTOS.slug, acrescentarEtapa: { nome: "Quarto ponto", lat: marcado.lat, lng: marcado.lng } },
       },
     ]);
+  });
+
+  // 🔴 TAREFA 11f (m6 da auditoria): o mapa do ponto novo é o MESMO que anda —
+  // um toque leva o pin, e o portão do Salvar vale aqui também (C1): afastado,
+  // o ponto se marca mas não se confirma.
+  it("o toque leva o pin; afastado, o Salvar desliga e diz pra aproximar; perto de novo, confirma o ponto do toque", async () => {
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={TRES_PONTOS} />);
+    abrir();
+    fireEvent.change(caixa(), { target: { value: "Quarto ponto" } });
+    const mapa = editor().querySelector<HTMLElement>('[data-testid="mapa-escolher"]')!;
+    dublarRect(mapa);
+    dublarRect(mapa.parentElement!);
+    fireEvent.click(within(editor()).getByRole("button", { name: AFASTAR }));
+    ponteiro(mapa, "pointerdown", 400, 30);
+    ponteiro(mapa, "pointerup", 402, 31);
+    const u = ultimoDe(TRES_PONTOS);
+    const e = coordDaPosicao(402, 31, { lat: u.lat, lng: u.lng }, MAPA_ZOOM_EDITOR - 1, L, A);
+    expect(lido().lat).toBeCloseTo(e.lat, 6);
+    expect(lido().lng).toBeCloseTo(e.lng, 6);
+    const salvarBotao = within(editor()).getByRole("button", { name: SALVAR }) as HTMLButtonElement;
+    expect(salvarBotao.disabled, "afastado, o ponto novo continuou confirmável").toBe(true);
+    expect(within(editor()).getByText(APROXIME_PRA_SALVAR)).toBeTruthy();
+    confirmar();
+    expect(fetchFalso).not.toHaveBeenCalled();
+    fireEvent.click(within(editor()).getByRole("button", { name: APROXIMAR }));
+    expect(salvarBotao.disabled).toBe(false);
+    const marcado = lido();
+    confirmar();
+    await waitFor(() => expect(fetchFalso).toHaveBeenCalledTimes(1));
+    expect(corpos(fetchFalso)[0].corpo).toEqual({
+      slug: TRES_PONTOS.slug,
+      acrescentarEtapa: { nome: "Quarto ponto", lat: marcado.lat, lng: marcado.lng },
+    });
   });
 
   // Confirmar sem mexer é o DONO afirmando aquela posição — aceito, sem

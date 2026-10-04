@@ -6,6 +6,7 @@ import {
   type GrupoDaFicha,
 } from "@/lib/campos-da-ficha";
 import { Fragment } from "react";
+import { vistaNoPonto0 } from "@/lib/vista-do-mapa";
 import type { Ficha } from "@/types/ficha";
 import EditorFaixas from "./campos/EditorFaixas";
 import EditorBooleano from "./campos/EditorBooleano";
@@ -14,7 +15,7 @@ import EditorLista from "./campos/EditorLista";
 import EditorNumeroDeMotor from "./campos/EditorNumeroDeMotor";
 import EditorProsa from "./campos/EditorProsa";
 import EditorWaypoints from "./campos/EditorWaypoints";
-import type { CampoNaTela, Editor } from "./campos/tipos";
+import type { CampoNaTela, Editor, VistaNaTela } from "./campos/tipos";
 
 /** A FICHA INTEIRA NA TELA DO DONO (Task 5, 2026-09-27) — e desde a Task 6
  *  (2026-09-30) com o editor de cada espécie dentro do bloco do campo.
@@ -261,7 +262,8 @@ function ehPar(valor: unknown): valor is { lat: number; lng: number } {
   // 🔴 FINITOS, não só `number` (onda de conserto 1 da Task 8, R3): `NaN` e
   // `Infinity` são `typeof "number"`, e um par com `lng: Infinity` descia como
   // `ponto` pro editor, cujo laço de tiles nunca terminava (medido: heap out of
-  // memory). Fora de forma, o editor cai no estado vazio.
+  // memory). Fora de forma, não é ponto: o editor mostra o mapa SEM PIN, na
+  // vista que o servidor mandou (Tarefa 11f), e o mosaico sai da vista.
   return Number.isFinite(p.lat) && Number.isFinite(p.lng);
 }
 
@@ -409,6 +411,26 @@ function pontoDoTrajeto(ficha: Ficha, caminho: string): Pick<CampoNaTela, "ponto
   return indice !== null && ehPar(ponto) ? { ponto: { indice, lat: ponto.lat, lng: ponto.lng } } : {};
 }
 
+/** A LINHA DE MAPA SEM PONTO (Tarefa 11f, m5 da auditoria): o par da chuva que
+ *  não é par finito, ou a linha `.lat` de um ponto do trajeto cujo par não é.
+ *  O schema não deixa isto chegar (JSON não tem `NaN` nem `Infinity`), e é por
+ *  isso que a página só busca a vista quando esta conta diz que precisa —
+ *  nenhuma ida ao serviço de geocoding pra abrir uma ficha sã. */
+function semPonto(ficha: Ficha, campo: CampoDaFicha, caminho: string): boolean {
+  if (campo.especie !== "coord" || caminho.endsWith(".lng")) return false;
+  if (caminho.endsWith(".lat")) return pontoDoTrajeto(ficha, caminho).ponto === undefined;
+  return !ehPar(lerValor(ficha, caminho));
+}
+
+/** Se ALGUMA linha de mapa desta ficha está sem ponto — e a página precisa de
+ *  uma vista pra ela (`vistaSemPonto`). Pra a coordenada da chuva com o ponto 0
+ *  bom a vista sai dele, sem rede, e isto não conta. */
+export function precisaDeVista(ficha: Ficha): boolean {
+  return camposDaFicha(ficha).some(
+    (c) => semPonto(ficha, c, c.caminho) && vistaNoPonto0(ficha, c.caminho) === null,
+  );
+}
+
 /** UM campo na tela: rótulo, a marca de ausente quando o campo não está no
  *  documento, e o instrumento que grava aquele campo sozinho.
  *
@@ -425,7 +447,7 @@ function pontoDoTrajeto(ficha: Ficha, caminho: string): Pick<CampoNaTela, "ponto
  *  ⚠️ Até a Tarefa 11d havia aqui o caso da FOLHA DE UM BLOCO AUSENTE, que não
  *  ganhava editor (a porta recusava `horario.abre` sozinho). O bloco saiu; toda
  *  entrada do registro tem instrumento. */
-function Bloco({ ficha, campo }: { ficha: Ficha; campo: CampoDaFicha }) {
+function Bloco({ ficha, campo, vistaSemPonto }: { ficha: Ficha; campo: CampoDaFicha; vistaSemPonto?: VistaNaTela }) {
   const valor = lerValor(ficha, campo.caminho);
   const ausente = valor === undefined;
   const Instrumento = INSTRUMENTO[campo.especie];
@@ -437,6 +459,12 @@ function Bloco({ ficha, campo }: { ficha: Ficha; campo: CampoDaFicha }) {
     ...(campo.opcoes ? { opcoes: campo.opcoes, multiplo: multiploDe(campo.caminho) } : {}),
     ...(campo.especie === "coord" ? pontoDoTrajeto(ficha, campo.caminho) : {}),
   };
+  // Sem ponto, a vista: o ponto 0 pra a chuva (sem rede), ou a que a página
+  // buscou pela cidade. Só vista — o mapa nasce sem pin.
+  if (semPonto(ficha, campo, campo.caminho)) {
+    const vista = vistaNoPonto0(ficha, campo.caminho) ?? vistaSemPonto;
+    if (vista) naTela.vista = vista;
+  }
 
   return (
     <div
@@ -453,7 +481,15 @@ function Bloco({ ficha, campo }: { ficha: Ficha; campo: CampoDaFicha }) {
   );
 }
 
-export default function FichaInteira({ ficha }: { ficha: Ficha }) {
+export default function FichaInteira({
+  ficha,
+  vistaSemPonto,
+}: {
+  ficha: Ficha;
+  /** De onde o mapa de uma coordenada SEM PONTO começa (Tarefa 11f) — só
+   *  quando `precisaDeVista(ficha)`. Calculada pela página (`vista-do-mapa`). */
+  vistaSemPonto?: VistaNaTela;
+}) {
   const campos = camposDaFicha(ficha);
   // Os grupos SAEM DOS CAMPOS DESTA FICHA, na ordem em que o registro os
   // declara — nunca de uma lista de grupos escrita aqui. Duas consequências
@@ -481,7 +517,7 @@ export default function FichaInteira({ ficha }: { ficha: Ficha }) {
             .filter((c) => c.grupo === g)
             .map((c) => (
               <Fragment key={c.caminho}>
-                <Bloco ficha={ficha} campo={c} />
+                <Bloco ficha={ficha} campo={c} vistaSemPonto={vistaSemPonto} />
                 {c.caminho === ultimoDoTrajeto && (
                   <EditorWaypoints
                     slug={ficha.slug}

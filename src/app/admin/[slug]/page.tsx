@@ -10,7 +10,8 @@ import { comPrazo } from "@/lib/cache-rotas";
 import { avisoVigente, getClient, historico, type AvisoLinha, type FichaVersao } from "@/lib/db";
 import CaixaDeSenha from "../CaixaDeSenha";
 import BotaoVisibilidade from "../BotaoVisibilidade";
-import FichaInteira, { rotuloDe } from "../FichaInteira";
+import { FONTES_DE_PRODUCAO, vistaDaCidade } from "@/lib/vista-do-mapa";
+import FichaInteira, { precisaDeVista, rotuloDe } from "../FichaInteira";
 import HistoricoDaFicha, { type VersaoNaTela } from "../HistoricoDaFicha";
 import PainelAdmin from "../PainelAdmin";
 import "../admin.css";
@@ -134,6 +135,9 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
   const { ficha, oculto } = doDono;
 
   const agora = Math.floor(Date.now() / 1000);
+  // 🔴 SÓ COM UMA LINHA DE MAPA SEM PONTO (Tarefa 11f, m5): o schema não deixa
+  // isso chegar, e uma ficha sã abre sem ir ao serviço de geocoding.
+  const vistaSemPonto = precisaDeVista(ficha) ? await vistaDaCidade(ficha, FONTES_DE_PRODUCAO) : null;
   const [leitura, { aviso, erro: avisoErro }, { versoes: linhas, erro: historicoErro }] = await Promise.all([
     resolverEstado(ficha),
     lerAvisoVigente(slug, agora),
@@ -162,7 +166,7 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
           `voz` passou a ser editada dentro do bloco `campo-voz` da ficha
           inteira, pelo `EditorProsa`, como qualquer outro campo de prosa. Não
           há mais um componente de tela pra um campo só. */}
-      <FichaInteira ficha={ficha} />
+      <FichaInteira ficha={ficha} vistaSemPonto={vistaSemPonto ?? undefined} />
       {historicoErro && <p className="adm-erro" role="alert">{HISTORICO_ERRO_LEITURA}</p>}
       <HistoricoDaFicha versoes={versoes} />
     </main>

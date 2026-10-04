@@ -127,6 +127,36 @@ as perguntas respondidas, e conta UM Salvar por tela.
 *Custo se errada:* um instrumento a mais pra manter que sabe acrescentar e tirar faixa. O inverso é
 o dono corrigir as duas horas, ver a tela andar, e o app publicar a hora que ele quis trocar.
 
+**RULING DA TAREFA 11f (2026-10-04) — o mapa de pôr o pin ANDA, e a coordenada se MARCA nele; a
+primeira ruling escrita aqui sobre o mapa.** A decisão anterior dele sobre este mapa nunca esteve
+neste arquivo: ela mora em `src/lib/mapa.ts` (o docblock de `MAPA_ZOOM_EDITOR`), em
+`tests/lib/mapa.test.ts` ("MAPA_ZOOM_EDITOR — o zoom de pôr o pin") e no brief da onda de conserto 1
+da Tarefa 8 (fora do git). Em 2026-10-01 ele decidiu *"bem mais perto; pra chegar longe, salva e abre
+de novo"* — uns 10 a 20 m por pixel, porque no zoom 11 o dedo errava a entrada de uma trilha por
+dezenas de metros. A decisão tem DUAS metades, e esta ruling trata cada uma:
+1. **A precisão FICA**, agora como PORTÃO: o mapa aproxima e afasta (+/−, do 7 ao 15), mas o
+   Salvar só liga com a vista no `MAPA_ZOOM_EDITOR` (13, ~19 m/px) ou mais perto. Afastado, o pin
+   se põe e se arrasta, e a tela diz pra aproximar. Vale na ficha no ar, no lugar novo e no ponto
+   novo do trajeto. Sem o portão, um toque no z7 gravaria um ponto a quilômetros (~1,2 km/px).
+2. **"Pra chegar longe, salva e abre de novo" é SUBSTITUÍDO** — era o custo que ele aceitou, e o
+   arrastar da vista o elimina. Pedido dele em 2026-10-04, ao ver o lugar novo pedir latitude e
+   longitude digitadas: *"dios mio, latitude e longitude, era bom ter um mapa e a pessoa arrastar
+   para a localização correta — que horror"*.
+E com isso: a coordenada SEM ponto (o lugar novo) deixa de entrar digitada — é o mesmo mapa,
+nascendo SEM PIN numa vista calculada no servidor (a cidade do lugar, achada só com nome igual e no
+estado de Pernambuco; pra a coordenada da chuva, o ponto 0 que ele já marcou; senão o quadro do
+acervo no ar), e o ponto é o TOQUE dele. Antes do toque não há pin nem Salvar: a vista nunca é
+gravada. Os gestos: dedo na gota (22 px de tela) arrasta o pin pelo deslocamento, sem salto; dedo
+no fundo arrastado mais de 8 px move a vista; soltar com até 8 px é toque, e leva o pin (também com
+o pin já posto). Os tiles do painel saem só da vista atual e não entram no cache offline das
+fichas. As perguntas do questionário que pedem *"a latitude e a longitude"* NÃO mudaram (o teste
+do questionário as protege): a instrução de marcar mora na linha de ajuda, e a redação das duas
+perguntas é decisão dele. Os achados que moldaram isto estão em `task-11f-auditoria.md` (C1, C2,
+I1–I10), fora do git.
+*Custo se errada:* um mapa mais complexo de manter (dois gestos e um portão), e uma busca de cidade
+no servidor por abertura de pergunta de mapa sem ponto. O inverso é ele digitar números que ninguém
+confere, ou um toque afastado publicar um ponto a quilômetros do lugar.
+
 **C1 da Tarefa 2 — `undefined` é SILÊNCIO, e uma regra de coerência nunca afirma o que o dono
 declarou.**
 `prosa-bate-com-piso` acusava ficha **sem** `piso` (que é opcional de propósito): ausente, o campo

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { MapaDoPin } from "./EditorCoordenada";
+import { MAPA_ZOOM_EDITOR } from "@/lib/mapa";
+import { APROXIME_PRA_SALVAR, MapaDoPin, pertoPraSalvar } from "./EditorCoordenada";
 import { usarGravacao } from "./gravar";
 import { CAIXA_VAZIA, SALVANDO, SALVAR } from "./palavras";
 
@@ -36,7 +37,14 @@ import { CAIXA_VAZIA, SALVANDO, SALVAR } from "./palavras";
  *  posição do último chegam por PROP, montados por `FichaInteira` — o mesmo
  *  contrato de `./tipos.ts`: nenhum editor importa `@/lib/campos-da-ficha`, que
  *  traria o zod pro celular. O `ultimo` é só ONDE O MAPA COMEÇA; ele só vira
- *  dado se o dono confirmar o pin ali. */
+ *  dado se o dono confirmar o pin ali.
+ *
+ *  🔴 O MAPA ANDA DESDE A TAREFA 11f (m6 da auditoria): o mesmo `MapaDoPin`
+ *  ganhou o arrastar do fundo, o + e o − e o toque que leva o pin. Acabou o
+ *  limite de ~9 km pra etapa nova (antes, mais longe era salvar e abrir de
+ *  novo). E o mesmo portão do Salvar: afastado (abaixo do `MAPA_ZOOM_EDITOR`),
+ *  o pin se põe mas não se confirma. O pin do ponto novo continua nascendo no
+ *  último ponto — ele existe, então não há estado "sem pin" aqui. */
 
 /** O nome da caixa do ponto novo. "O nome" é a palavra que o painel já usa pra
  *  essa folha de todo ponto (`ROTULO_DO_PONTO.nome`), e "ponto" é a que o
@@ -82,6 +90,8 @@ export default function EditorWaypoints({
   const [aberto, setAberto] = useState(false);
   const [nome, setNome] = useState("");
   const [pin, setPin] = useState<Par>(ultimo);
+  const [vista, setVista] = useState({ centro: ultimo, z: MAPA_ZOOM_EDITOR });
+  const perto = pertoPraSalvar(vista.z);
   const [confirmandoTirar, setConfirmandoTirar] = useState(false);
   const { erro, salvando, gravar, recusarAqui } = usarGravacao();
 
@@ -113,11 +123,12 @@ export default function EditorWaypoints({
             onChange={(e) => setNome(e.target.value)}
           />
           <p className="adm-editor-ajuda">{DICA_DO_PONTO_NOVO}</p>
-          <MapaDoPin centro={ultimo} atual={pin} aoMover={setPin} />
-          <p className="adm-editor-coord" data-testid="coord-atual">
+          <MapaDoPin vista={vista} atual={pin} aoMover={(p) => setPin(p)} aoMudarVista={setVista} />
+          <p className="adm-editor-coord" data-testid="coord-atual" aria-live="polite">
             {`${pin.lat}, ${pin.lng}`}
           </p>
-          <button type="button" className="adm-editor-salvar" disabled={salvando} onClick={acrescentar}>
+          {!perto && <p className="adm-editor-ajuda">{APROXIME_PRA_SALVAR}</p>}
+          <button type="button" className="adm-editor-salvar" disabled={salvando || !perto} onClick={acrescentar}>
             {salvando ? SALVANDO : SALVAR}
           </button>
         </>

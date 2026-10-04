@@ -15,6 +15,7 @@ import {
   planoDaRaiz,
   podeGuardarPagina,
   resolverNavegacao,
+  tilePodeIrProCache,
   aquecer,
   fichasDoAcervo,
   PARAM_DEBUG,
@@ -107,6 +108,21 @@ describe("podeGuardarPagina", () => {
   it("e as paginas de verdade continuam sendo", () => {
     expect(podeGuardarPagina("/trilhas")).toBe(true);
     expect(podeGuardarPagina("/")).toBe(true);
+  });
+});
+
+// 🔴 Tarefa 11f, I7 da auditoria: o mapa do painel anda e aproxima, e os tiles
+// dele despejariam do cache offline (120 entradas) os das fichas.
+describe("tilePodeIrProCache", () => {
+  it("tile pedido pelo painel não vai pro cache dos tiles", () => {
+    expect(tilePodeIrProCache("https://bateperna.vercel.app/admin/novo?slug=x&p=3")).toBe(false);
+    expect(tilePodeIrProCache("https://bateperna.vercel.app/admin/lugar-marcador")).toBe(false);
+  });
+
+  it("tile pedido pela ficha, pela home ou sem janela conhecida continua indo", () => {
+    expect(tilePodeIrProCache("https://bateperna.vercel.app/lugar-marcador")).toBe(true);
+    expect(tilePodeIrProCache("https://bateperna.vercel.app/")).toBe(true);
+    expect(tilePodeIrProCache(undefined)).toBe(true);
   });
 });
 

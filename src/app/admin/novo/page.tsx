@@ -6,6 +6,7 @@ import { COOKIE_ADMIN, avisarDesligado, sessaoValida } from "@/lib/admin-guarda"
 import { comPrazo } from "@/lib/cache-rotas";
 import { getClient, lerRascunho, type Rascunho } from "@/lib/db";
 import { PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
+import { FONTES_DE_PRODUCAO, vistaDaCoordSemPonto } from "@/lib/vista-do-mapa";
 import CaixaDeSenha from "../CaixaDeSenha";
 import FormularioDeLugar, { ComecarLugarNovo } from "../FormularioDeLugar";
 import { PERGUNTAS, escolherPosicao, montarPerguntas } from "./perguntas";
@@ -83,9 +84,23 @@ export default async function Novo({
 
   // A lista INTEIRA é montada aqui (é o registro que decide quais perguntas);
   // o cliente recebe só a da posição `p`, e quais já têm resposta.
-  const perguntas = montarPerguntas(JSON.parse(r.doc));
+  const doc: unknown = JSON.parse(r.doc);
+  const perguntas = montarPerguntas(doc);
   const respondidas = perguntas.map((q) => q.valor !== undefined);
   const posicao = escolherPosicao(p, respondidas);
+  const pergunta = perguntas[posicao - 1];
+
+  // 🔴 A COORDENADA SEM PONTO (Tarefa 11f): o mapa nasce sem pin, numa VISTA que
+  // é calculada AQUI, no servidor, e desce pronta — uma busca no celular
+  // chegaria depois do mapa desenhado e a vista pularia, talvez depois do toque
+  // dele (I1 da auditoria). Só a pergunta da TELA, e só se ela for de mapa sem
+  // ponto: as outras telas não vão ao serviço de geocoding. A vista não é ponto
+  // e não é gravada (`src/lib/vista-do-mapa.ts`).
+  const semPonto =
+    pergunta.especie === "coord" &&
+    !pergunta.campo.caminho.endsWith(".lng") &&
+    pergunta.valor === undefined;
+  const vista = semPonto ? await vistaDaCoordSemPonto(doc, pergunta.campo.caminho, FONTES_DE_PRODUCAO) : null;
 
   return (
     <main className="adm">
@@ -93,7 +108,7 @@ export default async function Novo({
       <h2>{TITULO_NOVO}</h2>
       <FormularioDeLugar
         slug={slug}
-        pergunta={perguntas[posicao - 1]}
+        pergunta={vista ? { ...pergunta, campo: { ...pergunta.campo, vista } } : pergunta}
         posicao={posicao}
         respondidas={respondidas}
       />

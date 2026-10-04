@@ -8,6 +8,9 @@ import {
   MAPA_LARGURA_PX,
   MAPA_ZOOM,
   MAPA_ZOOM_EDITOR,
+  MAPA_ZOOM_EDITOR_MAX,
+  MAPA_ZOOM_EDITOR_MIN,
+  TOQUE_MAX_PX,
   TILE_PX,
   metrosPorPixel,
   pontoNoMundo,
@@ -585,8 +588,33 @@ describe("coordDaPosicao — o inverso de posicaoNaCaixa", () => {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Task 8, onda de conserto 1 (R5): o zoom do mapa do PAINEL, que é outro.
-// Decisão do João (2026-10-01): "bem mais perto; pra chegar longe, salva e abre
-// de novo" — uns 10 a 20 m por pixel. A ficha pública continua em MAPA_ZOOM.
+// Decisão do João (2026-10-01): "bem mais perto" — uns 10 a 20 m por pixel. A
+// ficha pública continua em MAPA_ZOOM. Desde a Tarefa 11f este é o zoom do
+// PORTÃO do Salvar: o mapa anda e aproxima/afasta, e o "pra chegar longe, salva
+// e abre de novo" daquela decisão foi substituído pelo arrastar (pedido dele,
+// 2026-10-04 — a ruling está em docs/superpowers/2026-09-27-rulings-painel-completo.md).
+describe("o + e o − do mapa de pôr o pin (Tarefa 11f)", () => {
+  it("o mais afastado mostra uma região inteira no celular (centenas de km), e não o mundo", () => {
+    const larguraKm = (metrosPorPixel(-8, MAPA_ZOOM_EDITOR_MIN) * MAPA_JANELA_VISIVEL_HOME_PX) / 1000;
+    expect(larguraKm).toBeGreaterThan(300);
+    expect(larguraKm).toBeLessThan(1000);
+    expect(MAPA_ZOOM_EDITOR_MIN).toBeLessThan(MAPA_ZOOM);
+  });
+
+  it("o mais perto passa do portão e pede tiles que o OSM desenha (até o 19)", () => {
+    expect(MAPA_ZOOM_EDITOR_MAX).toBeGreaterThan(MAPA_ZOOM_EDITOR);
+    expect(zoomDeTiles(MAPA_ZOOM_EDITOR_MAX)).toBeLessThanOrEqual(19);
+    expect(Number.isInteger(zoomDeTiles(MAPA_ZOOM_EDITOR_MIN))).toBe(true);
+  });
+
+  // I3 da auditoria: um toque é soltar com até 8px andados — menos que o raio do
+  // alvo de pegar o pin, senão um toque perto do pin seria ambíguo.
+  it("o toque é menor que o alvo do pin", () => {
+    expect(TOQUE_MAX_PX).toBeGreaterThan(0);
+    expect(TOQUE_MAX_PX).toBeLessThan(RAIO_ALVO_TOQUE_PX);
+  });
+});
+
 describe("MAPA_ZOOM_EDITOR — o zoom de pôr o pin", () => {
   it("na latitude do acervo (~−8°) dá entre 10 e 20 metros por pixel", () => {
     const m = metrosPorPixel(-8, MAPA_ZOOM_EDITOR);

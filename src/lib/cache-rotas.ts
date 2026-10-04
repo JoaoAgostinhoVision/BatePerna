@@ -110,6 +110,23 @@ export function podeGuardarPagina(pathname: string): boolean {
   return !pathname.startsWith("/admin");
 }
 
+/** Um tile do mapa pedido por ESTA página pode entrar no cache offline dos
+ *  tiles (`bp-tiles-osm`)?
+ *
+ *  🔴 NÃO SE A PÁGINA É O PAINEL (Tarefa 11f, I7 da auditoria). O mapa de pôr o
+ *  pin passou a andar e a aproximar, e cada vista pede ~8–15 tiles: uns dez
+ *  gestos do dono no painel despejariam, do cache de 120 entradas, os tiles das
+ *  fichas que ele (no mesmo celular) viu pra usar na estrada. O painel não é
+ *  parte do app offline (`podeGuardarPagina`). O cache HTTP do navegador
+ *  continua honrando os cabeçalhos do OSM, como a política pede.
+ *
+ *  `paginaUrl` é a URL da janela que pediu o tile (o `clientId` do evento);
+ *  sem janela conhecida, o tile segue a regra de sempre e vai pro cache. */
+export function tilePodeIrProCache(paginaUrl: string | undefined): boolean {
+  if (paginaUrl === undefined) return true;
+  return podeGuardarPagina(new URL(paginaUrl).pathname);
+}
+
 /** As navegações que o service worker resolve por conta própria: as fichas e
  *  a "/". O resto (a lista, os ícones) fica com as estratégias do serwist. */
 export function ehNavegacaoNossa(pathname: string): boolean {

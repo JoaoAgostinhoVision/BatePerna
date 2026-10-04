@@ -6,9 +6,8 @@ import EditorCoordenada from "./campos/EditorCoordenada";
 import EditorLista from "./campos/EditorLista";
 import EditorNumeroDeMotor from "./campos/EditorNumeroDeMotor";
 import EditorProsa from "./campos/EditorProsa";
-import { ERRO_GRAVAR, ERRO_REDE, PortaDoEditor, usarGravacao } from "./campos/gravar";
-import { CAIXA_VAZIA, SALVANDO, SALVAR } from "./campos/palavras";
-import type { Editor, EspecieNaTela, PerguntaNaTela, PropsDoEditor } from "./campos/tipos";
+import { ERRO_GRAVAR, ERRO_REDE, PortaDoEditor } from "./campos/gravar";
+import type { Editor, EspecieNaTela, PerguntaNaTela } from "./campos/tipos";
 
 /** O FORMULÁRIO DE LUGAR NOVO (Tarefa 11) — o questionário na tela, gravando
  *  num RASCUNHO que não vai ao ar.
@@ -26,12 +25,13 @@ import type { Editor, EspecieNaTela, PerguntaNaTela, PropsDoEditor } from "./cam
  *  `/api/admin/rascunho`, que aceita as mesmas formas de corpo. O "não sei" de
  *  um opcional respondido também é o de sempre (`BotaoNaoSei`, dentro de cada
  *  editor). O que NÃO deu pra reaproveitar, e por quê:
- *   - o MAPA não abre sem ponto: ele centra na coordenada do banco, e um lugar
- *     novo não tem nenhuma — começar num ponto qualquer seria uma coordenada
- *     que ninguém deu, salva com um toque. Então a coordenada vazia entra
- *     DIGITADA (`CoordenadaDigitada`, abaixo: é o que o questionário pergunta,
- *     "a latitude e a longitude"), e depois de gravada o mapa aparece,
- *     centrado nela, pra ajustar;
+ *   - (até a Tarefa 11f havia aqui um terceiro: a coordenada vazia entrava
+ *     DIGITADA, em duas caixas de número, porque o mapa só sabia abrir centrado
+ *     num ponto. Ele viu e pediu o mapa — "latitude e longitude… que horror".
+ *     Agora é o MESMO `EditorCoordenada` da ficha no ar: sem ponto, ele nasce
+ *     SEM PIN e sem Salvar, na vista que a página de servidor calculou
+ *     (`campo.vista`: a cidade do lugar, ou o ponto 0 pra a coordenada da
+ *     chuva), e o ponto é o TOQUE dele no mapa — nunca o centro da vista);
  *   - o "PULAR" de um opcional ainda sem resposta é novo: o `BotaoNaoSei` some
  *     num campo ausente (lá ele seria um ato vazio), e no questionário pular é
  *     um ato de verdade — o dono dizendo que não vai responder. Ele não grava
@@ -92,76 +92,6 @@ export const posicaoNaTela = (n: number, total: number): string => `Pergunta ${n
 export const enderecoDaPergunta = (slug: string, n: number): string =>
   `/admin/novo?slug=${encodeURIComponent(slug)}&p=${n}`;
 
-type Par = { lat: number; lng: number };
-const ehPar = (v: unknown): v is Par =>
-  typeof v === "object" && v !== null && Number.isFinite((v as Par).lat) && Number.isFinite((v as Par).lng);
-
-/** A COORDENADA AINDA SEM RESPOSTA: duas caixas de número, vazias, sem
- *  placeholder. Grava pelas MESMAS formas de corpo do mapa — o ponto do
- *  trajeto inteiro (`{slug, ponto, lat, lng}`) ou o par da chuva (`{slug,
- *  campo, valor: {lat, lng}}`) —, então a faixa e a finitude quem confere é a
- *  porta, como em todo editor. */
-function CoordenadaDigitada({ campo, slug }: PropsDoEditor) {
-  const [texto, setTexto] = useState<Readonly<Record<string, string>>>({});
-  const gravacao = usarGravacao();
-  const { erro, salvando, gravar, recusarAqui } = gravacao;
-  const metades = campo.folhas ?? [];
-
-  function salvar(): void {
-    const numero = (chave: string): number | null => {
-      const t = (texto[chave] ?? "").trim();
-      return t === "" || !Number.isFinite(Number(t)) ? null : Number(t);
-    };
-    const lat = numero("lat");
-    const lng = numero("lng");
-    if (lat === null || lng === null) {
-      recusarAqui(CAIXA_VAZIA);
-      return;
-    }
-    const ponto = /\.(\d+)\.lat$/.exec(campo.caminho);
-    void gravar(
-      ponto ? { slug, ponto: Number(ponto[1]), lat, lng } : { slug, campo: campo.caminho, valor: { lat, lng } },
-    );
-  }
-
-  return (
-    <div className="adm-editor" data-editor={campo.caminho}>
-      {metades.map((m) => (
-        <input
-          key={m.chave}
-          type="number"
-          step="any"
-          className="adm-editor-numero"
-          aria-label={m.rotulo}
-          data-numero={m.caminho}
-          value={texto[m.chave] ?? ""}
-          onChange={(e) => setTexto((antes) => ({ ...antes, [m.chave]: e.target.value }))}
-        />
-      ))}
-      <button
-        type="button"
-        className="adm-editor-salvar"
-        data-salvar={campo.caminho}
-        disabled={salvando}
-        onClick={salvar}
-      >
-        {salvando ? SALVANDO : SALVAR}
-      </button>
-      {erro && (
-        <p className="adm-erro" role="alert">
-          {erro}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/** O mapa quando já há ponto; as caixas de número quando não há. */
-function CoordenadaDoRascunho(props: PropsDoEditor) {
-  if (ehPar(props.valor) || props.campo.ponto) return <EditorCoordenada {...props} />;
-  return <CoordenadaDigitada {...props} />;
-}
-
 /** 🔴 `Record` POR ESPÉCIE: uma espécie nova no registro deixa este arquivo sem
  *  compilar até alguém decidir o instrumento dela — mesmo guarda da
  *  `FichaInteira`. */
@@ -171,7 +101,7 @@ const INSTRUMENTO: Record<EspecieNaTela, Editor> = {
   booleano: EditorBooleano,
   numero: EditorNumeroDeMotor,
   faixas: EditorFaixas,
-  coord: CoordenadaDoRascunho,
+  coord: EditorCoordenada,
 };
 
 function Pergunta({

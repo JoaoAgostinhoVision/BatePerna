@@ -169,6 +169,23 @@ describe("a varredura do schema, antes de ela guardar coisa nenhuma", () => {
     expect(new Set(FOLHAS).size).toBe(FOLHAS.length);
     expect(FOLHAS.filter((f) => f === "")).toEqual([]);
   });
+
+  // 🔴 CONTROLE POSITIVO DO GUARDA DOS BLOCOS OPCIONAIS (I-1 da revisão da 11d).
+  // Contra o `fichaSchema` de hoje a expectativa é `[]` — e um `[]` é o que um
+  // guarda CEGO também devolve: arrancar o `saida.push(caminho)` ficava verde na
+  // suíte inteira (52ª espécie: a condição ficou inalcançável quando o `horario`
+  // virou lista). Este schema sintético TEM o que o guarda procura, nos três
+  // lugares onde ele sabe procurar: no 1º nível, aninhado num objeto, e dentro
+  // de uma lista de objetos. Os nomes são marcadores, não campos de ficha.
+  it("o guarda dos blocos opcionais ACHA um bloco quando ele existe — no 1º nível, aninhado e em lista", () => {
+    const sintetico = z.object({
+      raso: z.object({ a: z.string() }).optional(),
+      fundo: z.object({ dentro: z.object({ b: z.string() }).optional(), c: z.string() }),
+      lista: z.array(z.object({ item: z.object({ d: z.string() }).optional() })),
+      solto: z.string().optional(),
+    });
+    expect(blocosOpcionaisDoSchema(sintetico, "", [])).toEqual(["raso", "fundo.dentro", "lista[].item"]);
+  });
 });
 
 describe("o registro cobre o schema", () => {

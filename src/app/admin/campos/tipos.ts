@@ -41,12 +41,16 @@ export type CampoNaTela = {
    *  (`piso`, `custo.tag`, `condicao.severidade`). Quem decide é
    *  `FichaInteira`, com guarda medido contra a porta de escrita. */
   multiplo?: boolean;
-  /** Só pra espécie `coord`, no formulário de lugar novo: as duas METADES
-   *  (`lat`, `lng`) da coordenada ainda sem resposta, que entram digitadas e
-   *  juntas (`CoordenadaDigitada`). `chave` é a metade, `caminho` o caminho
-   *  completo (o marcador de teste), `rotulo` o nome da caixa. Até a Tarefa 11d
-   *  servia também às folhas do bloco `horario`, que deixou de existir. */
-  folhas?: readonly { chave: string; caminho: string; rotulo: string }[];
+  /** Só pra espécie `coord` SEM ponto (o lugar novo, ou um documento torto na
+   *  ficha no ar): de onde o mapa COMEÇA — centro e zoom da vista, calculados no
+   *  SERVIDOR (`src/lib/vista-do-mapa.ts`) e entregues prontos. 🔴 NÃO É PONTO:
+   *  o mapa nasce sem pin e sem Salvar, e nada grava a vista. Sem `vista` e sem
+   *  ponto, o editor diz que não há mapa.
+   *
+   *  ⚠️ Até a Tarefa 11f havia aqui `folhas` — as duas metades da coordenada
+   *  vazia, que entravam DIGITADAS em duas caixas de número (`CoordenadaDigitada`,
+   *  apagada). Ele pediu o mapa: "latitude e longitude… que horror". */
+  vista?: VistaNaTela;
   /** Só pra espécie `coord`, e só na METADE `.lat` de um ponto do trajeto: o
    *  ÍNDICE e o PAR daquele ponto, montados no servidor (Task 8). A metade
    *  sozinha é um número, e o mapa precisa dos dois pra pôr o pin; é a linha
@@ -56,6 +60,17 @@ export type CampoNaTela = {
    *  fontes pra mesma pergunta. `condicao.coords` também não: lá o `valor` já É
    *  o par. */
   ponto?: { indice: number; lat: number; lng: number };
+};
+
+/** Onde o mapa de pôr o pin começa quando não há ponto, e DE ONDE veio esse
+ *  começo — a tela diz quando não achou a cidade. Declarado aqui, e não
+ *  importado de `@/lib/vista-do-mapa`, pela regra do topo; aquele módulo devolve
+ *  um objeto desta mesma forma, e a página que o passa adiante não compila se
+ *  as duas desandarem. */
+export type VistaNaTela = {
+  centro: { lat: number; lng: number };
+  z: number;
+  origem: "ponto" | "cidade" | "acervo";
 };
 
 /** 🔴 `valor` É `unknown` DE PROPÓSITO. Ele vem do documento que está no banco,

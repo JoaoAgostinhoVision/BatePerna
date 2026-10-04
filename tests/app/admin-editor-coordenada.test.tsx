@@ -1,9 +1,30 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import FichaInteira from "@/app/admin/FichaInteira";
+import FichaInteira, { precisaDeVista } from "@/app/admin/FichaInteira";
 import { ERRO_GRAVAR } from "@/app/admin/campos/gravar";
 import { SALVAR } from "@/app/admin/campos/palavras";
-import { MAPA_ALTURA_PX, MAPA_LARGURA_PX, MAPA_ZOOM_EDITOR, TILE_PX, coordDaPosicao } from "@/lib/mapa";
+import {
+  AFASTAR,
+  APROXIMAR,
+  APROXIME_PRA_SALVAR,
+  MARQUE_NO_MAPA,
+  SEM_VISTA,
+  VISTA_SEM_CIDADE,
+} from "@/app/admin/campos/EditorCoordenada";
+import type { VistaNaTela } from "@/app/admin/campos/tipos";
+import {
+  GOTA_ACIMA_DA_PONTA_PX,
+  MAPA_ALTURA_PX,
+  MAPA_LARGURA_PX,
+  MAPA_ZOOM_EDITOR,
+  MAPA_ZOOM_EDITOR_MAX,
+  MAPA_ZOOM_EDITOR_MIN,
+  TILE_PX,
+  coordDaPosicao,
+  zoomDeTiles,
+} from "@/lib/mapa";
 import { camposDaFicha } from "@/lib/campos-da-ficha";
 import { getAllFichas } from "@/lib/ficha";
 import type { Ficha } from "@/types/ficha";
@@ -430,29 +451,365 @@ describe("EditorCoordenada — onde o pin pode ir, e quando", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 🔴 ONDA 1, R3 (achado M3): `typeof === "number"` aceita `NaN` e `Infinity`, e
-// `lng: Infinity` fazia o laço de tiles nunca terminar (a revisão mediu: heap
-// out of memory). Valor fora de forma cai no estado vazio, como o contrato de
-// `PropsDoEditor` promete.
+// 🔴 TAREFA 11f (pedido dele, 2026-10-04: "era bom ter um mapa e a pessoa
+// arrastar para a localização correta"). O mapa ANDA: arrastar o FUNDO move a
+// vista, o + e o − aproximam e afastam, e um TOQUE põe o pin. Os gestos são os
+// da auditoria (I3): o alvo de pegar o pin é um círculo de `RAIO_ALVO_TOQUE_PX`
+// (22px de TELA) em volta da GOTA visível; o pin anda o DESLOCAMENTO do dedo
+// (sem salto); toque = soltar com até `TOQUE_MAX_PX` (8px de tela) andados.
 // ═══════════════════════════════════════════════════════════════════════════
-describe("EditorCoordenada — coordenada não finita no documento", () => {
+
+/** A gota do pin na TELA, com o pin no centro da caixa (onde ele nasce). */
+const GOTA = naTela({ x: L / 2, y: A / 2 - GOTA_ACIMA_DA_PONTA_PX });
+
+type NaTela = { clientX: number; clientY: number };
+
+/** Um gesto inteiro em pixels de TELA: encosta em `de`, passa por `por`, solta no último. */
+function gesto(caminho: string, de: NaTela, ...por: NaTela[]): void {
+  const mapa = mapaEm(caminho)!;
+  dublarCaixas(mapa);
+  ponteiro(mapa, "pointerdown", de);
+  for (const p of por) ponteiro(mapa, "pointermove", p);
+  ponteiro(mapa, "pointerup", por.at(-1) ?? de);
+}
+const mais = (caminho: string): HTMLButtonElement => within(bloco(caminho)).getByRole("button", { name: APROXIMAR });
+const menos = (caminho: string): HTMLButtonElement => within(bloco(caminho)).getByRole("button", { name: AFASTAR });
+const salvarEm = (caminho: string): HTMLButtonElement | null =>
+  bloco(caminho).querySelector<HTMLButtonElement>(`[data-salvar="${caminho}"]`);
+/** O zoom que a tela DESENHA, lido da URL do primeiro tile. */
+const zoomDosTiles = (caminho: string): number =>
+  Number(/\/(\d+)\/\d+\/\d+\.png$/.exec(mapaEm(caminho)!.querySelector("img")!.getAttribute("src")!)![1]);
+
+describe("EditorCoordenada — os gestos (Tarefa 11f, I3 da auditoria)", () => {
+  it("pegar o pin pela BORDA da gota não o faz saltar: ele anda o deslocamento do dedo", () => {
+    render(<FichaInteira ficha={FICHA} />);
+    // 15px de tela à direita do meio da gota: dentro do alvo de 22px, longe da ponta
+    const de = { clientX: GOTA.clientX + 15, clientY: GOTA.clientY };
+    gesto(PAR, de, { clientX: de.clientX + 20, clientY: de.clientY + 10 });
+    // 20×10 px de tela = 40×20 px de layout (a caixa na tela tem metade do tamanho)
+    expect(parseFloat(pinEm(PAR).style.left)).toBeCloseTo(L / 2 + 40, 1);
+    expect(parseFloat(pinEm(PAR).style.top)).toBeCloseTo(A / 2 + 20, 1);
+    const e = coordDaPosicao(L / 2 + 40, A / 2 + 20, FICHA.condicao.coords, MAPA_ZOOM_EDITOR, L, A);
+    expect(lido(PAR).lat).toBeCloseTo(e.lat, 6);
+    expect(lido(PAR).lng).toBeCloseTo(e.lng, 6);
+  });
+
+  it("dedo FORA do alvo do pin e arrastado: a VISTA anda (o pin vai junto do mapa), e o número não muda", () => {
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={FICHA} />);
+    // a 23px de tela da gota: fora do alvo, por um pixel
+    const de = { clientX: GOTA.clientX - 23, clientY: GOTA.clientY };
+    expect(Math.hypot(de.clientX - GOTA.clientX, de.clientY - GOTA.clientY)).toBeGreaterThan(22);
+    gesto(
+      PAR,
+      de,
+      { clientX: de.clientX + 25, clientY: de.clientY + 15 },
+      { clientX: de.clientX + 50, clientY: de.clientY + 30 },
+    );
+    expect(lido(PAR), "arrastar o fundo mexeu no ponto").toEqual(FICHA.condicao.coords);
+    // o mapa andou 50×30 de tela = 100×60 de layout, e o pin, que é um lugar NO mapa, andou junto
+    expect(parseFloat(pinEm(PAR).style.left)).toBeCloseTo(L / 2 + 100, 1);
+    expect(parseFloat(pinEm(PAR).style.top)).toBeCloseTo(A / 2 + 60, 1);
+    expect(fetchFalso).not.toHaveBeenCalled();
+  });
+
+  it("um TOQUE fora do pin (até 8px andados) leva o pin pra lá — o mesmo gesto do primeiro ponto", () => {
+    render(<FichaInteira ficha={FICHA} />);
+    const de = naTela({ x: 100, y: 40 });
+    const ate = { clientX: de.clientX + 3, clientY: de.clientY + 2 }; // 3,6px de tela
+    gesto(PAR, de, ate);
+    const layout = { x: (ate.clientX - RECT.left) * ESCALA_TELA, y: (ate.clientY - RECT.top) * ESCALA_TELA };
+    const e = coordDaPosicao(layout.x, layout.y, FICHA.condicao.coords, MAPA_ZOOM_EDITOR, L, A);
+    expect(lido(PAR).lat).toBeCloseTo(e.lat, 6);
+    expect(lido(PAR).lng).toBeCloseTo(e.lng, 6);
+    expect(parseFloat(pinEm(PAR).style.left)).toBeCloseTo(layout.x, 1);
+    expect(parseFloat(pinEm(PAR).style.top)).toBeCloseTo(layout.y, 1);
+  });
+
+  // O alvo é a GOTA visível, e não a ponta (I3a): numa caixa em escala 1, um
+  // dedo 15px acima do meio da gota está a ~28px da ponta — fora de um alvo
+  // centrado na ponta, dentro do certo. Pegou o pin: o número muda.
+  it("o alvo de pegar o pin é o meio da GOTA, não a ponta que o dedo tampa", () => {
+    render(<FichaInteira ficha={FICHA} />);
+    const mapa = mapaEm(PAR)!;
+    const UM = { left: 0, top: 0, width: L, height: A };
+    dublarCaixas(mapa, UM);
+    const de = { clientX: L / 2, clientY: A / 2 - GOTA_ACIMA_DA_PONTA_PX - 15 };
+    expect(Math.hypot(0, A / 2 - de.clientY), "premissa: longe da ponta").toBeGreaterThan(22);
+    ponteiro(mapa, "pointerdown", de);
+    ponteiro(mapa, "pointermove", { clientX: de.clientX + 30, clientY: de.clientY });
+    ponteiro(mapa, "pointerup", { clientX: de.clientX + 30, clientY: de.clientY });
+    expect(lido(PAR), "o dedo na gota não pegou o pin").not.toEqual(FICHA.condicao.coords);
+  });
+
+  // Um arrasto do fundo que VOLTA perto de onde começou não vira toque: ele já
+  // foi arrasto (I3c — "passou disso, é arrasto de vista e não põe pin").
+  it("arrastar o fundo e voltar ao ponto de partida não é toque: não põe pin", () => {
+    render(<FichaInteira ficha={FICHA} />);
+    const de = naTela({ x: 100, y: 40 });
+    gesto(PAR, de, { clientX: de.clientX + 40, clientY: de.clientY }, { clientX: de.clientX + 2, clientY: de.clientY });
+    expect(lido(PAR)).toEqual(FICHA.condicao.coords);
+  });
+
+  it("andar 9px já é arrasto do fundo: não põe pin", () => {
+    render(<FichaInteira ficha={FICHA} />);
+    const de = naTela({ x: 100, y: 40 });
+    gesto(PAR, de, { clientX: de.clientX + 9, clientY: de.clientY });
+    expect(lido(PAR)).toEqual(FICHA.condicao.coords);
+  });
+
+  it("o navegador cancelar o gesto (pointercancel) não vira toque, e o ponteiro solto não move mais nada", () => {
+    render(<FichaInteira ficha={FICHA} />);
+    const mapa = mapaEm(PAR)!;
+    dublarCaixas(mapa);
+    const de = naTela({ x: 100, y: 40 });
+    ponteiro(mapa, "pointerdown", de);
+    ponteiro(mapa, "pointercancel", de);
+    ponteiro(mapa, "pointermove", { clientX: de.clientX + 40, clientY: de.clientY });
+    ponteiro(mapa, "pointerup", { clientX: de.clientX + 40, clientY: de.clientY });
+    expect(lido(PAR)).toEqual(FICHA.condicao.coords);
+    expect(parseFloat(pinEm(PAR).style.left)).toBe(L / 2);
+  });
+
+  it("o − afasta um degrau e o + aproxima, em volta do centro; o número e a rota não mexem", () => {
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={FICHA} />);
+    expect(zoomDosTiles(PAR)).toBe(zoomDeTiles(MAPA_ZOOM_EDITOR));
+    fireEvent.click(menos(PAR));
+    expect(zoomDosTiles(PAR)).toBe(zoomDeTiles(MAPA_ZOOM_EDITOR - 1));
+    // o pin estava no centro da vista, e o zoom é em volta do centro: continua lá
+    expect(parseFloat(pinEm(PAR).style.left)).toBeCloseTo(L / 2, 1);
+    expect(parseFloat(pinEm(PAR).style.top)).toBeCloseTo(A / 2, 1);
+    fireEvent.click(mais(PAR));
+    fireEvent.click(mais(PAR));
+    expect(zoomDosTiles(PAR)).toBe(zoomDeTiles(MAPA_ZOOM_EDITOR + 1));
+    expect(lido(PAR)).toEqual(FICHA.condicao.coords);
+    expect(fetchFalso).not.toHaveBeenCalled();
+    // +/− são botões que não gravam: dentro de um <form> um botão sem type é submit
+    expect(mais(PAR).getAttribute("type")).toBe("button");
+    expect(menos(PAR).getAttribute("type")).toBe("button");
+  });
+
+  it("o + e o − param nos limites, e o botão do limite desliga", () => {
+    render(<FichaInteira ficha={FICHA} />);
+    for (let z = MAPA_ZOOM_EDITOR; z < MAPA_ZOOM_EDITOR_MAX; z++) fireEvent.click(mais(PAR));
+    expect(zoomDosTiles(PAR)).toBe(zoomDeTiles(MAPA_ZOOM_EDITOR_MAX));
+    expect(mais(PAR).disabled).toBe(true);
+    expect(menos(PAR).disabled).toBe(false);
+    for (let z = MAPA_ZOOM_EDITOR_MAX; z > MAPA_ZOOM_EDITOR_MIN; z--) fireEvent.click(menos(PAR));
+    expect(zoomDosTiles(PAR)).toBe(zoomDeTiles(MAPA_ZOOM_EDITOR_MIN));
+    expect(menos(PAR).disabled).toBe(true);
+    expect(mais(PAR).disabled).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 C1 DA AUDITORIA DA 11f: afastado, um toque grava um ponto a quilômetros (no
+// z7, ~1,2 km por pixel). O Salvar só liga com a vista no `MAPA_ZOOM_EDITOR` ou
+// mais perto — na ficha no ar também. Afastado, o pin ainda se põe e se arrasta.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("EditorCoordenada — o portão do Salvar no zoom (C1)", () => {
+  it("afastado: o Salvar desliga, a ajuda diz pra aproximar, e tocar no Salvar não chama a rota", () => {
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={FICHA} />);
+    expect(salvarEm(PAR)!.disabled).toBe(false);
+    expect(within(bloco(PAR)).queryByText(APROXIME_PRA_SALVAR)).toBeNull();
+    fireEvent.click(menos(PAR));
+    fireEvent.click(menos(PAR));
+    gesto(PAR, naTela({ x: 100, y: 40 })); // um toque afastado põe o pin…
+    expect(lido(PAR)).not.toEqual(FICHA.condicao.coords);
+    expect(salvarEm(PAR)!.disabled, "afastado, o Salvar continuou ligado").toBe(true); // …mas não salva
+    expect(within(bloco(PAR)).getByText(APROXIME_PRA_SALVAR)).toBeTruthy();
+    fireEvent.click(salvarEm(PAR)!);
+    expect(fetchFalso).not.toHaveBeenCalled();
+  });
+
+  it("aproximando de novo até o zoom do portão, o Salvar liga e grava o ponto do toque", async () => {
+    const { fetchFalso, reloadFalso } = comRota();
+    render(<FichaInteira ficha={FICHA} />);
+    fireEvent.click(menos(PAR));
+    gesto(PAR, naTela({ x: 100, y: 40 }));
+    const tocado = lido(PAR);
+    fireEvent.click(mais(PAR));
+    expect(salvarEm(PAR)!.disabled).toBe(false);
+    expect(within(bloco(PAR)).queryByText(APROXIME_PRA_SALVAR)).toBeNull();
+    expect(lido(PAR), "aproximar mexeu no ponto").toEqual(tocado);
+    salvar(PAR);
+    await waitFor(() => expect(reloadFalso).toHaveBeenCalled());
+    expect(corpos(fetchFalso)[0].corpo).toEqual({ slug: FICHA.slug, campo: PAR, valor: tocado });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 I4 DA AUDITORIA DA 11f: a guarda pin ↔ mosaico em TODO zoom e centro. O
+// defeito provável desta tarefa é o deslocamento da vista aplicado aos tiles e
+// não à conta do ponto (ou o contrário) — e o ponto gravado sairia de outro
+// lugar que o mostrado. A prova é a mesma do R4 da Tarefa 8, pela URL do tile.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("EditorCoordenada — pin e mosaico depois de mexer na vista (I4)", () => {
+  const mundo = (c: { lat: number; lng: number }, z: number) => {
+    const n = TILE_PX * 2 ** z;
+    const fi = (c.lat * Math.PI) / 180;
+    return {
+      x: ((c.lng + 180) / 360) * n,
+      y: ((1 - Math.log(Math.tan(fi) + 1 / Math.cos(fi)) / Math.PI) / 2) * n,
+    };
+  };
+  function pinSobreOMosaico(caminho: string): void {
+    const c = lido(caminho);
+    const camada = mapaEm(caminho)!.querySelector(".adm-editor-mapa-tiles") as HTMLElement;
+    const escala = Number(/scale\(([^)]+)\)/.exec(camada.style.transform)![1]);
+    const imgs = [...camada.querySelectorAll("img")];
+    const z = zoomDosTiles(caminho);
+    const w = mundo(c, z);
+    const tx = Math.floor(w.x / TILE_PX);
+    const ty = Math.floor(w.y / TILE_PX);
+    const img = imgs.find((i) => i.getAttribute("src")!.endsWith(`/${z}/${tx}/${ty}.png`));
+    expect(img, `o ponto mostrado (${z}/${tx}/${ty}) não está em tile nenhum desenhado`).toBeDefined();
+    const x = (parseFloat(img!.style.left) + (w.x - tx * TILE_PX)) * escala;
+    const y = (parseFloat(img!.style.top) + (w.y - ty * TILE_PX)) * escala;
+    expect(Math.abs(x - parseFloat(pinEm(caminho).style.left)), "pin e mosaico desalinhados no eixo x").toBeLessThan(1);
+    expect(Math.abs(y - parseFloat(pinEm(caminho).style.top)), "pin e mosaico desalinhados no eixo y").toBeLessThan(1);
+  }
+
+  for (const caminho of [PAR, LAT0]) {
+    it(`${caminho}: depois do −, de um arrasto da vista e de um toque, o ponto gravado é o do mosaico sob o pin`, async () => {
+      const { fetchFalso } = comRota();
+      render(<FichaInteira ficha={FICHA} />);
+      fireEvent.click(menos(caminho));
+      const de = naTela({ x: 60, y: 160 });
+      gesto(
+        caminho,
+        de,
+        { clientX: de.clientX + 30, clientY: de.clientY - 20 },
+        { clientX: de.clientX + 70, clientY: de.clientY - 35 },
+      );
+      // o arrasto levou o pin (um lugar NO mapa) pra (380, 30); o toque é longe dele
+      gesto(caminho, naTela({ x: 120, y: 150 }));
+      // o pin cai ONDE o dedo tocou, também afastado e com a vista andada
+      expect(parseFloat(pinEm(caminho).style.left), "o pin não caiu sob o dedo").toBeCloseTo(120, 0);
+      expect(parseFloat(pinEm(caminho).style.top), "o pin não caiu sob o dedo").toBeCloseTo(150, 0);
+      pinSobreOMosaico(caminho);
+      fireEvent.click(mais(caminho));
+      pinSobreOMosaico(caminho);
+      const mostrado = lido(caminho);
+      salvar(caminho);
+      await waitFor(() => expect(fetchFalso).toHaveBeenCalled());
+      const corpo = corpos(fetchFalso)[0].corpo;
+      expect(caminho === PAR ? corpo.valor : { lat: corpo.lat, lng: corpo.lng }).toEqual(mostrado);
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 M1/M4 DA 11f, NA FICHA NO AR: coordenada que não é par finito. Até a 11f
+// essa linha ficava SEM MAPA (onda 1 da Tarefa 8, R3: `lng: Infinity` travava o
+// laço de tiles). Agora é MAPA SEM PIN, começando na vista que o servidor
+// mandou (a cidade da ficha) — e sem vista, a frase de sem mapa. O laço de
+// tiles continua longe do número torto: o mosaico sai da VISTA, nunca do valor.
+// (O schema não deixa esse documento existir: JSON não tem NaN nem Infinity. É
+// um conserto, não um caminho do dia a dia — m5 da auditoria.)
+// ═══════════════════════════════════════════════════════════════════════════
+describe("EditorCoordenada — coordenada que não é par finito", () => {
+  /** Vista de MARCADOR: um número qualquer, que não é ponto de lugar nenhum. */
+  const VISTA: VistaNaTela = { centro: { lat: -8.5, lng: -36.5 }, z: 11, origem: "cidade" };
+  const semPar = (f: Ficha): Ficha => ({ ...f, condicao: { ...f.condicao, coords: { lat: NaN, lng: -36 } } }) as Ficha;
+  const semPonto0 = (f: Ficha): Ficha =>
+    ({ ...f, trajeto: { ...f.trajeto, waypoints: [{ ...f.trajeto.waypoints[0], lat: NaN }] } }) as Ficha;
+
   for (const [nome, coords] of [
     ["lat NaN", { lat: NaN, lng: -36 }],
     ["lat Infinity", { lat: Infinity, lng: -36 }],
     ["lng Infinity", { lat: -8, lng: Infinity }],
   ] as const) {
-    it(`condicao.coords com ${nome}: sem mapa e sem número, e a tela não cai`, () => {
+    it(`condicao.coords com ${nome}, com vista: MAPA SEM PIN, número vazio, nenhum Salvar, e a ajuda de marcar`, () => {
       const torta = { ...FICHA, condicao: { ...FICHA.condicao, coords } } as Ficha;
-      render(<FichaInteira ficha={torta} />);
-      expect(mapaEm(PAR)).toBeNull();
+      render(<FichaInteira ficha={torta} vistaSemPonto={VISTA} />);
+      expect(mapaEm(PAR), "sem mapa: a pergunta não tem como ser respondida").not.toBeNull();
+      expect(bloco(PAR).querySelector("[data-pin]"), "um pin que ninguém pôs").toBeNull();
       expect(atualEm(PAR)).toBe("");
+      expect(salvarEm(PAR), "Salvar sem pin gravaria o centro da vista").toBeNull();
+      expect(within(bloco(PAR)).getByText(MARQUE_NO_MAPA)).toBeTruthy();
     });
   }
 
-  it("ponto do trajeto com lng Infinity: a linha da latitude fica sem mapa", () => {
+  it("condicao.coords torta e o ponto 0 bom: a vista começa no ponto 0, no zoom de pôr o pin — não na da cidade", () => {
+    render(<FichaInteira ficha={semPar(FICHA)} vistaSemPonto={VISTA} />);
+    expect(zoomDosTiles(PAR)).toBe(zoomDeTiles(MAPA_ZOOM_EDITOR));
+  });
+
+  it("sem vista nenhuma: sem mapa, sem número, e a frase que diz que não há mapa", () => {
+    render(<FichaInteira ficha={semPonto0(semPar(FICHA))} />);
+    expect(mapaEm(PAR)).toBeNull();
+    expect(mapaEm(LAT0)).toBeNull();
+    expect(atualEm(PAR)).toBe("");
+    expect(within(bloco(PAR)).getByText(SEM_VISTA)).toBeTruthy();
+    expect(within(bloco(LAT0)).getByText(SEM_VISTA)).toBeTruthy();
+  });
+
+  it("ponto do trajeto com lng Infinity: a linha da latitude vira mapa SEM PIN na vista do servidor", () => {
     const wp = { ...FICHA.trajeto.waypoints[0], lng: Infinity };
     const torta = { ...FICHA, trajeto: { ...FICHA.trajeto, waypoints: [wp] } } as Ficha;
-    render(<FichaInteira ficha={torta} />);
-    expect(mapaEm(LAT0)).toBeNull();
+    render(<FichaInteira ficha={torta} vistaSemPonto={VISTA} />);
+    expect(mapaEm(LAT0)).not.toBeNull();
+    expect(bloco(LAT0).querySelector("[data-pin]")).toBeNull();
+    expect(zoomDosTiles(LAT0)).toBe(zoomDeTiles(VISTA.z));
+  });
+
+  it("M4: abrir e NÃO tocar — nenhum Salvar; tocar e salvar grava o ponto do TOQUE, não o centro da vista", async () => {
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={semPonto0(semPar(FICHA))} vistaSemPonto={{ ...VISTA, z: MAPA_ZOOM_EDITOR }} />);
+    expect(salvarEm(PAR)).toBeNull();
+    expect(fetchFalso).not.toHaveBeenCalled();
+    gesto(PAR, naTela({ x: 400, y: 30 }));
+    const e = coordDaPosicao(400, 30, VISTA.centro, MAPA_ZOOM_EDITOR, L, A);
+    salvar(PAR);
+    await waitFor(() => expect(fetchFalso).toHaveBeenCalled());
+    const valor = corpos(fetchFalso)[0].corpo.valor as { lat: number; lng: number };
+    expect(valor.lat).toBeCloseTo(e.lat, 6);
+    expect(valor.lng).toBeCloseTo(e.lng, 6);
+    expect(valor, "gravou o centro da vista, que ninguém escolheu").not.toEqual(VISTA.centro);
+  });
+
+  // 🔴 A PÁGINA SÓ VAI AO SERVIÇO DE GEOCODING QUANDO PRECISA: uma ficha sã
+  // abre sem rede nenhuma a mais (`admin/[slug]/page.tsx`).
+  it("precisaDeVista: nenhuma ficha sã do acervo; a torta sem ponto 0, sim; a da chuva torta com o ponto 0 bom, não", () => {
+    for (const f of ACERVO) expect(precisaDeVista(f), f.slug).toBe(false);
+    expect(precisaDeVista(semPar(FICHA)), "a chuva torta sai do ponto 0, sem rede").toBe(false);
+    expect(precisaDeVista(semPonto0(semPar(FICHA)))).toBe(true);
+    expect(precisaDeVista(semPonto0(FICHA)), "o ponto 0 torto precisa da cidade").toBe(true);
+  });
+
+  // Medido no Chrome (375×667): com a ajuda EM CIMA do mapa, o primeiro toque a
+  // apagava e o mapa subia ~45px debaixo do dedo. Toda ajuda mora embaixo dele.
+  it("as ajudas que somem com o toque ficam DEPOIS do mapa — o mapa não pula quando elas somem", () => {
+    render(<FichaInteira ficha={semPonto0(semPar(FICHA))} vistaSemPonto={{ ...VISTA, origem: "acervo" }} />);
+    const ajudas = [...bloco(PAR).querySelectorAll(".adm-editor-ajuda")];
+    expect(ajudas.map((p) => p.textContent)).toEqual([VISTA_SEM_CIDADE, MARQUE_NO_MAPA]);
+    for (const p of ajudas) {
+      expect(mapaEm(PAR)!.compareDocumentPosition(p) & Node.DOCUMENT_POSITION_FOLLOWING, p.textContent!).toBeTruthy();
+    }
+  });
+
+  it("a vista que caiu no acervo diz que não achou a cidade; a da cidade não diz nada disso", () => {
+    const longe = semPonto0(semPar(FICHA));
+    const { unmount } = render(<FichaInteira ficha={longe} vistaSemPonto={{ ...VISTA, origem: "acervo" }} />);
+    expect(within(bloco(PAR)).getByText(VISTA_SEM_CIDADE)).toBeTruthy();
+    unmount();
+    render(<FichaInteira ficha={longe} vistaSemPonto={VISTA} />);
+    expect(within(bloco(PAR)).queryByText(VISTA_SEM_CIDADE)).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// O meio da gota (o alvo de pegar o pin) sai da regra do pin no CSS.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("EditorCoordenada — o alvo do pin bate com o desenho dele", () => {
+  it("GOTA_ACIMA_DA_PONTA_PX = o margin-top da gota menos metade da altura dela", () => {
+    const css = readFileSync(path.join(process.cwd(), "src", "app", "admin", "admin.css"), "utf8");
+    const regra = /\.adm-editor-mapa-pin \{([^}]*)\}/.exec(css)![1];
+    const altura = Number(/height: ([\d.]+)px/.exec(regra)![1]);
+    const topo = Number(/margin: -([\d.]+)px/.exec(regra)![1]);
+    expect(GOTA_ACIMA_DA_PONTA_PX).toBeCloseTo(topo - altura / 2, 6);
   });
 });

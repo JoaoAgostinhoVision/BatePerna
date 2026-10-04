@@ -115,3 +115,31 @@ describe("service worker: /admin nunca vira cache", () => {
     expect(primeira.constructor.name).toBe("NetworkFirst");
   });
 });
+
+/** 🔴 TAREFA 11f, I7 DA AUDITORIA: os tiles do PAINEL não entram no cache
+ *  offline dos tiles (`bp-tiles-osm`, 120 entradas). O mapa de pôr o pin anda e
+ *  aproxima; dez gestos do dono despejariam os tiles das fichas que ele guardou
+ *  pra estrada. Quem decide é a JANELA que pediu (`clientId` →
+ *  `tilePodeIrProCache`, testada em `tests/lib/cache-rotas.test.ts`); aqui se
+ *  trava a FIAÇÃO, lendo o arquivo (o `sw.ts` não é importável). */
+describe("service worker: os tiles do painel não vão pro cache offline", () => {
+  const bloco = SW.slice(SW.indexOf("runtimeCaching:"));
+  const rotaDosTiles = (): string => {
+    const i = bloco.indexOf("ehTileOsm(url.href)");
+    expect(i, "a rota dos tiles sumiu").toBeGreaterThan(-1);
+    return bloco.slice(i, bloco.indexOf("},", bloco.indexOf("handler:", i)));
+  };
+
+  it("a rota dos tiles pergunta à janela e escolhe entre o cache e a rede", () => {
+    expect(rotaDosTiles()).toMatch(
+      /self\.clients\.get\(evento\.clientId\)[\s\S]*tilePodeIrProCache\(janela\?\.url\) \? tilesGuardados : tilesDoPainel/,
+    );
+  });
+
+  it("o cache dos tiles é o de sempre, e o do painel é só rede", () => {
+    expect(SW).toMatch(/const tilesGuardados = new CacheFirst\(\{\s*cacheName: "bp-tiles-osm"/);
+    expect(SW).toMatch(/const tilesDoPainel = new NetworkOnly\(\);/);
+    // um cache de tiles só — o painel não ganhou um cache novo (M6)
+    expect(SW.match(/cacheName: "bp-tiles/g)).toHaveLength(1);
+  });
+});

@@ -26,6 +26,7 @@ import type { PropsDoEditor } from "./tipos";
  *  - Os dois são `type="button"`: mexem na lista NA TELA e não gravam nada.
  *    Quem grava é o Salvar, um só.
  *  - Caixa vazia é recusada aqui, antes da viagem (meia faixa não é faixa).
+ *  - A lista vai pra porta NA ORDEM DO DIA (ordenada pelo `abre`).
  *
  *  Sem horário, aparece UMA faixa vazia — o caminho de volta depois de um
  *  "não tem". Com horário, as faixas DELE, com as horas dele: resposta dele
@@ -55,11 +56,17 @@ const ehFaixa = (v: unknown): v is Faixa =>
 
 const VAZIA: Faixa = { abre: "", fecha: "" };
 
-/** O que o documento tem, nas duas formas que ele pode ter (a lista, ou o
- *  objeto de antes da 11c) — e uma faixa vazia quando não tem nada legível. */
+/** O que o documento tem — a LISTA de faixas — e uma faixa vazia quando não
+ *  tem nada legível.
+ *
+ *  ⚠️ Até a revisão da 11d havia aqui um segundo ramo, pro objeto `{abre,
+ *  fecha}` de antes da 11c, e o comentário prometia "as duas formas". Ele era
+ *  inalcançável (M-6 daquela revisão): na ficha no ar o valor passa pelo
+ *  `fichaSchema`, cujo `transform` já entrega a lista, e no rascunho toda
+ *  gravação desde a 11c passa por `conferirFaixas`. O ramo saiu; a forma velha,
+ *  se um dia chegar, cai na faixa vazia, como qualquer valor ilegível. */
 function faixasDoValor(valor: unknown): Faixa[] {
   if (Array.isArray(valor) && valor.length > 0 && valor.every(ehFaixa)) return valor.map((f) => ({ ...f }));
-  if (ehFaixa(valor)) return [{ abre: valor.abre, fecha: valor.fecha }];
   return [{ ...VAZIA }];
 }
 
@@ -77,7 +84,13 @@ export default function EditorFaixas({ campo, valor, slug }: PropsDoEditor) {
       recusarAqui(HORA_VAZIA);
       return;
     }
-    void gravar({ slug, campo: campo.caminho, valor: faixas });
+    // 🔴 NA ORDEM DO DIA (M-1 da revisão da 11d): "+ outra faixa" põe a nova no
+    // FIM, e a porta recusa lista fora de ordem. Ordenar pelo `abre` não muda o
+    // que ele quis — a tela pública sempre diz as faixas na ordem do dia. "HH:MM"
+    // ordena como texto. A porta continua recusando lista fora de ordem que
+    // chegue por outro caminho.
+    const naOrdem = [...faixas].sort((a, b) => (a.abre < b.abre ? -1 : a.abre > b.abre ? 1 : 0));
+    void gravar({ slug, campo: campo.caminho, valor: naOrdem });
   }
 
   return (

@@ -21,6 +21,7 @@ import {
   nuncaCachear,
   podeGuardarPagina,
   resolverNavegacao,
+  tilePodeIrProCache,
 } from "@/lib/cache-rotas";
 
 declare global {
@@ -31,6 +32,25 @@ declare global {
 declare const self: ServiceWorkerGlobalScope;
 
 const MES_EM_S = 60 * 60 * 24 * 30;
+
+/** Tiles do mapa: o que já foi visto continua aparecendo na estrada. */
+const tilesGuardados = new CacheFirst({
+  cacheName: "bp-tiles-osm",
+  plugins: [
+    // O mapa é <img> sem crossorigin, então a resposta vem opaca (status 0)
+    // e o padrão do serwist recusa guardar — sem isto o cache fica vazio e
+    // o mapa some offline. Preço: resposta opaca não deixa ver se deu erro,
+    // e o browser cobra ela na cota com um padding gordo. Daí o teto baixo
+    // de entradas: um punhado de fichas cabe, um álbum do Brasil não.
+    new CacheableResponsePlugin({ statuses: [0, 200] }),
+    new ExpirationPlugin({ maxEntries: 120, maxAgeSeconds: MES_EM_S }),
+  ],
+});
+
+/** 🔴 Os tiles do PAINEL só pela rede (Tarefa 11f, I7): o mapa de pôr o pin anda
+ *  e aproxima, e os tiles dele despejariam do cache acima os das fichas que o
+ *  dono guardou pra estrada. Ver `tilePodeIrProCache`. */
+const tilesDoPainel = new NetworkOnly();
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
@@ -65,20 +85,16 @@ const serwist = new Serwist({
       handler: new NetworkOnly(),
     },
     {
-      // Tiles do mapa: o que já foi visto continua aparecendo na estrada.
+      // Tiles do mapa. A janela que pediu decide: a do painel vai só pela rede,
+      // as outras pelo cache de sempre. O `Referer` não serve pra isso — pra
+      // outra origem o navegador manda só a origem, sem o caminho —, e por isso
+      // a pergunta é à JANELA (`clientId`).
       matcher: ({ url }) => ehTileOsm(url.href),
-      handler: new CacheFirst({
-        cacheName: "bp-tiles-osm",
-        plugins: [
-          // O mapa é <img> sem crossorigin, então a resposta vem opaca (status 0)
-          // e o padrão do serwist recusa guardar — sem isto o cache fica vazio e
-          // o mapa some offline. Preço: resposta opaca não deixa ver se deu erro,
-          // e o browser cobra ela na cota com um padding gordo. Daí o teto baixo
-          // de entradas: um punhado de fichas cabe, um álbum do Brasil não.
-          new CacheableResponsePlugin({ statuses: [0, 200] }),
-          new ExpirationPlugin({ maxEntries: 120, maxAgeSeconds: MES_EM_S }),
-        ],
-      }),
+      handler: async (opcoes) => {
+        const evento = opcoes.event as FetchEvent;
+        const janela = evento.clientId ? await self.clients.get(evento.clientId) : undefined;
+        return (tilePodeIrProCache(janela?.url) ? tilesGuardados : tilesDoPainel).handle(opcoes);
+      },
     },
     {
       // As outras páginas (hoje só /trilhas): rede primeiro, cache como rede de

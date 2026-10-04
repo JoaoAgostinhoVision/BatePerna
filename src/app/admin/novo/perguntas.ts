@@ -1,5 +1,5 @@
 import { CAMPOS_DA_FICHA, lerCaminho, type CampoDaFicha } from "@/lib/campos-da-ficha";
-import { ROTULO_DO_PONTO, multiploDe, rotuloDe } from "../FichaInteira";
+import { multiploDe, rotuloDe } from "../FichaInteira";
 import type { CampoNaTela, PerguntaNaTela } from "../campos/tipos";
 
 /** AS PERGUNTAS DO LUGAR NOVO (Tarefa 11) — e este arquivo é de SERVIDOR.
@@ -182,14 +182,14 @@ function naTela(c: CampoDaFicha, caminho: string, rascunho: unknown): CampoNaTel
     ...(c.opcoes ? { opcoes: c.opcoes, multiplo: multiploDe(caminho) } : {}),
   };
   if (c.especie === "coord") {
-    // As duas metades, com o rótulo de cada uma — é o que a caixa de digitar a
-    // coordenada usa quando ainda não há ponto pra pôr o pin.
-    const metade = (m: "lat" | "lng") => ({ chave: m, caminho: `${caminho}.${m}`, rotulo: ROTULO_DO_PONTO[m] });
+    // O ponto do trajeto já marcado desce com o índice e o par (o mapa põe o
+    // pin nele). Sem ponto, o mapa nasce SEM PIN, na vista que a PÁGINA busca
+    // (`vistaDaCoordSemPonto`) — a Tarefa 11f apagou as duas caixas de número
+    // que ficavam aqui no lugar do mapa.
     const ponto = caminho.endsWith(".lat") ? lerCaminho(rascunho, caminho.split(".").slice(0, -1)) : undefined;
     const indice = Number(caminho.split(".").find((d) => /^\d+$/.test(d)));
     return {
       ...base,
-      folhas: [metade("lat"), metade("lng")],
       ...(caminho.endsWith(".lat") && ehPar(ponto) ? { ponto: { indice, lat: ponto.lat, lng: ponto.lng } } : {}),
     };
   }
