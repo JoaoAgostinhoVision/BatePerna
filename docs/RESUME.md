@@ -33,6 +33,9 @@ depois de `1de5d53`, redespachar COMO ESTÁ).
 e o velho fica numa tabela que REDIRECIONA pro novo, tudo pelo app. Vira tarefa própria (**11e**, brief AINDA NÃO
 escrito, auditar antes) — antes da 12, porque mexe na chave de `ficha_versoes` e na rota pública `[slug]`.
 Ordem: 11c → 11d → 11e → 12.
+**11e (04/10):** ele escolheu que o endereço muda SÓ QUANDO ELE MANDA (as 3 fichas mantêm o endereço; corrigir a
+cidade faz o painel avisar e oferecer trocar). Brief escrito (`task-11e-brief.md`, E1–E7), **auditoria em curso**
+(`task-11e-auditoria.md`; se não existir, redespachar a auditoria antes de qualquer coisa da 11e).
 Ele ainda não deu a cidade das 3 fichas (não trava código, trava publicar).
 
 → 🔴 **PRÓXIMO PASSO:** a re-revisão das ondas 1+2 voltou (`task-11-rereview.md`: 0 C · 2 I · 4 M) e a **onda 3**
