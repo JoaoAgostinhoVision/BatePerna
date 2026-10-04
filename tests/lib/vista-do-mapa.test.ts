@@ -6,14 +6,17 @@ import {
   MAPA_ZOOM,
   MAPA_ZOOM_EDITOR,
   MAPA_ZOOM_EDITOR_MIN,
+  TILE_PX,
   enquadrar,
 } from "@/lib/mapa";
+import { distanciaKm } from "@/lib/geo";
 import {
   FONTES_DE_PRODUCAO,
   cidadeNoEstado,
   vistaDaCidade,
   vistaDaCoordSemPonto,
   vistaDoAcervo,
+  VIZINHAS_KM,
   type FontesDaVista,
 } from "@/lib/vista-do-mapa";
 
@@ -150,6 +153,37 @@ describe("cidadeNoEstado — só o nome IGUAL, e só no estado do app", () => {
       ],
     };
     expect(cidadeNoEstado(doisDoMunicipio, "Cidade Marcador")).toBe("ambigua");
+  });
+
+  // W3 da onda de fix 2 da 11f (m-1 da re-revisão): as que sobram sem desempate,
+  // todas a até VIZINHAS_KM da primeira, são a MESMA vista — vale a primeira.
+  // 0,04° de latitude ≈ 4,4 km; 0,05° ≈ 5,6 km (o limiar é 5 km).
+  it("sem sede nem município, todas a até VIZINHAS_KM da primeira: vale a PRIMEIRA; uma mais longe: ambígua", () => {
+    const perto = (dLat: number) => ({
+      results: [
+        item("Cidade Marcador", ESTADO_DO_APP, -8.2, -36.2, "PPL", "Cidade Marcador"),
+        item("Cidade Marcador", ESTADO_DO_APP, -8.2 - dLat, -36.2, "PPL", "Cidade Marcador"),
+      ],
+    });
+    expect(distanciaKm({ lat: -8.2, lng: -36.2 }, { lat: -8.24, lng: -36.2 }), "premissa").toBeLessThan(VIZINHAS_KM);
+    expect(distanciaKm({ lat: -8.2, lng: -36.2 }, { lat: -8.25, lng: -36.2 }), "premissa").toBeGreaterThan(VIZINHAS_KM);
+    expect(cidadeNoEstado(perto(0.04), "Cidade Marcador")).toEqual({ lat: -8.2, lng: -36.2 });
+    expect(cidadeNoEstado(perto(0.05), "Cidade Marcador")).toBe("ambigua");
+    // três: as duas primeiras vizinhas, a terceira longe — ainda ambígua
+    const tres = {
+      results: [...perto(0.01).results, item("Cidade Marcador", ESTADO_DO_APP, -7.9, -39.9, "PPL", "Município Marcador")],
+    };
+    expect(cidadeNoEstado(tres, "Cidade Marcador")).toBe("ambigua");
+  });
+
+  // O limiar é escolhido pela geometria da vista: com as outras a até
+  // VIZINHAS_KM da primeira, a vista centrada nela (MAPA_ZOOM, moldura de
+  // MAPA_ALTURA_PX) mostra todas — cabe na METADE da altura, o lado mais curto.
+  it("VIZINHAS_KM cabe na metade da altura da vista da cidade, na latitude de Pernambuco", () => {
+    const mPorPx = (40075016.686 * Math.cos((9 * Math.PI) / 180)) / (TILE_PX * 2 ** MAPA_ZOOM);
+    const metadeDaAlturaKm = (mPorPx * MAPA_ALTURA_PX) / 2 / 1000;
+    expect(VIZINHAS_KM).toBeGreaterThan(0);
+    expect(VIZINHAS_KM).toBeLessThan(metadeDaAlturaKm);
   });
 
   it("resposta vazia, torta ou sem resultado: nada, sem estourar; cidade em branco: nada", () => {
@@ -307,6 +341,16 @@ describe("cidadeNoEstado — as cidades reais que a revisão mediu", () => {
         item("Belo Jardim", PE, -8.34923, -36.40015, "AIRF", "Belo Jardim"),
       ],
       { lat: -8.33556, lng: -36.42417 },
+    ],
+    // m-1 da re-revisão da 11f: as duas entradas do MESMO município, a menos de
+    // 1 km uma da outra, sem sede (medido no serviço em 2026-10-04, 3 casas).
+    [
+      "Barra de Guabiraba",
+      [
+        item("Barra de Guabiraba", PE, -8.416, -35.663, "PPL", "Barra de Guabiraba"),
+        item("Barra de Guabiraba", PE, -8.42, -35.658, "PPL", "Barra de Guabiraba"),
+      ],
+      { lat: -8.416, lng: -35.663 },
     ],
   ];
   for (const [cidade, results, esperado] of CASOS) {

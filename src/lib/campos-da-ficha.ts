@@ -468,10 +468,11 @@ export const RECUSA_TIRAR_O_LUGAR = "O Ponto 1 é o próprio lugar: ele não sai
  *  próprio orquestrador): a ficha pública imprimia a cópia como fato Nível A, com
  *  "Abrir no mapa", e na primeira etapa a cópia era a do PRÓPRIO destino — o app
  *  afirmando uma posição que ninguém deu, sem nada que a distinguisse de uma
- *  conferida. Agora não existe cópia de coordenada em lugar nenhum do caminho:
- *  confirmar o pin sem mexer é o DONO afirmando aquela posição, e é aceito sem
- *  heurística de "igual à anterior" (que comeria o caso real de duas etapas no
- *  mesmo ponto). Faixa e finitude são do schema, como em `gravarPonto`.
+ *  conferida. Agora não existe cópia de coordenada em lugar nenhum do caminho: a
+ *  tela abre o mapa do ponto novo SEM PIN (a vista no último ponto; onda de fix 2
+ *  da 11f, m-5), e o que chega aqui é o toque dele. Não há heurística de "igual
+ *  à anterior" (que comeria o caso real de duas etapas no mesmo ponto: é tocar
+ *  ali). Faixa e finitude são do schema, como em `gravarPonto`.
  *
  *  Sem `nota`: nada é pré-preenchido (§4.4 da spec). O nome vem do dono e é
  *  gravado como chegou; em branco é recusado com frase, como toda caixa vazia. */

@@ -75,9 +75,11 @@ import type { CampoNaTela, PropsDoEditor, VistaNaTela } from "./tipos";
  *  portão media o zoom da VISTA, e o caminho que a própria ajuda ensinava —
  *  tocar afastado, apertar + — gravava o toque do z7 (medido no Chrome: ~75 km
  *  da cidade). Um pin posto de longe só se salva depois de tocado ou arrastado
- *  de novo, de perto. O pin que veio do banco (ou o último ponto, no
- *  `EditorWaypoints`) conta como posto no `MAPA_ZOOM_EDITOR`: é o ponto que
- *  já está lá. A ajuda (`portaoDoSalvar`) diz o que falta em cada caso.
+ *  de novo, de perto. O pin que veio do banco conta como posto no
+ *  `MAPA_ZOOM_EDITOR`: é o ponto que já está lá. (O ponto NOVO do
+ *  `EditorWaypoints` não tem ponto que já esteja lá: nasce sem pin desde a onda
+ *  de fix 2 da 11f, m-5.) A ajuda (`portaoDoSalvar`) diz o que falta em cada
+ *  caso.
  *
  *  🔴 ARRASTAR NÃO GRAVA, NEM MEXER NA VISTA. Só o Salvar manda pra porta — o
  *  dono confere o número embaixo contra o que sabe antes.

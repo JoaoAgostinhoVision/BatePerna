@@ -86,10 +86,18 @@ function dublarRect(el: HTMLElement): void {
 const ponteiro = (el: HTMLElement, tipo: string, x: number, y: number): void => {
   fireEvent(el, new MouseEvent(tipo, { bubbles: true, cancelable: true, clientX: RECT.left + x, clientY: RECT.top + y }));
 };
-function arrastarPin(): void {
+/** O toque do dono no mapa (o ponto novo nasce SEM pin: é o toque que o põe).
+ *  Por padrão, no meio da caixa — onde a vista centra o último ponto. */
+function tocar(x = L / 2, y = A / 2): void {
   const mapa = editor().querySelector<HTMLElement>('[data-testid="mapa-escolher"]')!;
   dublarRect(mapa);
   dublarRect(mapa.parentElement!);
+  ponteiro(mapa, "pointerdown", x, y);
+  ponteiro(mapa, "pointerup", x, y);
+}
+function arrastarPin(): void {
+  tocar();
+  const mapa = editor().querySelector<HTMLElement>('[data-testid="mapa-escolher"]')!;
   ponteiro(mapa, "pointerdown", L / 2, A / 2);
   ponteiro(mapa, "pointermove", L / 2 + 120, A / 2 - 60);
   ponteiro(mapa, "pointerup", L / 2 + 120, A / 2 - 60);
@@ -139,14 +147,23 @@ describe("EditorWaypoints — onde ele mora", () => {
 });
 
 describe("EditorWaypoints — acrescentar no FIM, na posição que o DONO marcou", () => {
-  it("abrir mostra o nome, a dica e o MESMO mapa do pin, começando no último ponto", () => {
+  it("abrir mostra o nome, a dica e o MESMO mapa do pin, com a VISTA no último ponto e sem pin; o toque põe o pin e tira a dica", () => {
     render(<FichaInteira ficha={TRES_PONTOS} />);
     abrir();
     expect(caixa().value).toBe("");
     expect(within(editor()).getByText(DICA_DO_PONTO_NOVO)).toBeTruthy();
-    expect(editor().querySelector('[data-testid="mapa-escolher"] [data-pin]')).not.toBeNull();
+    expect(editor().querySelector('[data-testid="mapa-escolher"] [data-pin]')).toBeNull();
+    // a dica mora DEPOIS do mapa: ela some com o toque, e o mapa não pula
+    const mapa = editor().querySelector('[data-testid="mapa-escolher"]')!;
+    expect(mapa.compareDocumentPosition(within(editor()).getByText(DICA_DO_PONTO_NOVO)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // a vista é centrada no último ponto: tocar o meio dá ele
+    tocar();
     const u = ultimoDe(TRES_PONTOS);
-    expect(lido()).toEqual({ lat: u.lat, lng: u.lng });
+    expect(lido().lat).toBeCloseTo(u.lat, 6);
+    expect(lido().lng).toBeCloseTo(u.lng, 6);
+    expect(editor().querySelector('[data-testid="mapa-escolher"] [data-pin]')).not.toBeNull();
+    expect(within(editor()).queryByText(DICA_DO_PONTO_NOVO)).toBeNull();
+    expect((within(editor()).getByRole("button", { name: SALVAR }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   // 🔴 O CRITICAL 1 DA REVISÃO, pelo lado da tela: o que vai no PUT é a posição
@@ -184,7 +201,9 @@ describe("EditorWaypoints — acrescentar no FIM, na posição que o DONO marcou
       ({ ...r, x: r.left, y: r.top, right: r.left + r.width, bottom: r.top + r.height, toJSON: () => ({}) }) as DOMRect;
     mapa.getBoundingClientRect = rect({ left: 10, top: 20, width: L, height: A });
     mapa.parentElement!.getBoundingClientRect = rect({ left: 70, top: 20, width: 360, height: A });
-    // o pin nasce no centro (240, 100); o dedo encosta no fundo, longe da gota, e anda 200px
+    // o toque põe o pin no centro (240, 100); o dedo encosta no fundo, longe da gota, e anda 200px
+    ponteiro(mapa, "pointerdown", L / 2, A / 2);
+    ponteiro(mapa, "pointerup", L / 2, A / 2);
     ponteiro(mapa, "pointerdown", 90, 130);
     ponteiro(mapa, "pointermove", 190, 130);
     ponteiro(mapa, "pointermove", 290, 130);
@@ -244,20 +263,22 @@ describe("EditorWaypoints — acrescentar no FIM, na posição que o DONO marcou
     });
   });
 
-  // Confirmar sem mexer é o DONO afirmando aquela posição — aceito, sem
-  // heurística de "igual à anterior" (que comeria duas etapas no mesmo ponto).
-  it("confirmar sem mexer o pin manda a posição em que ele está — e isso é o dono afirmando", async () => {
+  // 🔴 W2 da onda de fix 2 da 11f (m-5 da re-revisão, LINHA VERMELHA): o ponto
+  // novo nasce SEM PIN. Antes, ele se confirmava sem gesto nenhum com o par do
+  // ÚLTIMO ponto — a mesma cópia que a revisão da Tarefa 10 barrou, voltando
+  // pela porta do pin pré-posto. A vista começa no último ponto; o ponto, não.
+  it("abrir e não tocar: sem pin, sem número e sem Salvar — o par do último ponto não se confirma sem gesto", () => {
     const { fetchFalso } = comRota();
     render(<FichaInteira ficha={UM_PONTO_REAL} />);
     abrir();
     fireEvent.change(caixa(), { target: { value: "Ponto marcador" } });
-    confirmar();
-    await waitFor(() => expect(fetchFalso).toHaveBeenCalledTimes(1));
-    const u = ultimoDe(UM_PONTO_REAL);
-    expect(corpos(fetchFalso)[0].corpo).toEqual({
-      slug: UM_PONTO_REAL.slug,
-      acrescentarEtapa: { nome: "Ponto marcador", lat: u.lat, lng: u.lng },
-    });
+    expect(editor().querySelector('[data-testid="mapa-escolher"]'), "premissa: o mapa abriu").not.toBeNull();
+    expect(editor().querySelector('[data-testid="mapa-escolher"] [data-pin]'), "o ponto novo nasceu com pin").toBeNull();
+    expect(editor().querySelector('[data-testid="coord-atual"]')!.textContent).toBe("");
+    expect(within(editor()).queryByRole("button", { name: SALVAR }), "há como confirmar sem tocar").toBeNull();
+    for (const nome of [APROXIMAR, AFASTAR, AFASTAR]) fireEvent.click(within(editor()).getByRole("button", { name: nome }));
+    expect(within(editor()).queryByRole("button", { name: SALVAR }), "mexer só na vista deu como confirmar").toBeNull();
+    expect(fetchFalso).not.toHaveBeenCalled();
   });
 
   for (const [nome, texto] of [
@@ -269,6 +290,7 @@ describe("EditorWaypoints — acrescentar no FIM, na posição que o DONO marcou
       render(<FichaInteira ficha={TRES_PONTOS} />);
       abrir();
       fireEvent.change(caixa(), { target: { value: texto } });
+      tocar();
       confirmar();
       expect(within(editor()).getByRole("alert").textContent).toBe(CAIXA_VAZIA);
       expect(fetchFalso).not.toHaveBeenCalled();
@@ -281,6 +303,7 @@ describe("EditorWaypoints — acrescentar no FIM, na posição que o DONO marcou
     render(<FichaInteira ficha={TRES_PONTOS} />);
     abrir();
     fireEvent.change(caixa(), { target: { value: "Quarto ponto" } });
+    tocar();
     confirmar();
     await waitFor(() => expect(within(editor()).getByRole("alert").textContent).toBe(FRASE));
     expect(caixa().value).toBe("Quarto ponto");

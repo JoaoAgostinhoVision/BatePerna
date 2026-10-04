@@ -15,14 +15,16 @@ import { CAIXA_VAZIA, SALVANDO, SALVAR } from "./palavras";
  *
  *  🔴 DUAS AÇÕES, E SÓ DUAS:
  *   - ACRESCENTAR UM PONTO NO FIM: o botão abre o nome e o MESMO mapa do
- *     `EditorCoordenada` (`MapaDoPin`), com o pin começando no último ponto. O
- *     dono escreve o nome, POSICIONA o pin e confirma; o que vai pra porta é a
- *     posição do pin. 🔴 Até a onda de conserto 1 a coordenada era COPIADA do
- *     último ponto pela porta, e a ficha pública a imprimia como fato, com
- *     "Abrir no mapa" — na primeira etapa, em cima do próprio destino. Agora
- *     nenhuma coordenada é copiada em lugar nenhum: confirmar sem mexer o pin é o
- *     DONO afirmando aquela posição, e é aceito sem heurística de "igual à
- *     anterior" (que comeria o caso real de duas etapas no mesmo ponto).
+ *     `EditorCoordenada` (`MapaDoPin`), com a VISTA começando no último ponto
+ *     e SEM PIN. O dono escreve o nome, TOCA onde fica o ponto (e arrasta pra
+ *     acertar) e confirma; o que vai pra porta é a posição do pin. 🔴 Até a
+ *     onda de conserto 1 a coordenada era COPIADA do último ponto pela porta, e
+ *     a ficha pública a imprimia como fato, com "Abrir no mapa" — na primeira
+ *     etapa, em cima do próprio destino. 🔴 E até a onda de fix 2 da 11f (m-5 da
+ *     re-revisão) a cópia voltava pela porta do PIN PRÉ-POSTO: o pin nascia no
+ *     último ponto e se confirmava sem gesto nenhum. Agora não há pin nem Salvar
+ *     até o toque dele, e nenhuma coordenada é copiada em lugar nenhum. Duas
+ *     etapas no mesmo ponto continuam possíveis: é tocar ali.
  *   - TIRAR O ÚLTIMO, EM DOIS TOQUES (decisão do João, 2026-10-01): o primeiro
  *     troca o botão pela pergunta (`TIRAR_MESMO`), e só o segundo manda. O estado
  *     de "confirmar" é desta tela: recarregar desfaz. Só aparece com dois pontos
@@ -36,8 +38,8 @@ import { CAIXA_VAZIA, SALVANDO, SALVAR } from "./palavras";
  *  🔴 O SERVIDOR CONTA, O EDITOR NÃO SABE O QUE É FICHA. `pontos`, o rótulo e a
  *  posição do último chegam por PROP, montados por `FichaInteira` — o mesmo
  *  contrato de `./tipos.ts`: nenhum editor importa `@/lib/campos-da-ficha`, que
- *  traria o zod pro celular. O `ultimo` é só ONDE O MAPA COMEÇA; ele só vira
- *  dado se o dono confirmar o pin ali.
+ *  traria o zod pro celular. O `ultimo` é só ONDE O MAPA COMEÇA (a vista);
+ *  nunca vira pin nem dado.
  *
  *  🔴 O MAPA ANDA DESDE A TAREFA 11f (m6 da auditoria): o mesmo `MapaDoPin`
  *  ganhou o arrastar do fundo, o + e o − e o toque que leva o pin. Acabou o
@@ -45,9 +47,8 @@ import { CAIXA_VAZIA, SALVANDO, SALVAR } from "./palavras";
  *  novo). E o mesmo portão do Salvar (`portaoDoSalvar`): o pin posto com a
  *  vista afastada (abaixo do `MAPA_ZOOM_EDITOR`) não se confirma — nem depois
  *  de aproximar, até ser tocado ou arrastado de perto (onda de fix da 11f, C-1
- *  da revisão) —, e o pin fora da parte visível também não. O pin do ponto novo
- *  continua nascendo no último ponto — ele existe, então não há estado "sem
- *  pin" aqui —, e conta como posto de perto. */
+ *  da revisão) —, e o pin fora da parte visível também não. Sem pin (antes do
+ *  primeiro toque), não há Salvar: a vista nunca é gravada. */
 
 /** O nome da caixa do ponto novo. "O nome" é a palavra que o painel já usa pra
  *  essa folha de todo ponto (`ROTULO_DO_PONTO.nome`), e "ponto" é a que o
@@ -58,12 +59,14 @@ export const NOME_DO_PONTO_NOVO = "O nome do ponto novo";
 // PENDENTE: redação minha, o João ainda não leu
 export const ACRESCENTAR_PONTO = "Acrescentar um ponto no fim do trajeto";
 
-/** O pin começa no último ponto, e o dono precisa saber que é ELE quem diz onde
- *  o ponto novo fica — senão confirma sem olhar. Trocada na onda de conserto 1:
- *  a anterior ("nasce na coordenada do último; depois, ajuste") descrevia a cópia
- *  que deixou de existir. */
+/** A ajuda do mapa SEM PIN do ponto novo: a vista começa no último ponto, mas o
+ *  ponto novo só existe depois do toque dele. Trocada na onda de fix 2 da 11f
+ *  (m-5): a anterior ("Arraste o pin até onde fica o ponto novo.") descrevia o
+ *  pin pré-posto no último ponto, que deixou de existir. Some com o toque, e
+ *  mora EMBAIXO do mapa (como a `MARQUE_NO_MAPA`): uma linha que some em cima
+ *  faria o mapa pular debaixo do dedo. */
 // PENDENTE: redação minha, o João ainda não leu
-export const DICA_DO_PONTO_NOVO = "Arraste o pin até onde fica o ponto novo.";
+export const DICA_DO_PONTO_NOVO = "Toque no mapa onde fica o ponto novo. Depois, arraste o pin pra acertar.";
 
 /** `rotulo` é o "Ponto N" que o servidor já escreve no bloco de cada ponto —
  *  uma forma só de nomear um ponto na tela inteira. */
@@ -87,13 +90,14 @@ export default function EditorWaypoints({
   pontos: number;
   /** O rótulo do último ponto, como o bloco dele o mostra ("Ponto 3"). */
   rotuloDoUltimo: string;
-  /** Onde o mapa do ponto novo COMEÇA: a posição do último ponto. */
+  /** Onde a VISTA do ponto novo começa: a posição do último ponto. Nunca o pin. */
   ultimo: Par;
 }) {
   const [aberto, setAberto] = useState(false);
   const [nome, setNome] = useState("");
-  const [pin, setPin] = useState<Par>(ultimo);
-  // O pin nasce no último ponto, que já é dado: conta como posto de perto.
+  // 🔴 SEM PIN até o toque dele (m-5): o último ponto é só onde a vista começa.
+  const [pin, setPin] = useState<Par | null>(null);
+  // Só vale com pin: o primeiro `aoMover` o troca pelo zoom do gesto.
   const [zDoPin, setZDoPin] = useState(MAPA_ZOOM_EDITOR);
   const [pinAVista, setPinAVista] = useState(true);
   const [vista, setVista] = useState({ centro: ultimo, z: MAPA_ZOOM_EDITOR });
@@ -101,12 +105,12 @@ export default function EditorWaypoints({
   const [confirmandoTirar, setConfirmandoTirar] = useState(false);
   const { erro, salvando, gravar, recusarAqui } = usarGravacao();
 
-  function acrescentar(): void {
+  function acrescentar(posto: Par): void {
     if (nome.trim() === "") {
       recusarAqui(CAIXA_VAZIA);
       return;
     }
-    void gravar({ slug, acrescentarEtapa: { nome, lat: pin.lat, lng: pin.lng } });
+    void gravar({ slug, acrescentarEtapa: { nome, lat: posto.lat, lng: posto.lng } });
   }
 
   function tirar(): void {
@@ -128,7 +132,6 @@ export default function EditorWaypoints({
             value={nome}
             onChange={(e) => setNome(e.target.value)}
           />
-          <p className="adm-editor-ajuda">{DICA_DO_PONTO_NOVO}</p>
           <MapaDoPin
             vista={vista}
             atual={pin}
@@ -140,17 +143,21 @@ export default function EditorWaypoints({
             aoVerPin={setPinAVista}
           />
           <p className="adm-editor-coord" data-testid="coord-atual" aria-live="polite">
-            {`${pin.lat}, ${pin.lng}`}
+            {pin ? `${pin.lat}, ${pin.lng}` : ""}
           </p>
-          {ajudaDoPortao !== null && <p className="adm-editor-ajuda">{ajudaDoPortao}</p>}
-          <button
-            type="button"
-            className="adm-editor-salvar"
-            disabled={salvando || ajudaDoPortao !== null}
-            onClick={acrescentar}
-          >
-            {salvando ? SALVANDO : SALVAR}
-          </button>
+          {pin === null && <p className="adm-editor-ajuda">{DICA_DO_PONTO_NOVO}</p>}
+          {pin !== null && ajudaDoPortao !== null && <p className="adm-editor-ajuda">{ajudaDoPortao}</p>}
+          {/* 🔴 SEM PIN NÃO HÁ SALVAR: nada aqui grava a vista (nem o último ponto). */}
+          {pin !== null && (
+            <button
+              type="button"
+              className="adm-editor-salvar"
+              disabled={salvando || ajudaDoPortao !== null}
+              onClick={() => acrescentar(pin)}
+            >
+              {salvando ? SALVANDO : SALVAR}
+            </button>
+          )}
         </>
       ) : (
         <button type="button" className="adm-editor-salvar" onClick={() => setAberto(true)}>

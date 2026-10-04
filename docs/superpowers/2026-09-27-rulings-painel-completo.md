@@ -144,8 +144,11 @@ dezenas de metros. A decisão tem DUAS metades, e esta ruling trata cada uma:
    *"tocar afastado, aproximar, Salvar liga"*). Agora: o pin guarda o zoom do último gesto que o
    pôs ou moveu, e aproximar a vista não o muda — o toque de longe só se salva depois de tocado ou
    arrastado de perto; com pin, o +/− aproxima e afasta EM VOLTA DO PIN (ele fica onde está na
-   tela); e pin fora da parte visível não se salva. O ponto que já está no banco (ou o último
-   ponto, no ponto novo do trajeto) conta como posto de perto.
+   tela); e pin fora da parte visível não se salva. O ponto que já está no banco conta como posto
+   de perto. 🔴 **Emenda da onda de fix 2 (m-5 da re-revisão):** o ponto NOVO do trajeto nascia
+   com o pin no último ponto e se confirmava sem gesto nenhum — a cópia que a revisão da Tarefa 10
+   barrou, voltando pela porta do pin pré-posto. Agora ele nasce SEM PIN: a vista começa no
+   último ponto, e não há pin nem Salvar até o toque dele.
 2. **"Pra chegar longe, salva e abre de novo" é SUBSTITUÍDO** — era o custo que ele aceitou, e o
    arrastar da vista o elimina. Pedido dele em 2026-10-04, ao ver o lugar novo pedir latitude e
    longitude digitadas: *"dios mio, latitude e longitude, era bom ter um mapa e a pessoa arrastar

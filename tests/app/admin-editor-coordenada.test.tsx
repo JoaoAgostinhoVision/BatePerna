@@ -736,6 +736,88 @@ describe("EditorCoordenada — o portão do Salvar no zoom (C1)", () => {
     expect(salvarEm(PAR)!.disabled).toBe(false);
     expect(within(bloco(PAR)).queryByText(PIN_FORA_DA_VISTA)).toBeNull();
   });
+
+  // W1 da onda de fix 2 da 11f (I-1 da re-revisão): a regra (c) confere QUATRO
+  // bordas e um evento, e só a direita estava provada. Cada caso abaixo arrasta o
+  // FUNDO (o pin vai junto do mapa, o número não muda) até o pin sair por UMA
+  // borda, e volta. Caixa em escala 1 (tela = layout), pra o deslocamento do dedo
+  // ser o do pin. O pin nasce no centro, (240, 100).
+  /** Arrasta o fundo de `de` até `ate` (tela), em dois passos, e solta. */
+  function arrastarFundo(mapa: HTMLElement, de: NaTela, ate: NaTela): void {
+    ponteiro(mapa, "pointerdown", de);
+    ponteiro(mapa, "pointermove", { clientX: (de.clientX + ate.clientX) / 2, clientY: (de.clientY + ate.clientY) / 2 });
+    ponteiro(mapa, "pointermove", ate);
+    ponteiro(mapa, "pointerup", ate);
+  }
+  const ESCALA_UM = { left: 0, top: 20, width: L, height: A };
+  for (const caso of [
+    // a caixa de 480 começa 60px à esquerda da moldura de 360: a parte visível é
+    // x ∈ [60, 420]. O pin em x=40 está DENTRO da caixa e FORA da tela.
+    {
+      borda: "ESQUERDA",
+      caixa: { left: -60, top: 20, width: L, height: A },
+      moldura: { left: 0, top: 20, width: 360, height: A },
+      de: { clientX: 300, clientY: 150 },
+      ate: { clientX: 100, clientY: 150 },
+      eixo: "left" as const,
+      fora: 40,
+    },
+    {
+      borda: "de CIMA",
+      caixa: ESCALA_UM,
+      moldura: ESCALA_UM,
+      de: { clientX: 100, clientY: 190 },
+      ate: { clientX: 100, clientY: 40 },
+      eixo: "top" as const,
+      fora: -50,
+    },
+    {
+      borda: "de BAIXO",
+      caixa: ESCALA_UM,
+      moldura: ESCALA_UM,
+      de: { clientX: 100, clientY: 30 },
+      ate: { clientX: 100, clientY: 160 },
+      eixo: "top" as const,
+      fora: A / 2 + 130,
+    },
+  ]) {
+    it(`pin fora da parte visível pela borda ${caso.borda}: sem Salvar, e a ajuda diz que ele saiu; de volta à vista, salva`, () => {
+      const { fetchFalso } = comRota();
+      render(<FichaInteira ficha={FICHA} />);
+      const mapa = mapaEm(PAR)!;
+      dublarCaixas(mapa, caso.caixa, caso.moldura);
+      expect(salvarEm(PAR)!.disabled, "premissa: o pin do banco, à vista, salva").toBe(false);
+      arrastarFundo(mapa, caso.de, caso.ate);
+      expect(parseFloat(pinEm(PAR).style[caso.eixo]), "premissa: o pin fora por aquela borda").toBeCloseTo(caso.fora, 1);
+      expect(lido(PAR), "arrastar o fundo mexeu no ponto").toEqual(FICHA.condicao.coords);
+      expect(salvarEm(PAR)!.disabled, `o pin fora pela borda ${caso.borda} ficou salvável`).toBe(true);
+      expect(within(bloco(PAR)).getByText(PIN_FORA_DA_VISTA)).toBeTruthy();
+      fireEvent.click(salvarEm(PAR)!);
+      expect(fetchFalso).not.toHaveBeenCalled();
+      arrastarFundo(mapa, caso.ate, caso.de);
+      expect(salvarEm(PAR)!.disabled, "de volta à vista, o pin não salvou").toBe(false);
+      expect(within(bloco(PAR)).queryByText(PIN_FORA_DA_VISTA)).toBeNull();
+    });
+  }
+
+  // O celular gira (ou a janela estreita): a moldura passa a cortar outra fatia,
+  // e o pin que estava à vista fica fora — sem nenhum gesto. É o `resize` que
+  // manda medir de novo.
+  it("a moldura encolhe com a janela (resize): o pin que saiu da vista desliga o Salvar; ela volta a crescer, ele liga", () => {
+    render(<FichaInteira ficha={FICHA} />);
+    const mapa = mapaEm(PAR)!;
+    expect(parseFloat(pinEm(PAR).style.left), "premissa: o pin no centro").toBeCloseTo(L / 2, 1);
+    expect(salvarEm(PAR)!.disabled, "premissa: à vista, salva").toBe(false);
+    // a moldura passa a mostrar só x ∈ [0, 200] da caixa: o pin em 240 fica fora
+    dublarCaixas(mapa, ESCALA_UM, { left: 0, top: 20, width: 200, height: A });
+    expect(salvarEm(PAR)!.disabled, "premissa: sem o resize nada redesenha").toBe(false);
+    fireEvent(window, new Event("resize"));
+    expect(salvarEm(PAR)!.disabled, "a janela estreitou e o pin fora da tela ficou salvável").toBe(true);
+    expect(within(bloco(PAR)).getByText(PIN_FORA_DA_VISTA)).toBeTruthy();
+    dublarRect(mapa.parentElement!, ESCALA_UM);
+    fireEvent(window, new Event("resize"));
+    expect(salvarEm(PAR)!.disabled, "a janela voltou e o pin à vista não salvou").toBe(false);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -1,4 +1,4 @@
-import type { Coord } from "./geo";
+import { distanciaKm, type Coord } from "./geo";
 import { ESTADO_DO_APP, PRAZO_BUSCA_MS, urlBuscaCidade } from "./lugares";
 import {
   MAPA_ALTURA_PX,
@@ -29,7 +29,7 @@ import {
  *   2. a CIDADE do lugar (o campo `cidade`, da 11b), achada no serviço de
  *      geocoding SÓ se o nome for IGUAL, o estado for o do app e o lugar for
  *      HABITADO, e só se sobrar uma (ou uma sede, ou uma do município de mesmo
- *      nome — `cidadeNoEstado`) → no `MAPA_ZOOM` da ficha pública (~26 km no
+ *      nome, ou todas a poucos km da primeira — `cidadeNoEstado`) → no `MAPA_ZOOM` da ficha pública (~26 km no
  *      celular, com nome de cidade: um município do sertão é maior que os ~6 km
  *      do zoom de pôr o pin). Achada mais de uma vez sem desempate, a vista
  *      cai no acervo com a origem `cidade-ambigua` — a tela não diz "não
@@ -82,6 +82,19 @@ function lerCandidatas(raw: unknown): Candidata[] {
 const NAO_HABITADO = new Set(["PPLH", "PPLQ", "PPLW", "PPLCH"]);
 const habitado = (classe: string): boolean => classe.startsWith("PPL") && !NAO_HABITADO.has(classe);
 
+/** 🔴 O LIMIAR DE "VIZINHAS" (desempate 3): 5 km. A vista da cidade abre no
+ *  `MAPA_ZOOM` (11, ~75,7 m/px nesta latitude), e a moldura do mapa tem
+ *  `MAPA_ALTURA_PX` (200 px) de altura — ~15 km, METADE ~7,5 km; a largura
+ *  visível no celular é maior. Com as outras a até 5 km da primeira, a vista
+ *  centrada nela mostra todas dentro da moldura: escolher a primeira não
+ *  esconde nenhuma. Mais longe que a metade da altura, a outra poderia ficar
+ *  fora da tela, e a escolha já esconderia uma — fica "ambígua". Há teste
+ *  conferindo que o limiar cabe na metade da altura. */
+export const VIZINHAS_KM = 5;
+
+const todasVizinhasDaPrimeira = (lista: readonly Coord[]): boolean =>
+  lista.every((l) => distanciaKm(lista[0], l) <= VIZINHAS_KM);
+
 /** A cidade na resposta do serviço — só a de nome IGUAL (normalizado), no
  *  estado do app e HABITADA. Nunca "a primeira da lista": a busca devolve
  *  homônimos de outros estados antes (C2 da auditoria da Tarefa 11f).
@@ -90,7 +103,11 @@ const habitado = (classe: string): boolean => classe.startsWith("PPL") && !NAO_H
  *   1. a única SEDE (`PPLA*`, sede de município) — o Cabo de Santo Agostinho
  *      vem como sede e como povoado, no mesmo lugar;
  *   2. a única do MUNICÍPIO de mesmo nome (`admin2`) — Bonito, a do Véu de
- *      Noiva, vem duas vezes como `PPL`: a cidade, e um povoado de Ibirajuba.
+ *      Noiva, vem duas vezes como `PPL`: a cidade, e um povoado de Ibirajuba;
+ *   3. todas VIZINHAS da primeira (a até `VIZINHAS_KM` dela): a primeira —
+ *      Barra de Guabiraba vem duas vezes, as duas `PPL` do próprio
+ *      município, a menos de 1 km uma da outra (m-1 da re-revisão da 11f). Qualquer
+ *      uma serve porque isto é só onde a câmera começa, nunca ponto gravado.
  *  Nenhum desempate serve: `"ambigua"` (a cidade FOI achada, mais de uma vez).
  *  Nenhuma: `null`. Nos dois, a vista cai no acervo — nunca o estado errado. */
 export function cidadeNoEstado(raw: unknown, cidade: string): Coord | "ambigua" | null {
@@ -104,7 +121,8 @@ export function cidadeNoEstado(raw: unknown, cidade: string): Coord | "ambigua" 
   const sedes = iguais.filter((l) => l.classe.startsWith("PPLA"));
   const doMunicipio = iguais.filter((l) => normalizar(l.municipio) === alvo);
   const unica = [iguais, sedes, doMunicipio].find((lista) => lista.length === 1);
-  return unica ? { lat: unica[0].lat, lng: unica[0].lng } : "ambigua";
+  if (unica) return { lat: unica[0].lat, lng: unica[0].lng };
+  return todasVizinhasDaPrimeira(iguais) ? { lat: iguais[0].lat, lng: iguais[0].lng } : "ambigua";
 }
 
 /** O quadro do acervo no ar — o mesmo `enquadrar` da home, sobre as

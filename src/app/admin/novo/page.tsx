@@ -95,11 +95,9 @@ export default async function Novo({
   // chegaria depois do mapa desenhado e a vista pularia, talvez depois do toque
   // dele (I1 da auditoria). Só a pergunta da TELA, e só se ela for de mapa sem
   // ponto: as outras telas não vão ao serviço de geocoding. A vista não é ponto
-  // e não é gravada (`src/lib/vista-do-mapa.ts`).
-  const semPonto =
-    pergunta.especie === "coord" &&
-    !pergunta.campo.caminho.endsWith(".lng") &&
-    pergunta.valor === undefined;
+  // e não é gravada (`src/lib/vista-do-mapa.ts`). Não há pergunta de `.lng`:
+  // `camposQueSaoPergunta` a tira (o mapa mora na linha da `.lat`).
+  const semPonto = pergunta.especie === "coord" && pergunta.valor === undefined;
   const vista = semPonto ? await vistaDaCoordSemPonto(doc, pergunta.campo.caminho, FONTES_DE_PRODUCAO) : null;
 
   return (
