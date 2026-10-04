@@ -14,8 +14,11 @@
    fichas existentes ganham a pergunta — ELE responde, eu não deduzo do slug.
 3. **Horário com intervalo de almoço (8–10 e 14–17), ANTES de publicar** — mexe no veredito público de "fechado".
    Abre e fecha dependem um do outro (já dito ao agente da onda 3, F2).
-**Ordem nova:** onda 3 (F2, F3) → tarefa "cidade" → tarefa "intervalo" → Tarefa 12 (G1′ já reescrito). Os briefs
-das duas tarefas novas AINDA NÃO EXISTEM — escrever e auditar antes de despachar.
+**Estado (04/10, tarde):** onda 3 fechou só F3 (`1a53564`, F1 desfeito em `d88cc1c`; 1866/1866 medido por mim).
+O F2 (horário com UM Salvar) foi ABSORVIDO pela 11d. Ordem: **11b cidade → 11c horário-dado+veredito público →
+11d editor de faixas no painel → Tarefa 12.** Briefs escritos (`task-11b/c/d-brief.md`), **auditoria em curso**
+(`task-11bcd-auditoria.md`): se ela não existir, redespachar a auditoria; se existir, corrigir os briefs e
+despachar a 11b. Ele ainda não deu a cidade das 3 fichas (não trava código, trava publicar).
 
 → 🔴 **PRÓXIMO PASSO:** a re-revisão das ondas 1+2 voltou (`task-11-rereview.md`: 0 C · 2 I · 4 M) e a **onda 3**
 foi despachada (`task-11-fix3-brief.md`, F1 nome confere o RESULTADO / F2 horário com UM Salvar / F3 rede não avança).
