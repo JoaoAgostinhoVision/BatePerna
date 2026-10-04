@@ -42,6 +42,9 @@ com o doc de produção, zero diferença). Os achados foram pra seção "ANTES D
 despachada** (`task-11d-PROMPT.md`; se não houver commit de código depois de `c577ca3`, redespachar COMO ESTÁ).
 ✅ **11d feita: `3f7546a`** (editor de faixas, UM Salvar; contração do bloco). Medido: 1968/1968 em 98, tsc 0,
 build 0, mutar 42/0. **Revisão despachada** (`task-11d-review.md`; se não existir, redespachar). Depois: 11e.
+🔴 **PEDIDO DELE (04/10): "latitude e longitude… era bom ter um mapa e a pessoa arrastar — que horror".** Vira a
+**11f** (brief `task-11f-brief.md`: mapa sem pin centrado na CIDADE via `/api/lugares`, +/−, arrastar a vista, TOQUE
+põe o pin, nunca grava o centro). **Auditoria em curso** (`task-11f-auditoria.md`). Ordem nova: 11d → **11f** → 11e → 12.
 📌 **Lido no banco de PRODUÇÃO em 04/10 (só leitura):** 1 versão por ficha; Pedra `{abre 05:00, fecha 17:00}`, Véu
 `{08:00, 17:00}`, Rampa só `dias [sab,dom]`; nenhuma tem cidade; produção NÃO tem a coluna `oculto` nem a tabela
 `ficha_rascunhos` — o `ensureSchema` (ALTER guardado) cria no `npm run semear`, que TEM de vir antes do deploy.
