@@ -58,6 +58,11 @@ fora da vista sem Salvar; prazo da busca testado; cidades reais de PE não recus
 código depois de `1995a9c`, redespachar com o mesmo brief.
 ✅ **Onda de fix feita: `1f09660`** (2042/2042, tsc 0, build 0, mutar 42/0). **Re-revisão despachada**
 (`task-11f-rereview.md`; se não existir, redespachar). Depois: **11e** (`task-11e-brief.md`, já auditado).
+✅ **Re-revisão: 0 C · 1 I · 6 M** — nenhum caminho grava ponto não conferido de perto. Mas o m-5 é LINHA VERMELHA:
+o ponto novo do trajeto se confirmava com o par do ÚLTIMO ponto, sem gesto (o Critical da Tarefa 10 voltando pelo
+pin pré-posto). **Onda de fix 2 despachada** (`task-11f-fix2-brief.md`, W1–W4: ponto novo nasce SEM pin; provas da
+regra "pin fora da vista"). Se não houver commit de código depois de `1f09660`, redespachar com o mesmo brief.
+📝 Copy +: "Não achei a cidade" também quando o serviço caiu; "o campo cidade aceita distrito?".
 📝 **Pacote de copy pro João (crescendo):** "Abre sábado e domingo. Abre das 8h às 10h e das 14h às 17h."; "abre
 domingo às 8h" dito num domingo; "Não sei — o app não diz nada sobre isto" com horário ausente (FALSO: sem horário
 nunca fecha); "Escolha uma hora, no formato HH:MM." pra faixa vazia; e todas as `PENDENTE` dos relatórios 11b/c/d/f. Ordem nova: 11d → **11f** → 11e → 12.
