@@ -120,12 +120,16 @@ describe("ficha_rascunhos", () => {
     await salvarRascunho(c, "lugar-marcador-dois", '{"quem":"outro"}', 2);
     await gravarVersao(c, "lugar-marcador-tres", '{"slug":"no-ar"}', "painel", 1);
     await gravarVersao(c, "lugar-marcador-tres", '{"slug":"no-ar"}', "painel", 2, true);
-    for (const destino of ["lugar-marcador-dois", "lugar-marcador-tres"]) {
+    // e o NASCIDO escondido: a 1ª versão já com `oculto` — sem versão visível
+    // nenhuma, é o caso que um filtro `oculto = 0` deixaria passar (G1 da 12).
+    await gravarVersao(c, "lugar-marcador-seis", '{"slug":"escondido"}', "painel", 1, true);
+    for (const destino of ["lugar-marcador-dois", "lugar-marcador-tres", "lugar-marcador-seis"]) {
       expect(await moverRascunho(c, S, destino, '{"quem":"perdido"}', 9), destino).toBe(false);
     }
     expect((await lerRascunho(c, S))!.doc).toBe('{"quem":"eu"}');
     expect((await lerRascunho(c, "lugar-marcador-dois"))!.doc).toBe('{"quem":"outro"}');
     expect(await lerRascunho(c, "lugar-marcador-tres")).toBeNull();
+    expect(await lerRascunho(c, "lugar-marcador-seis")).toBeNull();
     // e sem rascunho na origem não nasce nada no destino
     expect(await moverRascunho(c, "lugar-marcador-quatro", "lugar-marcador-cinco", "{}", 9)).toBe(false);
     expect(await lerRascunho(c, "lugar-marcador-cinco")).toBeNull();

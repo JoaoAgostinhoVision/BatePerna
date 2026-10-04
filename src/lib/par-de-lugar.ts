@@ -34,8 +34,12 @@ import { cidadeDoDoc, gemeoSemCidade, nomeComCidade, nomeDoRascunho, parDeLugar,
  *  nela, só no par — é o ato que desfaz a dúvida, e recusá-lo deixava dois
  *  lugares de mesmo nome sem cidade pedindo, cada um, a cidade do outro
  *  primeiro, sem saída. Vale também pra quem ainda NÃO tem cidade: renomear um
- *  lugar sem cidade pro nome de outro sem cidade espera, e é isso que impede
- *  aquele estado de nascer. Reescrever o MESMO nome noutra grafia não é nome
+ *  lugar sem cidade pro nome de outro sem cidade espera. ⚠️ Isso NÃO impede
+ *  que dois lugares de mesmo nome fiquem sem cidade: renomear um lugar sem
+ *  cidade pro nome de outro COM cidade passa, e o "voltar a uma versão" de
+ *  antes da cidade a apaga (medido na re-revisão 2 da 11b). Não trava: cada um
+ *  ainda recebe a sua cidade, porque responder a cidade só esbarra no par.
+ *  Reescrever o MESMO nome noutra grafia não é nome
  *  novo (`parDaTroca` compara pela normalização).
  *
  *  Devolve a frase da recusa — com o nome (e a cidade, se houver) de QUEM JÁ
