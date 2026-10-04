@@ -36,6 +36,11 @@ Ordem: 11c → 11d → 11e → 12.
 **11e (04/10):** ele escolheu que o endereço muda SÓ QUANDO ELE MANDA (as 3 fichas mantêm o endereço; corrigir a
 cidade faz o painel avisar e oferecer trocar). Brief escrito e AUDITADO (`task-11e-auditoria.md`: 2 C · 10 I · 8 M, todas aceitas e coladas no fim do brief;
 o 12-E5 foi pro brief da 12). Pronto pra despachar DEPOIS da 11d.
+✅ **11c feita: `c577ca3`** (horário = lista de 1–3 faixas; lê a forma velha pra sempre). Medido por mim: 1949/1949
+em 97, tsc 0, build 0, mutar 42/0. **Revisão despachada** (`task-11c-review.md`; se não existir, redespachar).
+📌 **Lido no banco de PRODUÇÃO em 04/10 (só leitura):** 1 versão por ficha; Pedra `{abre 05:00, fecha 17:00}`, Véu
+`{08:00, 17:00}`, Rampa só `dias [sab,dom]`; nenhuma tem cidade; produção NÃO tem a coluna `oculto` nem a tabela
+`ficha_rascunhos` — o `ensureSchema` (ALTER guardado) cria no `npm run semear`, que TEM de vir antes do deploy.
 Ele ainda não deu a cidade das 3 fichas (não trava código, trava publicar).
 
 → 🔴 **PRÓXIMO PASSO:** a re-revisão das ondas 1+2 voltou (`task-11-rereview.md`: 0 C · 2 I · 4 M) e a **onda 3**
