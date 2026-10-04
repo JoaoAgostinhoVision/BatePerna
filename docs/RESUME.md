@@ -2,6 +2,19 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
+🟡 **SESSÃO DE 03/10, EM CURSO — a Tarefa 11 está nas ondas de fix.** `a4a3754` (implementação) e `b92caa1`
+(onda 1: colisão também por NOME, inclusive escondido; coordenada do rascunho só em par) — medidos por mim, 1855/1855
+em 96, `tsc` 0, build 0. **DECISÃO DELE (pergunta direta): o formulário de lugar novo é UMA PERGUNTA POR VEZ**
+(spec §7.3) — a onda 2 foi despachada com `.superpowers/sdd/2026-09-26-painel-completo/task-11-fix2-brief.md`.
+Se a sessão morrer: se o topo do log for `b92caa1`, redespache esse brief; se houver commit da onda 2, meça e
+despache a re-revisão das duas ondas. Depois, a Tarefa 12 como descrito abaixo.
+🔴 **Trava de deploy nova:** `ensureSchema` NÃO roda em requisição — sem `npm run semear` antes do `vercel --prod`,
+a tabela `ficha_rascunhos` não existe e o `/admin` inteiro cai ("no such table"). A tela pública não cai.
+Copy nova da 11 (PENDENTE): "a coordenada do ponto entra inteira: a latitude e a longitude juntas, no mesmo Salvar",
+mais as listadas em `task-11-report.md`.
+
+⚪ **O bloco abaixo (01/10) continua valendo para o que vem DEPOIS da 11.**
+
 🟡 **ÚLTIMA PARADA: 2026-10-01, A PEDIDO DELE** — *"deixe tudo pronto para a próxima sessão"*.
 
 **Branch `painel-completo`, 10 de 12 tarefas completas, NADA NO AR.** Medido por mim na parada: árvore
