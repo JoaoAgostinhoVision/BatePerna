@@ -499,6 +499,66 @@ describe("o NOME colide, não só o endereço (onda de conserto 1)", () => {
       expect((await lerRascunho(c, S))!.doc).toBe(antes);
     });
 
+    // 🔴 ONDA 3 (I-A da re-revisão): a conferência olha o RESULTADO — o nome do
+    // ponto 0 no documento novo —, e não a grafia do caminho. `escrever` lê
+    // `00` e `000` como o índice 0, então comparar o TEXTO do caminho deixava
+    // uma porta lateral pro nome exato de um lugar no ar.
+    it("o nome é conferido pelo RESULTADO: `.0`, `.00` e `.000` recusam igual, e o rascunho não muda", async () => {
+      await lugarMarcador(OUTRO_SLUG, OUTRO_NOME);
+      const antes = (await lerRascunho(c, S))!.doc;
+      for (const campo of ["trajeto.waypoints.0.nome", "trajeto.waypoints.00.nome", "trajeto.waypoints.000.nome"]) {
+        const res = await mudar({ slug: S, campo, valor: OUTRO_NOME });
+        expect(res.status, campo).toBe(409);
+        expect(await res.text(), campo).toBe(JA_EXISTE_LUGAR);
+      }
+      expect((await lerRascunho(c, S))!.doc).toBe(antes);
+    });
+
+    // As MESMAS portas do POST, na mesma ordem, pelas duas grafias do caminho.
+    // (O nome em branco não chega até elas no PUT: a folha recusa antes, com a
+    // frase da caixa vazia — e é o caso de baixo que confere isso.)
+    it("renomear pra nome sem letra ou de tela: a frase do POST, e o rascunho não muda", async () => {
+      const antes = (await lerRascunho(c, S))!.doc;
+      for (const campo of [CAMPO_NOME, "trajeto.waypoints.00.nome"]) {
+        for (const [valor, status, frase] of [
+          ["!!!", 400, NOME_SEM_LETRA],
+          ["Novo", 409, NOME_DE_TELA],
+          ["  ADMIN ", 409, NOME_DE_TELA],
+        ] as const) {
+          const res = await mudar({ slug: S, campo, valor });
+          expect(res.status, `${campo} ${valor}`).toBe(status);
+          expect(await res.text(), `${campo} ${valor}`).toBe(frase);
+        }
+        const branco = await mudar({ slug: S, campo, valor: "   " });
+        expect(branco.status, campo).toBe(400);
+        expect(await branco.text(), campo).toMatch(/caixa vazia/);
+      }
+      expect((await lerRascunho(c, S))!.doc).toBe(antes);
+    });
+
+    // O avesso: um PUT que NÃO muda o nome não confere colisão nenhuma — nem
+    // paga a leitura, nem é recusado por um nome que já colidia antes (o
+    // rascunho foi gravado direto no banco com o nome de um lugar no ar, que é
+    // o estado que um rascunho de antes desta onda pode ter).
+    it("PUT que não muda o nome não lê colisão, e não é recusado por um nome que já colidia", async () => {
+      await lugarMarcador(OUTRO_SLUG, OUTRO_NOME);
+      await salvarRascunho(c, S, JSON.stringify({ slug: S, modos: [], trajeto: { waypoints: [{ nome: OUTRO_NOME }] } }), AGORA);
+      const db = await import("@/lib/db");
+      const lidas = vi.spyOn(db, "versoesAtuais");
+      for (const corpo of [
+        { slug: S, campo: "voz", valor: "frase marcadora" },
+        { slug: S, ponto: 0, lat: -8.1, lng: -35.2 },
+        { slug: S, campo: CAMPO_NOME, valor: OUTRO_NOME },
+      ]) {
+        const res = await mudar(corpo);
+        expect(res.status, `${JSON.stringify(corpo)} ${await res.clone().text()}`).toBe(200);
+      }
+      expect(lidas, "um PUT que não muda o nome leu a colisão").not.toHaveBeenCalled();
+      const doc = await docDe(S);
+      expect(doc.voz).toBe("frase marcadora");
+      expect(doc.trajeto).toEqual({ waypoints: [{ nome: OUTRO_NOME, lat: -8.1, lng: -35.2 }] });
+    });
+
     it("renomear pro PRÓPRIO nome (outra grafia) ou pra um nome livre: 200", async () => {
       expect((await mudar({ slug: S, campo: CAMPO_NOME, valor: "Lugar Marcador UM" })).status).toBe(200);
       expect(((await docDe(S)).trajeto as { waypoints: { nome: string }[] }).waypoints[0].nome).toBe("Lugar Marcador UM");

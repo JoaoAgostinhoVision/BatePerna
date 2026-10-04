@@ -24,6 +24,7 @@ import {
   posicaoNaTela,
 } from "@/app/admin/FormularioDeLugar";
 import EditorProsa from "@/app/admin/campos/EditorProsa";
+import { ERRO_REDE } from "@/app/admin/campos/gravar";
 import { LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
 import { regraDe, semComentarios } from "../css";
 import { bancoVazio, semearAcervo } from "../banco";
@@ -514,6 +515,28 @@ describe("/admin/novo — responder, sair e voltar", () => {
     fireEvent.change(within(pergunta("voz")).getByRole("textbox"), { target: { value: "texto marcador" } });
     fireEvent.click(pergunta("voz").querySelector('[data-salvar="voz"]')!);
     expect(await within(pergunta("voz")).findByText(FRASE)).toBeTruthy();
+    expect(fetchFalso).toHaveBeenCalledTimes(1);
+    expect(assign).not.toHaveBeenCalled();
+    expect(reload).not.toHaveBeenCalled();
+    expect(within(pergunta("voz")).getByDisplayValue("texto marcador")).toBeTruthy();
+  });
+
+  // 🔴 ONDA 3 (m-A da re-revisão): a falha de REDE também não avança. No
+  // celular com sinal ruim, avançar jogaria fora o texto que ele acabou de
+  // escrever — e a mutação "a rede navega" sobrevivia à suíte inteira.
+  it("falha de rede: 'Sem rede.' na tela, e não sai da pergunta", async () => {
+    await lugarNovo();
+    const fetchFalso = vi.fn(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    vi.stubGlobal("fetch", fetchFalso);
+    const reload = vi.fn();
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, reload, assign });
+    await telaDe("voz");
+    fireEvent.change(within(pergunta("voz")).getByRole("textbox"), { target: { value: "texto marcador" } });
+    fireEvent.click(pergunta("voz").querySelector('[data-salvar="voz"]')!);
+    expect(await within(pergunta("voz")).findByText(ERRO_REDE)).toBeTruthy();
     expect(fetchFalso).toHaveBeenCalledTimes(1);
     expect(assign).not.toHaveBeenCalled();
     expect(reload).not.toHaveBeenCalled();
