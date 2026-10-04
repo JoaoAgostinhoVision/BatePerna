@@ -7,6 +7,16 @@
 **A onda 2 da Tarefa 11 FOI FEITA: `6a04ccd`** (uma pergunta por vez, posição na URL `?slug=X&p=N`). Medido por mim:
 **1865/1865 em 96**, `tsc` 0, build 0 (`/admin/novo` 1.96 kB · 111 kB), `mutar.mjs` 42/0, árvore limpa, stash intocado.
 
+🔴 **DECISÕES DELE EM 04/10, que mudam a ordem da rodada:**
+1. **Pode haver dois lugares com o MESMO nome** (Pedra do Navio em Bom Jardim e em Floresta). O F1 da onda 3 foi
+   RETIRADO (mensagem ao agente). A recusa por NOME da onda 1 (`nomeOcupado`) tem que sair; a colisão é de ENDEREÇO.
+2. **Cidade obrigatória**: lugar novo pergunta nome E cidade; endereço = nome + cidade; a home mostra a cidade. As 3
+   fichas existentes ganham a pergunta — ELE responde, eu não deduzo do slug.
+3. **Horário com intervalo de almoço (8–10 e 14–17), ANTES de publicar** — mexe no veredito público de "fechado".
+   Abre e fecha dependem um do outro (já dito ao agente da onda 3, F2).
+**Ordem nova:** onda 3 (F2, F3) → tarefa "cidade" → tarefa "intervalo" → Tarefa 12 (G1′ já reescrito). Os briefs
+das duas tarefas novas AINDA NÃO EXISTEM — escrever e auditar antes de despachar.
+
 → 🔴 **PRÓXIMO PASSO:** a re-revisão das ondas 1+2 voltou (`task-11-rereview.md`: 0 C · 2 I · 4 M) e a **onda 3**
 foi despachada (`task-11-fix3-brief.md`, F1 nome confere o RESULTADO / F2 horário com UM Salvar / F3 rede não avança).
 Se o log não tiver commit de código depois de `8f4fb68`, redespachar `task-11-fix3-PROMPT.md` COMO ESTÁ. Se tiver:
