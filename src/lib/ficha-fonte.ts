@@ -8,10 +8,16 @@ import { fichaSchema, type Ficha } from "@/types/ficha";
  *
  *  Ordem de leitura do banco é estável por acaso, não por contrato — como era
  *  a do `readdir` antes dela. O acervo e a home dependem de uma ordem que a
- *  pessoa reconheça, então ela é declarada, não herdada. */
+ *  pessoa reconheça, então ela é declarada, não herdada.
+ *
+ *  🔴 NOME IGUAL DESEMPATA PELA CIDADE (Tarefa 11b): dois lugares podem ter o
+ *  mesmo nome, e o empate deixava a ordem a do banco. Sem cidade vem antes
+ *  (`""` é o menor texto) — é só ordem, não afirma nada. */
 export function ordenarPorNome(fichas: Ficha[]): Ficha[] {
-  return [...fichas].sort((a, b) =>
-    a.trajeto.waypoints[0].nome.localeCompare(b.trajeto.waypoints[0].nome, "pt-BR"),
+  return [...fichas].sort(
+    (a, b) =>
+      a.trajeto.waypoints[0].nome.localeCompare(b.trajeto.waypoints[0].nome, "pt-BR") ||
+      (a.cidade ?? "").localeCompare(b.cidade ?? "", "pt-BR"),
   );
 }
 

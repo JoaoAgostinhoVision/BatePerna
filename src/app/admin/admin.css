@@ -34,6 +34,9 @@
   padding: 1rem; text-decoration: none; color: inherit;
 }
 .adm-item-nome { font-size: 1.05rem; }
+/* A cidade embaixo do nome (Tarefa 11b) — é ela que separa dois lugares de mesmo
+   nome. Tamanho e cor da marca ao lado, que já existem nesta folha. */
+.adm-item-cidade { display: block; font-size: .85rem; color: #555; }
 .adm-item-marca { font-size: .85rem; color: #555; text-align: right; }
 .adm-lista-rodape { font-size: .85rem; color: #777; margin-top: 1rem; }
 

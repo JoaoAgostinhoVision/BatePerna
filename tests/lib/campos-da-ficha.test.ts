@@ -43,6 +43,22 @@ const EDITADOS_INTEIROS = new Map<string, readonly string[]>([["condicao.coords"
 // folha nova lá dentro fica vermelha aqui em vez de nascer invisível.
 const BLOCOS_INTEIROS = new Map<string, readonly string[]>([["horario", ["abre", "fecha"]]]);
 
+// 🔴 A ÚNICA DIVERGÊNCIA DECLARADA ENTRE A COLUNA `obrigatorio` E O SCHEMA
+// (Tarefa 11b, 2026-10-04, 11b-I1 da auditoria do plano). Cada chave aqui é
+// OBRIGATÓRIA NO REGISTRO (sem "não sei", e o formulário de lugar novo a pede)
+// e OPCIONAL NO SCHEMA, com o motivo escrito ao lado. Consumida pelo caso
+// "nenhuma entrada diverge" — que continua recusando qualquer OUTRA divergência
+// — e vigiada pelo caso "nenhuma exceção fantasma", que exige as duas metades
+// do motivo valendo de verdade.
+const OBRIGATORIO_SO_NO_REGISTRO = new Map<string, string>([
+  [
+    "cidade",
+    "as 3 fichas no ar nasceram sem cidade, e quem a responde é o João, pelo painel; " +
+      "obrigatória no schema, `fichaSchema.parse` estouraria na leitura pública e " +
+      "`buscarFichas` derrubaria a lista inteira, não uma ficha",
+  ],
+]);
+
 type DefZod = {
   typeName: string;
   innerType?: z.ZodTypeAny;
@@ -156,7 +172,7 @@ describe("a varredura do schema, antes de ela guardar coisa nenhuma", () => {
     expect(FOLHAS).toContain("dias"); // lista de escalar é UMA folha, não `dias[]`
     expect(FOLHAS).not.toContain("condicao"); // nó interno não é folha
     expect(FOLHAS).not.toContain("trajeto.waypoints"); // idem
-    expect(FOLHAS).toHaveLength(33);
+    expect(FOLHAS).toHaveLength(34);
   });
 
   it("nenhuma folha repetida, e nenhuma vazia", () => {
@@ -285,6 +301,7 @@ describe("o registro cobre o schema", () => {
 
     it("nenhuma entrada diverge — `obrigatorio` é o que o schema diz, não o que eu escrevi", () => {
       const divergentes = resolvidos
+        .filter((r) => !OBRIGATORIO_SO_NO_REGISTRO.has(r.caminho))
         .filter((r) => r.tipo !== undefined && r.obrigatorio === eOpcionalNoSchema(r.tipo))
         .map((r) => `${r.caminho}: registro diz obrigatorio=${r.obrigatorio}, schema diz o contrário`);
       expect(
@@ -292,6 +309,22 @@ describe("o registro cobre o schema", () => {
         "a coluna que decide se o 'não sei' existe tem que vir do schema. Se algum " +
           "campo precisar divergir, ele entra com o motivo escrito — nunca afrouxando isto",
       ).toEqual([]);
+    });
+
+    // A exceção de cima não é um buraco aberto: toda chave dela tem de ser
+    // obrigatória no REGISTRO e opcional no SCHEMA — as duas metades do motivo.
+    // Exceção que deixou de divergir (alguém tornou o campo obrigatório no
+    // schema, ou opcional no registro) fica vermelha aqui, em vez de continuar
+    // escondendo uma divergência que não existe mais.
+    it("nenhuma exceção fantasma — toda chave de OBRIGATORIO_SO_NO_REGISTRO diverge de verdade", () => {
+      expect(OBRIGATORIO_SO_NO_REGISTRO.size, "a exceção foi lida vazia").toBeGreaterThan(0);
+      for (const [caminho, motivo] of OBRIGATORIO_SO_NO_REGISTRO) {
+        expect(motivo.trim().length, `${caminho}: exceção sem motivo escrito`).toBeGreaterThan(20);
+        expect(campoPorCaminho(caminho)?.obrigatorio, `${caminho}: não é obrigatório no registro`).toBe(true);
+        const tipo = tipoNoCaminho(caminho);
+        expect(tipo, `${caminho}: não existe no schema`).toBeDefined();
+        expect(eOpcionalNoSchema(tipo!), `${caminho}: não é opcional no schema`).toBe(true);
+      }
     });
 
     // ⚠️ O caso que eu esperava precisar de exceção e NÃO precisou: as folhas

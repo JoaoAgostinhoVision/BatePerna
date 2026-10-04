@@ -104,6 +104,9 @@ html, body { background: var(--ground); }
 .bp .scan { display: inline-block; font-family: var(--type); font-size: .7rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
 .bp h1 { font-family: var(--serif); font-weight: 600; font-size: 2rem; line-height: 1.06; letter-spacing: -.01em; margin: .5rem 0 .1rem; text-wrap: balance; }
 .bp .promessa { color: var(--ink-soft); font-size: 1.03rem; font-style: italic; margin: 0; max-width: 32ch; }
+/* A cidade, entre o nome e a promessa (Tarefa 11b). Mesma letra e mesma cor do
+   rótulo de escaneio, sem a caixa alta: é o lugar, não um aviso. */
+.bp .ficha-cidade { font-family: var(--type); font-size: .8rem; font-weight: 600; color: var(--ink-faint); margin: 0 0 .35rem; }
 
 /* the decision — A's warm card hosting C's stamp */
 .bp .decision {
@@ -394,6 +397,8 @@ html, body { background: var(--ground); }
   background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px;
   padding: .8rem .9rem .9rem; box-shadow: var(--shadow-card); }
 .bp .lista-t { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; line-height: 1.15; }
+/* A cidade sob o nome (Tarefa 11b) — a mesma do cartão da home. */
+.bp .lista-cidade { font-family: var(--type); font-size: .72rem; font-weight: 600; color: var(--ink-faint); }
 .bp .lista-p { color: var(--ink-soft); font-size: .88rem; font-style: italic; }
 
 /* A marca é botão de verdade quando é saída: alvo de toque de 44px, o mínimo

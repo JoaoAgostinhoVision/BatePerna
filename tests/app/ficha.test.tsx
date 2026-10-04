@@ -32,7 +32,7 @@ vi.mock("@/lib/carimbo-estado", async (real) => ({
 // nada no bloco de baixo lê ou compara essa string —, então a diferença não
 // separa as duas versões. O teste que usava `COM_FATOS` foi apagado junto —
 // ver a nota abaixo.
-const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS } = vi.hoisted(() => {
+const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS, COM_CIDADE } = vi.hoisted(() => {
   const base = {
     slug: "morro-de-teste",
     modos: ["contemplativo"],
@@ -86,6 +86,8 @@ const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS } = vi.hoisted(() => {
       slug: "morro-pago-centavos",
       custo: { tag: "pago" as const, valor: "R$ 12,50 por carro · na guarita" },
     },
+    // A CIDADE (Tarefa 11b) — um nome-marcador, nunca uma cidade real.
+    COM_CIDADE: { ...base, slug: "morro-com-cidade", cidade: "Cidade Marcador Um" },
   };
 });
 
@@ -95,7 +97,7 @@ const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS } = vi.hoisted(() => {
 // decoração.
 vi.mock("@/lib/ficha", async (real) => {
   const mod = await real<typeof import("@/lib/ficha")>();
-  const sinteticas = [SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS] as unknown as TipoFicha[];
+  const sinteticas = [SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS, COM_CIDADE] as unknown as TipoFicha[];
   return {
     ...mod,
     getFicha: async (slug: string) =>
@@ -264,6 +266,35 @@ describe("a frase de relevo atravessa da ficha até a tela", () => {
 // `Appbar.test.tsx` passa a string pronta, então nada olhava de onde ela vinha.
 // Decisão dele: *"tem que ser algo personalizável, nem tudo tem o mesmo valor e
 // mesma forma"*.
+// 🔴 TAREFA 11b: a cidade aparece junto do `h1` — é ela que separa dois lugares
+// de mesmo nome. Sem cidade, a ficha CALA: nenhum traço, nenhum "sem cidade".
+describe("a cidade aparece junto do nome, e cala sem ela", () => {
+  const hero = (c: HTMLElement) => c.querySelector(".hero") as HTMLElement;
+
+  it("com cidade: ela está no topo da ficha, logo depois do h1", async () => {
+    const { container } = await abrir("morro-com-cidade");
+    const h1 = hero(container).querySelector("h1")!;
+    expect(h1.textContent).toBe("Morro de Teste");
+    expect(h1.nextElementSibling?.textContent).toBe("Cidade Marcador Um");
+  });
+
+  it("sem cidade (as fichas reais de hoje): nada entre o h1 e a promessa, nenhuma palavra no lugar", async () => {
+    for (const f of acervoDoBanco) {
+      expect(f.cidade, `${f.slug}: ganhou cidade — o caso deixou de medir o silêncio`).toBeUndefined();
+      const { container } = await abrir(f.slug);
+      const h1 = hero(container).querySelector("h1")!;
+      expect(h1.nextElementSibling?.className, f.slug).toBe("promessa");
+      expect(container.querySelector(".ficha-cidade"), f.slug).toBeNull();
+      expect(hero(container).textContent, f.slug).not.toMatch(/cidade/i);
+      cleanup();
+    }
+  });
+
+  it("a regra da cidade existe no ficha.css", () => {
+    expect(regraDe(semComentarios("ficha.css"), ".bp .ficha-cidade")).not.toBeNull();
+  });
+});
+
 describe("o chip do custo vem da FICHA, não do código", () => {
   const chip = (c: HTMLElement) => c.querySelector(".cost-chip")?.textContent;
 

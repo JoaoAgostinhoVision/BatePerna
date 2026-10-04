@@ -280,15 +280,18 @@ export default function FormularioDeLugar({
   );
 }
 
-/** O NOME, ANTES DE TUDO — é dele que sai o endereço do lugar.
+/** O NOME E A CIDADE, ANTES DE TUDO — é deles que sai o endereço do lugar
+ *  (Tarefa 11b: dois lugares podem ter o mesmo nome, e a cidade os separa).
  *
- *  A pergunta é a do questionário pro nome do ponto (chega por prop, do
- *  servidor). A porta (`POST /api/admin/rascunho`) faz o rascunho nascer e
- *  recusa com frase o nome de um lugar que já existe (inclusive escondido), de
- *  um rascunho, ou de uma tela do app; a frase dela aparece aqui como chegou,
- *  e o que ele digitou fica na caixa. */
-export function ComecarLugarNovo({ pergunta }: { pergunta: string }) {
+ *  As perguntas são as do questionário (chegam por prop, do servidor), e as
+ *  duas caixas nascem VAZIAS, sem placeholder. A porta (`POST
+ *  /api/admin/rascunho`) faz o rascunho nascer e recusa com frase a caixa vazia,
+ *  o nome e a cidade de um lugar (inclusive escondido) ou de um rascunho que já
+ *  existe, e o endereço ocupado; a frase dela aparece aqui como chegou, e o que
+ *  ele digitou fica nas caixas. */
+export function ComecarLugarNovo({ perguntas }: { perguntas: { nome: string; cidade: string } }) {
   const [nome, setNome] = useState("");
+  const [cidade, setCidade] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [indo, setIndo] = useState(false);
 
@@ -298,7 +301,7 @@ export function ComecarLugarNovo({ pergunta }: { pergunta: string }) {
     setErro(null);
     setIndo(true);
     try {
-      const r = await fetch("/api/admin/rascunho", { method: "POST", body: JSON.stringify({ nome }) });
+      const r = await fetch("/api/admin/rascunho", { method: "POST", body: JSON.stringify({ nome, cidade }) });
       if (r.ok) {
         const { slug } = (await r.json()) as { slug: string };
         location.assign(`/admin/novo?slug=${encodeURIComponent(slug)}`);
@@ -316,8 +319,12 @@ export function ComecarLugarNovo({ pergunta }: { pergunta: string }) {
   return (
     <form className="adm-porta adm-novo-nome" onSubmit={comecar}>
       <label className="adm-rotulo">
-        {pergunta}
+        {perguntas.nome}
         <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} />
+      </label>
+      <label className="adm-rotulo">
+        {perguntas.cidade}
+        <input type="text" value={cidade} onChange={(e) => setCidade(e.target.value)} />
       </label>
       <button type="submit" disabled={indo}>
         {indo ? COMECANDO : COMECAR}

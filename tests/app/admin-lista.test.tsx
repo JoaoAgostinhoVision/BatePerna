@@ -89,6 +89,28 @@ describe("ListaDeLugares", () => {
   // passaria verde com a página real ainda lendo o acervo FILTRADO (B1 da
   // auditoria). A prova de que a página entrega o escondido é a de
   // `tests/app/admin-page.test.tsx` ("o lugar escondido aparece na lista do dono").
+  // 🔴 TAREFA 11b: a cidade fica junto do nome, DENTRO do item daquele lugar —
+  // dois lugares de mesmo nome só se distinguem por ela. Sem cidade, cala.
+  it("a cidade aparece no item do lugar que tem cidade, e só nele", () => {
+    const [comCidade, ...resto] = FICHAS;
+    render(
+      <ListaDeLugares
+        fichas={[{ ...comCidade, cidade: "Cidade Marcador Um" }, ...resto]}
+        leituras={{}}
+        ocultos={new Set()} rascunhos={[]}
+        agora={1_758_000_000}
+      />,
+    );
+    const item = screen.getByTestId(`lugar-${comCidade.slug}`);
+    expect(within(item).getByText("Cidade Marcador Um")).toBeTruthy();
+    for (const f of resto) {
+      expect(f.cidade, "a premissa: as fichas reais não têm cidade").toBeUndefined();
+      const outro = screen.getByTestId(`lugar-${f.slug}`);
+      expect(outro.querySelector(".adm-item-cidade"), f.slug).toBeNull();
+      expect(outro.textContent, f.slug).not.toMatch(/cidade/i);
+    }
+  });
+
   it("lugar escondido aparece na lista do painel, marcado — e só ele", () => {
     const SLUG = FICHAS[1].slug;
     const leituras = Object.fromEntries(FICHAS.map((f) => [f.slug, leituraSeca]));

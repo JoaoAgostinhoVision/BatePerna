@@ -71,6 +71,9 @@ export default function CartaoTrilha({
           agora={agora}
         />
       </span>
+      {/* 🔴 A CIDADE sob o nome (Tarefa 11b): dois lugares de mesmo nome só se
+          distinguem por ela. Sem cidade, cala — nenhum traço, nenhuma palavra. */}
+      {ficha.cidade && <span className="cartao-cidade">{ficha.cidade}</span>}
       <span className="cartao-prom">{ficha.promessa}</span>
       {/* O separador vive ENTRE os pedaços, e não dentro deles: com o " · "
           colado no texto de cada um, a marca do Nível B pintaria o ponto

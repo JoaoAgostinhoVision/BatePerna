@@ -44,6 +44,25 @@ no topo de cada cartão na home.
 
 **Exemplo (Rampa):** `Rampa do Pepê`
 
+### A cidade — `cidade`
+
+<!-- PENDENTE: redação minha, o João ainda não leu (Tarefa 11b, 2026-10-04) -->
+
+(A cidade é da ficha inteira, não do ponto — ela mora aqui, logo depois do nome,
+porque é a pergunta que vem junto com ele.)
+
+**Pergunta:** em que cidade fica esse lugar?
+
+**Por que importa:** dois lugares podem ter o mesmo nome, e às vezes o que separa um
+do outro é só a cidade. Ela aparece embaixo do nome no cartão da home, junto do título
+da ficha, na lista do acervo e no título do link compartilhado; e entra no endereço
+de um lugar NOVO (a cidade vai depois do nome, sem repetir quando o nome já termina
+com ela).
+Mudar a cidade depois não muda o endereço — link que já circula continua valendo.
+
+**Exemplo:** nenhum, de propósito. Nenhuma ficha de hoje tem a cidade respondida, e
+ela não é deduzida do nome nem do endereço — quem responde é você, pelo painel.
+
 ### A coordenada
 
 **Pergunta:** qual é a latitude e a longitude desse ponto? (dá pra pegar abrindo o

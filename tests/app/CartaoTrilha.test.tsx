@@ -5,7 +5,7 @@ import LocalVivo from "@/app/local";
 import { CHAVE_LOCAL } from "@/lib/local";
 import { getFichasComCondicao } from "@/lib/ficha";
 import { agoraRecife } from "@/lib/horario";
-import { semComentarios } from "../css";
+import { regraDe, semComentarios } from "../css";
 import { bancoDeProducao } from "../banco";
 
 afterEach(() => { cleanup(); localStorage.clear(); });
@@ -30,6 +30,27 @@ function fichaReal(slug: string) {
 
 const ficha = fichaReal("rampa-do-pepe");
 const leitura = { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000, aviso: null };
+
+// 🔴 TAREFA 11b: a cidade fica sob o nome, no cartão — dois lugares de mesmo
+// nome só se distinguem por ela. Sem cidade, o cartão cala.
+describe("a cidade no cartão", () => {
+  it("com cidade: ela aparece sob o nome, dentro do cartão", () => {
+    const { container } = render(<CartaoTrilha ficha={{ ...ficha, cidade: "Cidade Marcador Um" }} inicial={leitura} />);
+    expect(container.querySelector(".cartao-cidade")?.textContent).toBe("Cidade Marcador Um");
+    expect(container.querySelector(".cartao-topo")!.nextElementSibling?.className).toBe("cartao-cidade");
+  });
+
+  it("sem cidade: nenhum elemento, nenhuma palavra no lugar", () => {
+    expect(ficha.cidade, "a premissa: a ficha real não tem cidade").toBeUndefined();
+    const { container } = render(<CartaoTrilha ficha={ficha} inicial={leitura} />);
+    expect(container.querySelector(".cartao-cidade")).toBeNull();
+    expect(container.textContent).not.toMatch(/cidade/i);
+  });
+
+  it("a regra da cidade existe no home.css", () => {
+    expect(regraDe(semComentarios("home.css"), ".bp .cartao-cidade")).not.toBeNull();
+  });
+});
 
 describe("a linha de metadados do cartão", () => {
   it("sem localização, não inventa km", () => {

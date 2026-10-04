@@ -90,6 +90,25 @@ describe("ficha loader", () => {
     const nomes = ordenarPorNome(fora_de_ordem).map((f) => f.trajeto.waypoints[0].nome);
     expect(nomes).toEqual(["Ávila", "Boa Vista", "Cachoeira do Urubu"]);
   });
+
+  // 🔴 TAREFA 11b (11b-M2): dois lugares podem ter o MESMO nome, e aí a ordem
+  // empatava e ficava a do banco — que é estável por acaso, não por contrato.
+  // Desempate pela cidade; sem cidade, antes das que têm. Ordem de entrada
+  // invertida de propósito, nas duas metades.
+  it("ordenarPorNome desempata nomes iguais pela cidade", () => {
+    const comCidade = (cidade: string | undefined, slug: string): Ficha => ({
+      ...fichaComNome("Lugar Marcador"),
+      slug,
+      ...(cidade === undefined ? {} : { cidade }),
+    });
+    const fora = [
+      comCidade("Cidade Marcador Beta", "b"),
+      comCidade("Cidade Marcador Alfa", "a"),
+      comCidade(undefined, "sem"),
+    ];
+    expect(ordenarPorNome(fora).map((f) => f.slug)).toEqual(["sem", "a", "b"]);
+    expect(ordenarPorNome([...fora].reverse()).map((f) => f.slug)).toEqual(["sem", "a", "b"]);
+  });
 });
 
 // JSON bruto (não Ficha já validada) — precisa ser o que fs.readFileSync +

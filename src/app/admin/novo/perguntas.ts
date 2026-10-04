@@ -42,6 +42,8 @@ import type { CampoNaTela, PerguntaNaTela } from "../campos/tipos";
 export const PERGUNTAS: Readonly<Record<string, string>> = {
   // PENDENTE: do questionário, que ele leu; primeira vez numa tela
   "trajeto.waypoints.0.nome": "Como você chama esse lugar, do jeito que chamaria conversando com alguém que já foi?",
+  // PENDENTE: redação minha, o João ainda não leu — nem no questionário (Tarefa 11b)
+  cidade: "Em que cidade fica esse lugar?",
   // PENDENTE: do questionário, que ele leu; primeira vez numa tela
   "trajeto.waypoints.0.lat": "Qual é a latitude e a longitude desse ponto?",
   // PENDENTE: do questionário, que ele leu; primeira vez numa tela
@@ -118,6 +120,7 @@ export const PERGUNTAS: Readonly<Record<string, string>> = {
  *  ponto `0`). */
 export const ORDEM: readonly string[] = [
   "trajeto.waypoints.0.nome",
+  "cidade",
   "trajeto.waypoints.0.lat",
   "trajeto.waypoints.0.nota",
   "promessa",

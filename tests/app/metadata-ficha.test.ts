@@ -24,6 +24,28 @@ const pedir = (slug: string) => generateMetadata({ params: Promise.resolve({ slu
 await bancoDeProducao();
 const fichas = await getAllFichas();
 
+// 🔴 TAREFA 11b (11b-I6): o link de duas Pedras do Navio saía IDÊNTICO no
+// WhatsApp. Com cidade, o título é "Nome — Cidade"; sem cidade, igual a hoje.
+describe("a cidade entra no título do link, só quando existe", () => {
+  it("com cidade: título, openGraph e twitter levam \"Nome — Cidade\"", async () => {
+    const { gravarEdicao } = await import("../banco");
+    const { getClient } = await import("@/lib/db");
+    const f = fichas[0];
+    expect(f.cidade, "a premissa: as fichas reais não têm cidade").toBeUndefined();
+    await gravarEdicao(getClient(), f, { cidade: "Cidade Marcador Um" });
+    try {
+      const m = await pedir(f.slug);
+      const titulo = `${f.trajeto.waypoints[0].nome} — Cidade Marcador Um`;
+      expect(m.title).toBe(titulo);
+      expect(m.openGraph?.title).toBe(`${titulo} · BatePerna`);
+      expect(m.twitter?.title).toBe(`${titulo} · BatePerna`);
+    } finally {
+      await gravarEdicao(getClient(), f, {}, Math.floor(Date.now() / 1000) + 120);
+    }
+    expect((await pedir(f.slug)).title, "a ficha não voltou sem cidade").toBe(f.trajeto.waypoints[0].nome);
+  });
+});
+
 describe("o cartão que o link de uma trilha mostra", () => {
   // 🔴 NÃO-VACUIDADE: todo laço abaixo varre o acervo. Com ele vazio, todos
   // passariam — a espécie "prova que passa por não ter o que provar". Cravado a

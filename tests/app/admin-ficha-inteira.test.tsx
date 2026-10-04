@@ -37,11 +37,12 @@ const comHorario = exigir("pedra-furada-de-venturosa");
  *  lado — sem o número, um registro que ENCOLHESSE passaria verde no laço
  *  abaixo (é a 44ª espécie do catálogo, que mordeu quatro vezes nesta rodada).
  *
- *  30 = as 26 entradas do registro que não são molde + as 4 folhas do único
- *  waypoint desta ficha (`nome`, `lat`, `lng`, `nota`). O registro tem 30
+ *  31 = as 27 entradas do registro que não são molde + as 4 folhas do único
+ *  waypoint desta ficha (`nome`, `lat`, `lng`, `nota`). O registro tem 31
  *  entradas, das quais 4 são molde — então uma ficha de 1 waypoint dá
- *  26 + 4 = 30 blocos, e uma de 2 waypoints daria 34. */
-const BLOCOS_DE_UM_WAYPOINT = 30;
+ *  27 + 4 = 31 blocos, e uma de 2 waypoints daria 35. (Era 30 até a Tarefa
+ *  11b, 2026-10-04: a `cidade` entrou no registro.) */
+const BLOCOS_DE_UM_WAYPOINT = 31;
 
 /** A ORDEM DOS SEIS GRUPOS, cravada à mão: ela é contrato desta tela (é a
  *  ordem em que o dono lê a ficha, a mesma da §3 do desenho), e o componente a
@@ -100,8 +101,8 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     for (const i of [0, 1, 2]) {
       expect(screen.getByTestId(`campo-trajeto.waypoints.${i}.nome`), `waypoint ${i}`).toBeTruthy();
     }
-    // 26 fixos + 3 × 4 folhas de waypoint.
-    expect(testidsDe(container, "campo-")).toHaveLength(26 + 12);
+    // 27 fixos + 3 × 4 folhas de waypoint.
+    expect(testidsDe(container, "campo-")).toHaveLength(27 + 12);
   });
 
   // 🔴 Sem isto, um componente que renderiza uma caixa vazia passa no teste de
@@ -221,14 +222,21 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     // Task 6.
     expect(cheio.textContent).not.toMatch(/não sei|não diz/i);
 
-    // 🔴 3, cravado e com motivo: nesta ficha faltam exatamente `horario`,
-    // `horario.abre` e `horario.fecha` — todo o resto do registro está
+    // 🔴 4, cravado e com motivo: nesta ficha faltam exatamente `horario`,
+    // `horario.abre` e `horario.fecha` — e a `cidade`, que NENHUMA ficha real
+    // tem até o João respondê-la pelo painel (Tarefa 11b: obrigatória no
+    // registro, e ninguém a preenche por ele). Todo o resto do registro está
     // preenchido (piso, carroComum, dias, secaRapido, custo.valor,
     // custo.curto e a nota do waypoint, que são os opcionais que ela TEM).
     const marcados = [...container.querySelectorAll("[data-ausente]")].map(
       (e) => e.getAttribute("data-testid")!,
     );
-    expect(marcados.sort()).toEqual(["campo-horario", "campo-horario.abre", "campo-horario.fecha"]);
+    expect(marcados.sort()).toEqual([
+      "campo-cidade",
+      "campo-horario",
+      "campo-horario.abre",
+      "campo-horario.fecha",
+    ]);
   });
 
   // 🔴 `false` NÃO É SILÊNCIO. `carroComum: false` é uma AFIRMAÇÃO ("não

@@ -126,10 +126,10 @@ const prosaDe = (f: Ficha) =>
   [f.voz, f.acesso, f.avisos, f.promessa, f.premio, f.condicao.regra_texto,
     f.discriminador.como_ler].join(" \n ").toLowerCase();
 
-/** O nome do lugar como o dono o escreveu — é ele que vai na frase, nunca o
- *  slug. `waypoints[0]` é O LUGAR; do `[1]` em diante são as etapas do trajeto
- *  até ele. */
-const nomeDe = (f: Ficha) => f.trajeto.waypoints[0].nome;
+/** O nome do lugar como o dono o escreveu (`waypoints[0]`, O LUGAR), nunca o slug — e a cidade entre
+ *  parênteses quando há (Tarefa 11b): dois lugares de mesmo nome compararem-se dizia "X e X". Sem cidade,
+ *  só o nome. A `cidade` NÃO entra em `TEXTOS_QUE_DISTINGUEM`: dois lugares na mesma cidade são o normal. */
+const nomeDe = (f: Ficha) => f.trajeto.waypoints[0].nome + (f.cidade ? ` (${f.cidade})` : "");
 
 /** O que uma regra acha. O identificador da regra é carimbado pela tabela lá
  *  embaixo, nunca escrito aqui dentro — assim nenhuma regra pode carimbar o

@@ -9,7 +9,9 @@ const erros = [];
 const str = (v) => typeof v === "string" && v.length > 0;
 const num = (v) => typeof v === "number" && Number.isFinite(v);
 
-for (const k of ["slug", "rotulo_escaneio", "promessa", "voz", "premio", "acesso", "avisos"])
+// `cidade` (Tarefa 11b): opcional no schema só porque as fichas antigas não a
+// têm; ficha NOVA nasce com ela, e publicar sem ela é a recusa da Tarefa 12.
+for (const k of ["slug", "cidade", "rotulo_escaneio", "promessa", "voz", "premio", "acesso", "avisos"])
   if (!str(f[k])) erros.push(`${k}: falta ou não é string`);
 if (!Array.isArray(f.modos)) erros.push("modos: não é array");
 

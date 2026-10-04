@@ -55,7 +55,10 @@ export async function generateMetadata({
   const ficha = await getFicha(slug);
   if (!ficha) return {}; // 404 herda o título do layout
 
-  const nome = ficha.trajeto.waypoints[0].nome;
+  // 🔴 A CIDADE NO TÍTULO (Tarefa 11b, 11b-I6): o link de duas Pedras do Navio
+  // saía IDÊNTICO no WhatsApp. "Nome — Cidade" só quando há cidade; sem ela,
+  // igual a antes — o app não escreve "sem cidade" em lugar nenhum.
+  const nome = ficha.trajeto.waypoints[0].nome + (ficha.cidade ? ` — ${ficha.cidade}` : "");
   return {
     title: nome,
     description: ficha.promessa,
@@ -215,6 +218,9 @@ export default async function Ficha({
         <div className="hero">
           <span className="scan">{ficha.rotulo_escaneio}</span>
           <h1>{wp.nome}</h1>
+          {/* 🔴 A CIDADE junto do nome (Tarefa 11b): é ela que separa dois
+              lugares de mesmo nome. Sem cidade, cala — nenhum traço. */}
+          {ficha.cidade && <p className="ficha-cidade">{ficha.cidade}</p>}
           <p className="promessa">{ficha.promessa}</p>
 
           <Carimbo

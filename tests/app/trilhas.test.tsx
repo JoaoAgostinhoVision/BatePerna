@@ -15,6 +15,29 @@ const banco = await bancoDeProducao();
 const acervo = await getAllFichas();
 
 describe("/trilhas", () => {
+  // 🔴 TAREFA 11b: a lista do acervo é tela de ESCOLHER pelo nome (11b-I6) —
+  // a cidade fica sob ele. Sem cidade, cala.
+  it("a cidade aparece sob o nome do lugar que tem, e nenhum outro ganha palavra no lugar dela", async () => {
+    const alvo = acervo[0];
+    expect(alvo.cidade, "a premissa: as fichas reais não têm cidade").toBeUndefined();
+    const { container: antes } = render(await Trilhas());
+    expect(antes.querySelector(".lista-cidade")).toBeNull();
+    expect(antes.textContent).not.toMatch(/cidade/i);
+    cleanup();
+    await gravarEdicao(banco, alvo, { cidade: "Cidade Marcador Um" });
+    try {
+      const { container } = render(await Trilhas());
+      const item = container.querySelector(`a[href="/${alvo.slug}"]`)!;
+      const t = item.querySelector(".lista-t")!;
+      expect(t.textContent).toBe(alvo.trajeto.waypoints[0].nome);
+      expect(t.nextElementSibling?.className).toBe("lista-cidade");
+      expect(t.nextElementSibling?.textContent).toBe("Cidade Marcador Um");
+      expect(container.querySelectorAll(".lista-cidade")).toHaveLength(1);
+    } finally {
+      await gravarEdicao(banco, alvo, {}, Math.floor(Date.now() / 1000) + 120);
+    }
+  });
+
   it("dá um link pra cada ficha do acervo", async () => {
     const { container } = render(await Trilhas());
     const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));

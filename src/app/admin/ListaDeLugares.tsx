@@ -11,8 +11,9 @@ export const LUGAR_NOVO = "+ lugar novo";
 // PENDENTE: redação minha, o João ainda não leu
 export const TITULO_RASCUNHOS = "Começados, ainda fora do ar";
 
-/** Um rascunho na lista: o slug (pro link) e o nome que ele digitou ao criar. */
-export type RascunhoNaLista = { slug: string; nome: string };
+/** Um rascunho na lista: o slug (pro link), o nome e a cidade que ele digitou
+ *  ao criar. `cidade` ausente: rascunho nascido antes da Tarefa 11b — cala. */
+export type RascunhoNaLista = { slug: string; nome: string; cidade?: string };
 
 type Props = {
   fichas: Ficha[];
@@ -62,7 +63,13 @@ export default function ListaDeLugares({ fichas, leituras, ocultos, rascunhos, a
           return (
             <li key={f.slug} className="adm-item" data-lugar={f.slug} data-testid={`lugar-${f.slug}`}>
               <Link href={`/admin/${f.slug}`} className="adm-item-link">
-                <span className="adm-item-nome">{f.trajeto.waypoints[0].nome}</span>
+                {/* 🔴 A CIDADE junto do nome, embaixo dele (Tarefa 11b): dois
+                    lugares de mesmo nome só se distinguem por ela. Sem cidade,
+                    cala — nenhum traço, nenhum "sem cidade". */}
+                <span className="adm-item-nome">
+                  {f.trajeto.waypoints[0].nome}
+                  {f.cidade && <span className="adm-item-cidade">{f.cidade}</span>}
+                </span>
                 {ocultos.has(f.slug) && <span className="adm-marca-escondido">{ESCONDIDO}</span>}
                 {leitura && <span className="adm-item-marca">{marcaAgora(f, leitura, agora)}</span>}
               </Link>
@@ -81,7 +88,10 @@ export default function ListaDeLugares({ fichas, leituras, ocultos, rascunhos, a
             {rascunhos.map((r) => (
               <li key={r.slug} className="adm-item" data-rascunho={r.slug}>
                 <Link href={`/admin/novo?slug=${encodeURIComponent(r.slug)}`} className="adm-item-link">
-                  <span className="adm-item-nome">{r.nome}</span>
+                  <span className="adm-item-nome">
+                    {r.nome}
+                    {r.cidade && <span className="adm-item-cidade">{r.cidade}</span>}
+                  </span>
                 </Link>
               </li>
             ))}

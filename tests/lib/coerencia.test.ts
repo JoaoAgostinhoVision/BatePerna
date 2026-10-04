@@ -256,6 +256,22 @@ describe("violacoesDoAcervo", () => {
     expect(v[0].frase).toContain(f.trajeto.waypoints[0].nome);
   });
 
+  // 🔴 TAREFA 11b (11b-M1): dois lugares podem ter o MESMO nome. Nas frases que
+  // comparam dois lugares, só o nome sairia "Lugar e Lugar têm a voz igual" —
+  // a cidade entre parênteses é o que diz de QUAL lugar se fala. Cidades
+  // marcadoras, sobre um nome real que já está no acervo.
+  it("a frase que compara dois lugares de mesmo nome leva a cidade de cada um", () => {
+    const um = { ...de("rampa-do-pepe"), cidade: "Cidade Marcador Um" };
+    const dois = { ...de("rampa-do-pepe"), slug: "marcador-gemeo", cidade: "Cidade Marcador Dois" };
+    const v = violacoesDoAcervo([um, dois]).find((x) => x.regra === "texto-emprestado");
+    expect(v, "a premissa: dois lugares de voz igual violam texto-emprestado").toBeDefined();
+    const nome = um.trajeto.waypoints[0].nome;
+    expect(v!.frase).toContain(`${nome} (Cidade Marcador Um) e ${nome} (Cidade Marcador Dois)`);
+    // e sem cidade, só o nome — nenhum parêntese vazio
+    const sem = violacoesDoAcervo([de("rampa-do-pepe"), { ...de("rampa-do-pepe"), slug: "marcador-gemeo" }]);
+    expect(sem.find((x) => x.regra === "texto-emprestado")!.frase).toContain(`${nome} e ${nome} têm`);
+  });
+
   // 🔴 A frase vai pra TELA DO DONO, no celular, no meio de uma edição. Se ela
   // trouxer o identificador da regra ou o slug cru, ele lê jargão em vez de ler
   // o que está errado. Vale pras 14, não só pra uma.

@@ -175,6 +175,8 @@ export const ROTULOS: Record<string, string> = {
   premio: "O prêmio",
 
   // — como se chega, e o que se encontra no caminho —
+  // PENDENTE: redação minha, o João ainda não leu
+  cidade: "A cidade",
   // 🔴 As quatro folhas de um PONTO do trajeto NÃO ENTRAM AQUI: elas vêm no
   // registro como MOLDE (`[]` = qualquer índice) e o rótulo delas mora em
   // `ROTULO_DO_PONTO`, logo abaixo. Ver a justificativa lá.

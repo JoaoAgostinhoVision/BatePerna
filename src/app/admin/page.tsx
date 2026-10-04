@@ -8,7 +8,7 @@ import { resolverEstados } from "@/lib/carimbo-estado";
 import { comPrazo } from "@/lib/cache-rotas";
 import { getClient, listarRascunhos, type Rascunho } from "@/lib/db";
 import { PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
-import { nomeDoRascunho } from "@/lib/rascunho";
+import { cidadeDoDoc, nomeDoRascunho } from "@/lib/rascunho";
 import CaixaDeSenha from "./CaixaDeSenha";
 import ListaDeLugares from "./ListaDeLugares";
 import "./admin.css";
@@ -66,7 +66,7 @@ export default async function Admin() {
     ESTOUROU,
   );
   if (linhas === ESTOUROU) throw new Error("O banco não respondeu a tempo à leitura dos rascunhos.");
-  const rascunhos = linhas.map((r) => ({ slug: r.slug, nome: nomeDoRascunho(r.doc, r.slug) }));
+  const rascunhos = linhas.map((r) => ({ slug: r.slug, nome: nomeDoRascunho(r.doc, r.slug), cidade: cidadeDoDoc(r.doc) }));
 
   return (
     <main className="adm">

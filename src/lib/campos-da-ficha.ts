@@ -91,6 +91,11 @@ export const CAMPOS_DA_FICHA: readonly CampoDaFicha[] = [
   { caminho: "premio", especie: "prosa", obrigatorio: true, grupo: "voz" },
 
   // — como se chega, e o que se encontra no caminho —
+  // 🔴 A CIDADE (Tarefa 11b) abre o grupo: é o que separa dois lugares de mesmo
+  // nome. `obrigatorio: true` aqui e opcional no schema — a divergência é
+  // declarada, com o motivo, em `OBRIGATORIO_SO_NO_REGISTRO` no teste deste
+  // registro. Obrigatória quer dizer: sem "não sei", e o lugar novo nasce com ela.
+  { caminho: "cidade", especie: "prosa", obrigatorio: true, grupo: "chegar" },
   // O molde: `[]` é "qualquer índice". `nome`/`lat`/`lng` são obrigatórios
   // DENTRO do waypoint; `nota` não é.
   { caminho: "trajeto.waypoints[].nome", especie: "prosa", obrigatorio: true, grupo: "chegar" },

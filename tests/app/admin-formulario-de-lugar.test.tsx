@@ -46,6 +46,7 @@ import { bancoVazio, semearAcervo } from "../banco";
 const SENHA = "s".repeat(24);
 const SEGREDO = "segredo-de-assinatura-do-teste-formulario";
 const NOME = "Lugar Marcador Um";
+const CIDADE = "Cidade Marcador Um";
 const S = "lugar-marcador-um";
 
 afterEach(() => {
@@ -89,7 +90,7 @@ afterEach(() => vi.unstubAllEnvs());
 /** O rascunho nasce pela porta de verdade do banco — o mesmo `criarRascunho`
  *  e o mesmo documento que a rota usa. */
 async function lugarNovo(): Promise<void> {
-  expect(await criarRascunho(cliente, S, docDoLugarNovo(S, NOME), 1)).toBe(true);
+  expect(await criarRascunho(cliente, S, docDoLugarNovo(S, NOME, CIDADE), 1)).toBe(true);
 }
 
 async function paginaNovo(slug?: string, p?: string | string[]) {
@@ -276,7 +277,7 @@ describe("/admin/novo — as perguntas", () => {
   // mesmo silêncio.
   it("opcional respondido: o 'não sei' de sempre, e nenhum 'pular' junto", async () => {
     await lugarNovo();
-    await salvarRascunho(cliente, S, JSON.stringify({ ...JSON.parse(docDoLugarNovo(S, NOME)), piso: "barro" }), 2);
+    await salvarRascunho(cliente, S, JSON.stringify({ ...JSON.parse(docDoLugarNovo(S, NOME, CIDADE)), piso: "barro" }), 2);
     await telaDe("piso");
     const botoes = within(pergunta("piso")).getAllByRole("button", { name: /não sei|não tem|pular/i });
     expect(botoes).toHaveLength(1);
@@ -316,7 +317,10 @@ describe("/admin/novo — as perguntas", () => {
   it("nenhum campo vem com resposta de exemplo dentro da caixa", async () => {
     await lugarNovo();
     let lidas = 0;
-    let nomeConferido = false;
+    // O nome e a cidade são o que ELE digitou ao criar (Tarefa 11b) — e são
+    // exatamente isso, nada além.
+    const DIGITADOS: Record<string, string> = { "trajeto.waypoints.0.nome": NOME, cidade: CIDADE };
+    const conferidos = new Set<string>();
     await porTodasAsTelas((n, container) => {
       const [m] = naTela();
       const caixas = [...container.querySelectorAll<HTMLInputElement>("input, textarea, select")];
@@ -324,18 +328,17 @@ describe("/admin/novo — as perguntas", () => {
       for (const caixa of caixas) {
         lidas++;
         expect(caixa.getAttribute("placeholder") ?? "", `placeholder em ${m}`).toBe("");
-        if (m === "trajeto.waypoints.0.nome") continue; // o nome é o que ELE digitou ao criar
+        if (m in DIGITADOS) continue;
         if (caixa.type === "radio" || caixa.type === "checkbox") expect(caixa.checked, m).toBe(false);
         else expect(caixa.value, m).toBe("");
       }
-      if (m === "trajeto.waypoints.0.nome") {
-        // e o nome é exatamente o que ele digitou, nada além
-        expect(within(pergunta(m)).getByRole("textbox")).toHaveProperty("value", NOME);
-        nomeConferido = true;
+      if (m in DIGITADOS) {
+        expect(within(pergunta(m)).getByRole("textbox")).toHaveProperty("value", DIGITADOS[m]);
+        conferidos.add(m);
       }
     });
     expect(lidas, "nenhuma caixa lida: o laço ficaria oco").toBeGreaterThan(20);
-    expect(nomeConferido).toBe(true);
+    expect([...conferidos].sort()).toEqual(Object.keys(DIGITADOS).sort());
   });
 });
 
@@ -364,11 +367,16 @@ describe("/admin/novo — a posição mora na URL", () => {
   it("na página: p torto cai na 1ª sem resposta; p válido é obedecido", async () => {
     await lugarNovo();
     const total = esperadas().length;
-    // o nome já está respondido (é dele que o rascunho nasce): a 1ª sem resposta é a 2ª
+    // o nome e a cidade já estão respondidos (é deles que o rascunho nasce): a
+    // 1ª sem resposta é a 3ª
+    expect(ORDEM.slice(0, 2), "a premissa: as duas primeiras são o nome e a cidade").toEqual([
+      "trajeto.waypoints.0.nome",
+      "cidade",
+    ]);
     for (const p of [undefined, "", "abc", "0", "-2", String(total + 1), "1.5", ["3", "4"]]) {
       await paginaNovo(S, p);
-      expect(naTela(), JSON.stringify(p)).toEqual([ORDEM[1]]);
-      expect(screen.getByText(posicaoNaTela(2, total)), JSON.stringify(p)).toBeTruthy();
+      expect(naTela(), JSON.stringify(p)).toEqual([ORDEM[2]]);
+      expect(screen.getByText(posicaoNaTela(3, total)), JSON.stringify(p)).toBeTruthy();
       cleanup();
     }
     await paginaNovo(S, "5");
@@ -382,7 +390,7 @@ describe("/admin/novo — a posição mora na URL", () => {
   // `p`) cai na primeira pergunta SEM resposta — e não no começo de novo.
   it("sai e volta pela lista do painel: cai na primeira pergunta sem resposta", async () => {
     await lugarNovo();
-    const doc = JSON.parse(docDoLugarNovo(S, NOME));
+    const doc = JSON.parse(docDoLugarNovo(S, NOME, CIDADE));
     doc.trajeto.waypoints[0] = { ...doc.trajeto.waypoints[0], lat: -8.1, lng: -35.2 };
     await salvarRascunho(cliente, S, JSON.stringify(doc), 2);
     const { default: Admin } = await import("@/app/admin/page");
@@ -392,8 +400,8 @@ describe("/admin/novo — a posição mora na URL", () => {
     const params = new URL(href, "http://x").searchParams;
     expect(params.get("p"), "a premissa: o link da lista não leva posição").toBeNull();
     await paginaNovo(params.get("slug")!);
-    expect(naTela()).toEqual([ORDEM[2]]);
-    expect(screen.getByText(posicaoNaTela(3, esperadas().length))).toBeTruthy();
+    expect(naTela()).toEqual([ORDEM[3]]);
+    expect(screen.getByText(posicaoNaTela(4, esperadas().length))).toBeTruthy();
   });
 });
 
@@ -440,14 +448,14 @@ describe("/admin/novo — andar entre as perguntas", () => {
     await salvarRascunho(
       cliente,
       S,
-      JSON.stringify({ ...JSON.parse(docDoLugarNovo(S, NOME)), voz: "frase marcadora" }),
+      JSON.stringify({ ...JSON.parse(docDoLugarNovo(S, NOME, CIDADE)), voz: "frase marcadora" }),
       2,
     );
     const total = esperadas().length;
     await paginaNovo(S, "4");
     const saltos = within(screen.getByTestId("saltos")).getAllByRole("link");
     expect(saltos).toHaveLength(total);
-    const respondidas = new Set([posDe("trajeto.waypoints.0.nome"), posDe("voz")]);
+    const respondidas = new Set([posDe("trajeto.waypoints.0.nome"), posDe("cidade"), posDe("voz")]);
     saltos.forEach((a, i) => {
       const n = i + 1;
       expect(a.getAttribute("href"), `salto ${n}`).toBe(enderecoDaPergunta(S, n));
@@ -652,34 +660,75 @@ describe("/admin/novo — responder, sair e voltar", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-describe("/admin/novo — o lugar novo nasce do nome", () => {
-  it("sem slug: só a pergunta do nome, caixa vazia, e começar leva ao rascunho", async () => {
+describe("/admin/novo — o lugar novo nasce do nome e da cidade", () => {
+  // 🔴 TAREFA 11b: o lugar nasce com as DUAS respostas — o nome e a cidade, as
+  // duas caixas vazias e sem placeholder (nada pré-preenchido, spec §4.4).
+  it("sem slug: só as perguntas do nome e da cidade, caixas vazias, e começar leva ao rascunho", async () => {
     const { chamadas, assign } = await comRotaDeVerdade();
     const { container } = await paginaNovo();
-    expect(screen.getByText(PERGUNTAS["trajeto.waypoints.0.nome"])).toBeTruthy();
-    const caixa = screen.getByRole("textbox") as HTMLInputElement;
-    expect(caixa.value).toBe("");
-    expect(caixa.getAttribute("placeholder") ?? "").toBe("");
+    const caixaDo = (texto: string) => screen.getByRole("textbox", { name: texto }) as HTMLInputElement;
+    const nome = caixaDo(PERGUNTAS["trajeto.waypoints.0.nome"]);
+    const cidade = caixaDo(PERGUNTAS.cidade);
+    expect(screen.getAllByRole("textbox"), "uma caixa a mais ou a menos").toHaveLength(2);
+    for (const caixa of [nome, cidade]) {
+      expect(caixa.value).toBe("");
+      expect(caixa.getAttribute("placeholder") ?? "").toBe("");
+    }
     expect(screen.queryAllByTestId(/^pergunta-/)).toHaveLength(0);
 
-    fireEvent.change(caixa, { target: { value: NOME } });
+    fireEvent.change(nome, { target: { value: NOME } });
+    fireEvent.change(cidade, { target: { value: CIDADE } });
     fireEvent.submit(container.querySelector("form")!);
-    await waitFor(() => expect(assign).toHaveBeenCalledWith(`/admin/novo?slug=${S}`));
-    expect(chamadas[0]).toEqual({ url: "/api/admin/rascunho", metodo: "POST", corpo: { nome: NOME } });
-    expect(await lerRascunho(cliente, S)).not.toBeNull();
+    const nasce = "lugar-marcador-um-cidade-marcador-um";
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(`/admin/novo?slug=${nasce}`));
+    expect(chamadas[0]).toEqual({ url: "/api/admin/rascunho", metodo: "POST", corpo: { nome: NOME, cidade: CIDADE } });
+    expect(JSON.parse((await lerRascunho(cliente, nasce))!.doc).cidade).toBe(CIDADE);
   });
 
-  it("nome de um lugar que já existe: a frase da porta na tela, e nada nasce", async () => {
+  it("sem a cidade: a frase da porta na tela, o nome fica na caixa, e nada nasce", async () => {
+    const { assign } = await comRotaDeVerdade();
+    const { container } = await paginaNovo();
+    const { CIDADE_VAZIA } = await import("@/lib/rascunho");
+    const nome = screen.getByRole("textbox", { name: PERGUNTAS["trajeto.waypoints.0.nome"] }) as HTMLInputElement;
+    fireEvent.change(nome, { target: { value: NOME } });
+    fireEvent.submit(container.querySelector("form")!);
+    expect(await screen.findByText(CIDADE_VAZIA)).toBeTruthy();
+    expect(assign).not.toHaveBeenCalled();
+    expect(nome.value).toBe(NOME);
+    expect(await lerRascunho(cliente, "lugar-marcador-um-cidade-marcador-um")).toBeNull();
+  });
+
+  // A INVERSÃO da onda 1: o nome de um lugar que já está no ar, numa cidade, nasce.
+  it("nome de um lugar que já existe, numa cidade: nasce em outro endereço, e o lugar fica intacto", async () => {
     const { assign } = await comRotaDeVerdade();
     const { container } = await paginaNovo();
     const { getAllFichas } = await import("@/lib/ficha");
-    const { slugDoNome, JA_EXISTE_LUGAR } = await import("@/lib/rascunho");
+    const { slugDoNome } = await import("@/lib/rascunho");
     const alvo = (await getAllFichas()).find((f) => slugDoNome(f.trajeto.waypoints[0].nome) === f.slug)!;
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: alvo.trajeto.waypoints[0].nome } });
+    fireEvent.change(screen.getByRole("textbox", { name: PERGUNTAS["trajeto.waypoints.0.nome"] }), {
+      target: { value: alvo.trajeto.waypoints[0].nome },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: PERGUNTAS.cidade }), { target: { value: CIDADE } });
     fireEvent.submit(container.querySelector("form")!);
-    expect(await screen.findByText(JA_EXISTE_LUGAR)).toBeTruthy();
-    expect(assign).not.toHaveBeenCalled();
+    const nasce = `${alvo.slug}-cidade-marcador-um`;
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(`/admin/novo?slug=${nasce}`));
     expect(await lerRascunho(cliente, alvo.slug)).toBeNull();
+    expect(await historico(cliente, alvo.slug)).toHaveLength(1);
+  });
+
+  it("nome e cidade de um rascunho que já existe: a frase da porta na tela, e nada nasce", async () => {
+    const { assign } = await comRotaDeVerdade();
+    const { parDeRascunho } = await import("@/lib/rascunho");
+    await lugarNovo();
+    const { container } = await paginaNovo();
+    fireEvent.change(screen.getByRole("textbox", { name: PERGUNTAS["trajeto.waypoints.0.nome"] }), {
+      target: { value: NOME },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: PERGUNTAS.cidade }), { target: { value: CIDADE } });
+    fireEvent.submit(container.querySelector("form")!);
+    expect(await screen.findByText(parDeRascunho(`${NOME} (${CIDADE})`))).toBeTruthy();
+    expect(assign).not.toHaveBeenCalled();
+    expect(await lerRascunho(cliente, "lugar-marcador-um-cidade-marcador-um")).toBeNull();
     expect(screen.getByRole("button", { name: COMECAR })).toBeTruthy();
   });
 });
@@ -712,6 +761,24 @@ describe("/admin — a lista ganha a porta do lugar novo e a dos rascunhos", () 
     expect(lugares.contains(secao), "a seção de rascunhos está DENTRO da lista dos lugares").toBe(false);
     expect(within(lugares).queryByText(new RegExp(NOME)), "o rascunho entrou na lista dos lugares no ar").toBeNull();
     expect(within(lugares).getAllByRole("link").length, "a premissa: os lugares no ar estão lá").toBeGreaterThan(1);
+  });
+
+  // 🔴 TAREFA 11b: a cidade aparece onde o nome aparece pra ESCOLHER — dois
+  // rascunhos de mesmo nome só se distinguem por ela.
+  it("o rascunho mostra a cidade dele junto do nome, dentro do item", async () => {
+    await lugarNovo();
+    await paginaAdmin();
+    const item = screen.getByTestId("rascunhos").querySelector<HTMLElement>(`[data-rascunho="${S}"]`)!;
+    expect(item, "a premissa: o item do rascunho existe").not.toBeNull();
+    expect(within(item).getByText(NOME)).toBeTruthy();
+    expect(within(item).getByText(CIDADE)).toBeTruthy();
+  });
+
+  it("rascunho SEM cidade (nascido antes da 11b): só o nome, e nenhuma palavra no lugar dela", async () => {
+    expect(await criarRascunho(cliente, S, JSON.stringify({ slug: S, modos: [], trajeto: { waypoints: [{ nome: NOME }] } }), 1)).toBe(true);
+    await paginaAdmin();
+    const item = screen.getByTestId("rascunhos").querySelector<HTMLElement>(`[data-rascunho="${S}"]`)!;
+    expect(item.textContent).toBe(NOME);
   });
 
   it("sem rascunho, a seção não aparece", async () => {
@@ -794,7 +861,7 @@ describe("o formulário e a lista têm regra no admin.css", () => {
     await salvarRascunho(
       cliente,
       S,
-      JSON.stringify({ ...JSON.parse(docDoLugarNovo(S, NOME)), horario: { abre: "05:00", fecha: "17:00" } }),
+      JSON.stringify({ ...JSON.parse(docDoLugarNovo(S, NOME, CIDADE)), horario: { abre: "05:00", fecha: "17:00" } }),
       2,
     );
     await comRotaDeVerdade();

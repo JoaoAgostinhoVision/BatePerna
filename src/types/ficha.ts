@@ -109,6 +109,20 @@ export const discriminadorSchema = z.object({
 export const fichaSchema = z.object({
   slug: z.string(),
   modos: z.array(z.string()),
+  // A CIDADE onde o lugar fica (Tarefa 11b, decisão do João em 2026-10-04: *"pode
+  // existir mais de um lugar com o mesmo nome, a diferença às vezes só vai ser a
+  // localização"*). É ela que separa dois lugares de mesmo nome — no endereço de
+  // um lugar NOVO, na tela e na colisão do painel.
+  //
+  // 🔴 OPCIONAL AQUI E OBRIGATÓRIA NO REGISTRO (`src/lib/campos-da-ficha.ts`), e a
+  // divergência é declarada com o motivo no teste do registro
+  // (`OBRIGATORIO_SO_NO_REGISTRO`): as fichas que já estavam no ar nasceram sem
+  // cidade, e este schema é o caminho de LEITURA — obrigatória aqui, a leitura
+  // pública estouraria e `buscarFichas` derrubaria a lista inteira. Quem a
+  // responde é o dono, pelo painel; ninguém a deduz do endereço nem do nome.
+  //
+  // Ausente é silêncio, a régua de sempre: nenhuma tela escreve "sem cidade".
+  cidade: z.string().optional(),
   rotulo_escaneio: z.string(),
   promessa: z.string(),
   voz: z.string(),
