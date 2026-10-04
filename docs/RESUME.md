@@ -7,9 +7,11 @@
 **A onda 2 da Tarefa 11 FOI FEITA: `6a04ccd`** (uma pergunta por vez, posição na URL `?slug=X&p=N`). Medido por mim:
 **1865/1865 em 96**, `tsc` 0, build 0 (`/admin/novo` 1.96 kB · 111 kB), `mutar.mjs` 42/0, árvore limpa, stash intocado.
 
-→ 🔴 **PRÓXIMO PASSO:** se `.superpowers/sdd/2026-09-26-painel-completo/task-11-rereview.md` NÃO existir, despachar
-`task-11-rereview-PROMPT.md` COMO ESTÁ (general-purpose, opus, background) — re-revisão das ondas 1+2 juntas, base
-`a4a3754`. Se existir: ler o veredito, onda 3 se precisar, `git stash drop` do `onda2-t11-PARCIAL`, e **Tarefa 12**.
+→ 🔴 **PRÓXIMO PASSO:** a re-revisão das ondas 1+2 voltou (`task-11-rereview.md`: 0 C · 2 I · 4 M) e a **onda 3**
+foi despachada (`task-11-fix3-brief.md`, F1 nome confere o RESULTADO / F2 horário com UM Salvar / F3 rede não avança).
+Se o log não tiver commit de código depois de `8f4fb68`, redespachar `task-11-fix3-PROMPT.md` COMO ESTÁ. Se tiver:
+medir eu mesmo → re-revisão só da onda 3 → `git stash drop` do `onda2-t11-PARCIAL` → **Tarefa 12** (o brief
+dela ganhou o **G1′**: publicar recusa também por NOME, pela mesma `nomeOcupado`).
 
 Preocupações do implementador da onda 2 (pra levar ao João, não travam): ninguém viu a tela no celular (lista de
 saltos com 27 números); "pulei" e "nunca respondi" aparecem iguais; "Próxima" sem salvar descarta o digitado sem
