@@ -356,8 +356,10 @@ describe("a cadeia de waypoints — o bloco Trajeto a lê, e o que fala do LUGAR
   /** Os que falam DO LUGAR: toda leitura é `waypoints[0]`, e só isso. São os
    *  sete que a spec §6 lista (fora o `page.tsx`, que é misto) MAIS a
    *  `coerencia.ts`, que nasceu depois da spec (Tarefa 3) e lê o `[0]` pro nome
-   *  do lugar nas frases das regras — o comentário dela diz por quê. A spec
-   *  contava 8 arquivos; com a coerência são 9 (8 cegos + o misto). */
+   *  do lugar nas frases das regras — o comentário dela diz por quê — e a
+   *  `rascunho.ts` (Tarefa 11), que lê o `[0]` pro nome do lugar novo. A spec
+   *  contava 8 arquivos; com a coerência e o rascunho são 10 (9 cegos + o
+   *  misto). */
   const CEGOS = [
     "src/app/CartaoTrilha.tsx",
     "src/app/ListaDoAcervo.tsx",

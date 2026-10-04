@@ -613,6 +613,14 @@ function abrirRascunho(docAtual: string): Record<string, unknown> {
 /** `aplicarCampo` sobre o rascunho: grava UMA resposta e devolve o JSON novo. */
 export function aplicarNoRascunho(docAtual: string, caminho: string, valor: ValorDeCampo): string {
   const campo = exigirCampo(caminho);
+  // 🔴 MEIA COORDENADA (onda de conserto 1 da Tarefa 11): a coordenada do ponto
+  // entra como PAR, por `gravarPontoNoRascunho`. Uma folha sozinha deixaria o
+  // rascunho com latitude sem longitude — a janela que a Tarefa 8 (R1) fechou
+  // na ficha no ar.
+  if (/^trajeto\.waypoints\.\d+\.(lat|lng)$/.test(caminho)) {
+    // PENDENTE: redação minha, o João ainda não leu
+    throw new Error("a coordenada do ponto entra inteira: a latitude e a longitude juntas, no mesmo Salvar");
+  }
   const atual = abrirRascunho(docAtual);
   if (campo.especie === "bloco") return JSON.stringify(gravarBloco(atual, caminho, valor));
 

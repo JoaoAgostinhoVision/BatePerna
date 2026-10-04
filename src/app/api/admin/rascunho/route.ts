@@ -15,6 +15,7 @@ import {
   listarRascunhos,
   salvarRascunho,
   versaoAtual,
+  versoesAtuais,
 } from "@/lib/db";
 import {
   JA_EXISTE_LUGAR,
@@ -41,11 +42,14 @@ const SEM_CACHE = { "cache-control": "no-store" } as const;
  *
  *   - `POST {nome}` — o lugar novo NASCE. O slug sai do nome (`slugDoNome`); é
  *     recusado com frase quando já é de um lugar (inclusive ESCONDIDO), de um
- *     rascunho, ou de uma tela do app. 201 `{slug}`.
+ *     rascunho, ou de uma tela do app — e quando o NOME já é de um lugar ou de
+ *     um rascunho, mesmo com endereço outro (`nomeOcupado`). 201 `{slug}`.
  *   - `PUT` — responde uma pergunta, nas formas de corpo da porta da ficha
  *     (`src/app/api/admin/ficha/route.ts`), mutuamente exclusivas:
  *       `{slug, campo, valor}` · `{slug, campo, naoSei: true}` ·
  *       `{slug, ponto, lat, lng}`.
+ *     Renomear (`trajeto.waypoints.0.nome`) passa pela mesma colisão de nome do
+ *     POST; a coordenada do ponto só entra como PAR (a terceira forma).
  *     A terceira existe pra o editor de coordenada servir aqui SEM MUDAR: ele
  *     grava o ponto do trajeto inteiro, num corpo só, por essa forma.
  *   - `GET` — a lista; com `?slug=`, o documento de um.
@@ -89,6 +93,38 @@ function recusar400(erro: unknown): Response {
   return new Response(nossa ? erro.message : "", { status: 400, headers: TEXTO });
 }
 
+/** 🔴 A COLISÃO POR NOME (onda de conserto 1 da Tarefa 11) — a que a frase
+ *  `JA_EXISTE_LUGAR` sempre prometeu. O endereço sai do nome NO NASCIMENTO, mas
+ *  nem todo lugar tem endereço que sai do nome dele (um leva a cidade), e o nome
+ *  continua editável depois de nascer. Sem esta conferência, o nome EXATO de um
+ *  lugar no ar fazia nascer um rascunho com outro slug — e publicá-lo poria dois
+ *  lugares de mesmo nome na home.
+ *
+ *  O nome é o do ponto `0` (`nomeDoRascunho`, que serve a qualquer documento de
+ *  lugar), comparado pela MESMA normalização do endereço (`slugDoNome`: sem
+ *  acento, sem caixa, pontuação e espaços colapsados). Contra:
+ *   - a versão ATUAL de todo lugar, SEM filtro de `oculto` — um lugar escondido
+ *     é um lugar, e volta ao ar;
+ *   - todo rascunho, menos `exceto` (o próprio, quando ele se renomeia).
+ *  Devolve a frase da recusa, ou `null` se o nome está livre.
+ *
+ *  ⚠️ Esta conferência LÊ e depois a rota GRAVA — há janela entre as duas, ao
+ *  contrário da porta do endereço (`criarRascunho`, uma consulta só). Aceita
+ *  porque o painel tem um dono só; a normalização não cabe numa consulta SQL. */
+async function nomeOcupado(nome: string, exceto?: string): Promise<string | null> {
+  const alvo = slugDoNome(nome);
+  for (const v of (await versoesAtuais(getClient(), { incluirOcultos: true })).values()) {
+    if (slugDoNome(nomeDoRascunho(v.doc, v.ficha_slug)) === alvo) return JA_EXISTE_LUGAR;
+  }
+  for (const r of await listarRascunhos(getClient())) {
+    if (r.slug !== exceto && slugDoNome(nomeDoRascunho(r.doc, r.slug)) === alvo) return JA_EXISTE_RASCUNHO;
+  }
+  return null;
+}
+
+/** O campo que é o NOME do lugar (o ponto `0`). Renomear passa pela colisão. */
+const CAMPO_DO_NOME = "trajeto.waypoints.0.nome";
+
 export async function POST(req: Request): Promise<Response> {
   const fechada = porta(req);
   if (fechada) return fechada;
@@ -104,6 +140,12 @@ export async function POST(req: Request): Promise<Response> {
   const slug = slugDoNome(nome);
   if (slug === "") return new Response(NOME_SEM_LETRA, { status: 400, headers: TEXTO });
   if (SLUGS_RESERVADOS.includes(slug)) return new Response(NOME_DE_TELA, { status: 409, headers: TEXTO });
+
+  // O NOME, antes do endereço. As duas recusas são de coisas DIFERENTES (o nome
+  // que bate com endereço outro × o endereço que bate com nome outro), e cada
+  // uma tem caso que só ela pega — não é a mesma porta duas vezes.
+  const doNome = await nomeOcupado(nome);
+  if (doNome !== null) return new Response(doNome, { status: 409, headers: TEXTO });
 
   // 🔴 A COLISÃO TEM UMA PORTA SÓ, e ela é a consulta de `criarRascunho`: o
   // INSERT só acontece se o slug não existe em `ficha_rascunhos` NEM em
@@ -169,6 +211,14 @@ export async function PUT(req: Request): Promise<Response> {
   // dele, pulando a conferência de colisão que só o POST faz.
   const atual = await lerRascunho(getClient(), slug);
   if (atual === null) return new Response("", { status: 400, headers: TEXTO });
+
+  // Renomear é a segunda porta do mesmo buraco do POST: um rascunho que nasceu
+  // com outro nome não pode virar o nome de um lugar (ou de outro rascunho)
+  // depois. Valor que não é texto segue adiante e é recusado pela folha.
+  if (campo === CAMPO_DO_NOME && typeof valor === "string") {
+    const renomeado = await nomeOcupado(valor, slug);
+    if (renomeado !== null) return new Response(renomeado, { status: 409, headers: TEXTO });
+  }
 
   let novoDoc: string;
   try {

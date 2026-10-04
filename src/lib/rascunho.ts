@@ -66,7 +66,10 @@ export function docDoLugarNovo(slug: string, nome: string): string {
 /** O nome que a LISTA do painel mostra pra um rascunho: o do ponto `0`, que é
  *  o que ele digitou ao criar (e que ele pode ter trocado depois, pela pergunta
  *  do nome). Documento que não abre, ou sem nome, cai no slug — nunca em
- *  "sem nome", que seria palavra nova pra um caso que não deveria existir. */
+ *  "sem nome", que seria palavra nova pra um caso que não deveria existir.
+ *
+ *  Serve a QUALQUER documento de lugar, não só a rascunho: a colisão por nome
+ *  da rota (onda de conserto 1) lê com ela também o nome dos lugares no ar. */
 export function nomeDoRascunho(doc: string, slug: string): string {
   try {
     const nome = (JSON.parse(doc) as { trajeto?: { waypoints?: { nome?: unknown }[] } }).trajeto?.waypoints?.[0]

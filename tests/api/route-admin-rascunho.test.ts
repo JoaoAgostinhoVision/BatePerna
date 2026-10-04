@@ -375,6 +375,180 @@ describe("PUT — responder uma pergunta", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// 🔴 ONDA DE CONSERTO 1 (F1/F2): O NOME TAMBÉM COLIDE, NÃO SÓ O ENDEREÇO.
+//
+// O caso real que a revisão mediu: um lugar do acervo tem endereço que NÃO sai
+// do nome dele (o nome diz a cachoeira, o endereço leva a cidade). Digitar o
+// nome EXATO desse lugar fazia um rascunho nascer com outro slug — e publicá-lo
+// poria dois lugares de mesmo nome na home, enquanto a frase `JA_EXISTE_LUGAR`
+// prometia uma conferência POR NOME que não existia.
+//
+// Aqui o caso é montado com MARCADORES (endereço e nome que não se derivam um do
+// outro), gravados pela mesma função que grava todo lugar. Cada caso prova UMA
+// porta sozinha: o nome que bate com endereço diferente (a porta do nome), e o
+// endereço que bate com nome diferente (a porta do slug) — com as duas
+// batendo juntas, arrancar uma delas sobreviveria (espécie 47).
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Um lugar marcador no banco, com endereço e nome escolhidos separados. O resto
+ *  do documento é o de um lugar do acervo — só pra ser uma ficha inteira; nada
+ *  dele é lido aqui além do nome do ponto `0`. */
+async function lugarMarcador(slug: string, nome: string, oculto = false): Promise<void> {
+  const base = acervo[0];
+  const [primeiro, ...resto] = base.trajeto.waypoints;
+  const doc = { ...base, slug, trajeto: { ...base.trajeto, waypoints: [{ ...primeiro, nome }, ...resto] } };
+  await gravarVersao(c, slug, JSON.stringify(doc), "painel", AGORA, oculto);
+}
+
+describe("o NOME colide, não só o endereço (onda de conserto 1)", () => {
+  const OUTRO_SLUG = "marcador-endereco-que-nao-sai-do-nome";
+  const OUTRO_NOME = "Lugar Marcador Dois";
+
+  it("POST com o nome EXATO de um lugar no ar cujo endereço é outro: 409 JA_EXISTE_LUGAR, nada nasce", async () => {
+    await lugarMarcador(OUTRO_SLUG, OUTRO_NOME);
+    expect(slugDoNome(OUTRO_NOME), "a premissa: o endereço NÃO sai do nome").not.toBe(OUTRO_SLUG);
+    for (const nome of [OUTRO_NOME, "  lugar   MARCADOR dóis "]) {
+      const res = await criar(nome);
+      expect(res.status, nome).toBe(409);
+      expect(await res.text()).toBe(JA_EXISTE_LUGAR);
+    }
+    expect(await listarRascunhos(c)).toEqual([]);
+    expect(await historico(c, OUTRO_SLUG)).toHaveLength(1);
+  });
+
+  it("POST com o nome de um lugar ESCONDIDO cujo endereço é outro: 409, e ele continua escondido", async () => {
+    await lugarMarcador(OUTRO_SLUG, OUTRO_NOME);
+    await esconder(OUTRO_SLUG);
+    expect((await versoesAtuais(c)).has(OUTRO_SLUG), "a premissa: o público não o vê").toBe(false);
+    const res = await criar(OUTRO_NOME);
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(JA_EXISTE_LUGAR);
+    expect(await listarRascunhos(c)).toEqual([]);
+    const h = await historico(c, OUTRO_SLUG);
+    expect(h).toHaveLength(2);
+    expect(h[0].oculto).toBe(true);
+  });
+
+  it("a porta do endereço continua sozinha: slug igual com NOME diferente, 409", async () => {
+    await lugarMarcador("lugar-marcador-tres", "Nome Marcador Diferente");
+    const res = await criar("Lugar Marcador Tres");
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(JA_EXISTE_LUGAR);
+    expect(await listarRascunhos(c)).toEqual([]);
+  });
+
+  // 🔴 F2 — O LUGAR NASCIDO ESCONDIDO: a única versão dele foi gravada com
+  // `oculto`. É uma chamada da API de `db.ts` com a assinatura que existe, e a
+  // Tarefa 12 é a primeira porta que CRIA lugar. Fecha a M16′ (`NOT EXISTS …
+  // AND oculto <> 1`): sem versão visível nenhuma no histórico, aquele filtro
+  // não acharia o lugar.
+  it("lugar NASCIDO escondido: endereço e nome colidem os dois, e ele continua intacto", async () => {
+    await lugarMarcador("lugar-marcador-escondido", "Marcador Nascido Escondido", true);
+    const h0 = await historico(c, "lugar-marcador-escondido");
+    expect(h0.map((v) => v.oculto), "a premissa: nenhuma versão visível").toEqual([true]);
+    for (const nome of ["Lugar Marcador Escondido", "Marcador Nascido Escondido"]) {
+      const res = await criar(nome);
+      expect(res.status, nome).toBe(409);
+      expect(await res.text(), nome).toBe(JA_EXISTE_LUGAR);
+    }
+    expect(await listarRascunhos(c)).toEqual([]);
+    expect(await historico(c, "lugar-marcador-escondido")).toEqual(h0);
+  });
+
+  it("POST com o nome que OUTRO rascunho tem agora (endereço diferente): 409 JA_EXISTE_RASCUNHO", async () => {
+    expect((await criar(NOME)).status).toBe(201);
+    expect((await mudar({ slug: S, campo: "trajeto.waypoints.0.nome", valor: "Nome Marcador Novo" })).status).toBe(200);
+    for (const nome of ["Nome Marcador Novo", NOME]) {
+      const res = await criar(nome);
+      expect(res.status, nome).toBe(409);
+      expect(await res.text(), nome).toBe(JA_EXISTE_RASCUNHO);
+    }
+    expect((await listarRascunhos(c)).map((r) => r.slug)).toEqual([S]);
+  });
+
+  describe("PUT do nome do rascunho", () => {
+    const CAMPO_NOME = "trajeto.waypoints.0.nome";
+    beforeEach(async () => {
+      expect((await criar(NOME)).status).toBe(201);
+    });
+
+    it("renomear pro nome de um lugar no ar (endereço outro): 409 JA_EXISTE_LUGAR, o rascunho não muda", async () => {
+      await lugarMarcador(OUTRO_SLUG, OUTRO_NOME);
+      const antes = (await lerRascunho(c, S))!.doc;
+      const res = await mudar({ slug: S, campo: CAMPO_NOME, valor: "lugar marcador DOIS" });
+      expect(res.status).toBe(409);
+      expect(await res.text()).toBe(JA_EXISTE_LUGAR);
+      expect((await lerRascunho(c, S))!.doc).toBe(antes);
+    });
+
+    it("renomear pro nome de um lugar NASCIDO escondido: 409 JA_EXISTE_LUGAR", async () => {
+      await lugarMarcador("lugar-marcador-escondido", "Marcador Nascido Escondido", true);
+      const antes = (await lerRascunho(c, S))!.doc;
+      const res = await mudar({ slug: S, campo: CAMPO_NOME, valor: "Marcador Nascido Escondido" });
+      expect(res.status).toBe(409);
+      expect(await res.text()).toBe(JA_EXISTE_LUGAR);
+      expect((await lerRascunho(c, S))!.doc).toBe(antes);
+    });
+
+    it("renomear pro nome de OUTRO rascunho: 409 JA_EXISTE_RASCUNHO", async () => {
+      expect((await criar("Lugar Marcador Quatro")).status).toBe(201);
+      const antes = (await lerRascunho(c, S))!.doc;
+      const res = await mudar({ slug: S, campo: CAMPO_NOME, valor: "LUGAR MARCADOR QUATRO" });
+      expect(res.status).toBe(409);
+      expect(await res.text()).toBe(JA_EXISTE_RASCUNHO);
+      expect((await lerRascunho(c, S))!.doc).toBe(antes);
+    });
+
+    it("renomear pro PRÓPRIO nome (outra grafia) ou pra um nome livre: 200", async () => {
+      expect((await mudar({ slug: S, campo: CAMPO_NOME, valor: "Lugar Marcador UM" })).status).toBe(200);
+      expect(((await docDe(S)).trajeto as { waypoints: { nome: string }[] }).waypoints[0].nome).toBe("Lugar Marcador UM");
+      expect((await mudar({ slug: S, campo: CAMPO_NOME, valor: "Nome Marcador Livre" })).status).toBe(200);
+      expect(((await docDe(S)).trajeto as { waypoints: { nome: string }[] }).waypoints[0].nome).toBe("Nome Marcador Livre");
+    });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 F3 — MEIA COORDENADA. A coordenada do ponto entra como PAR, pela forma
+// `{slug, ponto, lat, lng}`; a forma `campo` de `.lat` ou `.lng` sozinha
+// deixaria o rascunho com uma latitude sem longitude — a janela que a Tarefa 8
+// (R1) fechou na ficha no ar.
+describe("meia coordenada no rascunho (onda de conserto 1)", () => {
+  beforeEach(async () => {
+    expect((await criar(NOME)).status).toBe(201);
+  });
+
+  it("PUT só com `.lat` ou só com `.lng`: 400 com frase, e o rascunho não muda", async () => {
+    const antes = (await lerRascunho(c, S))!.doc;
+    for (const campo of ["trajeto.waypoints.0.lat", "trajeto.waypoints.0.lng"]) {
+      const res = await mudar({ slug: S, campo, valor: -8.1 });
+      expect(res.status, campo).toBe(400);
+      expect(await res.text(), campo).toMatch(/a coordenada do ponto entra inteira/);
+    }
+    expect((await lerRascunho(c, S))!.doc).toBe(antes);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 F4 — O 401 NÃO DIZ NADA: corpo VAZIO nos quatro métodos. Só o status não
+// distingue um 401 mudo de um 401 que ecoa alguma coisa a quem não entrou.
+describe("sem cookie, nos quatro métodos", () => {
+  it("401 com corpo VAZIO", async () => {
+    for (const [metodo, corpo] of [
+      ["POST", { nome: NOME }],
+      ["PUT", { slug: S, campo: "voz", valor: "x" }],
+      ["GET", undefined],
+      ["DELETE", { slug: S }],
+    ] as const) {
+      const fn = rota[metodo];
+      const res = await fn(pedido(metodo, corpo));
+      expect(res.status, metodo).toBe(401);
+      expect(await res.text(), metodo).toBe("");
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 describe("GET e DELETE", () => {
   beforeEach(async () => {
     expect((await criar(NOME)).status).toBe(201);
