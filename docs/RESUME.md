@@ -51,6 +51,11 @@ ruling minha de ORDENAR as faixas antes de gravar). **A 11f foi despachada** (`t
 commit de código depois de `3f7546a`, redespachar COMO ESTÁ).
 ✅ **11f feita: `1995a9c`** (mapa sem pin, +/−, toque põe o pin, Salvar só perto). Medido: 2020/2020 em 99, tsc 0,
 build 0, mutar 42/0. **Revisão despachada** (`task-11f-review.md`; se não existir, redespachar). Depois: 11e.
+🔴 **Revisão da 11f: 1 C · 3 I · 5 M.** O Critical nasceu no MEU plano: a prova "tocar afastado, aproximar, Salvar
+liga" que aceitei da auditoria ERA o furo (gravou ponto a ~75 km, com o pin fora da tela), e um teste a exigia.
+**Onda de fix despachada** (`task-11f-fix-brief.md`, Z1–Z3: Salvar vale pelo zoom do PIN; + em volta do pin; pin
+fora da vista sem Salvar; prazo da busca testado; cidades reais de PE não recusadas). Se não houver commit de
+código depois de `1995a9c`, redespachar com o mesmo brief.
 📝 **Pacote de copy pro João (crescendo):** "Abre sábado e domingo. Abre das 8h às 10h e das 14h às 17h."; "abre
 domingo às 8h" dito num domingo; "Não sei — o app não diz nada sobre isto" com horário ausente (FALSO: sem horário
 nunca fecha); "Escolha uma hora, no formato HH:MM." pra faixa vazia; e todas as `PENDENTE` dos relatórios 11b/c/d/f. Ordem nova: 11d → **11f** → 11e → 12.
