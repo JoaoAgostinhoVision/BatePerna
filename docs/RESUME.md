@@ -63,6 +63,11 @@ o ponto novo do trajeto se confirmava com o par do ÚLTIMO ponto, sem gesto (o C
 pin pré-posto). **Onda de fix 2 despachada** (`task-11f-fix2-brief.md`, W1–W4: ponto novo nasce SEM pin; provas da
 regra "pin fora da vista"). Se não houver commit de código depois de `1f09660`, redespachar com o mesmo brief.
 📝 Copy +: "Não achei a cidade" também quando o serviço caiu; "o campo cidade aceita distrito?".
+✅ **11f FECHADA: `f4ecb34`** (onda 2: ponto novo nasce SEM pin — provado vermelho por mim com o pin no último ponto;
+2049/2049 em 99, tsc 0, build 0, mutar 42/0). 📝 Copy +: `DICA_DO_PONTO_NOVO` "Toque no mapa onde fica o ponto novo.
+Depois, arraste o pin pra acertar."
+▶ **A 11e foi despachada** (`task-11e-PROMPT.md`; se não houver commit de código depois de `f4ecb34`, redespachar
+COMO ESTÁ). Depois: medir → revisão → **Tarefa 12** (brief com G1′, 12-I1..I3, 12-E5 acrescentados hoje).
 📝 **Pacote de copy pro João (crescendo):** "Abre sábado e domingo. Abre das 8h às 10h e das 14h às 17h."; "abre
 domingo às 8h" dito num domingo; "Não sei — o app não diz nada sobre isto" com horário ausente (FALSO: sem horário
 nunca fecha); "Escolha uma hora, no formato HH:MM." pra faixa vazia; e todas as `PENDENTE` dos relatórios 11b/c/d/f. Ordem nova: 11d → **11f** → 11e → 12.
