@@ -2,6 +2,19 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — ATUALIZADO 04/10 (vence o bloco de 03/10 logo abaixo)
+
+**A onda 2 da Tarefa 11 FOI FEITA: `6a04ccd`** (uma pergunta por vez, posição na URL `?slug=X&p=N`). Medido por mim:
+**1865/1865 em 96**, `tsc` 0, build 0 (`/admin/novo` 1.96 kB · 111 kB), `mutar.mjs` 42/0, árvore limpa, stash intocado.
+
+→ 🔴 **PRÓXIMO PASSO:** se `.superpowers/sdd/2026-09-26-painel-completo/task-11-rereview.md` NÃO existir, despachar
+`task-11-rereview-PROMPT.md` COMO ESTÁ (general-purpose, opus, background) — re-revisão das ondas 1+2 juntas, base
+`a4a3754`. Se existir: ler o veredito, onda 3 se precisar, `git stash drop` do `onda2-t11-PARCIAL`, e **Tarefa 12**.
+
+Preocupações do implementador da onda 2 (pra levar ao João, não travam): ninguém viu a tela no celular (lista de
+saltos com 27 números); "pulei" e "nunca respondi" aparecem iguais; "Próxima" sem salvar descarta o digitado sem
+aviso (R3). Palavras novas PENDENTE: `Anterior`, `Próxima`, `Pergunta N de M`, `respondida`, `sem resposta`.
+
 ## ▶ SE O JOÃO DISSER SÓ "CONTINUA" (parada de 03/10, a pedido dele: *"deixa tudo pronto"*)
 
 **Branch `painel-completo`, Tarefa 11 nas ondas de fix, NADA NO AR.** Topo esperado do log: `docs(resume): 03/10 -
