@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { PISOS } from "@/lib/piso";
-import { CIDADE_SEM_LETRA, slugDoNome } from "@/lib/rascunho";
+import { CIDADE_SEM_LETRA, CIDADE_VAZIA, slugDoNome } from "@/lib/rascunho";
 import { SEVERIDADES } from "@/lib/severidade";
 import { DIAS } from "@/lib/semana";
 import { fichaSchema, type Ficha } from "@/types/ficha";
@@ -256,6 +256,9 @@ function exigirCampo(caminho: string): CampoDaFicha {
  *  preço. Vale pra todo campo opcional, e só-espaços conta como vazia. */
 function recusarVazio(caminho: string, valor: ValorDeCampo): void {
   const vazia = (v: unknown) => typeof v === "string" && v.trim() === "";
+  // A cidade não tem "não sei" (M-N3 da re-revisão da 11b): a frase de baixo
+  // mandaria dizê-lo. A dela é a do POST.
+  if (caminho === "cidade" && vazia(valor)) throw new Error(CIDADE_VAZIA);
   if (vazia(valor) || (Array.isArray(valor) && valor.some(vazia))) {
     // PENDENTE: redação minha, o João ainda não leu
     throw new Error(`caixa vazia em \`${caminho}\`: escreva algo, ou diga "não sei" (que tira o campo)`);
@@ -589,6 +592,10 @@ export function removerCampo(docAtual: string, caminho: string): string {
 function recusarNaoSeiObrigatorio(caminho: string): void {
   const campo = exigirCampo(caminho);
   if (!campo.obrigatorio) return;
+  // 🔴 A CIDADE (M-N3 da re-revisão da 11b): a frase de baixo diria que sem ela
+  // "a ficha não existe" — falso, as fichas de antes da 11b existem sem ela. A
+  // dela é a do POST, que diz por que ela é pedida.
+  if (caminho === "cidade") throw new Error(CIDADE_VAZIA);
   const bloco = blocoQueContem(caminho);
   // PENDENTE: redação minha, o João ainda não leu
   throw new Error(

@@ -69,7 +69,15 @@ export const CIDADE_SEM_LETRA = "Essa cidade não tem letra nem número, e não 
  *     o mesmo lugar nem que não é. `quem` aqui é só o nome (não há cidade).
  *   - ENDEREÇO: o endereço que sairia está ocupado por um lugar de nome OU
  *     cidade diferente. A frase NUNCA diz que o nome é o mesmo, porque não é
- *     (era o m-D da re-revisão da Tarefa 11, e o I5 da auditoria da 11b). */
+ *     (era o m-D da re-revisão da Tarefa 11, e o I5 da auditoria da 11b).
+ *     🔴 E NUNCA MANDA MUDAR O NOME (onda de fix 2 da 11b, I-N2 da re-revisão):
+ *     o nome digitado é o de um lugar real, e inventar outro pra caber num
+ *     endereço é o defeito. Ainda é alcançável — a fronteira entre o nome e a
+ *     cidade que anda ("Lugar Marcador" em "Cidade Marcador" × "Lugar Marcador
+ *     Cidade" em "Marcador"), e um lugar NO AR, que guarda o endereço com que
+ *     nasceu, depois de renomeado ou de ter a cidade corrigida. A frase diz o
+ *     que é verdade e a única saída que existe: se é o MESMO lugar, seguir por
+ *     ele. Se não é, o painel não tem saída hoje, e a frase diz isso. */
 // PENDENTE: redação minha, o João ainda não leu
 export const parDeLugar = (quem: string): string =>
   `Já existe no app um lugar com esse nome nessa cidade: ${quem}. Mude o que já existe pela lista.`;
@@ -81,10 +89,10 @@ export const gemeoSemCidade = (quem: string): string =>
   `Já tem um lugar com esse nome que ainda está sem a cidade: ${quem}. Responda primeiro a cidade dele, pela lista do painel: só você sabe se é o mesmo lugar.`;
 // PENDENTE: redação minha, o João ainda não leu
 export const enderecoDeLugar = (quem: string): string =>
-  `O endereço que sairia desse nome e dessa cidade já é de outro lugar do app: ${quem}. Mude um pouco o nome pra diferenciar.`;
+  `O endereço que sairia desse nome e dessa cidade já é de outro lugar do app: ${quem}. Se for o mesmo lugar, mude o que já existe pela lista; se não for, o painel ainda não sabe dar outro endereço a este.`;
 // PENDENTE: redação minha, o João ainda não leu
 export const enderecoDeRascunho = (quem: string): string =>
-  `O endereço que sairia desse nome e dessa cidade já é de um lugar novo começado: ${quem}. Mude um pouco o nome, ou continue por ele na lista do painel.`;
+  `O endereço que sairia desse nome e dessa cidade já é de um lugar novo começado: ${quem}. Se for o mesmo lugar, continue por ele na lista do painel; se não for, o painel ainda não sabe dar outro endereço a este.`;
 
 /** O DOCUMENTO COM QUE UM RASCUNHO NASCE — e é tudo o que ele tem.
  *
@@ -100,6 +108,14 @@ export const enderecoDeRascunho = (quem: string): string =>
  *  exige este documento EXATO. */
 export function docDoLugarNovo(slug: string, nome: string, cidade: string): string {
   return JSON.stringify({ slug, modos: [], cidade, trajeto: { waypoints: [{ nome }] } });
+}
+
+/** O documento de um rascunho com o `slug` de dentro trocado pelo endereço
+ *  novo — o endereço do rascunho acompanha o nome e a cidade (onda de fix 2 da
+ *  11b), e o documento não pode dizer um endereço e morar noutro. A chave
+ *  continua onde estava (o espalhamento mantém a ordem). */
+export function docNoEndereco(doc: string, slug: string): string {
+  return JSON.stringify({ ...(JSON.parse(doc) as Record<string, unknown>), slug });
 }
 
 /** O nome que a LISTA do painel mostra pra um rascunho: o do ponto `0`, que é

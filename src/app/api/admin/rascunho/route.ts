@@ -13,10 +13,11 @@ import {
   getClient,
   lerRascunho,
   listarRascunhos,
+  moverRascunho,
   salvarRascunho,
   versaoAtual,
 } from "@/lib/db";
-import { parDaMudanca, parOcupado } from "@/lib/par-de-lugar";
+import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, parDaMudanca, parOcupado } from "@/lib/par-de-lugar";
 import {
   CIDADE_SEM_LETRA,
   CIDADE_VAZIA,
@@ -24,6 +25,7 @@ import {
   NOME_VAZIO,
   cidadeDoDoc,
   docDoLugarNovo,
+  docNoEndereco,
   enderecoDeLugar,
   enderecoDeRascunho,
   nomeComCidade,
@@ -54,8 +56,9 @@ const SEM_CACHE = { "cache-control": "no-store" } as const;
  *       `{slug, campo, valor}` · `{slug, campo, naoSei: true}` ·
  *       `{slug, ponto, lat, lng}`.
  *     Renomear (`trajeto.waypoints.0.nome`) e mudar a `cidade` passam pela
- *     mesma colisão de PAR do POST (`parDaMudanca`) — e o endereço não muda
- *     com nenhum dos dois;
+ *     mesma colisão de PAR do POST (`parDaMudanca`) — e o endereço do
+ *     rascunho ACOMPANHA os dois (`moverRascunho`): a resposta é `{slug}` com
+ *     o endereço de agora;
  *     a coordenada do ponto só entra como PAR (a terceira forma).
  *     A terceira existe pra o editor de coordenada servir aqui SEM MUDAR: ele
  *     grava o ponto do trajeto inteiro, num corpo só, por essa forma.
@@ -139,7 +142,7 @@ export async function POST(req: Request): Promise<Response> {
   // que bate com endereço outro × o endereço que bate com par outro), e cada
   // uma tem caso que só ela pega — não é a mesma porta duas vezes. (O endereço
   // ocupado pelo MESMO par nunca chega lá embaixo: o par o recusa antes.)
-  const doPar = await parOcupado(nome, cidade);
+  const doPar = await parOcupado(nome, cidade, { exceto: null, nomeNovo: true });
   if (doPar !== null) return new Response(doPar, { status: 409, headers: TEXTO });
 
   // 🔴 A COLISÃO DE ENDEREÇO TEM UMA PORTA SÓ, e ela é a consulta de
@@ -156,8 +159,8 @@ export async function POST(req: Request): Promise<Response> {
   // DIFERENTES caírem no mesmo endereço, e o segundo era recusado). Os dois têm
   // letra (conferido acima), então o endereço tem sempre um hífen no meio, e
   // nenhuma tela do app (`SLUGS_RESERVADOS`) tem: ele nunca chega a uma.
-  // O endereço nasce uma vez e não muda: renomear, ou mudar a cidade, depois
-  // não mexe nele — link que já circula continua valendo.
+  // Enquanto é RASCUNHO, o endereço acompanha o nome e a cidade (ver o PUT);
+  // depois de publicado, não muda mais — link que já circula continua valendo.
   const agora = Math.floor(Date.now() / 1000);
   const slug = slugDoNome(`${nome} ${cidade}`);
   if (await criarRascunho(getClient(), slug, docDoLugarNovo(slug, nome, cidade), agora)) {
@@ -215,7 +218,8 @@ export async function PUT(req: Request): Promise<Response> {
 
   // Renomear, ou mudar a cidade, passa pelo MESMO par do POST (11b-M3) — a
   // função é a mesma da ficha no ar. Valor que não é texto segue adiante e é
-  // recusado pela folha.
+  // recusado pela folha. Mudar só a cidade nunca esbarra no gêmeo sem cidade
+  // (Y1 da onda de fix 2): ver `parOcupado`.
   const doPar = await parDaMudanca(atual.doc, slug, campo, valor);
   if (doPar !== null) return new Response(doPar, { status: 409, headers: TEXTO });
 
@@ -225,7 +229,31 @@ export async function PUT(req: Request): Promise<Response> {
   } catch (erro) {
     return recusar400(erro);
   }
-  await salvarRascunho(getClient(), slug, novoDoc, Math.floor(Date.now() / 1000));
+  const agora = Math.floor(Date.now() / 1000);
+
+  // 🔴 O ENDEREÇO DO RASCUNHO ACOMPANHA O NOME E A CIDADE (onda de fix 2 da 11b,
+  // Y2 — o I-N2 da re-revisão). Congelado, um rascunho corrigido de cidade
+  // continuava no endereço da cidade errada: o lugar real daquela cidade não
+  // nascia mais (a frase mandava "mudar um pouco o nome" dele), e a Tarefa 12
+  // publicaria com aquele endereço. Rascunho não tem link circulando; o lugar
+  // NO AR, esse sim, guarda o endereço com que nasceu (a porta da ficha nunca
+  // muda endereço). A troca de chave é UMA consulta (`moverRascunho`), recusada
+  // quando o endereço novo já é de outro — e a resposta devolve o endereço de
+  // AGORA, que é por onde o formulário segue.
+  if (trazCampo && (campo === CAMPO_DO_NOME || campo === CAMPO_DA_CIDADE)) {
+    // As duas metades com letra, como no POST: é o hífen no meio que nunca
+    // deixa o endereço cair numa tela do app.
+    if (slugDoNome(nomeDoRascunho(novoDoc, "")) === "") return new Response(NOME_SEM_LETRA, { status: 400, headers: TEXTO });
+    if (slugDoNome(cidadeDoDoc(novoDoc) ?? "") === "") return new Response(CIDADE_VAZIA, { status: 400, headers: TEXTO });
+    const destino = slugDoNome(`${nomeDoRascunho(novoDoc, "")} ${cidadeDoDoc(novoDoc)}`);
+    if (destino !== slug) {
+      if (await moverRascunho(getClient(), slug, destino, docNoEndereco(novoDoc, destino), agora)) {
+        return Response.json({ slug: destino }, { headers: SEM_CACHE });
+      }
+      return new Response(await quemOcupa(destino), { status: 409, headers: TEXTO });
+    }
+  }
+  await salvarRascunho(getClient(), slug, novoDoc, agora);
   return Response.json({ slug }, { headers: SEM_CACHE });
 }
 

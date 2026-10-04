@@ -495,6 +495,24 @@ describe("/admin/novo — responder, sair e voltar", () => {
     expect(within(pergunta("voz")).getByDisplayValue("o chao firma em dois dias")).toBeTruthy();
   });
 
+  // 🔴 Y2 DA ONDA DE FIX 2 DA 11b: corrigir a cidade (ou o nome) muda o
+  // endereço do rascunho, e a próxima pergunta é a do endereço DEVOLVIDO pela
+  // porta — nunca a do slug velho, que já não existe.
+  it("corrigir a cidade: vai pra próxima pergunta no endereço NOVO, que a porta devolveu", async () => {
+    await lugarNovo();
+    const { chamadas, reload, assign } = await comRotaDeVerdade();
+    await telaDe("cidade");
+    fireEvent.change(within(pergunta("cidade")).getByRole("textbox"), { target: { value: "Cidade Marcador Dois" } });
+    fireEvent.click(pergunta("cidade").querySelector('[data-salvar="cidade"]')!);
+    const novo = "lugar-marcador-um-cidade-marcador-dois";
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(novo, posDe("cidade") + 1)));
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(reload).not.toHaveBeenCalled();
+    expect(chamadas[0].corpo).toEqual({ slug: S, campo: "cidade", valor: "Cidade Marcador Dois" });
+    expect(await lerRascunho(cliente, S)).toBeNull();
+    expect(JSON.parse((await lerRascunho(cliente, novo))!.doc).cidade).toBe("Cidade Marcador Dois");
+  });
+
   it("gravar na ÚLTIMA pergunta: fica na última", async () => {
     await lugarNovo();
     const { chamadas, reload, assign } = await comRotaDeVerdade();

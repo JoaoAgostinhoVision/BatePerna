@@ -4,7 +4,7 @@ import { MIN_SENHA } from "@/lib/admin-config";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
 import { ensureSchema, gravarVersao, historico, salvarRascunho, versaoAtual, versoesAtuais } from "@/lib/db";
-import { CIDADE_SEM_LETRA, gemeoSemCidade, parDeLugar, parDeRascunho } from "@/lib/rascunho";
+import { CIDADE_SEM_LETRA, CIDADE_VAZIA, gemeoSemCidade, parDeLugar, parDeRascunho } from "@/lib/rascunho";
 import { semearAcervo } from "../banco";
 import { fichaSchema, type Ficha } from "@/types/ficha";
 import type { Violacao } from "@/lib/coerencia";
@@ -1609,6 +1609,113 @@ describe("PUT /api/admin/ficha — o par (nome, cidade) e a cidade sem letra (on
       expect(res.status, `${campo}=${valor}: ${await res.clone().text()}`).toBe(200);
     }
     expect(await historico(c, B)).toHaveLength(4);
+  });
+
+  // 🔴 I-N1 DA RE-REVISÃO (Y1 da onda de fix 2) — O TRAVAMENTO MÚTUO, PELA
+  // SEQUÊNCIA DA SONDA Q2: renomear um lugar SEM cidade pro nome de outro SEM
+  // cidade agora espera (o NOME muda, e o gêmeo vale); e dar a cidade a cada um
+  // nunca esbarra no gêmeo, só no par. Os dois nomes são os do banco, lidos do
+  // banco; as cidades são marcadores, e só neste banco de teste.
+  it("renomear um lugar SEM cidade pro nome de outro SEM cidade: 409 do gêmeo; e cada um ainda recebe a sua cidade", async () => {
+    const pedra = acervo.find((f) => f.slug !== SLUG && f.cidade === undefined)!;
+    expect(pedra, "a premissa: outro lugar sem cidade").toBeDefined();
+    expect(ficha.cidade, "a premissa: a Rampa sem cidade").toBeUndefined();
+    const nomeDaRampa = ficha.trajeto.waypoints[0].nome;
+    const res = await PUT(pedido({ slug: pedra.slug, campo: CAMPO_NOME, valor: nomeDaRampa }, cookieBom));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(gemeoSemCidade(nomeDaRampa));
+    expect(await historico(c, pedra.slug)).toHaveLength(1);
+    // nenhum dos dois ficou travado: cada um recebe a sua cidade
+    for (const [slug, cidade] of [
+      [pedra.slug, CIDADE],
+      [SLUG, OUTRA_CIDADE],
+    ] as const) {
+      const r = await PUT(pedido({ slug, campo: "cidade", valor: cidade }, cookieBom));
+      expect(r.status, `${slug}: ${await r.clone().text()}`).toBe(200);
+      expect(JSON.parse((await versaoAtual(c, slug))!.doc).cidade).toBe(cidade);
+    }
+  });
+
+  // 🔴 E O ESTADO DE ANTES, SE JÁ EXISTIR (dois lugares de mesmo nome sem
+  // cidade, gravados direto no banco): os dois recebem cidade. A única recusa é
+  // a do PAR — a mesma cidade que o outro acabou de receber. Reescrever o mesmo
+  // nome noutra grafia também não é "nome novo", e passa.
+  it("dois lugares de mesmo nome SEM cidade já no banco: os dois recebem cidade, e só o par recusa", async () => {
+    await lugar("marcador-gemeo-a", "Lugar Marcador Nove");
+    await lugar("marcador-gemeo-b", "Lugar Marcador Nove");
+    const grafia = await PUT(pedido({ slug: "marcador-gemeo-a", campo: CAMPO_NOME, valor: "LUGAR marcador nove" }, cookieBom));
+    expect(grafia.status, await grafia.clone().text()).toBe(200);
+    const a = await PUT(pedido({ slug: "marcador-gemeo-a", campo: "cidade", valor: CIDADE }, cookieBom));
+    expect(a.status, await a.clone().text()).toBe(200);
+    const mesma = await PUT(pedido({ slug: "marcador-gemeo-b", campo: "cidade", valor: CIDADE }, cookieBom));
+    expect(mesma.status).toBe(409);
+    expect(await mesma.text()).toBe(parDeLugar(`LUGAR marcador nove (${CIDADE})`));
+    const b = await PUT(pedido({ slug: "marcador-gemeo-b", campo: "cidade", valor: OUTRA_CIDADE }, cookieBom));
+    expect(b.status, await b.clone().text()).toBe(200);
+  });
+
+  // 🔴 M-N2 (o outro lado da bifurcação): um lugar SEM cidade renomeado pro nome
+  // de um lugar COM cidade passa — sem a cidade dele não há par pra comparar, e
+  // o gêmeo é só de quem NÃO tem cidade. Quando ele responder a cidade, o par
+  // decide.
+  it("renomear um lugar SEM cidade pro nome de um lugar COM cidade: 200 (sem cidade não há par)", async () => {
+    expect(ficha.cidade, "a premissa: a Rampa sem cidade").toBeUndefined();
+    const res = await PUT(pedido({ slug: SLUG, campo: CAMPO_NOME, valor: "Lugar Marcador Dois" }, cookieBom));
+    expect(res.status, await res.clone().text()).toBe(200);
+    const igual = await PUT(pedido({ slug: SLUG, campo: "cidade", valor: OUTRA_CIDADE }, cookieBom));
+    expect(igual.status).toBe(409);
+    expect(await igual.text()).toBe(parDeLugar(`Lugar Marcador Dois (${OUTRA_CIDADE})`));
+  });
+
+  // 🔴 M-N1 (Y3): "voltar a uma versão" é uma quarta porta que muda o nome e a
+  // cidade — e passa pela MESMA conferência. A sequência da sonda Q3: os dois
+  // ganham a mesma cidade, a Pedra é renomeada, a Rampa pega o nome que a Pedra
+  // largou, e voltar a Pedra à versão de antes daria aos dois o mesmo par.
+  it("voltar a uma versão que daria o par de OUTRO lugar: 409 com a frase do par, nada gravado", async () => {
+    const pedra = acervo.find((f) => f.slug !== SLUG && f.cidade === undefined)!;
+    const nomeDaPedra = pedra.trajeto.waypoints[0].nome;
+    const ok = async (slug: string, campo: string, valor: string) => {
+      const r = await PUT(pedido({ slug, campo, valor }, cookieBom));
+      expect(r.status, `${slug} ${campo}=${valor}: ${await r.clone().text()}`).toBe(200);
+      return ((await r.json()) as { id: number }).id;
+    };
+    const comCidade = await ok(pedra.slug, "cidade", CIDADE);
+    await ok(SLUG, "cidade", CIDADE);
+    await ok(pedra.slug, CAMPO_NOME, "Lugar Marcador Um");
+    await ok(SLUG, CAMPO_NOME, nomeDaPedra);
+    const antes = await historico(c, pedra.slug);
+    const res = await PUT(pedido({ slug: pedra.slug, versaoId: comCidade }, cookieBom));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(parDeLugar(`${nomeDaPedra} (${CIDADE})`));
+    expect(await historico(c, pedra.slug)).toEqual(antes);
+  });
+
+  // E a versão que NÃO dá par de ninguém volta, como sempre (a conferência
+  // não trava o "voltar" comum): o lugar renomeado volta ao nome de antes.
+  it("voltar a uma versão de par livre: 200", async () => {
+    const r1 = await PUT(pedido({ slug: B, campo: CAMPO_NOME, valor: "Lugar Marcador Dez" }, cookieBom));
+    expect(r1.status).toBe(200);
+    const v1 = (await historico(c, B)).at(-1)!.id;
+    const res = await PUT(pedido({ slug: B, versaoId: v1 }, cookieBom));
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(JSON.parse((await versaoAtual(c, B))!.doc).trajeto.waypoints[0].nome).toBe("Lugar Marcador Dois");
+  });
+
+  // 🔴 M-N3 (Y4): a cidade não tem "não sei", e as duas recusas diziam coisa
+  // falsa — a caixa vazia mandava dizer "não sei", e o "não sei" dizia que sem
+  // ela "a ficha não existe" (as fichas de antes da 11b existem sem ela). As
+  // duas agora são a frase do POST.
+  it("cidade em branco, ou 'não sei' na cidade: 400 com a frase do POST, e nada gravado", async () => {
+    for (const corpo of [
+      { slug: SLUG, campo: "cidade", valor: "" },
+      { slug: SLUG, campo: "cidade", valor: "   " },
+      { slug: SLUG, campo: "cidade", naoSei: true },
+    ]) {
+      const res = await PUT(pedido(corpo, cookieBom));
+      expect(res.status, JSON.stringify(corpo)).toBe(400);
+      expect(await res.text(), JSON.stringify(corpo)).toBe(CIDADE_VAZIA);
+    }
+    expect(await historico(c, SLUG)).toHaveLength(1);
   });
 
   // 🔴 X3: `"--"` virava "Rampa do Pepê — -- · BatePerna" no título do link.

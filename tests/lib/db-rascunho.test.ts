@@ -7,6 +7,7 @@ import {
   gravarVersao,
   lerRascunho,
   listarRascunhos,
+  moverRascunho,
   salvarRascunho,
   versaoAtual,
   versoesAtuais,
@@ -96,6 +97,38 @@ describe("ficha_rascunhos", () => {
     await gravarVersao(c, S, '{"slug":"no-ar"}', "painel", 2, true);
     expect(await criarRascunho(c, S, '{"quem":"novo"}', 3)).toBe(false);
     expect(await lerRascunho(c, S)).toBeNull();
+  });
+
+  // 🔴 ONDA DE FIX 2 DA 11b (Y2): o endereço do rascunho acompanha o nome e a
+  // cidade, e trocar de chave é UMA consulta — nunca "apagar e criar", que
+  // deixaria uma janela com nenhum rascunho, nem "criar e apagar", com dois.
+  it("moverRascunho troca a chave e o documento juntos: o velho some, o novo existe", async () => {
+    await salvarRascunho(c, S, '{"quem":"antes"}', 1);
+    expect(await moverRascunho(c, S, "lugar-marcador-dois", '{"quem":"depois"}', 5)).toBe(true);
+    expect(await lerRascunho(c, S)).toBeNull();
+    expect(await lerRascunho(c, "lugar-marcador-dois")).toEqual({
+      slug: "lugar-marcador-dois",
+      doc: '{"quem":"depois"}',
+      atualizado_em: 5,
+    });
+  });
+
+  // E recusa o endereço que já é de outro: de um rascunho, ou de um lugar —
+  // mesmo ESCONDIDO, pela régua de `criarRascunho`. Recusado, nada muda.
+  it("moverRascunho recusa endereço de outro rascunho ou de lugar ESCONDIDO, e nada muda", async () => {
+    await salvarRascunho(c, S, '{"quem":"eu"}', 1);
+    await salvarRascunho(c, "lugar-marcador-dois", '{"quem":"outro"}', 2);
+    await gravarVersao(c, "lugar-marcador-tres", '{"slug":"no-ar"}', "painel", 1);
+    await gravarVersao(c, "lugar-marcador-tres", '{"slug":"no-ar"}', "painel", 2, true);
+    for (const destino of ["lugar-marcador-dois", "lugar-marcador-tres"]) {
+      expect(await moverRascunho(c, S, destino, '{"quem":"perdido"}', 9), destino).toBe(false);
+    }
+    expect((await lerRascunho(c, S))!.doc).toBe('{"quem":"eu"}');
+    expect((await lerRascunho(c, "lugar-marcador-dois"))!.doc).toBe('{"quem":"outro"}');
+    expect(await lerRascunho(c, "lugar-marcador-tres")).toBeNull();
+    // e sem rascunho na origem não nasce nada no destino
+    expect(await moverRascunho(c, "lugar-marcador-quatro", "lugar-marcador-cinco", "{}", 9)).toBe(false);
+    expect(await lerRascunho(c, "lugar-marcador-cinco")).toBeNull();
   });
 
   it("listarRascunhos traz todos, o mais recente primeiro", async () => {

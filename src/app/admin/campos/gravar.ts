@@ -20,10 +20,17 @@ import { createContext, useContext, useState } from "react";
  *  `depoisDeGravar` diz pra onde a tela vai depois de um sucesso. `null` (o
  *  PADRÃO, o da ficha no ar) é o `location.reload()` de sempre: a mesma tela,
  *  relida do banco. O formulário de lugar novo, que é UMA PERGUNTA POR VEZ
- *  (decisão do João, 2026-10-03), passa o endereço da PRÓXIMA pergunta — e a
- *  tela vai pra lá com `location.assign`, também relida do banco. Recusa e
- *  falha de rede não vão a lugar nenhum, nos dois casos. */
-export const PortaDoEditor = createContext<{ gravarEm: string; previa: boolean; depoisDeGravar: string | null }>({
+ *  (decisão do João, 2026-10-03), passa uma função que dá o endereço da
+ *  PRÓXIMA pergunta a partir do `slug` que a porta DEVOLVEU — e a tela vai pra
+ *  lá com `location.assign`, também relida do banco. 🔴 O slug devolvido, nunca
+ *  o que a tela tinha: corrigir o nome ou a cidade muda o endereço do rascunho
+ *  (onda de fix 2 da 11b), e o endereço velho já não existe. Recusa e falha de
+ *  rede não vão a lugar nenhum, nos dois casos. */
+export const PortaDoEditor = createContext<{
+  gravarEm: string;
+  previa: boolean;
+  depoisDeGravar: ((slug: string) => string) | null;
+}>({
   gravarEm: "/api/admin/ficha",
   previa: true,
   depoisDeGravar: null,
@@ -92,7 +99,7 @@ export function usarGravacao(): Gravacao {
       const r = await fetch(gravarEm, { method: "PUT", body: JSON.stringify(corpo) });
       if (r.ok) {
         if (depoisDeGravar === null) location.reload();
-        else location.assign(depoisDeGravar);
+        else location.assign(depoisDeGravar(((await r.json()) as { slug: string }).slug));
         return;
       }
       const frase = (await r.text()).trim();

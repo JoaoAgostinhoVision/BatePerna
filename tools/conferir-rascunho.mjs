@@ -13,11 +13,13 @@ for (const k of ["slug", "rotulo_escaneio", "promessa", "voz", "premio", "acesso
   if (!str(f[k])) erros.push(`${k}: falta ou não é string`);
 
 // `cidade` (Tarefa 11b): o fichaSchema a ACEITA AUSENTE — as fichas de antes de
-// 04/10 não a têm —, e esta ferramenta aceita o que o schema aceita (onda de fix
-// da 11b: exigi-la aqui dizia "FORMA: ✗" pra uma ficha que o loadAll() aceita).
-// Ausente vira uma linha de AVISO no fim, não erro: lugar NOVO nasce com ela, e
-// publicar sem ela é a recusa da Tarefa 12, não a FORMA. Presente, ela tem de
-// ser texto com letra ou número — a mesma régua das portas do painel.
+// 04/10 não a têm —, e aqui a AUSENTE também passa (onda de fix da 11b: exigi-la
+// dizia "FORMA: ✗" pra uma ficha que o loadAll() aceita). Ausente vira uma linha
+// de AVISO no fim, não erro: lugar NOVO nasce com ela, e publicar sem ela é a
+// recusa da Tarefa 12, não a FORMA. PRESENTE, a régua é a do PAINEL, mais dura
+// que a do schema: o schema aceita qualquer texto (`""` e `"--"` passam lá), e
+// aqui ela tem de ser texto com letra ou número — é o que as portas do painel
+// gravam, e o que separa dois lugares pelo par.
 // (A régua é a de `slugDoNome`, de `src/lib/rascunho.ts`: sem acento, sobra a-z ou 0-9.)
 const temLetra = (s) => /[a-z0-9]/.test(s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase());
 if ("cidade" in f && !(str(f.cidade) && temLetra(f.cidade)))

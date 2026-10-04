@@ -28,23 +28,37 @@ import { cidadeDoDoc, gemeoSemCidade, nomeComCidade, nomeDoRascunho, parDeLugar,
  *  separa nada). Isto some sozinho quando todo lugar tiver cidade: é a mesma
  *  conferência, não há código a apagar. Ninguém deduz a cidade por ele.
  *
+ *  🔴 E A ESPERA É DE QUANDO O NOME NASCE OU MUDA (`nomeNovo`, Y1 da onda de
+ *  fix 2 — o I-N1 da re-revisão): o POST, e o PUT que troca o nome (no rascunho,
+ *  na ficha no ar, e o "voltar a uma versão"). Responder a CIDADE nunca esbarra
+ *  nela, só no par — é o ato que desfaz a dúvida, e recusá-lo deixava dois
+ *  lugares de mesmo nome sem cidade pedindo, cada um, a cidade do outro
+ *  primeiro, sem saída. Vale também pra quem ainda NÃO tem cidade: renomear um
+ *  lugar sem cidade pro nome de outro sem cidade espera, e é isso que impede
+ *  aquele estado de nascer. Reescrever o MESMO nome noutra grafia não é nome
+ *  novo (`parDaTroca` compara pela normalização).
+ *
  *  Devolve a frase da recusa — com o nome (e a cidade, se houver) de QUEM JÁ
- *  EXISTE —, ou `null` se está livre. O par que chega SEM cidade (ou sem nome)
- *  não é conferido: só a ficha no ar chega assim (as 3 de antes da 11b), e sem
- *  a cidade dela não há par a comparar.
+ *  EXISTE —, ou `null` se está livre. Sem nome, nada a conferir. Sem CIDADE
+ *  (só a ficha no ar chega assim: as 3 de antes da 11b), o par não é conferido —
+ *  não há par a comparar —, e só a espera do gêmeo vale (quando o nome muda).
  *
  *  ⚠️ Esta conferência LÊ e depois a rota GRAVA — há janela entre as duas, ao
  *  contrário da porta do endereço (`criarRascunho`, uma consulta só). Aceita
  *  porque o painel tem um dono só; a normalização não cabe numa consulta SQL. */
-export async function parOcupado(nome: string, cidade: string, exceto?: string): Promise<string | null> {
+export async function parOcupado(
+  nome: string,
+  cidade: string,
+  { exceto, nomeNovo }: { exceto: string | null; nomeNovo: boolean },
+): Promise<string | null> {
   const n = slugDoNome(nome);
   const c = slugDoNome(cidade);
-  if (n === "" || c === "") return null;
+  if (n === "") return null;
   const bate = (doc: string, slug: string): { semCidade: boolean; quem: string } | null => {
     const nomeDeles = nomeDoRascunho(doc, slug);
     if (slug === exceto || slugDoNome(nomeDeles) !== n) return null;
     const deles = cidadeDoDoc(doc);
-    if (deles === undefined || slugDoNome(deles) === "") return { semCidade: true, quem: nomeDeles };
+    if (deles === undefined || slugDoNome(deles) === "") return nomeNovo ? { semCidade: true, quem: nomeDeles } : null;
     return slugDoNome(deles) === c ? { semCidade: false, quem: nomeComCidade(nomeDeles, deles) } : null;
   };
   for (const v of (await versoesAtuais(getClient(), { incluirOcultos: true })).values()) {
@@ -58,10 +72,21 @@ export async function parOcupado(nome: string, cidade: string, exceto?: string):
   return null;
 }
 
+/** O PAR DE UMA TROCA — o lugar `slug`, cujo documento é `atual`, passa a ter
+ *  `nome` e `cidade`. É a função que TODA porta que muda um lugar que já existe
+ *  chama: os dois PUTs de campo (por `parDaMudanca`) e o "voltar a uma versão"
+ *  da ficha no ar (M-N1 da re-revisão: era uma quarta porta sem o par). O
+ *  próprio `slug` fica de fora da comparação, e o nome só é NOVO quando muda
+ *  pela normalização. */
+export async function parDaTroca(atual: string, slug: string, nome: string, cidade: string): Promise<string | null> {
+  const nomeNovo = slugDoNome(nome) !== slugDoNome(nomeDoRascunho(atual, ""));
+  return parOcupado(nome, cidade, { exceto: slug, nomeNovo });
+}
+
 /** O campo que é o NOME do lugar (o ponto `0`) e o da cidade: as duas metades
  *  do par. */
-const CAMPO_DO_NOME = "trajeto.waypoints.0.nome";
-const CAMPO_DA_CIDADE = "cidade";
+export const CAMPO_DO_NOME = "trajeto.waypoints.0.nome";
+export const CAMPO_DA_CIDADE = "cidade";
 
 /** O PAR DE UMA MUDANÇA — o que os dois PUTs (rascunho e ficha no ar) chamam
  *  antes de gravar. Renomear, ou mudar a cidade, é a segunda porta do mesmo
@@ -74,5 +99,5 @@ export async function parDaMudanca(atual: string, slug: string, campo: unknown, 
   if ((campo !== CAMPO_DO_NOME && campo !== CAMPO_DA_CIDADE) || typeof valor !== "string") return null;
   const nome = campo === CAMPO_DO_NOME ? valor : nomeDoRascunho(atual, "");
   const cidade = campo === CAMPO_DA_CIDADE ? valor : (cidadeDoDoc(atual) ?? "");
-  return parOcupado(nome, cidade, slug);
+  return parDaTroca(atual, slug, nome, cidade);
 }

@@ -428,6 +428,32 @@ export async function criarRascunho(client: Client, slug: string, doc: string, a
   return r.rowsAffected === 1;
 }
 
+/** Muda o rascunho de `de` pra o endereço `para`, com o documento `doc` — e só
+ *  se `para` estiver livre nas DUAS tabelas, pela régua de `criarRascunho`
+ *  (sem filtro de `oculto`). Devolve `false` sem mudar nada quando `para` já é
+ *  de um rascunho ou de um lugar, ou quando não há rascunho em `de`.
+ *
+ *  🔴 POR QUE EXISTE (onda de fix 2 da Tarefa 11b): o endereço de um RASCUNHO
+ *  acompanha o nome e a cidade dele até publicar — ainda não há link
+ *  circulando, e o endereço velho seria o de um par que não é mais o dele, que
+ *  a Tarefa 12 publicaria.
+ *
+ *  🔴 E É UM `UPDATE` SÓ, nunca "criar o novo e apagar o velho" (uma janela com
+ *  DOIS rascunhos do mesmo lugar) nem "apagar e criar" (uma janela com nenhum):
+ *  a conferência do destino e a troca de chave acontecem juntas no banco.
+ *  `para` diferente de `de` é de quem chama — com os dois iguais, o próprio
+ *  rascunho ocuparia o destino e a resposta seria `false`. */
+export async function moverRascunho(client: Client, de: string, para: string, doc: string, agora: number): Promise<boolean> {
+  const r = await client.execute({
+    sql: `UPDATE ficha_rascunhos SET slug = ?, doc = ?, atualizado_em = ?
+          WHERE slug = ?
+            AND NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
+            AND NOT EXISTS (SELECT 1 FROM ficha_rascunhos WHERE slug = ?)`,
+    args: [para, doc, agora, de, para, para],
+  });
+  return r.rowsAffected === 1;
+}
+
 /** O rascunho de `slug`, ou `null` se não há. */
 export async function lerRascunho(client: Client, slug: string): Promise<Rascunho | null> {
   const r = await client.execute({

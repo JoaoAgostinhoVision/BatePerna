@@ -52,7 +52,8 @@ import type { Editor, EspecieNaTela, PerguntaNaTela, PropsDoEditor } from "./cam
  *  já têm resposta (`escolherPosicao`, em `./novo/perguntas.ts`, decide o `p`
  *  torto ou ausente: a primeira sem resposta).
  *   - Salvar (ou o "não sei") com sucesso AVANÇA: o provedor passa
- *     `depoisDeGravar` com o endereço da pergunta N+1 (na última, a própria);
+ *     `depoisDeGravar`, que dá o endereço da pergunta N+1 (na última, a
+ *     própria) no slug que a porta DEVOLVEU;
  *     recusa não sai do lugar. O PADRÃO dos editores continua o `reload()`, e
  *     a ficha no ar não mudou.
  *   - Pular também avança, sem gravar nada.
@@ -241,7 +242,14 @@ export default function FormularioDeLugar({
   // build, o `Link` punha +4 kB no First Load JS desta página (111 → 115 kB),
   // no celular. E o `<a>` faz o mesmo que o `location.assign` do Salvar: a
   // página inteira relida do banco — uma navegação só, nos dois caminhos.
-  const porta = { gravarEm: "/api/admin/rascunho", previa: false, depoisDeGravar: proxima ?? ir(posicao) };
+  // 🔴 O endereço vem da RESPOSTA da porta (ver `PortaDoEditor`): corrigir o
+  // nome ou a cidade muda o endereço do rascunho.
+  const destino = proxima === null ? posicao : posicao + 1;
+  const porta = {
+    gravarEm: "/api/admin/rascunho",
+    previa: false,
+    depoisDeGravar: (novo: string) => enderecoDaPergunta(novo, destino),
+  };
   return (
     <PortaDoEditor.Provider value={porta}>
       <section className="adm-novo" data-rascunho={slug}>

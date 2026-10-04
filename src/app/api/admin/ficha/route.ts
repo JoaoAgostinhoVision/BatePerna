@@ -13,7 +13,8 @@ import {
   type ValorDeCampo,
 } from "@/lib/campos-da-ficha";
 import { type Violacao, violacoesDoAcervo } from "@/lib/coerencia";
-import { parDaMudanca } from "@/lib/par-de-lugar";
+import { parDaMudanca, parDaTroca } from "@/lib/par-de-lugar";
+import { cidadeDoDoc, nomeDoRascunho } from "@/lib/rascunho";
 import { type Ficha, fichaSchema } from "@/types/ficha";
 
 export const dynamic = "force-dynamic";
@@ -298,6 +299,20 @@ export async function PUT(req: Request): Promise<Response> {
     // escrito porque falha fechada num campo de visibilidade significa "no ar",
     // que é o estado de todo lugar que ninguém escondeu.
     const atual = await versaoAtual(getClient(), slug);
+
+    // 🔴 O PAR (NOME, CIDADE), TAMBÉM AO VOLTAR (onda de fix 2 da 11b, Y3 — o
+    // M-N1 da re-revisão): a versão antiga traz o nome e a cidade DELA, e voltar
+    // a ela é mudar os dois de uma vez. Sem isto, era a quarta porta que dava a
+    // um lugar o par de outro. A função é a MESMA dos PUTs de campo
+    // (`parDaTroca`, que `parDaMudanca` chama), nunca uma cópia.
+    const doPar = await parDaTroca(
+      (atual ?? versao).doc,
+      slug,
+      nomeDoRascunho(versao.doc, ""),
+      cidadeDoDoc(versao.doc) ?? "",
+    );
+    if (doPar !== null) return new Response(doPar, { status: 409, headers: TEXTO });
+
     const id = await gravarVersao(getClient(), slug, versao.doc, "painel", agora, atual?.oculto ?? false);
     return Response.json({ id }, { headers: { "cache-control": "no-store" } });
   }
@@ -399,7 +414,8 @@ export async function PUT(req: Request): Promise<Response> {
   // lugar (no ar ou escondido) ou de um rascunho é 409 — a MESMA função das
   // portas do lugar novo (`src/lib/par-de-lugar.ts`), nunca uma cópia. O
   // próprio lugar fica de fora da comparação. Lugar ainda sem cidade não tem
-  // par a conferir quando é renomeado.
+  // par a conferir quando é renomeado — mas espera o gêmeo sem cidade, como
+  // todo nome que muda; dar a cidade nunca espera (Y1 da onda de fix 2).
   const doPar = await parDaMudanca(versao.doc, slug, campo, valor);
   if (doPar !== null) return new Response(doPar, { status: 409, headers: TEXTO });
 
