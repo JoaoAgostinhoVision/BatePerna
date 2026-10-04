@@ -37,7 +37,9 @@ Ordem: 11c → 11d → 11e → 12.
 cidade faz o painel avisar e oferecer trocar). Brief escrito e AUDITADO (`task-11e-auditoria.md`: 2 C · 10 I · 8 M, todas aceitas e coladas no fim do brief;
 o 12-E5 foi pro brief da 12). Pronto pra despachar DEPOIS da 11d.
 ✅ **11c feita: `c577ca3`** (horário = lista de 1–3 faixas; lê a forma velha pra sempre). Medido por mim: 1949/1949
-em 97, tsc 0, build 0, mutar 42/0. **Revisão despachada** (`task-11c-review.md`; se não existir, redespachar).
+em 97, tsc 0, build 0, mutar 42/0. ✅ **Revisão: 0 C · 1 I · 6 M** (30.240 comparações velho×novo nas 3 fichas
+com o doc de produção, zero diferença). Os achados foram pra seção "ANTES DA TELA" do brief da 11d. **A 11d foi
+despachada** (`task-11d-PROMPT.md`; se não houver commit de código depois de `c577ca3`, redespachar COMO ESTÁ).
 📌 **Lido no banco de PRODUÇÃO em 04/10 (só leitura):** 1 versão por ficha; Pedra `{abre 05:00, fecha 17:00}`, Véu
 `{08:00, 17:00}`, Rampa só `dias [sab,dom]`; nenhuma tem cidade; produção NÃO tem a coluna `oculto` nem a tabela
 `ficha_rascunhos` — o `ensureSchema` (ALTER guardado) cria no `npm run semear`, que TEM de vir antes do deploy.
