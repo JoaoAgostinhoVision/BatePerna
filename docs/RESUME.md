@@ -49,6 +49,8 @@ no fim do brief; a política do OSM PERMITE o uso). Pronto pra despachar depois 
 ✅ **11d revisada: 0 C · 1 I · 6 M** (Chrome real a 360 px; os achados foram pra seção "ANTES DO MAPA" da 11f, com a
 ruling minha de ORDENAR as faixas antes de gravar). **A 11f foi despachada** (`task-11f-PROMPT.md`; se não houver
 commit de código depois de `3f7546a`, redespachar COMO ESTÁ).
+✅ **11f feita: `1995a9c`** (mapa sem pin, +/−, toque põe o pin, Salvar só perto). Medido: 2020/2020 em 99, tsc 0,
+build 0, mutar 42/0. **Revisão despachada** (`task-11f-review.md`; se não existir, redespachar). Depois: 11e.
 📝 **Pacote de copy pro João (crescendo):** "Abre sábado e domingo. Abre das 8h às 10h e das 14h às 17h."; "abre
 domingo às 8h" dito num domingo; "Não sei — o app não diz nada sobre isto" com horário ausente (FALSO: sem horário
 nunca fecha); "Escolha uma hora, no formato HH:MM." pra faixa vazia; e todas as `PENDENTE` dos relatórios 11b/c/d/f. Ordem nova: 11d → **11f** → 11e → 12.
