@@ -9,7 +9,7 @@
 
 🔴 **DECISÕES DELE EM 04/10, que mudam a ordem da rodada:**
 1. **Pode haver dois lugares com o MESMO nome** (Pedra do Navio em Bom Jardim e em Floresta). O F1 da onda 3 foi
-   RETIRADO (mensagem ao agente). A recusa por NOME da onda 1 (`nomeOcupado`) tem que sair; a colisão é de ENDEREÇO.
+   RETIRADO (mensagem ao agente). A recusa por NOME da onda 1 saiu na 11b (`98afd82`); a colisão é do PAR (nome, cidade) e do endereço.
 2. **Cidade obrigatória**: lugar novo pergunta nome E cidade; endereço = nome + cidade; a home mostra a cidade. As 3
    fichas existentes ganham a pergunta — ELE responde, eu não deduzo do slug.
 3. **Horário com intervalo de almoço (8–10 e 14–17), ANTES de publicar** — mexe no veredito público de "fechado".
@@ -17,15 +17,18 @@
 **Estado (04/10, tarde):** onda 3 fechou só F3 (`1a53564`, F1 desfeito em `d88cc1c`; 1866/1866 medido por mim).
 O F2 (horário com UM Salvar) foi ABSORVIDO pela 11d. Ordem: **11b cidade → 11c horário-dado+veredito público →
 11d editor de faixas no painel → Tarefa 12.** Briefs escritos e AUDITADOS (`task-11bcd-auditoria.md`: 1 C · 16 I, todas aceitas e coladas no fim
-de cada brief, inclusive o da 12; o recorte mudou: a 11c leva o registro e a escrita, a 11d é só tela). **A 11b foi
-despachada** com `task-11b-PROMPT.md`: se o log não tiver commit de código depois de `d88cc1c`, redespachar COMO ESTÁ. 
+de cada brief, inclusive o da 12; o recorte mudou: a 11c leva o registro e a escrita, a 11d é só tela). **A 11b está feita (`98afd82`, 1892/1892 medido por mim) e revisada** (`task-11b-review.md`: 0 C · 2 I · 7 M).
+Os dois I vinham da ELISÃO (não repetir a cidade no endereço), decisão MINHA: retirada. **Onda de fix despachada**
+(`task-11b-fix-brief.md`, X1–X5): endereço sempre nome+cidade; gêmeo de lugar SEM cidade → 409 pedindo a cidade
+dele; cidade sem letra recusada em toda porta; par também na ficha no ar. Se o log não tiver commit de código
+depois de `98afd82`, redespachar com o mesmo brief. Depois: medir → re-revisão → 11c.
 Ele ainda não deu a cidade das 3 fichas (não trava código, trava publicar).
 
 → 🔴 **PRÓXIMO PASSO:** a re-revisão das ondas 1+2 voltou (`task-11-rereview.md`: 0 C · 2 I · 4 M) e a **onda 3**
 foi despachada (`task-11-fix3-brief.md`, F1 nome confere o RESULTADO / F2 horário com UM Salvar / F3 rede não avança).
 Se o log não tiver commit de código depois de `8f4fb68`, redespachar `task-11-fix3-PROMPT.md` COMO ESTÁ. Se tiver:
 medir eu mesmo → re-revisão só da onda 3 → `git stash drop` do `onda2-t11-PARCIAL` → **Tarefa 12** (o brief
-dela ganhou o **G1′**: publicar recusa também por NOME, pela mesma `nomeOcupado`).
+dela ganhou o **G1′**, REESCRITO no mesmo dia: publicar NÃO recusa por nome; recusa por endereço e pelo par nome+cidade).
 
 Preocupações do implementador da onda 2 (pra levar ao João, não travam): ninguém viu a tela no celular (lista de
 saltos com 27 números); "pulei" e "nunca respondi" aparecem iguais; "Próxima" sem salvar descarta o digitado sem
