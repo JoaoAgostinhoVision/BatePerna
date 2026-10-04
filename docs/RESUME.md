@@ -56,6 +56,8 @@ liga" que aceitei da auditoria ERA o furo (gravou ponto a ~75 km, com o pin fora
 **Onda de fix despachada** (`task-11f-fix-brief.md`, Z1–Z3: Salvar vale pelo zoom do PIN; + em volta do pin; pin
 fora da vista sem Salvar; prazo da busca testado; cidades reais de PE não recusadas). Se não houver commit de
 código depois de `1995a9c`, redespachar com o mesmo brief.
+✅ **Onda de fix feita: `1f09660`** (2042/2042, tsc 0, build 0, mutar 42/0). **Re-revisão despachada**
+(`task-11f-rereview.md`; se não existir, redespachar). Depois: **11e** (`task-11e-brief.md`, já auditado).
 📝 **Pacote de copy pro João (crescendo):** "Abre sábado e domingo. Abre das 8h às 10h e das 14h às 17h."; "abre
 domingo às 8h" dito num domingo; "Não sei — o app não diz nada sobre isto" com horário ausente (FALSO: sem horário
 nunca fecha); "Escolha uma hora, no formato HH:MM." pra faixa vazia; e todas as `PENDENTE` dos relatórios 11b/c/d/f. Ordem nova: 11d → **11f** → 11e → 12.
