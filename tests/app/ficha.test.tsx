@@ -351,7 +351,7 @@ describe("o horário atravessa da ficha até o carimbo", () => {
     // Montada a partir da própria ficha: ele pode mudar o horário sem que o
     // teste vire manutenção.
     expect(container.querySelector(".reason")?.textContent).toBe(
-      `Fecha às ${Number(f.horario!.fecha.slice(0, 2))}h, abre às ${Number(f.horario!.abre.slice(0, 2))}h.`,
+      `Fecha às ${Number(f.horario![0].fecha.slice(0, 2))}h, abre às ${Number(f.horario![0].abre.slice(0, 2))}h.`,
     );
   });
 
@@ -880,8 +880,8 @@ describe("o tíquete: preço e horário, cada um calando sozinho", () => {
     // Derivado à mão, sem chamar `rotuloHora`: asserção escrita com a própria
     // função que produz o texto ficaria cega ao formato mudar.
     expect(hora, "o horário foi pra tela no formato cru do JSON").not.toContain(":");
-    expect(hora).toContain(`${Number(soHora!.horario!.abre.split(":")[0])}h`);
-    expect(hora).toContain(`${Number(soHora!.horario!.fecha.split(":")[0])}h`);
+    expect(hora).toContain(`${Number(soHora!.horario![0].abre.split(":")[0])}h`);
+    expect(hora).toContain(`${Number(soHora!.horario![0].fecha.split(":")[0])}h`);
   });
 
   it("ficha com os dois: as duas metades na mesma linha, e ela é Nível B", async () => {

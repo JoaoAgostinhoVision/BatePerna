@@ -2,11 +2,17 @@
 import { useState } from "react";
 import BotaoNaoSei from "./BotaoNaoSei";
 import { usarGravacao } from "./gravar";
-import { HORA_VAZIA, SALVANDO, SALVAR } from "./palavras";
+import { BLOCO_JUNTO, HORA_VAZIA, SALVANDO, SALVAR } from "./palavras";
 import type { PropsDoEditor } from "./tipos";
 
-/** O BLOCO OPCIONAL INTEIRO — `horario` é o único hoje, e ele é o instrumento
+/** O BLOCO OPCIONAL INTEIRO — `horario` era o único, e ele era o instrumento
  *  que a auditoria do brief (A3) exigiu.
+ *
+ *  ⚠️ SEM CAMPO NENHUM DESDE A TAREFA 11c: o `horario` virou a LISTA de faixas
+ *  (`EditorFaixas`), e o registro não tem mais entrada `bloco`. Este arquivo
+ *  continua só porque o `Record` de espécies da `FichaInteira` e do
+ *  `FormularioDeLugar` ainda o pede; quem o apaga é a Tarefa 11d. O que segue
+ *  descreve o tempo em que ele servia.
  *
  *  🔴 O DEFEITO QUE ISTO EXISTE PRA NÃO COMETER: **a tela convidando a um ato
  *  que a porta nega.** Com o `horario` ausente, `camposDaFicha` devolve TRÊS
@@ -39,8 +45,6 @@ import type { PropsDoEditor } from "./tipos";
  *  ⚠️ NENHUM TEXTO SOBRE UM LUGAR ESPECÍFICO: os rótulos das folhas chegam por
  *  prop, resolvidos pelo servidor a partir do registro. */
 
-// PENDENTE: redação minha, o João ainda não leu
-export const BLOCO_JUNTO = "Estes campos entram juntos: um sozinho não vira ficha.";
 
 export default function EditorBloco({ campo, valor, slug }: PropsDoEditor) {
   const folhas = campo.folhas ?? [];

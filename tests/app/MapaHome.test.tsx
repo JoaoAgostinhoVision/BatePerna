@@ -189,7 +189,7 @@ describe("MapaHome", () => {
     vi.setSystemTime(Date.UTC(2027, 0, 15, 21, 0)); // 18h em Recife
     try {
       const slug = fichas[0].slug;
-      const comHorario = [{ ...fichas[0], horario: { abre: "05:00", fecha: "17:00" } }];
+      const comHorario = [{ ...fichas[0], horario: [{ abre: "05:00", fecha: "17:00" }] }];
       // 🔴 O RELÓGIO DO CARTÃO SAI DO MESMO INSTANTE QUE O DO MAPA. Desde que a
       // pergunta ganhou o eixo do DIA (2026-09-11), `agora` carrega hora E dia —
       // e escrever `18 * 60` à mão aqui deixaria o dia da semana implícito. O

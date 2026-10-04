@@ -99,20 +99,37 @@ describe("camposQueMudaram", () => {
     expect(camposQueMudaram(doc(RAMPA), doc(nova))).toEqual(["trajeto.waypoints.0.lat"]);
   });
 
-  // 🔴 FOLHA DE BLOCO: com o bloco presente nas duas, quem mudou é a FOLHA — o
-  // bloco inteiro não é "campo que mudou" (ele não se edita inteiro com ele
-  // presente; ver `gravarBloco`).
-  it("folha de bloco: com o horário nas duas, sai só a folha que mudou", () => {
-    const nova = { ...PEDRA, horario: { ...PEDRA.horario!, fecha: "18:00" } };
-    expect(camposQueMudaram(doc(PEDRA), doc(nova))).toEqual(["horario.fecha"]);
+  // 🔴 O HORÁRIO É UM CAMPO SÓ desde a Tarefa 11c — a lista de faixas. Mudar a
+  // hora de fechar de uma faixa é "o horário mudou", e tirá-lo ou devolvê-lo
+  // também: uma mudança, a do horário.
+  it("o horário que mudou uma hora é UMA mudança, a do horário", () => {
+    const nova = { ...PEDRA, horario: [{ ...PEDRA.horario![0], fecha: "18:00" }] };
+    expect(camposQueMudaram(doc(PEDRA), doc(nova))).toEqual(["horario"]);
   });
 
-  // E o bloco que ENTROU ou SAIU (o "não sei" tira o horário inteiro) é UMA
-  // mudança, a do bloco — não três (bloco + as duas folhas).
-  it("o bloco que saiu ou entrou inteiro é uma mudança só, a do bloco", () => {
+  it("o horário que saiu ou entrou inteiro é uma mudança só", () => {
     const { horario: _, ...semHorario } = PEDRA;
     expect(camposQueMudaram(doc(PEDRA), doc(semHorario))).toEqual(["horario"]);
     expect(camposQueMudaram(doc(semHorario), doc(PEDRA))).toEqual(["horario"]);
+  });
+
+  // 🔴 11c-I3 DA AUDITORIA: a primeira edição de QUALQUER campo de uma ficha
+  // gravada na forma VELHA (`{abre, fecha}`) reescreve o horário em LISTA,
+  // porque a porta passa o documento inteiro pelo schema. Comparando os
+  // documentos crus, o histórico diria ao dono que ele mudou o horário numa
+  // versão em que ele mudou a voz — o app afirmando o que o DONO fez.
+  it("forma velha → lista com a mesma hora, e a voz trocada: só a voz mudou", () => {
+    const velha = { ...PEDRA, horario: { abre: "05:00", fecha: "17:00" } };
+    const nova = { ...PEDRA, voz: "outra voz", horario: [{ abre: "05:00", fecha: "17:00" }] };
+    expect(camposQueMudaram(doc(velha), doc(nova))).toEqual(["voz"]);
+    // e ao contrário (o "voltar" a uma versão velha, que grava verbatim)
+    expect(camposQueMudaram(doc(nova), doc(velha))).toEqual(["voz"]);
+  });
+
+  it("forma velha → lista com OUTRA hora: o horário mudou, de verdade", () => {
+    const velha = { ...PEDRA, horario: { abre: "05:00", fecha: "17:00" } };
+    const nova = { ...PEDRA, horario: [{ abre: "05:00", fecha: "10:00" }, { abre: "14:00", fecha: "17:00" }] };
+    expect(camposQueMudaram(doc(velha), doc(nova))).toEqual(["horario"]);
   });
 
   it("lista com os mesmos dias em outra ordem É mudança (a ordem da lista é dado)", () => {

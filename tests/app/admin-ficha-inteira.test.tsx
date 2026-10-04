@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import FichaInteira, { ROTULOS, ROTULO_DO_PONTO, rotuloDe } from "@/app/admin/FichaInteira";
 import { CAMPOS_DA_FICHA, camposDaFicha, type GrupoDaFicha } from "@/lib/campos-da-ficha";
 import { getAllFichas } from "@/lib/ficha";
@@ -37,12 +37,14 @@ const comHorario = exigir("pedra-furada-de-venturosa");
  *  lado — sem o número, um registro que ENCOLHESSE passaria verde no laço
  *  abaixo (é a 44ª espécie do catálogo, que mordeu quatro vezes nesta rodada).
  *
- *  31 = as 27 entradas do registro que não são molde + as 4 folhas do único
- *  waypoint desta ficha (`nome`, `lat`, `lng`, `nota`). O registro tem 31
+ *  29 = as 25 entradas do registro que não são molde + as 4 folhas do único
+ *  waypoint desta ficha (`nome`, `lat`, `lng`, `nota`). O registro tem 29
  *  entradas, das quais 4 são molde — então uma ficha de 1 waypoint dá
- *  27 + 4 = 31 blocos, e uma de 2 waypoints daria 35. (Era 30 até a Tarefa
- *  11b, 2026-10-04: a `cidade` entrou no registro.) */
-const BLOCOS_DE_UM_WAYPOINT = 31;
+ *  25 + 4 = 29 blocos, e uma de 2 waypoints daria 33. (Era 30 até a Tarefa
+ *  11b, 2026-10-04: a `cidade` entrou no registro, 31; e na 11c, no mesmo dia,
+ *  `horario.abre` e `horario.fecha` saíram — o horário virou UMA entrada, a
+ *  lista de faixas.) */
+const BLOCOS_DE_UM_WAYPOINT = 29;
 
 /** A ORDEM DOS SEIS GRUPOS, cravada à mão: ela é contrato desta tela (é a
  *  ordem em que o dono lê a ficha, a mesma da §3 do desenho), e o componente a
@@ -101,8 +103,8 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     for (const i of [0, 1, 2]) {
       expect(screen.getByTestId(`campo-trajeto.waypoints.${i}.nome`), `waypoint ${i}`).toBeTruthy();
     }
-    // 27 fixos + 3 × 4 folhas de waypoint.
-    expect(testidsDe(container, "campo-")).toHaveLength(27 + 12);
+    // 25 fixos + 3 × 4 folhas de waypoint.
+    expect(testidsDe(container, "campo-")).toHaveLength(25 + 12);
   });
 
   // 🔴 Sem isto, um componente que renderiza uma caixa vazia passa no teste de
@@ -120,8 +122,8 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
   // `coord-atual` DO EDITOR, embaixo do mapa. As três linhas `coord` têm três
   // formas diferentes de mostrar, e as três são medidas — a `.lat` de um ponto
   // mostra o PAR do ponto (é ela que carrega o mapa dele), a `.lng` só o número
-  // dela. O que ainda tem `<p>` (o `bloco` presente) está medido no `describe`
-  // do bloco `horario`.
+  // dela. O que tinha `<p>` (o `bloco` presente) deixou de existir na Tarefa
+  // 11c: o horário virou a lista de faixas, cujas caixas SÃO o valor.
   it("o VALOR de cada campo `coord` aparece DENTRO do bloco dele, no número embaixo do mapa", () => {
     render(<FichaInteira ficha={semHorario} />);
     const lido = (caminho: string, texto: string) =>
@@ -172,8 +174,8 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     const carro = within(screen.getByTestId("campo-carroComum"));
     expect((carro.getByRole("radio", { name: "Sim" }) as HTMLInputElement).checked).toBe(true);
     expect((carro.getByRole("radio", { name: "Não" }) as HTMLInputElement).checked).toBe(false);
-    // a espécie `hora` só a ficha que TEM horário pode provar, e está provada
-    // no bloco "o bloco `horario`" mais abaixo.
+    // o horário (a lista de faixas) só a ficha que TEM horário pode provar, e
+    // está provado no `describe` "o horário, uma entrada só" mais abaixo.
   });
 
   it("o RÓTULO de cada campo aparece dentro do bloco dele, e não é o caminho cru", () => {
@@ -222,8 +224,8 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     // Task 6.
     expect(cheio.textContent).not.toMatch(/não sei|não diz/i);
 
-    // 🔴 4, cravado e com motivo: nesta ficha faltam exatamente `horario`,
-    // `horario.abre` e `horario.fecha` — e a `cidade`, que NENHUMA ficha real
+    // 🔴 2, cravado e com motivo: nesta ficha falta exatamente o `horario` (uma
+    // entrada só desde a Tarefa 11c) — e a `cidade`, que NENHUMA ficha real
     // tem até o João respondê-la pelo painel (Tarefa 11b: obrigatória no
     // registro, e ninguém a preenche por ele). Todo o resto do registro está
     // preenchido (piso, carroComum, dias, secaRapido, custo.valor,
@@ -231,12 +233,7 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     const marcados = [...container.querySelectorAll("[data-ausente]")].map(
       (e) => e.getAttribute("data-testid")!,
     );
-    expect(marcados.sort()).toEqual([
-      "campo-cidade",
-      "campo-horario",
-      "campo-horario.abre",
-      "campo-horario.fecha",
-    ]);
+    expect(marcados.sort()).toEqual(["campo-cidade", "campo-horario"]);
   });
 
   // 🔴 `false` NÃO É SILÊNCIO. `carroComum: false` é uma AFIRMAÇÃO ("não
@@ -280,43 +277,41 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
   });
 });
 
-describe("FichaInteira — o bloco `horario`, que não é caixa de texto", () => {
-  // 🔴 `camposDaFicha` devolve TRÊS entradas sobre o mesmo assunto: `horario`
-  // (espécie `bloco`), `horario.abre` e `horario.fecha`. O bloco existe pra
-  // responder "este lugar TEM horário?" — é ele que carrega o "não sei" do
-  // grupo na porta de escrita.
-  it("com horário: o bloco diz que sim, e NÃO repete o valor de folha nenhuma", () => {
+describe("FichaInteira — o horário, uma entrada só (a lista de faixas)", () => {
+  // 🔴 TAREFA 11c: o horário deixou de ser um bloco com duas folhas e virou UMA
+  // entrada, a lista de 1 a 3 faixas. As caixas de hora SÃO o valor: o bloco
+  // não repete as horas num `<p>` ao lado, e não diz mais "sim".
+  it("com horário: as horas da faixa estão nas caixas, e o bloco não as repete", () => {
     render(<FichaInteira ficha={comHorario} />);
     const bloco = screen.getByTestId("campo-horario");
-    expect(bloco.textContent).toMatch(/sim/i);
-    expect(
-      bloco.textContent,
-      "o bloco repetiu a hora de abrir — a tela diz a mesma coisa duas vezes",
-    ).not.toContain(comHorario.horario!.abre);
-    expect(bloco.textContent).not.toContain(comHorario.horario!.fecha);
-    // as folhas continuam mostrando o valor delas, cada uma no bloco dela — desde
-    // a Task 6 dentro do seletor de hora que as edita.
-    expect(within(screen.getByTestId("campo-horario.abre")).getByDisplayValue(comHorario.horario!.abre));
-    expect(
-      within(screen.getByTestId("campo-horario.fecha")).getByDisplayValue(comHorario.horario!.fecha),
-    );
+    const [faixa] = comHorario.horario!;
+    expect(within(bloco).getByDisplayValue(faixa.abre)).toBeTruthy();
+    expect(within(bloco).getByDisplayValue(faixa.fecha)).toBeTruthy();
+    expect(bloco.querySelector(".adm-campo-valor"), "o bloco repetiu as horas num parágrafo").toBeNull();
+    expect(screen.queryByTestId("campo-horario.abre")).toBeNull();
+    expect(screen.queryByTestId("campo-horario.fecha")).toBeNull();
   });
 
-  // 🔴 A função itera o REGISTRO, não o documento: bloco ausente não faz as
-  // folhas dele sumirem da lista. Então elas têm que aparecer MARCADAS, nunca
-  // desaparecer — o dono que abriu a tela pra preencher a hora precisa ver
-  // onde ela entra.
-  it("sem horário: os TRÊS blocos aparecem, e os três dizem ausente", () => {
+  it("com intervalo: as duas faixas, na ordem, cada uma com as duas horas", () => {
+    const ALMOCO = [
+      { abre: "08:00", fecha: "10:00" },
+      { abre: "14:00", fecha: "17:00" },
+    ];
+    render(<FichaInteira ficha={{ ...comHorario, horario: ALMOCO }} />);
+    const caixas = [...screen.getByTestId("campo-horario").querySelectorAll<HTMLInputElement>("input[type=time]")];
+    expect(caixas.map((c) => c.value)).toEqual(["08:00", "10:00", "14:00", "17:00"]);
+  });
+
+  // 🔴 Ausente, o campo aparece MARCADO — nunca some —, e o caminho de volta
+  // depois de um "não tem" é uma faixa de caixas VAZIAS: nada pré-preenchido.
+  it("sem horário: um bloco só, marcado ausente, com as caixas vazias", () => {
     expect(semHorario.horario, "esta ficha ganhou horário — o caso deixou de ser medido").toBeUndefined();
     render(<FichaInteira ficha={semHorario} />);
-    for (const caminho of ["horario", "horario.abre", "horario.fecha"]) {
-      const bloco = screen.getByTestId(`campo-${caminho}`);
-      expect(bloco, `${caminho} sumiu da tela`).toBeTruthy();
-      expect(bloco.hasAttribute("data-ausente"), `${caminho} não veio marcado`).toBe(true);
-      const frase = bloco.querySelector(".adm-campo-ausente");
-      expect(frase, `${caminho} perdeu o parágrafo de ausência`).not.toBeNull();
-      expect(frase!.textContent, caminho).toMatch(/não sei|não diz/i);
-    }
+    const bloco = screen.getByTestId("campo-horario");
+    expect(bloco.hasAttribute("data-ausente")).toBe(true);
+    expect(bloco.querySelector(".adm-campo-ausente")!.textContent).toMatch(/não sei|não diz/i);
+    const caixas = [...bloco.querySelectorAll<HTMLInputElement>("input[type=time]")];
+    expect(caixas.map((c) => c.value)).toEqual(["", ""]);
   });
 });
 
@@ -444,7 +439,8 @@ describe("FichaInteira — os guardas do que cresce: rótulo e CSS", () => {
   it("toda classe que esta tela usa tem regra no `admin.css`", () => {
     const css = semComentarios("admin/admin.css");
     // 🔴 AS DUAS FICHAS, NÃO UMA (Task 8). Com `coord` ganhando editor, o
-    // `.adm-campo-valor` passou a existir SÓ no bloco `horario` PRESENTE — e
+    // `.adm-campo-valor` passou a existir SÓ no bloco `horario` PRESENTE (e na
+    // 11c nem ali: a regra saiu) — e
     // `semHorario` não tem horário, então medir uma ficha só acusava a regra
     // como morta quando ela está viva na outra. Medido: o vermelho era esse.
     const { container } = render(
@@ -453,6 +449,12 @@ describe("FichaInteira — os guardas do que cresce: rótulo e CSS", () => {
         <FichaInteira ficha={comHorario} />
       </>,
     );
+    // 🔴 E O EDITOR DO TRAJETO ABERTO (Tarefa 11c). Até a 11c o
+    // `.adm-editor-ajuda` aparecia no bloco `horario` AUSENTE (a frase "estes
+    // campos entram juntos"); com o horário virando lista, quem a usa é só o
+    // ponto novo do trajeto — que só aparece depois do toque. Medir a tela
+    // fechada acusaria a regra como morta quando ela está viva ali.
+    fireEvent.click(within(screen.getAllByTestId("editor-waypoints")[0]).getByRole("button"));
     const classes = [...new Set([...container.querySelectorAll("[class]")].flatMap((e) => [...e.classList]))];
     expect(classes.length, "nenhuma classe foi lida: o teste ficaria oco").toBeGreaterThan(0);
     for (const c of classes) {

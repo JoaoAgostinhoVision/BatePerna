@@ -1,4 +1,5 @@
 import { CAMPOS_DA_FICHA, camposDaFicha, lerCaminho } from "@/lib/campos-da-ficha";
+import { faixasDe } from "@/lib/horario";
 import type { Ficha } from "@/types/ficha";
 
 /** QUE CAMPO MUDOU de uma versão da ficha pra anterior (Task 9, 2026-10-01).
@@ -24,27 +25,29 @@ import type { Ficha } from "@/types/ficha";
  *  comparar, e "mudou tudo" encheria a linha da semente com os 30 rótulos. */
 export function camposQueMudaram(anterior: string | null, atual: string): string[] {
   if (anterior === null) return [];
-  const a = abrir(anterior);
-  const b = abrir(atual);
+  const a = comHorarioEmLista(abrir(anterior));
+  const b = comHorarioEmLista(abrir(atual));
   if (a === NAO_ABRIU || b === NAO_ABRIU) return [];
 
-  const blocos = new Set(CAMPOS_DA_FICHA.filter((c) => c.especie === "bloco").map((c) => c.caminho));
   const mudou: string[] = [];
   for (const { caminho } of camposDaFicha(esqueletoDaUniao(a, b))) {
-    // Folha de um bloco que ENTROU ou SAIU inteiro: quem mudou foi o bloco, e
-    // ele já está na lista (o bloco vem antes das folhas no registro).
-    const bloco = [...blocos].find((x) => caminho.startsWith(`${x}.`));
-    if (bloco && (lerCaminho(a, bloco.split(".")) === undefined) !== (lerCaminho(b, bloco.split(".")) === undefined)) {
-      continue;
-    }
     const va = lerCaminho(a, caminho.split("."));
     const vb = lerCaminho(b, caminho.split("."));
-    // O bloco presente nas DUAS não é "campo que mudou" — ele não se edita
-    // inteiro com ele presente (ver `gravarBloco`); quem mudou é a folha.
-    if (blocos.has(caminho) && va !== undefined && vb !== undefined) continue;
     if (!mesmoValor(va, vb)) mudou.push(caminho);
   }
   return mudou;
+}
+
+/** 🔴 O HORÁRIO NAS DUAS FORMAS É O MESMO DADO (Tarefa 11c, 11c-I3 da
+ *  auditoria). A ficha gravada no objeto de antes (`{abre, fecha}`) sai em
+ *  LISTA na primeira edição de qualquer campo — a porta passa o documento
+ *  inteiro pelo schema —, e o "voltar" grava a forma velha de novo, verbatim.
+ *  Comparando os documentos crus, o histórico diria ao dono que ele mudou o
+ *  horário numa versão em que ele mudou a voz. Os dois lados passam pela
+ *  MESMA função que o schema de leitura usa (`faixasDe`), sem zod. */
+function comHorarioEmLista(doc: unknown): unknown {
+  if (typeof doc !== "object" || doc === null || Array.isArray(doc) || !("horario" in doc)) return doc;
+  return { ...doc, horario: faixasDe((doc as { horario: unknown }).horario) ?? (doc as { horario: unknown }).horario };
 }
 
 const NAO_ABRIU = Symbol("documento que não parseia");

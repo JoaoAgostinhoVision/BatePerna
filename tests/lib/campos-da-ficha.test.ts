@@ -32,17 +32,6 @@ const FORA_DE_PROPOSITO = new Set([
 // precisão), este teste fica vermelho em vez de a folha nova nascer invisível.
 const EDITADOS_INTEIROS = new Map<string, readonly string[]>([["condicao.coords", ["lat", "lng"]]]);
 
-// O OUTRO tipo de entrada que não é folha, e ele é o OPOSTO do de cima (ruling
-// H1, 2026-09-26). Um BLOCO OPCIONAL inteiro (`horario`) entra no registro pra
-// carregar o "não sei" do bloco — mas ele NÃO engole as folhas: `horario.abre`
-// e `horario.fecha` continuam no registro por conta própria, cada uma com o
-// seu instrumento. Por isso é outra estrutura, e não mais uma linha em
-// `EDITADOS_INTEIROS`: a regra de cobertura das folhas é contrária.
-//
-// O valor é o conjunto EXATO de folhas do bloco, pelo mesmo motivo do outro:
-// folha nova lá dentro fica vermelha aqui em vez de nascer invisível.
-const BLOCOS_INTEIROS = new Map<string, readonly string[]>([["horario", ["abre", "fecha"]]]);
-
 // 🔴 A ÚNICA DIVERGÊNCIA DECLARADA ENTRE A COLUNA `obrigatorio` E O SCHEMA
 // (Tarefa 11b, 2026-10-04, 11b-I1 da auditoria do plano). Cada chave aqui é
 // OBRIGATÓRIA NO REGISTRO (sem "não sei", e o formulário de lugar novo a pede)
@@ -131,7 +120,7 @@ const MOLDE = "[]";
 /** O tipo Zod que o `fichaSchema` declara para UM caminho concreto.
  *
  *  🔴 O MÓDULO TEM UM RESOLVEDOR IGUAL A ESTE, e a duplicação é de propósito:
- *  lá ele é COMPORTAMENTO (a conferência folha a folha de `gravarBloco`), aqui
+ *  lá ele é COMPORTAMENTO (a conferência de uma folha, em `validarFolha`), aqui
  *  ele é o GUARDA. Um guarda que chama a função do módulo que ele guarda mede
  *  o módulo contra ele mesmo. São 10 linhas; a independência vale mais. */
 function tipoNoCaminho(caminho: string): z.ZodTypeAny | undefined {
@@ -172,7 +161,8 @@ describe("a varredura do schema, antes de ela guardar coisa nenhuma", () => {
     expect(FOLHAS).toContain("dias"); // lista de escalar é UMA folha, não `dias[]`
     expect(FOLHAS).not.toContain("condicao"); // nó interno não é folha
     expect(FOLHAS).not.toContain("trajeto.waypoints"); // idem
-    expect(FOLHAS).toHaveLength(34);
+    expect(FOLHAS).toContain("horario"); // a lista de faixas é UMA folha (Tarefa 11c)
+    expect(FOLHAS).toHaveLength(33);
   });
 
   it("nenhuma folha repetida, e nenhuma vazia", () => {
@@ -210,7 +200,7 @@ describe("o registro cobre o schema", () => {
   it("nenhuma entrada do registro é fantasma — ou é folha do schema, ou é entrada-inteira declarada", () => {
     const folhas = new Set(FOLHAS);
     const fantasmas = CAMPOS_DA_FICHA.map((c) => c.caminho).filter(
-      (p) => !folhas.has(p) && !EDITADOS_INTEIROS.has(p) && !BLOCOS_INTEIROS.has(p),
+      (p) => !folhas.has(p) && !EDITADOS_INTEIROS.has(p),
     );
     expect(fantasmas, "entrada do registro que não corresponde a nada no schema").toEqual([]);
   });
@@ -223,46 +213,32 @@ describe("o registro cobre o schema", () => {
     }
   });
 
-  // 🔴 RULING H1. Sem esta varredura, "só o `horario` é bloco opcional" seria
-  // uma frase minha — e frase escrita à mão é exatamente o que fica cega ao
-  // que cresceu. O schema é quem responde.
-  it("`horario` é o único bloco opcional do schema, e ele está no registro", () => {
-    expect(BLOCOS_DO_SCHEMA, "bloco opcional novo no schema: ou entra no registro como `bloco`, ou ganha um motivo escrito").toEqual([
-      "horario",
-    ]);
-    expect([...BLOCOS_INTEIROS.keys()]).toEqual(BLOCOS_DO_SCHEMA);
+  // 🔴 O GUARDA DOS BLOCOS OPCIONAIS FICA, COM A EXPECTATIVA VAZIA (Tarefa
+  // 11c; 11d-I1 da auditoria). Ele nasceu do ruling H1: um OBJETO opcional no
+  // schema, com folhas obrigatórias por dentro, é um campo cujo "não sei" só
+  // existe no nível do objeto — e por 9 dias o `horario` foi um assim, sem
+  // caminho nenhum até "não fecha". Desde a 11c o `horario` é uma LISTA (uma
+  // folha só, editada inteira), e o schema não tem bloco opcional nenhum. Quem
+  // acrescentar um recebe o vermelho aqui, em vez de o campo nascer sem "não
+  // sei". Sem esta varredura, "não há bloco opcional" seria uma frase minha.
+  it("o schema não tem bloco opcional nenhum — o `horario` virou lista", () => {
+    expect(
+      BLOCOS_DO_SCHEMA,
+      "bloco opcional novo no schema: decida como o \"não sei\" dele chega à tela, e escreva o motivo",
+    ).toEqual([]);
   });
 
-  it("todo bloco engole EXATAMENTE as folhas declaradas, é espécie `bloco`, e NÃO é obrigatório", () => {
-    for (const [raiz, esperadas] of BLOCOS_INTEIROS) {
-      const dentro = FOLHAS.filter((f) => f.startsWith(`${raiz}.`)).map((f) => f.slice(raiz.length + 1));
-      expect(dentro.sort(), raiz).toEqual([...esperadas].sort());
-      expect(campoPorCaminho(raiz)?.especie, raiz).toBe("bloco");
-      // É a entrada do bloco que carrega o "não sei". Se ela fosse
-      // obrigatória, o bloco inteiro ficaria inalcançável de novo.
-      expect(campoPorCaminho(raiz)?.obrigatorio, raiz).toBe(false);
-    }
-  });
-
-  // 🔴 A DIFERENÇA ENTRE AS DUAS ESTRUTURAS, provada e não só comentada: o
-  // bloco NÃO engole a cobertura das folhas dele. `horario.abre` e
-  // `horario.fecha` têm entrada própria, cada uma com o seu instrumento — o
-  // contrário do `condicao.coords`, que engole `lat` e `lng`.
-  it("as folhas de um bloco continuam no registro, cada uma com o seu instrumento", () => {
-    for (const [raiz, folhas] of BLOCOS_INTEIROS) {
-      for (const folha of folhas) {
-        const entrada = campoPorCaminho(`${raiz}.${folha}`);
-        expect(entrada, `${raiz}.${folha}`).toBeDefined();
-        expect(entrada?.especie, `${raiz}.${folha}`).not.toBe("bloco");
-        // Se o bloco existe, as duas horas existem — cada folha é obrigatória
-        // DENTRO dele, e é por isso que o "não sei" mora um degrau acima.
-        expect(entrada?.obrigatorio, `${raiz}.${folha}`).toBe(true);
-      }
-    }
-    // As duas estruturas são disjuntas: nada pode ser bloco e entrada-inteira
-    // ao mesmo tempo, porque as regras de cobertura delas se contradizem.
-    const nos_dois = [...BLOCOS_INTEIROS.keys()].filter((b) => EDITADOS_INTEIROS.has(b));
-    expect(nos_dois).toEqual([]);
+  // 🔴 O HORÁRIO É UMA FOLHA SÓ — a lista inteira de faixas —, e é ela que o
+  // registro edita, com a espécie que grava a lista de uma vez. As duas horas
+  // de dentro NÃO são campos: com intervalo, abre e fecha de cada faixa
+  // dependem um do outro (o I-B da Tarefa 11).
+  it("o `horario` é uma folha do schema, e o registro o edita inteiro, como `faixas`", () => {
+    expect(FOLHAS).toContain("horario");
+    expect(FOLHAS.filter((f) => f.startsWith("horario."))).toEqual([]);
+    expect(campoPorCaminho("horario")?.especie).toBe("faixas");
+    expect(campoPorCaminho("horario")?.obrigatorio, "sem o \"não sei\" o horário não tem volta").toBe(false);
+    expect(campoPorCaminho("horario.abre")).toBeUndefined();
+    expect(campoPorCaminho("horario.fecha")).toBeUndefined();
   });
 
   // 🔴 I1 DA REVISÃO (2026-09-26), E É O FURO MAIS SÉRIO QUE ESTE ARQUIVO
@@ -327,22 +303,16 @@ describe("o registro cobre o schema", () => {
       }
     });
 
-    // ⚠️ O caso que eu esperava precisar de exceção e NÃO precisou: as folhas
-    // do bloco `horario` são obrigatórias DENTRO dele (`z.string()`, sem
-    // `.optional()`), e o bloco é que é `ZodOptional`. O resolvedor desembrulha
-    // o `ZodOptional` do `horario` ao DESCER, então `horario.abre` chega como
-    // `ZodString` puro — obrigatório, que é exatamente o que o registro diz.
-    // Zero exceções nas 30 entradas.
-    it("o bloco é opcional e as folhas dele não — e o varredor enxerga os dois", () => {
+    it("o horário é opcional no schema — e o varredor o enxerga", () => {
       expect(eOpcionalNoSchema(tipoNoCaminho("horario")!)).toBe(true);
-      expect(eOpcionalNoSchema(tipoNoCaminho("horario.abre")!)).toBe(false);
-      expect(eOpcionalNoSchema(tipoNoCaminho("horario.fecha")!)).toBe(false);
     });
   });
 
   it("o registro não está vazio nem é só a voz — senão os guardas acima passam ocos", () => {
     expect(CAMPOS_DA_FICHA.length).toBeGreaterThan(12);
-    expect(new Set(CAMPOS_DA_FICHA.map((c) => c.especie)).size).toBe(7);
+    // 6, e não as 8 que o tipo declara: `hora` e `bloco` ficaram sem entrada
+    // na 11c (o horário virou `faixas`) e só existem até a 11d contrair a tela.
+    expect(new Set(CAMPOS_DA_FICHA.map((c) => c.especie)).size).toBe(6);
     expect(new Set(CAMPOS_DA_FICHA.map((c) => c.grupo)).size).toBe(6);
   });
 

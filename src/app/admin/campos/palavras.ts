@@ -64,6 +64,12 @@ export const NADA_ESCOLHIDO = "Escolha uma das opções.";
 // PENDENTE: redação minha, o João ainda não leu
 export const HORA_VAZIA = "Escolha uma hora, no formato HH:MM.";
 
+/** A ajuda das horas que entram JUNTAS. Nasceu no `EditorBloco` (o bloco
+ *  `horario` ausente) e mudou pra cá na Tarefa 11c, quando o `EditorFaixas`
+ *  passou a dizê-la também: as duas horas de uma faixa entram juntas. */
+// PENDENTE: redação minha, o João ainda não leu
+export const BLOCO_JUNTO = "Estes campos entram juntos: um sozinho não vira ficha.";
+
 /** A recusa de caixa de texto vazia — o outro lado do "não sei" (§4.1 do
  *  desenho: caixa vazia é ERRO DE PREENCHIMENTO, "não sei" é outra ação).
  *

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { PISOS } from "@/lib/piso";
 import { SEVERIDADES } from "@/lib/severidade";
 import { DIAS } from "@/lib/semana";
+import { HHMM, faixasDe } from "@/lib/horario";
 
 /** 🔴 UMA COORDENADA DO PLANETA: finita e na faixa (Tarefa 8, onda de conserto
  *  1, R2). Até 2026-10-01 era `z.number()` cru, e a revisão mediu os dois buracos
@@ -74,6 +75,13 @@ export const waypointSchema = z.object({
  *  CADA janela pode ser zero sozinha — decisões do João: "só olhar a chuva que
  *  já caiu" pra previsão, e o espelho dela pro passado. Este schema não
  *  mudou com nenhuma das duas: ele nunca recusou o zero. */
+/** UMA faixa do horário: as duas horas em "HH:MM". O formato vem de `HHMM`, em
+ *  `horario.ts` — a porta de escrita confere contra o MESMO. */
+export const faixaSchema = z.object({
+  abre: z.string().regex(HHMM),
+  fecha: z.string().regex(HHMM),
+});
+
 export const regraSchema = z.object({
   tipo: z.literal("chuva_binaria"),
   janela_previsao_horas: z.number().finite(),
@@ -229,11 +237,23 @@ export const fichaSchema = z.object({
   // nem "guarita". Foi esse tipo de palavra que passou o dia 2026-08-27 inteiro
   // sendo arrancada do código, e a tela diz só as horas. Quando o nome importar,
   // ele é prosa do `acesso` — ou vira campo, com o `custo.curto` de molde.
+  //
+  // 🔴 E DESDE A TAREFA 11c (2026-10-04) É UMA LISTA DE 1 A 3 FAIXAS — ele: *"tem
+  // lugares que fecham para o almoço, aí fica de 8 às 10 e 14 às 17"*. Este
+  // schema aceita as DUAS formas na leitura (o objeto de antes e a lista) e
+  // devolve SEMPRE a lista. A forma velha é PERMANENTE, não migração: as fichas
+  // no banco foram gravadas nela, a semente não regrava slug existente, e o
+  // "voltar a uma versão" grava o documento antigo verbatim.
+  //
+  // ⚠️ AQUI SÓ MORA A FORMA (11c-I2 da auditoria). Ordem, sobreposição e "24h só
+  // sozinha" são regras de ESCRITA, em `problemaDasFaixas` (`horario.ts`):
+  // neste schema, que é o caminho de LEITURA, uma regra que um documento já
+  // gravado não cumpra derrubaria a lista inteira da home. `.min(1)` fica,
+  // pela razão do `dias` logo abaixo: `[]` fecharia o lugar a qualquer hora, e
+  // "sem horário" é a chave AUSENTE (11c-C1).
   horario: z
-    .object({
-      abre: z.string().regex(/^\d{2}:\d{2}$/),
-      fecha: z.string().regex(/^\d{2}:\d{2}$/),
-    })
+    .union([faixaSchema, z.array(faixaSchema).min(1).max(3)])
+    .transform((h) => faixasDe(h)!)
     .optional(),
   // OS DIAS DA SEMANA em que da pra entrar.
   //

@@ -42,9 +42,10 @@ export type CampoNaTela = {
    *  `FichaInteira`, com guarda medido contra a porta de escrita. */
   multiplo?: boolean;
   /** Só pra espécie `bloco`: as folhas que entram JUNTAS quando o bloco está
-   *  ausente. `chave` é o nome da folha DENTRO do bloco (`abre`), que é a chave
-   *  que `gravarBloco` espera no corpo; `caminho` é o caminho completo, pro
-   *  marcador de teste. */
+   *  ausente. `chave` é o nome da folha DENTRO do bloco (`abre`), que era a
+   *  chave que a porta do bloco esperava no corpo; `caminho` é o caminho
+   *  completo, pro marcador de teste. ⚠️ Sem campo nenhum desde a Tarefa 11c (o
+   *  horário virou `faixas`); a contração é da 11d. */
   folhas?: readonly { chave: string; caminho: string; rotulo: string }[];
   /** Só pra espécie `coord`, e só na METADE `.lat` de um ponto do trajeto: o
    *  ÍNDICE e o PAR daquele ponto, montados no servidor (Task 8). A metade
@@ -74,7 +75,7 @@ export type Editor = (props: PropsDoEditor) => ReactElement;
  *  `CampoNaTela` (ver o docblock do topo). Quem monta a `PerguntaNaTela` é o
  *  servidor, a partir do `CampoDaFicha` — e uma espécie nova no registro que
  *  não esteja aqui deixa AQUELE arquivo sem compilar. */
-export type EspecieNaTela = "prosa" | "lista" | "booleano" | "hora" | "numero" | "coord" | "bloco";
+export type EspecieNaTela = "prosa" | "lista" | "booleano" | "hora" | "numero" | "coord" | "bloco" | "faixas";
 
 /** UMA PERGUNTA DO FORMULÁRIO DE LUGAR NOVO (Tarefa 11) — o contrato entre a
  *  página de servidor (`/admin/novo`, que lê o registro e o questionário) e o

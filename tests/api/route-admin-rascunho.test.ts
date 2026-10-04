@@ -419,15 +419,23 @@ describe("PUT — responder uma pergunta", () => {
     expect((await docDe(S)).voz).toBe("marcador");
   });
 
-  it("o horário entra inteiro; uma hora sozinha recusa com a frase que diz o que fazer", async () => {
-    const meia = await mudar({ slug: S, campo: "horario.abre", valor: "05:00" });
-    expect(meia.status).toBe(400);
-    expect(await meia.text()).toMatch(/horario/);
-    expect((await mudar({ slug: S, campo: "horario", valor: { abre: "05:00", fecha: "17:00" } })).status).toBe(200);
-    expect((await docDe(S)).horario).toEqual({ abre: "05:00", fecha: "17:00" });
-    // presente, cada hora muda sozinha
-    expect((await mudar({ slug: S, campo: "horario.fecha", valor: "16:00" })).status).toBe(200);
-    expect((await docDe(S)).horario).toEqual({ abre: "05:00", fecha: "16:00" });
+  // 🔴 TAREFA 11c: o horário é a LISTA de faixas, e entra inteiro — também no
+  // rascunho. A lista nova substitui a velha; as regras são as da ficha no ar
+  // (`problemaDasFaixas`), com a frase chegando à tela.
+  it("o horário entra inteiro, em lista, e a lista nova substitui a velha", async () => {
+    expect((await mudar({ slug: S, campo: "horario.abre", valor: "05:00" })).status).toBe(400);
+    expect((await mudar({ slug: S, campo: "horario", valor: [{ abre: "05:00", fecha: "17:00" }] })).status).toBe(200);
+    expect((await docDe(S)).horario).toEqual([{ abre: "05:00", fecha: "17:00" }]);
+    const almoco = [
+      { abre: "08:00", fecha: "10:00" },
+      { abre: "14:00", fecha: "17:00" },
+    ];
+    expect((await mudar({ slug: S, campo: "horario", valor: almoco })).status).toBe(200);
+    expect((await docDe(S)).horario).toEqual(almoco);
+    const vazia = await mudar({ slug: S, campo: "horario", valor: [] });
+    expect(vazia.status).toBe(400);
+    expect(await vazia.text()).toMatch(/não tem/);
+    expect((await docDe(S)).horario).toEqual(almoco);
   });
 
   it("a coordenada do ponto entra INTEIRA, pela forma `ponto` da porta", async () => {

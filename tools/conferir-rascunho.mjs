@@ -64,9 +64,17 @@ if (!decl) {
     erros.push(`piso: "${f.piso}" não é um dos ${nomes.length} de src/lib/piso.ts (${nomes.join(", ")})`);
 }
 if ("carroComum" in f && typeof f.carroComum !== "boolean") erros.push("carroComum");
-if (f.horario)
-  for (const k of ["abre", "fecha"])
-    if (!/^\d{2}:\d{2}$/.test(f.horario[k] ?? "")) erros.push(`horario.${k}: precisa ser HH:MM`);
+// O horário (Tarefa 11c): a LISTA de 1 a 3 faixas OU o objeto de antes — as
+// duas formas que o fichaSchema aceita. Só a FORMA: ordem e sobreposição são
+// regras de escrita do painel (`problemaDasFaixas`, em src/lib/horario.ts).
+if ("horario" in f) {
+  const faixas = Array.isArray(f.horario) ? f.horario : [f.horario];
+  if (faixas.length < 1 || faixas.length > 3) erros.push("horario: de 1 a 3 faixas");
+  faixas.forEach((faixa, i) => {
+    for (const k of ["abre", "fecha"])
+      if (!/^\d{2}:\d{2}$/.test(faixa?.[k] ?? "")) erros.push(`horario.${i}.${k}: precisa ser HH:MM`);
+  });
+}
 
 // O rascunho ficou com PROSA MINHA nos quatro campos de voz, pra ele aprovar
 // em vez de escrever do zero. Isso o faz PARECER pronto — e é exatamente assim

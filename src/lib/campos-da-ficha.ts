@@ -3,6 +3,7 @@ import { PISOS } from "@/lib/piso";
 import { CIDADE_SEM_LETRA, CIDADE_VAZIA, slugDoNome } from "@/lib/rascunho";
 import { SEVERIDADES } from "@/lib/severidade";
 import { DIAS } from "@/lib/semana";
+import { problemaDasFaixas, type Faixa } from "@/lib/horario";
 import { fichaSchema, type Ficha } from "@/types/ficha";
 
 /** A ESPINHA DO PAINEL: um registro declarado de campos, e uma porta só que
@@ -27,20 +28,26 @@ import { fichaSchema, type Ficha } from "@/types/ficha";
  *    a lista LITERAL aqui mesmo, 80 linhas abaixo — dívida da Task 1, e dizer
  *    que nenhuma é cópia repetida era falso.
  *  - `booleano` — interruptor, com a frase que ele vira na tela ao lado.
- *  - `hora` — seletor `HH:MM`; o schema tem regex e texto livre não passa.
+ *  - `faixas` — o HORÁRIO inteiro (Tarefa 11c): uma lista de 1 a 3 faixas
+ *    `{abre, fecha}`, gravada de uma vez — a gravação SUBSTITUI a lista. As
+ *    regras (ordem, sobreposição, 24h só sozinha) são de `problemaDasFaixas`,
+ *    em `horario.ts`. O "não sei" tira a chave, e é o único caminho até "sem
+ *    horário": `[]` é recusado.
+ *  - `hora` — seletor `HH:MM`. ⚠️ SEM ENTRADA NO REGISTRO desde a 11c: as
+ *    folhas `horario.abre`/`.fecha` viraram a lista acima. A espécie fica
+ *    declarada só porque a tela do painel ainda tem o instrumento dela, e
+ *    quem o contrai é a 11d.
  *  - `numero` — número DE MOTOR (limiar de chuva, janelas): a tela mostra a
  *    consequência ao vivo antes de gravar.
- *  - `bloco` — um BLOCO OPCIONAL inteiro (`horario`). Duas operações, e só
- *    duas: `removerCampo` (o "não sei") e `aplicarCampo` **com o bloco
- *    AUSENTE**, que é como o bloco VOLTA depois de um "não sei". Com o bloco
- *    presente, `aplicarCampo` no bloco é recusado — cada folha se edita pelo
- *    instrumento dela. Ver o comentário de `BLOCOS_OPCIONAIS` mais abaixo.
+ *  - `bloco` — ⚠️ SEM ENTRADA NO REGISTRO desde a 11c, pela mesma razão do
+ *    `hora`: o único bloco era o `horario`, que virou `faixas`. A porta de
+ *    escrita do bloco saiu daqui; a tela dele sai na 11d.
  *  - `coord` — editado no MAPA, com pin arrastado. Duas formas convivem aqui
  *    de propósito, porque o schema as declara diferentes: `condicao.coords` é
  *    o PAR (`{lat, lng}`) e `trajeto.waypoints[].lat`/`.lng` são as METADES
  *    (números soltos). Quem grava não precisa distinguir — o
  *    `fichaSchema.parse` da porta recusa a forma errada no caminho errado. */
-export type EspecieCampo = "prosa" | "lista" | "booleano" | "hora" | "numero" | "coord" | "bloco";
+export type EspecieCampo = "prosa" | "lista" | "booleano" | "hora" | "numero" | "coord" | "bloco" | "faixas";
 
 /** O bloco em que o campo aparece na tela do painel. Os nomes seguem os blocos
  *  que a ficha pública já tem (`src/app/[slug]/page.tsx`): `acesso`, `avisos`,
@@ -59,17 +66,13 @@ export type CampoDaFicha = {
   opcoes?: readonly string[];
 };
 
-/** O valor de um BLOCO inteiro: as folhas dele, todas de uma vez. Só existe
- *  para o caso "o bloco está ausente e volta inteiro" — ver `gravarBloco`. */
-export type ValorDeBloco = { readonly [folha: string]: string };
-
 export type ValorDeCampo =
   | string
   | number
   | boolean
   | readonly string[]
   | { lat: number; lng: number }
-  | ValorDeBloco;
+  | readonly Faixa[];
 
 /** A marca de "qualquer índice" dentro de um caminho. */
 const MOLDE = "[]";
@@ -114,16 +117,15 @@ export const CAMPOS_DA_FICHA: readonly CampoDaFicha[] = [
   { caminho: "custo.curto", especie: "prosa", obrigatorio: false, grupo: "custo" },
 
   // — quando dá pra ir —
-  // 🔴 O BLOCO INTEIRO É UMA ENTRADA, e é ela que carrega o "não sei" do
-  // horário (ruling H1, 2026-09-26). `abre` e `fecha` são `obrigatorio: true`,
-  // e isso NÃO contradiz o `horario` ser opcional no schema: o bloco pode
-  // faltar, mas um bloco com só metade da faixa não é ficha. Sem esta entrada
-  // não existiria caminho nenhum pra dizer "este lugar não fecha por horário"
-  // — e a régua do app (`src/types/ficha.ts`, `src/lib/horario.ts:117`) é que
-  // ficha sem horário NUNCA fecha. A régua tem que ser alcançável do celular.
-  { caminho: "horario", especie: "bloco", obrigatorio: false, grupo: "quando" },
-  { caminho: "horario.abre", especie: "hora", obrigatorio: true, grupo: "quando" },
-  { caminho: "horario.fecha", especie: "hora", obrigatorio: true, grupo: "quando" },
+  // 🔴 O HORÁRIO INTEIRO É UMA ENTRADA (Tarefa 11c, 2026-10-04): a lista de 1 a
+  // 3 faixas, gravada de uma vez — "fecha pro almoço" são duas faixas que só
+  // fazem sentido juntas. Até a 11c era um BLOCO com as duas folhas editadas
+  // uma a uma (ruling H1); a emenda está em `task-11bcd-auditoria.md`, 11c-I1.
+  // É esta entrada que carrega o "não sei": sem ela não existiria caminho
+  // nenhum pra dizer "este lugar não fecha por horário" — e a régua do app
+  // (`src/types/ficha.ts`, `src/lib/horario.ts:246`) é que ficha sem horário
+  // NUNCA fecha. A régua tem que ser alcançável do celular.
+  { caminho: "horario", especie: "faixas", obrigatorio: false, grupo: "quando" },
   { caminho: "dias", especie: "lista", obrigatorio: false, grupo: "quando", opcoes: DIAS },
 
   // — o que a chuva faz aqui —
@@ -141,25 +143,6 @@ export const CAMPOS_DA_FICHA: readonly CampoDaFicha[] = [
   { caminho: "discriminador.como_ler", especie: "prosa", obrigatorio: true, grupo: "discriminador" },
   { caminho: "discriminador.permissao_abortar", especie: "prosa", obrigatorio: true, grupo: "discriminador" },
 ] as const satisfies readonly CampoDaFicha[];
-
-/** Os caminhos de espécie `bloco`. Derivado do registro, nunca repetido à mão.
- *
- *  🔴 `horario` É O ÚNICO HOJE, e isso foi MEDIDO, não suposto: o teste
- *  "`horario` é o único bloco opcional do schema" caminha o `fichaSchema`
- *  procurando toda chave OPCIONAL que é um objeto, e falha se aparecer outra.
- *  Quem acrescentar um bloco opcional ao schema recebe o vermelho junto —
- *  não precisa procurar de novo. (`condicao`, `custo`, `trajeto` e
- *  `discriminador` são objetos OBRIGATÓRIOS: não têm "não sei" nenhum.) */
-const BLOCOS_OPCIONAIS: readonly string[] = CAMPOS_DA_FICHA.filter((c) => c.especie === "bloco").map(
-  (c) => c.caminho,
-);
-
-/** O bloco opcional que contém este caminho, se houver. É ele que a recusa de
- *  "não sei" aponta: tirar `horario.abre` sozinho deixaria a ficha quebrada;
- *  o que o dono quis dizer é tirar o `horario` inteiro. */
-function blocoQueContem(caminho: string): string | undefined {
-  return BLOCOS_OPCIONAIS.find((b) => caminho.startsWith(`${b}.`));
-}
 
 /** `trajeto.waypoints.2.nome` → `trajeto.waypoints[].nome`. Todo degrau que é
  *  só dígitos vira `[]` colado no degrau anterior. */
@@ -287,7 +270,7 @@ const itemInexistente = (i: number, tem: number): string => `não existe o item 
  *  pela mesma referência, que é o que faz "só o campo pedido muda". */
 /*  `criar` (Tarefa 11) só é `true` no RASCUNHO: lá o documento é incompleto por
     natureza, e responder `custo.curto` antes de `custo.tag` tem de criar o
-    `custo`. Na ficha que está no ar ele é sempre `false`, e o bloco ausente
+    `custo`. Na ficha que está no ar ele é sempre `false`, e o degrau ausente
     continua recusado como sempre foi (ver o comentário do `filho === undefined`). */
 function escrever(
   no: unknown,
@@ -324,12 +307,11 @@ function escrever(
     // Nada a remover num bloco que já não existe.
     if (remover) return no;
     // 🔴 AQUI HAVIA UM CAMINHO QUE NUNCA DAVA CERTO, e a revisão de 2026-09-26
-    // mediu: ele criava `{}` para o bloco ausente e deixava o
-    // `fichaSchema.parse` decidir — só que um bloco com UMA folha nunca passa
-    // no schema (`horario` sem `fecha` é `Required`), então a gravação
-    // estourava SEMPRE, com um ZodError cru. Bloco ausente volta INTEIRO, por
-    // `gravarBloco`; quem pede meia folha de um bloco ausente é barrado antes
-    // de chegar aqui, em `aplicarCampo`, com a frase que diz o que fazer.
+    // mediu: ele criava `{}` para o degrau ausente e deixava o
+    // `fichaSchema.parse` decidir — só que um objeto com UMA folha nunca passa
+    // no schema (era o `horario` sem `fecha`, `Required`), então a gravação
+    // estourava SEMPRE, com um ZodError cru. Na ficha no ar o degrau ausente é
+    // recusado aqui; o horário, que era o caso, virou uma entrada só (11c).
     //
     // 🔴 E NO RASCUNHO (`criar`) o degrau ausente NASCE como objeto vazio — lá
     // não há schema do documento inteiro a satisfazer, e cada folha já foi
@@ -365,10 +347,10 @@ function desembrulhar(tipo: z.ZodTypeAny): z.ZodTypeAny {
 
 /** O tipo Zod que o `fichaSchema` declara para UM caminho concreto.
  *
- *  Existe pra `gravarBloco` poder conferir cada folha do bloco **antes** de
- *  montar o objeto — e conferir contra a FONTE, não contra uma cópia da regra.
- *  Repetir aqui o `/^\d{2}:\d{2}$/` do `horario` seria a espécie "duas fontes
- *  pra mesma pergunta", que este projeto já pagou. */
+ *  Existe pra `validarFolha` conferir uma folha do RASCUNHO (que não passa
+ *  pelo schema do documento inteiro) contra a FONTE, não contra uma cópia da
+ *  regra — repetir aqui um formato do schema seria a espécie "duas fontes pra
+ *  mesma pergunta", que este projeto já pagou. */
 function tipoNoCaminho(caminho: string): z.ZodTypeAny | undefined {
   let atual: z.ZodTypeAny | undefined = fichaSchema;
   for (const degrau of caminho.split(".")) {
@@ -396,51 +378,20 @@ function validarFolha(caminho: string, valor: unknown): void {
   throw new Error(`\`${caminho}\` não serve: este campo é do tipo \`${especie}\``);
 }
 
-/** 🔴 O BLOCO VOLTA INTEIRO, e só quando está AUSENTE (ruling H1 emendado,
- *  2026-09-26).
+/** 🔴 O HORÁRIO ENTRA INTEIRO, E SUBSTITUI O QUE HAVIA (Tarefa 11c). A
+ *  conferência é a de `problemaDasFaixas` — a fonte única das regras de uma
+ *  lista de faixas — e estoura `Error` com a frase dela, nunca um ZodError cru
+ *  (que a rota devolveria como 400 mudo). Devolve a lista só com as duas horas
+ *  de cada faixa: o rascunho não passa pelo schema, que é quem tiraria o resto.
  *
- *  A primeira redação do H1 deixou o `horario` numa porta de mão única: o
- *  "não sei" tirava o bloco e NADA o trazia de volta, porque `abre` sozinho
- *  estoura por falta de `fecha` e vice-versa. O João tocava "não sei", mudava
- *  de ideia, e o horário só voltava com um desenvolvedor no banco — o oposto
- *  da lei. Eu tinha alcançado a régua "não fecha" e tornado inalcançável a
- *  régua "fecha".
- *
- *  Com o bloco PRESENTE a recusa continua, e por um motivo que não mudou:
- *  existindo o bloco, cada folha tem o instrumento dela, e gravar o objeto
- *  fechado por cima pularia a conferência campo a campo.
- *
- *  🔴 E a conferência é FOLHA A FOLHA, ANTES de montar. Montar e deixar o
- *  `fichaSchema.parse` decidir devolveria um ZodError cru que não diz QUAL
- *  hora está errada; aqui a recusa nomeia `horario.abre`. */
-function gravarBloco(atual: unknown, caminho: string, valor: ValorDeCampo): unknown {
-  if (lerCaminho(atual, caminho.split(".")) !== undefined) {
-    // PENDENTE: redação minha, o João ainda não leu
-    throw new Error(
-      `\`${caminho}\` já está preenchido: mude um campo de cada vez, ou diga "não sei" pra tirar o bloco inteiro`,
-    );
-  }
-  if (typeof valor !== "object" || valor === null || Array.isArray(valor)) {
-    // PENDENTE: redação minha, o João ainda não leu
-    throw new Error(`\`${caminho}\` é um bloco: mande os campos dele juntos`);
-  }
-
-  const folhas = CAMPOS_DA_FICHA.filter((c) => c.caminho.startsWith(`${caminho}.`)).map((c) => c.caminho);
-  const dado = valor as Record<string, unknown>;
-  for (const folha of folhas) {
-    const chave = folha.slice(caminho.length + 1);
-    if (!(chave in dado)) {
-      // PENDENTE: redação minha, o João ainda não leu
-      throw new Error(`falta \`${folha}\`: o bloco \`${caminho}\` só entra completo`);
-    }
-  }
-  for (const chave of Object.keys(dado)) {
-    const folha = `${caminho}.${chave}`;
-    if (!folhas.includes(folha)) throw new Error(`\`${folha}\` não é campo do bloco \`${caminho}\``);
-  }
-  for (const folha of folhas) validarFolha(folha, dado[folha.slice(caminho.length + 1)]);
-
-  return escrever(atual, caminho.split("."), valor, false);
+ *  ⚠️ Antes da 11c o horário era um BLOCO que voltava inteiro só quando
+ *  AUSENTE e, presente, se editava folha a folha (ruling H1 emendado). A
+ *  edição folha a folha deixou de existir: com intervalo, abre e fecha de cada
+ *  faixa dependem um do outro, e a lista é o campo. */
+function conferirFaixas(valor: unknown): Faixa[] {
+  const problema = problemaDasFaixas(valor);
+  if (problema !== null) throw new Error(problema);
+  return (valor as Faixa[]).map(({ abre, fecha }) => ({ abre, fecha }));
 }
 
 /** Grava UM campo sobre o documento atual e devolve o JSON novo.
@@ -453,24 +404,15 @@ function gravarBloco(atual: unknown, caminho: string, valor: ValorDeCampo): unkn
 export function aplicarCampo(docAtual: string, caminho: string, valor: ValorDeCampo): string {
   const campo = exigirCampo(caminho);
 
-  if (campo.especie === "bloco") {
+  if (campo.especie === "faixas") {
+    const faixas = conferirFaixas(valor);
     const atual = fichaSchema.parse(JSON.parse(docAtual));
-    return JSON.stringify(fichaSchema.parse(gravarBloco(atual, caminho, valor)));
+    return JSON.stringify(fichaSchema.parse(escrever(atual, caminho.split("."), faixas, false)));
   }
 
   recusarVazio(caminho, valor);
   recusarCidadeSemLetra(caminho, valor);
   const atual = fichaSchema.parse(JSON.parse(docAtual));
-
-  // Folha de um bloco que a ficha não tem: `horario.abre` sozinho nunca vira
-  // documento válido, porque falta o `fecha`. A recusa diz o caminho que
-  // existe, em vez de deixar o schema devolver `Required` sobre outro campo.
-  const bloco = blocoQueContem(caminho);
-  if (bloco && lerCaminho(atual, bloco.split(".")) === undefined) {
-    // PENDENTE: redação minha, o João ainda não leu
-    throw new Error(`\`${bloco}\` não está preenchido nesta ficha: preencha o \`${bloco}\` inteiro de uma vez`);
-  }
-
   return JSON.stringify(fichaSchema.parse(escrever(atual, caminho.split("."), valor, false)));
 }
 
@@ -596,13 +538,8 @@ function recusarNaoSeiObrigatorio(caminho: string): void {
   // "a ficha não existe" — falso, as fichas de antes da 11b existem sem ela. A
   // dela é a do POST, que diz por que ela é pedida.
   if (caminho === "cidade") throw new Error(CIDADE_VAZIA);
-  const bloco = blocoQueContem(caminho);
   // PENDENTE: redação minha, o João ainda não leu
-  throw new Error(
-    bloco
-      ? `\`${caminho}\` é obrigatório dentro de \`${bloco}\`: o "não sei" aqui é tirar o \`${bloco}\` inteiro`
-      : `\`${caminho}\` é obrigatório: sem ele a ficha não existe, então não tem "não sei"`,
-  );
+  throw new Error(`\`${caminho}\` é obrigatório: sem ele a ficha não existe, então não tem "não sei"`);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -619,8 +556,9 @@ function recusarNaoSeiObrigatorio(caminho: string): void {
 // (`exigirCampo` — `slug` e `modos` não são perguntas), a caixa vazia recusada
 // (`""` nunca chega ao documento), o TIPO de cada folha conferido contra o
 // schema (`validarFolha` — um `piso` inventado não entra nem no rascunho, porque
-// o formulário não teria instrumento pra relê-lo), o bloco que entra inteiro, e
-// o "não sei" que não existe em campo obrigatório.
+// o formulário não teria instrumento pra relê-lo), o horário conferido pelas
+// MESMAS regras da ficha no ar (`conferirFaixas`), e o "não sei" que não existe
+// em campo obrigatório.
 //
 // O QUE ELAS NÃO FAZEM, de propósito: o `fichaSchema.parse` do documento
 // inteiro e o portão de coerência. Os dois são de PUBLICAR (Tarefa 12), que é
@@ -649,14 +587,11 @@ export function aplicarNoRascunho(docAtual: string, caminho: string, valor: Valo
     throw new Error("a coordenada do ponto entra inteira: a latitude e a longitude juntas, no mesmo Salvar");
   }
   const atual = abrirRascunho(docAtual);
-  if (campo.especie === "bloco") return JSON.stringify(gravarBloco(atual, caminho, valor));
+  if (campo.especie === "faixas") {
+    return JSON.stringify(escrever(atual, caminho.split("."), conferirFaixas(valor), false, true));
+  }
 
   validarFolha(caminho, valor);
-  const bloco = blocoQueContem(caminho);
-  if (bloco && lerCaminho(atual, bloco.split(".")) === undefined) {
-    // PENDENTE: redação minha, o João ainda não leu
-    throw new Error(`\`${bloco}\` não está preenchido nesta ficha: preencha o \`${bloco}\` inteiro de uma vez`);
-  }
   return JSON.stringify(escrever(atual, caminho.split("."), valor, false, true));
 }
 

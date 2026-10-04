@@ -1,6 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import EditorBloco from "./campos/EditorBloco";
+import EditorFaixas from "./campos/EditorFaixas";
 import EditorBooleano from "./campos/EditorBooleano";
 import EditorCoordenada from "./campos/EditorCoordenada";
 import EditorHora from "./campos/EditorHora";
@@ -173,6 +174,7 @@ const INSTRUMENTO: Record<EspecieNaTela, Editor> = {
   hora: EditorHora,
   numero: EditorNumeroDeMotor,
   bloco: EditorBloco,
+  faixas: EditorFaixas,
   coord: CoordenadaDoRascunho,
 };
 

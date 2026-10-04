@@ -36,7 +36,7 @@ describe("os fatos compactos de uma trilha", () => {
       ...BASE,
       piso: "barro",
       custo: { tag: "pago", valor: "R$ 5 por pessoa · cobrado no portão" },
-      horario: { abre: "05:00", fecha: "17:00" },
+      horario: [{ abre: "05:00", fecha: "17:00" }],
       dias: ["sab", "dom"],
     };
     const o = { voce: { lat: -8.0, lng: -36.8 }, comAbertura: true };
@@ -85,7 +85,7 @@ describe("os fatos compactos de uma trilha", () => {
   // repetir os dias ali alongaria uma linha que já quebra em duas no celular.
   // Um padrão `true` encheria a home sem ninguém decidir isso.
   it("por padrão a abertura NÃO entra — é a linha do cartão da home", () => {
-    const t: TrilhaCompacta = { ...BASE, dias: ["sab", "dom"], horario: { abre: "05:00", fecha: "17:00" } };
+    const t: TrilhaCompacta = { ...BASE, dias: ["sab", "dom"], horario: [{ abre: "05:00", fecha: "17:00" }] };
     expect(textos(t)).toEqual([]);
     expect(textos(t, { comAbertura: true })).toEqual(["sábado e domingo", "5h–17h"]);
   });
@@ -95,7 +95,7 @@ describe("os fatos compactos de uma trilha", () => {
   // dia. Juntá-los numa string só obrigaria a inventar a metade que falta.
   it("dia sem hora, e hora sem dia, cada um sozinho", () => {
     expect(textos({ ...BASE, dias: ["sab", "dom"] }, { comAbertura: true })).toEqual(["sábado e domingo"]);
-    expect(textos({ ...BASE, horario: { abre: "08:00", fecha: "17:00" } }, { comAbertura: true }))
+    expect(textos({ ...BASE, horario: [{ abre: "08:00", fecha: "17:00" }] }, { comAbertura: true }))
       .toEqual(["8h–17h"]);
   });
 });

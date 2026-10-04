@@ -90,6 +90,19 @@ por um erro cru de schema.
 *Custo se errada:* uma operação a mais na espécie. O inverso é um campo que o dono desliga e não
 consegue religar sozinho.
 
+**EMENDA DA TAREFA 11c (2026-10-04) — o `horario` deixa de ser BLOCO e vira UMA entrada, a LISTA de
+faixas.** Decisão dele: *"tem lugares que fecham para o almoço, aí fica de 8 às 10 e 14 às 17"*. O
+horário passou a ser uma lista de 1 a 3 faixas `{abre, fecha}`, e com intervalo as horas de cada faixa
+dependem umas das outras — editá-las folha a folha (o que a H1 e o C1 acima montaram) deixa de fazer
+sentido. O registro tem agora UMA entrada `horario`, espécie `faixas`, cuja gravação **substitui a
+lista inteira**, com as regras (ordem, sobreposição, 24h e meia-noite só sozinhas) em
+`problemaDasFaixas` (`src/lib/horario.ts`), chamada pelas portas de ESCRITA — nunca no schema, que é o
+caminho de leitura. O que a H1 protegia continua: a entrada carrega o "não sei", e é o ÚNICO caminho
+até "sem horário" (`[]` é recusado). O schema LÊ as duas formas — o objeto de antes e a lista — para
+sempre: as fichas no banco estão na forma velha, e o "voltar" a grava de novo verbatim. As espécies
+`bloco` e `hora` ficaram sem entrada; a contração da tela delas é a Tarefa 11d. Os achados que
+moldaram isto estão em `task-11bcd-auditoria.md` (11c-C1, I1–I7), fora do git.
+
 **C1 da Tarefa 2 — `undefined` é SILÊNCIO, e uma regra de coerência nunca afirma o que o dono
 declarou.**
 `prosa-bate-com-piso` acusava ficha **sem** `piso` (que é opcional de propósito): ausente, o campo

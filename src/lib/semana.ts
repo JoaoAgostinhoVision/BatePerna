@@ -141,6 +141,24 @@ export function rotuloProximoDia(dias: readonly Dia[], dia: number): string | nu
   return `abre ${NOME[DIAS[(dia + falta) % 7]]}`;
 }
 
+/** O próximo dia aberto DEPOIS DE HOJE — pra quando hoje é dia de abrir, mas
+ *  as horas de hoje já acabaram (Tarefa 11c, 11c-I5 da auditoria).
+ *
+ *  🔴 NASCEU DE UM DEFEITO QUE ESTAVA NO CÓDIGO: o "abre amanhã às 8h" do
+ *  `rotuloAbertura` não olhava `dias`. Domingo 18h, num lugar de sábado e
+ *  domingo, dizia "amanhã" — e segunda está fechado. `rotuloProximoDia` não
+ *  serve aqui porque conta a partir de HOJE, e hoje está aberto pelo dia.
+ *
+ *  O "amanhã" sai igual ao de `rotuloProximoDia`; o nome do dia é palavra nova. */
+export function rotuloDiaSeguinteAberto(dias: readonly Dia[], dia: number): string | null {
+  const amanha = (dia + 1) % 7;
+  const falta = diasAteAbrir(dias, amanha);
+  if (falta === null) return null;
+  if (falta === 0) return "abre amanhã";
+  // PENDENTE: redação minha, o João ainda não leu
+  return `abre ${NOME[DIAS[(amanha + falta) % 7]]}`;
+}
+
 /** "Abre sábado e domingo." — a frase do motivo, na ficha.
  *
  *  ⚠️ Sem substantivo, igual ao `rotuloFaixa`: não diz o que abre. Ver o topo

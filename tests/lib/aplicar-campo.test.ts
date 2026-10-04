@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
-import { aplicarCampo, removerCampo } from "@/lib/campos-da-ficha";
+import { aplicarCampo, aplicarNoRascunho, removerCampo, tirarDoRascunho } from "@/lib/campos-da-ficha";
 import { loadAll } from "@/lib/ficha";
-import { aberturaDaFicha, fechadoAgora } from "@/lib/horario";
+import { aberturaDaFicha, fechadoAgora, rotuloAbertura } from "@/lib/horario";
 import { fichaSchema } from "@/types/ficha";
 
 // 🔴 C5 da revisão do controlador: `.find` sem guarda devolve `undefined`, e
@@ -103,25 +103,37 @@ describe("aplicarCampo", () => {
     expect(() => aplicarCampo(DOC, "piso", "asfalto-de-mentira")).toThrow();
   });
 
-  // 🔴 I3 DA REVISÃO (2026-09-26). Esta asserção morava na linha de cima, com
-  // o `DOC` da Rampa — QUE NÃO TEM `horario`. O ZodError trazia DOIS problemas
-  // (a regex E `fecha: Required`), então trocar `z.string().regex(/^\d{2}:\d{2}$/)`
-  // por `z.string()` no schema deixava a suíte inteira VERDE: o segundo
-  // problema sobrava quando o primeiro saía. A regex não estava pinada por
-  // nada — e o comentário da espécie `hora` e a justificativa do bloco se
-  // APOIAM nela.
-  //
-  // Morde assim: `minutosDeHHMM("8h")` dá `NaN`, `fechadoNaHora` devolve
-  // `false` (o lugar nunca fecha) e o chip da ficha pública renderiza
-  // `NaNhundefined`.
-  it("a regex HH:MM do `hora` é a ÚNICA coisa que recusa `8h` numa ficha que TEM horário", () => {
-    const e = estouro(() => aplicarCampo(DOC_HORA, "horario.abre", "8h"));
-    expect(e).toBeInstanceOf(ZodError);
-    const issues = (e as ZodError).issues;
-    expect(issues, "mais de um problema: o teste mediria a regex por acidente").toHaveLength(1);
-    expect(issues[0].path.join(".")).toBe("horario.abre");
-    expect(issues[0].code).toBe("invalid_string");
-    expect((issues[0] as { validation?: unknown }).validation).toBe("regex");
+  // 🔴 I3 DA REVISÃO (2026-09-26), refeito na 11c pra LISTA de faixas. A regex
+  // HH:MM do schema não estava pinada por nada — e morde assim:
+  // `minutosDeHHMM("8h")` dá `NaN`, `fechadoNaHora` devolve `false` (o lugar
+  // nunca fecha) e o chip da ficha pública renderiza `NaNhundefined`. Agora há
+  // DUAS portas em série (a regra da escrita, `problemaDasFaixas`, e o schema),
+  // e cada uma é provada SOZINHA — senão arrancar uma sobrevive porque a outra
+  // estoura igual (47ª espécie).
+  it("o schema de LEITURA recusa `8h` nas duas formas, e aceita a hora certa", () => {
+    const com = (horario: unknown) => fichaSchema.safeParse({ ...JSON.parse(DOC), horario }).success;
+    expect(com([{ abre: "08:00", fecha: "17:00" }]), "o controle: a lista certa passa").toBe(true);
+    expect(com({ abre: "08:00", fecha: "17:00" }), "o controle: a forma velha passa").toBe(true);
+    expect(com([{ abre: "8h", fecha: "17:00" }])).toBe(false);
+    expect(com({ abre: "8h", fecha: "17:00" })).toBe(false);
+    expect(com([{ abre: "08:00", fecha: "17h" }])).toBe(false);
+  });
+
+  // 🔴 11c-C1 NA LEITURA: `[]` não é "sem horário" — sem horário é a chave
+  // AUSENTE. Uma lista vazia lida como horário fecharia o lugar a qualquer hora.
+  // E mais de 3 faixas não é forma que o app conheça.
+  it("o schema de LEITURA recusa a lista vazia e a de 4 faixas", () => {
+    const com = (horario: unknown) => fichaSchema.safeParse({ ...JSON.parse(DOC), horario }).success;
+    const f = (abre: string, fecha: string) => ({ abre, fecha });
+    expect(com([f("06:00", "07:00"), f("08:00", "09:00"), f("10:00", "11:00")]), "o controle: 3 passam").toBe(true);
+    expect(com([])).toBe(false);
+    expect(com([f("06:00", "07:00"), f("08:00", "09:00"), f("10:00", "11:00"), f("12:00", "13:00")])).toBe(false);
+  });
+
+  it("a porta de escrita recusa `8h` com FRASE, antes de o schema ver", () => {
+    const e = estouro(() => aplicarCampo(DOC_HORA, "horario", [{ abre: "8h", fecha: "17:00" }]));
+    expect(e).not.toBeInstanceOf(ZodError);
+    expect((e as Error).message).toContain('"8h"');
   });
 
   it("caminho fora do registro é recusado", () => {
@@ -221,20 +233,25 @@ describe("removerCampo — o 'não sei'", () => {
   });
 });
 
-// 🔴 RULING H1 (2026-09-26). Antes disto não existia caminho nenhum pra dizer
-// "este lugar não fecha por horário": `horario` é opcional no schema, mas
-// `abre` e `fecha` são obrigatórios DENTRO dele, então nenhuma remoção de
-// campo alcançava a régua "ficha sem horário NUNCA fecha". O bloco inteiro
-// virou entrada do registro, de espécie `bloco`.
-describe("o bloco opcional inteiro — o 'não sei' do horário", () => {
-  it("remover o bloco tira a chave, e o documento continua válido", () => {
+// 🔴 RULING H1 (2026-09-26), e desde a Tarefa 11c o horário é UMA entrada do
+// registro, de espécie `faixas`: a lista inteira de 1 a 3 faixas, gravada de
+// uma vez — a gravação SUBSTITUI a lista (11c-I1 da auditoria). O "não sei"
+// (que o painel diz "não tem") tira a chave, e é o ÚNICO caminho até "sem
+// horário": `[]` é recusado (11c-C1).
+describe("o horário inteiro — a lista de faixas e o 'não sei'", () => {
+  const ALMOCO = [
+    { abre: "08:00", fecha: "10:00" },
+    { abre: "14:00", fecha: "17:00" },
+  ];
+
+  it("remover o horário tira a chave, e o documento continua válido", () => {
     const depois = JSON.parse(removerCampo(DOC_HORA, "horario"));
     expect("horario" in depois).toBe(false);
     expect(() => fichaSchema.parse(depois)).not.toThrow();
   });
 
   // 🔴 A CONSEQUÊNCIA DE VERDADE, medida no motor que a tela usa
-  // (`fechadoAgora`, `src/lib/horario.ts:117`) — não na presença da chave.
+  // (`fechadoAgora`, `src/lib/horario.ts:246`) — não na presença da chave.
   // Sem esta asserção, o teste de cima prova que uma chave sumiu do JSON e
   // nada sobre o que o app passa a dizer.
   it("o lugar DEIXA DE FECHAR por horário depois do 'não sei'", () => {
@@ -246,47 +263,30 @@ describe("o bloco opcional inteiro — o 'não sei' do horário", () => {
     expect(fechadoAgora(aberturaDaFicha(depois), seisDaTarde)).toBe(false);
   });
 
-  it("só o bloco sai; todo o resto sai idêntico", () => {
+  it("só o horário sai; todo o resto sai idêntico", () => {
     const antes = JSON.parse(DOC_HORA);
     const depois = JSON.parse(removerCampo(DOC_HORA, "horario"));
     expect({ ...depois, horario: antes.horario }).toEqual(antes);
   });
 
-  it("tirar o bloco de quem já não tem é inofensivo, e não inventa a chave", () => {
+  it("tirar o horário de quem já não tem é inofensivo, e não inventa a chave", () => {
     const depois = JSON.parse(removerCampo(DOC, "horario"));
     expect("horario" in depois).toBe(false);
     expect(depois).toEqual(JSON.parse(DOC));
   });
 
-  // 🔴 ESTA É A RECUSA QUE O SCHEMA NÃO FARIA. `{abre, fecha}` bem formado
-  // PASSA no `fichaSchema` — se a guarda do registro sumir, esta chamada não
-  // estoura de jeito nenhum, e a mutação morre no `estouro()` e não num
-  // `toThrow()` de fachada.
-  it("com o bloco PRESENTE, gravar o bloco inteiro é recusado, e a recusa manda editar campo a campo", () => {
-    const e = estouro(() => aplicarCampo(DOC_HORA, "horario", { abre: "06:00", fecha: "18:00" }));
-    expect(e).not.toBeInstanceOf(ZodError);
-    expect((e as Error).message).toContain("horario");
-    expect((e as Error).message).toContain("um campo de cada vez");
-    // e o documento não mudou
-    expect(JSON.parse(DOC_HORA).horario).toEqual(comHora.horario);
+  // 🔴 A GRAVAÇÃO SUBSTITUI A LISTA INTEIRA, com o horário presente — o
+  // contrário do bloco de antes, que recusava. O intervalo do almoço entra
+  // numa versão só: abre e fecha de cada faixa dependem um do outro.
+  it("com o horário PRESENTE, gravar a lista substitui a lista inteira", () => {
+    const depois = JSON.parse(aplicarCampo(DOC_HORA, "horario", ALMOCO));
+    expect(depois.horario).toEqual(ALMOCO);
+    expect({ ...depois, horario: comHora.horario }).toEqual(JSON.parse(DOC_HORA));
   });
 
-  it("gravar meia hora do bloco continua valendo — o bloco não trancou os campos", () => {
-    const depois = JSON.parse(aplicarCampo(DOC_HORA, "horario.abre", "06:00"));
-    expect(depois.horario.abre).toBe("06:00");
-    expect(depois.horario.fecha).toBe(comHora.horario!.fecha);
-  });
-
-  // 🔴 C1 DA REVISÃO (2026-09-26): a primeira redação do H1 deixou o `horario`
-  // numa PORTA DE MÃO ÚNICA. O "não sei" tirava o bloco e nada o trazia de
-  // volta — `abre` sozinho estoura por falta de `fecha`, `fecha` sozinho pela
-  // falta de `abre`, e não havia sequência nenhuma da API que devolvesse
-  // horário a uma ficha sem horário. Ele tocaria "não sei", mudaria de ideia,
-  // e o horário só voltaria com um desenvolvedor no banco. Os quatro casos
-  // abaixo são a IDA E VOLTA completa.
-  it("com o bloco AUSENTE, gravar o bloco inteiro GRAVA", () => {
-    const depois = JSON.parse(aplicarCampo(DOC, "horario", { abre: "05:00", fecha: "17:00" }));
-    expect(depois.horario).toEqual({ abre: "05:00", fecha: "17:00" });
+  it("com o horário AUSENTE, gravar a lista GRAVA — o 'não sei' tem volta", () => {
+    const depois = JSON.parse(aplicarCampo(DOC, "horario", [{ abre: "05:00", fecha: "17:00" }]));
+    expect(depois.horario).toEqual([{ abre: "05:00", fecha: "17:00" }]);
     expect(() => fichaSchema.parse(depois)).not.toThrow();
   });
 
@@ -297,58 +297,86 @@ describe("o bloco opcional inteiro — o 'não sei' do horário", () => {
     const antes = fichaSchema.parse(JSON.parse(DOC));
     expect(fechadoAgora(aberturaDaFicha(antes), seisDaTarde), "a premissa: sem horário ela não fecha").toBe(false);
 
-    const comHorario = aplicarCampo(DOC, "horario", { abre: "05:00", fecha: "17:00" });
+    const comHorario = aplicarCampo(DOC, "horario", [{ abre: "05:00", fecha: "17:00" }]);
     expect(fechadoAgora(aberturaDaFicha(fichaSchema.parse(JSON.parse(comHorario))), seisDaTarde)).toBe(true);
 
     const semDeNovo = removerCampo(comHorario, "horario");
     expect(fechadoAgora(aberturaDaFicha(fichaSchema.parse(JSON.parse(semDeNovo))), seisDaTarde)).toBe(false);
   });
 
-  // 🔴 A CONFERÊNCIA É FOLHA A FOLHA, ANTES DE MONTAR. Montar e deixar o
-  // `fichaSchema.parse` decidir devolveria um ZodError cru que não diz QUAL
-  // das duas horas está errada — e o dono lê a recusa no celular.
-  it("hora mal escrita no bloco é recusada pela regra de `hora`, nomeando a folha", () => {
-    const e = estouro(() => aplicarCampo(DOC, "horario", { abre: "8h", fecha: "17:00" }));
-    expect(e).not.toBeInstanceOf(ZodError);
-    expect((e as Error).message).toContain("horario.abre");
-    expect((e as Error).message).not.toContain("horario.fecha");
+  it("o intervalo gravado chega ao motor: ao meio-dia fechado, abre às 14h", () => {
+    const meioDia = { minutos: 12 * 60, dia: 3, epochS: 0 };
+    const f = fichaSchema.parse(JSON.parse(aplicarCampo(DOC_HORA, "horario", ALMOCO)));
+    expect(fechadoAgora(aberturaDaFicha(f), meioDia)).toBe(true);
+    expect(rotuloAbertura(aberturaDaFicha(f), meioDia)).toBe("abre às 14h");
   });
 
-  it("folha que falta no bloco é nomeada, e o bloco não entra pela metade", () => {
-    const e = estouro(() => aplicarCampo(DOC, "horario", { abre: "06:00" }));
-    expect(e).not.toBeInstanceOf(ZodError);
-    expect((e as Error).message).toContain("horario.fecha");
-    // e nem o `abre` que veio certo foi gravado
-    expect("horario" in JSON.parse(DOC)).toBe(false);
+  // 🔴 "GRAVAR SEMPRE NA FORMA NOVA" vale pra esta porta (11c-I4): a ficha
+  // gravada no objeto de antes sai em lista na PRIMEIRA edição de qualquer
+  // campo, porque o documento inteiro passa pelo schema.
+  it("a ficha na forma VELHA sai em lista na primeira edição de outro campo", () => {
+    const velho = JSON.stringify({ ...JSON.parse(DOC), horario: { abre: "05:00", fecha: "17:00" } });
+    const depois = JSON.parse(aplicarCampo(velho, "voz", "outra voz"));
+    expect(depois.horario).toEqual([{ abre: "05:00", fecha: "17:00" }]);
   });
 
-  it("chave que não é do bloco é recusada nomeando a chave", () => {
-    const e = estouro(() => aplicarCampo(DOC, "horario", { abre: "06:00", fecha: "18:00", almoco: "12:00" }));
+  // 🔴 AS RECUSAS SÃO DA PORTA, COM FRASE — nunca um ZodError cru (que a rota
+  // devolveria como 400 mudo). `problemaDasFaixas` é a fonte das regras.
+  it("lista vazia é recusada, e a frase manda usar o 'não tem'", () => {
+    const e = estouro(() => aplicarCampo(DOC_HORA, "horario", []));
     expect(e).not.toBeInstanceOf(ZodError);
-    expect((e as Error).message).toContain("almoco");
+    expect((e as Error).message).toContain("não tem");
   });
 
-  // O caminho que a revisão provou NUNCA produzir sucesso, agora com recusa
-  // que diz o que fazer em vez de um `Required` sobre a outra hora.
-  it("meia folha de um bloco AUSENTE é recusada mandando preencher o bloco inteiro", () => {
-    const e = estouro(() => aplicarCampo(DOC, "horario.abre", "06:00"));
-    expect(e).not.toBeInstanceOf(ZodError);
-    expect((e as Error).message).toContain("horario");
-    expect((e as Error).message).toContain("inteiro");
-  });
-
-  // 🔴 E A ARMADILHA DA M3 DE NOVO, no caso mais escorregadio do arquivo:
-  // `horario` sem `abre` TAMBÉM estoura no Zod. Um `toThrow()` aqui ficaria
-  // verde com a guarda do registro apagada, e o dono receberia um ZodError em
-  // inglês em vez de "o 'não sei' aqui é tirar o horario inteiro".
-  it("remover MEIA hora é recusado pelo REGISTRO, e a recusa aponta o bloco", () => {
-    for (const caminho of ["horario.abre", "horario.fecha"]) {
-      const e = estouro(() => removerCampo(DOC_HORA, caminho));
-      expect(e, caminho).not.toBeInstanceOf(ZodError);
-      expect((e as Error).message, caminho).toContain("obrigatório");
-      expect((e as Error).message, caminho).toContain(caminho);
-      expect((e as Error).message, caminho).toContain("tirar o `horario` inteiro");
+  it("sobreposta, fora de ordem, 4 faixas, ou meia faixa: recusada com frase", () => {
+    const casos: [unknown, RegExp][] = [
+      [[{ abre: "08:00", fecha: "11:00" }, { abre: "10:00", fecha: "17:00" }], /sobrep/],
+      [[ALMOCO[1], ALMOCO[0]], /ordem/],
+      [[...ALMOCO, { abre: "18:00", fecha: "19:00" }, { abre: "20:00", fecha: "21:00" }], /3/],
+      [[{ abre: "06:00" }], /abrir e da hora de fechar/],
+      [[{ abre: "06:00", fecha: "18:00", almoco: "12:00" }], /almoco/],
+      [{ abre: "06:00", fecha: "18:00" }, /lista/],
+    ];
+    for (const [valor, frase] of casos) {
+      const e = estouro(() => aplicarCampo(DOC_HORA, "horario", valor as never));
+      expect(e, JSON.stringify(valor)).not.toBeInstanceOf(ZodError);
+      expect((e as Error).message, JSON.stringify(valor)).toMatch(frase);
     }
+  });
+
+  // As folhas de antes NÃO SÃO MAIS CAMPOS: a hora de abrir sozinha não se
+  // grava nem se tira — a lista é que é o campo.
+  it("`horario.abre` e `horario.fecha` saíram do registro", () => {
+    for (const caminho of ["horario.abre", "horario.fecha"]) {
+      expect((estouro(() => aplicarCampo(DOC_HORA, caminho, "06:00")) as Error).message, caminho).toContain(
+        "fora do registro",
+      );
+      expect((estouro(() => removerCampo(DOC_HORA, caminho)) as Error).message, caminho).toContain(
+        "fora do registro",
+      );
+    }
+  });
+});
+
+describe("o horário no RASCUNHO — a mesma regra, sem o schema do documento", () => {
+  const RASCUNHO = JSON.stringify({ slug: "lugar-marcador", modos: [], trajeto: { waypoints: [] } });
+
+  it("grava a lista inteira, e só as duas horas de cada faixa", () => {
+    const lista = [{ abre: "08:00", fecha: "10:00" }, { abre: "14:00", fecha: "17:00" }];
+    expect(JSON.parse(aplicarNoRascunho(RASCUNHO, "horario", lista)).horario).toEqual(lista);
+  });
+
+  it("recusa o que a ficha no ar recusa, com a mesma frase", () => {
+    for (const valor of [[], [{ abre: "14:00", fecha: "17:00" }, { abre: "08:00", fecha: "10:00" }]]) {
+      const noAr = (estouro(() => aplicarCampo(DOC_HORA, "horario", valor)) as Error).message;
+      const noRascunho = (estouro(() => aplicarNoRascunho(RASCUNHO, "horario", valor)) as Error).message;
+      expect(noRascunho).toBe(noAr);
+    }
+  });
+
+  it("o 'não sei' tira a chave", () => {
+    const com = aplicarNoRascunho(RASCUNHO, "horario", [{ abre: "08:00", fecha: "10:00" }]);
+    expect("horario" in JSON.parse(tirarDoRascunho(com, "horario"))).toBe(false);
   });
 });
 

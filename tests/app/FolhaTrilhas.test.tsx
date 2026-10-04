@@ -105,7 +105,7 @@ describe("FolhaTrilhas", () => {
   it("trilha fechada sai do grupo 'Hoje o tempo deixa', mesmo com o tempo bom", () => {
     vi.setSystemTime(Date.UTC(2027, 0, 15, 21, 0)); // 18h em Recife
     const AGORA_18 = Math.floor(Date.UTC(2027, 0, 15, 21, 0) / 1000);
-    const fechada = { ...fichaFake("fechada"), horario: { abre: "05:00", fecha: "17:00" } };
+    const fechada = { ...fichaFake("fechada"), horario: [{ abre: "05:00", fecha: "17:00" }] };
     const aberta = fichaFake("aberta"); // sem horário: nunca fecha
     const visiveis = [
       { ficha: fechada, leitura: { estado: "fresco" as const, erro: false, calculadoEm: AGORA_18, aviso: null } },
@@ -292,7 +292,7 @@ describe("o agrupamento pergunta o TOM, não o estado", () => {
     const AGORA_18 = Math.floor(Date.UTC(2027, 0, 15, 21, 0) / 1000);
     const base = fichaFake("fechada");
     const fechada = {
-      ficha: { ...base, condicao: { ...base.condicao, severidade: "cuidado" as const }, horario: { abre: "05:00", fecha: "17:00" } },
+      ficha: { ...base, condicao: { ...base.condicao, severidade: "cuidado" as const }, horario: [{ abre: "05:00", fecha: "17:00" }] },
       leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_18, aviso: null },
     };
     const aberta = { ...molhada("aberta", "cuidado"), leitura: { estado: "frio" as const, erro: false, calculadoEm: AGORA_18, aviso: null } };

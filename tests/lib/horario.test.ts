@@ -8,8 +8,12 @@ import {
   fechadoHoje,
   minutosDeHHMM,
   minutosDoDiaRecife,
+  faixasDe,
+  fechadoNaHora,
+  problemaDasFaixas,
   rotuloAbertura,
   rotuloFaixa,
+  rotuloFaixaCurta,
   rotuloHora,
   type Abertura,
   type Agora,
@@ -21,7 +25,7 @@ import type { Aviso } from "@/lib/aviso";
 // A Pedra Furada fecha às 17h, então às 18h com céu limpo a ficha dizia
 // "Pode ir" com o lugar fechado havia uma hora — o app afirmando mais do que
 // sabe, mesma família do `SEM INFORMAÇÕES · tome cuidado` da v3.4.
-const PEDRA: Horario = { abre: "05:00", fecha: "17:00" };
+const PEDRA: Horario = [{ abre: "05:00", fecha: "17:00" }];
 const h = (hh: number, mm = 0) => hh * 60 + mm;
 
 // 🔴 DESDE 2026-09-11 A PERGUNTA TEM DOIS EIXOS (hora e dia da semana), e estes
@@ -98,14 +102,14 @@ describe("fechadoAgora", () => {
   // seja lida AO CONTRÁRIO em silêncio — que é o que aconteceria com uma
   // comparação simples.
   it("faixa que atravessa a meia-noite (22h–5h) não é lida ao contrário", () => {
-    const noturno: Horario = { abre: "22:00", fecha: "05:00" };
+    const noturno: Horario = [{ abre: "22:00", fecha: "05:00" }];
     expect(fechadoAgora(so(noturno), as(h(23)))).toBe(false);
     expect(fechadoAgora(so(noturno), as(h(3)))).toBe(false);
     expect(fechadoAgora(so(noturno), as(h(12)))).toBe(true);
   });
 
   it("abre e fecha na mesma hora significa 24h, não zero", () => {
-    expect(fechadoAgora(so({ abre: "00:00", fecha: "00:00" }), as(h(13)))).toBe(false);
+    expect(fechadoAgora(so([{ abre: "00:00", fecha: "00:00" }]), as(h(13)))).toBe(false);
   });
 });
 
@@ -300,6 +304,196 @@ describe("fechadoHoje junta o calendário e o dono", () => {
 
   it("agora === null, sem aviso — o comportamento de hoje, preservado", () => {
     expect(fechadoHoje(so(PEDRA), null, null)).toBe(false);
+  });
+});
+
+// 🔴 O HORÁRIO COM INTERVALO (Tarefa 11c, decisão do João, 2026-10-04): *"tem
+// lugares que fecham para o almoço, aí fica de 8 às 10 e 14 às 17"*. O horário
+// passou a ser uma LISTA de 1 a 3 faixas, e o veredito é "dentro de ALGUMA".
+describe("o horário com intervalo — a lista de faixas", () => {
+  const ALMOCO: Horario = [
+    { abre: "08:00", fecha: "10:00" },
+    { abre: "14:00", fecha: "17:00" },
+  ];
+  const fechado = (hor: Horario, minutos: number) => fechadoAgora(so(hor), as(minutos));
+  const frase = (hor: Horario, minutos: number) => rotuloAbertura(so(hor), as(minutos)!);
+
+  // A tabela do brief (H3), hora a hora. As bordas são as de hoje — `<` pra
+  // abrir, `>=` pra fechar —, lidas do código e não da intuição: no minuto de
+  // abrir já abriu, no de fechar já fechou.
+  it("a tabela de horas de 8–10 e 14–17", () => {
+    expect([fechado(ALMOCO, h(7, 59)), frase(ALMOCO, h(7, 59))]).toEqual([true, "abre às 8h"]);
+    expect([fechado(ALMOCO, h(8)), frase(ALMOCO, h(8))]).toEqual([false, null]);
+    expect([fechado(ALMOCO, h(9, 59)), frase(ALMOCO, h(9, 59))]).toEqual([false, null]);
+    expect([fechado(ALMOCO, h(10)), frase(ALMOCO, h(10))]).toEqual([true, "abre às 14h"]);
+    expect([fechado(ALMOCO, h(13, 59)), frase(ALMOCO, h(13, 59))]).toEqual([true, "abre às 14h"]);
+    expect([fechado(ALMOCO, h(14)), frase(ALMOCO, h(14))]).toEqual([false, null]);
+    expect([fechado(ALMOCO, h(17)), frase(ALMOCO, h(17))]).toEqual([true, "abre amanhã às 8h"]);
+  });
+
+  // 🔴 11c-I2: "a próxima faixa" é o MENOR `abre` depois de agora, nunca "a
+  // seguinte no array". O schema de leitura só confere FORMA — um documento
+  // gravado fora de ordem (à mão, pelo "voltar") chega aqui fora de ordem.
+  it("fora de ordem no documento, a resposta é a mesma", () => {
+    const TROCADA: Horario = [ALMOCO[1], ALMOCO[0]];
+    expect(frase(TROCADA, h(7))).toBe("abre às 8h");
+    expect(frase(TROCADA, h(11))).toBe("abre às 14h");
+    expect(frase(TROCADA, h(18))).toBe("abre amanhã às 8h");
+    expect(fechado(TROCADA, h(9))).toBe(false);
+    expect(fechado(TROCADA, h(12))).toBe(true);
+  });
+
+  // 🔴 11c-C1, O CRITICAL DA AUDITORIA: "dentro de alguma faixa" sobre uma
+  // lista VAZIA é "fechado a qualquer hora" — o carimbo dizendo "Fechado" num
+  // lugar cujo dono só tirou as horas. O schema recusa `[]`; esta é a segunda
+  // trava, porque o documento é dado e dado chega torto.
+  it("lista vazia não fecha nunca — é o mesmo silêncio de não ter horário", () => {
+    expect(fechadoNaHora([], h(12))).toBe(false);
+    expect(fechado([], h(3))).toBe(false);
+    expect(frase([], h(12))).toBeNull();
+  });
+
+  it("abreAindaHoje olha a PRÓXIMA faixa, não a primeira", () => {
+    expect(abreAindaHoje(ALMOCO, h(11))).toBe(true);
+    expect(abreAindaHoje(ALMOCO, h(17))).toBe(false);
+  });
+
+  it("a faixa curta mostra as faixas juntas", () => {
+    expect(rotuloFaixaCurta(ALMOCO)).toBe("8h–10h · 14h–17h");
+  });
+
+  it("o motivo, com duas faixas, diz as duas", () => {
+    expect(rotuloFaixa(so(ALMOCO))).toBe("Abre das 8h às 10h e das 14h às 17h.");
+    const TRES: Horario = [
+      { abre: "07:00", fecha: "09:00" },
+      { abre: "10:00", fecha: "12:00" },
+      { abre: "14:00", fecha: "17:30" },
+    ];
+    expect(rotuloFaixa(so(TRES))).toBe("Abre das 7h às 9h, das 10h às 12h e das 14h às 17h30.");
+  });
+
+  // 🔴 M1 DA AUDITORIA: "byte a byte igual a hoje" só se prova com OURO tirado
+  // do código de ANTES. Estas strings foram geradas pelo `horario.ts` anterior
+  // à 11c (2026-10-04, `1de5d53`), com as duas fichas reais e as horas da
+  // tabela, e coladas aqui. Escrever o esperado depois seria tautologia.
+  describe("com UMA faixa, tudo sai como saía — o ouro do código de antes", () => {
+    const OURO = {
+      pedra: { h: [{ abre: "05:00", fecha: "17:00" }], faixa: "Fecha às 17h, abre às 5h.", curta: "5h–17h" },
+      veu: { h: [{ abre: "08:00", fecha: "17:00" }], faixa: "Fecha às 17h, abre às 8h.", curta: "8h–17h" },
+    } as const;
+    const HORAS: Record<string, { pedra: [boolean, string | null]; veu: [boolean, string | null] }> = {
+      "04:59": { pedra: [true, "abre às 5h"], veu: [true, "abre às 8h"] },
+      "05:00": { pedra: [false, null], veu: [true, "abre às 8h"] },
+      "07:59": { pedra: [false, null], veu: [true, "abre às 8h"] },
+      "08:00": { pedra: [false, null], veu: [false, null] },
+      "09:59": { pedra: [false, null], veu: [false, null] },
+      "10:00": { pedra: [false, null], veu: [false, null] },
+      "13:59": { pedra: [false, null], veu: [false, null] },
+      "14:00": { pedra: [false, null], veu: [false, null] },
+      "16:59": { pedra: [false, null], veu: [false, null] },
+      "17:00": { pedra: [true, "abre amanhã às 5h"], veu: [true, "abre amanhã às 8h"] },
+      "23:59": { pedra: [true, "abre amanhã às 5h"], veu: [true, "abre amanhã às 8h"] },
+      "00:00": { pedra: [true, "abre às 5h"], veu: [true, "abre às 8h"] },
+    };
+
+    it("o motivo e a faixa curta", () => {
+      for (const o of Object.values(OURO)) {
+        expect(rotuloFaixa(so(o.h))).toBe(o.faixa);
+        expect(rotuloFaixaCurta(o.h)).toBe(o.curta);
+      }
+    });
+
+    it("hora a hora, o veredito e a frase", () => {
+      for (const [hhmm, esperado] of Object.entries(HORAS)) {
+        const m = minutosDeHHMM(hhmm);
+        for (const k of ["pedra", "veu"] as const) {
+          expect([fechadoNaHora(OURO[k].h, m), rotuloAbertura(so(OURO[k].h), as(m)!)], `${k} ${hhmm}`).toEqual(
+            esperado[k],
+          );
+        }
+      }
+    });
+  });
+
+  // 🔴 11c-I5: UM DEFEITO DE HOJE que esta tarefa conserta. O "abre amanhã às
+  // 8h" não olhava `dias`: domingo 18h, num lugar de sábado e domingo, dizia
+  // "amanhã" — e segunda está fechado.
+  it("domingo 18h num lugar de sábado e domingo: abre SÁBADO, não amanhã", () => {
+    const FIM_DE_SEMANA: Abertura = { horario: [{ abre: "08:00", fecha: "17:00" }], dias: ["sab", "dom"] };
+    expect(rotuloAbertura(FIM_DE_SEMANA, em(h(18), 0))).toBe("abre sábado às 8h");
+    // e no sábado à noite o amanhã é verdade, e continua sendo dito
+    expect(rotuloAbertura(FIM_DE_SEMANA, em(h(18), 6))).toBe("abre amanhã às 8h");
+  });
+
+  it("o único dia é hoje: depois de fechar, abre no mesmo dia da semana que vem", () => {
+    const SO_DOMINGO: Abertura = { horario: [{ abre: "08:00", fecha: "17:00" }], dias: ["dom"] };
+    expect(rotuloAbertura(SO_DOMINGO, em(h(18), 0))).toBe("abre domingo às 8h");
+  });
+});
+
+describe("faixasDe — a forma velha e a nova, lidas igual", () => {
+  it("o objeto de antes vira lista de uma faixa; a lista passa como está", () => {
+    expect(faixasDe({ abre: "05:00", fecha: "17:00" })).toEqual([{ abre: "05:00", fecha: "17:00" }]);
+    expect(faixasDe([{ abre: "08:00", fecha: "10:00" }])).toEqual([{ abre: "08:00", fecha: "10:00" }]);
+  });
+
+  it("ausência e lixo não viram horário", () => {
+    expect(faixasDe(undefined)).toBeUndefined();
+    expect(faixasDe("08:00")).toBeUndefined();
+    expect(faixasDe(null)).toBeUndefined();
+  });
+});
+
+// 🔴 11c-I2: AS REGRAS DE UMA LISTA VÁLIDA MORAM AQUI, não no schema. No schema
+// elas virariam 400 MUDO na porta e, pior, derrubariam a LEITURA de um
+// documento já gravado — e o "voltar" grava verbatim, então a leitura tem de
+// aceitar tudo o que um dia entrou. Quem chama isto são as portas de ESCRITA.
+describe("problemaDasFaixas — as regras da porta de escrita", () => {
+  const f = (abre: string, fecha: string) => ({ abre, fecha });
+
+  it("as listas boas passam", () => {
+    expect(problemaDasFaixas([f("05:00", "17:00")])).toBeNull();
+    expect(problemaDasFaixas([f("08:00", "10:00"), f("14:00", "17:00")])).toBeNull();
+    expect(problemaDasFaixas([f("07:00", "09:00"), f("10:00", "12:00"), f("14:00", "17:00")])).toBeNull();
+    // 24h e a travessia da meia-noite continuam valendo SOZINHAS
+    expect(problemaDasFaixas([f("00:00", "00:00")])).toBeNull();
+    expect(problemaDasFaixas([f("22:00", "05:00")])).toBeNull();
+  });
+
+  // M4 da auditoria: faixas que se TOCAM são aceitas. Com `<`/`>=` às 10:00
+  // cai na segunda e não há buraco nenhum.
+  it("faixas que se tocam (8–10 e 10–14) passam, e às 10h está aberto", () => {
+    const TOCAM: Horario = [f("08:00", "10:00"), f("10:00", "14:00")];
+    expect(problemaDasFaixas(TOCAM)).toBeNull();
+    expect(fechadoNaHora(TOCAM, h(10))).toBe(false);
+  });
+
+  it("vazia, ou com mais de 3, não entra — e a frase diz o que fazer", () => {
+    expect(problemaDasFaixas([])).toMatch(/não tem/);
+    expect(problemaDasFaixas([f("06:00", "07:00"), f("08:00", "09:00"), f("10:00", "11:00"), f("12:00", "13:00")])).toMatch(/3/);
+  });
+
+  it("uma faixa sem a hora de abrir ou de fechar não entra", () => {
+    expect(problemaDasFaixas([{ abre: "08:00" }])).toMatch(/abrir e .* fechar/);
+    expect(problemaDasFaixas([{ fecha: "17:00" }])).toMatch(/abrir e .* fechar/);
+    expect(problemaDasFaixas([{ abre: "8h", fecha: "17:00" }])).not.toBeNull();
+    expect(problemaDasFaixas({ abre: "08:00", fecha: "17:00" })).not.toBeNull(); // a porta grava a lista
+    expect(problemaDasFaixas("08:00")).not.toBeNull();
+  });
+
+  it("fora de ordem não entra", () => {
+    expect(problemaDasFaixas([f("14:00", "17:00"), f("08:00", "10:00")])).toMatch(/ordem/);
+  });
+
+  it("sobrepostas não entram", () => {
+    expect(problemaDasFaixas([f("08:00", "11:00"), f("10:00", "17:00")])).toMatch(/sobrep/);
+  });
+
+  // H2: combinar 22–05 (ou 24h) com outra faixa fica de fora — é o que existia
+  // e estava testado, e nenhum lugar real pediu outra coisa.
+  it("24h ou travessia da meia-noite, só sozinhas", () => {
+    expect(problemaDasFaixas([f("06:00", "08:00"), f("22:00", "05:00")])).toMatch(/sozinha/);
+    expect(problemaDasFaixas([f("00:00", "00:00"), f("08:00", "10:00")])).toMatch(/sozinha/);
   });
 });
 

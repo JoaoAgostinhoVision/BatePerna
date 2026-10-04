@@ -389,7 +389,7 @@ const TABELA: readonly Regra[] = [
     //
     // 🔴 SÃO DUAS FRASES PORQUE SÃO DOIS COMPORTAMENTOS, e a versão anterior
     // escrevia UMA e ela era FALSA num deles (achado na revisão de 2026-09-27).
-    // `fechadoNaHora` (`src/lib/horario.ts:95`) trata `abre === fecha` como
+    // `dentroDaFaixa` (`src/lib/horario.ts:194`) trata `abre === fecha` como
     // **24h: nunca fecha** — não como travessia da meia-noite. Dizer a esse dono
     // que o app vai anunciar o lugar "aberto a noite toda e fechado o dia todo"
     // seria descrever o OUTRO caso. A fronteira `<` × `<=` é de propósito e tem
@@ -404,8 +404,8 @@ const TABELA: readonly Regra[] = [
     achar: (fichas) =>
       fichas.flatMap((f) => {
         if (!f.horario) return []; // ausente é silêncio: ficha sem horário nunca fecha
-        const [ah, am] = f.horario.abre.split(":").map(Number);
-        const [fh, fm] = f.horario.fecha.split(":").map(Number);
+        const faixa = f.horario.find((x) => x.abre >= x.fecha) ?? f.horario[0]; // HH:MM: o texto ordena
+        const [[ah, am], [fh, fm]] = [faixa.abre, faixa.fecha].map((x) => x.split(":").map(Number));
         const abre = ah * 60 + am;
         const fecha = fh * 60 + fm;
         if (abre < fecha) return [];
@@ -414,11 +414,11 @@ const TABELA: readonly Regra[] = [
           slug: f.slug,
           frase: abre === fecha
             // PENDENTE: redação minha, o João ainda não leu
-            ? `${nomeDe(f)} abre e fecha no mesmo horário (${f.horario.abre}) — assim o app ` +
+            ? `${nomeDe(f)} abre e fecha no mesmo horário (${faixa.abre}) — assim o app ` +
               "entende que o lugar está aberto 24 horas e nunca fecha. Se for isso, diga no " +
               "texto da ficha; se não for, um dos dois horários está errado."
             // PENDENTE: redação minha, o João ainda não leu
-            : `${nomeDe(f)} abre às ${f.horario.abre} e fecha às ${f.horario.fecha} — assim o ` +
+            : `${nomeDe(f)} abre às ${faixa.abre} e fecha às ${faixa.fecha} — assim o ` +
               "app vai anunciá-la aberta a noite toda e fechada o dia todo. Se for de " +
               "propósito, diga isso no texto da ficha; se não for, os dois horários estão " +
               "trocados.",
@@ -444,7 +444,7 @@ const TABELA: readonly Regra[] = [
       }),
   },
   {
-    // Mata: `horario.fecha: "23:00"` enquanto o `avisos` da mesma ficha diz
+    // Mata: o horário fechando às "23:00" enquanto o `avisos` da mesma ficha diz
     // "fecha às 17h". A hora vive em DUAS fontes — o campo, que o carimbo lê, e
     // a prosa, que a pessoa lê — e nada as amarrava. É o defeito que
     // `tests/app/km-uma-fonte.test.tsx` fechou pro km e ninguém tinha fechado
@@ -455,13 +455,13 @@ const TABELA: readonly Regra[] = [
       fichas.flatMap((f) => {
         const citada = /fecha (?:às|as) (\d{1,2})\s*h/i.exec(prosaDe(f));
         if (!citada || !f.horario) return []; // sem campo, quem acusa é a regra de cima
-        if (Number(citada[1]) === Number(f.horario.fecha.split(":")[0])) return [];
+        if (f.horario.some((x) => Number(citada[1]) === Number(x.fecha.split(":")[0]))) return [];
         return [{
           slug: f.slug,
           // PENDENTE: redação minha, o João ainda não leu
           frase:
             `O texto de ${nomeDe(f)} diz que fecha às ${citada[1]}h e o horário da ficha diz ` +
-            `${f.horario.fecha}. As duas frases aparecem na mesma tela.`,
+            `${f.horario[f.horario.length - 1].fecha}. As duas frases aparecem na mesma tela.`,
         }];
       }),
   },

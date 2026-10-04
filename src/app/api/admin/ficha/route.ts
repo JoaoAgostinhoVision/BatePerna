@@ -34,7 +34,7 @@ const TEXTO = { "content-type": "text/plain; charset=utf-8", "cache-control": "n
  *  ⚠️ ZodError NÃO VAZA. A `message` dele é um JSON de `invalid_type`, que não
  *  é português e não diz nada a ninguém — ali o corpo continua vazio. Todo
  *  caminho que tem frase pra ele já a escreveu à mão (`recusarVazio`,
- *  `validarFolha`, `gravarBloco`, `exigirCampo`); o que sobra pro zod é o
+ *  `validarFolha`, `conferirFaixas`, `exigirCampo`); o que sobra pro zod é o
  *  documento inteiro não fechando, e disso o dono não tem o que fazer campo a
  *  campo. */
 function recusar400(erro: unknown): Response {

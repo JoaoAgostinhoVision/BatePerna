@@ -443,7 +443,7 @@ describe("Carimbo — a cor acompanha a leitura que está na tela", () => {
     const { container } = montarNaMoldura({
       estado: "fresco",
       calculadoEm: Math.floor(Date.UTC(2027, 0, 15, 21, 0) / 1000),
-      abertura: { horario: { abre: "05:00", fecha: "17:00" } },
+      abertura: { horario: [{ abre: "05:00", fecha: "17:00" }] },
     });
     const moldura = container.querySelector("main.bp");
 
@@ -762,7 +762,7 @@ describe("a ficha e o cartão dizem a MESMA palavra", () => {
 // relógio à mão — e sempre com timer FALSO, senão a suíte passaria de manhã e
 // cairia à noite.
 describe("Carimbo — a hora, e não só a chuva", () => {
-  const PEDRA = { abre: "05:00", fecha: "17:00" };
+  const PEDRA = [{ abre: "05:00", fecha: "17:00" }];
 
   // Move o relógio E devolve o instante, porque os dois têm que andar juntos:
   // na primeira versão deste bloco eu movi só o relógio e deixei a leitura das

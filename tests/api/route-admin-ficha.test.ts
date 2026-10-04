@@ -9,6 +9,8 @@ import { semearAcervo } from "../banco";
 import { fichaSchema, type Ficha } from "@/types/ficha";
 import type { Violacao } from "@/lib/coerencia";
 import { RECUSA_TIRAR_O_LUGAR } from "@/lib/campos-da-ficha";
+import { fichaDaVersao } from "@/lib/ficha-fonte";
+import { aberturaDaFicha, fechadoAgora } from "@/lib/horario";
 import { SEGUNDO, TERCEIRO, TRES_PONTOS, doisPontos, tresPontos } from "../ficha-de-tres-pontos";
 
 // 🔴 C1 da revisão do controlador: o molde real é `tests/api/route-admin-aviso.test.ts`
@@ -250,6 +252,33 @@ describe("PUT /api/admin/ficha — voltar a uma versão (versaoId)", () => {
     expect(JSON.parse(h[1].doc).voz, "a versão de onde voltamos continua lá").toBe("a segunda");
   });
 
+  // 🔴 TAREFA 11c (11c-I4 da auditoria): o "voltar" grava o documento VERBATIM,
+  // de propósito — então a forma VELHA do horário (`{abre, fecha}`) volta a ser
+  // a versão atual sempre que ele voltar a uma versão de antes da 11c. A
+  // leitura da forma velha é PERMANENTE, e o veredito tem de sair certo dela.
+  it("voltar a uma versão com o horário na forma VELHA grava verbatim, e o veredito sai certo", async () => {
+    const PEDRA = "pedra-furada-de-venturosa";
+    const velha = JSON.stringify({
+      ...JSON.parse((await versaoAtual(c, PEDRA))!.doc),
+      horario: { abre: "05:00", fecha: "17:00" },
+    });
+    const vVelha = await gravarVersao(c, PEDRA, velha, "semente", AGORA);
+    const almoco = [
+      { abre: "08:00", fecha: "10:00" },
+      { abre: "14:00", fecha: "17:00" },
+    ];
+    expect((await PUT(pedido({ slug: PEDRA, campo: "horario", valor: almoco }, cookieBom))).status).toBe(200);
+    const meioDia = { minutos: 12 * 60, dia: 3, epochS: 0 };
+    const seis = { minutos: 18 * 60, dia: 3, epochS: 0 };
+    const leitura = async () => aberturaDaFicha(fichaDaVersao(PEDRA, (await versaoAtual(c, PEDRA))!.doc));
+    expect(fechadoAgora(await leitura(), meioDia), "a premissa: com o almoço, meio-dia é fechado").toBe(true);
+
+    expect((await PUT(pedido({ slug: PEDRA, versaoId: vVelha }, cookieBom))).status).toBe(200);
+    expect((await versaoAtual(c, PEDRA))!.doc, "o voltar deixou de gravar verbatim").toBe(velha);
+    expect(fechadoAgora(await leitura(), meioDia), "a forma velha 05–17 ao meio-dia está aberta").toBe(false);
+    expect(fechadoAgora(await leitura(), seis)).toBe(true);
+  });
+
   // 🔴 A LINHA VERMELHA EM FORMA DE TESTE. Sem conferir que a versão é DAQUELE
   // lugar, um `versaoId` qualquer põe a voz da Rampa na ficha da Pedra Furada —
   // exatamente o defeito que este projeto mais caça, agora com ajuda do banco.
@@ -384,7 +413,7 @@ describe("PUT /api/admin/ficha — voltar a uma versão (versaoId)", () => {
  *  pela semente, ou por "voltar" a uma versão que o acervo de hoje reprova). */
 const comChip = (f: Ficha, curto: string) => JSON.stringify({ ...f, custo: { ...f.custo, curto } });
 
-/** A ficha `f` SEM o bloco `horario`. */
+/** A ficha `f` SEM o `horario`. */
 const semHorario = (f: Ficha) => {
   const { horario: _fora, ...resto } = f;
   return JSON.stringify(resto);
@@ -507,71 +536,69 @@ describe('PUT /api/admin/ficha — o "não sei" de verdade (removerCampo)', () =
   });
 });
 
-describe("PUT /api/admin/ficha — o bloco horario, e a IDA E VOLTA", () => {
+describe("PUT /api/admin/ficha — o horário (a lista de faixas), e a IDA E VOLTA", () => {
   // `pedra-furada-de-venturosa` é a ficha que TEM `horario` e cuja prosa NÃO
-  // cita hora de fechar — tirar o bloco dela não mexe com a coerência, o que
-  // deixa estes casos medindo o bloco e mais nada.
+  // cita hora de fechar — mexer no horário dela não mexe com a coerência, o que
+  // deixa estes casos medindo o horário e mais nada.
   const PEDRA = "pedra-furada-de-venturosa";
+  const ALMOCO = [
+    { abre: "08:00", fecha: "10:00" },
+    { abre: "14:00", fecha: "17:00" },
+  ];
 
-  it("naoSei no bloco inteiro: 200, e o horário sai da ficha", async () => {
+  it("naoSei no horário: 200, e o horário sai da ficha", async () => {
     const res = await PUT(pedido({ slug: PEDRA, campo: "horario", naoSei: true }, cookieBom));
     expect(res.status).toBe(200);
     expect("horario" in JSON.parse((await versaoAtual(c, PEDRA))!.doc)).toBe(false);
     expect(await historico(c, PEDRA)).toHaveLength(2);
   });
 
-  // 🔴 A 47ª ESPÉCIE (duas portas em série): `campoPorCaminho("horario.abre")`
-  // ACHA a entrada, então a guarda da lista branca deixa passar; quem recusa é
-  // `aplicarCampo`. Só o status não distingue as duas — a frase, que nomeia o
-  // BLOCO, distingue.
-  it("horario.abre sozinho com o bloco AUSENTE: 400, e a recusa nomeia o bloco", async () => {
-    // A Rampa é a ficha do acervo que não tem `horario`.
-    expect(ficha.horario, "a premissa deste caso: a Rampa não tem horário").toBeUndefined();
-    const res = await PUT(pedido({ slug: SLUG, campo: "horario.abre", valor: "09:00" }, cookieBom));
+  // Desde a Tarefa 11c as duas horas não são campos: a lista é o campo. A
+  // recusa é a da LISTA BRANCA da rota (400 de corpo vazio, como todo caminho
+  // fora do registro — a tela nunca o oferece), e não chega a `aplicarCampo`.
+  it("horario.abre sozinho: 400 da lista branca, e nada é gravado", async () => {
+    const res = await PUT(pedido({ slug: PEDRA, campo: "horario.abre", valor: "09:00" }, cookieBom));
     expect(res.status).toBe(400);
-    expect(await res.text()).toMatch(/`horario` não está preenchido nesta ficha/);
-    expect(await historico(c, SLUG)).toHaveLength(1);
+    expect(await res.text()).toBe("");
+    expect(await historico(c, PEDRA)).toHaveLength(1);
   });
 
   // 🔴🔴 A IDA E VOLTA — O CASO QUE A LEI DELE EXIGE. Sem ele, o "não sei" do
   // horário é uma porta de mão única pela ROTA: o dono desliga o horário, muda
-  // de ideia, e religá-lo passa a exigir um desenvolvedor no banco. A emenda C1
-  // da Tarefa 1 consertou isso em `aplicarCampo`; aqui é a prova de que a
-  // consertou ONDE O CELULAR ALCANÇA.
-  it("tirar o horário e RELIGÁ-LO inteiro, tudo pela API: o bloco volta", async () => {
+  // de ideia, e religá-lo passa a exigir um desenvolvedor no banco.
+  it("tirar o horário e RELIGÁ-LO, tudo pela API: o horário volta, em lista", async () => {
     expect((await PUT(pedido({ slug: PEDRA, campo: "horario", naoSei: true }, cookieBom))).status).toBe(200);
     expect("horario" in JSON.parse((await versaoAtual(c, PEDRA))!.doc)).toBe(false);
 
-    const volta = await PUT(
-      pedido({ slug: PEDRA, campo: "horario", valor: { abre: "08:00", fecha: "17:00" } }, cookieBom),
-    );
+    const volta = await PUT(pedido({ slug: PEDRA, campo: "horario", valor: [{ abre: "08:00", fecha: "17:00" }] }, cookieBom));
     expect(volta.status, await volta.text()).toBe(200);
-    expect(JSON.parse((await versaoAtual(c, PEDRA))!.doc).horario).toEqual({ abre: "08:00", fecha: "17:00" });
+    expect(JSON.parse((await versaoAtual(c, PEDRA))!.doc).horario).toEqual([{ abre: "08:00", fecha: "17:00" }]);
     expect(await historico(c, PEDRA)).toHaveLength(3);
   });
 
-  // O par do de cima: com o bloco PRESENTE, gravar o objeto fechado por cima
-  // pularia a conferência folha a folha, e é recusado.
-  it("gravar o bloco horario quando ele JÁ existe: 400, e nada é gravado", async () => {
-    const res = await PUT(
-      pedido({ slug: PEDRA, campo: "horario", valor: { abre: "08:00", fecha: "17:00" } }, cookieBom),
-    );
-    expect(res.status).toBe(400);
-    expect(await res.text()).toMatch(/`horario` já está preenchido/);
-    expect(await historico(c, PEDRA)).toHaveLength(1);
+  // O contrário do bloco de antes da 11c, que recusava: com o horário PRESENTE,
+  // gravar a lista SUBSTITUI a lista — é assim que o intervalo do almoço entra.
+  it("com o horário presente, a lista nova substitui a velha: 200, numa versão só", async () => {
+    const res = await PUT(pedido({ slug: PEDRA, campo: "horario", valor: ALMOCO }, cookieBom));
+    expect(res.status, await res.text()).toBe(200);
+    expect(JSON.parse((await versaoAtual(c, PEDRA))!.doc).horario).toEqual(ALMOCO);
+    expect(await historico(c, PEDRA)).toHaveLength(2);
   });
 
-  // 🔴 VALIDAÇÃO FOLHA A FOLHA (C1): a recusa nomeia `horario.abre`, não devolve
-  // um erro cru de schema sobre o objeto inteiro. É a diferença entre o dono
-  // saber qual das duas horas está errada e não saber.
-  it("religar o bloco com uma hora malformada: 400 nomeando horario.abre", async () => {
-    expect((await PUT(pedido({ slug: PEDRA, campo: "horario", naoSei: true }, cookieBom))).status).toBe(200);
-    const res = await PUT(
-      pedido({ slug: PEDRA, campo: "horario", valor: { abre: "8h", fecha: "17:00" } }, cookieBom),
-    );
-    expect(res.status).toBe(400);
-    expect(await res.text()).toMatch(/`horario\.abre` não serve/);
-    expect(await historico(c, PEDRA)).toHaveLength(2); // ⬅ só a semente e o "não sei"
+  // 🔴 AS RECUSAS CHEGAM AO CELULAR COM FRASE — nunca o 400 de corpo vazio que
+  // um ZodError produziria (`recusar400` só deixa vazar `Error` exato).
+  it("hora malformada, lista vazia ou faixas sobrepostas: 400 com frase, e nada é gravado", async () => {
+    const casos: [unknown, RegExp][] = [
+      [[{ abre: "8h", fecha: "17:00" }], /"8h"/],
+      [[], /não tem/],
+      [[{ abre: "08:00", fecha: "11:00" }, { abre: "10:00", fecha: "17:00" }], /sobrep/],
+    ];
+    for (const [valor, frase] of casos) {
+      const res = await PUT(pedido({ slug: PEDRA, campo: "horario", valor }, cookieBom));
+      expect(res.status, JSON.stringify(valor)).toBe(400);
+      expect(await res.text(), JSON.stringify(valor)).toMatch(frase);
+    }
+    expect(await historico(c, PEDRA)).toHaveLength(1); // ⬅ só a semente
   });
 });
 

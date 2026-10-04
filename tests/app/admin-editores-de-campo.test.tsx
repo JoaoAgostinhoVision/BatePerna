@@ -5,7 +5,6 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import ts from "typescript";
 import FichaInteira, { LISTA_MULTIPLA, moldeDe, multiploDe } from "@/app/admin/FichaInteira";
 import { NAO_SEI, NAO_TEM, TIRANDO } from "@/app/admin/campos/BotaoNaoSei";
-import { BLOCO_JUNTO } from "@/app/admin/campos/EditorBloco";
 import {
   ACRESCENTAR_PONTO,
   DICA_DO_PONTO_NOVO,
@@ -27,6 +26,7 @@ import {
 import { LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
 import {
   ALEM_DO_PROVEDOR,
+  BLOCO_JUNTO,
   CAIXA_VAZIA,
   COM_ESTE_NUMERO,
   DE_VOLTA_AO_AR,
@@ -256,15 +256,15 @@ describe('O "não sei" — a ação que TIRA a chave, e só em campo opcional', 
   // (`horario` ausente na rampa-do-pepe, que mostrava a frase de ausência, o
   // formulário das duas horas E o "Não tem" ao mesmo tempo) e o CAMPO COMUM
   // (`dias` ausente).
-  it("BLOCO já ausente não oferece 'não tem' — o formulário das horas continua", () => {
+  it("HORÁRIO já ausente não oferece 'não tem' — as caixas das horas continuam", () => {
     expect(semHorario.horario, "esta ficha ganhou horário — o caso deixou de ser medido").toBeUndefined();
     render(<FichaInteira ficha={semHorario} />);
     expect(
       bloco("horario").querySelector('[data-nao-sei="horario"]'),
-      "o bloco já ausente ofereceu tirar o que já não está lá",
+      "o horário já ausente ofereceu tirar o que já não está lá",
     ).toBeNull();
-    // e o que o bloco ausente TEM de oferecer continua ali
-    expect(bloco("horario").querySelector('[data-hora="horario.abre"]')).not.toBeNull();
+    // e o que o horário ausente TEM de oferecer continua ali
+    expect(bloco("horario").querySelector('[data-hora="horario.0.abre"]')).not.toBeNull();
     expect(bloco("horario").querySelector('[data-salvar="horario"]')).not.toBeNull();
   });
 
@@ -607,128 +607,95 @@ describe("EditorBooleano — o interruptor, com TRÊS estados", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-describe("EditorHora — o seletor, e o que ele NÃO confere", () => {
-  it("grava a hora no caminho da folha", async () => {
+describe("EditorFaixas — o horário inteiro, a lista de faixas (Tarefa 11c)", () => {
+  const ALMOCO = [
+    { abre: "08:00", fecha: "10:00" },
+    { abre: "14:00", fecha: "17:00" },
+  ];
+  const caixa = (i: number, chave: "abre" | "fecha"): HTMLInputElement =>
+    bloco("horario").querySelector<HTMLInputElement>(`[data-hora="horario.${i}.${chave}"]`)!;
+
+  it("abre com as horas que estão no banco, uma faixa por linha", () => {
+    render(<FichaInteira ficha={comHorario} />);
+    expect(caixa(0, "abre").value).toBe(comHorario.horario![0].abre);
+    expect(caixa(0, "fecha").value).toBe(comHorario.horario![0].fecha);
+  });
+
+  // 🔴 A LISTA INTEIRA VAI NO CORPO, e é ela que a porta grava por cima.
+  it("grava a LISTA inteira no caminho `horario`, nunca uma folha", async () => {
     const { fetchFalso } = comRota();
     render(<FichaInteira ficha={comHorario} />);
-    fireEvent.change(bloco("horario.fecha").querySelector('[data-hora="horario.fecha"]')!, {
-      target: { value: "19:30" },
-    });
-    salvar("horario.fecha");
+    fireEvent.change(caixa(0, "fecha"), { target: { value: "19:30" } });
+    salvar("horario");
     await waitFor(() => expect(fetchFalso).toHaveBeenCalled());
     expect(corpoDe(fetchFalso)).toEqual({
       slug: comHorario.slug,
-      campo: "horario.fecha",
-      valor: "19:30",
+      campo: "horario",
+      valor: [{ abre: comHorario.horario![0].abre, fecha: "19:30" }],
     });
   });
 
-  it("abre com a hora que está no banco", () => {
-    render(<FichaInteira ficha={comHorario} />);
-    expect(
-      bloco("horario.abre").querySelector<HTMLInputElement>('[data-hora="horario.abre"]')!.value,
-    ).toBe(comHorario.horario!.abre);
-  });
-
-  // 🔴 O PLANO PEDIA "recusa texto que não é HH:MM antes de chamar a rota", e o
-  // que ESTE caso mede é o estado que o controle DE FATO produz. Medido em
-  // 2026-09-30: `<input type="time">` recebendo `"17h"` fica com `value === ""`
-  // — a especificação manda o controle devolver hora válida ou string vazia.
-  // Uma regex de `HH:MM` no cliente seria condição semanticamente morta.
-  it("hora que não é HH:MM não chega à rota: o controle a esvazia, e o editor recusa dizendo o formato", () => {
+  // 🔴 O EDITOR MÍNIMO NUNCA ENCOLHE A LISTA SEM O DONO VER: com intervalo ele
+  // mostra as duas faixas e manda as duas — mexer numa não apaga a outra.
+  it("com intervalo: mostra as duas faixas e grava as duas", async () => {
     const { fetchFalso } = comRota();
-    render(<FichaInteira ficha={comHorario} />);
-    const caixa = bloco("horario.fecha").querySelector<HTMLInputElement>('[data-hora="horario.fecha"]')!;
-    // 🔴 O ALCANCE DA FRASE, CRAVADO: ela só cobre o que ESTE controle produz.
-    // Num navegador que não implementa `type=time` o controle cai para texto
-    // livre, `"17h"` chega à porta, volta um ZodError de corpo VAZIO e o dono lê
-    // `ERRO_GRAVAR` — a frase menos informativa do app, exatamente onde a
-    // `HORA_VAZIA` prometia dizer o formato. Isso está ESCRITO no docblock dela,
-    // e esta asserção é o que impede a promessa de crescer sem ninguém medir:
-    // o dia em que este `type` deixar de ser `time`, o caso fica vermelho.
-    expect(
-      caixa.type,
-      "o instrumento não é mais um seletor de hora: a recusa de cliente passou a ser alcançável por texto livre, e a frase da porta é a menos informativa do app",
-    ).toBe("time");
-    fireEvent.change(caixa, { target: { value: "17h" } });
-    expect(caixa.value, "o controle de hora aceitou texto livre — o caso mudou de natureza").toBe("");
-    salvar("horario.fecha");
-    expect(fetchFalso, "uma hora malformada foi mandada pra porta").not.toHaveBeenCalled();
-    const alerta = bloco("horario.fecha").querySelector('[role="alert"]')!.textContent;
-    expect(alerta).toBe(HORA_VAZIA);
-    expect(alerta, "a frase da recusa não diz o formato").toMatch(/HH:MM/);
+    render(<FichaInteira ficha={{ ...comHorario, horario: ALMOCO }} />);
+    expect([caixa(0, "abre"), caixa(0, "fecha"), caixa(1, "abre"), caixa(1, "fecha")].map((c) => c.value)).toEqual([
+      "08:00",
+      "10:00",
+      "14:00",
+      "17:00",
+    ]);
+    fireEvent.change(caixa(1, "fecha"), { target: { value: "18:00" } });
+    salvar("horario");
+    await waitFor(() => expect(fetchFalso).toHaveBeenCalled());
+    expect(corpoDe(fetchFalso).valor).toEqual([ALMOCO[0], { abre: "14:00", fecha: "18:00" }]);
   });
-});
 
-// ═══════════════════════════════════════════════════════════════════════════
-describe("O bloco `horario` — a tela não convida ao que a porta nega (A3)", () => {
-  it("bloco AUSENTE: o editor do bloco pede as folhas JUNTAS e grava o bloco inteiro", async () => {
+  it("sem horário: UMA faixa de caixas vazias, e preenchê-las grava a lista de uma faixa", async () => {
     expect(semHorario.horario, "esta ficha ganhou horário — o caso deixou de ser medido").toBeUndefined();
     const { fetchFalso } = comRota();
     render(<FichaInteira ficha={semHorario} />);
-    const dentro = bloco("horario");
-    fireEvent.change(dentro.querySelector('[data-hora="horario.abre"]')!, { target: { value: "08:00" } });
-    fireEvent.change(dentro.querySelector('[data-hora="horario.fecha"]')!, { target: { value: "17:00" } });
+    expect([caixa(0, "abre").value, caixa(0, "fecha").value], "nada pré-preenchido").toEqual(["", ""]);
+    expect(bloco("horario").querySelector('[data-hora="horario.1.abre"]')).toBeNull();
+    fireEvent.change(caixa(0, "abre"), { target: { value: "08:00" } });
+    fireEvent.change(caixa(0, "fecha"), { target: { value: "17:00" } });
     salvar("horario");
     await waitFor(() => expect(fetchFalso).toHaveBeenCalled());
-    // 🔴 É ISTO que a porta aceita com o bloco ausente (`gravarBloco`): o bloco,
-    // com as folhas dentro, chaveadas pelo nome DENTRO do bloco.
     expect(corpoDe(fetchFalso)).toEqual({
       slug: semHorario.slug,
       campo: "horario",
-      valor: { abre: "08:00", fecha: "17:00" },
+      valor: [{ abre: "08:00", fecha: "17:00" }],
     });
   });
 
-  // 🔴 O DEFEITO DO A3, DE FRENTE: com o bloco ausente a porta RECUSA
-  // `{campo: "horario.abre"}`. A tela não pode oferecer o ato.
-  it("bloco AUSENTE: a folha NÃO oferece salvar nem editor nenhum", () => {
-    render(<FichaInteira ficha={semHorario} />);
-    for (const folha of ["horario.abre", "horario.fecha"]) {
-      const el = bloco(folha);
-      expect(el.querySelector("[data-editor]"), `${folha} ganhou editor com o bloco ausente`).toBeNull();
-      expect(
-        within(el).queryByRole("button"),
-        `${folha} ofereceu um botão — o dono levaria recusa num campo que a tela ofereceu`,
-      ).toBeNull();
-      expect(within(el).queryByRole("textbox"), `${folha} ofereceu caixa`).toBeNull();
-      // e continua DIZENDO que está ausente, em vez de sumir
-      expect(el.hasAttribute("data-ausente"), `${folha} perdeu a marca de ausente`).toBe(true);
-    }
-  });
-
-  it("bloco AUSENTE: uma folha só não grava — o bloco entra completo", () => {
+  // 🔴 A LISTA VAZIA E A MEIA FAIXA NUNCA SAEM DAQUI (11c-C1): uma caixa vazia
+  // é recusada antes da viagem, dizendo o formato.
+  it("uma caixa vazia não grava — a rota nem é chamada, e a frase diz o formato", () => {
     const { fetchFalso } = comRota();
     render(<FichaInteira ficha={semHorario} />);
-    fireEvent.change(bloco("horario").querySelector('[data-hora="horario.abre"]')!, {
-      target: { value: "08:00" },
-    });
+    fireEvent.change(caixa(0, "abre"), { target: { value: "08:00" } });
     salvar("horario");
-    expect(fetchFalso, "meio bloco foi mandado pra porta").not.toHaveBeenCalled();
+    expect(fetchFalso, "meia faixa foi mandada pra porta").not.toHaveBeenCalled();
     expect(bloco("horario").querySelector('[role="alert"]')!.textContent).toBe(HORA_VAZIA);
   });
 
-  // O par simétrico. Sem ele, um editor de bloco que mostrasse as caixas SEMPRE
-  // passaria no caso de cima — e `aplicarCampo` no bloco PRESENTE é recusado de
-  // propósito (cada folha tem o instrumento dela).
-  it("bloco PRESENTE: o bloco não oferece caixa nenhuma, e cada folha oferece a dela", () => {
-    expect(comHorario.horario, "esta ficha perdeu o horário — o caso deixou de ser medido").toBeTruthy();
+  // 🔴 O ALCANCE DA `HORA_VAZIA`, CRAVADO (herdado do caso do `EditorHora`):
+  // `<input type="time">` recebendo `"17h"` fica com `value === ""`, e é por
+  // isso que a recusa de cliente diz o FORMATO. O dia em que este `type` deixar
+  // de ser `time`, texto livre chega à porta — que recusa com a frase dela.
+  it("hora que não é HH:MM não chega à rota: o controle a esvazia", () => {
+    const { fetchFalso } = comRota();
     render(<FichaInteira ficha={comHorario} />);
-    expect(
-      bloco("horario").querySelectorAll("input"),
-      "o bloco presente ofereceu caixa — a porta recusa gravar o bloco por cima",
-    ).toHaveLength(0);
-    expect(bloco("horario").querySelector('[data-salvar="horario"]')).toBeNull();
-    // o bloco continua respondendo a pergunta que é dele
-    expect(emCampo("horario").getByText("Sim")).toBeTruthy();
-    // e as folhas, agora sim, editam
-    for (const folha of ["horario.abre", "horario.fecha"]) {
-      expect(bloco(folha).querySelector(`[data-hora="${folha}"]`), `${folha} ficou sem editor`).not.toBeNull();
-      expect(bloco(folha).querySelector(`[data-salvar="${folha}"]`)).not.toBeNull();
-    }
+    expect(caixa(0, "fecha").type, "o instrumento não é mais um seletor de hora").toBe("time");
+    fireEvent.change(caixa(0, "fecha"), { target: { value: "17h" } });
+    expect(caixa(0, "fecha").value, "o controle de hora aceitou texto livre").toBe("");
+    salvar("horario");
+    expect(fetchFalso).not.toHaveBeenCalled();
+    expect(bloco("horario").querySelector('[role="alert"]')!.textContent).toMatch(/HH:MM/);
   });
 
-  it("bloco PRESENTE: o botão do bloco tira o BLOCO INTEIRO, nunca uma folha", async () => {
+  it("com horário: o 'não tem' tira o horário INTEIRO", async () => {
     const { fetchFalso } = comRota();
     render(<FichaInteira ficha={comHorario} />);
     fireEvent.click(bloco("horario").querySelector('[data-nao-sei="horario"]')!);
@@ -736,14 +703,10 @@ describe("O bloco `horario` — a tela não convida ao que a porta nega (A3)", (
     expect(corpoDe(fetchFalso)).toEqual({ slug: comHorario.slug, campo: "horario", naoSei: true });
   });
 
-  it("a folha de um bloco nunca oferece 'não sei' — o dela é tirar o bloco", () => {
+  it("as duas horas não são campos da tela: nenhum bloco `horario.abre`/`horario.fecha`", () => {
     render(<FichaInteira ficha={comHorario} />);
-    for (const folha of ["horario.abre", "horario.fecha"]) {
-      expect(
-        bloco(folha).querySelector(`[data-nao-sei="${folha}"]`),
-        `${folha} ofereceu "não sei" — a porta recusa, mandando tirar o bloco`,
-      ).toBeNull();
-    }
+    expect(screen.queryByTestId("campo-horario.abre")).toBeNull();
+    expect(screen.queryByTestId("campo-horario.fecha")).toBeNull();
   });
 });
 
@@ -805,25 +768,11 @@ describe("O que ele escolheu não some em recusa nenhuma — nos quatro instrume
     ).toBe(frase);
   }
 
-  it("EditorHora: a hora escolhida continua no seletor, nas três recusas", async () => {
-    for (const r of RECUSAS) {
-      const { fetchFalso } = recusaEm(comHorario, r.fazer());
-      const caixa = (): HTMLInputElement =>
-        bloco("horario.fecha").querySelector<HTMLInputElement>('[data-hora="horario.fecha"]')!;
-      fireEvent.change(caixa(), { target: { value: "19:45" } });
-      salvar("horario.fecha");
-      await esperarAlerta("horario.fecha", r.frase);
-      expect(fetchFalso, `${r.nome}: a viagem não aconteceu — o caso mediu uma recusa de cliente`).toHaveBeenCalled();
-      expect(caixa().value, `${r.nome}: a hora que ele acabou de escolher sumiu`).toBe("19:45");
-      cleanup();
-    }
-  });
-
-  it("EditorBloco: as DUAS horas continuam nas caixas, nas três recusas", async () => {
+  it("EditorFaixas: as DUAS horas continuam nas caixas, nas três recusas", async () => {
     for (const r of RECUSAS) {
       const { fetchFalso } = recusaEm(semHorario, r.fazer());
       const caixa = (folha: string): HTMLInputElement =>
-        bloco("horario").querySelector<HTMLInputElement>(`[data-hora="horario.${folha}"]`)!;
+        bloco("horario").querySelector<HTMLInputElement>(`[data-hora="horario.0.${folha}"]`)!;
       fireEvent.change(caixa("abre"), { target: { value: "08:15" } });
       fireEvent.change(caixa("fecha"), { target: { value: "17:45" } });
       salvar("horario");
@@ -934,11 +883,12 @@ describe("Os guardas do que cresce — registro × instrumento", () => {
   // até alguém pô-la aqui, com a tarefa que a pega escrita ao lado.
   const SEM_EDITOR_AINDA: string[] = [];
 
-  /** A espécie que tem editor E `<p>` ao lado, e isso é de significado, não de
-   *  estilo: com o bloco PRESENTE o `EditorBloco` não mostra caixa nenhuma (só o
-   *  botão que tira o bloco inteiro), então quem responde "este lugar TEM
-   *  horário?" é o `<p>` com o `SIM`. Ver o `mostraOValor` do `INSTRUMENTO`. */
-  const MOSTRA_O_VALOR_AO_LADO = ["bloco"];
+  /** A espécie que tem editor E `<p>` ao lado. Era o `bloco` (com o bloco
+   *  PRESENTE o `EditorBloco` não mostrava caixa nenhuma, e quem respondia "este
+   *  lugar TEM horário?" era o `<p>` com o `SIM`); desde a Tarefa 11c o horário
+   *  é `faixas`, cujas caixas SÃO o valor, e nenhuma espécie do registro mostra
+   *  o valor ao lado. A lista fica, vazia, pelo mesmo motivo da de cima. */
+  const MOSTRA_O_VALOR_AO_LADO: string[] = [];
 
   // 🔴 O CASO "espécie sem editor continua em LEITURA" MORREU NA TASK 8, como o
   // comentário dele prometia: ele existia pra provar que `coord` renderizava
@@ -991,12 +941,11 @@ describe("Os guardas do que cresce — registro × instrumento", () => {
       for (const c of camposDaFicha(f)) {
         const el = bloco(c.caminho);
         // 🔴 CAMPO AUSENTE FICA DE FORA, e isso NÃO é afrouxar o portão: a folha
-        // de um bloco ausente não ganha editor de propósito (a porta recusa
-        // `horario.abre` sozinho, e oferecer ali uma caixa seria a tela
-        // convidando ao que a porta nega — ver o docblock do `Bloco`). Ali a
-        // ausência do editor é resposta ao DADO, não à espécie, e misturar os
-        // dois faria este portão recusar um comportamento certo. Quem guarda
-        // aquele estado é o `describe` do bloco `horario`.
+        // de um bloco ausente não ganhava editor de propósito (a porta recusava
+        // a meia hora sozinha — ver o docblock do `Bloco`). Ali a ausência do
+        // editor era resposta ao DADO, não à espécie. Desde a Tarefa 11c não há
+        // bloco no registro, mas a regra fica: a partição é por espécie, e um
+        // campo ausente responde ao dado.
         if (el.hasAttribute("data-ausente")) continue;
         const tem = el.querySelector(`[data-editor="${c.caminho}"]`) !== null;
         const antes = vistas.get(c.especie);
@@ -1010,7 +959,8 @@ describe("Os guardas do que cresce — registro × instrumento", () => {
       unmount();
     }
     expect(medidos, "nenhum campo preenchido foi medido: o portão ficaria oco").toBeGreaterThan(60);
-    expect(vistas.size, "nem toda espécie do registro apareceu na tela: o portão mediria menos").toBe(7);
+    // 6: `hora` e `bloco` ficaram sem entrada no registro na Tarefa 11c.
+    expect(vistas.size, "nem toda espécie do registro apareceu na tela: o portão mediria menos").toBe(6);
     expect(
       [...vistas]
         .filter(([, tem]) => !tem)
@@ -1117,20 +1067,17 @@ describe("Os guardas do que cresce — registro × instrumento", () => {
     }
   });
 
-  // 🔴 O GUARDA DO `EditorBloco` E DO `EditorHora`, no lugar de um comentário:
-  // o editor de bloco mostra um seletor de HORA por folha, e o editor de hora
-  // não oferece "não sei". As duas coisas só são certas enquanto toda folha de
-  // bloco for `hora` e obrigatória. Bloco novo com folha de prosa (ou folha de
-  // hora opcional) sai vermelho aqui.
-  it("toda folha de BLOCO do registro é da espécie `hora` e é obrigatória", () => {
-    const blocos = CAMPOS_DA_FICHA.filter((c) => c.especie === "bloco").map((c) => c.caminho);
-    expect(blocos.length, "o registro perdeu o bloco: o guarda ficaria oco").toBeGreaterThan(0);
-    const folhas = CAMPOS_DA_FICHA.filter((c) => blocos.some((b) => c.caminho.startsWith(`${b}.`)));
-    expect(folhas.length, "bloco sem folha nenhuma: o guarda ficaria oco").toBeGreaterThan(1);
-    for (const f of folhas) {
-      expect(f.especie, `${f.caminho}: o EditorBloco mostraria um seletor de HORA pra ela`).toBe("hora");
-      expect(f.obrigatorio, `${f.caminho} é opcional e o EditorHora não oferece "não sei"`).toBe(true);
-    }
+  // 🔴 O GUARDA DO `EditorBloco` E DO `EditorHora` MUDOU DE PERGUNTA na Tarefa
+  // 11c. Ele cravava que toda folha de bloco era `hora` e obrigatória — certo
+  // enquanto o `horario` era um bloco de duas folhas. Desde a 11c o horário é
+  // UMA entrada (`faixas`), e as duas espécies ficaram sem entrada nenhuma:
+  // só existem até a 11d contrair a tela delas. Este caso impede que uma
+  // entrada nova nasça numa delas sem ninguém decidir a tela de novo.
+  it("nenhuma entrada do registro é `bloco` ou `hora` desde a 11c — e o horário é `faixas`", () => {
+    expect(CAMPOS_DA_FICHA.filter((c) => c.especie === "bloco" || c.especie === "hora").map((c) => c.caminho)).toEqual(
+      [],
+    );
+    expect(CAMPOS_DA_FICHA.filter((c) => c.especie === "faixas").map((c) => c.caminho)).toEqual(["horario"]);
   });
 });
 

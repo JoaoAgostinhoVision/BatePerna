@@ -40,7 +40,7 @@ import type { PropsDoEditor } from "./tipos";
  *  *"não sei"* — o dono não sabe, e o app cala. Num BLOCO opcional (`horario`
  *  é o único hoje) tirar o bloco é a **única** forma de dizer *"este lugar não
  *  tem hora pra abrir e fechar"* — a régua do app é que ficha sem horário nunca
- *  fecha (`src/lib/horario.ts:117`). Chamar isso de "não sei" faria o dono
+ *  fecha (`src/lib/horario.ts:246`). Chamar isso de "não sei" faria o dono
  *  declarar ignorância quando o que ele está declarando é um FATO. Duas
  *  palavras, um botão, e teste pros dois ramos: frase montada por bifurcação
  *  com prova de um lado só é a 49ª espécie do catálogo deste projeto.

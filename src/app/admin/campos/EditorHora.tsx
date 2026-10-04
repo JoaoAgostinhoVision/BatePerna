@@ -1,4 +1,8 @@
 "use client";
+// ⚠️ SEM CAMPO NENHUM DESDE A TAREFA 11c: as folhas `horario.abre`/`.fecha`
+// viraram a LISTA de faixas (`EditorFaixas`). Este arquivo continua só porque o
+// `Record` de espécies da `FichaInteira` e do `FormularioDeLugar` ainda o pede;
+// quem o apaga é a Tarefa 11d. O docblock abaixo descreve o tempo em que servia.
 import { useState } from "react";
 import { usarGravacao } from "./gravar";
 import { HORA_VAZIA, SALVANDO, SALVAR } from "./palavras";

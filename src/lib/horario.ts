@@ -24,8 +24,23 @@
  *  módulo direto. Mesma razão que já exilou `piso.ts` — a razão inteira está
  *  escrita lá. */
 
-/** `abre` e `fecha` em "HH:MM", hora de Recife. */
-export type Horario = { abre: string; fecha: string };
+/** UMA faixa: `abre` e `fecha` em "HH:MM", hora de Recife. */
+export type Faixa = { abre: string; fecha: string };
+
+/** 🔴 O HORÁRIO É UMA LISTA DE 1 A 3 FAIXAS desde a Tarefa 11c (2026-10-04),
+ *  decisão dele: *"tem lugares que fecham para o almoço, aí fica de 8 às 10 e
+ *  14 às 17"*. O lugar está aberto quando a hora cai DENTRO DE ALGUMA faixa.
+ *
+ *  ⚠️ A FORMA DE ANTES (`{abre, fecha}`, um objeto) CONTINUA SENDO LIDA, PARA
+ *  SEMPRE — não é migração temporária. As fichas que já estão no banco foram
+ *  gravadas nela, a semente não regrava slug existente, e o "voltar a uma
+ *  versão" grava o documento antigo verbatim. Quem a converte é `faixasDe`,
+ *  chamada pelo schema de leitura e pelo histórico do painel. */
+export type Horario = readonly Faixa[];
+
+/** O formato de uma hora, numa fonte só: o schema (`src/types/ficha.ts`) e a
+ *  porta de escrita (`problemaDasFaixas`) leem ESTE. */
+export const HHMM = /^\d{2}:\d{2}$/;
 
 /** O agreste não tem horário de verão — mesmo offset fixo que `validade.ts` e
  *  o placar do `ConfirmarFui` usam. Repetir o número aqui seria uma segunda
@@ -33,12 +48,102 @@ export type Horario = { abre: string; fecha: string };
 import { OFFSET_RECIFE_S } from "./validade";
 import {
   fechadoNoDia,
+  rotuloDiaSeguinteAberto,
   rotuloProximoDia,
   rotuloSemana,
   diaDaSemanaRecife,
   type Dia,
 } from "./semana";
 import { fechadoPeloDono, type Aviso } from "./aviso";
+
+/** As duas formas do horário, lidas como a mesma lista — a função PURA que o
+ *  transform do schema e o histórico do painel (`campos-mudados.ts`) usam, pra
+ *  as duas leituras nunca discordarem.
+ *
+ *  Objeto → lista de uma faixa; lista → a mesma lista; qualquer outra coisa →
+ *  `undefined`. NÃO confere as faixas por dentro: forma é do schema, regra é de
+ *  `problemaDasFaixas`. */
+export function faixasDe(horario: unknown): Faixa[] | undefined {
+  if (Array.isArray(horario)) return horario as Faixa[];
+  if (typeof horario === "object" && horario !== null) return [horario as Faixa];
+  return undefined;
+}
+
+/** Uma faixa que vira a meia-noite (`fecha` antes de `abre`) ou de 24h
+ *  (`abre === fecha`). Só vale SOZINHA na lista. */
+const especial = (f: Faixa): boolean => minutosDeHHMM(f.abre) >= minutosDeHHMM(f.fecha);
+
+/** 🔴 AS REGRAS DE UMA LISTA DE FAIXAS VÁLIDA — e elas moram AQUI, não no
+ *  schema (11c-I2 da auditoria). No schema elas virariam um 400 de corpo
+ *  vazio na porta (o dono leria "Não consegui salvar."), e pior: o schema é o
+ *  caminho de LEITURA, e uma regra que um documento já gravado não cumpra
+ *  derrubaria a lista inteira da home. Quem chama isto são as portas de
+ *  ESCRITA (`aplicarCampo`, `aplicarNoRascunho` e a publicação), que estouram
+ *  com a frase.
+ *
+ *  Devolve a frase da recusa, ou `null` quando a lista serve. As regras:
+ *   - de 1 a 3 faixas; `[]` não é "sem horário" — sem horário é a chave
+ *     AUSENTE, e o caminho até ela é o "não tem" (11c-C1);
+ *   - cada faixa com as duas horas, no formato `HH:MM`;
+ *   - com mais de uma faixa: em ordem, sem sobreposição — e nenhuma de 24h nem
+ *     atravessando a meia-noite (essas só valem sozinhas, que é o que existia e
+ *     estava testado). Faixas que se TOCAM (8–10 e 10–14) passam (M4). */
+export function problemaDasFaixas(lista: unknown): string | null {
+  if (!Array.isArray(lista)) {
+    // PENDENTE: redação minha, o João ainda não leu
+    return "o horário é uma lista de faixas, cada uma com a hora de abrir e a de fechar";
+  }
+  if (lista.length === 0) {
+    // PENDENTE: redação minha, o João ainda não leu
+    return 'o horário precisa de pelo menos uma faixa: se o lugar não tem hora pra abrir e fechar, use "não tem"';
+  }
+  if (lista.length > 3) {
+    // PENDENTE: redação minha, o João ainda não leu
+    return "o horário cabe em até 3 faixas";
+  }
+  for (const f of lista as unknown[]) {
+    const faixa = (typeof f === "object" && f !== null ? f : {}) as Record<string, unknown>;
+    if (typeof faixa.abre !== "string" || typeof faixa.fecha !== "string") {
+      // PENDENTE: redação minha, o João ainda não leu
+      return "cada faixa do horário precisa da hora de abrir e da hora de fechar";
+    }
+    const estranha = Object.keys(faixa).find((k) => k !== "abre" && k !== "fecha");
+    if (estranha !== undefined) {
+      // PENDENTE: redação minha, o João ainda não leu
+      return `uma faixa do horário só tem a hora de abrir e a de fechar ("${estranha}" não é parte dela)`;
+    }
+    if (!HHMM.test(faixa.abre) || !HHMM.test(faixa.fecha)) {
+      // PENDENTE: redação minha, o João ainda não leu
+      return `"${faixa.abre}" ou "${faixa.fecha}" não é uma hora (o formato é 08:00)`;
+    }
+  }
+  const faixas = lista as Faixa[];
+  if (faixas.length === 1) return null;
+  const sozinha = faixas.find(especial);
+  if (sozinha) {
+    // PENDENTE: redação minha, o João ainda não leu
+    return (
+      `a faixa ${rotuloFaixaCurta([sozinha])} é de 24 horas ou passa da meia-noite, ` +
+      "e uma faixa assim só vale sozinha no horário"
+    );
+  }
+  for (let i = 1; i < faixas.length; i++) {
+    const antes = faixas[i - 1];
+    const agora = faixas[i];
+    if (minutosDeHHMM(agora.abre) < minutosDeHHMM(antes.abre)) {
+      // PENDENTE: redação minha, o João ainda não leu
+      return (
+        `as faixas vão na ordem do dia: a ${rotuloFaixaCurta([agora])} vem antes da ` +
+        `${rotuloFaixaCurta([antes])}`
+      );
+    }
+    if (minutosDeHHMM(agora.abre) < minutosDeHHMM(antes.fecha)) {
+      // PENDENTE: redação minha, o João ainda não leu
+      return `as faixas ${rotuloFaixaCurta([antes])} e ${rotuloFaixaCurta([agora])} se sobrepõem`;
+    }
+  }
+  return null;
+}
 
 /** O relógio de Recife inteiro: que horas são, que dia da semana é — e o
  *  INSTANTE de onde os dois saíram.
@@ -82,20 +187,48 @@ export function agoraRecife(epochS: number): Agora {
   return { minutos: minutosDoDiaRecife(epochS), dia: diaDaSemanaRecife(epochS), epochS };
 }
 
-/** Está fora da faixa de HORAS agora? Metade da pergunta — quem responde a
- *  pergunta inteira é `fechadoAgora`, logo abaixo.
+/** A hora cai DENTRO desta faixa? As bordas são as de sempre: no minuto de
+ *  abrir já abriu, no minuto de fechar já fechou.
  *
  *  A faixa que VIRA A MEIA-NOITE (`fecha` antes de `abre`, tipo 22:00–05:00)
  *  funciona — não porque alguma ficha precise hoje, mas porque a alternativa
  *  seria uma faixa dessas ser lida ao contrário em silêncio. */
-export function fechadoNaHora(horario: Horario | undefined, minutos: number | null): boolean {
-  if (!horario || minutos === null) return false;
-  const abre = minutosDeHHMM(horario.abre);
-  const fecha = minutosDeHHMM(horario.fecha);
-  if (abre === fecha) return false;               // 24h: nunca fecha
+function dentroDaFaixa(faixa: Faixa, minutos: number): boolean {
+  const abre = minutosDeHHMM(faixa.abre);
+  const fecha = minutosDeHHMM(faixa.fecha);
+  if (abre === fecha) return true;                // 24h: nunca fecha
   return abre < fecha
-    ? minutos < abre || minutos >= fecha
-    : minutos < abre && minutos >= fecha;         // faixa que atravessa a meia-noite
+    ? minutos >= abre && minutos < fecha
+    : minutos >= abre || minutos < fecha;         // faixa que atravessa a meia-noite
+}
+
+/** Está fora das faixas de HORAS agora? Metade da pergunta — quem responde a
+ *  pergunta inteira é `fechadoAgora`, logo abaixo.
+ *
+ *  Fechado é estar fora de TODAS as faixas: no intervalo do almoço (entre 10h
+ *  e 14h, num lugar de 8–10 e 14–17) está fechado.
+ *
+ *  🔴 A LISTA VAZIA NÃO FECHA (11c-C1, o Critical da auditoria). "Fora de todas
+ *  as faixas" de uma lista sem faixa nenhuma é "fechado a qualquer hora" — o
+ *  carimbo dizendo "Fechado" num lugar cujo dono só tirou as horas. O schema
+ *  recusa `[]`; esta guarda é a segunda trava, porque documento é dado. */
+export function fechadoNaHora(horario: Horario | undefined, minutos: number | null): boolean {
+  if (!horario || horario.length === 0 || minutos === null) return false;
+  return !horario.some((faixa) => dentroDaFaixa(faixa, minutos));
+}
+
+/** O `abre` da PRÓXIMA faixa ainda hoje, se houver: o MENOR `abre` depois de
+ *  agora — nunca "a seguinte no array", que o documento pode trazer fora de
+ *  ordem (11c-I2). */
+function proximaAberturaHoje(horario: Horario, minutos: number): Faixa | undefined {
+  return horario
+    .filter((f) => minutos < minutosDeHHMM(f.abre))
+    .sort((a, b) => minutosDeHHMM(a.abre) - minutosDeHHMM(b.abre))[0];
+}
+
+/** A primeira faixa do dia: o menor `abre` de todos. É dela o "abre amanhã". */
+function primeiraDoDia(horario: Horario): Faixa {
+  return [...horario].sort((a, b) => minutosDeHHMM(a.abre) - minutosDeHHMM(b.abre))[0];
 }
 
 /** Está fechado AGORA? — a pergunta INTEIRA, pelos dois eixos.
@@ -149,7 +282,7 @@ export function fechadoHoje(
  *  sabe que está fechado — é o que separa "abre às 5h" de "abre amanhã às 5h",
  *  e a diferença entre as duas frases é o dia inteiro de quem lê. */
 export function abreAindaHoje(horario: Horario, minutos: number): boolean {
-  return minutos < minutosDeHHMM(horario.abre);
+  return proximaAberturaHoje(horario, minutos) !== undefined;
 }
 
 /** "05:00" → "5h"; "17:30" → "17h30". Mesma forma do `horaCurtaRecife`, que já
@@ -160,7 +293,8 @@ export function rotuloHora(hhmm: string): string {
   return Number(m) === 0 ? `${Number(h)}h` : `${Number(h)}h${m}`;
 }
 
-/** "5h–17h" — a faixa compacta, pro ticket da ficha e pra lista do acervo.
+/** "5h–17h" · "8h–10h · 14h–17h" — as faixas compactas, pro ticket da ficha e
+ *  pra lista do acervo. Com uma faixa só, sai como sempre saiu.
  *
  *  🔴 Ela vivia ESCRITA À MÃO dentro de `[slug]/page.tsx` (`${rotuloHora(abre)}–${rotuloHora(fecha)}`),
  *  e ali era a única tela que a mostrava. Com `/trilhas` passando a mostrá-la
@@ -168,7 +302,8 @@ export function rotuloHora(hhmm: string): string {
  *  podendo escrever a mesma faixa de formas diferentes — a família de sempre.
  *  O travessão é o EN DASH, e é o que separa uma faixa de uma subtração. */
 export function rotuloFaixaCurta(horario: Horario): string {
-  return `${rotuloHora(horario.abre)}–${rotuloHora(horario.fecha)}`;
+  // PENDENTE: redação minha, o João ainda não leu — o " · " entre as faixas
+  return horario.map((f) => `${rotuloHora(f.abre)}–${rotuloHora(f.fecha)}`).join(" · ");
 }
 
 /** A linha de baixo do carimbo fechado: "abre às 5h", "abre amanhã às 5h",
@@ -191,10 +326,13 @@ export function rotuloAbertura(abertura: Abertura, agora: Agora): string | null 
     return rotuloProximoDia(abertura.dias, agora.dia);
   }
   if (abertura.horario && fechadoNaHora(abertura.horario, agora.minutos)) {
-    const hora = rotuloHora(abertura.horario.abre);
-    return abreAindaHoje(abertura.horario, agora.minutos)
-      ? `abre às ${hora}`
-      : `abre amanhã às ${hora}`;
+    const hoje = proximaAberturaHoje(abertura.horario, agora.minutos);
+    if (hoje) return `abre às ${rotuloHora(hoje.abre)}`;
+    // 🔴 O "amanhã" OLHA `dias` desde a 11c (11c-I5): domingo 18h, num lugar de
+    // sábado e domingo, "abre amanhã" era mentira — segunda está fechado.
+    const dia = abertura.dias ? rotuloDiaSeguinteAberto(abertura.dias, agora.dia) : "abre amanhã";
+    // PENDENTE: redação minha, o João ainda não leu — o dia pelo nome + a hora
+    return dia === null ? null : `${dia} às ${rotuloHora(primeiraDoDia(abertura.horario).abre)}`;
   }
   return null;
 }
@@ -207,10 +345,17 @@ export function rotuloAbertura(abertura: Abertura, agora: Agora): string | null 
 export function rotuloFaixa(abertura: Abertura): string {
   const partes: string[] = [];
   if (abertura.dias?.length) partes.push(rotuloSemana(abertura.dias));
-  if (abertura.horario) {
-    partes.push(
-      `Fecha às ${rotuloHora(abertura.horario.fecha)}, abre às ${rotuloHora(abertura.horario.abre)}.`,
-    );
+  const faixas = abertura.horario ?? [];
+  if (faixas.length === 1) {
+    partes.push(`Fecha às ${rotuloHora(faixas[0].fecha)}, abre às ${rotuloHora(faixas[0].abre)}.`);
+  } else if (faixas.length > 1) {
+    // Com intervalo, "fecha às X, abre às Y" não diz qual das faixas: a frase
+    // passa a dizer as faixas, na ordem do dia.
+    const das = [...faixas]
+      .sort((a, b) => minutosDeHHMM(a.abre) - minutosDeHHMM(b.abre))
+      .map((f) => `das ${rotuloHora(f.abre)} às ${rotuloHora(f.fecha)}`);
+    // PENDENTE: redação minha, o João ainda não leu
+    partes.push(`Abre ${das.slice(0, -1).join(", ")} e ${das[das.length - 1]}.`);
   }
   return partes.join(" ");
 }

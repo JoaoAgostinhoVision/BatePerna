@@ -6,8 +6,10 @@ import {
   type GrupoDaFicha,
 } from "@/lib/campos-da-ficha";
 import { Fragment } from "react";
+import { faixasDe } from "@/lib/horario";
 import type { Ficha } from "@/types/ficha";
 import EditorBloco from "./campos/EditorBloco";
+import EditorFaixas from "./campos/EditorFaixas";
 import EditorBooleano from "./campos/EditorBooleano";
 import EditorCoordenada from "./campos/EditorCoordenada";
 import EditorHora from "./campos/EditorHora";
@@ -201,10 +203,6 @@ export const ROTULOS: Record<string, string> = {
   // PENDENTE: redação minha, o João ainda não leu
   horario: "Este lugar tem hora pra abrir e pra fechar?",
   // PENDENTE: redação minha, o João ainda não leu
-  "horario.abre": "A hora de abrir",
-  // PENDENTE: redação minha, o João ainda não leu
-  "horario.fecha": "A hora de fechar",
-  // PENDENTE: redação minha, o João ainda não leu
   dias: "Os dias da semana em que abre",
 
   // — o que a chuva faz aqui —
@@ -317,8 +315,9 @@ const MOSTRAR: Record<EspecieCampo, (valor: unknown) => string> = {
   lista: (v) => (Array.isArray(v) ? v.join(", ") : String(v)),
   booleano: (v) => (v === true ? SIM : NAO),
   coord: (v) => (ehPar(v) ? `${v.lat}, ${v.lng}` : String(v)),
-  // 🔴 O BLOCO NÃO MOSTRA FOLHA NENHUMA. `horario` (espécie `bloco`) vem no
-  // registro AO LADO de `horario.abre` e `horario.fecha` — três entradas sobre
+  // ⚠️ SEM ENTRADA DESDE A 11c (o horário virou `faixas`); o que segue é a razão
+  // de quando existia. O BLOCO NÃO MOSTRA FOLHA NENHUMA. `horario` (espécie
+  // `bloco`) vinha no registro AO LADO de `horario.abre` e `horario.fecha` — três entradas sobre
   // o mesmo assunto —, e o que ele existe pra responder é "este lugar TEM
   // horário?": é ele que carrega o "não sei" do grupo (é assim que a porta de
   // escrita o trata — `removerCampo` no bloco tira o bloco inteiro, e é o
@@ -326,6 +325,8 @@ const MOSTRAR: Record<EspecieCampo, (valor: unknown) => string> = {
   // o valor de `abre` faria a tela dizer a mesma coisa duas vezes, e o bloco
   // deixaria de responder a pergunta que é dele.
   bloco: () => SIM,
+  // Só pra régua do `Record`: com `mostraOValor: true`, este texto não aparece.
+  faixas: (v) => (faixasDe(v) ?? []).map((f) => `${f.abre}–${f.fecha}`).join(" · "),
 };
 
 /** O valor que ESTA ficha tem neste caminho concreto, ou `undefined`.
@@ -451,6 +452,9 @@ const INSTRUMENTO: Record<EspecieCampo, { Editor: Editor; mostraOValor: boolean 
   booleano: { Editor: EditorBooleano, mostraOValor: true },
   hora: { Editor: EditorHora, mostraOValor: true },
   bloco: { Editor: EditorBloco, mostraOValor: false },
+  // O horário inteiro (Tarefa 11c): as caixas de hora SÃO o valor, como no
+  // `hora` — um `<p>` ao lado repetiria as faixas.
+  faixas: { Editor: EditorFaixas, mostraOValor: true },
   numero: { Editor: EditorNumeroDeMotor, mostraOValor: true },
   // 🔴 `coord` ENTROU NA TASK 8 com `mostraOValor: true`: o editor mostra o
   // número embaixo do mapa (é o que o dono confere), e um `<p>` ao lado seria
@@ -460,9 +464,13 @@ const INSTRUMENTO: Record<EspecieCampo, { Editor: Editor; mostraOValor: boolean 
 };
 
 /** Os caminhos de espécie `bloco` DESTA ficha, tirados do registro expandido —
- *  nunca uma lista escrita aqui. Irmão do `BLOCOS_OPCIONAIS` de
- *  `campos-da-ficha.ts`, e pelo mesmo motivo: quem acrescentar um bloco ao
- *  registro ganha o comportamento sem tocar neste arquivo. */
+ *  nunca uma lista escrita aqui: quem acrescentar um bloco ao registro ganha o
+ *  comportamento sem tocar neste arquivo.
+ *
+ *  ⚠️ DESDE A TAREFA 11c O REGISTRO NÃO TEM BLOCO NENHUM — o único era o
+ *  `horario`, que virou a lista de faixas (`EditorFaixas`). Esta maquinaria
+ *  (`blocosDe`, `blocoQueContem`, `folhasDoBloco` e o ramo `blocoAusente` do
+ *  `Bloco`) ficou sem caso, e a contração dela é da Tarefa 11d. */
 const blocosDe = (campos: readonly CampoDaFicha[]): string[] =>
   campos.filter((c) => c.especie === "bloco").map((c) => c.caminho);
 
@@ -542,6 +550,11 @@ function Bloco({
       {ausente ? (
         <p className="adm-campo-ausente">{AUSENTE}</p>
       ) : (
+        // ⚠️ SEM ESPÉCIE QUE CHEGUE AQUI desde a Tarefa 11c: o único caminho era
+        // o `bloco` (`mostraOValor: false`) e a folha de bloco ausente
+        // (`instrumento === null`), e o horário virou `faixas`. A regra
+        // `.adm-campo-valor` saiu do `admin.css` pelo guarda de regra morta; este
+        // ramo, o `MOSTRAR` e o `mostraOValor` são contração da Tarefa 11d.
         (instrumento === null || !instrumento.mostraOValor) && (
           <p className="adm-campo-valor">{MOSTRAR[campo.especie](valor)}</p>
         )

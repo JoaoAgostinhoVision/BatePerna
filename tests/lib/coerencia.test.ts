@@ -110,7 +110,7 @@ const QUEBRAS: Record<string, () => Ficha[]> = {
   // noite toda e fechada o dia todo.
   "horario-invertido-sem-aviso": () => {
     const f = rampa();
-    f.horario = { abre: "17:00", fecha: "08:00" };
+    f.horario = [{ abre: "17:00", fecha: "08:00" }];
     return com(f);
   },
 
@@ -124,7 +124,7 @@ const QUEBRAS: Record<string, () => Ficha[]> = {
   // hora, e as duas frases aparecem na MESMA tela.
   "prosa-bate-com-hora-de-fechar": () => {
     const f = veu();
-    f.horario = { abre: "08:00", fecha: "15:00" };
+    f.horario = [{ abre: "08:00", fecha: "15:00" }];
     return com(f);
   },
 
@@ -442,7 +442,7 @@ describe("violacoesDoAcervo", () => {
   // ficha do acervo de hoje abre à noite.
   it("a travessia da noite DITA na ficha passa — a regra exige o aviso, não proíbe o horário", () => {
     const f = rampa();
-    f.horario = { abre: "17:00", fecha: "08:00" };
+    f.horario = [{ abre: "17:00", fecha: "08:00" }];
     f.avisos = `${f.avisos} A visita é de madrugada: atravessa a noite inteira.`;
     expect(violacoesDoAcervo([f]).map((x) => x.regra)).not.toContain("horario-invertido-sem-aviso");
   });
@@ -595,13 +595,13 @@ describe("violacoesDoAcervo", () => {
   });
 
   // 🔴 `abre === fecha` É ACUSADO, e a frase dele é OUTRA. `fechadoNaHora`
-  // (`src/lib/horario.ts:95`) lê horários iguais como **24h: nunca fecha**, não
+  // (`src/lib/horario.ts:194`, `dentroDaFaixa`) lê horários iguais como **24h: nunca fecha**, não
   // como travessia da meia-noite — dizer a esse dono que o app vai anunciar o
   // lugar "aberto a noite toda e fechada o dia todo" seria descrever outro caso.
   // Sem este par de asserções, trocar `<` por `<=` sobrevive.
   it("horário igual em abre e fecha é acusado, e a frase fala de 24 horas", () => {
     const f = rampa();
-    f.horario = { abre: "08:00", fecha: "08:00" };
+    f.horario = [{ abre: "08:00", fecha: "08:00" }];
     const v = violacoesDoAcervo([f]).filter((x) => x.regra === "horario-invertido-sem-aviso");
     expect(v.length, "abrir e fechar no mesmo horário passou batido").toBe(1);
     expect(v[0].frase, "a frase do horário igual descreve o caso invertido").toContain("24 horas");
@@ -634,7 +634,7 @@ describe("violacoesDoAcervo", () => {
 
   it("a ficha genuinamente invertida recebe a frase da noite, não a das 24 horas", () => {
     const f = rampa();
-    f.horario = { abre: "17:00", fecha: "08:00" };
+    f.horario = [{ abre: "17:00", fecha: "08:00" }];
     const v = violacoesDoAcervo([f]).filter((x) => x.regra === "horario-invertido-sem-aviso");
     expect(v.length, "horário invertido de verdade passou batido").toBe(1);
     expect(v[0].frase, "a ficha invertida recebeu a frase do caso de 24 horas")
@@ -689,9 +689,52 @@ describe("violacoesDoAcervo", () => {
     expect(b[0].frase).not.toContain("não mostra preço nenhum");
   });
 
+  // 🔴 O HORÁRIO COM INTERVALO (Tarefa 11c). As três regras da hora passaram a
+  // ler a LISTA de faixas, e cada uma tem prova com mais de uma faixa — senão
+  // uma regra que só lesse a faixa 0 passaria verde com as fichas de hoje, que
+  // têm uma faixa só.
+  it("com intervalo, a faixa invertida é achada mesmo não sendo a primeira", () => {
+    const f = rampa();
+    f.horario = [{ abre: "06:00", fecha: "08:00" }, { abre: "17:00", fecha: "08:00" }];
+    const v = violacoesDoAcervo([f]).filter((x) => x.regra === "horario-invertido-sem-aviso");
+    expect(v.length, "a segunda faixa invertida passou batida").toBe(1);
+    expect(v[0].frase).toContain("abre às 17:00 e fecha às 08:00");
+  });
+
+  it("com intervalo e as faixas certas, a regra do horário invertido cala", () => {
+    const f = rampa();
+    f.horario = [{ abre: "08:00", fecha: "10:00" }, { abre: "14:00", fecha: "17:00" }];
+    expect(violacoesDoAcervo([f]).map((x) => x.regra)).not.toContain("horario-invertido-sem-aviso");
+  });
+
+  // H4 do brief: "a hora de fechar" da prosa é o fim do dia (a ÚLTIMA faixa), e
+  // a hora de fechar de uma faixa do MEIO também vale — "fecha às 10h pro
+  // almoço" é verdade sobre um lugar de 8–10 e 14–17.
+  it("com intervalo, a prosa pode citar o fechamento da última faixa ou de uma do meio", () => {
+    const f = veu(); // a prosa da Véu diz "fecha às 17h"
+    f.horario = [{ abre: "08:00", fecha: "10:00" }, { abre: "14:00", fecha: "17:00" }];
+    expect(violacoesDoAcervo([f]).map((x) => x.regra), "o fim do dia não foi aceito").not.toContain(
+      "prosa-bate-com-hora-de-fechar",
+    );
+    const meio = rampa();
+    meio.avisos = `${meio.avisos} Fecha às 10h pro almoço.`;
+    meio.horario = [{ abre: "08:00", fecha: "10:00" }, { abre: "14:00", fecha: "17:00" }];
+    expect(violacoesDoAcervo([meio]).map((x) => x.regra), "a faixa do meio não foi aceita").not.toContain(
+      "prosa-bate-com-hora-de-fechar",
+    );
+  });
+
+  it("com intervalo, uma hora que não fecha faixa nenhuma é acusada, e a frase diz o fim do dia", () => {
+    const f = veu(); // "fecha às 17h"
+    f.horario = [{ abre: "08:00", fecha: "10:00" }, { abre: "14:00", fecha: "16:00" }];
+    const v = violacoesDoAcervo([f]).filter((x) => x.regra === "prosa-bate-com-hora-de-fechar");
+    expect(v.length, "17h não fecha faixa nenhuma e passou").toBe(1);
+    expect(v[0].frase).toContain("o horário da ficha diz 16:00");
+  });
+
   it("um minuto de faixa já é faixa normal, e passa calado", () => {
     const f = rampa();
-    f.horario = { abre: "08:00", fecha: "08:01" };
+    f.horario = [{ abre: "08:00", fecha: "08:01" }];
     expect(violacoesDoAcervo([f]).map((x) => x.regra)).not.toContain("horario-invertido-sem-aviso");
   });
 
@@ -708,7 +751,7 @@ describe("violacoesDoAcervo", () => {
 
     const comCampo = rampa();
     comCampo.avisos = `${comCampo.avisos} O lugar fecha as 16h.`;
-    comCampo.horario = { abre: "05:00", fecha: "17:00" };
+    comCampo.horario = [{ abre: "05:00", fecha: "17:00" }];
     expect(
       violacoesDoAcervo([comCampo]).map((x) => x.regra),
       '"fecha as 16h" sem acento não foi comparado com o campo',
