@@ -2,12 +2,32 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-🟡 **SESSÃO DE 03/10, EM CURSO — a Tarefa 11 está nas ondas de fix.** `a4a3754` (implementação) e `b92caa1`
-(onda 1: colisão também por NOME, inclusive escondido; coordenada do rascunho só em par) — medidos por mim, 1855/1855
-em 96, `tsc` 0, build 0. **DECISÃO DELE (pergunta direta): o formulário de lugar novo é UMA PERGUNTA POR VEZ**
-(spec §7.3) — a onda 2 foi despachada com `.superpowers/sdd/2026-09-26-painel-completo/task-11-fix2-brief.md`.
-Se a sessão morrer: se o topo do log for `b92caa1`, redespache esse brief; se houver commit da onda 2, meça e
-despache a re-revisão das duas ondas. Depois, a Tarefa 12 como descrito abaixo.
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" (parada de 03/10, a pedido dele: *"deixa tudo pronto"*)
+
+**Branch `painel-completo`, Tarefa 11 nas ondas de fix, NADA NO AR.** Topo esperado do log: `docs(resume): 03/10 -
+a parada...`. Último código: `b92caa1`, medido por mim: **1855/1855 em 96**, `tsc` 0, build 0.
+
+→ 🔴 **O PRIMEIRO PASSO, SEM PENSAR:** conferir árvore limpa e **despachar a onda 2 da Tarefa 11** num agente
+`general-purpose`, opus, background, com o prompt **`.superpowers/sdd/2026-09-26-painel-completo/task-11-fix2-PROMPT.md`
+COMO ESTÁ** (só troque o HEAD se entrou mais docs). Não reescreva o brief (`task-11-fix2-brief.md`, R1–R5).
+Depois: medir eu mesmo → **re-revisão das ondas 1 E 2 juntas** (base `a4a3754`; a revisão foi `task-11-review.md`)
+→ commit do RESUME → **Tarefa 12 sem pausar** (o bloco de 01/10 abaixo diz como).
+
+🔴 **O STASH `onda2-t11-PARCIAL-nao-verificado-03-10` — NÃO dê `git stash pop`.** É o trabalho pela metade do
+implementador da onda 2, parado por mim a pedido dele (8 arquivos, nada medido), e **contém uma SABOTAGEM VIVA**:
+`src/lib/coerencia.ts:499` com `if (false) { // mutacao Z3: o par 0/0 passa`. Ninguém precisa dele: o brief basta
+pra redespachar do zero. Se quiser aproveitar, só com `git checkout stash@{0} -- <arquivo>` arquivo a arquivo,
+**NUNCA o `coerencia.ts`**. Depois que a onda 2 fechar, `git stash drop`.
+
+**O que a sessão de 03/10 fez:** `a4a3754` (Tarefa 11: rascunho, `/admin/novo`, rota `/api/admin/rascunho`) →
+revisão 0 C · 2 I · 7 M → `b92caa1` (onda 1: colisão também por NOME, inclusive lugar escondido e nascido
+escondido; coordenada do rascunho só entra em par; 401 com corpo vazio provado). Aceito por ruling: a mutação
+`criar = true` sobrevive porque `aplicarCampo` recusa antes (portas em série, prova já existe 2×).
+**DECISÃO DELE (pergunta direta, 03/10): o formulário de lugar novo é UMA PERGUNTA POR VEZ** (spec §7.3) — é a onda 2.
+
+**Esperando ele (não trava nada):** botão de descartar rascunho (a rota `DELETE` existe, sem botão); registro tem 8
+opcionais e o questionário 6 (`trajeto.waypoints[].nota`, `custo.valor`); a coordenada de lugar novo entra digitada
+e o mapa só aparece depois; frase de recusa quando só o endereço colide diz "nome".
 🔴 **Trava de deploy nova:** `ensureSchema` NÃO roda em requisição — sem `npm run semear` antes do `vercel --prod`,
 a tabela `ficha_rascunhos` não existe e o `/admin` inteiro cai ("no such table"). A tela pública não cai.
 Copy nova da 11 (PENDENTE): "a coordenada do ponto entra inteira: a latitude e a longitude juntas, no mesmo Salvar",
