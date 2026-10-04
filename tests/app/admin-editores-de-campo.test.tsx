@@ -13,7 +13,17 @@ import {
   TIRAR_MESMO,
 } from "@/app/admin/campos/EditorWaypoints";
 import { ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
-import { AVISO_RASCUNHO, COMECANDO, COMECAR, PULADA, PULAR } from "@/app/admin/FormularioDeLugar";
+import {
+  ANTERIOR,
+  AVISO_RASCUNHO,
+  COMECANDO,
+  COMECAR,
+  PROXIMA,
+  PULADA,
+  PULAR,
+  RESPONDIDA,
+  SEM_RESPOSTA,
+} from "@/app/admin/FormularioDeLugar";
 import { LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
 import {
   ALEM_DO_PROVEDOR,
@@ -1365,6 +1375,11 @@ describe("Os editores servem os três lugares", () => {
     COMECANDO,
     LUGAR_NOVO,
     TITULO_RASCUNHOS,
+    // Onda 2 da Tarefa 11: uma pergunta por vez — andar e os saltos.
+    ANTERIOR,
+    PROXIMA,
+    RESPONDIDA,
+    SEM_RESPOSTA,
   ];
 
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem

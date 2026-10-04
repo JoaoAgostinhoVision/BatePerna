@@ -207,6 +207,25 @@ function naTela(c: CampoDaFicha, caminho: string, rascunho: unknown): CampoNaTel
   return base;
 }
 
+/** QUAL PERGUNTA A TELA MOSTRA (onda 2: uma pergunta por vez, decisão do João
+ *  de 2026-10-03) — a posição mora na URL, `?slug=X&p=N`, com N de 1 a M.
+ *
+ *  `p` só vale se for um número inteiro escrito só com dígitos e estiver entre
+ *  1 e M. Qualquer outra coisa (ausente, vazio, letra, 0, negativo, decimal,
+ *  maior que M, ou repetido na URL) cai na PRIMEIRA pergunta ainda SEM
+ *  resposta — ou na 1ª, se todas tiverem. Nunca erro, nunca tela vazia: é por
+ *  aqui que entra quem volta pela lista do painel, cujo link não leva `p`.
+ *
+ *  `respondidas[i]` diz se a pergunta `i + 1` já tem resposta no rascunho. */
+export function escolherPosicao(p: string | string[] | undefined, respondidas: readonly boolean[]): number {
+  if (typeof p === "string" && /^\d+$/.test(p)) {
+    const n = Number(p);
+    if (n >= 1 && n <= respondidas.length) return n;
+  }
+  const semResposta = respondidas.indexOf(false);
+  return semResposta < 0 ? 1 : semResposta + 1;
+}
+
 /** AS PERGUNTAS, NA ORDEM DA TELA, COM O QUE O RASCUNHO JÁ RESPONDEU. */
 export function montarPerguntas(rascunho: unknown): PerguntaNaTela[] {
   // 🔴 QUEM DECIDE QUAIS PERGUNTAS É O REGISTRO, aqui em produção também, e não

@@ -1,5 +1,5 @@
 "use client";
-import { useState, type FormEvent, type MouseEvent } from "react";
+import { useState, type FormEvent } from "react";
 import EditorBloco from "./campos/EditorBloco";
 import EditorBooleano from "./campos/EditorBooleano";
 import EditorCoordenada from "./campos/EditorCoordenada";
@@ -43,12 +43,25 @@ import type { Editor, EspecieNaTela, PerguntaNaTela, PropsDoEditor } from "./cam
  *     ponto só, o `0`, que é o próprio lugar. Etapas entram depois de publicar,
  *     pelo painel do lugar.
  *
- *  ⚠️ TODAS AS PERGUNTAS NUMA TELA, numa lista numerada na ordem do
- *  questionário — e não "uma pergunta por vez" como a spec §7.3 descreve. É
- *  desvio, dito no relatório: com o rascunho gravado a cada resposta e a página
- *  recarregando do banco a cada gravação (o padrão dos editores), "uma por vez"
- *  pediria estado de navegação que sobrevivesse ao reload; e o teste que a
- *  auditoria exige ("uma pergunta por campo do registro") lê todas na página.
+ *  🔴 UMA PERGUNTA POR VEZ, na ordem do questionário — como a spec §7.3 diz, e
+ *  como o João decidiu em 2026-10-03, depois de ver o custo da outra forma (com
+ *  as ~27 numa tela, cada Salvar recarregava a página e jogava fora o que ele
+ *  tinha digitado em OUTRA caixa). O estado de navegação que sobrevive à
+ *  gravação é a URL: `/admin/novo?slug=X&p=N`. A página de servidor monta a
+ *  lista inteira e entrega a este componente só a pergunta N, a posição e quais
+ *  já têm resposta (`escolherPosicao`, em `./novo/perguntas.ts`, decide o `p`
+ *  torto ou ausente: a primeira sem resposta).
+ *   - Salvar (ou o "não sei") com sucesso AVANÇA: o provedor passa
+ *     `depoisDeGravar` com o endereço da pergunta N+1 (na última, a própria);
+ *     recusa não sai do lugar. O PADRÃO dos editores continua o `reload()`, e
+ *     a ficha no ar não mudou.
+ *   - Pular também avança, sem gravar nada.
+ *   - "Anterior" e "Próxima" são LINKS, não gravam: voltar a uma resposta, ou
+ *     deixar uma obrigatória pra depois — rascunho é incompleto por natureza.
+ *   - A lista de saltos tem um número por pergunta, marcado respondida ou sem
+ *     resposta (no `aria-label`, e no desenho pela folha de estilo).
+ *   ⚠️ "Pulada" não fica guardada: no documento, pular e nunca responder são a
+ *   mesma ausência, e na volta a pergunta aparece sem resposta de novo.
  *
  *  ⚠️ NENHUM TEXTO SOBRE UM LUGAR ESPECÍFICO mora aqui: as perguntas e os
  *  rótulos chegam por prop, e as palavras fixas abaixo servem a todo lugar. */
@@ -63,8 +76,21 @@ export const PULADA = "Pulada: o app vai calar sobre isto.";
 export const COMECAR = "Começar";
 // PENDENTE: redação minha, o João ainda não leu
 export const COMECANDO = "Começando…";
+// PENDENTE: redação minha, o João ainda não leu
+export const ANTERIOR = "Anterior";
+// PENDENTE: redação minha, o João ainda não leu
+export const PROXIMA = "Próxima";
+// PENDENTE: redação minha, o João ainda não leu
+export const RESPONDIDA = "respondida";
+// PENDENTE: redação minha, o João ainda não leu
+export const SEM_RESPOSTA = "sem resposta";
+/** "Pergunta N de M". */
+// PENDENTE: redação minha, o João ainda não leu
+export const posicaoNaTela = (n: number, total: number): string => `Pergunta ${n} de ${total}`;
 
-const PORTA_DO_RASCUNHO = { gravarEm: "/api/admin/rascunho", previa: false } as const;
+/** O endereço da pergunta N do rascunho — a posição mora na URL. */
+export const enderecoDaPergunta = (slug: string, n: number): string =>
+  `/admin/novo?slug=${encodeURIComponent(slug)}&p=${n}`;
 
 type Par = { lat: number; lng: number };
 const ehPar = (v: unknown): v is Par =>
@@ -149,22 +175,32 @@ const INSTRUMENTO: Record<EspecieNaTela, Editor> = {
   coord: CoordenadaDoRascunho,
 };
 
-function Pergunta({ pergunta, slug }: { pergunta: PerguntaNaTela; slug: string }) {
+function Pergunta({
+  pergunta,
+  slug,
+  proxima,
+}: {
+  pergunta: PerguntaNaTela;
+  slug: string;
+  /** O endereço da próxima pergunta; `null` na última. */
+  proxima: string | null;
+}) {
   const { especie, campo, texto, valor, dentro } = pergunta;
   const [pulada, setPulada] = useState(false);
   const Instrumento = INSTRUMENTO[especie];
   // 🔴 SÓ OPCIONAL, E SÓ SEM RESPOSTA. Obrigatório não se pula (a porta de
-  // publicar recusaria); respondido, quem tira a resposta é o "não sei" de
+  // publicar recusaria; pra deixá-lo pra depois há o "Próxima", que não diz
+  // que o app vai calar); respondido, quem tira a resposta é o "não sei" de
   // dentro do editor — dois botões pro mesmo silêncio seriam duas palavras.
   const podePular = !campo.obrigatorio && valor === undefined;
 
-  function pular(e: MouseEvent<HTMLButtonElement>): void {
+  function pular(): void {
     setPulada(true);
-    e.currentTarget.closest("li")?.nextElementSibling?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    if (proxima !== null) location.assign(proxima);
   }
 
   return (
-    <li className="adm-pergunta" data-testid={`pergunta-${campo.caminho}`}>
+    <section className="adm-pergunta" data-testid={`pergunta-${campo.caminho}`}>
       <p className="adm-pergunta-texto">{texto}</p>
       <Instrumento campo={campo} valor={valor} slug={slug} />
       {dentro?.map((d) => (
@@ -178,18 +214,65 @@ function Pergunta({ pergunta, slug }: { pergunta: PerguntaNaTela; slug: string }
             {PULAR}
           </button>
         ))}
-    </li>
+    </section>
   );
 }
 
-export default function FormularioDeLugar({ slug, perguntas }: { slug: string; perguntas: readonly PerguntaNaTela[] }) {
+export default function FormularioDeLugar({
+  slug,
+  pergunta,
+  posicao,
+  respondidas,
+}: {
+  slug: string;
+  /** A pergunta da posição `posicao` — e só ela. */
+  pergunta: PerguntaNaTela;
+  /** 1 a M. */
+  posicao: number;
+  /** Uma por pergunta, na ordem da tela: se ela já tem resposta no rascunho.
+   *  O tamanho é o total M. */
+  respondidas: readonly boolean[];
+}) {
+  const total = respondidas.length;
+  const ir = (n: number): string => enderecoDaPergunta(slug, n);
+  const proxima = posicao < total ? ir(posicao + 1) : null;
+  // Gravar AVANÇA; na última, fica na última (relida do banco).
+  // ⚠️ Os links são `<a>` simples, não o `Link` do Next, de propósito: medido no
+  // build, o `Link` punha +4 kB no First Load JS desta página (111 → 115 kB),
+  // no celular. E o `<a>` faz o mesmo que o `location.assign` do Salvar: a
+  // página inteira relida do banco — uma navegação só, nos dois caminhos.
+  const porta = { gravarEm: "/api/admin/rascunho", previa: false, depoisDeGravar: proxima ?? ir(posicao) };
   return (
-    <PortaDoEditor.Provider value={PORTA_DO_RASCUNHO}>
+    <PortaDoEditor.Provider value={porta}>
       <section className="adm-novo" data-rascunho={slug}>
         <p className="adm-novo-aviso">{AVISO_RASCUNHO}</p>
-        <ol className="adm-novo-perguntas">
-          {perguntas.map((p) => (
-            <Pergunta key={p.campo.caminho} pergunta={p} slug={slug} />
+        <p className="adm-novo-posicao">{posicaoNaTela(posicao, total)}</p>
+        <Pergunta key={pergunta.campo.caminho} pergunta={pergunta} slug={slug} proxima={proxima} />
+        <nav className="adm-novo-passos">
+          {posicao > 1 && (
+            <a className="adm-novo-passo" href={ir(posicao - 1)}>
+              {ANTERIOR}
+            </a>
+          )}
+          {proxima !== null && (
+            <a className="adm-novo-passo adm-novo-passo-proxima" href={proxima}>
+              {PROXIMA}
+            </a>
+          )}
+        </nav>
+        <ol className="adm-novo-saltos" data-testid="saltos">
+          {respondidas.map((r, i) => (
+            <li key={i}>
+              <a
+                className={r ? "adm-novo-salto adm-novo-salto-respondida" : "adm-novo-salto"}
+                href={ir(i + 1)}
+               
+                aria-label={`${posicaoNaTela(i + 1, total)}: ${r ? RESPONDIDA : SEM_RESPOSTA}`}
+                aria-current={i + 1 === posicao ? "step" : undefined}
+              >
+                {i + 1}
+              </a>
+            </li>
           ))}
         </ol>
       </section>

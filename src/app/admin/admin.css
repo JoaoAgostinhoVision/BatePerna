@@ -232,9 +232,19 @@
 /* O campo do nome usa a moldura de `.adm-porta` (é a mesma forma: uma caixa e
    um botão); isto só dá a ele o respiro de `.adm-ficha-inteira`. */
 .adm-novo-nome { margin-top: 1.2rem; }
-/* A lista das perguntas: grid com o gap das seções, e o recuo do número que o
-   `<ol>` já desenha. */
-.adm-novo-perguntas { display: grid; gap: 1.2rem; margin: 0; padding-left: 1.4rem; }
+/* "Pergunta N de M": texto de apoio, como `.adm-novo-aviso`. */
+.adm-novo-posicao { margin: 0; font-size: .85rem; color: #777; }
+/* Anterior à esquerda, Próxima à direita (mesmo sozinha, na 1ª); alvo de dedo do tamanho do
+   `.adm-novo-link`. */
+.adm-novo-passos { display: flex; justify-content: space-between; gap: .6rem; }
+.adm-novo-passo { padding: .8rem 1rem; border: 1px solid #999; border-radius: 10px; text-decoration: none; color: inherit; }
+.adm-novo-passo-proxima { margin-left: auto; }
+/* Os saltos: um número por pergunta, em linhas que quebram; a respondida vem
+   cheia, a sem resposta vazada, a atual com a borda grossa. */
+.adm-novo-saltos { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+.adm-novo-salto { display: inline-block; min-width: 2.2rem; padding: .5rem 0; border: 1px solid #999; border-radius: 8px; text-align: center; text-decoration: none; color: inherit; }
+.adm-novo-salto-respondida { background: #ddd; }
+.adm-novo-salto[aria-current] { border-width: 3px; font-weight: bold; }
 /* Cada pergunta é um cartão, como `.adm-grupo`. */
 .adm-pergunta { display: grid; gap: .5rem; padding: 1rem; border: 1px solid #ccc; border-radius: 10px; }
 /* A pergunta é o que ele lê primeiro: o tamanho de texto de `.adm-item-nome`. */

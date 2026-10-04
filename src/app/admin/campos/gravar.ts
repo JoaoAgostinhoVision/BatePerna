@@ -15,10 +15,18 @@ import { createContext, useContext, useState } from "react";
  *  `previa: false` desliga a prévia do carimbo no número de motor: ela pede ao
  *  servidor o carimbo do lugar com o número novo, e um rascunho não tem lugar no
  *  ar pra calcular — a resposta seria sempre "não consegui conferir", uma frase
- *  de falha que não é falha nenhuma. */
-export const PortaDoEditor = createContext<{ gravarEm: string; previa: boolean }>({
+ *  de falha que não é falha nenhuma.
+ *
+ *  `depoisDeGravar` diz pra onde a tela vai depois de um sucesso. `null` (o
+ *  PADRÃO, o da ficha no ar) é o `location.reload()` de sempre: a mesma tela,
+ *  relida do banco. O formulário de lugar novo, que é UMA PERGUNTA POR VEZ
+ *  (decisão do João, 2026-10-03), passa o endereço da PRÓXIMA pergunta — e a
+ *  tela vai pra lá com `location.assign`, também relida do banco. Recusa e
+ *  falha de rede não vão a lugar nenhum, nos dois casos. */
+export const PortaDoEditor = createContext<{ gravarEm: string; previa: boolean; depoisDeGravar: string | null }>({
   gravarEm: "/api/admin/ficha",
   previa: true,
+  depoisDeGravar: null,
 });
 
 /** A GRAVAÇÃO DE UM CAMPO, UMA VEZ SÓ — o que os editores desta pasta
@@ -44,7 +52,8 @@ export const PortaDoEditor = createContext<{ gravarEm: string; previa: boolean }
  *  toca no estado do editor: em 400, em 409 e em falha de rede, o que está na
  *  caixa continua na caixa. Perder no celular, por um sinal ruim, o texto que
  *  acabou de escrever é o defeito que faz alguém parar de usar o painel. Quem
- *  troca a tela é só o `location.reload()` do SUCESSO. */
+ *  troca a tela é só o SUCESSO — `location.reload()`, ou `location.assign` pra
+ *  próxima pergunta no formulário de lugar novo (ver `depoisDeGravar`). */
 
 // PENDENTE: vinha do `EditorDeVoz` já marcado; o João ainda não leu
 export const ERRO_GRAVAR = "Não consegui salvar.";
@@ -73,7 +82,7 @@ export type Gravacao = {
 export function usarGravacao(): Gravacao {
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
-  const { gravarEm } = useContext(PortaDoEditor);
+  const { gravarEm, depoisDeGravar } = useContext(PortaDoEditor);
 
   async function gravar(corpo: Record<string, unknown>): Promise<void> {
     if (salvando) return;
@@ -82,7 +91,8 @@ export function usarGravacao(): Gravacao {
     try {
       const r = await fetch(gravarEm, { method: "PUT", body: JSON.stringify(corpo) });
       if (r.ok) {
-        location.reload();
+        if (depoisDeGravar === null) location.reload();
+        else location.assign(depoisDeGravar);
         return;
       }
       const frase = (await r.text()).trim();

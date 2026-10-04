@@ -8,7 +8,7 @@ import { getClient, lerRascunho, type Rascunho } from "@/lib/db";
 import { PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
 import CaixaDeSenha from "../CaixaDeSenha";
 import FormularioDeLugar, { ComecarLugarNovo } from "../FormularioDeLugar";
-import { PERGUNTAS, montarPerguntas } from "./perguntas";
+import { PERGUNTAS, escolherPosicao, montarPerguntas } from "./perguntas";
 import "../admin.css";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,9 @@ const ESTOUROU = Symbol("prazo do rascunho");
 /** `/admin/novo` — o lugar novo (Tarefa 11).
  *
  *  Sem `?slug=`: a pergunta do NOME, e só ela — é dele que sai o endereço.
- *  Com `?slug=`: o formulário inteiro sobre o RASCUNHO daquele slug.
+ *  Com `?slug=`: o formulário sobre o RASCUNHO daquele slug, UMA PERGUNTA POR
+ *  VEZ — a da posição `&p=N` (1 a M); `p` ausente ou torto cai na primeira
+ *  ainda sem resposta (`escolherPosicao`).
  *
  *  🔴 ESTA PÁGINA É DE SERVIDOR E É QUEM CONHECE O REGISTRO: `montarPerguntas`
  *  lê `CAMPOS_DA_FICHA` e o questionário e entrega ao `FormularioDeLugar` (de
@@ -38,7 +40,7 @@ const ESTOUROU = Symbol("prazo do rascunho");
 export default async function Novo({
   searchParams,
 }: {
-  searchParams: Promise<{ slug?: string | string[] }>;
+  searchParams: Promise<{ slug?: string | string[]; p?: string | string[] }>;
 }) {
   const cfg = lerConfigAdmin(process.env);
   if (!cfg.ligado) {
@@ -56,7 +58,7 @@ export default async function Novo({
     );
   }
 
-  const { slug } = await searchParams;
+  const { slug, p } = await searchParams;
   if (typeof slug !== "string") {
     return (
       <main className="adm">
@@ -78,11 +80,22 @@ export default async function Novo({
   if (r === ESTOUROU) throw new Error("O banco não respondeu a tempo à leitura do rascunho.");
   if (r === null) notFound();
 
+  // A lista INTEIRA é montada aqui (é o registro que decide quais perguntas);
+  // o cliente recebe só a da posição `p`, e quais já têm resposta.
+  const perguntas = montarPerguntas(JSON.parse(r.doc));
+  const respondidas = perguntas.map((q) => q.valor !== undefined);
+  const posicao = escolherPosicao(p, respondidas);
+
   return (
     <main className="adm">
       <h1>Painel</h1>
       <h2>{TITULO_NOVO}</h2>
-      <FormularioDeLugar slug={slug} perguntas={montarPerguntas(JSON.parse(r.doc))} />
+      <FormularioDeLugar
+        slug={slug}
+        pergunta={perguntas[posicao - 1]}
+        posicao={posicao}
+        respondidas={respondidas}
+      />
     </main>
   );
 }

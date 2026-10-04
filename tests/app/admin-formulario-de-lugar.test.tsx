@@ -10,13 +10,20 @@ import { CAMPOS_DA_FICHA, type CampoDaFicha } from "@/lib/campos-da-ficha";
 import { criarRascunho, historico, lerRascunho, salvarRascunho, versaoAtual } from "@/lib/db";
 import { docDoLugarNovo } from "@/lib/rascunho";
 import { rotuloDe } from "@/app/admin/FichaInteira";
-import { ORDEM, PERGUNTAS } from "@/app/admin/novo/perguntas";
+import { ORDEM, PERGUNTAS, escolherPosicao } from "@/app/admin/novo/perguntas";
 import {
+  ANTERIOR,
   AVISO_RASCUNHO,
   COMECAR,
+  PROXIMA,
   PULADA,
   PULAR,
+  RESPONDIDA,
+  SEM_RESPOSTA,
+  enderecoDaPergunta,
+  posicaoNaTela,
 } from "@/app/admin/FormularioDeLugar";
+import EditorProsa from "@/app/admin/campos/EditorProsa";
 import { LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
 import { regraDe, semComentarios } from "../css";
 import { bancoVazio, semearAcervo } from "../banco";
@@ -84,12 +91,39 @@ async function lugarNovo(): Promise<void> {
   expect(await criarRascunho(cliente, S, docDoLugarNovo(S, NOME), 1)).toBe(true);
 }
 
-async function paginaNovo(slug?: string) {
+async function paginaNovo(slug?: string, p?: string | string[]) {
   const { default: Novo } = await import("@/app/admin/novo/page");
-  return render(await Novo({ searchParams: Promise.resolve(slug === undefined ? {} : { slug }) }));
+  const params: { slug?: string; p?: string | string[] } = {};
+  if (slug !== undefined) params.slug = slug;
+  if (p !== undefined) params.p = p;
+  return render(await Novo({ searchParams: Promise.resolve(params) }));
 }
 
 const pergunta = (caminho: string): HTMLElement => screen.getByTestId(`pergunta-${caminho}`);
+
+/** O caminho de cada pergunta que a tela mostra agora (o `data-testid`). */
+const naTela = (): string[] =>
+  screen.queryAllByTestId(/^pergunta-/).map((e) => e.getAttribute("data-testid")!.slice("pergunta-".length));
+
+/** A posição (1…M) de uma pergunta na ordem da tela. */
+function posDe(caminho: string): number {
+  const i = ORDEM.indexOf(caminho);
+  expect(i, `${caminho} não está na ordem`).toBeGreaterThan(-1);
+  return i + 1;
+}
+const telaDe = (caminho: string) => paginaNovo(S, String(posDe(caminho)));
+
+/** 🔴 TODAS AS TELAS, uma por uma, de `p=1` a `p=M` — com M lido do REGISTRO,
+ *  nunca da página. Cada tela é desmontada antes da próxima. */
+async function porTodasAsTelas(fn: (n: number, container: HTMLElement) => void | Promise<void>): Promise<number> {
+  const total = esperadas().length;
+  for (let n = 1; n <= total; n++) {
+    const { container } = await paginaNovo(S, String(n));
+    await fn(n, container);
+    cleanup();
+  }
+  return total;
+}
 
 /** QUAIS PERGUNTAS, lidas do REGISTRO — e não da lista da página. */
 function esperadas(): CampoDaFicha[] {
@@ -125,19 +159,35 @@ async function comRotaDeVerdade() {
   return { fetchFalso, chamadas, reload, assign };
 }
 
+/** O campo do registro de um caminho concreto da tela. */
+function campoDe(concretoDaTela: string): CampoDaFicha {
+  const c = esperadas().find((x) => concreto(x.caminho) === concretoDaTela);
+  expect(c, `${concretoDaTela} não é campo do registro`).toBeDefined();
+  return c!;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 describe("/admin/novo — as perguntas", () => {
+  // 🔴 UMA PERGUNTA POR VEZ (decisão dele, 03/10): cada tela tem EXATAMENTE
+  // uma, e a UNIÃO das telas 1…M é o registro — cada campo uma vez só, na ordem
+  // do questionário.
   it("o formulário faz uma pergunta por campo do registro, e nenhuma a mais", async () => {
     await lugarNovo();
-    await paginaNovo(S);
     const campos = esperadas();
     expect(campos.length, "o registro foi lido vazio: o laço não provaria nada").toBeGreaterThan(20);
-    for (const c of campos) {
-      expect(screen.getByTestId(`pergunta-${concreto(c.caminho)}`), c.caminho).toBeTruthy();
-    }
-    expect(screen.getAllByTestId(/^pergunta-/)).toHaveLength(campos.length);
-    // e nenhum molde cru chega à tela
-    expect(document.body.innerHTML).not.toContain("[]");
+    const vistas: string[] = [];
+    const total = await porTodasAsTelas((n) => {
+      const aqui = naTela();
+      expect(aqui, `a tela ${n} não tem exatamente uma pergunta`).toHaveLength(1);
+      vistas.push(aqui[0]);
+      expect(screen.getByText(posicaoNaTela(n, campos.length)), `tela ${n}`).toBeTruthy();
+      // e nenhum molde cru chega à tela
+      expect(document.body.innerHTML).not.toContain("[]");
+    });
+    expect(vistas).toHaveLength(total);
+    expect(new Set(vistas).size, "a mesma pergunta apareceu em duas telas").toBe(vistas.length);
+    expect([...vistas].sort()).toEqual(campos.map((c) => concreto(c.caminho)).sort());
+    expect(vistas, "a ordem das telas não é a do questionário").toEqual([...ORDEM]);
   });
 
   // 🔴 A ORDEM E A REDAÇÃO SÃO DO QUESTIONÁRIO, e isto é PROCEDÊNCIA: cada
@@ -180,37 +230,44 @@ describe("/admin/novo — as perguntas", () => {
       "condicao.severidade",
     ]);
     await lugarNovo();
-    await paginaNovo(S);
-    for (const m of semPergunta) {
-      expect(within(pergunta(concreto(m))).getByText(rotuloDe(concreto(m)))).toBeTruthy();
-    }
-    for (const m of ORDEM.filter((x) => PERGUNTAS[x] !== undefined)) {
-      expect(within(pergunta(concreto(m))).getByText(PERGUNTAS[m])).toBeTruthy();
-    }
+    let medidas = 0;
+    await porTodasAsTelas(() => {
+      const [m] = naTela();
+      const texto = PERGUNTAS[m] ?? rotuloDe(m);
+      if (semPergunta.includes(m)) expect(PERGUNTAS[m]).toBeUndefined();
+      expect(within(pergunta(m)).getByText(texto), m).toBeTruthy();
+      medidas++;
+    });
+    expect(medidas).toBe(ORDEM.length);
   });
 
   it("a tela não traz exemplo nem o caminho velho dos arquivos", async () => {
     await lugarNovo();
-    await paginaNovo(S);
-    expect(document.body.textContent).not.toMatch(/exemplo/i);
-    expect(document.body.textContent).not.toContain("content/fichas");
-    expect(screen.getByText(AVISO_RASCUNHO)).toBeTruthy();
+    await porTodasAsTelas((n) => {
+      expect(document.body.textContent, `tela ${n}`).not.toMatch(/exemplo/i);
+      expect(document.body.textContent, `tela ${n}`).not.toContain("content/fichas");
+      expect(screen.getByText(AVISO_RASCUNHO), `tela ${n}`).toBeTruthy();
+    });
   });
 
   it("pular só aparece nos campos OPCIONAIS, nunca nos obrigatórios", async () => {
     await lugarNovo();
-    await paginaNovo(S);
     let opcionais = 0;
-    for (const c of esperadas()) {
-      const bloco = pergunta(concreto(c.caminho));
-      const pular = within(bloco).queryByRole("button", { name: /não sei|não tem|pular/i });
-      if (c.obrigatorio) expect(pular, c.caminho).toBeNull();
-      else {
-        expect(pular, c.caminho).not.toBeNull();
+    let obrigatorios = 0;
+    await porTodasAsTelas(() => {
+      const [m] = naTela();
+      const c = campoDe(m);
+      const pular = within(pergunta(m)).queryByRole("button", { name: /não sei|não tem|pular/i });
+      if (c.obrigatorio) {
+        expect(pular, m).toBeNull();
+        obrigatorios++;
+      } else {
+        expect(pular, m).not.toBeNull();
         opcionais++;
       }
-    }
+    });
     expect(opcionais, "sem opcional nenhum, o ramo de cima não foi medido").toBeGreaterThan(3);
+    expect(obrigatorios, "sem obrigatório nenhum, o ramo de cima não foi medido").toBeGreaterThan(3);
   });
 
   // Com a resposta DADA, o botão é o "não sei" de sempre (tira a resposta);
@@ -219,55 +276,203 @@ describe("/admin/novo — as perguntas", () => {
   it("opcional respondido: o 'não sei' de sempre, e nenhum 'pular' junto", async () => {
     await lugarNovo();
     await salvarRascunho(cliente, S, JSON.stringify({ ...JSON.parse(docDoLugarNovo(S, NOME)), piso: "barro" }), 2);
-    await paginaNovo(S);
+    await telaDe("piso");
     const botoes = within(pergunta("piso")).getAllByRole("button", { name: /não sei|não tem|pular/i });
     expect(botoes).toHaveLength(1);
     expect(botoes[0].textContent).toMatch(/não sei/i);
   });
 
-  it("pular não grava nada: diz que o app vai calar, e o rascunho fica igual", async () => {
+  // Pular é um ato (o dono dizendo que não vai responder), e como o Salvar,
+  // AVANÇA — sem gravar nada: a ausência já é o "não sei" no documento.
+  it("pular não grava nada: diz que o app vai calar, o rascunho fica igual, e vai pra próxima", async () => {
     await lugarNovo();
-    const { fetchFalso } = await comRotaDeVerdade();
-    await paginaNovo(S);
+    const { fetchFalso, assign, reload } = await comRotaDeVerdade();
+    await telaDe("secaRapido");
     const antes = (await lerRascunho(cliente, S))!.doc;
     fireEvent.click(within(pergunta("secaRapido")).getByRole("button", { name: PULAR }));
     expect(within(pergunta("secaRapido")).getByText(PULADA)).toBeTruthy();
+    expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(S, posDe("secaRapido") + 1));
+    expect(reload).not.toHaveBeenCalled();
     expect(fetchFalso).not.toHaveBeenCalled();
     expect((await lerRascunho(cliente, S))!.doc).toBe(antes);
   });
 
+  it("pular na ÚLTIMA pergunta: fica nela", async () => {
+    await lugarNovo();
+    const { assign, reload } = await comRotaDeVerdade();
+    const ultima = ORDEM[ORDEM.length - 1];
+    expect(campoDe(ultima).obrigatorio, "a premissa: a última é opcional").toBe(false);
+    await telaDe(ultima);
+    fireEvent.click(within(pergunta(ultima)).getByRole("button", { name: PULAR }));
+    expect(within(pergunta(ultima)).getByText(PULADA)).toBeTruthy();
+    expect(assign).not.toHaveBeenCalled();
+    expect(reload).not.toHaveBeenCalled();
+  });
+
   // 🔴 E8: "nada pré-preenchido" inclui o PLACEHOLDER — exemplo dentro da
   // caixa é resposta plausível de um lugar real que se salva sem querer. Toda
-  // caixa, de toda espécie: texto, número, hora, escolha, marcação.
+  // caixa, de toda espécie, em TODA tela: texto, número, hora, escolha, marcação.
   it("nenhum campo vem com resposta de exemplo dentro da caixa", async () => {
     await lugarNovo();
-    const { container } = await paginaNovo(S);
-    const nome = pergunta("trajeto.waypoints.0.nome");
-    const caixas = [...container.querySelectorAll<HTMLInputElement>("input, textarea, select")];
-    expect(caixas.length, "nenhuma caixa lida: o laço ficaria oco").toBeGreaterThan(20);
-    for (const caixa of caixas) {
-      const onde = caixa.closest("[data-testid]")?.getAttribute("data-testid");
-      expect(caixa.getAttribute("placeholder") ?? "", `placeholder em ${onde}`).toBe("");
-      if (nome.contains(caixa)) continue; // o nome é o que ELE digitou ao criar
-      if (caixa.type === "radio" || caixa.type === "checkbox") expect(caixa.checked, onde!).toBe(false);
-      else expect(caixa.value, onde!).toBe("");
+    let lidas = 0;
+    let nomeConferido = false;
+    await porTodasAsTelas((n, container) => {
+      const [m] = naTela();
+      const caixas = [...container.querySelectorAll<HTMLInputElement>("input, textarea, select")];
+      expect(caixas.length, `a tela ${n} não tem caixa nenhuma`).toBeGreaterThan(0);
+      for (const caixa of caixas) {
+        lidas++;
+        expect(caixa.getAttribute("placeholder") ?? "", `placeholder em ${m}`).toBe("");
+        if (m === "trajeto.waypoints.0.nome") continue; // o nome é o que ELE digitou ao criar
+        if (caixa.type === "radio" || caixa.type === "checkbox") expect(caixa.checked, m).toBe(false);
+        else expect(caixa.value, m).toBe("");
+      }
+      if (m === "trajeto.waypoints.0.nome") {
+        // e o nome é exatamente o que ele digitou, nada além
+        expect(within(pergunta(m)).getByRole("textbox")).toHaveProperty("value", NOME);
+        nomeConferido = true;
+      }
+    });
+    expect(lidas, "nenhuma caixa lida: o laço ficaria oco").toBeGreaterThan(20);
+    expect(nomeConferido).toBe(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 R1: A POSIÇÃO MORA NA URL (`?slug=X&p=N`), e `p` torto nunca é 500 nem
+// tela vazia — cai na primeira pergunta ainda sem resposta (ou na 1ª, se todas
+// tiverem).
+describe("/admin/novo — a posição mora na URL", () => {
+  it("escolherPosicao: cada borda de p", () => {
+    const r = [true, false, true, false];
+    // válido: é ele
+    expect(escolherPosicao("1", r)).toBe(1);
+    expect(escolherPosicao("3", r)).toBe(3);
+    expect(escolherPosicao("4", r)).toBe(4);
+    // torto: a primeira sem resposta (a 2ª)
+    for (const p of [undefined, "", "abc", "0", "-1", "5", "99", "1.5", "2x", " 3", "1e0", ["1", "3"], []]) {
+      expect(escolherPosicao(p as string | string[] | undefined, r), JSON.stringify(p)).toBe(2);
     }
-    // e o nome é exatamente o que ele digitou, nada além
-    expect(within(nome).getByRole("textbox")).toHaveProperty("value", NOME);
+    // todas respondidas: a 1ª
+    expect(escolherPosicao(undefined, [true, true, true])).toBe(1);
+    expect(escolherPosicao("9", [true, true, true])).toBe(1);
+    // nenhuma respondida: a 1ª
+    expect(escolherPosicao(undefined, [false, false])).toBe(1);
+  });
+
+  it("na página: p torto cai na 1ª sem resposta; p válido é obedecido", async () => {
+    await lugarNovo();
+    const total = esperadas().length;
+    // o nome já está respondido (é dele que o rascunho nasce): a 1ª sem resposta é a 2ª
+    for (const p of [undefined, "", "abc", "0", "-2", String(total + 1), "1.5", ["3", "4"]]) {
+      await paginaNovo(S, p);
+      expect(naTela(), JSON.stringify(p)).toEqual([ORDEM[1]]);
+      expect(screen.getByText(posicaoNaTela(2, total)), JSON.stringify(p)).toBeTruthy();
+      cleanup();
+    }
+    await paginaNovo(S, "5");
+    expect(naTela()).toEqual([ORDEM[4]]);
+    cleanup();
+    await paginaNovo(S, "1");
+    expect(naTela()).toEqual([ORDEM[0]]);
+  });
+
+  // 🔴 R5: quem volta pelo link do rascunho na lista do painel (que não leva
+  // `p`) cai na primeira pergunta SEM resposta — e não no começo de novo.
+  it("sai e volta pela lista do painel: cai na primeira pergunta sem resposta", async () => {
+    await lugarNovo();
+    const doc = JSON.parse(docDoLugarNovo(S, NOME));
+    doc.trajeto.waypoints[0] = { ...doc.trajeto.waypoints[0], lat: -8.1, lng: -35.2 };
+    await salvarRascunho(cliente, S, JSON.stringify(doc), 2);
+    const { default: Admin } = await import("@/app/admin/page");
+    render(await Admin());
+    const href = within(screen.getByTestId("rascunhos")).getByRole("link", { name: new RegExp(NOME) }).getAttribute("href")!;
+    cleanup();
+    const params = new URL(href, "http://x").searchParams;
+    expect(params.get("p"), "a premissa: o link da lista não leva posição").toBeNull();
+    await paginaNovo(params.get("slug")!);
+    expect(naTela()).toEqual([ORDEM[2]]);
+    expect(screen.getByText(posicaoNaTela(3, esperadas().length))).toBeTruthy();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 R3: ANDAR SEM GRAVAR. "Anterior" e "Próxima" são LINKS — servem pra voltar
+// a uma resposta ou deixar uma obrigatória pra depois (rascunho é incompleto
+// por natureza). E a lista de saltos diz quais já têm resposta.
+describe("/admin/novo — andar entre as perguntas", () => {
+  it("primeira: só 'Próxima'; do meio: as duas; última: só 'Anterior' — e são links", async () => {
+    await lugarNovo();
+    const total = esperadas().length;
+    await paginaNovo(S, "1");
+    expect(screen.queryByRole("link", { name: ANTERIOR })).toBeNull();
+    expect(screen.getByRole("link", { name: PROXIMA }).getAttribute("href")).toBe(enderecoDaPergunta(S, 2));
+    cleanup();
+    await paginaNovo(S, "5");
+    expect(screen.getByRole("link", { name: ANTERIOR }).getAttribute("href")).toBe(enderecoDaPergunta(S, 4));
+    expect(screen.getByRole("link", { name: PROXIMA }).getAttribute("href")).toBe(enderecoDaPergunta(S, 6));
+    expect(screen.queryByRole("button", { name: new RegExp(`${ANTERIOR}|${PROXIMA}`) })).toBeNull();
+    cleanup();
+    await paginaNovo(S, String(total));
+    expect(screen.getByRole("link", { name: ANTERIOR }).getAttribute("href")).toBe(enderecoDaPergunta(S, total - 1));
+    expect(screen.queryByRole("link", { name: PROXIMA })).toBeNull();
+  });
+
+  it("andar não grava nada", async () => {
+    await lugarNovo();
+    const { fetchFalso } = await comRotaDeVerdade();
+    await paginaNovo(S, "5");
+    // o jsdom não navega; o toque no link tem de chegar, e não sair dali
+    const parar = (e: Event) => e.preventDefault();
+    document.addEventListener("click", parar);
+    try {
+      fireEvent.click(screen.getByRole("link", { name: PROXIMA }));
+      fireEvent.click(screen.getByRole("link", { name: ANTERIOR }));
+    } finally {
+      document.removeEventListener("click", parar);
+    }
+    expect(fetchFalso).not.toHaveBeenCalled();
+  });
+
+  it("a lista de saltos: uma por pergunta, cada uma marcada respondida ou sem resposta", async () => {
+    await lugarNovo();
+    await salvarRascunho(
+      cliente,
+      S,
+      JSON.stringify({ ...JSON.parse(docDoLugarNovo(S, NOME)), voz: "frase marcadora" }),
+      2,
+    );
+    const total = esperadas().length;
+    await paginaNovo(S, "4");
+    const saltos = within(screen.getByTestId("saltos")).getAllByRole("link");
+    expect(saltos).toHaveLength(total);
+    const respondidas = new Set([posDe("trajeto.waypoints.0.nome"), posDe("voz")]);
+    saltos.forEach((a, i) => {
+      const n = i + 1;
+      expect(a.getAttribute("href"), `salto ${n}`).toBe(enderecoDaPergunta(S, n));
+      expect(a.getAttribute("aria-label"), `salto ${n}`).toBe(
+        `${posicaoNaTela(n, total)}: ${respondidas.has(n) ? RESPONDIDA : SEM_RESPOSTA}`,
+      );
+      expect(a.getAttribute("aria-current"), `salto ${n}`).toBe(n === 4 ? "step" : null);
+    });
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe("/admin/novo — responder, sair e voltar", () => {
+  // 🔴 R2: gravar com sucesso AVANÇA pra próxima pergunta (`location.assign`),
+  // e não recarrega a mesma.
   it("sai da tela e volta: o que foi respondido continua lá", async () => {
     await lugarNovo();
-    const { chamadas, reload } = await comRotaDeVerdade();
-    const { unmount } = await paginaNovo(S);
+    const { chamadas, reload, assign } = await comRotaDeVerdade();
+    const { unmount } = await telaDe("voz");
     fireEvent.change(within(pergunta("voz")).getByRole("textbox"), {
       target: { value: "o chao firma em dois dias" },
     });
     fireEvent.click(pergunta("voz").querySelector('[data-salvar="voz"]')!);
-    await waitFor(() => expect(reload).toHaveBeenCalled());
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(S, posDe("voz") + 1)));
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(reload).not.toHaveBeenCalled();
 
     // 🔴 pra porta do RASCUNHO, nunca pra da ficha no ar
     expect(chamadas).toHaveLength(1);
@@ -277,8 +482,64 @@ describe("/admin/novo — responder, sair e voltar", () => {
     expect(await versaoAtual(cliente, S), "o rascunho foi parar no ar").toBeNull();
 
     unmount();
-    await paginaNovo(S);
+    await telaDe("voz");
     expect(within(pergunta("voz")).getByDisplayValue("o chao firma em dois dias")).toBeTruthy();
+  });
+
+  it("gravar na ÚLTIMA pergunta: fica na última", async () => {
+    await lugarNovo();
+    const { chamadas, reload, assign } = await comRotaDeVerdade();
+    const ultima = ORDEM[ORDEM.length - 1];
+    const total = esperadas().length;
+    expect(posDe(ultima)).toBe(total);
+    await telaDe(ultima);
+    fireEvent.click(within(pergunta(ultima)).getAllByRole("checkbox")[0]);
+    fireEvent.click(pergunta(ultima).querySelector(`[data-salvar="${ultima}"]`)!);
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(S, total)));
+    expect(chamadas).toHaveLength(1);
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  // Erro de gravação NÃO avança: a frase da porta aparece, e ele fica na
+  // pergunta, com o que digitou na caixa.
+  it("recusa da porta: a frase na tela, e não sai da pergunta", async () => {
+    await lugarNovo();
+    const FRASE = "Frase marcadora da recusa.";
+    const fetchFalso = vi.fn(async () => new Response(FRASE, { status: 409 }));
+    vi.stubGlobal("fetch", fetchFalso);
+    const reload = vi.fn();
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, reload, assign });
+    await telaDe("voz");
+    fireEvent.change(within(pergunta("voz")).getByRole("textbox"), { target: { value: "texto marcador" } });
+    fireEvent.click(pergunta("voz").querySelector('[data-salvar="voz"]')!);
+    expect(await within(pergunta("voz")).findByText(FRASE)).toBeTruthy();
+    expect(fetchFalso).toHaveBeenCalledTimes(1);
+    expect(assign).not.toHaveBeenCalled();
+    expect(reload).not.toHaveBeenCalled();
+    expect(within(pergunta("voz")).getByDisplayValue("texto marcador")).toBeTruthy();
+  });
+
+  // 🔴 O PADRÃO NÃO MUDOU: fora do formulário de lugar novo (a `FichaInteira`
+  // não monta provedor), um editor que grava RECARREGA a página, como antes, e
+  // não navega pra lugar nenhum.
+  it("editor sem provedor (a ficha no ar): gravar recarrega, e não navega", async () => {
+    const fetchFalso = vi.fn(async () => new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchFalso);
+    const reload = vi.fn();
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, reload, assign });
+    render(
+      <EditorProsa
+        campo={{ caminho: "voz", rotulo: "voz", obrigatorio: true }}
+        valor="frase marcadora"
+        slug="lugar-marcador-no-ar"
+      />,
+    );
+    fireEvent.click(document.querySelector('[data-salvar="voz"]')!);
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    expect(assign).not.toHaveBeenCalled();
+    expect((fetchFalso.mock.calls[0] as unknown as [string])[0]).toBe("/api/admin/ficha");
   });
 
   // A coordenada de um lugar novo NÃO tem de onde o mapa começar — e começar
@@ -288,7 +549,7 @@ describe("/admin/novo — responder, sair e voltar", () => {
   it("coordenada sem resposta: duas caixas de número, sem mapa; gravada, o mapa", async () => {
     await lugarNovo();
     const { chamadas } = await comRotaDeVerdade();
-    const { unmount } = await paginaNovo(S);
+    const primeira = await telaDe("trajeto.waypoints.0.lat");
     const ponto = pergunta("trajeto.waypoints.0.lat");
     expect(within(ponto).queryByTestId("mapa-escolher"), "um mapa sem ponto começaria num lugar inventado").toBeNull();
     const [lat, lng] = within(ponto).getAllByRole("spinbutton");
@@ -297,7 +558,9 @@ describe("/admin/novo — responder, sair e voltar", () => {
     fireEvent.click(within(ponto).getByRole("button", { name: /salvar/i }));
     await waitFor(() => expect(chamadas).toHaveLength(1));
     expect(chamadas[0].corpo).toEqual({ slug: S, ponto: 0, lat: -8.1, lng: -35.2 });
+    primeira.unmount();
 
+    const segunda = await telaDe("condicao.coords");
     const chuva = pergunta("condicao.coords");
     const [clat, clng] = within(chuva).getAllByRole("spinbutton");
     fireEvent.change(clat, { target: { value: "-8.3" } });
@@ -306,16 +569,18 @@ describe("/admin/novo — responder, sair e voltar", () => {
     await waitFor(() => expect(chamadas).toHaveLength(2));
     expect(chamadas[1].corpo).toEqual({ slug: S, campo: "condicao.coords", valor: { lat: -8.3, lng: -35.4 } });
 
-    unmount();
-    await paginaNovo(S);
+    segunda.unmount();
+    const terceira = await telaDe("trajeto.waypoints.0.lat");
     expect(within(pergunta("trajeto.waypoints.0.lat")).getByTestId("mapa-escolher")).toBeTruthy();
+    terceira.unmount();
+    await telaDe("condicao.coords");
     expect(within(pergunta("condicao.coords")).getByTestId("mapa-escolher")).toBeTruthy();
   });
 
   it("caixa de coordenada vazia não grava", async () => {
     await lugarNovo();
     const { fetchFalso } = await comRotaDeVerdade();
-    await paginaNovo(S);
+    await telaDe("trajeto.waypoints.0.lat");
     const ponto = pergunta("trajeto.waypoints.0.lat");
     fireEvent.change(within(ponto).getAllByRole("spinbutton")[0], { target: { value: "-8.1" } });
     fireEvent.click(within(ponto).getByRole("button", { name: /salvar/i }));
@@ -331,7 +596,7 @@ describe("/admin/novo — responder, sair e voltar", () => {
     try {
       await lugarNovo();
       const { fetchFalso } = await comRotaDeVerdade();
-      await paginaNovo(S);
+      await telaDe("condicao.regra.limiar_mm");
       fireEvent.change(within(pergunta("condicao.regra.limiar_mm")).getByRole("spinbutton"), {
         target: { value: "3" },
       });
@@ -509,13 +774,17 @@ describe("o formulário e a lista têm regra no admin.css", () => {
       JSON.stringify({ ...JSON.parse(docDoLugarNovo(S, NOME)), horario: { abre: "05:00", fecha: "17:00" } }),
       2,
     );
-    const novo = await paginaNovo(S);
+    await comRotaDeVerdade();
+    // uma tela do MEIO (as duas setas) com um opcional sem resposta (o "pular")
+    const novo = await telaDe("piso");
     // o "pulada" só existe depois de um toque — sem ele, a regra dela pareceria morta
-    fireEvent.click(within(novo.container).getAllByRole("button", { name: PULAR })[0]);
+    fireEvent.click(within(novo.container).getByRole("button", { name: PULAR }));
+    // e outra tela com o "pular" ainda de pé (o toque acima o trocou pelo "pulada")
+    const outra = await telaDe("secaRapido");
     const { default: Admin } = await import("@/app/admin/page");
     const lista = render(await Admin());
     const semRascunho = await paginaNovo();
-    const classes = [novo.container, lista.container, semRascunho.container].flatMap((c) =>
+    const classes = [novo.container, outra.container, lista.container, semRascunho.container].flatMap((c) =>
       [...c.querySelectorAll("[class]")].flatMap((e) => [...e.classList]),
     );
     const PREFIXO = /^adm-(novo|pergunta|rascunho)/;
