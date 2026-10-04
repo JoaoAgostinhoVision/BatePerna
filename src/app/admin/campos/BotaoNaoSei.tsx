@@ -36,11 +36,12 @@ import type { PropsDoEditor } from "./tipos";
  *  nesse estado, aquele teste fica vermelho e este esconderijo deixa de ser
  *  honesto. É a porta que decide, não este componente.
  *
- *  🔴 E A PALAVRA MUDA NO BLOCO, de propósito. Num campo comum, tirar a chave é
- *  *"não sei"* — o dono não sabe, e o app cala. Num BLOCO opcional (`horario`
- *  é o único hoje) tirar o bloco é a **única** forma de dizer *"este lugar não
- *  tem hora pra abrir e fechar"* — a régua do app é que ficha sem horário nunca
- *  fecha (`src/lib/horario.ts:246`). Chamar isso de "não sei" faria o dono
+ *  🔴 E A PALAVRA MUDA NO HORÁRIO, de propósito. Num campo comum, tirar a chave
+ *  é *"não sei"* — o dono não sabe, e o app cala. No `horario` (a lista de
+ *  faixas; até a Tarefa 11c era um BLOCO, e a palavra nasceu lá) tirar a chave
+ *  é a **única** forma de dizer *"este lugar não tem hora pra abrir e fechar"*
+ *  — a régua do app é que ficha sem horário nunca fecha (`fechadoAgora`, em
+ *  `src/lib/horario.ts`). Chamar isso de "não sei" faria o dono
  *  declarar ignorância quando o que ele está declarando é um FATO. Duas
  *  palavras, um botão, e teste pros dois ramos: frase montada por bifurcação
  *  com prova de um lado só é a 49ª espécie do catálogo deste projeto.
@@ -54,8 +55,9 @@ import type { PropsDoEditor } from "./tipos";
  *  tela dizer duas coisas sobre uma gravação.
  *
  *  ⚠️ SEM CONFIRMAÇÃO, e é escolha: a tabela de versões é append-only, o
- *  histórico da tela do lugar traz o "voltar", e o bloco VOLTA inteiro (ruling
- *  C1 da Tarefa 1). Nada aqui é irreversível pelo celular. */
+ *  histórico da tela do lugar traz o "voltar", e o horário tirado volta pelo
+ *  próprio editor dele (uma faixa de caixas vazias). Nada aqui é irreversível
+ *  pelo celular. */
 
 // PENDENTE: redação minha, o João ainda não leu
 export const NAO_SEI = "Não sei — o app cala sobre isto";
@@ -69,12 +71,12 @@ export default function BotaoNaoSei({
   valor,
   slug,
   gravacao,
-  bloco = false,
+  naoTem = false,
 }: PropsDoEditor & {
   /** O `usarGravacao()` DO EDITOR — nunca um próprio, ver o docblock. */
   gravacao: Gravacao;
-  /** `true` só pra espécie `bloco` — troca a palavra, ver o docblock. */
-  bloco?: boolean;
+  /** `true` só no horário (`EditorFaixas`) — troca a palavra, ver o docblock. */
+  naoTem?: boolean;
 }) {
   const { salvando, gravar } = gravacao;
   // 🔴 As duas saídas, e as duas são "a tela não oferece o que não vale":
@@ -88,7 +90,7 @@ export default function BotaoNaoSei({
       disabled={salvando}
       onClick={() => void gravar({ slug, campo: campo.caminho, naoSei: true })}
     >
-      {salvando ? TIRANDO : bloco ? NAO_TEM : NAO_SEI}
+      {salvando ? TIRANDO : naoTem ? NAO_TEM : NAO_SEI}
     </button>
   );
 }

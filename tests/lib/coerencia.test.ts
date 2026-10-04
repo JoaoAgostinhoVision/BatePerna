@@ -595,7 +595,7 @@ describe("violacoesDoAcervo", () => {
   });
 
   // 🔴 `abre === fecha` É ACUSADO, e a frase dele é OUTRA. `fechadoNaHora`
-  // (`src/lib/horario.ts:194`, `dentroDaFaixa`) lê horários iguais como **24h: nunca fecha**, não
+  // (`dentroDaFaixa`, em `src/lib/horario.ts`) lê horários iguais como **24h: nunca fecha**, não
   // como travessia da meia-noite — dizer a esse dono que o app vai anunciar o
   // lugar "aberto a noite toda e fechada o dia todo" seria descrever outro caso.
   // Sem este par de asserções, trocar `<` por `<=` sobrevive.

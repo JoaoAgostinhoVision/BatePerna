@@ -6,8 +6,10 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import type { Client } from "@libsql/client";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
-import { CAMPOS_DA_FICHA, type CampoDaFicha } from "@/lib/campos-da-ficha";
-import { criarRascunho, historico, lerRascunho, salvarRascunho, versaoAtual } from "@/lib/db";
+import { CAMPOS_DA_FICHA, lerCaminho, type CampoDaFicha } from "@/lib/campos-da-ficha";
+import { criarRascunho, gravarVersao, historico, lerRascunho, salvarRascunho, versaoAtual } from "@/lib/db";
+import { aberturaDaFicha, fechadoAgora, rotuloAbertura } from "@/lib/horario";
+import { fichaSchema } from "@/types/ficha";
 import { docDoLugarNovo } from "@/lib/rascunho";
 import { rotuloDe } from "@/app/admin/FichaInteira";
 import { ORDEM, PERGUNTAS, escolherPosicao } from "@/app/admin/novo/perguntas";
@@ -25,6 +27,7 @@ import {
 } from "@/app/admin/FormularioDeLugar";
 import EditorProsa from "@/app/admin/campos/EditorProsa";
 import { ERRO_REDE } from "@/app/admin/campos/gravar";
+import { HORA_VAZIA } from "@/app/admin/campos/palavras";
 import { LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
 import { regraDe, semComentarios } from "../css";
 import { bancoVazio, semearAcervo } from "../banco";
@@ -39,9 +42,9 @@ import { bancoVazio, semearAcervo } from "../banco";
  *  escritas à mão.
  *
  *  🔴 E O QUE "QUAIS PERGUNTAS" SIGNIFICA SAI DO REGISTRO, AQUI, nunca da lista
- *  da tela: `esperadas()` é o registro com as duas dobras que a auditoria
- *  decidiu (folha de bloco mora no bloco; a metade `.lng` do ponto mora na
- *  `.lat`) e o molde `[]` no ponto `0`. */
+ *  da tela: `esperadas()` é o registro com a dobra que a auditoria decidiu (a
+ *  metade `.lng` do ponto mora na `.lat`) e o molde `[]` no ponto `0`. A
+ *  outra dobra (folha de bloco mora no bloco) saiu com o bloco, na 11d. */
 
 const SENHA = "s".repeat(24);
 const SEGREDO = "segredo-de-assinatura-do-teste-formulario";
@@ -129,12 +132,7 @@ async function porTodasAsTelas(fn: (n: number, container: HTMLElement) => void |
 
 /** QUAIS PERGUNTAS, lidas do REGISTRO — e não da lista da página. */
 function esperadas(): CampoDaFicha[] {
-  const blocos = CAMPOS_DA_FICHA.filter((c) => c.especie === "bloco").map((c) => c.caminho);
-  return CAMPOS_DA_FICHA.filter(
-    (c) =>
-      !blocos.some((b) => c.caminho.startsWith(`${b}.`)) &&
-      !(c.especie === "coord" && c.caminho.endsWith("[].lng")),
-  );
+  return CAMPOS_DA_FICHA.filter((c) => !(c.especie === "coord" && c.caminho.endsWith("[].lng")));
 }
 const concreto = (molde: string): string => molde.replace("[]", ".0");
 
@@ -161,6 +159,53 @@ async function comRotaDeVerdade() {
   return { fetchFalso, chamadas, reload, assign };
 }
 
+/** 🔴 UM RASCUNHO COM TODAS AS PERGUNTAS RESPONDIDAS (Tarefa 11d). A varredura
+ *  R4 rodava só num rascunho NOVO — e foi por isso que o I-B da Tarefa 11 (dois
+ *  Salvar na pergunta do horário PRESENTE) passou: o horário presente nunca era
+ *  visto. Todo texto aqui é MARCADOR, de um lugar que não existe; o horário é o
+ *  do almoço (duas faixas), que é o caso de mais de um par de caixas por tela.
+ *  Uma premissa medida confere que ele responde TODA pergunta do registro e que
+ *  é uma ficha que o schema aceita. */
+const ALMOCO = [
+  { abre: "08:00", fecha: "10:00" },
+  { abre: "14:00", fecha: "17:00" },
+];
+function docTodoRespondido(horario: readonly { abre: string; fecha: string }[] = ALMOCO): string {
+  return JSON.stringify({
+    ...JSON.parse(docDoLugarNovo(S, NOME, CIDADE)),
+    trajeto: { waypoints: [{ nome: NOME, lat: -8.4, lng: -36.2, nota: "Nota marcadora." }] },
+    rotulo_escaneio: "Rótulo marcador",
+    promessa: "Promessa marcadora.",
+    voz: "Voz marcadora.",
+    premio: "Prêmio marcador.",
+    acesso: "Acesso marcador.",
+    avisos: "Aviso marcador.",
+    piso: "barro",
+    carroComum: true,
+    secaRapido: "Chão marcador.",
+    condicao: {
+      coords: { lat: -8.4, lng: -36.2 },
+      regra: { tipo: "chuva_binaria", janela_previsao_horas: 3, janela_passado_horas: 6, limiar_mm: 1 },
+      severidade: "nao-va",
+      regra_texto: "Regra marcadora.",
+      ressalva_proxy: "Ressalva marcadora.",
+    },
+    discriminador: { formato: "marcador", como_ler: "Leitura marcadora.", permissao_abortar: "Permissão marcadora." },
+    custo: { tag: "pago", valor: "Valor marcador", curto: "Curto marcador" },
+    horario,
+    dias: ["sab", "dom"],
+  });
+}
+
+/** Todo valor PRIMITIVO do documento, em texto — é contra isto que se confere
+ *  que o que está numa caixa é resposta DELE, e não algo que a tela pôs lá. */
+function respostasDe(v: unknown, saida = new Set<string>()): Set<string> {
+  if (Array.isArray(v)) for (const x of v) respostasDe(x, saida);
+  else if (typeof v === "object" && v !== null) for (const x of Object.values(v)) respostasDe(x, saida);
+  else saida.add(String(v));
+  return saida;
+}
+
 /** O campo do registro de um caminho concreto da tela. */
 function campoDe(concretoDaTela: string): CampoDaFicha {
   const c = esperadas().find((x) => concreto(x.caminho) === concretoDaTela);
@@ -181,6 +226,8 @@ describe("/admin/novo — as perguntas", () => {
     const total = await porTodasAsTelas((n) => {
       const aqui = naTela();
       expect(aqui, `a tela ${n} não tem exatamente uma pergunta`).toHaveLength(1);
+      // 🔴 UM SALVAR POR TELA (Tarefa 11d): a lacuna que deixou o I-B passar.
+      expect(document.querySelectorAll("[data-salvar]"), `a tela ${n} (${aqui[0]}) não tem UM Salvar`).toHaveLength(1);
       vistas.push(aqui[0]);
       expect(screen.getByText(posicaoNaTela(n, campos.length)), `tela ${n}`).toBeTruthy();
       // e nenhum molde cru chega à tela
@@ -339,6 +386,151 @@ describe("/admin/novo — as perguntas", () => {
     });
     expect(lidas, "nenhuma caixa lida: o laço ficaria oco").toBeGreaterThan(20);
     expect([...conferidos].sort()).toEqual(Object.keys(DIGITADOS).sort());
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 A VARREDURA R4 NUM RASCUNHO TODO RESPONDIDO, e o I-B da Tarefa 11 fechado
+// (Tarefa 11d). A pergunta do horário presente tinha DOIS Salvar (um por
+// folha), o primeiro avançava, e a hora digitada na outra caixa sumia sem
+// aviso. O horário virou UM instrumento com UM Salvar que grava a lista inteira.
+describe("/admin/novo — rascunho com TODAS as perguntas respondidas", () => {
+  it("a premissa: o rascunho responde toda pergunta do registro, e é uma ficha que o schema aceita", () => {
+    const doc = JSON.parse(docTodoRespondido());
+    const sem = esperadas()
+      .map((c) => concreto(c.caminho))
+      .filter((m) => lerCaminho(doc, m.split(".")) === undefined);
+    expect(sem, "pergunta sem resposta: a varredura abaixo não veria a tela dela respondida").toEqual([]);
+    expect(fichaSchema.safeParse(doc).success).toBe(true);
+    expect(doc.horario, "sem intervalo, a tela do horário teria um par de caixas só").toHaveLength(2);
+  });
+
+  it("uma pergunta por tela, UM Salvar por tela, nenhum botão de enviar, nenhum pular — e as caixas trazem as respostas DELE", async () => {
+    await lugarNovo();
+    await salvarRascunho(cliente, S, docTodoRespondido(), 2);
+    const respostas = respostasDe(JSON.parse(docTodoRespondido()));
+    let caixas = 0;
+    const vistas: string[] = [];
+    await porTodasAsTelas((n, container) => {
+      const aqui = naTela();
+      expect(aqui, `a tela ${n} não tem exatamente uma pergunta`).toHaveLength(1);
+      const [m] = aqui;
+      vistas.push(m);
+      expect(container.querySelectorAll("[data-salvar]"), `a tela ${n} (${m}) não tem UM Salvar`).toHaveLength(1);
+      // 🔴 M2 da auditoria: um `<button>` sem `type` é SUBMIT. Nenhum, em tela
+      // nenhuma — os botões que não gravam (+ faixa, tirar, pular, não sei) são
+      // `type="button"`, e quem grava é o Salvar.
+      expect(
+        container.querySelectorAll('button:not([type="button"])'),
+        `a tela ${n} (${m}) tem botão de enviar`,
+      ).toHaveLength(0);
+      expect(
+        within(pergunta(m)).queryByRole("button", { name: PULAR }),
+        `a tela ${n} (${m}) respondida oferece pular`,
+      ).toBeNull();
+      for (const caixa of container.querySelectorAll<HTMLInputElement>("input, textarea, select")) {
+        caixas++;
+        expect(caixa.getAttribute("placeholder") ?? "", `placeholder em ${m}`).toBe("");
+        if (caixa.type === "radio" || caixa.type === "checkbox") continue;
+        expect(caixa.value, `${m}: a caixa veio vazia com a resposta dele no rascunho`).not.toBe("");
+        expect(respostas.has(caixa.value), `${m}: "${caixa.value}" não é resposta dele`).toBe(true);
+      }
+    });
+    expect(vistas, "a ordem das telas não é a do questionário").toEqual([...ORDEM]);
+    expect(caixas, "nenhuma caixa lida: o laço ficaria oco").toBeGreaterThan(20);
+  });
+
+  it("a tela do horário respondido: as faixas DELE nas caixas, um Salvar", async () => {
+    await lugarNovo();
+    await salvarRascunho(cliente, S, docTodoRespondido(), 2);
+    await telaDe("horario");
+    const horas = [...pergunta("horario").querySelectorAll<HTMLInputElement>("[data-hora]")].map((c) => c.value);
+    expect(horas).toEqual(["08:00", "10:00", "14:00", "17:00"]);
+    expect(pergunta("horario").querySelectorAll("[data-salvar]")).toHaveLength(1);
+  });
+
+  // 🔴 O I-B, COM A PROVA QUE ELE PEDIA: horário presente, mudar as DUAS horas,
+  // tocar UM Salvar — as duas gravadas no rascunho, e a tela avança.
+  it("I-B: horário presente, mudar as duas horas, um Salvar — as duas gravadas, e vai pra próxima", async () => {
+    await lugarNovo();
+    await salvarRascunho(
+      cliente,
+      S,
+      JSON.stringify({ ...JSON.parse(docDoLugarNovo(S, NOME, CIDADE)), horario: [{ abre: "08:00", fecha: "17:00" }] }),
+      2,
+    );
+    const { chamadas, assign, reload } = await comRotaDeVerdade();
+    await telaDe("horario");
+    const caixa = (chave: string) =>
+      pergunta("horario").querySelector<HTMLInputElement>(`[data-hora="horario.0.${chave}"]`)!;
+    expect([caixa("abre").value, caixa("fecha").value], "a resposta dele não voltou pra caixa").toEqual([
+      "08:00",
+      "17:00",
+    ]);
+    fireEvent.change(caixa("abre"), { target: { value: "09:00" } });
+    fireEvent.change(caixa("fecha"), { target: { value: "18:00" } });
+    fireEvent.click(pergunta("horario").querySelector('[data-salvar="horario"]')!);
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(S, posDe("horario") + 1)));
+    expect(reload).not.toHaveBeenCalled();
+    expect(chamadas, "duas requisições: abre e fecha não gravaram juntas").toHaveLength(1);
+    expect(chamadas[0].corpo).toEqual({ slug: S, campo: "horario", valor: [{ abre: "09:00", fecha: "18:00" }] });
+    expect(JSON.parse((await lerRascunho(cliente, S))!.doc).horario).toEqual([{ abre: "09:00", fecha: "18:00" }]);
+  });
+
+  it("meia faixa não grava e não avança: a frase do formato, e a hora fica na caixa", async () => {
+    await lugarNovo();
+    const { chamadas, assign } = await comRotaDeVerdade();
+    await telaDe("horario");
+    const caixa = (chave: string) =>
+      pergunta("horario").querySelector<HTMLInputElement>(`[data-hora="horario.0.${chave}"]`)!;
+    fireEvent.change(caixa("abre"), { target: { value: "09:00" } });
+    fireEvent.click(pergunta("horario").querySelector('[data-salvar="horario"]')!);
+    expect(within(pergunta("horario")).getByRole("alert").textContent).toBe(HORA_VAZIA);
+    expect(chamadas).toHaveLength(0);
+    expect(assign).not.toHaveBeenCalled();
+    expect(caixa("abre").value).toBe("09:00");
+  });
+
+  // 🔴 M1 DA AUDITORIA: A PROVA PONTA A PONTA PELO RASCUNHO. 8–10 e 14–17 pelo
+  // formulário → o rascunho → a publicação → a leitura PÚBLICA, e às 11h o
+  // veredito é "fechado, abre às 14h".
+  // ⚠️ A PUBLICAÇÃO É DA TAREFA 12 e ainda não existe. O que ela vai gravar está
+  // no brief dela (12-I3): `JSON.stringify(fichaSchema.parse(doc))` do rascunho,
+  // como versão. É isso que o caso faz, à mão — não é a rota de publicar.
+  it("ponta a ponta: 8–10 e 14–17 pelo formulário → publicado → a fonte pública, às 11h, diz fechado, abre às 14h", async () => {
+    await lugarNovo();
+    await salvarRascunho(cliente, S, docTodoRespondido([{ abre: "05:00", fecha: "17:00" }]), 2);
+    const { assign } = await comRotaDeVerdade();
+    await telaDe("horario");
+    const h = pergunta("horario");
+    fireEvent.click(h.querySelector("[data-mais-faixa]")!);
+    const caixa = (i: number, chave: string) =>
+      h.querySelector<HTMLInputElement>(`[data-hora="horario.${i}.${chave}"]`)!;
+    fireEvent.change(caixa(0, "abre"), { target: { value: "08:00" } });
+    fireEvent.change(caixa(0, "fecha"), { target: { value: "10:00" } });
+    fireEvent.change(caixa(1, "abre"), { target: { value: "14:00" } });
+    fireEvent.change(caixa(1, "fecha"), { target: { value: "17:00" } });
+    fireEvent.click(h.querySelector('[data-salvar="horario"]')!);
+    await waitFor(() => expect(assign).toHaveBeenCalled());
+
+    const doc = (await lerRascunho(cliente, S))!.doc;
+    await gravarVersao(
+      cliente,
+      S,
+      JSON.stringify(fichaSchema.parse(JSON.parse(doc))),
+      "painel",
+      Math.floor(Date.now() / 1000),
+    );
+    const { esquecerMemoria } = await import("@/lib/ficha-fonte");
+    const { getFicha } = await import("@/lib/ficha");
+    esquecerMemoria();
+    const f = await getFicha(S);
+    expect(f, "a ficha publicada não chegou à fonte pública").not.toBeNull();
+    expect(f!.horario).toEqual(ALMOCO);
+    // sábado (o rascunho abre sábado e domingo), 11h em Recife
+    const sabado11h = { minutos: 11 * 60, dia: 6, epochS: 0 };
+    expect(fechadoAgora(aberturaDaFicha(f!), sabado11h)).toBe(true);
+    expect(rotuloAbertura(aberturaDaFicha(f!), sabado11h)).toBe("abre às 14h");
   });
 });
 

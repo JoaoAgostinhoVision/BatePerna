@@ -251,7 +251,7 @@ describe("o horário inteiro — a lista de faixas e o 'não sei'", () => {
   });
 
   // 🔴 A CONSEQUÊNCIA DE VERDADE, medida no motor que a tela usa
-  // (`fechadoAgora`, `src/lib/horario.ts:246`) — não na presença da chave.
+  // (`fechadoAgora`, em `src/lib/horario.ts`) — não na presença da chave.
   // Sem esta asserção, o teste de cima prova que uma chave sumiu do JSON e
   // nada sobre o que o app passa a dizer.
   it("o lugar DEIXA DE FECHAR por horário depois do 'não sei'", () => {

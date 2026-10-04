@@ -161,6 +161,10 @@
 .adm-editor-salvar { padding: .6rem; font-size: .95rem; border-radius: 8px; }
 /* De `.adm-ficha button` também: os dois botões do bloco são o mesmo botão. */
 .adm-editor-nao-sei { padding: .6rem; font-size: .95rem; border-radius: 8px; }
+/* Os dois botões que mexem na lista de faixas do horário sem gravar (Tarefa
+   11d): o mesmo botão de `.adm-ficha button`, sem valor novo. */
+.adm-editor-mais-faixa { padding: .6rem; font-size: .95rem; border-radius: 8px; }
+.adm-editor-tirar-faixa { padding: .6rem; font-size: .95rem; border-radius: 8px; }
 /* Grid de `.adm-porta` com o `gap: .3rem` de `.adm-campo`, e `border: 0`/
    `padding: 0`/`margin: 0` só pra tirar a moldura que o navegador põe em
    `<fieldset>` por default — o cartão do grupo já é a moldura desta tela. */

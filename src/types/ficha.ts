@@ -22,6 +22,13 @@ export const waypointSchema = z.object({
   nota: z.string().optional(),
 });
 
+/** UMA faixa do horário: as duas horas em "HH:MM". O formato vem de `HHMM`, em
+ *  `horario.ts` — a porta de escrita confere contra o MESMO. */
+export const faixaSchema = z.object({
+  abre: z.string().regex(HHMM),
+  fecha: z.string().regex(HHMM),
+});
+
 /** 🔴 OS TRÊS NÚMEROS QUE GOVERNAM O MOTOR, E O `.finite()` É A ÚNICA
  *  RESTRIÇÃO AQUI — por medição, não por gosto (Task 7, 2026-09-30).
  *
@@ -75,13 +82,6 @@ export const waypointSchema = z.object({
  *  CADA janela pode ser zero sozinha — decisões do João: "só olhar a chuva que
  *  já caiu" pra previsão, e o espelho dela pro passado. Este schema não
  *  mudou com nenhuma das duas: ele nunca recusou o zero. */
-/** UMA faixa do horário: as duas horas em "HH:MM". O formato vem de `HHMM`, em
- *  `horario.ts` — a porta de escrita confere contra o MESMO. */
-export const faixaSchema = z.object({
-  abre: z.string().regex(HHMM),
-  fecha: z.string().regex(HHMM),
-});
-
 export const regraSchema = z.object({
   tipo: z.literal("chuva_binaria"),
   janela_previsao_horas: z.number().finite(),

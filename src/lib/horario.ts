@@ -121,11 +121,20 @@ export function problemaDasFaixas(lista: unknown): string | null {
   if (faixas.length === 1) return null;
   const sozinha = faixas.find(especial);
   if (sozinha) {
+    // 🔴 A FRASE DIZ O QUE A FAIXA É (M-2 da revisão da 11c): a que FECHA à
+    // meia-noite (14:00–00:00) não "passa" dela, termina nela. A regra é uma só
+    // (`especial`); só a palavra se bifurca.
+    const eh =
+      sozinha.abre === sozinha.fecha
+        ? // PENDENTE: redação minha, o João ainda não leu
+          "é de 24 horas"
+        : minutosDeHHMM(sozinha.fecha) === 0
+          ? // PENDENTE: redação minha, o João ainda não leu
+            "fecha à meia-noite"
+          : // PENDENTE: redação minha, o João ainda não leu
+            "passa da meia-noite";
     // PENDENTE: redação minha, o João ainda não leu
-    return (
-      `a faixa ${rotuloFaixaCurta([sozinha])} é de 24 horas ou passa da meia-noite, ` +
-      "e uma faixa assim só vale sozinha no horário"
-    );
+    return `a faixa ${rotuloFaixaCurta([sozinha])} ${eh}, e uma faixa assim só vale sozinha no horário`;
   }
   for (let i = 1; i < faixas.length; i++) {
     const antes = faixas[i - 1];
@@ -221,14 +230,21 @@ export function fechadoNaHora(horario: Horario | undefined, minutos: number | nu
  *  agora — nunca "a seguinte no array", que o documento pode trazer fora de
  *  ordem (11c-I2). */
 function proximaAberturaHoje(horario: Horario, minutos: number): Faixa | undefined {
-  return horario
-    .filter((f) => minutos < minutosDeHHMM(f.abre))
-    .sort((a, b) => minutosDeHHMM(a.abre) - minutosDeHHMM(b.abre))[0];
+  return naOrdemDoDia(horario).find((f) => minutos < minutosDeHHMM(f.abre));
+}
+
+/** As faixas na ORDEM DO DIA (pelo `abre`), numa cópia — o documento de quem
+ *  chamou não é mexido. É a ordem de toda frase que diz as faixas: o motivo
+ *  (`rotuloFaixa`) e o tíquete (`rotuloFaixaCurta`) são a mesma tela, e um
+ *  documento fora de ordem (o schema de leitura só confere forma) não pode
+ *  sair em duas ordens nela (I-1 da revisão da 11c). */
+function naOrdemDoDia(horario: Horario): Faixa[] {
+  return [...horario].sort((a, b) => minutosDeHHMM(a.abre) - minutosDeHHMM(b.abre));
 }
 
 /** A primeira faixa do dia: o menor `abre` de todos. É dela o "abre amanhã". */
 function primeiraDoDia(horario: Horario): Faixa {
-  return [...horario].sort((a, b) => minutosDeHHMM(a.abre) - minutosDeHHMM(b.abre))[0];
+  return naOrdemDoDia(horario)[0];
 }
 
 /** Está fechado AGORA? — a pergunta INTEIRA, pelos dois eixos.
@@ -278,13 +294,6 @@ export function fechadoHoje(
   return fechadoAgora(abertura, agora) || fechadoPeloDono(aviso, agora?.epochS ?? null);
 }
 
-/** A próxima abertura é HOJE ainda, ou só amanhã? Só faz sentido quando já se
- *  sabe que está fechado — é o que separa "abre às 5h" de "abre amanhã às 5h",
- *  e a diferença entre as duas frases é o dia inteiro de quem lê. */
-export function abreAindaHoje(horario: Horario, minutos: number): boolean {
-  return proximaAberturaHoje(horario, minutos) !== undefined;
-}
-
 /** "05:00" → "5h"; "17:30" → "17h30". Mesma forma do `horaCurtaRecife`, que já
  *  é o jeito deste app escrever hora — duas formas na mesma tela seriam a
  *  mesma trilha com duas caras. */
@@ -294,7 +303,8 @@ export function rotuloHora(hhmm: string): string {
 }
 
 /** "5h–17h" · "8h–10h · 14h–17h" — as faixas compactas, pro ticket da ficha e
- *  pra lista do acervo. Com uma faixa só, sai como sempre saiu.
+ *  pra lista do acervo, na ordem do dia (`naOrdemDoDia`). Com uma faixa só, sai
+ *  como sempre saiu.
  *
  *  🔴 Ela vivia ESCRITA À MÃO dentro de `[slug]/page.tsx` (`${rotuloHora(abre)}–${rotuloHora(fecha)}`),
  *  e ali era a única tela que a mostrava. Com `/trilhas` passando a mostrá-la
@@ -303,7 +313,7 @@ export function rotuloHora(hhmm: string): string {
  *  O travessão é o EN DASH, e é o que separa uma faixa de uma subtração. */
 export function rotuloFaixaCurta(horario: Horario): string {
   // PENDENTE: redação minha, o João ainda não leu — o " · " entre as faixas
-  return horario.map((f) => `${rotuloHora(f.abre)}–${rotuloHora(f.fecha)}`).join(" · ");
+  return naOrdemDoDia(horario).map((f) => `${rotuloHora(f.abre)}–${rotuloHora(f.fecha)}`).join(" · ");
 }
 
 /** A linha de baixo do carimbo fechado: "abre às 5h", "abre amanhã às 5h",
@@ -351,9 +361,7 @@ export function rotuloFaixa(abertura: Abertura): string {
   } else if (faixas.length > 1) {
     // Com intervalo, "fecha às X, abre às Y" não diz qual das faixas: a frase
     // passa a dizer as faixas, na ordem do dia.
-    const das = [...faixas]
-      .sort((a, b) => minutosDeHHMM(a.abre) - minutosDeHHMM(b.abre))
-      .map((f) => `das ${rotuloHora(f.abre)} às ${rotuloHora(f.fecha)}`);
+    const das = naOrdemDoDia(faixas).map((f) => `das ${rotuloHora(f.abre)} às ${rotuloHora(f.fecha)}`);
     // PENDENTE: redação minha, o João ainda não leu
     partes.push(`Abre ${das.slice(0, -1).join(", ")} e ${das[das.length - 1]}.`);
   }

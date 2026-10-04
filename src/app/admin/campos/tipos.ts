@@ -41,11 +41,11 @@ export type CampoNaTela = {
    *  (`piso`, `custo.tag`, `condicao.severidade`). Quem decide é
    *  `FichaInteira`, com guarda medido contra a porta de escrita. */
   multiplo?: boolean;
-  /** Só pra espécie `bloco`: as folhas que entram JUNTAS quando o bloco está
-   *  ausente. `chave` é o nome da folha DENTRO do bloco (`abre`), que era a
-   *  chave que a porta do bloco esperava no corpo; `caminho` é o caminho
-   *  completo, pro marcador de teste. ⚠️ Sem campo nenhum desde a Tarefa 11c (o
-   *  horário virou `faixas`); a contração é da 11d. */
+  /** Só pra espécie `coord`, no formulário de lugar novo: as duas METADES
+   *  (`lat`, `lng`) da coordenada ainda sem resposta, que entram digitadas e
+   *  juntas (`CoordenadaDigitada`). `chave` é a metade, `caminho` o caminho
+   *  completo (o marcador de teste), `rotulo` o nome da caixa. Até a Tarefa 11d
+   *  servia também às folhas do bloco `horario`, que deixou de existir. */
   folhas?: readonly { chave: string; caminho: string; rotulo: string }[];
   /** Só pra espécie `coord`, e só na METADE `.lat` de um ponto do trajeto: o
    *  ÍNDICE e o PAR daquele ponto, montados no servidor (Task 8). A metade
@@ -75,7 +75,7 @@ export type Editor = (props: PropsDoEditor) => ReactElement;
  *  `CampoNaTela` (ver o docblock do topo). Quem monta a `PerguntaNaTela` é o
  *  servidor, a partir do `CampoDaFicha` — e uma espécie nova no registro que
  *  não esteja aqui deixa AQUELE arquivo sem compilar. */
-export type EspecieNaTela = "prosa" | "lista" | "booleano" | "hora" | "numero" | "coord" | "bloco" | "faixas";
+export type EspecieNaTela = "prosa" | "lista" | "booleano" | "numero" | "coord" | "faixas";
 
 /** UMA PERGUNTA DO FORMULÁRIO DE LUGAR NOVO (Tarefa 11) — o contrato entre a
  *  página de servidor (`/admin/novo`, que lê o registro e o questionário) e o
@@ -86,13 +86,15 @@ export type EspecieNaTela = "prosa" | "lista" | "booleano" | "hora" | "numero" |
  *    rótulo do campo (`rotuloDe`), quando o questionário não pergunta por ele.
  *  - `valor` — o que o rascunho já tem nesse caminho (`undefined` = ainda sem
  *    resposta, ou pulado — no documento, os dois são a mesma ausência).
- *  - `dentro` — as folhas de um BLOCO PRESENTE (`horario.abre`/`.fecha`), cada
- *    uma com o instrumento dela. Folha de bloco não é pergunta própria: mora
- *    dentro da pergunta do bloco, como no `EditorBloco` (E2 da auditoria). */
+ *
+ *  🔴 UM INSTRUMENTO POR PERGUNTA, E UM SALVAR. Até a Tarefa 11d havia um
+ *  `dentro` (as folhas de um bloco presente, cada uma com o Salvar dela), e foi
+ *  por ele que o I-B da Tarefa 11 aconteceu: dois Salvar na pergunta do
+ *  horário, o primeiro avançava e a hora da outra caixa sumia. O horário virou
+ *  um instrumento só (`EditorFaixas`), e o `dentro` saiu. */
 export type PerguntaNaTela = {
   especie: EspecieNaTela;
   campo: CampoNaTela;
   texto: string;
   valor: unknown;
-  dentro?: readonly { campo: CampoNaTela; valor: unknown }[];
 };

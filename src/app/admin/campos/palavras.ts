@@ -13,11 +13,11 @@
  *  fora da fila de leitura dele; agora estão marcadas. Marcar a mais é honesto;
  *  marcar a menos é a frase que sobe sem ninguém ler. */
 
-/** O "sim" de um booleano e o "sim" de um bloco opcional são a MESMA palavra de
- *  propósito: as duas respondem a mesma forma de pergunta ("este lugar tem
- *  isto?"). Vinham de `FichaInteira.tsx`, onde nasceram na Task 5; mudaram de
- *  arquivo porque agora o editor de booleano também as escreve, e duas cópias
- *  da mesma palavra é como um "Sim" e um "sim" acabam na mesma tela. */
+/** O "sim" e o "não" do interruptor. Nasceram em `FichaInteira.tsx` na Task 5,
+ *  onde também respondiam o bloco opcional (o `horario` de antes da 11c), e
+ *  mudaram pra cá quando o editor de booleano passou a escrevê-las — duas
+ *  cópias da mesma palavra é como um "Sim" e um "sim" acabam na mesma tela.
+ *  Desde a Tarefa 11d só o interruptor as usa. */
 // PENDENTE: redação minha, o João ainda não leu
 export const SIM = "Sim";
 // PENDENTE: redação minha, o João ainda não leu
@@ -64,11 +64,19 @@ export const NADA_ESCOLHIDO = "Escolha uma das opções.";
 // PENDENTE: redação minha, o João ainda não leu
 export const HORA_VAZIA = "Escolha uma hora, no formato HH:MM.";
 
-/** A ajuda das horas que entram JUNTAS. Nasceu no `EditorBloco` (o bloco
- *  `horario` ausente) e mudou pra cá na Tarefa 11c, quando o `EditorFaixas`
- *  passou a dizê-la também: as duas horas de uma faixa entram juntas. */
+/** A ajuda das horas que entram JUNTAS: as duas horas de uma faixa só gravam
+ *  com as duas preenchidas. Nasceu no `EditorBloco` (o bloco `horario`
+ *  ausente, apagado na Tarefa 11d) e é do `EditorFaixas` desde a 11c — o nome
+ *  da constante perdeu o "bloco" na 11d; o texto é o mesmo. */
 // PENDENTE: redação minha, o João ainda não leu
-export const BLOCO_JUNTO = "Estes campos entram juntos: um sozinho não vira ficha.";
+export const HORAS_JUNTAS = "Estes campos entram juntos: um sozinho não vira ficha.";
+
+/** Os dois botões que MEXEM NA LISTA de faixas sem gravar nada (Tarefa 11d).
+ *  Quem grava é o Salvar, um só, com a lista inteira. */
+// PENDENTE: redação minha, o João ainda não leu
+export const MAIS_FAIXA = "+ outra faixa";
+// PENDENTE: redação minha, o João ainda não leu
+export const TIRAR_FAIXA = "Tirar esta faixa";
 
 /** A recusa de caixa de texto vazia — o outro lado do "não sei" (§4.1 do
  *  desenho: caixa vazia é ERRO DE PREENCHIMENTO, "não sei" é outra ação).

@@ -146,7 +146,7 @@ describe("EditorNumeroDeMotor — a caixa do número", () => {
   // neste editor porque um `type="number"` que o navegador implementa não produz
   // texto solto. No dia em que o instrumento deixar de ser `number`, este caso
   // fica vermelho e a decisão precisa de outra — é a mesma trava que o
-  // `EditorHora` tem pro `type="time"`.
+  // `EditorFaixas` tem pro `type="time"`.
   it("o instrumento é `type=number`, nos três", () => {
     render(<FichaInteira ficha={FICHA} />);
     for (const caminho of NUMEROS) {
@@ -162,16 +162,10 @@ describe("EditorNumeroDeMotor — a caixa do número", () => {
     expect(emCampo(LIMIAR).queryAllByText(rotulo)).toHaveLength(1);
   });
 
-  // 🔴 A7 DO BRIEF: o editor É o número, então não há `<p>` repetindo.
-  it("não há `<p>` de leitura repetindo o número ao lado da caixa", () => {
-    render(<FichaInteira ficha={FICHA} />);
-    for (const caminho of NUMEROS) {
-      expect(
-        bloco(caminho).querySelector(".adm-campo-valor"),
-        `${caminho}: o número aparece duas vezes — no \`<p>\` e dentro da caixa`,
-      ).toBeNull();
-    }
-  });
+  // ⚠️ O CASO "não há `<p>` de leitura repetindo o número" (A7 do brief) SAIU
+  // NA TAREFA 11d: o `<p>` de leitura da `FichaInteira` (`.adm-campo-valor`,
+  // o `MOSTRAR`) foi apagado com o bloco `horario`, e o caso passaria por
+  // construção. O editor continua sendo o número — é o caso de cima.
 
   // ⚠️ Os três são obrigatórios, e é por isso que não existe "não sei" aqui. O
   // caso mede o REGISTRO e a TELA: se um campo de número nascer opcional, ele sai

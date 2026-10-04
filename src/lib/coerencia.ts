@@ -389,7 +389,7 @@ const TABELA: readonly Regra[] = [
     //
     // 🔴 SÃO DUAS FRASES PORQUE SÃO DOIS COMPORTAMENTOS, e a versão anterior
     // escrevia UMA e ela era FALSA num deles (achado na revisão de 2026-09-27).
-    // `dentroDaFaixa` (`src/lib/horario.ts:194`) trata `abre === fecha` como
+    // `dentroDaFaixa` (em `src/lib/horario.ts`) trata `abre === fecha` como
     // **24h: nunca fecha** — não como travessia da meia-noite. Dizer a esse dono
     // que o app vai anunciar o lugar "aberto a noite toda e fechado o dia todo"
     // seria descrever o OUTRO caso. A fronteira `<` × `<=` é de propósito e tem

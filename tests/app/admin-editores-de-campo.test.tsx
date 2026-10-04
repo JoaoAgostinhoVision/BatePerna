@@ -26,14 +26,16 @@ import {
 import { LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
 import {
   ALEM_DO_PROVEDOR,
-  BLOCO_JUNTO,
   CAIXA_VAZIA,
   COM_ESTE_NUMERO,
   DE_VOLTA_AO_AR,
   ESCONDER,
   ESCONDIDO,
   HORA_VAZIA,
+  HORAS_JUNTAS,
   JANELA_NEGATIVA,
+  MAIS_FAIXA,
+  TIRAR_FAIXA,
   JANELA_PASSADO_NEGATIVA,
   MOSTRAR_DE_NOVO,
   NADA_ESCOLHIDO,
@@ -363,9 +365,10 @@ describe('O "não sei" — a ação que TIRA a chave, e só em campo opcional', 
   });
 
   // 🔴 A 49ª espécie do catálogo (bifurcação de frase com prova de um lado só):
-  // a palavra do botão muda no BLOCO, e os dois ramos são medidos. Colapsar a
+  // a palavra do botão muda no HORÁRIO (nasceu no bloco de antes da 11c), e os
+  // dois ramos são medidos. Colapsar a
   // bifurcação nos dois sentidos deixa este caso vermelho.
-  it("a palavra é 'não sei' num campo comum e 'não tem' num BLOCO — nunca a mesma", () => {
+  it("a palavra é 'não sei' num campo comum e 'não tem' no horário — nunca a mesma", () => {
     render(<FichaInteira ficha={comHorario} />);
     expect(bloco("piso").querySelector('[data-nao-sei="piso"]')!.textContent).toBe(NAO_SEI);
     expect(bloco("horario").querySelector('[data-nao-sei="horario"]')!.textContent).toBe(NAO_TEM);
@@ -703,6 +706,101 @@ describe("EditorFaixas — o horário inteiro, a lista de faixas (Tarefa 11c)", 
     expect(corpoDe(fetchFalso)).toEqual({ slug: comHorario.slug, campo: "horario", naoSei: true });
   });
 
+  // ── O EDITOR DE VERDADE (Tarefa 11d): acrescentar e tirar faixa, e UM Salvar ──
+  const mais = (): HTMLButtonElement | null => bloco("horario").querySelector("[data-mais-faixa]");
+  const tirar = (i: number): HTMLButtonElement | null => bloco("horario").querySelector(`[data-tirar-faixa="${i}"]`);
+  const faixasNaTela = (): number => bloco("horario").querySelectorAll("[data-faixa]").length;
+
+  // 🔴 11d-I3: com UMA faixa não há "tirar" — o caminho até "sem horário" é o
+  // "não tem", e o Salvar nunca manda a lista vazia (a porta a recusaria, e o
+  // schema também: `[]` não é "sem horário").
+  it("com uma faixa: nenhum 'tirar' — o Salvar nunca fica com a lista vazia na mão", () => {
+    render(<FichaInteira ficha={comHorario} />);
+    expect(faixasNaTela()).toBe(1);
+    expect(bloco("horario").querySelectorAll("[data-tirar-faixa]")).toHaveLength(0);
+    expect(bloco("horario").textContent).not.toContain(TIRAR_FAIXA);
+  });
+
+  it("'+ outra faixa' acrescenta uma faixa VAZIA (nada pré-preenchido), até 3 — e não grava nada", () => {
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={comHorario} />);
+    expect(mais()!.textContent).toBe(MAIS_FAIXA);
+    fireEvent.click(mais()!);
+    expect(faixasNaTela()).toBe(2);
+    expect([caixa(1, "abre").value, caixa(1, "fecha").value], "a faixa nova veio preenchida").toEqual(["", ""]);
+    expect(caixa(0, "abre").value, "acrescentar mexeu na faixa que já estava").toBe(comHorario.horario![0].abre);
+    fireEvent.click(mais()!);
+    expect(faixasNaTela()).toBe(3);
+    expect(mais(), "com 3 faixas o '+ outra faixa' continua oferecido").toBeNull();
+    expect(fetchFalso, "acrescentar faixa foi à porta").not.toHaveBeenCalled();
+  });
+
+  it("com mais de uma faixa, cada uma tem o seu 'tirar', e tirar não grava nada", () => {
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={{ ...comHorario, horario: ALMOCO }} />);
+    expect(tirar(0)!.textContent).toBe(TIRAR_FAIXA);
+    expect(tirar(1)).not.toBeNull();
+    fireEvent.click(tirar(0)!);
+    expect(faixasNaTela()).toBe(1);
+    expect([caixa(0, "abre").value, caixa(0, "fecha").value], "tirou a faixa errada").toEqual(["14:00", "17:00"]);
+    expect(bloco("horario").querySelectorAll("[data-tirar-faixa]"), "sobrou 'tirar' com uma faixa só").toHaveLength(0);
+    expect(fetchFalso, "tirar faixa foi à porta").not.toHaveBeenCalled();
+  });
+
+  // 🔴 M2 da auditoria: dentro de um `<form>` um `<button>` sem `type` é SUBMIT.
+  // Os dois botões de mexer na lista são `type="button"` — só o Salvar grava.
+  it("'+ outra faixa' e 'tirar' são type=button: UM botão grava, o Salvar", () => {
+    render(<FichaInteira ficha={{ ...comHorario, horario: ALMOCO }} />);
+    expect(mais()!.getAttribute("type")).toBe("button");
+    expect(tirar(0)!.getAttribute("type")).toBe("button");
+    expect(tirar(1)!.getAttribute("type")).toBe("button");
+    expect(bloco("horario").querySelectorAll("[data-salvar]")).toHaveLength(1);
+  });
+
+  // 🔴 O I-B DA TAREFA 11, NA FICHA NO AR: com o horário presente, mudar as DUAS
+  // horas e tocar UM Salvar grava as duas, numa requisição.
+  it("horário presente: mudar as duas horas, um Salvar, as duas no corpo — uma requisição", async () => {
+    const { fetchFalso, reloadFalso } = comRota();
+    render(<FichaInteira ficha={comHorario} />);
+    fireEvent.change(caixa(0, "abre"), { target: { value: "09:00" } });
+    fireEvent.change(caixa(0, "fecha"), { target: { value: "18:00" } });
+    salvar("horario");
+    await waitFor(() => expect(reloadFalso).toHaveBeenCalled());
+    expect(fetchFalso).toHaveBeenCalledTimes(1);
+    expect(corpoDe(fetchFalso).valor).toEqual([{ abre: "09:00", fecha: "18:00" }]);
+  });
+
+  it("de uma faixa pra o almoço: acrescentar, preencher, um Salvar — a lista das duas", async () => {
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={comHorario} />);
+    fireEvent.click(mais()!);
+    fireEvent.change(caixa(0, "abre"), { target: { value: "08:00" } });
+    fireEvent.change(caixa(0, "fecha"), { target: { value: "10:00" } });
+    fireEvent.change(caixa(1, "abre"), { target: { value: "14:00" } });
+    fireEvent.change(caixa(1, "fecha"), { target: { value: "17:00" } });
+    salvar("horario");
+    await waitFor(() => expect(fetchFalso).toHaveBeenCalled());
+    expect(corpoDe(fetchFalso)).toEqual({ slug: comHorario.slug, campo: "horario", valor: ALMOCO });
+  });
+
+  it("do almoço pra uma faixa: tirar, um Salvar — a lista que sobrou", async () => {
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={{ ...comHorario, horario: ALMOCO }} />);
+    fireEvent.click(tirar(1)!);
+    salvar("horario");
+    await waitFor(() => expect(fetchFalso).toHaveBeenCalled());
+    expect(corpoDe(fetchFalso).valor).toEqual([ALMOCO[0]]);
+  });
+
+  it("a faixa acrescentada e deixada vazia não grava — a frase do formato", () => {
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={comHorario} />);
+    fireEvent.click(mais()!);
+    salvar("horario");
+    expect(fetchFalso, "meia lista foi mandada pra porta").not.toHaveBeenCalled();
+    expect(bloco("horario").querySelector('[role="alert"]')!.textContent).toBe(HORA_VAZIA);
+  });
+
   it("as duas horas não são campos da tela: nenhum bloco `horario.abre`/`horario.fecha`", () => {
     render(<FichaInteira ficha={comHorario} />);
     expect(screen.queryByTestId("campo-horario.abre")).toBeNull();
@@ -883,12 +981,12 @@ describe("Os guardas do que cresce — registro × instrumento", () => {
   // até alguém pô-la aqui, com a tarefa que a pega escrita ao lado.
   const SEM_EDITOR_AINDA: string[] = [];
 
-  /** A espécie que tem editor E `<p>` ao lado. Era o `bloco` (com o bloco
-   *  PRESENTE o `EditorBloco` não mostrava caixa nenhuma, e quem respondia "este
-   *  lugar TEM horário?" era o `<p>` com o `SIM`); desde a Tarefa 11c o horário
-   *  é `faixas`, cujas caixas SÃO o valor, e nenhuma espécie do registro mostra
-   *  o valor ao lado. A lista fica, vazia, pelo mesmo motivo da de cima. */
-  const MOSTRA_O_VALOR_AO_LADO: string[] = [];
+  // 🔴 A LISTA `MOSTRA_O_VALOR_AO_LADO` E A ASSERÇÃO SOBRE `.adm-campo-valor`
+  // SAÍRAM NA TAREFA 11d, e é contração, não afrouxamento: o `<p>` de leitura
+  // ao lado do editor (o `MOSTRAR` e o `mostraOValor` da `FichaInteira`) foi
+  // apagado com o bloco `horario`, a única espécie que o usava. Sem o ramo no
+  // código, "nenhum `<p>` repetindo o valor" seria verdade por construção — o
+  // caso mediria o vazio. O que sobra pra provar é que todo campo tem editor.
 
   // 🔴 O CASO "espécie sem editor continua em LEITURA" MORREU NA TASK 8, como o
   // comentário dele prometia: ele existia pra provar que `coord` renderizava
@@ -897,35 +995,18 @@ describe("Os guardas do que cresce — registro × instrumento", () => {
   // partição (mais abaixo) exige que o lado SEM editor seja EXATAMENTE a lista
   // declarada — hoje, nenhuma espécie.
 
-  it("toda espécie COM editor tem o editor dentro do bloco do campo, e nenhum `<p>` repetindo", () => {
+  it("toda espécie COM editor tem o editor dentro do bloco do campo", () => {
     render(<FichaInteira ficha={comHorario} />);
     const comEditor = camposDaFicha(comHorario).filter((c) => !SEM_EDITOR_AINDA.includes(c.especie));
     expect(comEditor.length, "o registro perdeu as espécies com editor: o caso ficaria oco").toBeGreaterThan(
       20,
     );
-    let semPeDuplicado = 0;
     for (const c of comEditor) {
-      const el = bloco(c.caminho);
       expect(
-        el.querySelector(`[data-editor="${c.caminho}"]`),
+        bloco(c.caminho).querySelector(`[data-editor="${c.caminho}"]`),
         `${c.caminho} ficou sem instrumento`,
       ).not.toBeNull();
-      if (MOSTRA_O_VALOR_AO_LADO.includes(c.especie)) {
-        expect(
-          el.querySelector(".adm-campo-valor"),
-          `${c.caminho}: o editor dele não carrega o valor, e o \`<p>\` que responde a pergunta sumiu`,
-        ).not.toBeNull();
-        continue;
-      }
-      expect(
-        el.querySelector(".adm-campo-valor"),
-        `${c.caminho}: o valor aparece duas vezes — no \`<p>\` e dentro do controle`,
-      ).toBeNull();
-      semPeDuplicado++;
     }
-    // Sem isto, pôr toda espécie em `MOSTRA_O_VALOR_AO_LADO` deixaria o laço
-    // verde sem conferir duplicação nenhuma.
-    expect(semPeDuplicado, "nenhum campo foi medido contra o valor duplicado").toBeGreaterThan(20);
   });
 
   // 🔴 O PORTÃO DA PARTIÇÃO, e sem ele os dois casos acima ficam verdes de mãos
@@ -1067,16 +1148,23 @@ describe("Os guardas do que cresce — registro × instrumento", () => {
     }
   });
 
-  // 🔴 O GUARDA DO `EditorBloco` E DO `EditorHora` MUDOU DE PERGUNTA na Tarefa
-  // 11c. Ele cravava que toda folha de bloco era `hora` e obrigatória — certo
-  // enquanto o `horario` era um bloco de duas folhas. Desde a 11c o horário é
-  // UMA entrada (`faixas`), e as duas espécies ficaram sem entrada nenhuma:
-  // só existem até a 11d contrair a tela delas. Este caso impede que uma
-  // entrada nova nasça numa delas sem ninguém decidir a tela de novo.
-  it("nenhuma entrada do registro é `bloco` ou `hora` desde a 11c — e o horário é `faixas`", () => {
-    expect(CAMPOS_DA_FICHA.filter((c) => c.especie === "bloco" || c.especie === "hora").map((c) => c.caminho)).toEqual(
-      [],
-    );
+  // 🔴 O GUARDA DO `EditorBloco` E DO `EditorHora` MUDOU DE PERGUNTA DUAS
+  // VEZES. Na 11c, "nenhuma entrada é `bloco` nem `hora`" (as duas tinham ficado
+  // sem entrada); na 11d as duas espécies SAÍRAM DO TIPO, junto com os dois
+  // editores — e a pergunta vira: o registro usa exatamente as seis espécies que
+  // têm instrumento, e o horário é a única `faixas`. Uma espécie nova no tipo
+  // não compila sem instrumento (os `Record` da `FichaInteira` e do
+  // `FormularioDeLugar`); este caso pega a espécie do tipo que o registro
+  // deixou de usar — instrumento morto.
+  it("o registro usa as seis espécies do tipo, e o horário é a única `faixas`", () => {
+    expect([...new Set(CAMPOS_DA_FICHA.map((c) => c.especie))].sort()).toEqual([
+      "booleano",
+      "coord",
+      "faixas",
+      "lista",
+      "numero",
+      "prosa",
+    ]);
     expect(CAMPOS_DA_FICHA.filter((c) => c.especie === "faixas").map((c) => c.caminho)).toEqual(["horario"]);
   });
 });
@@ -1282,7 +1370,12 @@ describe("Os editores servem os três lugares", () => {
     ERRO_REDE,
     NAO_SEI,
     NAO_TEM,
-    BLOCO_JUNTO,
+    HORAS_JUNTAS,
+    // Tarefa 11d: os dois botões que mexem na lista de faixas. O "+ outra faixa"
+    // aparece em repouso (um lugar com horário de uma faixa); o "tirar", só com
+    // duas ou mais — nenhuma ficha do acervo tem.
+    MAIS_FAIXA,
+    TIRAR_FAIXA,
     // As do número de motor (Task 7; na onda de conserto 1, 2026-10-01,
     // `SEM_LEITURA` foi apagada e nasceram `JANELA_NEGATIVA` e
     // `ALEM_DO_PROVEDOR`; na onda 2, `JANELA_PASSADO_NEGATIVA`). Nenhuma aparece
@@ -1332,7 +1425,7 @@ describe("Os editores servem os três lugares", () => {
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem
    *  salvando ou em recusa, e é por isso que o cerco não pode depender do
    *  render. */
-  const EM_REPOUSO = [SIM, NAO, SALVAR, NAO_SEI, NAO_TEM, BLOCO_JUNTO];
+  const EM_REPOUSO = [SIM, NAO, SALVAR, NAO_SEI, NAO_TEM, HORAS_JUNTAS, MAIS_FAIXA];
 
   /** 🔴 O PORTÃO DE COMPLETUDE DA LISTA DE CIMA — o que acusa quando uma frase
    *  NOVA de editor não entra nela. Medido: exportar uma frase nova de um editor

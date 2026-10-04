@@ -281,13 +281,12 @@ describe("FichaInteira — o horário, uma entrada só (a lista de faixas)", () 
   // 🔴 TAREFA 11c: o horário deixou de ser um bloco com duas folhas e virou UMA
   // entrada, a lista de 1 a 3 faixas. As caixas de hora SÃO o valor: o bloco
   // não repete as horas num `<p>` ao lado, e não diz mais "sim".
-  it("com horário: as horas da faixa estão nas caixas, e o bloco não as repete", () => {
+  it("com horário: as horas da faixa estão nas caixas, e as duas horas não são campos", () => {
     render(<FichaInteira ficha={comHorario} />);
     const bloco = screen.getByTestId("campo-horario");
     const [faixa] = comHorario.horario!;
     expect(within(bloco).getByDisplayValue(faixa.abre)).toBeTruthy();
     expect(within(bloco).getByDisplayValue(faixa.fecha)).toBeTruthy();
-    expect(bloco.querySelector(".adm-campo-valor"), "o bloco repetiu as horas num parágrafo").toBeNull();
     expect(screen.queryByTestId("campo-horario.abre")).toBeNull();
     expect(screen.queryByTestId("campo-horario.fecha")).toBeNull();
   });
@@ -438,23 +437,30 @@ describe("FichaInteira — os guardas do que cresce: rótulo e CSS", () => {
   // não é detalhe de estilo, é elemento sem forma nenhuma.
   it("toda classe que esta tela usa tem regra no `admin.css`", () => {
     const css = semComentarios("admin/admin.css");
-    // 🔴 AS DUAS FICHAS, NÃO UMA (Task 8). Com `coord` ganhando editor, o
-    // `.adm-campo-valor` passou a existir SÓ no bloco `horario` PRESENTE (e na
-    // 11c nem ali: a regra saiu) — e
-    // `semHorario` não tem horário, então medir uma ficha só acusava a regra
-    // como morta quando ela está viva na outra. Medido: o vermelho era esse.
+    // 🔴 AS DUAS FICHAS, NÃO UMA (Task 8). Uma classe pode existir só numa
+    // delas — foi o `.adm-campo-valor`, que vivia só no bloco `horario`
+    // PRESENTE (saiu na 11c da folha e na 11d do código) —, e medir uma ficha só
+    // acusaria como morta uma regra viva na outra. Medido: o vermelho era esse.
     const { container } = render(
       <>
         <FichaInteira ficha={semHorario} />
         <FichaInteira ficha={comHorario} />
       </>,
     );
-    // 🔴 E O EDITOR DO TRAJETO ABERTO (Tarefa 11c). Até a 11c o
-    // `.adm-editor-ajuda` aparecia no bloco `horario` AUSENTE (a frase "estes
-    // campos entram juntos"); com o horário virando lista, quem a usa é só o
-    // ponto novo do trajeto — que só aparece depois do toque. Medir a tela
-    // fechada acusaria a regra como morta quando ela está viva ali.
+    // 🔴 E O EDITOR DO TRAJETO ABERTO (Tarefa 11c): o ponto novo só aparece
+    // depois do toque, e as classes dele (`.adm-editor-caixa`, `.adm-editor-ajuda`)
+    // entram na medição pelo estado em que o dono as vê. ⚠️ A 11c escreveu aqui
+    // que, sem o toque, a `.adm-editor-ajuda` seria acusada de morta — não é
+    // verdade desde que o `EditorFaixas` mostra a mesma classe no horário
+    // AUSENTE (a ficha sem horário a tem em repouso); corrigido na 11d.
     fireEvent.click(within(screen.getAllByTestId("editor-waypoints")[0]).getByRole("button"));
+    // 🔴 E O HORÁRIO COM DUAS FAIXAS (Tarefa 11d). Nenhuma ficha do acervo tem
+    // intervalo, e o "tirar esta faixa" só existe com duas ou mais: sem este
+    // toque no "+ outra faixa", a regra `.adm-editor-tirar-faixa` seria acusada
+    // de morta estando viva no primeiro almoço que ele cadastrar.
+    const maisFaixa = container.querySelectorAll<HTMLButtonElement>("[data-mais-faixa]");
+    expect(maisFaixa.length, "nenhum '+ outra faixa' na tela: o toque abaixo não aconteceria").toBeGreaterThan(0);
+    for (const b of maisFaixa) fireEvent.click(b);
     const classes = [...new Set([...container.querySelectorAll("[class]")].flatMap((e) => [...e.classList]))];
     expect(classes.length, "nenhuma classe foi lida: o teste ficaria oco").toBeGreaterThan(0);
     for (const c of classes) {

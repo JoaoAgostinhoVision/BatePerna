@@ -1,10 +1,8 @@
 "use client";
 import { useState, type FormEvent } from "react";
-import EditorBloco from "./campos/EditorBloco";
 import EditorFaixas from "./campos/EditorFaixas";
 import EditorBooleano from "./campos/EditorBooleano";
 import EditorCoordenada from "./campos/EditorCoordenada";
-import EditorHora from "./campos/EditorHora";
 import EditorLista from "./campos/EditorLista";
 import EditorNumeroDeMotor from "./campos/EditorNumeroDeMotor";
 import EditorProsa from "./campos/EditorProsa";
@@ -22,7 +20,7 @@ import type { Editor, EspecieNaTela, PerguntaNaTela, PropsDoEditor } from "./cam
  *  arquivo pra provar (`tests/app/admin-formulario-de-lugar.test.tsx`).
  *
  *  🔴 OS INSTRUMENTOS SÃO OS DA FICHA NO AR, SEM CÓPIA. Caixa de prosa, lista,
- *  interruptor, hora, bloco, número de motor e o mapa do pin são os editores de
+ *  interruptor, horário, número de motor e o mapa do pin são os editores de
  *  `./campos/`, os mesmos que o dono já usa no painel do lugar. O que muda é PRA
  *  ONDE eles gravam: o provedor `PortaDoEditor` aponta pra
  *  `/api/admin/rascunho`, que aceita as mesmas formas de corpo. O "não sei" de
@@ -171,9 +169,7 @@ const INSTRUMENTO: Record<EspecieNaTela, Editor> = {
   prosa: EditorProsa,
   lista: EditorLista,
   booleano: EditorBooleano,
-  hora: EditorHora,
   numero: EditorNumeroDeMotor,
-  bloco: EditorBloco,
   faixas: EditorFaixas,
   coord: CoordenadaDoRascunho,
 };
@@ -188,7 +184,7 @@ function Pergunta({
   /** O endereço da próxima pergunta; `null` na última. */
   proxima: string | null;
 }) {
-  const { especie, campo, texto, valor, dentro } = pergunta;
+  const { especie, campo, texto, valor } = pergunta;
   const [pulada, setPulada] = useState(false);
   const Instrumento = INSTRUMENTO[especie];
   // 🔴 SÓ OPCIONAL, E SÓ SEM RESPOSTA. Obrigatório não se pula (a porta de
@@ -205,10 +201,9 @@ function Pergunta({
   return (
     <section className="adm-pergunta" data-testid={`pergunta-${campo.caminho}`}>
       <p className="adm-pergunta-texto">{texto}</p>
+      {/* 🔴 UM instrumento, e com ele UM Salvar (Tarefa 11d, o I-B): toda
+          pergunta grava numa requisição só, e é ela que avança. */}
       <Instrumento campo={campo} valor={valor} slug={slug} />
-      {dentro?.map((d) => (
-        <EditorHora key={d.campo.caminho} campo={d.campo} valor={d.valor} slug={slug} />
-      ))}
       {podePular &&
         (pulada ? (
           <p className="adm-pergunta-pulada">{PULADA}</p>

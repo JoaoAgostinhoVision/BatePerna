@@ -8,7 +8,7 @@ import { createContext, useContext, useState } from "react";
  *  `/api/admin/ficha`, como antes. Só o formulário de LUGAR NOVO
  *  (`FormularioDeLugar`) envolve os mesmos editores num provedor que aponta pra
  *  `/api/admin/rascunho` — é o que deixa a caixa de prosa, a lista, o
- *  interruptor, o bloco e o mapa servirem ao rascunho SEM CÓPIA. As duas portas
+ *  interruptor, o horário e o mapa servirem ao rascunho SEM CÓPIA. As duas portas
  *  aceitam as mesmas formas de corpo (`{slug, campo, valor}`, `{slug, campo,
  *  naoSei}`, `{slug, ponto, lat, lng}`), então o editor não sabe a diferença.
  *
@@ -74,7 +74,7 @@ export type Gravacao = {
   salvando: boolean;
   /** Manda o corpo pra porta. O corpo é montado por quem chama, porque cada
    *  espécie manda uma forma diferente (`valor` texto, `valor` lista, `valor`
-   *  objeto do bloco, `naoSei: true`) — e a porta lê exatamente o que chegou. */
+   *  lista de faixas do horário, `naoSei: true`) — e a porta lê exatamente o que chegou. */
   gravar: (corpo: Record<string, unknown>) => Promise<void>;
   /** Recusa DAQUI, sem viagem nenhuma.
    *

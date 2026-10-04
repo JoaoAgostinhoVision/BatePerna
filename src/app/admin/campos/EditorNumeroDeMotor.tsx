@@ -76,7 +76,7 @@ export const ESPERA_PREVIA_MS = 500;
  *      `src/types/ficha.ts`.
  *
  *  ⚠️ POR QUE NÃO HÁ CONFERÊNCIA DE FORMATO AQUI, e isto é a mesma medição do
- *  `EditorHora`. Medido em jsdom (2026-09-30), num `<input type="number">`:
+ *  `type="time"` (hoje no `EditorFaixas`; nasceu no `EditorHora`). Medido em jsdom (2026-09-30), num `<input type="number">`:
  *  escrever `"abc"` deixa o `value` em `""`, e escrever `"1e999"` **também** deixa
  *  em `""` (o controle sanitiza pro algoritmo de "número de ponto flutuante
  *  válido" da especificação, e infinito não é). Então o que este editor recusa é o

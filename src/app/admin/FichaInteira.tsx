@@ -6,18 +6,14 @@ import {
   type GrupoDaFicha,
 } from "@/lib/campos-da-ficha";
 import { Fragment } from "react";
-import { faixasDe } from "@/lib/horario";
 import type { Ficha } from "@/types/ficha";
-import EditorBloco from "./campos/EditorBloco";
 import EditorFaixas from "./campos/EditorFaixas";
 import EditorBooleano from "./campos/EditorBooleano";
 import EditorCoordenada from "./campos/EditorCoordenada";
-import EditorHora from "./campos/EditorHora";
 import EditorLista from "./campos/EditorLista";
 import EditorNumeroDeMotor from "./campos/EditorNumeroDeMotor";
 import EditorProsa from "./campos/EditorProsa";
 import EditorWaypoints from "./campos/EditorWaypoints";
-import { NAO, SIM } from "./campos/palavras";
 import type { CampoNaTela, Editor } from "./campos/tipos";
 
 /** A FICHA INTEIRA NA TELA DO DONO (Task 5, 2026-09-27) — e desde a Task 6
@@ -47,8 +43,8 @@ import type { CampoNaTela, Editor } from "./campos/tipos";
  *  `npm run build` — comentário nenhum guarda.
  *
  *  🔴 QUAL INSTRUMENTO CADA ESPÉCIE GANHA SAI DE UM `Record<EspecieCampo, …>`
- *  (`INSTRUMENTO`, abaixo), pela mesma razão do `MOSTRAR` e do
- *  `TITULO_DO_GRUPO`: **espécie nova no registro não compila até alguém decidir
+ *  (`INSTRUMENTO`, abaixo), pela mesma razão do `TITULO_DO_GRUPO`:
+ *  **espécie nova no registro não compila até alguém decidir
  *  o instrumento dela.** Desde a Task 8 (2026-10-01) nenhuma sobra em leitura:
  *  `coord`, a última, ganhou o mapa que arrasta o pin.
  *
@@ -79,8 +75,8 @@ import type { CampoNaTela, Editor } from "./campos/tipos";
 //    dele já usa, em vez de cunhar um segundo vocabulário;
 //  - onde UMA seção do questionário cobre VÁRIOS campos (a coordenada vira
 //    latitude e longitude; "a regra em horas e milímetros" vira três números;
-//    "o custo" vira tag, valor e curto; "o horário" vira o bloco e as duas
-//    horas), o título não serve pra três blocos diferentes e a redação é
+//    "o custo" vira tag, valor e curto), o título não serve pra três blocos
+//    diferentes e a redação é
 //    MINHA, derivada da *Pergunta* daquela seção;
 //  - e onde o TÍTULO da seção é vago demais para virar pergunta na tela, o
 //    rótulo é a *Pergunta* dela: `carroComum` (o título é só "O carro") e
@@ -110,15 +106,6 @@ const TITULO = "A ficha inteira";
 
 // PENDENTE: redação minha, o João ainda não leu
 const AUSENTE = "Não sei — o app não diz nada sobre isto.";
-
-/** O "sim" de um booleano e o "sim" do bloco opcional são a MESMA palavra de
- *  propósito: as duas respondem a mesma forma de pergunta ("este lugar tem
- *  isto?"), e duas palavras diferentes pro mesmo sim seriam dois idiomas na
- *  mesma tela.
- *
- *  🔴 AS DUAS MUDARAM DE ARQUIVO NA TASK 6 (estão em `./campos/palavras`, ainda
- *  `PENDENTE`) porque o INTERRUPTOR também as escreve: a leitura e a escrita do
- *  mesmo campo não podem falar duas línguas. */
 
 /** O prefixo do bloco de um campo que vive dentro de uma LISTA — hoje só os
  *  waypoints têm índice. Conta a partir de **1**: o dono não conta pontos do
@@ -266,7 +253,8 @@ export const ROTULO_DO_PONTO: Record<string, string> = {
 /** O par de coordenadas, quando o valor é o par e não uma metade solta.
  *  `condicao.coords` é `{lat, lng}`; `trajeto.waypoints[].lat` é um número. As
  *  duas formas são `especie: "coord"` no registro, de propósito (o schema as
- *  declara diferentes) — então quem MOSTRA tem que aguentar as duas. */
+ *  declara diferentes) — então quem monta o `ponto` do mapa (`pontoDoTrajeto`)
+ *  tem que separar as duas. */
 function ehPar(valor: unknown): valor is { lat: number; lng: number } {
   if (typeof valor !== "object" || valor === null) return false;
   const p = valor as { lat?: unknown; lng?: unknown };
@@ -276,58 +264,6 @@ function ehPar(valor: unknown): valor is { lat: number; lng: number } {
   // memory). Fora de forma, o editor cai no estado vazio.
   return Number.isFinite(p.lat) && Number.isFinite(p.lng);
 }
-
-/** COMO CADA ESPÉCIE VIRA TEXTO. Chaveado por `EspecieCampo`, pela mesma razão
- *  do `TITULO_DO_GRUPO`: espécie nova no registro não compila até dizer como
- *  aparece — em vez de cair num `String(valor)` de reserva e a tela mostrar
- *  `[object Object]` na mão do dono.
- *
- *  🔴 `lista` SAI CRU (`barro`, `nao-va`, `sab, dom`), e isso é decisão desta
- *  tarefa, não esquecimento. Existe `rotuloPiso` e `rotuloDias` pra DUAS das
- *  quatro listas do registro; `custo.tag` e `condicao.severidade` não têm
- *  palavra neutra nenhuma (o que existe pra severidade é a fala do CARIMBO,
- *  que embute um número da ficha). Traduzir duas e deixar duas em código
- *  cru seria dois idiomas na mesma tela; e cunhar as duas que faltam é copy
- *  nova sobre a voz dos lugares, que não se decide numa tarefa de render.
- *
- *  🔴 ESTA FRASE PROMETIA QUE "a palavra de cada opção nasce na LISTA FECHADA do
- *  editor da Task 6" — E A TASK 6 NÃO A CUMPRIU. O `EditorLista` oferece as
- *  opções pelo CÓDIGO delas (`barro`, `nao-va`, `sab`), as mesmas que este
- *  `MOSTRAR` imprime, e por exatamente a razão do parágrafo acima: `custo.tag` e
- *  `condicao.severidade` não têm palavra neutra nenhuma no app, e cunhá-las é
- *  copy nova sobre um lugar real, que não se escreve sem o dono ler. Trocar o
- *  arquivo onde a promessa mora não a torna paga. **Fica como dívida escrita, e
- *  ela é de PALAVRA, não de código:** quatro listas, quatro conjuntos de opções
- *  pra ele ler e batizar, e aí `rotuloPiso`/`rotuloDias` entram junto com as
- *  duas que faltam — de uma vez, pra tela não falar dois idiomas no meio do
- *  caminho.
- *
- *  ⚠️ NA TASK 6 O `<p>` DE LEITURA SÓ SOBRA ONDE NÃO HÁ INSTRUMENTO, ou onde o
- *  instrumento não carrega o valor (o `bloco` — ver `INSTRUMENTO` abaixo). Nos
- *  outros, quem mostra o valor é o próprio controle; um `<p>` ao lado da caixa
- *  diria a mesma coisa duas vezes. Desde a Task 8 (`coord` ganhou o mapa) só o
- *  `bloco` passa por este mapa; as outras seis entradas continuam aqui porque o
- *  `Record` é o que trava espécie nova. */
-const MOSTRAR: Record<EspecieCampo, (valor: unknown) => string> = {
-  prosa: (v) => String(v),
-  hora: (v) => String(v),
-  numero: (v) => String(v),
-  lista: (v) => (Array.isArray(v) ? v.join(", ") : String(v)),
-  booleano: (v) => (v === true ? SIM : NAO),
-  coord: (v) => (ehPar(v) ? `${v.lat}, ${v.lng}` : String(v)),
-  // ⚠️ SEM ENTRADA DESDE A 11c (o horário virou `faixas`); o que segue é a razão
-  // de quando existia. O BLOCO NÃO MOSTRA FOLHA NENHUMA. `horario` (espécie
-  // `bloco`) vinha no registro AO LADO de `horario.abre` e `horario.fecha` — três entradas sobre
-  // o mesmo assunto —, e o que ele existe pra responder é "este lugar TEM
-  // horário?": é ele que carrega o "não sei" do grupo (é assim que a porta de
-  // escrita o trata — `removerCampo` no bloco tira o bloco inteiro, e é o
-  // único caminho pra dizer "este lugar não fecha por horário"). Repetir aqui
-  // o valor de `abre` faria a tela dizer a mesma coisa duas vezes, e o bloco
-  // deixaria de responder a pergunta que é dele.
-  bloco: () => SIM,
-  // Só pra régua do `Record`: com `mostraOValor: true`, este texto não aparece.
-  faixas: (v) => (faixasDe(v) ?? []).map((f) => `${f.abre}–${f.fecha}`).join(" · "),
-};
 
 /** O valor que ESTA ficha tem neste caminho concreto, ou `undefined`.
  *
@@ -422,61 +358,41 @@ export const moldeDe = (caminho: string): string =>
  *  — estado que o guarda das duas direções torna impossível. */
 export const multiploDe = (caminho: string): boolean | undefined => LISTA_MULTIPLA[moldeDe(caminho)];
 
-/** O INSTRUMENTO DE CADA ESPÉCIE. Chaveado por `EspecieCampo` pela mesma razão
- *  do `MOSTRAR`: **espécie nova no registro não compila até alguém decidir o
- *  instrumento dela** — em vez de nascer sem editor, invisível, com a suíte
- *  verde.
+/** O INSTRUMENTO DE CADA ESPÉCIE. Chaveado por `EspecieCampo`: **espécie nova
+ *  no registro não compila até alguém decidir o instrumento dela** — em vez de
+ *  nascer sem editor, invisível, com a suíte verde.
  *
- *  `null` seria "ainda só leitura", com a tarefa escrita ao lado. Desde a Task 8
- *  nenhuma espécie está assim.
+ *  🔴 O CONTROLE É O VALOR, em toda espécie: a caixa de texto traz a frase, a
+ *  lista traz a opção marcada, o número de motor traz o número, o mapa traz o
+ *  pin e o número embaixo dele, e o horário traz as faixas nas caixas de hora.
+ *  Um `<p>` de leitura ao lado diria a mesma coisa duas vezes — e no dia em que
+ *  a caixa abrisse com outro valor que o `<p>`, a tela mostraria duas respostas
+ *  pra um campo só. Até a Tarefa 11d havia um mapa `MOSTRAR` (como cada espécie
+ *  vira texto) e uma marca `mostraOValor` por espécie, pra uma exceção só: o
+ *  BLOCO `horario`, cujo editor não mostrava caixa nenhuma com o bloco
+ *  presente. O bloco virou a lista de faixas (11c) com o editor de verdade
+ *  (11d), e as duas peças saíram com ele.
  *
- *  `mostraOValor` é o que decide se o `<p>` de leitura sai: onde o controle já
- *  traz o valor dentro dele, um `<p>` ao lado diria a mesma coisa duas vezes. O
- *  `bloco` é a exceção e ela é de significado, não de estilo — com o bloco
- *  PRESENTE o editor dele não mostra caixa nenhuma (só o botão que tira o bloco
- *  inteiro), então quem responde "este lugar TEM horário?" continua sendo o
- *  `<p>` com o `SIM` do `MOSTRAR`.
- *
- *  🔴 `numero` ENTROU COM `mostraOValor: true` (Task 7), e a decisão é a mesma
- *  régua: o `<input type="number">` **é** o número. Um `<p>` ao lado repetindo
- *  `6` seria duas fontes pra mesma pergunta, e no dia em que a caixa abrisse com
- *  outro valor que o `<p>` — por um `useState` inicializado errado, por exemplo —
- *  a tela mostraria dois números para um campo só, sem ninguém saber qual está no
- *  banco. Custo da escolha: um campo de número ausente não teria valor nenhum na
- *  tela — e ele não existe, porque os três são `obrigatorio: true` (o ramo
- *  `ausente` do `Bloco` ganha do instrumento de qualquer forma, e há guarda
- *  cravando as duas coisas). */
-const INSTRUMENTO: Record<EspecieCampo, { Editor: Editor; mostraOValor: boolean } | null> = {
-  prosa: { Editor: EditorProsa, mostraOValor: true },
-  lista: { Editor: EditorLista, mostraOValor: true },
-  booleano: { Editor: EditorBooleano, mostraOValor: true },
-  hora: { Editor: EditorHora, mostraOValor: true },
-  bloco: { Editor: EditorBloco, mostraOValor: false },
-  // O horário inteiro (Tarefa 11c): as caixas de hora SÃO o valor, como no
-  // `hora` — um `<p>` ao lado repetiria as faixas.
-  faixas: { Editor: EditorFaixas, mostraOValor: true },
-  numero: { Editor: EditorNumeroDeMotor, mostraOValor: true },
-  // 🔴 `coord` ENTROU NA TASK 8 com `mostraOValor: true`: o editor mostra o
-  // número embaixo do mapa (é o que o dono confere), e um `<p>` ao lado seria
-  // o mesmo número duas vezes. As DUAS formas da espécie (o par e as metades
-  // de um ponto) estão no docblock do `EditorCoordenada`.
-  coord: { Editor: EditorCoordenada, mostraOValor: true },
+ *  ⚠️ A DÍVIDA DE PALAVRA QUE MORAVA NO DOCBLOCK DO `MOSTRAR` CONTINUA, e é do
+ *  `EditorLista`: as quatro listas (`piso`, `dias`, `custo.tag`,
+ *  `condicao.severidade`) aparecem pelo CÓDIGO das opções (`barro`, `nao-va`,
+ *  `sab`), porque `custo.tag` e `condicao.severidade` não têm palavra neutra
+ *  nenhuma no app, e cunhá-las é copy nova sobre a voz dos lugares, que não se
+ *  escreve sem o dono ler. Quatro conjuntos de opções pra ele batizar, de uma
+ *  vez — pra tela não falar dois idiomas no meio do caminho. */
+const INSTRUMENTO: Record<EspecieCampo, Editor> = {
+  prosa: EditorProsa,
+  lista: EditorLista,
+  booleano: EditorBooleano,
+  // O horário inteiro: a lista de faixas, com "+ outra faixa", "tirar esta
+  // faixa" e UM Salvar (Tarefas 11c e 11d).
+  faixas: EditorFaixas,
+  numero: EditorNumeroDeMotor,
+  // 🔴 `coord` ENTROU NA TASK 8: o editor mostra o número embaixo do mapa (é o
+  // que o dono confere). As DUAS formas da espécie (o par e as metades de um
+  // ponto) estão no docblock do `EditorCoordenada`.
+  coord: EditorCoordenada,
 };
-
-/** Os caminhos de espécie `bloco` DESTA ficha, tirados do registro expandido —
- *  nunca uma lista escrita aqui: quem acrescentar um bloco ao registro ganha o
- *  comportamento sem tocar neste arquivo.
- *
- *  ⚠️ DESDE A TAREFA 11c O REGISTRO NÃO TEM BLOCO NENHUM — o único era o
- *  `horario`, que virou a lista de faixas (`EditorFaixas`). Esta maquinaria
- *  (`blocosDe`, `blocoQueContem`, `folhasDoBloco` e o ramo `blocoAusente` do
- *  `Bloco`) ficou sem caso, e a contração dela é da Tarefa 11d. */
-const blocosDe = (campos: readonly CampoDaFicha[]): string[] =>
-  campos.filter((c) => c.especie === "bloco").map((c) => c.caminho);
-
-/** O bloco que CONTÉM este caminho, se houver (`horario.abre` → `horario`). */
-const blocoQueContem = (blocos: readonly string[], caminho: string): string | undefined =>
-  blocos.find((b) => caminho.startsWith(`${b}.`));
 
 /** O ÍNDICE e o PAR de um ponto do trajeto, pra a linha `.lat` dele — e só pra ela.
  *
@@ -493,8 +409,8 @@ function pontoDoTrajeto(ficha: Ficha, caminho: string): Pick<CampoNaTela, "ponto
   return indice !== null && ehPar(ponto) ? { ponto: { indice, lat: ponto.lat, lng: ponto.lng } } : {};
 }
 
-/** UM campo na tela: rótulo, o valor (ou a marca de ausente), e o instrumento
- *  que grava aquele campo sozinho.
+/** UM campo na tela: rótulo, a marca de ausente quando o campo não está no
+ *  documento, e o instrumento que grava aquele campo sozinho.
  *
  *  🔴 AUSENTE É `undefined`, NADA MAIS. `carroComum: false` é uma AFIRMAÇÃO
  *  ("não chega") e aparece como "Não"; `""` nunca chega ao documento (a porta
@@ -506,35 +422,19 @@ function pontoDoTrajeto(ficha: Ficha, caminho: string): Pick<CampoNaTela, "ponto
  *  O campo que o app cala tem que dizer que cala — se o editor aparecesse
  *  sozinho, um campo vazio ficaria indistinguível de um campo nunca respondido.
  *
- *  🔴 E A FOLHA DE UM BLOCO AUSENTE NÃO GANHA EDITOR NENHUM (A3 do brief).
- *  Com o `horario` ausente, a porta RECUSA `{campo: "horario.abre"}` com a frase
- *  "preencha o `horario` inteiro de uma vez" — oferecer ali uma caixa de hora
- *  com um Salvar seria a tela convidando a um ato que a porta nega. Quem oferece
- *  as duas horas juntas é o editor DO BLOCO. */
-function Bloco({
-  ficha,
-  campo,
-  blocos,
-  folhasDoBloco,
-}: {
-  ficha: Ficha;
-  campo: CampoDaFicha;
-  blocos: readonly string[];
-  folhasDoBloco: (bloco: string) => CampoNaTela["folhas"];
-}) {
+ *  ⚠️ Até a Tarefa 11d havia aqui o caso da FOLHA DE UM BLOCO AUSENTE, que não
+ *  ganhava editor (a porta recusava `horario.abre` sozinho). O bloco saiu; toda
+ *  entrada do registro tem instrumento. */
+function Bloco({ ficha, campo }: { ficha: Ficha; campo: CampoDaFicha }) {
   const valor = lerValor(ficha, campo.caminho);
   const ausente = valor === undefined;
-
-  const bloco = blocoQueContem(blocos, campo.caminho);
-  const blocoAusente = bloco !== undefined && lerValor(ficha, bloco) === undefined;
-  const instrumento = blocoAusente ? null : INSTRUMENTO[campo.especie];
+  const Instrumento = INSTRUMENTO[campo.especie];
 
   const naTela: CampoNaTela = {
     caminho: campo.caminho,
     rotulo: rotuloDe(campo.caminho),
     obrigatorio: campo.obrigatorio,
     ...(campo.opcoes ? { opcoes: campo.opcoes, multiplo: multiploDe(campo.caminho) } : {}),
-    ...(campo.especie === "bloco" ? { folhas: folhasDoBloco(campo.caminho) } : {}),
     ...(campo.especie === "coord" ? pontoDoTrajeto(ficha, campo.caminho) : {}),
   };
 
@@ -547,36 +447,14 @@ function Bloco({
       <span className="adm-campo-rotulo" data-rotulo={campo.caminho}>
         {rotuloDe(campo.caminho)}
       </span>
-      {ausente ? (
-        <p className="adm-campo-ausente">{AUSENTE}</p>
-      ) : (
-        // ⚠️ SEM ESPÉCIE QUE CHEGUE AQUI desde a Tarefa 11c: o único caminho era
-        // o `bloco` (`mostraOValor: false`) e a folha de bloco ausente
-        // (`instrumento === null`), e o horário virou `faixas`. A regra
-        // `.adm-campo-valor` saiu do `admin.css` pelo guarda de regra morta; este
-        // ramo, o `MOSTRAR` e o `mostraOValor` são contração da Tarefa 11d.
-        (instrumento === null || !instrumento.mostraOValor) && (
-          <p className="adm-campo-valor">{MOSTRAR[campo.especie](valor)}</p>
-        )
-      )}
-      {instrumento !== null && <instrumento.Editor campo={naTela} valor={valor} slug={ficha.slug} />}
+      {ausente && <p className="adm-campo-ausente">{AUSENTE}</p>}
+      <Instrumento campo={naTela} valor={valor} slug={ficha.slug} />
     </div>
   );
 }
 
 export default function FichaInteira({ ficha }: { ficha: Ficha }) {
   const campos = camposDaFicha(ficha);
-  const blocos = blocosDe(campos);
-  const folhasDoBloco = (bloco: string): CampoNaTela["folhas"] =>
-    campos
-      .filter((c) => c.caminho.startsWith(`${bloco}.`))
-      .map((c) => ({
-        // A chave é o nome da folha DENTRO do bloco, que é o que `gravarBloco`
-        // espera no corpo do `PUT` — nunca o caminho completo.
-        chave: c.caminho.slice(bloco.length + 1),
-        caminho: c.caminho,
-        rotulo: rotuloDe(c.caminho),
-      }));
   // Os grupos SAEM DOS CAMPOS DESTA FICHA, na ordem em que o registro os
   // declara — nunca de uma lista de grupos escrita aqui. Duas consequências
   // que valem: grupo novo no registro aparece sozinho, e grupo sem campo
@@ -603,7 +481,7 @@ export default function FichaInteira({ ficha }: { ficha: Ficha }) {
             .filter((c) => c.grupo === g)
             .map((c) => (
               <Fragment key={c.caminho}>
-                <Bloco ficha={ficha} campo={c} blocos={blocos} folhasDoBloco={folhasDoBloco} />
+                <Bloco ficha={ficha} campo={c} />
                 {c.caminho === ultimoDoTrajeto && (
                   <EditorWaypoints
                     slug={ficha.slug}

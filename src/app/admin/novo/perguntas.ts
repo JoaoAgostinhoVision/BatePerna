@@ -149,22 +149,18 @@ export const ORDEM: readonly string[] = [
   "dias",
 ];
 
-const blocos = (): string[] => CAMPOS_DA_FICHA.filter((c) => c.especie === "bloco").map((c) => c.caminho);
-
-/** QUAIS ENTRADAS DO REGISTRO SÃO PERGUNTA — derivado do registro, com as duas
- *  únicas dobras que a tela faz, e as duas por propriedade do registro, nunca
- *  por nome:
- *   - FOLHA DE BLOCO (`horario.abre`) mora dentro da pergunta do bloco (E2);
- *   - a METADE `.lng` de um ponto do trajeto mora na pergunta da `.lat`, como
- *     na ficha inteira: o questionário pergunta "a latitude e a longitude"
- *     numa frase só, e o editor de mapa grava o ponto INTEIRO num corpo só.
+/** QUAIS ENTRADAS DO REGISTRO SÃO PERGUNTA — derivado do registro, com a única
+ *  dobra que a tela faz, e por propriedade do registro, nunca por nome: a
+ *  METADE `.lng` de um ponto do trajeto mora na pergunta da `.lat`, como na
+ *  ficha inteira — o questionário pergunta "a latitude e a longitude" numa
+ *  frase só, e o editor de mapa grava o ponto INTEIRO num corpo só.
+ *
+ *  ⚠️ Até a Tarefa 11d havia uma segunda dobra: as folhas do bloco `horario`
+ *  moravam dentro da pergunta do bloco (E2). O horário virou UMA entrada (a
+ *  lista de faixas, 11c) com UM instrumento (11d), e a dobra saiu.
  *  O molde `[]` continua aqui; quem o troca pelo índice `0` é `noPonto0`. */
 export function camposQueSaoPergunta(): CampoDaFicha[] {
-  const bs = blocos();
-  return CAMPOS_DA_FICHA.filter(
-    (c) =>
-      !bs.some((b) => c.caminho.startsWith(`${b}.`)) && !(c.especie === "coord" && c.caminho.endsWith("[].lng")),
-  );
+  return CAMPOS_DA_FICHA.filter((c) => !(c.especie === "coord" && c.caminho.endsWith("[].lng")));
 }
 
 /** O molde com o índice do único ponto que um lugar novo tem: o `0`, que é o
@@ -185,16 +181,6 @@ function naTela(c: CampoDaFicha, caminho: string, rascunho: unknown): CampoNaTel
     obrigatorio: c.obrigatorio,
     ...(c.opcoes ? { opcoes: c.opcoes, multiplo: multiploDe(caminho) } : {}),
   };
-  if (c.especie === "bloco") {
-    return {
-      ...base,
-      folhas: CAMPOS_DA_FICHA.filter((f) => f.caminho.startsWith(`${caminho}.`)).map((f) => ({
-        chave: f.caminho.slice(caminho.length + 1),
-        caminho: f.caminho,
-        rotulo: rotuloDe(f.caminho),
-      })),
-    };
-  }
   if (c.especie === "coord") {
     // As duas metades, com o rótulo de cada uma — é o que a caixa de digitar a
     // coordenada usa quando ainda não há ponto pra pôr o pin.
@@ -243,20 +229,12 @@ export function montarPerguntas(rascunho: unknown): PerguntaNaTela[] {
   const campos = camposQueSaoPergunta()
     .map((c) => ({ c, caminho: noPonto0(c.caminho) }))
     .sort((a, b) => posicao(a.caminho) - posicao(b.caminho));
-  return campos.map(({ c, caminho }) => {
-    const valor = lerCaminho(rascunho, caminho.split("."));
-    const pergunta: PerguntaNaTela = {
+  return campos.map(
+    ({ c, caminho }): PerguntaNaTela => ({
       especie: c.especie,
       campo: naTela(c, caminho, rascunho),
       texto: PERGUNTAS[caminho] ?? rotuloDe(caminho),
-      valor,
-    };
-    if (c.especie === "bloco" && valor !== undefined) {
-      pergunta.dentro = CAMPOS_DA_FICHA.filter((f) => f.caminho.startsWith(`${caminho}.`)).map((f) => ({
-        campo: naTela(f, f.caminho, rascunho),
-        valor: lerCaminho(rascunho, f.caminho.split(".")),
-      }));
-    }
-    return pergunta;
-  });
+      valor: lerCaminho(rascunho, caminho.split(".")),
+    }),
+  );
 }

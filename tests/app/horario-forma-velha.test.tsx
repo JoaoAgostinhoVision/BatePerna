@@ -36,6 +36,8 @@ const { gravarVersao } = await import("@/lib/db");
 const { esquecerMemoria } = await import("@/lib/ficha-fonte");
 const Ficha = (await import("@/app/[slug]/page")).default;
 const { bancoDeProducao, AGORA_SEMENTE } = await import("../banco");
+const { aberturaDaFicha, rotuloFaixa, rotuloFaixaCurta } = await import("@/lib/horario");
+const { TRES_PONTOS } = await import("../ficha-de-tres-pontos");
 
 const banco = await bancoDeProducao();
 const VEU = "veu-de-noiva-de-bonito";
@@ -44,14 +46,14 @@ const VEU = "veu-de-noiva-de-bonito";
  *  byte a byte. Não editar: é a prova. */
 const VEU_DE_HOJE = String.raw`{"slug":"veu-de-noiva-de-bonito","modos":["condicional"],"rotulo_escaneio":"Com chuva, com cuidado","promessa":"A maior cachoeira de Bonito.","voz":"Vale a ida. Mas o trecho de terra é um desafio na chuva: molhou, o barro fica pegajoso.","premio":"Um espetáculo natural do brejo pernambucano — a maior cachoeira de Bonito. É isso que espera no fim do trecho de terra.","trajeto":{"waypoints":[{"nome":"Cachoeira Véu de Noiva","lat":-8.5431216,"lng":-35.712826}]},"acesso":"Carro comum chega. Mas tem um trecho de terra no caminho, e é ele que manda: com chuva vira um desafio — o barro fica pegajoso.","avisos":"Se choveu, o trecho de terra fica pegajoso. E repare na hora: fecha às 17h, então chegar tarde é não entrar.","condicao":{"coords":{"lat":-8.5431216,"lng":-35.712826},"regra":{"tipo":"chuva_binaria","janela_previsao_horas":3,"janela_passado_horas":6,"limiar_mm":0.2},"severidade":"cuidado","regra_texto":"Choveu nas últimas ~6h OU vem chuva nas próximas ~3h → não vá: o trecho de terra fica pegajoso. Os três números são os da Rampa do Pepê, herdados por escolha dele em 2026-09-03 (\"acho que pode seguir a regra da chuva da rampa do pepê\") — e por enquanto são palpite, não medição daqui. Nada nesta regra afirma coisa alguma sobre a queda d'água: ele não tem registro de perigo ali e disse que não sabe opinar.","ressalva_proxy":"Chuva medida ≠ barro no trecho de terra — a grade do modelo não vê esse pedaço. Confirme no caminho."},"discriminador":{"formato":"trecho de terra","como_ler":"No trecho de terra: barro pegajoso = não vá.","permissao_abortar":"Voltar aqui é decisão boa. A cachoeira fica."},"custo":{"tag":"pago","valor":"R$ 10 por pessoa · pago na entrada","curto":"R$ 10 · entrada"},"piso":"barro","carroComum":true,"horario":{"abre":"08:00","fecha":"17:00"}}`;
 
-async function pagina() {
+async function pagina(slug = VEU) {
   vi.mocked(resolverEstado).mockResolvedValue({
     estado: "fresco",
     erro: false,
     calculadoEm: Math.floor(Date.now() / 1000),
     aviso: null,
   });
-  return render(await Ficha({ params: Promise.resolve({ slug: VEU }), searchParams: Promise.resolve({}) }));
+  return render(await Ficha({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({}) }));
 }
 
 /** O relógio em Recife (UTC-3), num dia útil qualquer. */
@@ -111,5 +113,50 @@ describe("a ficha gravada na forma VELHA do horário, lida do banco", () => {
     const { container } = await pagina();
     expect(container.querySelector(".mark")?.textContent).not.toBe("Fechado agora");
     expect(container.querySelector(".tk.hora")?.textContent).toBe("8h–17h");
+  });
+});
+
+/** 🔴 A LISTA FORA DE ORDEM, LIDA DO BANCO (I-1 da revisão da 11c). O schema de
+ *  leitura só confere FORMA, e o "voltar a uma versão" grava verbatim: uma lista
+ *  `[14–17, 08–10]` chega à tela como está. O motivo ordenava e o tíquete não —
+ *  a mesma página dizia as faixas em duas ordens. O lugar é o MARCADOR da
+ *  `ficha-de-tres-pontos` (nenhum lugar real ganha horário inventado), e o
+ *  documento entra como STRING por `gravarVersao`, nunca pela semente. */
+describe("a lista de faixas FORA DE ORDEM, lida do banco", () => {
+  const MARCADOR = TRES_PONTOS.slug;
+  const INVERTIDA = JSON.stringify({
+    ...TRES_PONTOS,
+    horario: [
+      { abre: "14:00", fecha: "17:00" },
+      { abre: "08:00", fecha: "10:00" },
+    ],
+  });
+
+  beforeEach(async () => {
+    await gravarVersao(banco, MARCADOR, INVERTIDA, "painel", AGORA_SEMENTE + 2);
+    esquecerMemoria();
+  });
+
+  it("a premissa: o documento no banco tem as faixas na ordem INVERTIDA", async () => {
+    expect(JSON.parse(INVERTIDA).horario[0].abre).toBe("14:00");
+    expect((await getFicha(MARCADOR))!.horario![0].abre, "o getter reordenou: o caso não mede a tela").toBe("14:00");
+  });
+
+  it("o motivo diz as faixas na ordem do dia", async () => {
+    const f = (await getFicha(MARCADOR))!;
+    expect(rotuloFaixa(aberturaDaFicha(f))).toBe("Abre das 8h às 10h e das 14h às 17h.");
+  });
+
+  it("o tíquete diz as faixas na ordem do dia", async () => {
+    const f = (await getFicha(MARCADOR))!;
+    expect(rotuloFaixaCurta(f.horario!)).toBe("8h–10h · 14h–17h");
+  });
+
+  it("na página, às 11h: fechado, abre às 14h — e motivo e tíquete na mesma ordem", async () => {
+    as(11);
+    const { container } = await pagina(MARCADOR);
+    expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    expect(container.querySelector(".reason")?.textContent).toBe("Abre das 8h às 10h e das 14h às 17h.");
+    expect(container.querySelector(".tk.hora")?.textContent).toBe("8h–10h · 14h–17h");
   });
 });

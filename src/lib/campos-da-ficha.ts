@@ -33,21 +33,20 @@ import { fichaSchema, type Ficha } from "@/types/ficha";
  *    regras (ordem, sobreposição, 24h só sozinha) são de `problemaDasFaixas`,
  *    em `horario.ts`. O "não sei" tira a chave, e é o único caminho até "sem
  *    horário": `[]` é recusado.
- *  - `hora` — seletor `HH:MM`. ⚠️ SEM ENTRADA NO REGISTRO desde a 11c: as
- *    folhas `horario.abre`/`.fecha` viraram a lista acima. A espécie fica
- *    declarada só porque a tela do painel ainda tem o instrumento dela, e
- *    quem o contrai é a 11d.
  *  - `numero` — número DE MOTOR (limiar de chuva, janelas): a tela mostra a
  *    consequência ao vivo antes de gravar.
- *  - `bloco` — ⚠️ SEM ENTRADA NO REGISTRO desde a 11c, pela mesma razão do
- *    `hora`: o único bloco era o `horario`, que virou `faixas`. A porta de
- *    escrita do bloco saiu daqui; a tela dele sai na 11d.
+ *  ⚠️ `hora` e `bloco` existiram até a Tarefa 11d: eram as duas folhas do
+ *    `horario` (`horario.abre`/`.fecha`) e o objeto delas, editados folha a
+ *    folha. O horário virou a lista acima (11c: dado, registro e porta; 11d: a
+ *    tela), e as duas espécies saíram do tipo — junto com o `EditorHora`, o
+ *    `EditorBloco` e a maquinaria de bloco da tela. A emenda está em
+ *    `docs/superpowers/2026-09-27-rulings-painel-completo.md`.
  *  - `coord` — editado no MAPA, com pin arrastado. Duas formas convivem aqui
  *    de propósito, porque o schema as declara diferentes: `condicao.coords` é
  *    o PAR (`{lat, lng}`) e `trajeto.waypoints[].lat`/`.lng` são as METADES
  *    (números soltos). Quem grava não precisa distinguir — o
  *    `fichaSchema.parse` da porta recusa a forma errada no caminho errado. */
-export type EspecieCampo = "prosa" | "lista" | "booleano" | "hora" | "numero" | "coord" | "bloco" | "faixas";
+export type EspecieCampo = "prosa" | "lista" | "booleano" | "numero" | "coord" | "faixas";
 
 /** O bloco em que o campo aparece na tela do painel. Os nomes seguem os blocos
  *  que a ficha pública já tem (`src/app/[slug]/page.tsx`): `acesso`, `avisos`,
@@ -120,10 +119,11 @@ export const CAMPOS_DA_FICHA: readonly CampoDaFicha[] = [
   // 🔴 O HORÁRIO INTEIRO É UMA ENTRADA (Tarefa 11c, 2026-10-04): a lista de 1 a
   // 3 faixas, gravada de uma vez — "fecha pro almoço" são duas faixas que só
   // fazem sentido juntas. Até a 11c era um BLOCO com as duas folhas editadas
-  // uma a uma (ruling H1); a emenda está em `task-11bcd-auditoria.md`, 11c-I1.
+  // uma a uma (ruling H1); as emendas da 11c e da 11d estão em
+  // `docs/superpowers/2026-09-27-rulings-painel-completo.md`.
   // É esta entrada que carrega o "não sei": sem ela não existiria caminho
   // nenhum pra dizer "este lugar não fecha por horário" — e a régua do app
-  // (`src/types/ficha.ts`, `src/lib/horario.ts:246`) é que ficha sem horário
+  // (`src/types/ficha.ts`, e `fechadoAgora` em `src/lib/horario.ts`) é que ficha sem horário
   // NUNCA fecha. A régua tem que ser alcançável do celular.
   { caminho: "horario", especie: "faixas", obrigatorio: false, grupo: "quando" },
   { caminho: "dias", especie: "lista", obrigatorio: false, grupo: "quando", opcoes: DIAS },

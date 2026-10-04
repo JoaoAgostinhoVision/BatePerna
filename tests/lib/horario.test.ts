@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  abreAindaHoje,
   agoraRecife,
   fechadoAgora,
   fechadoHoje,
@@ -118,11 +117,6 @@ describe("as frases da tela", () => {
     expect(rotuloHora("05:00")).toBe("5h");
     expect(rotuloHora("17:00")).toBe("17h");
     expect(rotuloHora("17:30")).toBe("17h30");
-  });
-
-  it("abreAindaHoje separa quem só espera de quem perdeu o dia", () => {
-    expect(abreAindaHoje(PEDRA, h(4))).toBe(true);
-    expect(abreAindaHoje(PEDRA, h(18))).toBe(false);
   });
 
   // 🔴 O "amanhã" não é enfeite: a MESMA frase nos dois casos mentiria pra
@@ -353,13 +347,20 @@ describe("o horário com intervalo — a lista de faixas", () => {
     expect(frase([], h(12))).toBeNull();
   });
 
-  it("abreAindaHoje olha a PRÓXIMA faixa, não a primeira", () => {
-    expect(abreAindaHoje(ALMOCO, h(11))).toBe(true);
-    expect(abreAindaHoje(ALMOCO, h(17))).toBe(false);
-  });
-
   it("a faixa curta mostra as faixas juntas", () => {
     expect(rotuloFaixaCurta(ALMOCO)).toBe("8h–10h · 14h–17h");
+  });
+
+  // 🔴 I-1 DA REVISÃO DA 11c: o motivo e o tíquete são a MESMA tela, e uma lista
+  // fora de ordem no documento (o schema de leitura só confere FORMA) saía
+  // "Abre das 8h às 10h e das 14h às 17h." no motivo e "14h–17h · 8h–10h" no
+  // tíquete. Os dois ordenam pelo `abre` — a ordem do dia.
+  it("lista INVERTIDA: o motivo e o tíquete dizem a ordem do dia, os dois", () => {
+    const INVERTIDA: Horario = [ALMOCO[1], ALMOCO[0]];
+    expect(rotuloFaixaCurta(INVERTIDA)).toBe("8h–10h · 14h–17h");
+    expect(rotuloFaixa(so(INVERTIDA))).toBe("Abre das 8h às 10h e das 14h às 17h.");
+    // e ordenar não pode mexer no documento de quem chamou
+    expect(INVERTIDA[0].abre).toBe("14:00");
   });
 
   it("o motivo, com duas faixas, diz as duas", () => {
@@ -494,6 +495,20 @@ describe("problemaDasFaixas — as regras da porta de escrita", () => {
   it("24h ou travessia da meia-noite, só sozinhas", () => {
     expect(problemaDasFaixas([f("06:00", "08:00"), f("22:00", "05:00")])).toMatch(/sozinha/);
     expect(problemaDasFaixas([f("00:00", "00:00"), f("08:00", "10:00")])).toMatch(/sozinha/);
+  });
+
+  // 🔴 M-2 DA REVISÃO DA 11c: a faixa que FECHA à meia-noite (14:00–00:00) era
+  // recusada dizendo que "passa da meia-noite" — falso: ela termina nela. A
+  // REGRA não muda (as três seguem recusadas junto com outra faixa); muda a
+  // frase, que agora diz o que cada uma É. As três pontas da bifurcação, cada
+  // uma com a frase dela e sem a das outras (49ª espécie).
+  it("a frase diz o que a faixa é: 24 horas, fecha à meia-noite, ou passa dela", () => {
+    const de24 = problemaDasFaixas([f("00:00", "00:00"), f("08:00", "10:00")])!;
+    const ateMeiaNoite = problemaDasFaixas([f("08:00", "10:00"), f("14:00", "00:00")])!;
+    const passa = problemaDasFaixas([f("06:00", "08:00"), f("22:00", "05:00")])!;
+    expect(de24).toBe("a faixa 0h–0h é de 24 horas, e uma faixa assim só vale sozinha no horário");
+    expect(ateMeiaNoite).toBe("a faixa 14h–0h fecha à meia-noite, e uma faixa assim só vale sozinha no horário");
+    expect(passa).toBe("a faixa 22h–5h passa da meia-noite, e uma faixa assim só vale sozinha no horário");
   });
 });
 

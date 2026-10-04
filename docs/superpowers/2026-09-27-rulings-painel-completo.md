@@ -103,6 +103,30 @@ sempre: as fichas no banco estão na forma velha, e o "voltar" a grava de novo v
 `bloco` e `hora` ficaram sem entrada; a contração da tela delas é a Tarefa 11d. Os achados que
 moldaram isto estão em `task-11bcd-auditoria.md` (11c-C1, I1–I7), fora do git.
 
+**EMENDA DA TAREFA 11d (2026-10-04) — a H1 e o C1 acima deixam de valer PARA O HORÁRIO, também na
+TELA: um instrumento, UM Salvar, a lista inteira.** A H1/C1 dizia que o bloco *"só entra inteiro e
+só quando ausente"*, e que presente se edita folha a folha. O porquê da emenda é o **I-B da
+re-revisão da Tarefa 11**, medido no Chrome: com o horário presente, a pergunta do horário no
+formulário de lugar novo tinha DOIS Salvar (um por folha); ele digitou abre 09:00 e fecha 18:00,
+tocou o Salvar do abre, a tela avançou de pergunta, e o 18:00 sumiu sem aviso — o rascunho guardou o
+fecha antigo. É o mesmo defeito que levou à decisão dele de *"uma pergunta por tela"* (texto digitado
+em outra caixa, perdido no Salvar), acontecendo DENTRO de uma pergunta. E com intervalo a coisa
+piora: abre e fecha de cada faixa — e as faixas entre si — dependem umas das outras (*"só grava com
+os dois"*, regra dele). Então: o horário é editado por UM instrumento (`EditorFaixas`: as faixas,
+"+ outra faixa" até 3, "tirar esta faixa" só com duas ou mais, e UM Salvar), e a gravação SUBSTITUI
+a lista inteira numa requisição, na ficha no ar e no rascunho, pelas regras de `problemaDasFaixas`.
+Com uma faixa só não existe "tirar": o caminho até "sem horário" continua sendo o "não tem", e a
+lista vazia nunca sai da tela. As espécies `bloco` e `hora` saíram do tipo, junto com o
+`EditorBloco`, o `EditorHora` e a maquinaria de bloco da tela (o `dentro` do formulário, as folhas
+de bloco nas perguntas, o `<p>` de leitura da ficha inteira). 🔴 **O que NÃO saiu:** o guarda dos
+blocos opcionais do schema (`blocosOpcionaisDoSchema`, em `tests/lib/campos-da-ficha.test.ts`), com
+expectativa `[]` — ele é a razão inteira da H1 (um objeto opcional no schema com folhas obrigatórias
+por dentro só tem "não sei" no nível do objeto) e continua acusando o próximo que nascer. E a
+varredura do formulário ganhou o que faltou para pegar o I-B: ela roda também num rascunho com TODAS
+as perguntas respondidas, e conta UM Salvar por tela.
+*Custo se errada:* um instrumento a mais pra manter que sabe acrescentar e tirar faixa. O inverso é
+o dono corrigir as duas horas, ver a tela andar, e o app publicar a hora que ele quis trocar.
+
 **C1 da Tarefa 2 — `undefined` é SILÊNCIO, e uma regra de coerência nunca afirma o que o dono
 declarou.**
 `prosa-bate-com-piso` acusava ficha **sem** `piso` (que é opcional de propósito): ausente, o campo
