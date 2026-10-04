@@ -45,7 +45,13 @@ build 0, mutar 42/0. **Revisão despachada** (`task-11d-review.md`; se não exis
 🔴 **PEDIDO DELE (04/10): "latitude e longitude… era bom ter um mapa e a pessoa arrastar — que horror".** Vira a
 **11f** (brief `task-11f-brief.md`: mapa sem pin centrado na CIDADE via `/api/lugares`, +/−, arrastar a vista, TOQUE
 põe o pin, nunca grava o centro). **AUDITADO** (`task-11f-auditoria.md`: 2 C · 10 I · 7 M, todas aceitas e coladas
-no fim do brief; a política do OSM PERMITE o uso). Pronto pra despachar depois da 11d. Ordem nova: 11d → **11f** → 11e → 12.
+no fim do brief; a política do OSM PERMITE o uso). Pronto pra despachar depois da 11d.
+✅ **11d revisada: 0 C · 1 I · 6 M** (Chrome real a 360 px; os achados foram pra seção "ANTES DO MAPA" da 11f, com a
+ruling minha de ORDENAR as faixas antes de gravar). **A 11f foi despachada** (`task-11f-PROMPT.md`; se não houver
+commit de código depois de `3f7546a`, redespachar COMO ESTÁ).
+📝 **Pacote de copy pro João (crescendo):** "Abre sábado e domingo. Abre das 8h às 10h e das 14h às 17h."; "abre
+domingo às 8h" dito num domingo; "Não sei — o app não diz nada sobre isto" com horário ausente (FALSO: sem horário
+nunca fecha); "Escolha uma hora, no formato HH:MM." pra faixa vazia; e todas as `PENDENTE` dos relatórios 11b/c/d/f. Ordem nova: 11d → **11f** → 11e → 12.
 📌 **Lido no banco de PRODUÇÃO em 04/10 (só leitura):** 1 versão por ficha; Pedra `{abre 05:00, fecha 17:00}`, Véu
 `{08:00, 17:00}`, Rampa só `dias [sab,dom]`; nenhuma tem cidade; produção NÃO tem a coluna `oculto` nem a tabela
 `ficha_rascunhos` — o `ensureSchema` (ALTER guardado) cria no `npm run semear`, que TEM de vir antes do deploy.
