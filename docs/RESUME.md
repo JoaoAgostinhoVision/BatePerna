@@ -40,6 +40,8 @@ o 12-E5 foi pro brief da 12). Pronto pra despachar DEPOIS da 11d.
 em 97, tsc 0, build 0, mutar 42/0. ✅ **Revisão: 0 C · 1 I · 6 M** (30.240 comparações velho×novo nas 3 fichas
 com o doc de produção, zero diferença). Os achados foram pra seção "ANTES DA TELA" do brief da 11d. **A 11d foi
 despachada** (`task-11d-PROMPT.md`; se não houver commit de código depois de `c577ca3`, redespachar COMO ESTÁ).
+✅ **11d feita: `3f7546a`** (editor de faixas, UM Salvar; contração do bloco). Medido: 1968/1968 em 98, tsc 0,
+build 0, mutar 42/0. **Revisão despachada** (`task-11d-review.md`; se não existir, redespachar). Depois: 11e.
 📌 **Lido no banco de PRODUÇÃO em 04/10 (só leitura):** 1 versão por ficha; Pedra `{abre 05:00, fecha 17:00}`, Véu
 `{08:00, 17:00}`, Rampa só `dias [sab,dom]`; nenhuma tem cidade; produção NÃO tem a coluna `oculto` nem a tabela
 `ficha_rascunhos` — o `ensureSchema` (ALTER guardado) cria no `npm run semear`, que TEM de vir antes do deploy.
