@@ -10,7 +10,10 @@ import {
   APROXIMAR,
   APROXIME_PRA_SALVAR,
   MARQUE_NO_MAPA,
+  PIN_FORA_DA_VISTA,
   SEM_VISTA,
+  TOQUE_DE_PERTO,
+  VISTA_CIDADE_AMBIGUA,
   VISTA_SEM_CIDADE,
 } from "@/app/admin/campos/EditorCoordenada";
 import type { VistaNaTela } from "@/app/admin/campos/tipos";
@@ -571,13 +574,13 @@ describe("EditorCoordenada — os gestos (Tarefa 11f, I3 da auditoria)", () => {
     expect(parseFloat(pinEm(PAR).style.left)).toBe(L / 2);
   });
 
-  it("o − afasta um degrau e o + aproxima, em volta do centro; o número e a rota não mexem", () => {
+  it("o − afasta um degrau e o + aproxima, em volta do pin (que nasce no centro); o número e a rota não mexem", () => {
     const { fetchFalso } = comRota();
     render(<FichaInteira ficha={FICHA} />);
     expect(zoomDosTiles(PAR)).toBe(zoomDeTiles(MAPA_ZOOM_EDITOR));
     fireEvent.click(menos(PAR));
     expect(zoomDosTiles(PAR)).toBe(zoomDeTiles(MAPA_ZOOM_EDITOR - 1));
-    // o pin estava no centro da vista, e o zoom é em volta do centro: continua lá
+    // o pin estava no centro da vista, e o zoom é em volta dele: continua lá
     expect(parseFloat(pinEm(PAR).style.left)).toBeCloseTo(L / 2, 1);
     expect(parseFloat(pinEm(PAR).style.top)).toBeCloseTo(A / 2, 1);
     fireEvent.click(mais(PAR));
@@ -605,8 +608,10 @@ describe("EditorCoordenada — os gestos (Tarefa 11f, I3 da auditoria)", () => {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔴 C1 DA AUDITORIA DA 11f: afastado, um toque grava um ponto a quilômetros (no
-// z7, ~1,2 km por pixel). O Salvar só liga com a vista no `MAPA_ZOOM_EDITOR` ou
-// mais perto — na ficha no ar também. Afastado, o pin ainda se põe e se arrasta.
+// z7, ~1,2 km por pixel). O Salvar só liga com o PIN posto ou movido no
+// `MAPA_ZOOM_EDITOR` ou mais perto, e à vista — na ficha no ar também. Afastado,
+// o pin ainda se põe e se arrasta. (Até a onda de fix valia o zoom da VISTA, e
+// aproximar depois do toque salvava o toque de longe: C-1 da revisão da 11f.)
 // ═══════════════════════════════════════════════════════════════════════════
 describe("EditorCoordenada — o portão do Salvar no zoom (C1)", () => {
   it("afastado: o Salvar desliga, a ajuda diz pra aproximar, e tocar no Salvar não chama a rota", () => {
@@ -616,6 +621,8 @@ describe("EditorCoordenada — o portão do Salvar no zoom (C1)", () => {
     expect(within(bloco(PAR)).queryByText(APROXIME_PRA_SALVAR)).toBeNull();
     fireEvent.click(menos(PAR));
     fireEvent.click(menos(PAR));
+    // o portão é do PIN, não da vista: o ponto do banco, intocado, segue salvável
+    expect(salvarEm(PAR)!.disabled, "afastar a vista desligou o Salvar do pin que ninguém mexeu").toBe(false);
     gesto(PAR, naTela({ x: 100, y: 40 })); // um toque afastado põe o pin…
     expect(lido(PAR)).not.toEqual(FICHA.condicao.coords);
     expect(salvarEm(PAR)!.disabled, "afastado, o Salvar continuou ligado").toBe(true); // …mas não salva
@@ -624,19 +631,110 @@ describe("EditorCoordenada — o portão do Salvar no zoom (C1)", () => {
     expect(fetchFalso).not.toHaveBeenCalled();
   });
 
-  it("aproximando de novo até o zoom do portão, o Salvar liga e grava o ponto do toque", async () => {
+  // 🔴 C-1 DA REVISÃO DA 11f (o furo nasceu no plano: a prova "tocar afastado,
+  // aproximar, Salvar liga" ERA o furo). Medido no Chrome: toque no z7, seis +,
+  // Salvar aceito — um ponto posto a ~1,2 km/px, gravado a ~75 km da cidade. O
+  // Salvar vale pelo zoom em que o PIN foi posto ou movido, não pelo da vista.
+  it("C-1: tocar no z7 e apertar + seis vezes NÃO liga o Salvar — o pin vale pelo zoom em que foi posto; tocar de perto, sim", async () => {
     const { fetchFalso, reloadFalso } = comRota();
     render(<FichaInteira ficha={FICHA} />);
-    fireEvent.click(menos(PAR));
+    for (let z = MAPA_ZOOM_EDITOR; z > MAPA_ZOOM_EDITOR_MIN; z--) fireEvent.click(menos(PAR));
+    expect(zoomDosTiles(PAR), "premissa: o z7").toBe(zoomDeTiles(MAPA_ZOOM_EDITOR_MIN));
     gesto(PAR, naTela({ x: 100, y: 40 }));
-    const tocado = lido(PAR);
-    fireEvent.click(mais(PAR));
-    expect(salvarEm(PAR)!.disabled).toBe(false);
+    const longe = lido(PAR);
+    expect(within(bloco(PAR)).getByText(APROXIME_PRA_SALVAR)).toBeTruthy();
+    for (let z = MAPA_ZOOM_EDITOR_MIN; z < MAPA_ZOOM_EDITOR; z++) fireEvent.click(mais(PAR));
+    expect(zoomDosTiles(PAR), "premissa: de volta ao zoom do portão").toBe(zoomDeTiles(MAPA_ZOOM_EDITOR));
+    // o + aproxima em volta do PIN: ele fica onde o dedo o pôs, à vista
+    expect(parseFloat(pinEm(PAR).style.left)).toBeCloseTo(100, 0);
+    expect(parseFloat(pinEm(PAR).style.top)).toBeCloseTo(40, 0);
+    expect(lido(PAR), "aproximar mexeu no ponto").toEqual(longe);
+    expect(salvarEm(PAR)!.disabled, "o toque do z7 ficou salvável depois de aproximar").toBe(true);
+    // perto, a ajuda já não manda aproximar: manda tocar (ou arrastar) de novo
+    expect(within(bloco(PAR)).getByText(TOQUE_DE_PERTO)).toBeTruthy();
     expect(within(bloco(PAR)).queryByText(APROXIME_PRA_SALVAR)).toBeNull();
-    expect(lido(PAR), "aproximar mexeu no ponto").toEqual(tocado);
+    fireEvent.click(salvarEm(PAR)!);
+    expect(fetchFalso).not.toHaveBeenCalled();
+    // um toque DE PERTO põe o ponto que se grava
+    gesto(PAR, naTela({ x: 300, y: 150 }));
+    const perto = lido(PAR);
+    expect(perto).not.toEqual(longe);
+    expect(salvarEm(PAR)!.disabled).toBe(false);
+    expect(within(bloco(PAR)).queryByText(TOQUE_DE_PERTO)).toBeNull();
     salvar(PAR);
     await waitFor(() => expect(reloadFalso).toHaveBeenCalled());
-    expect(corpos(fetchFalso)[0].corpo).toEqual({ slug: FICHA.slug, campo: PAR, valor: tocado });
+    expect(corpos(fetchFalso)[0].corpo).toEqual({ slug: FICHA.slug, campo: PAR, valor: perto });
+  });
+
+  it("C-1: o pin posto de longe e ARRASTADO de perto também se salva — o gesto que move conta como o que põe", () => {
+    render(<FichaInteira ficha={FICHA} />);
+    fireEvent.click(menos(PAR));
+    fireEvent.click(menos(PAR));
+    gesto(PAR, naTela({ x: 100, y: 40 }));
+    fireEvent.click(mais(PAR));
+    fireEvent.click(mais(PAR));
+    expect(salvarEm(PAR)!.disabled, "premissa: o toque de longe não salva").toBe(true);
+    // pega a gota (o pin ficou em (100, 40) de layout) e arrasta 10px de tela
+    const gota = naTela({ x: 100, y: 40 - GOTA_ACIMA_DA_PONTA_PX });
+    gesto(PAR, gota, { clientX: gota.clientX + 10, clientY: gota.clientY + 10 });
+    expect(parseFloat(pinEm(PAR).style.left), "premissa: o arrasto pegou o pin").toBeCloseTo(120, 0);
+    expect(salvarEm(PAR)!.disabled).toBe(false);
+  });
+
+  it("com pin, o + e o − aproximam e afastam EM VOLTA DO PIN: ele fica no mesmo pixel, e o número não muda", () => {
+    render(<FichaInteira ficha={FICHA} />);
+    gesto(PAR, naTela({ x: 80, y: 160 }));
+    const ponto = lido(PAR);
+    for (const botao of [mais, mais, menos, menos, menos]) {
+      fireEvent.click(botao(PAR));
+      expect(parseFloat(pinEm(PAR).style.left), "o zoom tirou o pin do lugar (x)").toBeCloseTo(80, 0);
+      expect(parseFloat(pinEm(PAR).style.top), "o zoom tirou o pin do lugar (y)").toBeCloseTo(160, 0);
+    }
+    expect(zoomDosTiles(PAR)).toBe(zoomDeTiles(MAPA_ZOOM_EDITOR - 1));
+    expect(lido(PAR)).toEqual(ponto);
+  });
+
+  it("sem pin, o + aproxima em volta do CENTRO da vista: tocar o meio dá o centro", () => {
+    const semNada = {
+      ...FICHA,
+      condicao: { ...FICHA.condicao, coords: { lat: NaN, lng: -36 } },
+      trajeto: { ...FICHA.trajeto, waypoints: [{ ...FICHA.trajeto.waypoints[0], lat: NaN }] },
+    } as Ficha;
+    const vista: VistaNaTela = { centro: { lat: -8.5, lng: -36.5 }, z: 11, origem: "cidade" };
+    render(<FichaInteira ficha={semNada} vistaSemPonto={vista} />);
+    fireEvent.click(mais(PAR));
+    expect(zoomDosTiles(PAR)).toBe(zoomDeTiles(12));
+    gesto(PAR, naTela({ x: L / 2, y: A / 2 }));
+    expect(lido(PAR)).toEqual(vista.centro);
+  });
+
+  // (c): o pin que saiu da parte VISÍVEL (arrastando o fundo) não se salva — ele
+  // grava o que está vendo. O caso do celular: a caixa de 480px começa 60px à
+  // esquerda da moldura, que mostra 360px; o pin em x=440 está DENTRO da caixa
+  // e FORA da tela, e só a medida da moldura o acha.
+  it("pin fora da parte visível do mapa: sem Salvar, e a ajuda diz que ele saiu; de volta à vista, salva", () => {
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={FICHA} />);
+    const mapa = mapaEm(PAR)!;
+    dublarCaixas(mapa, { left: -60, top: 20, width: L, height: A }, { left: 0, top: 20, width: 360, height: A });
+    // o pin nasce em (240, 100) de layout = (180, 120) de tela; o dedo encosta longe da gota
+    ponteiro(mapa, "pointerdown", { clientX: 100, clientY: 150 });
+    ponteiro(mapa, "pointermove", { clientX: 200, clientY: 150 });
+    ponteiro(mapa, "pointermove", { clientX: 300, clientY: 150 });
+    ponteiro(mapa, "pointerup", { clientX: 300, clientY: 150 });
+    expect(parseFloat(pinEm(PAR).style.left), "premissa: o pin na sobra cortada").toBeCloseTo(440, 1);
+    expect(lido(PAR), "arrastar o fundo mexeu no ponto").toEqual(FICHA.condicao.coords);
+    expect(salvarEm(PAR)!.disabled, "o pin fora da tela ficou salvável").toBe(true);
+    expect(within(bloco(PAR)).getByText(PIN_FORA_DA_VISTA)).toBeTruthy();
+    fireEvent.click(salvarEm(PAR)!);
+    expect(fetchFalso).not.toHaveBeenCalled();
+    ponteiro(mapa, "pointerdown", { clientX: 300, clientY: 150 });
+    ponteiro(mapa, "pointermove", { clientX: 250, clientY: 150 });
+    ponteiro(mapa, "pointermove", { clientX: 200, clientY: 150 });
+    ponteiro(mapa, "pointerup", { clientX: 200, clientY: 150 });
+    expect(parseFloat(pinEm(PAR).style.left)).toBeCloseTo(340, 1);
+    expect(salvarEm(PAR)!.disabled).toBe(false);
+    expect(within(bloco(PAR)).queryByText(PIN_FORA_DA_VISTA)).toBeNull();
   });
 });
 
@@ -691,6 +789,9 @@ describe("EditorCoordenada — pin e mosaico depois de mexer na vista (I4)", () 
       expect(parseFloat(pinEm(caminho).style.top), "o pin não caiu sob o dedo").toBeCloseTo(150, 0);
       pinSobreOMosaico(caminho);
       fireEvent.click(mais(caminho));
+      pinSobreOMosaico(caminho);
+      // o toque do z12 não se salva (C-1): um toque de perto, e é ELE que vai
+      gesto(caminho, naTela({ x: 300, y: 60 }));
       pinSobreOMosaico(caminho);
       const mostrado = lido(caminho);
       salvar(caminho);
@@ -798,6 +899,15 @@ describe("EditorCoordenada — coordenada que não é par finito", () => {
     unmount();
     render(<FichaInteira ficha={longe} vistaSemPonto={VISTA} />);
     expect(within(bloco(PAR)).queryByText(VISTA_SEM_CIDADE)).toBeNull();
+    expect(within(bloco(PAR)).queryByText(VISTA_CIDADE_AMBIGUA)).toBeNull();
+  });
+
+  // I-2 da revisão da 11f: achada mais de uma vez não é "não achei".
+  it("a vista que caiu no acervo porque a cidade é AMBÍGUA diz isso, e não 'não achei'", () => {
+    render(<FichaInteira ficha={semPonto0(semPar(FICHA))} vistaSemPonto={{ ...VISTA, origem: "cidade-ambigua" }} />);
+    expect(within(bloco(PAR)).getByText(VISTA_CIDADE_AMBIGUA)).toBeTruthy();
+    expect(within(bloco(PAR)).queryByText(VISTA_SEM_CIDADE)).toBeNull();
+    expect(within(bloco(PAR)).getByText(MARQUE_NO_MAPA)).toBeTruthy();
   });
 });
 

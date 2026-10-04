@@ -28,7 +28,7 @@ import {
 import EditorProsa from "@/app/admin/campos/EditorProsa";
 import { ERRO_REDE } from "@/app/admin/campos/gravar";
 import { HORA_VAZIA } from "@/app/admin/campos/palavras";
-import { APROXIMAR, MARQUE_NO_MAPA, VISTA_SEM_CIDADE } from "@/app/admin/campos/EditorCoordenada";
+import { APROXIMAR, MARQUE_NO_MAPA, VISTA_CIDADE_AMBIGUA, VISTA_SEM_CIDADE } from "@/app/admin/campos/EditorCoordenada";
 import { ESTADO_DO_APP } from "@/lib/lugares";
 import { vistaDoAcervo } from "@/lib/vista-do-mapa";
 import {
@@ -94,8 +94,15 @@ let token: string;
 const CIDADE_NO_MAPA = { lat: -8.31, lng: -36.42 };
 const GEOCODING = {
   results: [
-    { name: CIDADE, admin1: "Estado Marcador", country: "Brasil", latitude: -23.4, longitude: -46.6 },
-    { name: CIDADE, admin1: ESTADO_DO_APP, country: "Brasil", latitude: CIDADE_NO_MAPA.lat, longitude: CIDADE_NO_MAPA.lng },
+    { name: CIDADE, feature_code: "PPL", admin1: "Estado Marcador", country: "Brasil", latitude: -23.4, longitude: -46.6 },
+    {
+      name: CIDADE,
+      feature_code: "PPL",
+      admin1: ESTADO_DO_APP,
+      country: "Brasil",
+      latitude: CIDADE_NO_MAPA.lat,
+      longitude: CIDADE_NO_MAPA.lng,
+    },
   ],
 };
 const ehGeocoding = (url: string): boolean => url.startsWith("https://geocoding-api.open-meteo.com/");
@@ -874,7 +881,7 @@ describe("/admin/novo — responder, sair e voltar", () => {
     Number(/\/(\d+)\/\d+\/\d+\.png$/.exec(pergunta(caminho).querySelector("img")!.getAttribute("src")!)![1]);
   const seis = (n: number): number => Number(n.toFixed(6));
 
-  it("M4: o ponto do lugar — mapa SEM PIN na cidade dele (a de Pernambuco), sem Salvar; o toque, aproximar, Salvar grava o TOQUE", async () => {
+  it("M4: o ponto do lugar — mapa SEM PIN na cidade dele (a de Pernambuco), sem Salvar; o toque de longe não salva nem aproximando, o de perto grava", async () => {
     await lugarNovo();
     const { chamadas, assign } = await comRotaDeVerdade();
     await telaDe("trajeto.waypoints.0.lat");
@@ -903,16 +910,29 @@ describe("/admin/novo — responder, sair e voltar", () => {
     expect(salvarDe(P)!.disabled).toBe(true);
     fireEvent.click(salvarDe(P)!);
     expect(chamadas).toHaveLength(0);
+    // 🔴 C-1 da revisão da 11f: aproximar NÃO torna salvável o toque dado de
+    // longe — o Salvar vale pelo zoom em que o PIN foi posto, não pelo da vista
+    // (até a onda de fix este caso EXIGIA o contrário, e era o furo).
     for (let z = MAPA_ZOOM; z < MAPA_ZOOM_EDITOR; z++) fireEvent.click(within(pergunta(P)).getByRole("button", { name: APROXIMAR }));
+    expect(zoomNaTela(P), "premissa: a vista chegou ao zoom do portão").toBe(zoomDeTiles(MAPA_ZOOM_EDITOR));
+    expect(numero(P), "aproximar mexeu no ponto").toBe(`${tocado.lat}, ${tocado.lng}`);
+    expect(salvarDe(P)!.disabled, "o toque do z11 ficou salvável só por aproximar").toBe(true);
+    fireEvent.click(salvarDe(P)!);
+    expect(chamadas).toHaveLength(0);
+    // o ponto que se grava é um toque DE PERTO
+    tocar(P, 200, 120);
+    const [lat, lng] = numero(P).split(", ").map(Number);
+    const dePerto = { lat, lng };
+    expect(dePerto, "o toque de perto não moveu o pin").not.toEqual(tocado);
     expect(salvarDe(P)!.disabled).toBe(false);
     fireEvent.click(salvarDe(P)!);
     await waitFor(() => expect(chamadas).toHaveLength(1));
-    expect(chamadas[0].corpo).toEqual({ slug: S, ponto: 0, ...tocado });
-    expect(tocado, "gravou o centro da vista").not.toEqual(CIDADE_NO_MAPA);
+    expect(chamadas[0].corpo).toEqual({ slug: S, ponto: 0, ...dePerto });
+    expect(dePerto, "gravou o centro da vista").not.toEqual(CIDADE_NO_MAPA);
     await waitFor(() => expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(S, posDe(P) + 1)));
     // e o rascunho tem o ponto DELE
     const doc = JSON.parse((await lerRascunho(cliente, S))!.doc);
-    expect({ lat: doc.trajeto.waypoints[0].lat, lng: doc.trajeto.waypoints[0].lng }).toEqual(tocado);
+    expect({ lat: doc.trajeto.waypoints[0].lat, lng: doc.trajeto.waypoints[0].lng }).toEqual(dePerto);
   });
 
   it("gravado, a pergunta volta com o pin no ponto dele, e sem buscar cidade nenhuma", async () => {
@@ -977,6 +997,22 @@ describe("/admin/novo — responder, sair e voltar", () => {
       expect(numero(P)).toBe(`${seis(quadro.centro.lat)}, ${seis(quadro.centro.lng)}`);
     });
   }
+
+  // I-2 da revisão da 11f: a cidade achada DUAS vezes em Pernambuco (sem sede
+  // nem município pra desempatar) cai no acervo, mas a tela não diz "não achei".
+  it("cidade achada duas vezes no estado: a vista cai no ACERVO, e a tela diz que achou mais de uma", async () => {
+    const outra = { ...GEOCODING.results[1], latitude: -7.9, longitude: -39.9 };
+    respostaDaCidade = () => Response.json({ results: [...GEOCODING.results, outra] });
+    await lugarNovo();
+    await comRotaDeVerdade();
+    await telaDe("trajeto.waypoints.0.lat");
+    const P = "trajeto.waypoints.0.lat";
+    expect(buscasDeCidade).toHaveLength(1);
+    expect(within(pergunta(P)).getByText(VISTA_CIDADE_AMBIGUA)).toBeTruthy();
+    expect(within(pergunta(P)).queryByText(VISTA_SEM_CIDADE)).toBeNull();
+    expect(pergunta(P).querySelector("[data-pin]")).toBeNull();
+    expect(salvarDe(P)).toBeNull();
+  });
 
   // A prévia do carimbo pede ao servidor o carimbo do LUGAR com o número novo;
   // um rascunho não tem lugar no ar, e a resposta seria sempre "não consegui

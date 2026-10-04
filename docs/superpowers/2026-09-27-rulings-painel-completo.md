@@ -135,16 +135,26 @@ da Tarefa 8 (fora do git). Em 2026-10-01 ele decidiu *"bem mais perto; pra chega
 de novo"* — uns 10 a 20 m por pixel, porque no zoom 11 o dedo errava a entrada de uma trilha por
 dezenas de metros. A decisão tem DUAS metades, e esta ruling trata cada uma:
 1. **A precisão FICA**, agora como PORTÃO: o mapa aproxima e afasta (+/−, do 7 ao 15), mas o
-   Salvar só liga com a vista no `MAPA_ZOOM_EDITOR` (13, ~19 m/px) ou mais perto. Afastado, o pin
-   se põe e se arrasta, e a tela diz pra aproximar. Vale na ficha no ar, no lugar novo e no ponto
-   novo do trajeto. Sem o portão, um toque no z7 gravaria um ponto a quilômetros (~1,2 km/px).
+   Salvar só liga com o PIN posto ou movido no `MAPA_ZOOM_EDITOR` (13, ~19 m/px) ou mais perto, e
+   com o pin na parte visível do mapa. Afastado, o pin se põe e se arrasta, e a tela diz o que
+   falta. Vale na ficha no ar, no lugar novo e no ponto novo do trajeto. 🔴 **Emenda da onda de fix
+   (C-1 da revisão da 11f):** a primeira versão deste portão media o zoom da VISTA, e com ela um
+   toque no z7 seguido de seis "+" gravava o ponto do z7 — medido no Chrome, ~75 km do centro da
+   cidade, com o pin fora da tela. O furo nasceu no plano do orquestrador (a prova pedida era
+   *"tocar afastado, aproximar, Salvar liga"*). Agora: o pin guarda o zoom do último gesto que o
+   pôs ou moveu, e aproximar a vista não o muda — o toque de longe só se salva depois de tocado ou
+   arrastado de perto; com pin, o +/− aproxima e afasta EM VOLTA DO PIN (ele fica onde está na
+   tela); e pin fora da parte visível não se salva. O ponto que já está no banco (ou o último
+   ponto, no ponto novo do trajeto) conta como posto de perto.
 2. **"Pra chegar longe, salva e abre de novo" é SUBSTITUÍDO** — era o custo que ele aceitou, e o
    arrastar da vista o elimina. Pedido dele em 2026-10-04, ao ver o lugar novo pedir latitude e
    longitude digitadas: *"dios mio, latitude e longitude, era bom ter um mapa e a pessoa arrastar
    para a localização correta — que horror"*.
 E com isso: a coordenada SEM ponto (o lugar novo) deixa de entrar digitada — é o mesmo mapa,
-nascendo SEM PIN numa vista calculada no servidor (a cidade do lugar, achada só com nome igual e no
-estado de Pernambuco; pra a coordenada da chuva, o ponto 0 que ele já marcou; senão o quadro do
+nascendo SEM PIN numa vista calculada no servidor (a cidade do lugar, achada só com nome igual, no
+estado de Pernambuco e entre os lugares habitados — com desempate pela sede e pelo município de
+mesmo nome, e, achada mais de uma vez sem desempate, a tela diz isso em vez de "não achei" (I-2 da
+revisão); pra a coordenada da chuva, o ponto 0 que ele já marcou; senão o quadro do
 acervo no ar), e o ponto é o TOQUE dele. Antes do toque não há pin nem Salvar: a vista nunca é
 gravada. Os gestos: dedo na gota (22 px de tela) arrasta o pin pelo deslocamento, sem salto; dedo
 no fundo arrastado mais de 8 px move a vista; soltar com até 8 px é toque, e leva o pin (também com

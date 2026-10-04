@@ -16,7 +16,10 @@ import {
   APROXIMAR,
   APROXIME_PRA_SALVAR,
   MARQUE_NO_MAPA,
+  PIN_FORA_DA_VISTA,
   SEM_VISTA,
+  TOQUE_DE_PERTO,
+  VISTA_CIDADE_AMBIGUA,
   VISTA_SEM_CIDADE,
 } from "@/app/admin/campos/EditorCoordenada";
 import { ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
@@ -1473,10 +1476,15 @@ describe("Os editores servem os três lugares", () => {
     // Tarefa 11f: o mapa de pôr o pin anda, e nasce sem pin quando não há ponto.
     // Nas três fichas (todas com ponto) só o nome do + e do − está na tela em
     // repouso, e como `aria-label`, não como texto; a ajuda de aproximar só
-    // depois do −; as outras três, só sem ponto (o lugar novo).
+    // depois do −; as outras três, só sem ponto (o lugar novo). Onda de fix da
+    // 11f: as duas do portão pelo PIN (C-1) e a da cidade ambígua (I-2), nenhuma
+    // em repouso.
     MARQUE_NO_MAPA,
     APROXIME_PRA_SALVAR,
+    TOQUE_DE_PERTO,
+    PIN_FORA_DA_VISTA,
     VISTA_SEM_CIDADE,
+    VISTA_CIDADE_AMBIGUA,
     SEM_VISTA,
     APROXIMAR,
     AFASTAR,

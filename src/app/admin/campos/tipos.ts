@@ -70,7 +70,7 @@ export type CampoNaTela = {
 export type VistaNaTela = {
   centro: { lat: number; lng: number };
   z: number;
-  origem: "ponto" | "cidade" | "acervo";
+  origem: "ponto" | "cidade" | "acervo" | "cidade-ambigua";
 };
 
 /** 🔴 `valor` É `unknown` DE PROPÓSITO. Ele vem do documento que está no banco,

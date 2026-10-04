@@ -124,8 +124,11 @@ export function zoomDeTiles(z: number = MAPA_ZOOM): number {
  *  a pessoa arrastar para a localização correta"): o mapa agora anda (arrastar o
  *  fundo) e aproxima/afasta (+/−), entre `MAPA_ZOOM_EDITOR_MIN` e
  *  `MAPA_ZOOM_EDITOR_MAX`. A precisão que ele pediu fica pelo portão: o Salvar
- *  só liga com a vista neste zoom ou mais perto (no z7 um dedo errado por 10 px
- *  é ~12 km). A emenda está no arquivo de rulings versionado.
+ *  só liga com o PIN posto ou movido neste zoom ou mais perto (no z7 um dedo
+ *  errado por 10 px é ~12 km) — o zoom do GESTO que pôs o pin, não o da vista:
+ *  até a onda de fix da 11f (C-1 da revisão) era o da vista, e tocar no z7 e
+ *  apertar + seis vezes gravava o ponto do z7. A emenda está no arquivo de
+ *  rulings versionado.
  *
  *  Os tiles seguem a mesma régua da ficha: só os que a vista ATUAL mostra
  *  (`tilesParaCaixa`), pedidos quando a vista muda — nunca download em lote nem

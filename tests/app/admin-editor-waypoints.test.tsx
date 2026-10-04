@@ -9,7 +9,7 @@ import {
   tirarPonto,
 } from "@/app/admin/campos/EditorWaypoints";
 import { CAIXA_VAZIA, SALVAR } from "@/app/admin/campos/palavras";
-import { AFASTAR, APROXIMAR, APROXIME_PRA_SALVAR } from "@/app/admin/campos/EditorCoordenada";
+import { AFASTAR, APROXIMAR, APROXIME_PRA_SALVAR, PIN_FORA_DA_VISTA } from "@/app/admin/campos/EditorCoordenada";
 import { MAPA_ALTURA_PX, MAPA_LARGURA_PX, MAPA_ZOOM_EDITOR, coordDaPosicao } from "@/lib/mapa";
 import { getAllFichas } from "@/lib/ficha";
 import type { Ficha } from "@/types/ficha";
@@ -171,10 +171,40 @@ describe("EditorWaypoints — acrescentar no FIM, na posição que o DONO marcou
     ]);
   });
 
+  // C-1 da revisão da 11f, regra (c): o ponto novo que saiu da parte VISÍVEL do
+  // mapa (arrastando o fundo) não se confirma. A moldura mostra só 360px da
+  // caixa de 480 (o celular): o pin em x=440 está na caixa e fora da tela.
+  it("o pin do ponto novo fora da parte visível do mapa não se confirma; de volta à vista, sim", () => {
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={TRES_PONTOS} />);
+    abrir();
+    fireEvent.change(caixa(), { target: { value: "Quarto ponto" } });
+    const mapa = editor().querySelector<HTMLElement>('[data-testid="mapa-escolher"]')!;
+    const rect = (r: { left: number; top: number; width: number; height: number }) => () =>
+      ({ ...r, x: r.left, y: r.top, right: r.left + r.width, bottom: r.top + r.height, toJSON: () => ({}) }) as DOMRect;
+    mapa.getBoundingClientRect = rect({ left: 10, top: 20, width: L, height: A });
+    mapa.parentElement!.getBoundingClientRect = rect({ left: 70, top: 20, width: 360, height: A });
+    // o pin nasce no centro (240, 100); o dedo encosta no fundo, longe da gota, e anda 200px
+    ponteiro(mapa, "pointerdown", 90, 130);
+    ponteiro(mapa, "pointermove", 190, 130);
+    ponteiro(mapa, "pointermove", 290, 130);
+    ponteiro(mapa, "pointerup", 290, 130);
+    const salvarBotao = within(editor()).getByRole("button", { name: SALVAR }) as HTMLButtonElement;
+    expect(salvarBotao.disabled, "o pin fora da tela ficou confirmável").toBe(true);
+    expect(within(editor()).getByText(PIN_FORA_DA_VISTA)).toBeTruthy();
+    confirmar();
+    expect(fetchFalso).not.toHaveBeenCalled();
+    ponteiro(mapa, "pointerdown", 290, 130);
+    ponteiro(mapa, "pointermove", 240, 130);
+    ponteiro(mapa, "pointermove", 190, 130);
+    ponteiro(mapa, "pointerup", 190, 130);
+    expect(salvarBotao.disabled).toBe(false);
+  });
+
   // 🔴 TAREFA 11f (m6 da auditoria): o mapa do ponto novo é o MESMO que anda —
   // um toque leva o pin, e o portão do Salvar vale aqui também (C1): afastado,
   // o ponto se marca mas não se confirma.
-  it("o toque leva o pin; afastado, o Salvar desliga e diz pra aproximar; perto de novo, confirma o ponto do toque", async () => {
+  it("o toque leva o pin; afastado, o Salvar desliga e diz pra aproximar; aproximar só não basta — confirma o toque dado de perto", async () => {
     const { fetchFalso } = comRota();
     render(<FichaInteira ficha={TRES_PONTOS} />);
     abrir();
@@ -189,14 +219,23 @@ describe("EditorWaypoints — acrescentar no FIM, na posição que o DONO marcou
     const e = coordDaPosicao(402, 31, { lat: u.lat, lng: u.lng }, MAPA_ZOOM_EDITOR - 1, L, A);
     expect(lido().lat).toBeCloseTo(e.lat, 6);
     expect(lido().lng).toBeCloseTo(e.lng, 6);
+    const longe = lido();
     const salvarBotao = within(editor()).getByRole("button", { name: SALVAR }) as HTMLButtonElement;
     expect(salvarBotao.disabled, "afastado, o ponto novo continuou confirmável").toBe(true);
     expect(within(editor()).getByText(APROXIME_PRA_SALVAR)).toBeTruthy();
     confirmar();
     expect(fetchFalso).not.toHaveBeenCalled();
+    // 🔴 C-1 da revisão da 11f: aproximar não torna confirmável o toque dado de
+    // longe; o Salvar vale pelo zoom em que o PIN foi posto. Perto, um toque novo.
     fireEvent.click(within(editor()).getByRole("button", { name: APROXIMAR }));
+    expect(salvarBotao.disabled, "o toque afastado ficou confirmável só por aproximar").toBe(true);
+    confirmar();
+    expect(fetchFalso).not.toHaveBeenCalled();
+    ponteiro(mapa, "pointerdown", 120, 150);
+    ponteiro(mapa, "pointerup", 120, 150);
     expect(salvarBotao.disabled).toBe(false);
     const marcado = lido();
+    expect(marcado, "o toque de perto não moveu o pin").not.toEqual(longe);
     confirmar();
     await waitFor(() => expect(fetchFalso).toHaveBeenCalledTimes(1));
     expect(corpos(fetchFalso)[0].corpo).toEqual({

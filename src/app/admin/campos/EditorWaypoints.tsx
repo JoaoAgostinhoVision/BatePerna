@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { MAPA_ZOOM_EDITOR } from "@/lib/mapa";
-import { APROXIME_PRA_SALVAR, MapaDoPin, pertoPraSalvar } from "./EditorCoordenada";
+import { MapaDoPin, portaoDoSalvar } from "./EditorCoordenada";
 import { usarGravacao } from "./gravar";
 import { CAIXA_VAZIA, SALVANDO, SALVAR } from "./palavras";
 
@@ -42,9 +42,12 @@ import { CAIXA_VAZIA, SALVANDO, SALVAR } from "./palavras";
  *  🔴 O MAPA ANDA DESDE A TAREFA 11f (m6 da auditoria): o mesmo `MapaDoPin`
  *  ganhou o arrastar do fundo, o + e o − e o toque que leva o pin. Acabou o
  *  limite de ~9 km pra etapa nova (antes, mais longe era salvar e abrir de
- *  novo). E o mesmo portão do Salvar: afastado (abaixo do `MAPA_ZOOM_EDITOR`),
- *  o pin se põe mas não se confirma. O pin do ponto novo continua nascendo no
- *  último ponto — ele existe, então não há estado "sem pin" aqui. */
+ *  novo). E o mesmo portão do Salvar (`portaoDoSalvar`): o pin posto com a
+ *  vista afastada (abaixo do `MAPA_ZOOM_EDITOR`) não se confirma — nem depois
+ *  de aproximar, até ser tocado ou arrastado de perto (onda de fix da 11f, C-1
+ *  da revisão) —, e o pin fora da parte visível também não. O pin do ponto novo
+ *  continua nascendo no último ponto — ele existe, então não há estado "sem
+ *  pin" aqui —, e conta como posto de perto. */
 
 /** O nome da caixa do ponto novo. "O nome" é a palavra que o painel já usa pra
  *  essa folha de todo ponto (`ROTULO_DO_PONTO.nome`), e "ponto" é a que o
@@ -90,8 +93,11 @@ export default function EditorWaypoints({
   const [aberto, setAberto] = useState(false);
   const [nome, setNome] = useState("");
   const [pin, setPin] = useState<Par>(ultimo);
+  // O pin nasce no último ponto, que já é dado: conta como posto de perto.
+  const [zDoPin, setZDoPin] = useState(MAPA_ZOOM_EDITOR);
+  const [pinAVista, setPinAVista] = useState(true);
   const [vista, setVista] = useState({ centro: ultimo, z: MAPA_ZOOM_EDITOR });
-  const perto = pertoPraSalvar(vista.z);
+  const ajudaDoPortao = portaoDoSalvar({ zDoPin, zDaVista: vista.z, pinAVista });
   const [confirmandoTirar, setConfirmandoTirar] = useState(false);
   const { erro, salvando, gravar, recusarAqui } = usarGravacao();
 
@@ -123,12 +129,26 @@ export default function EditorWaypoints({
             onChange={(e) => setNome(e.target.value)}
           />
           <p className="adm-editor-ajuda">{DICA_DO_PONTO_NOVO}</p>
-          <MapaDoPin vista={vista} atual={pin} aoMover={(p) => setPin(p)} aoMudarVista={setVista} />
+          <MapaDoPin
+            vista={vista}
+            atual={pin}
+            aoMover={(p, z) => {
+              setPin(p);
+              setZDoPin(z);
+            }}
+            aoMudarVista={setVista}
+            aoVerPin={setPinAVista}
+          />
           <p className="adm-editor-coord" data-testid="coord-atual" aria-live="polite">
             {`${pin.lat}, ${pin.lng}`}
           </p>
-          {!perto && <p className="adm-editor-ajuda">{APROXIME_PRA_SALVAR}</p>}
-          <button type="button" className="adm-editor-salvar" disabled={salvando || !perto} onClick={acrescentar}>
+          {ajudaDoPortao !== null && <p className="adm-editor-ajuda">{ajudaDoPortao}</p>}
+          <button
+            type="button"
+            className="adm-editor-salvar"
+            disabled={salvando || ajudaDoPortao !== null}
+            onClick={acrescentar}
+          >
             {salvando ? SALVANDO : SALVAR}
           </button>
         </>

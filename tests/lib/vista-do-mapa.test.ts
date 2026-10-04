@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { ESTADO_DO_APP, urlBuscaCidade } from "@/lib/lugares";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { ESTADO_DO_APP, PRAZO_BUSCA_MS, urlBuscaCidade } from "@/lib/lugares";
 import {
   MAPA_ALTURA_PX,
   MAPA_JANELA_VISIVEL_HOME_PX,
@@ -8,7 +8,19 @@ import {
   MAPA_ZOOM_EDITOR_MIN,
   enquadrar,
 } from "@/lib/mapa";
-import { cidadeNoEstado, vistaDaCoordSemPonto, vistaDoAcervo, type FontesDaVista } from "@/lib/vista-do-mapa";
+import {
+  FONTES_DE_PRODUCAO,
+  cidadeNoEstado,
+  vistaDaCidade,
+  vistaDaCoordSemPonto,
+  vistaDoAcervo,
+  type FontesDaVista,
+} from "@/lib/vista-do-mapa";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 /** DE ONDE O MAPA DE PÔR O PIN COMEÇA QUANDO AINDA NÃO HÁ PONTO (Tarefa 11f, M2
  *  + C2/I1/I2 da auditoria). A vista é só o CENTRO do que a tela mostra — nunca
@@ -17,11 +29,17 @@ import { cidadeNoEstado, vistaDaCoordSemPonto, vistaDoAcervo, type FontesDaVista
  *  🔴 TODA CIDADE AQUI É MARCADOR, e toda coordenada também: homônimos
  *  inventados, em estados inventados, com números que não apontam pra lugar
  *  nenhum que importe. A forma da resposta é a do serviço (`results[].name`,
- *  `admin1`, `latitude`, `longitude`), a mesma que `lerLugares` lê. */
+ *  `feature_code`, `admin1`, `admin2`, `latitude`, `longitude`).
+ *
+ *  A EXCEÇÃO é o bloco das cidades reais de Pernambuco (I-2 da revisão da 11f):
+ *  nome e coordenada de município são dado público de geografia, copiados da
+ *  resposta do serviço medida em 2026-10-04 — e nenhum deles vai pra ficha. */
 
-const item = (name: string, admin1: string, latitude: number, longitude: number) => ({
+const item = (name: string, admin1: string, latitude: number, longitude: number, feature_code = "PPL", admin2?: string) => ({
   name,
+  feature_code,
   admin1,
+  ...(admin2 === undefined ? {} : { admin2 }),
   country: "Brasil",
   latitude,
   longitude,
@@ -70,11 +88,68 @@ describe("cidadeNoEstado — só o nome IGUAL, e só no estado do app", () => {
     expect(cidadeNoEstado(fora, "Cidade Marcador")).toBeNull();
   });
 
-  it("DUAS iguais no estado do app: nada — não há como saber qual é", () => {
+  it("DUAS iguais no estado do app, sem sede nem município pra desempatar: AMBÍGUA — não há como saber qual é", () => {
     const duas = {
       results: [item("Cidade Marcador", ESTADO_DO_APP, -8.2, -36.2), item("Cidade Marcador", ESTADO_DO_APP, -7.9, -39.9)],
     };
-    expect(cidadeNoEstado(duas, "Cidade Marcador")).toBeNull();
+    expect(cidadeNoEstado(duas, "Cidade Marcador")).toBe("ambigua");
+  });
+
+  // I-2 da revisão da 11f: a busca devolve também o que NÃO é cidade (um
+  // aeródromo, um cabo) com o mesmo nome, e a regra "exatamente uma" recusava
+  // cidades reais. Só lugar HABITADO (as classes `PPL*` do GeoNames) conta.
+  it("só lugar habitado conta: o aeródromo e o cabo de mesmo nome não fazem a cidade virar ambígua", () => {
+    const comAeroporto = {
+      results: [
+        item("Cidade Marcador", ESTADO_DO_APP, -8.3, -36.4),
+        item("Cidade Marcador", ESTADO_DO_APP, -8.31, -36.41, "AIRF"),
+        item("Cidade Marcador", ESTADO_DO_APP, -8.35, -34.9, "CAPE"),
+      ],
+    };
+    expect(cidadeNoEstado(comAeroporto, "Cidade Marcador")).toEqual({ lat: -8.3, lng: -36.4 });
+  });
+
+  it("lugar que não é habitado (aeródromo, ruína, lugar abandonado) sozinho: nada", () => {
+    for (const fc of ["AIRF", "CAPE", "PPLH", "PPLQ", "PPLW"]) {
+      const so = { results: [item("Cidade Marcador", ESTADO_DO_APP, -8.3, -36.4, fc)] };
+      expect(cidadeNoEstado(so, "Cidade Marcador"), fc).toBeNull();
+    }
+    const semClasse = { results: [{ ...item("Cidade Marcador", ESTADO_DO_APP, -8.3, -36.4), feature_code: undefined }] };
+    expect(cidadeNoEstado(semClasse, "Cidade Marcador"), "sem classe").toBeNull();
+  });
+
+  it("duas habitadas, uma é a SEDE (PPLA*): vale a sede", () => {
+    const sede = {
+      results: [
+        item("Cidade Marcador", ESTADO_DO_APP, -8.28, -35.03, "PPLA2"),
+        item("Cidade Marcador", ESTADO_DO_APP, -8.29, -35.04, "PPL"),
+      ],
+    };
+    expect(cidadeNoEstado(sede, "Cidade Marcador")).toEqual({ lat: -8.28, lng: -35.03 });
+  });
+
+  it("duas habitadas, sem sede: vale a do MUNICÍPIO de mesmo nome (a outra é um povoado de outro município)", () => {
+    const povoado = {
+      results: [
+        item("Cidade Marcador", ESTADO_DO_APP, -8.47, -35.73, "PPL", "Cidade Marcador"),
+        item("Cidade Marcador", ESTADO_DO_APP, -8.62, -36.28, "PPL", "Município Marcador"),
+      ],
+    };
+    expect(cidadeNoEstado(povoado, "Cidade Marcador")).toEqual({ lat: -8.47, lng: -35.73 });
+  });
+
+  it("duas SEDES, ou dois do mesmo município: ambígua", () => {
+    const duasSedes = {
+      results: [item("Cidade Marcador", ESTADO_DO_APP, -8.2, -36.2, "PPLA2"), item("Cidade Marcador", ESTADO_DO_APP, -7.9, -39.9, "PPLA3")],
+    };
+    expect(cidadeNoEstado(duasSedes, "Cidade Marcador")).toBe("ambigua");
+    const doisDoMunicipio = {
+      results: [
+        item("Cidade Marcador", ESTADO_DO_APP, -8.2, -36.2, "PPL", "Cidade Marcador"),
+        item("Cidade Marcador", ESTADO_DO_APP, -7.9, -39.9, "PPL", "Cidade Marcador"),
+      ],
+    };
+    expect(cidadeNoEstado(doisDoMunicipio, "Cidade Marcador")).toBe("ambigua");
   });
 
   it("resposta vazia, torta ou sem resultado: nada, sem estourar; cidade em branco: nada", () => {
@@ -185,5 +260,141 @@ describe("vistaDaCoordSemPonto — a ordem das fontes", () => {
       fontes(async () => HOMONIMOS),
     );
     expect(v?.origem).toBe("cidade");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 I-2 DA REVISÃO DA 11f: CIDADES REAIS DE PERNAMBUCO que a regra "exatamente
+// uma" recusava — Bonito (a do Véu de Noiva) entre elas. As linhas são as que o
+// serviço devolveu em 2026-10-04 com \`admin1\` = Pernambuco (as de outros
+// estados vêm na mesma resposta e já caíam pelo estado), na forma da resposta.
+// Nome e coordenada de município são dado público; nenhum vai pra ficha.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("cidadeNoEstado — as cidades reais que a revisão mediu", () => {
+  const PE = ESTADO_DO_APP;
+  const outroEstado = (name: string) => item(name, "Mato Grosso do Sul", -21.12, -56.48, "PPL", name);
+  const CASOS: [string, ReturnType<typeof item>[], { lat: number; lng: number }][] = [
+    [
+      "Bonito",
+      [
+        outroEstado("Bonito"),
+        item("Bonito", PE, -8.47028, -35.72861, "PPL", "Bonito"),
+        item("Bonito", PE, -8.61667, -36.28333, "PPL", "Ibirajuba"),
+      ],
+      { lat: -8.47028, lng: -35.72861 },
+    ],
+    [
+      "Cabo de Santo Agostinho",
+      [
+        item("Cabo de Santo Agostinho", PE, -8.28773, -35.02925, "PPLA2", "Cabo de Santo Agostinho"),
+        item("Cabo de Santo Agostinho", PE, -8.28667, -35.035, "PPL", "Cabo de Santo Agostinho"),
+        item("Cabo de Santo Agostinho", PE, -8.35167, -34.9398, "CAPE", "Cabo de Santo Agostinho"),
+      ],
+      { lat: -8.28773, lng: -35.02925 },
+    ],
+    [
+      "Santa Cruz do Capibaribe",
+      [
+        item("Santa Cruz do Capibaribe", PE, -7.9575, -36.20472, "PPL", "Santa Cruz do Capibaribe"),
+        item("Santa Cruz Do Capibaribe", PE, -7.95, -36.2, "AIRF", "Santa Cruz do Capibaribe"),
+      ],
+      { lat: -7.9575, lng: -36.20472 },
+    ],
+    [
+      "Belo Jardim",
+      [
+        item("Belo Jardim", PE, -8.33556, -36.42417, "PPL", "Belo Jardim"),
+        item("Belo Jardim", PE, -8.34923, -36.40015, "AIRF", "Belo Jardim"),
+      ],
+      { lat: -8.33556, lng: -36.42417 },
+    ],
+  ];
+  for (const [cidade, results, esperado] of CASOS) {
+    it(`${cidade}: acha a cidade, e não "nenhuma" nem "ambígua"`, () => {
+      expect(cidadeNoEstado({ results }, cidade)).toEqual(esperado);
+    });
+  }
+});
+
+describe("vistaDaCidade — a cidade ambígua não é \"não achei\"", () => {
+  const ACERVO = [{ lat: -8.0, lng: -35.0 }];
+  it("mais de uma no estado: a vista do acervo, com a origem dizendo que a cidade foi achada mais de uma vez", async () => {
+    const duas = {
+      results: [item("Cidade Marcador", ESTADO_DO_APP, -8.2, -36.2), item("Cidade Marcador", ESTADO_DO_APP, -7.9, -39.9)],
+    };
+    const v = await vistaDaCidade({ cidade: "Cidade Marcador" }, { buscarCidade: async () => duas, coordsDoAcervo: async () => ACERVO });
+    expect(v).toEqual({ ...vistaDoAcervo(ACERVO)!, origem: "cidade-ambigua" });
+  });
+  it("nenhuma: a vista do acervo, origem \"acervo\" (não achou)", async () => {
+    const v = await vistaDaCidade({ cidade: "Cidade Marcador" }, { buscarCidade: async () => ({}), coordsDoAcervo: async () => ACERVO });
+    expect(v?.origem).toBe("acervo");
+  });
+  it("ambígua e acervo fora do ar: nenhuma vista", async () => {
+    const duas = {
+      results: [item("Cidade Marcador", ESTADO_DO_APP, -8.2, -36.2), item("Cidade Marcador", ESTADO_DO_APP, -7.9, -39.9)],
+    };
+    const v = await vistaDaCidade(
+      { cidade: "Cidade Marcador" },
+      {
+        buscarCidade: async () => duas,
+        coordsDoAcervo: async () => {
+          throw new Error("banco fora");
+        },
+      },
+    );
+    expect(v).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 I-1 DA REVISÃO DA 11f: AS FONTES DE PRODUÇÃO, com o \`fetch\` dublado. O
+// prazo é o que impede a página do painel de pendurar quando o serviço de
+// geocoding aceita a conexão e não responde (sem ele, o \`fetch\` do Node espera
+// o seu próprio teto, minutos). O relógio do prazo é encurtado pelo dublê do
+// \`AbortSignal.timeout\` — e o teste confere que ele foi pedido com o
+// \`PRAZO_BUSCA_MS\` —, então o caso mede o CAMINHO (pendurado → aborta → acervo)
+// sem esperar 3 s.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("FONTES_DE_PRODUCAO — a busca da cidade tem prazo, e resposta ruim cai no acervo", () => {
+  const ACERVO = [{ lat: -8.0, lng: -35.0 }];
+  const UMA = { results: [item("Cidade Marcador", ESTADO_DO_APP, -8.25, -37.75)] };
+  const fontes: FontesDaVista = { ...FONTES_DE_PRODUCAO, coordsDoAcervo: async () => ACERVO };
+  const PENDUROU = Symbol("pendurou");
+  const comLimite = <T,>(p: Promise<T>, ms: number) =>
+    Promise.race([p, new Promise<typeof PENDUROU>((r) => setTimeout(() => r(PENDUROU), ms))]);
+
+  it("serviço que responde: pede a URL da vista, sem cache e com o signal do prazo — e acha a cidade", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const f = vi.fn(async (_u: string, _i?: RequestInit) => Response.json(UMA));
+    vi.stubGlobal("fetch", f);
+    const v = await vistaDaCidade({ cidade: "Cidade Marcador" }, fontes);
+    expect(v?.origem).toBe("cidade");
+    const [url, init] = f.mock.calls[0];
+    expect(url).toBe(urlBuscaCidade("Cidade Marcador"));
+    expect(init?.cache).toBe("no-store");
+    expect(timeout).toHaveBeenCalledWith(PRAZO_BUSCA_MS);
+    expect(init?.signal).toBe(timeout.mock.results[0]?.value);
+  });
+
+  it("serviço PENDURADO: o prazo aborta a busca e a vista cai no acervo — a página não pendura", async () => {
+    const real = AbortSignal.timeout.bind(AbortSignal);
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation(() => real(20));
+    // aceita a conexão e nunca responde; só desiste se o signal abortar
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_u: string, init?: RequestInit) =>
+          new Promise<Response>((_ok, falha) => init?.signal?.addEventListener("abort", () => falha(init.signal!.reason))),
+      ),
+    );
+    const v = await comLimite(vistaDaCidade({ cidade: "Cidade Marcador" }, fontes), 1_000);
+    expect(v, "a busca pendurou: nenhum prazo abortou o fetch").not.toBe(PENDUROU);
+    expect(v).toEqual(vistaDoAcervo(ACERVO));
+    expect(timeout).toHaveBeenCalledWith(PRAZO_BUSCA_MS);
+  });
+
+  it("resposta que não é ok (503), mesmo com uma cidade boa no corpo: o acervo", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json(UMA, { status: 503 })));
+    expect(await vistaDaCidade({ cidade: "Cidade Marcador" }, fontes)).toEqual(vistaDoAcervo(ACERVO));
   });
 });

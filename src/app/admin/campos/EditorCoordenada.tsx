@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState, type PointerEvent } from "react";
+import { useEffect, useLayoutEffect, useReducer, useRef, useState, type PointerEvent } from "react";
 import {
   GOTA_ACIMA_DA_PONTA_PX,
   MAPA_ALTURA_PX,
@@ -58,16 +58,26 @@ import type { CampoNaTela, PropsDoEditor, VistaNaTela } from "./tipos";
  *   - DEDO NO FUNDO, solto com até 8px andados: é um TOQUE, e o pin vai pra
  *     onde o dedo soltou — o primeiro ponto, ou um ponto novo com o pin já posto
  *     (ruling do orquestrador: o mesmo gesto, uma regra só);
- *   - + e −: aproximam e afastam um degrau, em volta do centro da vista, entre
- *     `MAPA_ZOOM_EDITOR_MIN` e `MAPA_ZOOM_EDITOR_MAX`. Sem pinça nesta tarefa.
+ *   - + e −: aproximam e afastam um degrau, entre `MAPA_ZOOM_EDITOR_MIN` e
+ *     `MAPA_ZOOM_EDITOR_MAX`. COM PIN, EM VOLTA DO PIN — ele fica onde está na
+ *     tela (onda de fix da 11f, C-1: em volta do centro, dois + jogavam o pin
+ *     pra fora da tela); sem pin, em volta do centro. Sem pinça nesta tarefa.
  *  Só o ponteiro principal (o dedo, a caneta, o clique esquerdo), e um gesto de
  *  cada vez: o botão direito abre menu, e um segundo dedo seria pinça.
  *  `pointercancel` (o navegador tomando o gesto) desfaz o gesto e não vira toque.
  *
- *  🔴 O SALVAR SÓ LIGA PERTO (11f, C1). Com a vista afastada um dedo errado por
- *  10px é ~12 km (no z7). O pin se põe e se arrasta em qualquer zoom; o Salvar
- *  só liga com a vista no `MAPA_ZOOM_EDITOR` (a precisão que ele pediu em
- *  2026-10-01) ou mais perto, e a ajuda diz pra aproximar.
+ *  🔴 O SALVAR VALE PELO PIN, NÃO PELA VISTA (11f, C1; refeito na onda de fix,
+ *  C-1 da revisão). Afastado, um dedo errado por 10px é ~12 km (no z7). O pin
+ *  se põe e se arrasta em qualquer zoom, e GUARDA o zoom do último gesto que o
+ *  pôs ou moveu; o Salvar só liga se esse zoom for o `MAPA_ZOOM_EDITOR` (a
+ *  precisão que ele pediu em 2026-10-01) ou mais perto, E se o pin estiver na
+ *  parte VISÍVEL do mapa (ele grava o que está vendo). 🔴 Até a onda de fix o
+ *  portão media o zoom da VISTA, e o caminho que a própria ajuda ensinava —
+ *  tocar afastado, apertar + — gravava o toque do z7 (medido no Chrome: ~75 km
+ *  da cidade). Um pin posto de longe só se salva depois de tocado ou arrastado
+ *  de novo, de perto. O pin que veio do banco (ou o último ponto, no
+ *  `EditorWaypoints`) conta como posto no `MAPA_ZOOM_EDITOR`: é o ponto que
+ *  já está lá. A ajuda (`portaoDoSalvar`) diz o que falta em cada caso.
  *
  *  🔴 ARRASTAR NÃO GRAVA, NEM MEXER NA VISTA. Só o Salvar manda pra porta — o
  *  dono confere o número embaixo contra o que sabe antes.
@@ -107,14 +117,33 @@ type Vista = { centro: Par; z: number };
 // PENDENTE: redação minha, o João ainda não leu
 export const MARQUE_NO_MAPA = "Toque no mapa onde fica o ponto. Depois, arraste o pin pra acertar.";
 
-/** O portão do Salvar (C1): com a vista afastada, o toque erra por quilômetros. */
+/** O portão do Salvar (C1): o pin foi posto com a vista afastada, e a vista
+ *  ainda está afastada. Trocada na onda de fix da 11f (C-1): a anterior,
+ *  "Aproxime o mapa (+) pra poder salvar.", ensinava o furo — aproximar sem
+ *  tocar de novo salvava o toque de longe. */
 // PENDENTE: redação minha, o João ainda não leu
-export const APROXIME_PRA_SALVAR = "Aproxime o mapa (+) pra poder salvar.";
+export const APROXIME_PRA_SALVAR = "Aproxime o mapa (+) e toque de novo no ponto pra poder salvar.";
+
+/** O portão do Salvar (C-1 da revisão da 11f): a vista já está perto, mas o pin
+ *  foi posto de longe — falta o toque (ou o arrasto) de perto. */
+// PENDENTE: redação minha, o João ainda não leu
+export const TOQUE_DE_PERTO = "O pin foi posto de longe: toque de novo no ponto, ou arraste o pin, pra poder salvar.";
+
+/** O portão do Salvar (C-1 da revisão da 11f): o pin saiu da parte visível do
+ *  mapa (arrastando o fundo), e ninguém grava o que não está vendo. */
+// PENDENTE: redação minha, o João ainda não leu
+export const PIN_FORA_DA_VISTA = "O pin saiu do mapa: arraste o mapa até ele, ou toque no ponto, pra poder salvar.";
 
 /** A vista caiu no acervo: a cidade do lugar não foi achada (ou o serviço não
  *  respondeu), e o mapa começa na região dos lugares do app. */
 // PENDENTE: redação minha, o João ainda não leu
 export const VISTA_SEM_CIDADE = "Não achei a cidade no mapa: ele começa na região dos lugares do app.";
+
+/** A vista caiu no acervo porque a cidade foi achada MAIS DE UMA VEZ em
+ *  Pernambuco e não há como saber qual é (I-2 da revisão da 11f): "não achei"
+ *  seria falso. */
+// PENDENTE: redação minha, o João ainda não leu
+export const VISTA_CIDADE_AMBIGUA = "Achei mais de um lugar com o nome dessa cidade: o mapa começa na região dos lugares do app.";
 
 /** Sem ponto e sem vista nenhuma (cidade não achada E acervo vazio — impossível
  *  hoje, mas com ramo, e não um número inventado). */
@@ -225,21 +254,33 @@ function medir(el: HTMLElement) {
  *
  *  CONTROLADO: não guarda coordenada nem vista. Quem chama guarda `atual` (o pin,
  *  ou `null` antes do primeiro toque) e `vista`, e recebe cada pin novo por
- *  `aoMover` (já arredondado a seis casas) e cada vista nova por `aoMudarVista`.
- *  Mexer na vista NUNCA chama `aoMover`. */
+ *  `aoMover` (já arredondado a seis casas, e com o ZOOM DA VISTA em que o gesto
+ *  o pôs — é por ele que o portão do Salvar decide) e cada vista nova por
+ *  `aoMudarVista`. Mexer na vista NUNCA chama `aoMover`. Depois de cada
+ *  desenho, `aoVerPin` diz se o pin está na parte VISÍVEL do mapa. */
 export function MapaDoPin({
   vista,
   atual,
   aoMover,
   aoMudarVista,
+  aoVerPin,
 }: {
   vista: Vista;
   atual: Par | null;
-  aoMover: (par: Par) => void;
+  aoMover: (par: Par, zDoGesto: number) => void;
   aoMudarVista: (vista: Vista) => void;
+  aoVerPin: (visivel: boolean) => void;
 }) {
   const gesto = useRef<Gesto | null>(null);
+  const caixaRef = useRef<HTMLDivElement>(null);
   const { centro, z } = vista;
+  // A janela muda de largura (o celular gira) e a moldura corta outra fatia:
+  // redesenha pra medir de novo.
+  const [, redesenhar] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    window.addEventListener("resize", redesenhar);
+    return () => window.removeEventListener("resize", redesenhar);
+  }, []);
 
   // O mosaico é o MESMO do `MapaEstatico`: tiles de um zoom a mais desenhados em
   // 1/MAPA_ESCALA, centrados na VISTA. O pin vive em pixels de layout no zoom da
@@ -247,11 +288,27 @@ export function MapaDoPin({
   const tiles = tilesParaCaixa(centro, zoomDeTiles(z), L * MAPA_ESCALA, A * MAPA_ESCALA);
   const pin = atual ? posicaoNaCaixa(atual, centro, z, L, A) : null;
 
+  // 🔴 O PIN ESTÁ À VISTA? (C-1 da revisão da 11f, regra c). Medido DEPOIS de
+  // cada desenho, contra a parte visível (a mesma de `medir`). Sem caixa medível
+  // (nada desenhado ainda), a régua é a caixa de layout inteira.
+  useLayoutEffect(() => {
+    const el = caixaRef.current;
+    const v = (el ? medir(el)?.visivel : undefined) ?? { esq: 0, dir: L, topo: 0, base: A };
+    aoVerPin(pin !== null && pin.left >= v.esq && pin.left <= v.dir && pin.top >= v.topo && pin.top <= v.base);
+  });
+
   /** Um ponto da caixa (layout) vira coordenada — preso à parte visível. */
   function porNoLayout(x: number, y: number, v: NonNullable<ReturnType<typeof medir>>["visivel"]): void {
     const c = coordDaPosicao(entre(x, v.esq, v.dir), entre(y, v.topo, v.base), centro, z, L, A);
     if (!Number.isFinite(c.lat) || !Number.isFinite(c.lng)) return;
-    aoMover({ lat: seisCasas(c.lat), lng: seisCasas(c.lng) });
+    aoMover({ lat: seisCasas(c.lat), lng: seisCasas(c.lng) }, z);
+  }
+
+  /** Um degrau de zoom. COM PIN, em volta DELE: o centro novo é o que deixa o
+   *  pin no mesmo pixel da caixa — numa vista centrada no pin, no zoom novo,
+   *  ele fica em (L − pin.left, A − pin.top). Sem pin, em volta do centro. */
+  function zoomPara(zNovo: number): void {
+    aoMudarVista({ centro: atual && pin ? coordDaPosicao(L - pin.left, A - pin.top, atual, zNovo, L, A) : centro, z: zNovo });
   }
 
   function encostar(e: PointerEvent<HTMLDivElement>): void {
@@ -308,6 +365,7 @@ export function MapaDoPin({
   return (
     <div className="adm-editor-mapa" style={{ height: A }}>
       <div
+        ref={caixaRef}
         className="adm-editor-mapa-caixa"
         data-testid="mapa-escolher"
         style={{ width: L, height: A, marginLeft: -L / 2 }}
@@ -353,7 +411,7 @@ export function MapaDoPin({
           className="adm-editor-mapa-zoom-botao"
           aria-label={APROXIMAR}
           disabled={z >= MAPA_ZOOM_EDITOR_MAX}
-          onClick={() => aoMudarVista({ centro, z: z + 1 })}
+          onClick={() => zoomPara(z + 1)}
         >
           +
         </button>
@@ -362,7 +420,7 @@ export function MapaDoPin({
           className="adm-editor-mapa-zoom-botao"
           aria-label={AFASTAR}
           disabled={z <= MAPA_ZOOM_EDITOR_MIN}
-          onClick={() => aoMudarVista({ centro, z: z - 1 })}
+          onClick={() => zoomPara(z - 1)}
         >
           −
         </button>
@@ -380,8 +438,21 @@ export function MapaDoPin({
   );
 }
 
-/** O portão do Salvar (C1): perto o bastante pra o dedo não errar por quilômetros. */
+/** Perto o bastante pra o dedo não errar por quilômetros (C1). */
 export const pertoPraSalvar = (z: number): boolean => z >= MAPA_ZOOM_EDITOR;
+
+/** 🔴 O PORTÃO DO SALVAR (C1; refeito na onda de fix da 11f, C-1 da revisão):
+ *  `null` quando o pin pode ser salvo, ou a ajuda que diz o que falta. Uma
+ *  regra só pra quem tem pin (o `EditorCoordenada` com pin e o ponto novo do
+ *  `EditorWaypoints`):
+ *   (a) o pin vale pelo zoom do último gesto que o PÔS ou MOVEU — posto de
+ *       longe, só se salva depois de tocado ou arrastado de perto;
+ *   (c) pin fora da parte visível do mapa não se salva.
+ *  Aproximar a vista não muda o zoom do pin: é isso que fecha o furo. */
+export function portaoDoSalvar(p: { zDoPin: number; zDaVista: number; pinAVista: boolean }): string | null {
+  if (!pertoPraSalvar(p.zDoPin)) return pertoPraSalvar(p.zDaVista) ? TOQUE_DE_PERTO : APROXIME_PRA_SALVAR;
+  return p.pinAVista ? null : PIN_FORA_DA_VISTA;
+}
 
 function ComMapa({
   campo,
@@ -399,9 +470,18 @@ function ComMapa({
   vistaInicial: VistaNaTela;
 }) {
   const [atual, setAtual] = useState<Par | null>(inicial);
+  // O ponto que o documento já tem conta como posto de perto: é o ponto que
+  // está lá, e regravá-lo sem mexer é o dono afirmando ele.
+  const [zDoPin, setZDoPin] = useState(MAPA_ZOOM_EDITOR);
+  const [pinAVista, setPinAVista] = useState(true);
   const [vista, setVista] = useState<Vista>({ centro: vistaInicial.centro, z: vistaInicial.z });
   const { erro, salvando, gravar } = usarGravacao();
-  const perto = pertoPraSalvar(vista.z);
+  const ajudaDoPortao = portaoDoSalvar({ zDoPin, zDaVista: vista.z, pinAVista });
+
+  function mover(par: Par, zDoGesto: number): void {
+    setAtual(par);
+    setZDoPin(zDoGesto);
+  }
 
   function salvar(par: Par): void {
     if (indice !== null) {
@@ -413,7 +493,7 @@ function ComMapa({
 
   return (
     <div className="adm-editor" data-editor={campo.caminho}>
-      <MapaDoPin vista={vista} atual={atual} aoMover={setAtual} aoMudarVista={setVista} />
+      <MapaDoPin vista={vista} atual={atual} aoMover={mover} aoMudarVista={setVista} aoVerPin={setPinAVista} />
       <p className="adm-editor-coord" data-testid="coord-atual" aria-live="polite">
         {atual ? `${atual.lat}, ${atual.lng}` : ""}
       </p>
@@ -421,15 +501,18 @@ function ComMapa({
           primeiro toque, e uma linha que some EM CIMA do mapa o faria pular
           ~45px pra cima debaixo do dedo dele (medido no Chrome em 375×667). */}
       {atual === null && vistaInicial.origem === "acervo" && <p className="adm-editor-ajuda">{VISTA_SEM_CIDADE}</p>}
+      {atual === null && vistaInicial.origem === "cidade-ambigua" && (
+        <p className="adm-editor-ajuda">{VISTA_CIDADE_AMBIGUA}</p>
+      )}
       {atual === null && <p className="adm-editor-ajuda">{MARQUE_NO_MAPA}</p>}
-      {atual !== null && !perto && <p className="adm-editor-ajuda">{APROXIME_PRA_SALVAR}</p>}
+      {atual !== null && ajudaDoPortao !== null && <p className="adm-editor-ajuda">{ajudaDoPortao}</p>}
       {/* 🔴 SEM PIN NÃO HÁ SALVAR: nada aqui grava a vista. */}
       {atual !== null && (
         <button
           type="button"
           className="adm-editor-salvar"
           data-salvar={campo.caminho}
-          disabled={salvando || !perto}
+          disabled={salvando || ajudaDoPortao !== null}
           onClick={() => salvar(atual)}
         >
           {salvando ? SALVANDO : SALVAR}
