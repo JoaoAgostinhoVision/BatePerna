@@ -21,7 +21,10 @@ de cada brief, inclusive o da 12; o recorte mudou: a 11c leva o registro e a esc
 Os dois I vinham da ELISÃO (não repetir a cidade no endereço), decisão MINHA: retirada. **Onda de fix despachada**
 (`task-11b-fix-brief.md`, X1–X5): endereço sempre nome+cidade; gêmeo de lugar SEM cidade → 409 pedindo a cidade
 dele; cidade sem letra recusada em toda porta; par também na ficha no ar. Se o log não tiver commit de código
-depois de `98afd82`, redespachar com o mesmo brief. Depois: medir → re-revisão → 11c.
+depois de `98afd82`, redespachar com o mesmo brief. **Feita: `85711d8`** (1902/1902). Re-revisão:
+0 C · 2 I · 4 M (`task-11b-rereview.md`). **Onda de fix 2 despachada** (`task-11b-fix2-brief.md`, Y1–Y4: dar cidade
+nunca trava por gêmeo; o endereço do RASCUNHO acompanha nome+cidade até publicar). Se não houver commit de código
+depois de `85711d8`, redespachar com o mesmo brief. Depois: medir → re-revisão curta → 11c.
 Ele ainda não deu a cidade das 3 fichas (não trava código, trava publicar).
 
 → 🔴 **PRÓXIMO PASSO:** a re-revisão das ondas 1+2 voltou (`task-11-rereview.md`: 0 C · 2 I · 4 M) e a **onda 3**
