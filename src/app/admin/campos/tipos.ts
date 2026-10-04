@@ -69,3 +69,29 @@ export type PropsDoEditor = { campo: CampoNaTela; valor: unknown; slug: string }
  *  espécie nova no registro NÃO COMPILAR até alguém decidir o instrumento
  *  dela. */
 export type Editor = (props: PropsDoEditor) => ReactElement;
+
+/** A espécie, repetida AQUI e não importada do registro, pela mesma razão do
+ *  `CampoNaTela` (ver o docblock do topo). Quem monta a `PerguntaNaTela` é o
+ *  servidor, a partir do `CampoDaFicha` — e uma espécie nova no registro que
+ *  não esteja aqui deixa AQUELE arquivo sem compilar. */
+export type EspecieNaTela = "prosa" | "lista" | "booleano" | "hora" | "numero" | "coord" | "bloco";
+
+/** UMA PERGUNTA DO FORMULÁRIO DE LUGAR NOVO (Tarefa 11) — o contrato entre a
+ *  página de servidor (`/admin/novo`, que lê o registro e o questionário) e o
+ *  `FormularioDeLugar`, que é de cliente e NÃO PODE importar o registro (E1 da
+ *  auditoria: o zod iria pro celular).
+ *
+ *  - `texto` — a PERGUNTA, na redação do `docs/questionario-ficha.md`; ou o
+ *    rótulo do campo (`rotuloDe`), quando o questionário não pergunta por ele.
+ *  - `valor` — o que o rascunho já tem nesse caminho (`undefined` = ainda sem
+ *    resposta, ou pulado — no documento, os dois são a mesma ausência).
+ *  - `dentro` — as folhas de um BLOCO PRESENTE (`horario.abre`/`.fecha`), cada
+ *    uma com o instrumento dela. Folha de bloco não é pergunta própria: mora
+ *    dentro da pergunta do bloco, como no `EditorBloco` (E2 da auditoria). */
+export type PerguntaNaTela = {
+  especie: EspecieNaTela;
+  campo: CampoNaTela;
+  texto: string;
+  valor: unknown;
+  dentro?: readonly { campo: CampoNaTela; valor: unknown }[];
+};

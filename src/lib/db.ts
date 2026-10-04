@@ -65,6 +65,19 @@ export async function ensureSchema(client: Client): Promise<void> {
     `CREATE INDEX IF NOT EXISTS ficha_versoes_por_lugar ON ficha_versoes (ficha_slug, id)`,
   );
   await migrarColunaOculto(client);
+  // 🔴 A ÚNICA TABELA DESTE PROJETO QUE SOBRESCREVE, e o motivo é de régua, não
+  // de preguiça (spec §7.2, Tarefa 11): **rascunho nunca afirmou nada sobre o
+  // lugar; o histórico existe pra guardar o que o app já disse.** `avisos` e
+  // `ficha_versoes` são append-only porque o que está nelas FOI À TELA de
+  // alguém; um rascunho nunca foi. Guardar cada toque do formulário seria
+  // procedência de coisa que ninguém leu.
+  //
+  // E ele mora FORA de `ficha_versoes` porque lá tudo está no ar: a primeira
+  // linha de um lugar meio preenchido já apareceria na home. `doc` é JSON
+  // PARCIAL — não passa no `fichaSchema`, e é esse o ponto. Publicar (Tarefa 12)
+  // é o que valida, grava a versão 1 e apaga esta linha.
+  await client.execute(`CREATE TABLE IF NOT EXISTS ficha_rascunhos (
+    slug TEXT PRIMARY KEY, doc TEXT NOT NULL, atualizado_em INTEGER NOT NULL)`);
 }
 
 /** A coluna `oculto` de `ficha_versoes`, por `ALTER TABLE` guardado.
@@ -366,4 +379,77 @@ export async function historico(client: Client, slug: string): Promise<FichaVers
     args: [slug],
   });
   return r.rows.map(versaoDaLinha);
+}
+
+export type Rascunho = { slug: string; doc: string; atualizado_em: number };
+
+function rascunhoDaLinha(r: Record<string, unknown>): Rascunho {
+  return { slug: String(r.slug), doc: String(r.doc), atualizado_em: Number(r.atualizado_em) };
+}
+
+/** Grava o rascunho de `slug` POR CIMA do que havia — é o toque do formulário.
+ *
+ *  🔴 SOBRESCREVE, e é a única função de escrita deste arquivo que faz isso: ver
+ *  o comentário de `ficha_rascunhos` em `ensureSchema`. NÃO valida o documento
+ *  (nem `fichaSchema`, nem coerência): rascunho incompleto é o estado normal.
+ *
+ *  ⚠️ Quem chama do painel NUNCA usa esta função pra fazer um rascunho NASCER:
+ *  a porta de nascer é `criarRascunho`, que recusa slug que já existe. Esta aqui
+ *  só é chamada depois de conferir que o rascunho existe (ver
+ *  `src/app/api/admin/rascunho/route.ts`). */
+export async function salvarRascunho(client: Client, slug: string, doc: string, agora: number): Promise<void> {
+  await client.execute({
+    sql: `INSERT INTO ficha_rascunhos (slug, doc, atualizado_em) VALUES (?, ?, ?)
+          ON CONFLICT(slug) DO UPDATE SET doc = excluded.doc, atualizado_em = excluded.atualizado_em`,
+    args: [slug, doc, agora],
+  });
+}
+
+/** Faz um rascunho NASCER, e só se o `slug` estiver livre nas DUAS tabelas.
+ *  Devolve `false` sem gravar nada quando já existe rascunho com esse slug OU
+ *  lugar com esse slug em `ficha_versoes`.
+ *
+ *  🔴 O `NOT EXISTS` EM `ficha_versoes` NÃO FILTRA `oculto`, de propósito: um
+ *  lugar ESCONDIDO continua sendo um lugar, e volta ao ar. Um rascunho com o
+ *  slug dele seria publicado (Tarefa 12) como versão nova DAQUELE lugar — e com
+ *  `oculto = 0`, o desescondendo. É a mesma régua de `versaoAtual`/`historico`.
+ *
+ *  🔴 E É UMA CONSULTA SÓ, não "ler e depois gravar": a conferência e o INSERT
+ *  acontecem juntos no banco, então não há janela entre os dois. É a ÚNICA
+ *  porta da colisão: a rota só lê `versaoAtual` DEPOIS de uma recusa, pra
+ *  escolher a frase. */
+export async function criarRascunho(client: Client, slug: string, doc: string, agora: number): Promise<boolean> {
+  const r = await client.execute({
+    sql: `INSERT INTO ficha_rascunhos (slug, doc, atualizado_em)
+          SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
+          ON CONFLICT(slug) DO NOTHING`,
+    args: [slug, doc, agora, slug],
+  });
+  return r.rowsAffected === 1;
+}
+
+/** O rascunho de `slug`, ou `null` se não há. */
+export async function lerRascunho(client: Client, slug: string): Promise<Rascunho | null> {
+  const r = await client.execute({
+    sql: `SELECT slug, doc, atualizado_em FROM ficha_rascunhos WHERE slug = ?`,
+    args: [slug],
+  });
+  return r.rows.length ? rascunhoDaLinha(r.rows[0] as unknown as Record<string, unknown>) : null;
+}
+
+/** Todos os rascunhos, o mexido por último primeiro — é a ordem da lista do
+ *  painel, onde o dono volta pro que estava preenchendo. */
+export async function listarRascunhos(client: Client): Promise<Rascunho[]> {
+  const r = await client.execute(
+    `SELECT slug, doc, atualizado_em FROM ficha_rascunhos ORDER BY atualizado_em DESC, slug ASC`,
+  );
+  return r.rows.map((l) => rascunhoDaLinha(l as unknown as Record<string, unknown>));
+}
+
+/** Tira o rascunho. É o fim de publicar (Tarefa 12) — o lugar passa a ter
+ *  histórico em `ficha_versoes` e o rascunho deixa de existir. Pode apagar sem
+ *  culpa pela mesma razão de `salvarRascunho` sobrescrever: rascunho nunca
+ *  afirmou nada. */
+export async function apagarRascunho(client: Client, slug: string): Promise<void> {
+  await client.execute({ sql: `DELETE FROM ficha_rascunhos WHERE slug = ?`, args: [slug] });
 }

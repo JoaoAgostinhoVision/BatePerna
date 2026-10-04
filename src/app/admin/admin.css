@@ -212,3 +212,34 @@
    `.adm-editor-ajuda`, em fonte de largura fixa pra os dígitos não dançarem
    enquanto ele arrasta. */
 .adm-editor-coord { margin: 0; font-size: .85rem; color: #777; font-variant-numeric: tabular-nums; }
+
+/* O LUGAR NOVO (Tarefa 11): o "+ lugar novo" da lista, a seção dos rascunhos e
+   o formulário. Mesma régua dos blocos de cima — toda regra REUSA um valor que
+   já existe nesta folha, sem cor, fonte nem animação nova, e uma regra por
+   classe (o leitor de CSS dos testes não mede seletor agrupado). */
+/* O link da lista é um botão: borda, raio e padding de `.adm-item`/`.adm-item-link`,
+   sem sublinhado, e o `margin-top: 1rem` de `.adm-lista-rodape`. */
+.adm-novo-link { display: block; margin-top: 1rem; padding: 1rem; border: 1px solid #999; border-radius: 10px; text-decoration: none; color: inherit; text-align: center; }
+/* A seção dos rascunhos é irmã da lista: o mesmo `margin-top: 1.2rem` que
+   separa as seções do painel (`.adm-ficha-inteira`). */
+.adm-rascunhos { display: grid; gap: .6rem; margin-top: 1.2rem; }
+/* De `.adm-ficha h2`. */
+.adm-rascunhos-titulo { font-size: 1.05rem; margin: 0; }
+/* O formulário: o grid de `.adm-ficha-inteira`. */
+.adm-novo { display: grid; gap: 1.2rem; }
+/* O aviso de rascunho é texto de apoio, como `.adm-campo-ausente`. */
+.adm-novo-aviso { margin: 0; font-size: .85rem; color: #777; }
+/* O campo do nome usa a moldura de `.adm-porta` (é a mesma forma: uma caixa e
+   um botão); isto só dá a ele o respiro de `.adm-ficha-inteira`. */
+.adm-novo-nome { margin-top: 1.2rem; }
+/* A lista das perguntas: grid com o gap das seções, e o recuo do número que o
+   `<ol>` já desenha. */
+.adm-novo-perguntas { display: grid; gap: 1.2rem; margin: 0; padding-left: 1.4rem; }
+/* Cada pergunta é um cartão, como `.adm-grupo`. */
+.adm-pergunta { display: grid; gap: .5rem; padding: 1rem; border: 1px solid #ccc; border-radius: 10px; }
+/* A pergunta é o que ele lê primeiro: o tamanho de texto de `.adm-item-nome`. */
+.adm-pergunta-texto { margin: 0; font-size: 1.05rem; }
+/* De `.adm-editor-nao-sei`: é o mesmo lugar e a mesma função de botão. */
+.adm-pergunta-pular { padding: .6rem; font-size: .95rem; border-radius: 8px; }
+/* Texto de apoio, como `.adm-editor-ajuda`. */
+.adm-pergunta-pulada { margin: 0; font-size: .85rem; color: #777; }

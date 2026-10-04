@@ -13,6 +13,8 @@ import {
   TIRAR_MESMO,
 } from "@/app/admin/campos/EditorWaypoints";
 import { ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
+import { AVISO_RASCUNHO, COMECANDO, COMECAR, PULADA, PULAR } from "@/app/admin/FormularioDeLugar";
+import { LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
 import {
   ALEM_DO_PROVEDOR,
   CAIXA_VAZIA,
@@ -1353,6 +1355,16 @@ describe("Os editores servem os três lugares", () => {
     // Onda de conserto 1 da Tarefa 10: o segundo toque do "tirar" (decisão do
     // João). Só aparece depois do primeiro toque, nunca em repouso.
     TIRAR_MESMO,
+    // Tarefa 11: o formulário de lugar novo e a porta dele na lista. Nenhuma
+    // aparece no render das três fichas — moram em outra tela —, e é por isso
+    // que é esta lista que as cerca.
+    AVISO_RASCUNHO,
+    PULAR,
+    PULADA,
+    COMECAR,
+    COMECANDO,
+    LUGAR_NOVO,
+    TITULO_RASCUNHOS,
   ];
 
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem

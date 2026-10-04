@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { TETO_PASSADO_HORAS, TETO_PREVISAO_HORAS } from "@/lib/weather";
-import { usarGravacao } from "./gravar";
+import { PortaDoEditor, usarGravacao } from "./gravar";
 import {
   ALEM_DO_PROVEDOR,
   CAIXA_VAZIA,
@@ -152,6 +152,8 @@ export default function EditorNumeroDeMotor({ campo, valor, slug }: PropsDoEdito
   const [texto, setTexto] = useState(typeof valor === "number" ? String(valor) : "");
   const [previsao, setPrevisao] = useState<Previsao | null>(null);
   const { erro, salvando, gravar, recusarAqui } = usarGravacao();
+  // Sem prévia no RASCUNHO (Tarefa 11): ver `PortaDoEditor` em `./gravar`.
+  const { previa: comPrevia } = useContext(PortaDoEditor);
   const folha = campo.caminho.slice(campo.caminho.lastIndexOf(".") + 1);
 
   /** A pergunta que está esperando o dedo parar. Uma só de cada vez: cada tecla
@@ -174,7 +176,7 @@ export default function EditorNumeroDeMotor({ campo, valor, slug }: PropsDoEdito
     // consequência honesta a mostrar, e a rota recusa de qualquer forma. Número
     // igual ao gravado também não — a consequência dele já está no carimbo do
     // topo do painel.
-    if (n === null || recusaDe(folha, n) !== null || n === valor) {
+    if (!comPrevia || n === null || recusaDe(folha, n) !== null || n === valor) {
       setPrevisao(null);
       return;
     }

@@ -1,5 +1,25 @@
 "use client";
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
+
+/** PRA ONDE OS EDITORES GRAVAM — e se o número de motor pede prévia (Tarefa 11).
+ *
+ *  🔴 O PADRÃO É A FICHA NO AR, e ninguém que já existia muda: `FichaInteira`
+ *  não monta provedor nenhum, então todo editor continua gravando em
+ *  `/api/admin/ficha`, como antes. Só o formulário de LUGAR NOVO
+ *  (`FormularioDeLugar`) envolve os mesmos editores num provedor que aponta pra
+ *  `/api/admin/rascunho` — é o que deixa a caixa de prosa, a lista, o
+ *  interruptor, o bloco e o mapa servirem ao rascunho SEM CÓPIA. As duas portas
+ *  aceitam as mesmas formas de corpo (`{slug, campo, valor}`, `{slug, campo,
+ *  naoSei}`, `{slug, ponto, lat, lng}`), então o editor não sabe a diferença.
+ *
+ *  `previa: false` desliga a prévia do carimbo no número de motor: ela pede ao
+ *  servidor o carimbo do lugar com o número novo, e um rascunho não tem lugar no
+ *  ar pra calcular — a resposta seria sempre "não consegui conferir", uma frase
+ *  de falha que não é falha nenhuma. */
+export const PortaDoEditor = createContext<{ gravarEm: string; previa: boolean }>({
+  gravarEm: "/api/admin/ficha",
+  previa: true,
+});
 
 /** A GRAVAÇÃO DE UM CAMPO, UMA VEZ SÓ — o que os editores desta pasta
  *  compartilham.
@@ -53,13 +73,14 @@ export type Gravacao = {
 export function usarGravacao(): Gravacao {
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const { gravarEm } = useContext(PortaDoEditor);
 
   async function gravar(corpo: Record<string, unknown>): Promise<void> {
     if (salvando) return;
     setErro(null);
     setSalvando(true);
     try {
-      const r = await fetch("/api/admin/ficha", { method: "PUT", body: JSON.stringify(corpo) });
+      const r = await fetch(gravarEm, { method: "PUT", body: JSON.stringify(corpo) });
       if (r.ok) {
         location.reload();
         return;

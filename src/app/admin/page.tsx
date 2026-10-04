@@ -5,11 +5,17 @@ import { lerConfigAdmin } from "@/lib/admin-config";
 import { COOKIE_ADMIN, avisarDesligado, sessaoValida } from "@/lib/admin-guarda";
 import { getAcervoDoDono } from "@/lib/ficha";
 import { resolverEstados } from "@/lib/carimbo-estado";
+import { comPrazo } from "@/lib/cache-rotas";
+import { getClient, listarRascunhos, type Rascunho } from "@/lib/db";
+import { PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
+import { nomeDoRascunho } from "@/lib/rascunho";
 import CaixaDeSenha from "./CaixaDeSenha";
 import ListaDeLugares from "./ListaDeLugares";
 import "./admin.css";
 
 export const dynamic = "force-dynamic";
+
+const ESTOUROU = Symbol("prazo dos rascunhos");
 
 /** 🔴 Fora do índice. Painel de admin no Google é convite. */
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -50,11 +56,22 @@ export default async function Admin() {
   // memória do público. Ver o docblock de `getAcervoDoDono`.
   const { fichas, ocultos } = await getAcervoDoDono();
   const leituras = Object.fromEntries(await resolverEstados(fichas));
+  // 🔴 OS RASCUNHOS (Tarefa 11) — a porta de volta pro lugar novo que ele
+  // começou. Leitura DIRETA de `ficha_rascunhos`, que nunca passa pelo acervo:
+  // é por isso que um rascunho não aparece na lista dos lugares. Mesmo prazo da
+  // leitura do dono, e o estouro é erro, como lá.
+  const linhas = await comPrazo<Rascunho[] | typeof ESTOUROU>(
+    listarRascunhos(getClient()),
+    PRAZO_FICHA_MS,
+    ESTOUROU,
+  );
+  if (linhas === ESTOUROU) throw new Error("O banco não respondeu a tempo à leitura dos rascunhos.");
+  const rascunhos = linhas.map((r) => ({ slug: r.slug, nome: nomeDoRascunho(r.doc, r.slug) }));
 
   return (
     <main className="adm">
       <h1>Painel</h1>
-      <ListaDeLugares fichas={fichas} leituras={leituras} ocultos={ocultos} agora={agora} />
+      <ListaDeLugares fichas={fichas} leituras={leituras} ocultos={ocultos} rascunhos={rascunhos} agora={agora} />
     </main>
   );
 }

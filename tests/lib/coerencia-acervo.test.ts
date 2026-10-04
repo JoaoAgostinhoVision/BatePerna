@@ -367,6 +367,9 @@ describe("a cadeia de waypoints — o bloco Trajeto a lê, e o que fala do LUGAR
     "src/lib/coerencia.ts",
     "src/lib/ficha-fonte.ts",
     "src/lib/geo.ts",
+    // Tarefa 11: o nome do rascunho na lista do painel é o do ponto `[0]` — o
+    // nome que o dono deu ao LUGAR quando o criou.
+    "src/lib/rascunho.ts",
   ];
 
   /** O MISTO: o `h1` e o cartão de compartilhar falam do lugar (`[0]`), e o

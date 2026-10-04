@@ -6,6 +6,13 @@ import { ESCONDIDO } from "./campos/palavras";
 
 // PENDENTE: redação minha, o João ainda não leu
 const RODAPE_LISTA = "Toque num lugar pra ver e mudar o que o app diz dele.";
+// PENDENTE: da maquete que ele aprovou (o "+ lugar novo"); primeira vez no código
+export const LUGAR_NOVO = "+ lugar novo";
+// PENDENTE: redação minha, o João ainda não leu
+export const TITULO_RASCUNHOS = "Começados, ainda fora do ar";
+
+/** Um rascunho na lista: o slug (pro link) e o nome que ele digitou ao criar. */
+export type RascunhoNaLista = { slug: string; nome: string };
 
 type Props = {
   fichas: Ficha[];
@@ -14,6 +21,10 @@ type Props = {
    *  monta a lista tem de dizer quais estão escondidos, e uma página que
    *  esquecesse não compila — em vez de mostrar todos como se estivessem no ar. */
   ocultos: ReadonlySet<string>;
+  /** Os lugares NOVOS, ainda em rascunho (Tarefa 11). Obrigatório pela mesma
+   *  razão do `ocultos`: uma página que esquecesse não compila — em vez de o
+   *  rascunho sumir da tela e a porta de volta pra ele sumir junto. */
+  rascunhos: readonly RascunhoNaLista[];
   agora: number;
 };
 
@@ -27,18 +38,25 @@ type Props = {
  *  um lugar virando a língua dos três, a espécie que este app já pagou quatro
  *  vezes (a última em `severidade.ts`, 16/09).
  *
- *  🔴 SEM O "+ lugar novo" da maquete que o João aprovou: criar ficha é rodada
- *  futura (spec §6), e um botão que não abre nada é pior que nenhum botão —
- *  ele promete, e a promessa quebrada é do app.
+ *  🔴 O "+ lugar novo" da maquete que o João aprovou VOLTOU na Tarefa 11. Ele
+ *  tinha saído porque criar lugar era rodada futura, e um botão que não abre
+ *  nada promete o que o app não cumpre; agora ele abre `/admin/novo`, o
+ *  formulário de verdade, e o motivo de ficar fora deixou de valer.
+ *
+ *  🔴 E OS RASCUNHOS MORAM NUMA SEÇÃO SEPARADA, NUNCA NA LISTA DOS LUGARES
+ *  (Tarefa 11, E5 da auditoria). Um rascunho não está no ar — misturá-lo aos
+ *  lugares faria o dono achar que o app já fala dele. A seção é a porta de
+ *  volta: sem ela, sair do formulário perdia o rascunho de vista. Sem rascunho,
+ *  a seção não aparece.
  *
  *  🔴 O LUGAR ESCONDIDO ESTÁ NA LISTA, MARCADO (Task 9, 2026-10-01). Esconder
  *  tira do PÚBLICO, não do dono: sem ele aqui, não haveria caminho pela tela
  *  até o botão de mostrá-lo de novo. Quem entrega o escondido é a página
  *  (`getAcervoDoDono`); este componente só marca o que recebe. */
-export default function ListaDeLugares({ fichas, leituras, ocultos, agora }: Props) {
+export default function ListaDeLugares({ fichas, leituras, ocultos, rascunhos, agora }: Props) {
   return (
     <>
-      <ul className="adm-lista">
+      <ul className="adm-lista" data-testid="lugares">
         {fichas.map((f) => {
           const leitura = leituras[f.slug];
           return (
@@ -53,6 +71,23 @@ export default function ListaDeLugares({ fichas, leituras, ocultos, agora }: Pro
         })}
       </ul>
       <p className="adm-lista-rodape">{RODAPE_LISTA}</p>
+      <Link href="/admin/novo" className="adm-novo-link">
+        {LUGAR_NOVO}
+      </Link>
+      {rascunhos.length > 0 && (
+        <section className="adm-rascunhos" data-testid="rascunhos">
+          <h2 className="adm-rascunhos-titulo">{TITULO_RASCUNHOS}</h2>
+          <ul className="adm-lista">
+            {rascunhos.map((r) => (
+              <li key={r.slug} className="adm-item" data-rascunho={r.slug}>
+                <Link href={`/admin/novo?slug=${encodeURIComponent(r.slug)}`} className="adm-item-link">
+                  <span className="adm-item-nome">{r.nome}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </>
   );
 }

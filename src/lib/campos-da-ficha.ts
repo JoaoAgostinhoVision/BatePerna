@@ -264,7 +264,17 @@ const itemInexistente = (i: number, tem: number): string => `não existe o item 
 /** Escreve (ou apaga) a folha de `degraus` devolvendo uma cópia — NUNCA muta o
  *  que recebeu. Só os objetos do caminho tocado são copiados; os irmãos saem
  *  pela mesma referência, que é o que faz "só o campo pedido muda". */
-function escrever(no: unknown, degraus: readonly string[], valor: unknown, remover: boolean): unknown {
+/*  `criar` (Tarefa 11) só é `true` no RASCUNHO: lá o documento é incompleto por
+    natureza, e responder `custo.curto` antes de `custo.tag` tem de criar o
+    `custo`. Na ficha que está no ar ele é sempre `false`, e o bloco ausente
+    continua recusado como sempre foi (ver o comentário do `filho === undefined`). */
+function escrever(
+  no: unknown,
+  degraus: readonly string[],
+  valor: unknown,
+  remover: boolean,
+  criar = false,
+): unknown {
   const [degrau, ...resto] = degraus;
 
   if (Array.isArray(no)) {
@@ -275,7 +285,7 @@ function escrever(no: unknown, degraus: readonly string[], valor: unknown, remov
     if (i >= no.length) throw new Error(itemInexistente(i, no.length));
     if (resto.length === 0) throw new Error("remover ou trocar um item inteiro da lista não passa por aqui");
     const copia = no.slice();
-    copia[i] = escrever(no[i], resto, valor, remover);
+    copia[i] = escrever(no[i], resto, valor, remover, criar);
     return copia;
   }
 
@@ -299,9 +309,19 @@ function escrever(no: unknown, degraus: readonly string[], valor: unknown, remov
     // estourava SEMPRE, com um ZodError cru. Bloco ausente volta INTEIRO, por
     // `gravarBloco`; quem pede meia folha de um bloco ausente é barrado antes
     // de chegar aqui, em `aplicarCampo`, com a frase que diz o que fazer.
+    //
+    // 🔴 E NO RASCUNHO (`criar`) o degrau ausente NASCE como objeto vazio — lá
+    // não há schema do documento inteiro a satisfazer, e cada folha já foi
+    // conferida contra o tipo dela antes de chegar aqui. Item de LISTA nunca
+    // nasce, nem no rascunho: um `{}` no lugar de um índice viraria um objeto
+    // com chave `"0"`, não um waypoint.
+    if (criar && !/^\d+$/.test(resto[0])) {
+      copia[degrau] = escrever({}, resto, valor, remover, criar);
+      return copia;
+    }
     throw new Error(`\`${degrau}\` não existe neste documento`);
   }
-  copia[degrau] = escrever(filho, resto, valor, remover);
+  copia[degrau] = escrever(filho, resto, valor, remover, criar);
   return copia;
 }
 
@@ -371,7 +391,7 @@ function validarFolha(caminho: string, valor: unknown): void {
  *  🔴 E a conferência é FOLHA A FOLHA, ANTES de montar. Montar e deixar o
  *  `fichaSchema.parse` decidir devolveria um ZodError cru que não diz QUAL
  *  hora está errada; aqui a recusa nomeia `horario.abre`. */
-function gravarBloco(atual: Ficha, caminho: string, valor: ValorDeCampo): unknown {
+function gravarBloco(atual: unknown, caminho: string, valor: ValorDeCampo): unknown {
   if (lerCaminho(atual, caminho.split(".")) !== undefined) {
     // PENDENTE: redação minha, o João ainda não leu
     throw new Error(
@@ -539,16 +559,85 @@ export function tirarEtapa(docAtual: string, indice: number): string {
  *  passa a CALAR sobre aquilo. Campo obrigatório não tem "não sei" (§4.2).
  *  Termina na mesma porta — o documento sem a chave tem que continuar válido. */
 export function removerCampo(docAtual: string, caminho: string): string {
-  const campo = exigirCampo(caminho);
-  if (campo.obrigatorio) {
-    const bloco = blocoQueContem(caminho);
-    // PENDENTE: redação minha, o João ainda não leu
-    throw new Error(
-      bloco
-        ? `\`${caminho}\` é obrigatório dentro de \`${bloco}\`: o "não sei" aqui é tirar o \`${bloco}\` inteiro`
-        : `\`${caminho}\` é obrigatório: sem ele a ficha não existe, então não tem "não sei"`,
-    );
-  }
+  recusarNaoSeiObrigatorio(caminho);
   const atual = fichaSchema.parse(JSON.parse(docAtual));
   return JSON.stringify(fichaSchema.parse(escrever(atual, caminho.split("."), undefined, true)));
+}
+
+/** A recusa do "não sei" num campo obrigatório — uma frase só, pra ficha no ar
+ *  (`removerCampo`) e pro rascunho (`tirarDoRascunho`). */
+function recusarNaoSeiObrigatorio(caminho: string): void {
+  const campo = exigirCampo(caminho);
+  if (!campo.obrigatorio) return;
+  const bloco = blocoQueContem(caminho);
+  // PENDENTE: redação minha, o João ainda não leu
+  throw new Error(
+    bloco
+      ? `\`${caminho}\` é obrigatório dentro de \`${bloco}\`: o "não sei" aqui é tirar o \`${bloco}\` inteiro`
+      : `\`${caminho}\` é obrigatório: sem ele a ficha não existe, então não tem "não sei"`,
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// O RASCUNHO (Tarefa 11) — as mesmas três escritas, sobre documento INCOMPLETO.
+//
+// 🔴 POR QUE UMA VARIANTE, E NÃO `aplicarCampo` (E6 da auditoria, MEDIDO antes
+// de escrever): as três escritas da ficha no ar começam por
+// `fichaSchema.parse(JSON.parse(docAtual))`, e um rascunho recém-nascido
+// (`{slug, modos, trajeto}`) não passa — `aplicarCampo(rascunho, "voz", …)`
+// estoura `Required` sobre `rotulo_escaneio`, `promessa`, `condicao`… antes de
+// tocar a voz. Rascunho incompleto é o estado normal, não um erro.
+//
+// O QUE AS VARIANTES MANTÊM, campo a campo: a lista branca do registro
+// (`exigirCampo` — `slug` e `modos` não são perguntas), a caixa vazia recusada
+// (`""` nunca chega ao documento), o TIPO de cada folha conferido contra o
+// schema (`validarFolha` — um `piso` inventado não entra nem no rascunho, porque
+// o formulário não teria instrumento pra relê-lo), o bloco que entra inteiro, e
+// o "não sei" que não existe em campo obrigatório.
+//
+// O QUE ELAS NÃO FAZEM, de propósito: o `fichaSchema.parse` do documento
+// inteiro e o portão de coerência. Os dois são de PUBLICAR (Tarefa 12), que é
+// quando o rascunho passa a afirmar alguma coisa.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** O documento do rascunho, que tem de ser um OBJETO — e nada mais se exige. */
+function abrirRascunho(docAtual: string): Record<string, unknown> {
+  const doc: unknown = JSON.parse(docAtual);
+  if (typeof doc !== "object" || doc === null || Array.isArray(doc)) {
+    // PENDENTE: redação minha, o João ainda não leu
+    throw new Error("o rascunho guardado não é um documento");
+  }
+  return doc as Record<string, unknown>;
+}
+
+/** `aplicarCampo` sobre o rascunho: grava UMA resposta e devolve o JSON novo. */
+export function aplicarNoRascunho(docAtual: string, caminho: string, valor: ValorDeCampo): string {
+  const campo = exigirCampo(caminho);
+  const atual = abrirRascunho(docAtual);
+  if (campo.especie === "bloco") return JSON.stringify(gravarBloco(atual, caminho, valor));
+
+  validarFolha(caminho, valor);
+  const bloco = blocoQueContem(caminho);
+  if (bloco && lerCaminho(atual, bloco.split(".")) === undefined) {
+    // PENDENTE: redação minha, o João ainda não leu
+    throw new Error(`\`${bloco}\` não está preenchido nesta ficha: preencha o \`${bloco}\` inteiro de uma vez`);
+  }
+  return JSON.stringify(escrever(atual, caminho.split("."), valor, false, true));
+}
+
+/** `removerCampo` sobre o rascunho: o "não sei", que tira a resposta. */
+export function tirarDoRascunho(docAtual: string, caminho: string): string {
+  recusarNaoSeiObrigatorio(caminho);
+  return JSON.stringify(escrever(abrirRascunho(docAtual), caminho.split("."), undefined, true));
+}
+
+/** `gravarPonto` sobre o rascunho: a coordenada INTEIRA do ponto, as duas
+ *  metades juntas. O ponto tem de existir (o `[0]` nasce com o nome); a faixa
+ *  e a finitude são as do schema, conferidas folha a folha. */
+export function gravarPontoNoRascunho(docAtual: string, indice: number, lat: number, lng: number): string {
+  const base = ["trajeto", "waypoints", String(indice)];
+  validarFolha([...base, "lat"].join("."), lat);
+  validarFolha([...base, "lng"].join("."), lng);
+  const comLat = escrever(abrirRascunho(docAtual), [...base, "lat"], lat, false);
+  return JSON.stringify(escrever(comLat, [...base, "lng"], lng, false));
 }

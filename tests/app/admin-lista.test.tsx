@@ -42,7 +42,7 @@ describe("ListaDeLugares", () => {
       <ListaDeLugares
         fichas={FICHAS}
         leituras={Object.fromEntries(FICHAS.map((f) => [f.slug, leituraSeca]))}
-        ocultos={new Set()}
+        ocultos={new Set()} rascunhos={[]}
         agora={1_758_000_000}
       />,
     );
@@ -62,7 +62,7 @@ describe("ListaDeLugares", () => {
   //      variedade nenhuma).
   it("o rótulo de cada lugar é o do selo público daquele lugar", () => {
     const leituras = Object.fromEntries(FICHAS.map((f) => [f.slug, leituraFria]));
-    render(<ListaDeLugares fichas={FICHAS} leituras={leituras} ocultos={new Set()} agora={SAB_MEIODIA} />);
+    render(<ListaDeLugares fichas={FICHAS} leituras={leituras} ocultos={new Set()} rascunhos={[]} agora={SAB_MEIODIA} />);
 
     const marcas = FICHAS.map((f) => marcaAgora(f, leituraFria, SAB_MEIODIA));
     expect(new Set(marcas).size, "acervo sem variedade de voz não prova nada aqui").toBeGreaterThan(1);
@@ -92,7 +92,7 @@ describe("ListaDeLugares", () => {
   it("lugar escondido aparece na lista do painel, marcado — e só ele", () => {
     const SLUG = FICHAS[1].slug;
     const leituras = Object.fromEntries(FICHAS.map((f) => [f.slug, leituraSeca]));
-    render(<ListaDeLugares fichas={FICHAS} leituras={leituras} ocultos={new Set([SLUG])} agora={1_758_000_000} />);
+    render(<ListaDeLugares fichas={FICHAS} leituras={leituras} ocultos={new Set([SLUG])} rascunhos={[]} agora={1_758_000_000} />);
     expect(FICHAS.length, "sem outros lugares o laço de baixo não prova nada").toBeGreaterThan(1);
     const item = screen.getByTestId(`lugar-${SLUG}`);
     expect(within(item).getByText(/escondid/i)).not.toBeNull();
