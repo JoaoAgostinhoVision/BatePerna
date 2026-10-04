@@ -46,7 +46,7 @@ no topo de cada cartão na home.
 
 ### A cidade — `cidade`
 
-<!-- PENDENTE: redação minha, o João ainda não leu (Tarefa 11b, 2026-10-04) -->
+<!-- PENDENTE: redação minha, o João ainda não leu (Tarefa 11b e a onda de fix dela, 2026-10-04) -->
 
 (A cidade é da ficha inteira, não do ponto — ela mora aqui, logo depois do nome,
 porque é a pergunta que vem junto com ele.)
@@ -56,12 +56,15 @@ porque é a pergunta que vem junto com ele.)
 **Por que importa:** dois lugares podem ter o mesmo nome, e às vezes o que separa um
 do outro é só a cidade. Ela aparece embaixo do nome no cartão da home, junto do título
 da ficha, na lista do acervo e no título do link compartilhado; e entra no endereço
-de um lugar NOVO (a cidade vai depois do nome, sem repetir quando o nome já termina
-com ela).
+de um lugar NOVO (a cidade vai depois do nome, sempre — mesmo quando o nome já
+termina com ela).
 Mudar a cidade depois não muda o endereço — link que já circula continua valendo.
+Enquanto um lugar não tem a cidade respondida, o painel não deixa começar outro com o
+mesmo nome: só você sabe se é o mesmo lugar, então ele pede a cidade daquele primeiro.
 
-**Exemplo:** nenhum, de propósito. Nenhuma ficha de hoje tem a cidade respondida, e
-ela não é deduzida do nome nem do endereço — quem responde é você, pelo painel.
+**Exemplo:** nenhum, de propósito. As três fichas que já existiam quando esta pergunta
+entrou (04/10) vieram sem a cidade, e ela não é deduzida do nome nem do endereço —
+quem responde é você, pelo painel.
 
 ### A coordenada
 

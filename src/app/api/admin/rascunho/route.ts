@@ -15,8 +15,8 @@ import {
   listarRascunhos,
   salvarRascunho,
   versaoAtual,
-  versoesAtuais,
 } from "@/lib/db";
+import { parDaMudanca, parOcupado } from "@/lib/par-de-lugar";
 import {
   CIDADE_SEM_LETRA,
   CIDADE_VAZIA,
@@ -26,11 +26,8 @@ import {
   docDoLugarNovo,
   enderecoDeLugar,
   enderecoDeRascunho,
-  enderecosDoLugar,
   nomeComCidade,
   nomeDoRascunho,
-  parDeLugar,
-  parDeRascunho,
   slugDoNome,
 } from "@/lib/rascunho";
 
@@ -47,16 +44,18 @@ const SEM_CACHE = { "cache-control": "no-store" } as const;
  *
  *   - `POST {nome, cidade}` — o lugar novo NASCE (Tarefa 11b: a cidade é
  *     obrigatória, e é ela que separa dois lugares de mesmo nome). O endereço
- *     sai dos dois (`enderecosDoLugar`); é recusado com frase quando o PAR
- *     (nome, cidade) já é de um lugar (inclusive ESCONDIDO) ou de um rascunho
- *     (`parOcupado`), ou quando todo endereço possível já é de um lugar ou de um
- *     rascunho. Nome repetido em OUTRA cidade nasce. 201 `{slug}`.
+ *     é `slugDoNome(nome + " " + cidade)`, um só; é recusado com frase quando o
+ *     PAR (nome, cidade) já é de um lugar (inclusive ESCONDIDO) ou de um
+ *     rascunho, quando um lugar de MESMO nome ainda não tem cidade
+ *     (`parOcupado`), ou quando o endereço já é de um lugar ou de um rascunho.
+ *     Nome repetido em OUTRA cidade nasce. 201 `{slug}`.
  *   - `PUT` — responde uma pergunta, nas formas de corpo da porta da ficha
  *     (`src/app/api/admin/ficha/route.ts`), mutuamente exclusivas:
  *       `{slug, campo, valor}` · `{slug, campo, naoSei: true}` ·
  *       `{slug, ponto, lat, lng}`.
  *     Renomear (`trajeto.waypoints.0.nome`) e mudar a `cidade` passam pela
- *     mesma colisão de PAR do POST — e o endereço não muda com nenhum dos dois;
+ *     mesma colisão de PAR do POST (`parDaMudanca`) — e o endereço não muda
+ *     com nenhum dos dois;
  *     a coordenada do ponto só entra como PAR (a terceira forma).
  *     A terceira existe pra o editor de coordenada servir aqui SEM MUDAR: ele
  *     grava o ponto do trajeto inteiro, num corpo só, por essa forma.
@@ -101,51 +100,6 @@ function recusar400(erro: unknown): Response {
   return new Response(nossa ? erro.message : "", { status: 400, headers: TEXTO });
 }
 
-/** 🔴 A COLISÃO POR PAR (NOME, CIDADE) — Tarefa 11b, 2026-10-04.
- *
- *  Até aqui a colisão era por NOME (onda de conserto 1 da Tarefa 11), e o João
- *  a desfez: dois lugares podem ter o mesmo nome, e às vezes a diferença é só a
- *  cidade. O que continua sendo o MESMO lugar é o par — mesmo nome E mesma
- *  cidade, comparados pela normalização do endereço (`slugDoNome`: sem acento,
- *  sem caixa, pontuação e espaços colapsados). Lido do DADO, e não do endereço,
- *  porque nem todo lugar tem endereço que sai do nome (um do acervo leva a
- *  cidade no endereço e não no nome): sem esta conferência, o gêmeo dele
- *  nasceria em outro endereço (11b-I4). Contra:
- *   - a versão ATUAL de todo lugar, SEM filtro de `oculto` — um lugar escondido
- *     é um lugar, e volta ao ar;
- *   - todo rascunho, menos `exceto` (o próprio, quando ele muda nome ou cidade).
- *  Devolve a frase da recusa — com o nome e a cidade de QUEM JÁ EXISTE —, ou
- *  `null` se o par está livre.
- *
- *  ⚠️ LUGAR SEM CIDADE NÃO COLIDE POR PAR: os que nasceram antes da 11b não têm
- *  cidade até o dono respondê-la pelo painel, e até lá um gêmeo de um deles
- *  entra sem aviso. Ninguém deduz a cidade por eles.
- *
- *  ⚠️ Esta conferência LÊ e depois a rota GRAVA — há janela entre as duas, ao
- *  contrário da porta do endereço (`criarRascunho`, uma consulta só). Aceita
- *  porque o painel tem um dono só; a normalização não cabe numa consulta SQL. */
-async function parOcupado(nome: string, cidade: string, exceto?: string): Promise<string | null> {
-  const n = slugDoNome(nome);
-  const c = slugDoNome(cidade);
-  if (n === "" || c === "") return null;
-  const bate = (doc: string, slug: string): string | null => {
-    const deles = cidadeDoDoc(doc);
-    const nomeDeles = nomeDoRascunho(doc, slug);
-    if (deles === undefined || slugDoNome(deles) !== c || slugDoNome(nomeDeles) !== n) return null;
-    return nomeComCidade(nomeDeles, deles);
-  };
-  for (const v of (await versoesAtuais(getClient(), { incluirOcultos: true })).values()) {
-    const quem = bate(v.doc, v.ficha_slug);
-    if (quem !== null) return parDeLugar(quem);
-  }
-  for (const r of await listarRascunhos(getClient())) {
-    if (r.slug === exceto) continue;
-    const quem = bate(r.doc, r.slug);
-    if (quem !== null) return parDeRascunho(quem);
-  }
-  return null;
-}
-
 /** QUEM OCUPA um endereço que `criarRascunho` recusou — a frase nomeia o lugar
  *  (ou o rascunho) que JÁ ESTÁ lá, com o nome e a cidade DELE, lidos do dado.
  *  `versaoAtual`, NUNCA a leitura pública (`versoesAtuais` sem
@@ -157,11 +111,6 @@ async function quemOcupa(slug: string): Promise<string> {
   const doc = r?.doc ?? "";
   return enderecoDeRascunho(nomeComCidade(nomeDoRascunho(doc, slug), cidadeDoDoc(doc)));
 }
-
-/** O campo que é o NOME do lugar (o ponto `0`). Renomear passa pela colisão de
- *  par, e mudar a `cidade` também. */
-const CAMPO_DO_NOME = "trajeto.waypoints.0.nome";
-const CAMPO_DA_CIDADE = "cidade";
 
 export async function POST(req: Request): Promise<Response> {
   const fechada = porta(req);
@@ -188,7 +137,8 @@ export async function POST(req: Request): Promise<Response> {
 
   // O PAR, antes do endereço. As duas recusas são de coisas DIFERENTES (o par
   // que bate com endereço outro × o endereço que bate com par outro), e cada
-  // uma tem caso que só ela pega — não é a mesma porta duas vezes.
+  // uma tem caso que só ela pega — não é a mesma porta duas vezes. (O endereço
+  // ocupado pelo MESMO par nunca chega lá embaixo: o par o recusa antes.)
   const doPar = await parOcupado(nome, cidade);
   if (doPar !== null) return new Response(doPar, { status: 409, headers: TEXTO });
 
@@ -199,18 +149,22 @@ export async function POST(req: Request): Promise<Response> {
   // versão nova DELE, e com `oculto = 0`, desescondendo-o. Conferir e gravar na
   // mesma consulta também não deixa janela entre as duas coisas.
   //
-  // Os endereços são tentados EM ORDEM (`enderecosDoLugar`: o sem repetir a
-  // cidade, e a forma inteira atrás dele); o primeiro livre é o do lugar.
+  // 🔴 O ENDEREÇO É SEMPRE O NOME E A CIDADE, UM SÓ (decisão do João em
+  // 2026-10-04: *"a Pedra do Navio existe uma em Bom Jardim e outra em
+  // Floresta"*; e a onda de fix da 11b tirou a forma encurtada, que não
+  // repetia a cidade quando o nome já terminava com ela — ela fazia dois nomes
+  // DIFERENTES caírem no mesmo endereço, e o segundo era recusado). Os dois têm
+  // letra (conferido acima), então o endereço tem sempre um hífen no meio, e
+  // nenhuma tela do app (`SLUGS_RESERVADOS`) tem: ele nunca chega a uma.
+  // O endereço nasce uma vez e não muda: renomear, ou mudar a cidade, depois
+  // não mexe nele — link que já circula continua valendo.
   const agora = Math.floor(Date.now() / 1000);
-  const enderecos = enderecosDoLugar(nome, cidade);
-  for (const slug of enderecos) {
-    if (await criarRascunho(getClient(), slug, docDoLugarNovo(slug, nome, cidade), agora)) {
-      return Response.json({ slug }, { status: 201, headers: SEM_CACHE });
-    }
+  const slug = slugDoNome(`${nome} ${cidade}`);
+  if (await criarRascunho(getClient(), slug, docDoLugarNovo(slug, nome, cidade), agora)) {
+    return Response.json({ slug }, { status: 201, headers: SEM_CACHE });
   }
-  // Todos ocupados: só falta dizer POR QUEM — o do primeiro, que é o endereço
-  // que este lugar teria.
-  return new Response(await quemOcupa(enderecos[0]), { status: 409, headers: TEXTO });
+  // Ocupado: só falta dizer POR QUEM.
+  return new Response(await quemOcupa(slug), { status: 409, headers: TEXTO });
 }
 
 export async function PUT(req: Request): Promise<Response> {
@@ -259,17 +213,11 @@ export async function PUT(req: Request): Promise<Response> {
   const atual = await lerRascunho(getClient(), slug);
   if (atual === null) return new Response("", { status: 400, headers: TEXTO });
 
-  // Renomear, ou mudar a cidade, é a segunda porta do mesmo buraco do POST: um
-  // rascunho que nasceu com outro par não pode virar o par de um lugar (ou de
-  // outro rascunho) depois (11b-M3). O par novo é o valor que chega e a outra
-  // metade como está no rascunho; rascunho sem a outra metade não colide.
-  // Valor que não é texto segue adiante e é recusado pela folha.
-  if ((campo === CAMPO_DO_NOME || campo === CAMPO_DA_CIDADE) && typeof valor === "string") {
-    const nome = campo === CAMPO_DO_NOME ? valor : nomeDoRascunho(atual.doc, "");
-    const cidade = campo === CAMPO_DA_CIDADE ? valor : (cidadeDoDoc(atual.doc) ?? "");
-    const doPar = await parOcupado(nome, cidade, slug);
-    if (doPar !== null) return new Response(doPar, { status: 409, headers: TEXTO });
-  }
+  // Renomear, ou mudar a cidade, passa pelo MESMO par do POST (11b-M3) — a
+  // função é a mesma da ficha no ar. Valor que não é texto segue adiante e é
+  // recusado pela folha.
+  const doPar = await parDaMudanca(atual.doc, slug, campo, valor);
+  if (doPar !== null) return new Response(doPar, { status: 409, headers: TEXTO });
 
   let novoDoc: string;
   try {

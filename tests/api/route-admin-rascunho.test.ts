@@ -24,7 +24,7 @@ import {
   SLUGS_RESERVADOS,
   enderecoDeLugar,
   enderecoDeRascunho,
-  enderecosDoLugar,
+  gemeoSemCidade,
   parDeLugar,
   parDeRascunho,
   slugDoNome,
@@ -115,22 +115,14 @@ describe("o slug sai do NOME", () => {
     expect(slugDoNome("!!!")).toBe("");
   });
 
-  // 🔴 TAREFA 11b (decisão do João, 04/10): o ENDEREÇO de um lugar novo é o
-  // nome e a CIDADE — é ela que separa dois lugares de mesmo nome. Sem repetir
-  // a cidade quando o nome já termina com ela (ou é ela); e, nesse caso, o
-  // endereço inteiro vem logo atrás, como segunda tentativa (11b-I5).
-  it("o endereço é nome + cidade; sem repetir, a forma inteira vem de reserva", () => {
-    expect(enderecosDoLugar("Lugar Marcador Um", "Cidade Marcador Um")).toEqual([
-      "lugar-marcador-um-cidade-marcador-um",
-    ]);
-    expect(enderecosDoLugar("Mirante de Cidade Marcador", "cidade marcador")).toEqual([
-      "mirante-de-cidade-marcador",
-      "mirante-de-cidade-marcador-cidade-marcador",
-    ]);
-    // nome que É a cidade: a elisão também vale
-    expect(enderecosDoLugar("Marcador", "MARCADOR")).toEqual(["marcador", "marcador-marcador"]);
-    // terminar com a cidade é terminar com a PALAVRA, não com as letras
-    expect(enderecosDoLugar("Lugar Supermarcador", "Marcador")).toEqual(["lugar-supermarcador-marcador"]);
+  // 🔴 A TELA DO APP NUNCA VIRA ENDEREÇO, POR CONSTRUÇÃO (onda de fix da 11b):
+  // o endereço de um lugar novo é SEMPRE nome + cidade, os dois com letra, então
+  // sempre tem um hífen no meio — e nenhuma tela do app tem. Pasta de rota nova
+  // com hífen entra em `SLUGS_RESERVADOS` (o caso de baixo a exige) e deixa
+  // este vermelho: aí o endereço PODERIA chegar a ela, e a conferência volta.
+  it("nenhuma tela do app tem hífen, e todo endereço de lugar novo tem", () => {
+    expect(SLUGS_RESERVADOS.length, "a premissa: a lista foi lida").toBeGreaterThan(0);
+    for (const tela of SLUGS_RESERVADOS) expect(tela, tela).not.toContain("-");
   });
 
   // 🔴 O mesmo slug que a SEMENTE deu aos lugares de hoje sai do nome deles —
@@ -222,47 +214,90 @@ describe("POST — o lugar novo nasce", () => {
     ]);
   });
 
-  // 🔴 O nome EXATO de um lugar que já está no ar, numa cidade: nasce, em OUTRO
-  // endereço — e o lugar no ar fica intacto. Os lugares de hoje não têm cidade,
-  // então não colidem por par (ver o describe do par, abaixo).
-  it("nome de um lugar no ar, com uma cidade: nasce em outro endereço, e o lugar fica intacto", async () => {
+  // 🔴 ONDA DE FIX DA 11b (X1): o endereço é SEMPRE o nome e a cidade, um só,
+  // inclusive quando o nome já termina com a cidade ou É ela — nenhuma forma
+  // encurtada, nenhuma segunda tentativa. Era a forma encurtada que fazia dois
+  // nomes DIFERENTES caírem no mesmo endereço (os Mirantes, abaixo).
+  it("o endereço é SEMPRE nome + cidade, mesmo quando o nome já termina com ela", async () => {
+    for (const [nome, cidade, slug] of [
+      ["Mirante de Cidade Marcador", "cidade marcador", "mirante-de-cidade-marcador-cidade-marcador"],
+      ["Marcador", "MARCADOR", "marcador-marcador"],
+      ["Lugar Supermarcador", "Marcador", "lugar-supermarcador-marcador"],
+    ] as const) {
+      const res = await criar(nome, cidade);
+      expect(res.status, nome).toBe(201);
+      expect(await res.json(), nome).toEqual({ slug });
+      expect(slug, "a premissa: é o slug do nome e da cidade juntos").toBe(slugDoNome(`${nome} ${cidade}`));
+    }
+    expect(await lerRascunho(c, "mirante-de-cidade-marcador")).toBeNull();
+    expect(await lerRascunho(c, "marcador")).toBeNull();
+  });
+
+  // 🔴 ONDA DE FIX DA 11b (X2) — O GÊMEO DE UM LUGAR SEM CIDADE. Os lugares de
+  // hoje não têm cidade, e o par só separa dois lugares quando os DOIS têm. Um
+  // lugar novo com o mesmo nome de um deles pode ser o mesmo lugar ou outro, e
+  // só o dono sabe: a criação é recusada até ele responder a cidade DAQUELE.
+  // Até 04/10 este caso nascia (201) — a prova foi INVERTIDA, não apagada.
+  it("nome de um lugar no ar SEM cidade: 409 pedindo a cidade DELE, e nada nasce", async () => {
     const alvo = acervo.find((f) => slugDoNome(f.trajeto.waypoints[0].nome) === f.slug)!;
     expect(alvo.cidade, "a premissa: os lugares de hoje não têm cidade").toBeUndefined();
-    const res = await criar(alvo.trajeto.waypoints[0].nome, CIDADE);
-    expect(res.status, await res.clone().text()).toBe(201);
-    const { slug } = (await res.json()) as { slug: string };
-    expect(slug).toBe(`${alvo.slug}-cidade-marcador-um`);
-    expect(await lerRascunho(c, alvo.slug)).toBeNull();
+    const nome = alvo.trajeto.waypoints[0].nome;
+    for (const grafia of [nome, `  ${nome.toUpperCase()}  `]) {
+      const res = await criar(grafia, CIDADE);
+      expect(res.status, grafia).toBe(409);
+      expect(await res.text(), grafia).toBe(gemeoSemCidade(nome));
+    }
+    expect(await listarRascunhos(c)).toEqual([]);
     expect(await historico(c, alvo.slug)).toHaveLength(1);
   });
 
-  it("nome de um lugar ESCONDIDO, com uma cidade: nasce, e ele continua escondido e intacto", async () => {
+  it("nome de um lugar ESCONDIDO sem cidade: 409 pedindo a cidade dele, e ele continua escondido e intacto", async () => {
     const alvo = acervo.find((f) => slugDoNome(f.trajeto.waypoints[0].nome) === f.slug)!;
     await esconder(alvo.slug);
     expect((await versoesAtuais(c)).has(alvo.slug), "a premissa: o público não o vê").toBe(false);
     const res = await criar(alvo.trajeto.waypoints[0].nome, CIDADE);
-    expect(res.status).toBe(201);
-    expect(await lerRascunho(c, alvo.slug)).toBeNull();
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(gemeoSemCidade(alvo.trajeto.waypoints[0].nome));
+    expect(await listarRascunhos(c)).toEqual([]);
     const h = await historico(c, alvo.slug);
     expect(h).toHaveLength(2);
     expect(h[0].oculto).toBe(true);
   });
 
-  // 🔴 E O ENDEREÇO DE UM LUGAR (inclusive ESCONDIDO) NUNCA VIRA RASCUNHO — o
-  // rascunho seria publicado como versão nova daquele lugar. Aqui o endereço
-  // que sairia da elisão (o nome terminando com a "cidade") é o de um lugar que
-  // já existe: a forma inteira é tentada, e o rascunho nasce nela.
-  it("endereço de um lugar ESCONDIDO pela elisão: tenta o endereço inteiro, e o lugar continua intacto", async () => {
+  // 🔴 O CASO QUE A REVISÃO DA 11b ACHOU (I-1): o nome EXATO de um lugar real e,
+  // como cidade, a última palavra dele — o gêmeo exato. Com a forma encurtada
+  // ele nascia na forma inteira (201), e este caso cravava isso como certo.
+  // Agora o endereço dele está livre e só o gêmeo segura: 409.
+  it("o gêmeo EXATO de um lugar escondido sem cidade (a cidade = a última palavra do nome): 409", async () => {
     const alvo = acervo.find((f) => slugDoNome(f.trajeto.waypoints[0].nome) === f.slug)!;
     await esconder(alvo.slug);
     const ultima = alvo.slug.split("-").pop()!;
     const res = await criar(alvo.trajeto.waypoints[0].nome, ultima);
-    expect(res.status, await res.clone().text()).toBe(201);
-    expect(await res.json()).toEqual({ slug: `${alvo.slug}-${ultima}` });
-    expect(await lerRascunho(c, alvo.slug)).toBeNull();
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(gemeoSemCidade(alvo.trajeto.waypoints[0].nome));
+    expect(await listarRascunhos(c)).toEqual([]);
     const h = await historico(c, alvo.slug);
     expect(h).toHaveLength(2);
     expect(h[0].oculto).toBe(true);
+  });
+
+  // Um rascunho começado ANTES da 11b não tem cidade: o gêmeo dele também espera.
+  // E a cidade sem letra nem número (`"--"`, gravada antes de as portas a
+  // recusarem — o schema a aceita) não separa nada: conta como sem cidade.
+  it("nome de um RASCUNHO sem cidade, ou com cidade sem letra: 409 pedindo a cidade dele, e ele não muda", async () => {
+    const doc = JSON.stringify({ slug: "marcador-rascunho-antigo", modos: [], trajeto: { waypoints: [{ nome: NOME }] } });
+    await salvarRascunho(c, "marcador-rascunho-antigo", doc, AGORA);
+    const res = await criar(NOME, CIDADE);
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(gemeoSemCidade(NOME));
+    expect((await listarRascunhos(c)).map((r) => r.slug)).toEqual(["marcador-rascunho-antigo"]);
+    expect((await lerRascunho(c, "marcador-rascunho-antigo"))!.doc).toBe(doc);
+
+    const tracos = JSON.stringify({ slug: "marcador-rascunho-tracos", modos: [], cidade: "--", trajeto: { waypoints: [{ nome: "Lugar Marcador Nove" }] } });
+    await salvarRascunho(c, "marcador-rascunho-tracos", tracos, AGORA);
+    const res2 = await criar("Lugar Marcador Nove", CIDADE);
+    expect(res2.status).toBe(409);
+    expect(await res2.text()).toBe(gemeoSemCidade("Lugar Marcador Nove"));
   });
 
   it("nome E cidade de um rascunho que já existe: 409, e o primeiro não perde nada", async () => {
@@ -275,11 +310,10 @@ describe("POST — o lugar novo nasce", () => {
     expect((await listarRascunhos(c)).map((r) => r.slug)).toEqual([S]);
   });
 
-  // 🔴 A tela do app NUNCA vira endereço: `SLUGS_RESERVADOS` vale sobre o
-  // endereço FINAL. Com a cidade sempre no endereço, só a elisão (nome que é a
-  // própria cidade) chegaria a um nome de tela — e aí a forma inteira é a que
-  // nasce, nunca `/novo`.
-  it("nome e cidade que dariam um endereço de tela: nasce na forma inteira, nunca na tela", async () => {
+  // 🔴 A tela do app NUNCA vira endereço, pela rota de verdade: o nome que É uma
+  // tela, na "cidade" de mesmo nome, nasce em `novo-novo` — nunca em `/novo`.
+  // (A razão é a do caso "nenhuma tela do app tem hífen", lá em cima.)
+  it("nome e cidade que são uma tela do app: nasce em nome-cidade, nunca na tela", async () => {
     for (const nome of ["Novo", "Trilhas", "ADMIN"]) {
       const res = await criar(nome, nome);
       expect(res.status, nome).toBe(201);
@@ -456,8 +490,10 @@ describe("PUT — responder uma pergunta", () => {
 // Bom Jardim e outra em Floresta". O que continua sendo o MESMO lugar é o par:
 // mesmo nome E mesma cidade (pela normalização do endereço, `slugDoNome`),
 // lido do DADO de cada lugar — no ar ou escondido — e de cada rascunho (11b-I4).
-// Sem o par, o gêmeo de um lugar cujo endereço não sai do nome (o caso real do
-// acervo: o endereço leva a cidade, o nome não) nasceria sem aviso.
+// Sem o par, o gêmeo de um lugar cujo endereço não sai do nome (há um no
+// acervo: o endereço dele tem uma palavra que o nome não tem) nasceria sem
+// aviso. E contra um lugar SEM cidade o par não decide nada: o gêmeo espera a
+// cidade dele (X2 da onda de fix).
 //
 // Cada caso prova UMA porta sozinha: o par que bate com endereço diferente (a
 // porta do par), e o endereço que bate com nome diferente (a porta do slug) —
@@ -519,27 +555,33 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
     expect(h[0].oculto).toBe(true);
   });
 
-  // 🔴 11b-I4, COM O LUGAR REAL DO ACERVO cujo endereço não sai do nome: com uma
-  // cidade gravada NELE (marcador, só neste banco de teste — nunca na ficha
-  // real), o par colide; sem cidade nele (como está no ar), o gêmeo nasce.
-  it("o gêmeo de um lugar do acervo cujo endereço não sai do nome: 409 com cidade nele, 201 sem", async () => {
+  // 🔴 11b-I4, COM O LUGAR REAL DO ACERVO cujo endereço não sai do nome. Sem
+  // cidade nele (como está no ar), o gêmeo espera a cidade DELE (X2 da onda de
+  // fix — até 04/10 nascia). Com uma cidade gravada NELE (marcador, só neste
+  // banco de teste — nunca na ficha real), o par decide: na mesma cidade 409, em
+  // outra nasce. É a mesma conferência, e a espera some sozinha quando ele
+  // responde a cidade.
+  it("o gêmeo de um lugar do acervo cujo endereço não sai do nome: espera a cidade dele, e depois o par decide", async () => {
     const real = acervo.find((f) => slugDoNome(f.trajeto.waypoints[0].nome) !== f.slug);
     expect(real, "a premissa: um lugar do acervo tem endereço que não sai do nome").toBeDefined();
     const nome = real!.trajeto.waypoints[0].nome;
     expect(real!.cidade, "a premissa: nenhum lugar de hoje tem cidade").toBeUndefined();
 
-    // sem cidade nele: não colide por par — nasce
-    const livre = await criar(nome, CIDADE);
-    expect(livre.status, await livre.clone().text()).toBe(201);
-    const { slug: nascido } = (await livre.json()) as { slug: string };
-    expect((await rota.DELETE(pedido("DELETE", { slug: nascido }, cookieBom))).status).toBe(200);
+    // sem cidade nele: 409 pedindo a cidade dele
+    const espera = await criar(nome, CIDADE);
+    expect(espera.status).toBe(409);
+    expect(await espera.text()).toBe(gemeoSemCidade(nome));
+    expect(await listarRascunhos(c)).toEqual([]);
 
-    // com a cidade-marcador gravada nele: o par colide
+    // com a cidade-marcador gravada nele: o par colide na mesma cidade…
     await gravarVersao(c, real!.slug, JSON.stringify({ ...real, cidade: CIDADE }), "painel", AGORA);
     const res = await criar(nome, CIDADE);
     expect(res.status).toBe(409);
     expect(await res.text()).toBe(parDeLugar(`${nome} (${CIDADE})`));
     expect(await listarRascunhos(c)).toEqual([]);
+    // …e em outra, nasce
+    const outro = await criar(nome, OUTRA_CIDADE);
+    expect(outro.status, await outro.clone().text()).toBe(201);
   });
 
   // 🔴 A PORTA DO ENDEREÇO, SOZINHA: nome DIFERENTE, mesmo endereço. A frase
@@ -555,31 +597,40 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
     expect(await listarRascunhos(c)).toEqual([]);
   });
 
+  // Sem forma encurtada, dois nomes diferentes só caem no mesmo endereço quando
+  // a fronteira entre o nome e a cidade anda: "Lugar Marcador" em "Cidade
+  // Marcador" e "Lugar Marcador Cidade" em "Marcador".
   it("endereço ocupado por um RASCUNHO de nome diferente: 409 com a frase do rascunho", async () => {
-    expect((await criar("Mirante Cidade Marcador", "Marcador")).status).toBe(201);
-    // "Mirante Cidade Marcador" em "Marcador" dá `mirante-cidade-marcador` (elisão);
-    // "Mirante Cidade" em "Marcador" dá o mesmo endereço, sem forma de reserva
-    const res = await criar("Mirante Cidade", "Marcador");
+    expect((await criar("Lugar Marcador", "Cidade Marcador")).status).toBe(201);
+    const res = await criar("Lugar Marcador Cidade", "Marcador");
     expect(res.status).toBe(409);
-    expect(await res.text()).toBe(enderecoDeRascunho("Mirante Cidade Marcador (Marcador)"));
-    expect((await listarRascunhos(c)).map((r) => r.slug)).toEqual(["mirante-cidade-marcador"]);
+    expect(await res.text()).toBe(enderecoDeRascunho("Lugar Marcador (Cidade Marcador)"));
+    expect((await listarRascunhos(c)).map((r) => r.slug)).toEqual(["lugar-marcador-cidade-marcador"]);
   });
 
-  // 🔴 11b-I5: a ELISÃO faz dois nomes DIFERENTES caírem no mesmo endereço. Na
-  // ordem em que a forma inteira existe, ela é tentada antes de recusar.
-  it("os dois Mirantes: o da elisão, com o endereço já ocupado, nasce na forma inteira", async () => {
-    const um = await criar("Mirante", "Cidade Marcador");
-    expect(await um.json()).toEqual({ slug: "mirante-cidade-marcador" });
-    const dois = await criar("Mirante Cidade Marcador", "Cidade Marcador");
-    expect(dois.status, await dois.clone().text()).toBe(201);
-    expect(await dois.json()).toEqual({ slug: "mirante-cidade-marcador-cidade-marcador" });
+  // 🔴 11b-I5 e I-2 DA REVISÃO: "Mirante" e "Mirante <cidade>", na mesma cidade,
+  // são dois lugares e os dois nascem — NAS DUAS ORDENS. Com a forma encurtada,
+  // a ordem B (o longo primeiro) recusava o segundo e mandava o dono mudar o
+  // nome real dele.
+  it("os dois Mirantes nascem nas duas ordens, cada um no seu endereço", async () => {
+    // ordem A: o curto primeiro
+    const a1 = await criar("Mirante", "Cidade Marcador");
+    const a2 = await criar("Mirante Cidade Marcador", "Cidade Marcador");
+    expect([a1.status, a2.status], await a2.clone().text()).toEqual([201, 201]);
+    expect(await a1.json()).toEqual({ slug: "mirante-cidade-marcador" });
+    expect(await a2.json()).toEqual({ slug: "mirante-cidade-marcador-cidade-marcador" });
+    // ordem B: o longo primeiro (a do contraexemplo da auditoria)
+    const b1 = await criar("Mirante Cidade Marcador Seis", "Cidade Marcador Seis");
+    const b2 = await criar("Mirante", "Cidade Marcador Seis");
+    expect([b1.status, b2.status], await b2.clone().text()).toEqual([201, 201]);
+    expect(await b1.json()).toEqual({ slug: "mirante-cidade-marcador-seis-cidade-marcador-seis" });
+    expect(await b2.json()).toEqual({ slug: "mirante-cidade-marcador-seis" });
   });
 
   // E quem ocupa SEM cidade (como os lugares de hoje) é nomeado só pelo nome —
   // nenhum parêntese vazio, nenhum "sem cidade".
-  it("as duas formas ocupadas: 409 nomeando quem ocupa a primeira (sem cidade, só o nome)", async () => {
-    await lugarMarcador("lugar-marcador-tres", "Nome Marcador A");
-    await lugarMarcador("lugar-marcador-tres-tres", "Nome Marcador B", OUTRA_CIDADE);
+  it("endereço ocupado por um lugar SEM cidade, de nome diferente: 409 nomeando-o só pelo nome", async () => {
+    await lugarMarcador("lugar-marcador-tres-tres", "Nome Marcador A");
     const res = await criar("Lugar Marcador Tres", "Tres");
     expect(res.status).toBe(409);
     expect(await res.text()).toBe(enderecoDeLugar("Nome Marcador A"));
@@ -685,6 +736,29 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
       expect(res.status).toBe(400);
       expect(await res.text()).toMatch(/obrigatório/);
       expect((await docDe(S)).cidade).toBe(CIDADE);
+    });
+
+    // 🔴 X3 DA ONDA DE FIX: a cidade sem letra nem número é recusada aqui com a
+    // MESMA frase do POST. Antes entrava, e o rascunho parava de colidir por par.
+    it("cidade sem letra nem número: 400 com a frase do POST, e ela fica", async () => {
+      const antes = (await lerRascunho(c, S))!.doc;
+      for (const valor of ["--", " ... ", "—"]) {
+        const res = await mudar({ slug: S, campo: "cidade", valor });
+        expect(res.status, valor).toBe(400);
+        expect(await res.text(), valor).toBe(CIDADE_SEM_LETRA);
+      }
+      expect((await lerRascunho(c, S))!.doc).toBe(antes);
+    });
+
+    // 🔴 X2 no PUT: renomear o rascunho pro nome de um lugar SEM cidade espera a
+    // cidade dele, como o POST.
+    it("renomear pro nome de um lugar SEM cidade: 409 pedindo a cidade dele, o rascunho não muda", async () => {
+      await lugarMarcador(OUTRO_SLUG, OUTRO_NOME);
+      const antes = (await lerRascunho(c, S))!.doc;
+      const res = await mudar({ slug: S, campo: CAMPO_NOME, valor: "LUGAR marcador dois" });
+      expect(res.status).toBe(409);
+      expect(await res.text()).toBe(gemeoSemCidade(OUTRO_NOME));
+      expect((await lerRascunho(c, S))!.doc).toBe(antes);
     });
   });
 });

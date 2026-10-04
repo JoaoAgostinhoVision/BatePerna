@@ -58,7 +58,7 @@ export async function generateMetadata({
   // 🔴 A CIDADE NO TÍTULO (Tarefa 11b, 11b-I6): o link de duas Pedras do Navio
   // saía IDÊNTICO no WhatsApp. "Nome — Cidade" só quando há cidade; sem ela,
   // igual a antes — o app não escreve "sem cidade" em lugar nenhum.
-  const nome = ficha.trajeto.waypoints[0].nome + (ficha.cidade ? ` — ${ficha.cidade}` : "");
+  const nome = ficha.trajeto.waypoints[0].nome + (ficha.cidade ? ` — ${ficha.cidade}` : ""); // PENDENTE: formato meu (" — Cidade"), o João ainda não leu
   return {
     title: nome,
     description: ficha.promessa,

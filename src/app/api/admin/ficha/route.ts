@@ -13,6 +13,7 @@ import {
   type ValorDeCampo,
 } from "@/lib/campos-da-ficha";
 import { type Violacao, violacoesDoAcervo } from "@/lib/coerencia";
+import { parDaMudanca } from "@/lib/par-de-lugar";
 import { type Ficha, fichaSchema } from "@/types/ficha";
 
 export const dynamic = "force-dynamic";
@@ -392,6 +393,15 @@ export async function PUT(req: Request): Promise<Response> {
 
   const versao = await versaoAtual(getClient(), slug);
   if (versao == null) return new Response("", { status: 400, headers: TEXTO });
+
+  // 🔴 O PAR (NOME, CIDADE), TAMBÉM AQUI (onda de fix da Tarefa 11b, X4): dar a
+  // um lugar publicado, renomeando-o ou mudando a cidade dele, o par de OUTRO
+  // lugar (no ar ou escondido) ou de um rascunho é 409 — a MESMA função das
+  // portas do lugar novo (`src/lib/par-de-lugar.ts`), nunca uma cópia. O
+  // próprio lugar fica de fora da comparação. Lugar ainda sem cidade não tem
+  // par a conferir quando é renomeado.
+  const doPar = await parDaMudanca(versao.doc, slug, campo, valor);
+  if (doPar !== null) return new Response(doPar, { status: 409, headers: TEXTO });
 
   // 🔴 `valor` chega como `unknown` e NÃO é coagido pra string aqui — se
   // fosse `String(valor)`, um número viraria texto válido e passaria pelo

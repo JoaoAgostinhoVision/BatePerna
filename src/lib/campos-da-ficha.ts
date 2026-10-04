@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PISOS } from "@/lib/piso";
+import { CIDADE_SEM_LETRA, slugDoNome } from "@/lib/rascunho";
 import { SEVERIDADES } from "@/lib/severidade";
 import { DIAS } from "@/lib/semana";
 import { fichaSchema, type Ficha } from "@/types/ficha";
@@ -261,6 +262,18 @@ function recusarVazio(caminho: string, valor: ValorDeCampo): void {
   }
 }
 
+/** 🔴 A CIDADE SEM LETRA NEM NÚMERO (`"--"`) NÃO ENTRA, EM PORTA NENHUMA (onda de
+ *  fix da Tarefa 11b, X3). O POST do lugar novo já a recusava; as portas de
+ *  responder (o rascunho e a ficha no ar) a gravavam, e ela aparecia na tela
+ *  pública — "Nome — -- · BatePerna" no título do link — e parava de separar
+ *  dois lugares pelo par. A frase é a MESMA do POST. Chamada pelos dois
+ *  caminhos de escrita de folha (`aplicarCampo` e `validarFolha`). */
+function recusarCidadeSemLetra(caminho: string, valor: unknown): void {
+  if (caminho === "cidade" && typeof valor === "string" && slugDoNome(valor) === "") {
+    throw new Error(CIDADE_SEM_LETRA);
+  }
+}
+
 /** A recusa de índice que a lista não tem — uma frase só, pra `escrever` e pra
  *  `tirarEtapa` (onda de conserto 1 da Tarefa 10: pedir o Ponto 2 de um trajeto
  *  de um ponto respondia com a frase do LUGAR, que fala de outra coisa). */
@@ -371,6 +384,7 @@ function tipoNoCaminho(caminho: string): z.ZodTypeAny | undefined {
  *  app, e `invalid_string` não diz a ele qual das duas horas está errada. */
 function validarFolha(caminho: string, valor: unknown): void {
   recusarVazio(caminho, valor as ValorDeCampo);
+  recusarCidadeSemLetra(caminho, valor);
   const tipo = tipoNoCaminho(caminho);
   if (!tipo) throw new Error(`\`${caminho}\` não existe no fichaSchema`);
   if (desembrulhar(tipo).safeParse(valor).success) return;
@@ -442,6 +456,7 @@ export function aplicarCampo(docAtual: string, caminho: string, valor: ValorDeCa
   }
 
   recusarVazio(caminho, valor);
+  recusarCidadeSemLetra(caminho, valor);
   const atual = fichaSchema.parse(JSON.parse(docAtual));
 
   // Folha de um bloco que a ficha não tem: `horario.abre` sozinho nunca vira

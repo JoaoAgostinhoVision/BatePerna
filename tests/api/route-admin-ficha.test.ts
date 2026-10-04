@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MIN_SENHA } from "@/lib/admin-config";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
-import { ensureSchema, gravarVersao, historico, versaoAtual, versoesAtuais } from "@/lib/db";
+import { ensureSchema, gravarVersao, historico, salvarRascunho, versaoAtual, versoesAtuais } from "@/lib/db";
+import { CIDADE_SEM_LETRA, gemeoSemCidade, parDeLugar, parDeRascunho } from "@/lib/rascunho";
 import { semearAcervo } from "../banco";
 import { fichaSchema, type Ficha } from "@/types/ficha";
 import type { Violacao } from "@/lib/coerencia";
@@ -1519,5 +1520,104 @@ describe("PUT /api/admin/ficha — o portão de coerência vale pra TODA forma d
     ligarFantasma();
     const res = await PUT(pedido({ slug: T, versaoId: antiga }, cookieBom));
     expect(res.status, await res.text()).toBe(200);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 ONDA DE FIX DA TAREFA 11b — O PAR (NOME, CIDADE) TAMBÉM NA FICHA NO AR (X4),
+// e a cidade sem letra recusada aqui também (X3).
+//
+// Renomear um lugar publicado, ou mudar a cidade dele, passa pela MESMA
+// conferência do lugar novo (`parOcupado`, de `src/lib/par-de-lugar.ts`): o par
+// de OUTRO lugar (no ar, escondido) ou de um rascunho é 409, e o próprio par
+// nunca colide consigo. Os lugares aqui são MARCADORES gravados neste banco de
+// teste — nenhuma cidade real, nenhuma cidade nas fichas reais.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("PUT /api/admin/ficha — o par (nome, cidade) e a cidade sem letra (onda de fix da 11b)", () => {
+  const CAMPO_NOME = "trajeto.waypoints.0.nome";
+  const CIDADE = "Cidade Marcador Um";
+  const OUTRA_CIDADE = "Cidade Marcador Dois";
+  const B = "marcador-lugar-b";
+
+  /** Um lugar marcador no ar (ou escondido): o documento de `outra`, com slug,
+   *  nome e (se houver) cidade escolhidos aqui. */
+  async function lugar(slug: string, nome: string, cidade?: string, oculto = false): Promise<void> {
+    const [primeiro, ...resto] = outra.trajeto.waypoints;
+    const doc = {
+      ...outra,
+      slug,
+      ...(cidade === undefined ? {} : { cidade }),
+      trajeto: { ...outra.trajeto, waypoints: [{ ...primeiro, nome }, ...resto] },
+    };
+    await gravarVersao(c, slug, JSON.stringify(doc), "painel", AGORA - 10, oculto);
+  }
+
+  beforeEach(async () => {
+    await lugar(B, "Lugar Marcador Dois", OUTRA_CIDADE);
+  });
+
+  it("renomear pro par de OUTRO lugar no ar, ou ESCONDIDO: 409 com o nome e a cidade DELE, nada gravado", async () => {
+    await lugar("marcador-lugar-a", "Lugar Marcador Um", OUTRA_CIDADE);
+    await lugar("marcador-lugar-escondido", "Lugar Marcador Escondido", OUTRA_CIDADE, true);
+    for (const [valor, frase] of [
+      ["lugar  MARCADOR um", parDeLugar(`Lugar Marcador Um (${OUTRA_CIDADE})`)],
+      ["Lugar Marcador Escondido", parDeLugar(`Lugar Marcador Escondido (${OUTRA_CIDADE})`)],
+    ] as const) {
+      const res = await PUT(pedido({ slug: B, campo: CAMPO_NOME, valor }, cookieBom));
+      expect(res.status, valor).toBe(409);
+      expect(await res.text(), valor).toBe(frase);
+    }
+    expect(await historico(c, B)).toHaveLength(1);
+  });
+
+  it("renomear pro par de um RASCUNHO: 409 com a frase do rascunho, nada gravado", async () => {
+    const doc = { slug: "marcador-rascunho", modos: [], cidade: OUTRA_CIDADE, trajeto: { waypoints: [{ nome: "Lugar Marcador Tres" }] } };
+    await salvarRascunho(c, "marcador-rascunho", JSON.stringify(doc), AGORA);
+    const res = await PUT(pedido({ slug: B, campo: CAMPO_NOME, valor: "Lugar Marcador Três" }, cookieBom));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(parDeRascunho(`Lugar Marcador Tres (${OUTRA_CIDADE})`));
+    expect(await historico(c, B)).toHaveLength(1);
+  });
+
+  it("mudar a cidade pra a de OUTRO lugar de mesmo nome: 409, nada gravado", async () => {
+    await lugar("marcador-lugar-gemeo", "Lugar Marcador Dois", CIDADE);
+    const res = await PUT(pedido({ slug: B, campo: "cidade", valor: "cidade marcador UM" }, cookieBom));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(parDeLugar(`Lugar Marcador Dois (${CIDADE})`));
+    expect(await historico(c, B)).toHaveLength(1);
+  });
+
+  // X2 aqui também: o nome de um lugar SEM cidade espera a cidade dele.
+  it("renomear pro nome de um lugar SEM cidade: 409 pedindo a cidade dele, nada gravado", async () => {
+    await lugar("marcador-lugar-sem-cidade", "Lugar Marcador Sete");
+    const res = await PUT(pedido({ slug: B, campo: CAMPO_NOME, valor: "lugar marcador sete" }, cookieBom));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(gemeoSemCidade("Lugar Marcador Sete"));
+    expect(await historico(c, B)).toHaveLength(1);
+  });
+
+  // 🔴 O PRÓPRIO par, noutra grafia, PRIMEIRO: só passa porque o lugar não
+  // colide consigo mesmo. Depois, o nome de um lugar de OUTRA cidade é livre.
+  it("o PRÓPRIO par noutra grafia, e o nome de um lugar de OUTRA cidade: 200, e grava", async () => {
+    await lugar("marcador-lugar-longe", "Lugar Marcador Oito", CIDADE);
+    for (const [campo, valor] of [
+      [CAMPO_NOME, "LUGAR marcador DOIS"],
+      ["cidade", "cidade marcador dois"],
+      [CAMPO_NOME, "Lugar Marcador Oito"],
+    ] as const) {
+      const res = await PUT(pedido({ slug: B, campo, valor }, cookieBom));
+      expect(res.status, `${campo}=${valor}: ${await res.clone().text()}`).toBe(200);
+    }
+    expect(await historico(c, B)).toHaveLength(4);
+  });
+
+  // 🔴 X3: `"--"` virava "Rampa do Pepê — -- · BatePerna" no título do link.
+  it("cidade sem letra nem número: 400 com a frase do POST, e nada gravado", async () => {
+    for (const valor of ["--", " ... ", "—"]) {
+      const res = await PUT(pedido({ slug: SLUG, campo: "cidade", valor }, cookieBom));
+      expect(res.status, valor).toBe(400);
+      expect(await res.text(), valor).toBe(CIDADE_SEM_LETRA);
+    }
+    expect(await historico(c, SLUG)).toHaveLength(1);
   });
 });

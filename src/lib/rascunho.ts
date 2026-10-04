@@ -32,43 +32,20 @@ export function slugDoNome(nome: string): string {
  *  página do acervo, e um chamado "Novo" teria o painel atrás deste formulário —
  *  os dois inalcançáveis, sem erro nenhum na tela.
  *
- *  É uma lista à mão, e por isso é VIGIADA PELO DISCO: o teste
+ *  Desde a onda de fix da Tarefa 11b, nenhum endereço de lugar novo chega a
+ *  uma delas POR CONSTRUÇÃO: o endereço é sempre nome + cidade, os dois com
+ *  letra, então tem sempre um hífen no meio — e nenhuma tela tem. A lista fica
+ *  como a prova disso, e por isso é VIGIADA PELO DISCO: o teste
  *  `route-admin-rascunho.test.ts` lê as pastas de `src/app` e de
- *  `src/app/admin` e exige esta lista igual, nas duas direções. Pasta de rota
- *  nova sem reserva fica vermelha. */
+ *  `src/app/admin` e exige esta lista igual, nas duas direções, e um outro caso
+ *  exige que nenhuma tenha hífen. Pasta de rota nova sem reserva, ou com hífen,
+ *  fica vermelha. */
 export const SLUGS_RESERVADOS: readonly string[] = ["admin", "api", "icones", "trilhas", "novo"];
-
-/** 🔴 O ENDEREÇO DE UM LUGAR NOVO É O NOME E A CIDADE (Tarefa 11b, decisão do
- *  João em 2026-10-04: *"a Pedra do Navio existe uma em Bom Jardim e outra em
- *  Floresta"*). Devolve os endereços a TENTAR, em ordem — a rota fica com o
- *  primeiro que estiver livre:
- *
- *   - o normal é `slugDoNome(nome + " " + cidade)`, um só;
- *   - quando o nome JÁ TERMINA com a cidade (como palavra: `…-de-x` e `x`), ou
- *     É a cidade, a cidade não se repete — e a forma inteira vem logo atrás.
- *     🔴 A forma inteira existe porque a elisão faz dois nomes DIFERENTES
- *     caírem no mesmo endereço ("Mirante X" em X e "Mirante" em X): sem ela, o
- *     segundo seria recusado com o endereço de um lugar que não é ele (11b-I5).
- *
- *  As telas do app (`SLUGS_RESERVADOS`) nunca saem daqui: com a cidade sempre
- *  dentro, só a elisão chegaria a um nome sem hífen, e aí a forma inteira é a
- *  que fica. Nome ou cidade sem letra nem número: lista vazia — quem chama
- *  recusa antes, com a frase de cada um.
- *
- *  ⚠️ O ENDEREÇO NASCE UMA VEZ E NÃO MUDA: renomear, ou mudar a cidade, depois
- *  não mexe nele — link que já circula continua valendo. */
-export function enderecosDoLugar(nome: string, cidade: string): string[] {
-  const n = slugDoNome(nome);
-  const c = slugDoNome(cidade);
-  if (n === "" || c === "") return [];
-  const inteiro = `${n}-${c}`;
-  const semRepetir = n === c || n.endsWith(`-${c}`) ? [n, inteiro] : [inteiro];
-  return semRepetir.filter((e) => !SLUGS_RESERVADOS.includes(e));
-}
 
 /** O nome com a cidade entre parênteses, quando há cidade — é como uma frase do
  *  painel distingue dois lugares de mesmo nome. Sem cidade, só o nome: nunca
  *  "sem cidade", que seria palavra nova pra um silêncio. */
+// PENDENTE: formato meu (" (Cidade)"), o João ainda não leu
 export const nomeComCidade = (nome: string, cidade: string | undefined): string =>
   cidade ? `${nome} (${cidade})` : nome;
 
@@ -81,11 +58,15 @@ export const CIDADE_VAZIA = "O lugar precisa da cidade onde ele fica: é ela que
 // PENDENTE: redação minha, o João ainda não leu
 export const CIDADE_SEM_LETRA = "Essa cidade não tem letra nem número, e não dá pra fazer o endereço do lugar com ela.";
 
-/** 🔴 AS QUATRO RECUSAS DE COLISÃO, e cada uma diz o que é VERDADE no caso dela.
+/** 🔴 AS CINCO RECUSAS DE COLISÃO, e cada uma diz o que é VERDADE no caso dela.
  *  `quem` é sempre o lugar que JÁ EXISTE, com o nome e a cidade DELE lidos do
  *  dado (`nomeComCidade`) — nunca o que foi digitado agora.
  *   - PAR: o mesmo nome na mesma cidade (pela normalização do endereço). Aqui
  *     dizer "esse nome nessa cidade" é verdade.
+ *   - GÊMEO SEM CIDADE (onda de fix da 11b): o mesmo nome, e o que já existe
+ *     ainda não tem a cidade respondida. Pode ser o mesmo lugar ou outro, e só
+ *     o dono sabe — a frase pede a cidade DAQUELE primeiro, e nunca diz que é
+ *     o mesmo lugar nem que não é. `quem` aqui é só o nome (não há cidade).
  *   - ENDEREÇO: o endereço que sairia está ocupado por um lugar de nome OU
  *     cidade diferente. A frase NUNCA diz que o nome é o mesmo, porque não é
  *     (era o m-D da re-revisão da Tarefa 11, e o I5 da auditoria da 11b). */
@@ -95,6 +76,9 @@ export const parDeLugar = (quem: string): string =>
 // PENDENTE: redação minha, o João ainda não leu
 export const parDeRascunho = (quem: string): string =>
   `Já tem um lugar novo começado com esse nome nessa cidade: ${quem}. Continue por ele, na lista do painel.`;
+// PENDENTE: redação minha, o João ainda não leu
+export const gemeoSemCidade = (quem: string): string =>
+  `Já tem um lugar com esse nome que ainda está sem a cidade: ${quem}. Responda primeiro a cidade dele, pela lista do painel: só você sabe se é o mesmo lugar.`;
 // PENDENTE: redação minha, o João ainda não leu
 export const enderecoDeLugar = (quem: string): string =>
   `O endereço que sairia desse nome e dessa cidade já é de outro lugar do app: ${quem}. Mude um pouco o nome pra diferenciar.`;

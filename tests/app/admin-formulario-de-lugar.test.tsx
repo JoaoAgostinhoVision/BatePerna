@@ -698,21 +698,24 @@ describe("/admin/novo — o lugar novo nasce do nome e da cidade", () => {
     expect(await lerRascunho(cliente, "lugar-marcador-um-cidade-marcador-um")).toBeNull();
   });
 
-  // A INVERSÃO da onda 1: o nome de um lugar que já está no ar, numa cidade, nasce.
-  it("nome de um lugar que já existe, numa cidade: nasce em outro endereço, e o lugar fica intacto", async () => {
+  // A INVERSÃO DA INVERSÃO (onda de fix da 11b, X2): o nome de um lugar que já
+  // está no ar SEM cidade (como os de hoje) não nasce — a tela mostra a frase
+  // que pede a cidade DAQUELE, e o que ele digitou fica nas caixas.
+  it("nome de um lugar que já existe SEM cidade: a frase pede a cidade dele, e nada nasce", async () => {
     const { assign } = await comRotaDeVerdade();
     const { container } = await paginaNovo();
     const { getAllFichas } = await import("@/lib/ficha");
-    const { slugDoNome } = await import("@/lib/rascunho");
+    const { gemeoSemCidade, slugDoNome } = await import("@/lib/rascunho");
     const alvo = (await getAllFichas()).find((f) => slugDoNome(f.trajeto.waypoints[0].nome) === f.slug)!;
-    fireEvent.change(screen.getByRole("textbox", { name: PERGUNTAS["trajeto.waypoints.0.nome"] }), {
-      target: { value: alvo.trajeto.waypoints[0].nome },
-    });
+    expect(alvo.cidade, "a premissa: os lugares de hoje não têm cidade").toBeUndefined();
+    const nome = screen.getByRole("textbox", { name: PERGUNTAS["trajeto.waypoints.0.nome"] }) as HTMLInputElement;
+    fireEvent.change(nome, { target: { value: alvo.trajeto.waypoints[0].nome } });
     fireEvent.change(screen.getByRole("textbox", { name: PERGUNTAS.cidade }), { target: { value: CIDADE } });
     fireEvent.submit(container.querySelector("form")!);
-    const nasce = `${alvo.slug}-cidade-marcador-um`;
-    await waitFor(() => expect(assign).toHaveBeenCalledWith(`/admin/novo?slug=${nasce}`));
-    expect(await lerRascunho(cliente, alvo.slug)).toBeNull();
+    expect(await screen.findByText(gemeoSemCidade(alvo.trajeto.waypoints[0].nome))).toBeTruthy();
+    expect(assign).not.toHaveBeenCalled();
+    expect(nome.value).toBe(alvo.trajeto.waypoints[0].nome);
+    expect(await lerRascunho(cliente, `${alvo.slug}-cidade-marcador-um`)).toBeNull();
     expect(await historico(cliente, alvo.slug)).toHaveLength(1);
   });
 
