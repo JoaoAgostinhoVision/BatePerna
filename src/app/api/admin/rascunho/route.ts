@@ -48,8 +48,8 @@ const SEM_CACHE = { "cache-control": "no-store" } as const;
  *     (`src/app/api/admin/ficha/route.ts`), mutuamente exclusivas:
  *       `{slug, campo, valor}` · `{slug, campo, naoSei: true}` ·
  *       `{slug, ponto, lat, lng}`.
- *     Renomear (o nome do ponto `0` mudar no documento, por qualquer grafia
- *     do caminho) passa pelas mesmas portas do nome do POST; a coordenada do ponto só entra como PAR (a terceira forma).
+ *     Renomear (`trajeto.waypoints.0.nome`) passa pela mesma colisão de nome do
+ *     POST; a coordenada do ponto só entra como PAR (a terceira forma).
  *     A terceira existe pra o editor de coordenada servir aqui SEM MUDAR: ele
  *     grava o ponto do trajeto inteiro, num corpo só, por essa forma.
  *   - `GET` — a lista; com `?slug=`, o documento de um.
@@ -122,26 +122,8 @@ async function nomeOcupado(nome: string, exceto?: string): Promise<string | null
   return null;
 }
 
-/** 🔴 AS PORTAS DO NOME, numa função só — o POST (o lugar nasce) e o PUT (ele se
- *  renomeia) passam pelas MESMAS, na MESMA ordem: em branco → `NOME_VAZIO`; sem
- *  letra nem número → `NOME_SEM_LETRA`; nome de tela do app → `NOME_DE_TELA`;
- *  nome de um lugar ou de outro rascunho → `nomeOcupado`. Devolve a recusa, ou
- *  `null` se o nome passa. `exceto` é o próprio rascunho, quando ele se renomeia.
- *
- *  Até a onda 3 o PUT tinha uma cópia parcial disto (só a colisão), e um
- *  rascunho podia virar "!!!" pelo PUT, que o POST recusava. */
-async function recusaDoNome(nome: string, exceto?: string): Promise<Response | null> {
-  // Sem `trim` aqui, e foi medido: o POST já apara antes de chamar, e no PUT o
-  // nome em branco nunca chega (a folha recusa a caixa vazia antes) — com ou
-  // sem `trim`, `slugDoNome` e `nomeOcupado` decidem igual, e a mutação que o
-  // tirava sobrevivia à suíte inteira por ser equivalente.
-  if (nome === "") return new Response(NOME_VAZIO, { status: 400, headers: TEXTO });
-  const slug = slugDoNome(nome);
-  if (slug === "") return new Response(NOME_SEM_LETRA, { status: 400, headers: TEXTO });
-  if (SLUGS_RESERVADOS.includes(slug)) return new Response(NOME_DE_TELA, { status: 409, headers: TEXTO });
-  const ocupado = await nomeOcupado(nome, exceto);
-  return ocupado === null ? null : new Response(ocupado, { status: 409, headers: TEXTO });
-}
+/** O campo que é o NOME do lugar (o ponto `0`). Renomear passa pela colisão. */
+const CAMPO_DO_NOME = "trajeto.waypoints.0.nome";
 
 export async function POST(req: Request): Promise<Response> {
   const fechada = porta(req);
@@ -154,12 +136,16 @@ export async function POST(req: Request): Promise<Response> {
     return new Response("", { status: 400, headers: TEXTO });
   }
   const nome = corpo.nome.trim();
+  if (nome === "") return new Response(NOME_VAZIO, { status: 400, headers: TEXTO });
+  const slug = slugDoNome(nome);
+  if (slug === "") return new Response(NOME_SEM_LETRA, { status: 400, headers: TEXTO });
+  if (SLUGS_RESERVADOS.includes(slug)) return new Response(NOME_DE_TELA, { status: 409, headers: TEXTO });
+
   // O NOME, antes do endereço. As duas recusas são de coisas DIFERENTES (o nome
   // que bate com endereço outro × o endereço que bate com nome outro), e cada
   // uma tem caso que só ela pega — não é a mesma porta duas vezes.
-  const doNome = await recusaDoNome(nome);
-  if (doNome !== null) return doNome;
-  const slug = slugDoNome(nome);
+  const doNome = await nomeOcupado(nome);
+  if (doNome !== null) return new Response(doNome, { status: 409, headers: TEXTO });
 
   // 🔴 A COLISÃO TEM UMA PORTA SÓ, e ela é a consulta de `criarRascunho`: o
   // INSERT só acontece se o slug não existe em `ficha_rascunhos` NEM em
@@ -226,27 +212,19 @@ export async function PUT(req: Request): Promise<Response> {
   const atual = await lerRascunho(getClient(), slug);
   if (atual === null) return new Response("", { status: 400, headers: TEXTO });
 
+  // Renomear é a segunda porta do mesmo buraco do POST: um rascunho que nasceu
+  // com outro nome não pode virar o nome de um lugar (ou de outro rascunho)
+  // depois. Valor que não é texto segue adiante e é recusado pela folha.
+  if (campo === CAMPO_DO_NOME && typeof valor === "string") {
+    const renomeado = await nomeOcupado(valor, slug);
+    if (renomeado !== null) return new Response(renomeado, { status: 409, headers: TEXTO });
+  }
+
   let novoDoc: string;
   try {
     novoDoc = mudar(atual.doc);
   } catch (erro) {
     return recusar400(erro);
-  }
-
-  // 🔴 RENOMEAR passa pelas portas do POST (`recusaDoNome`), e quem decide se
-  // houve renomeação é o RESULTADO — o nome do ponto `0` no documento novo
-  // contra o do atual —, nunca o texto do caminho pedido. Até a onda 3 era
-  // `campo === "trajeto.waypoints.0.nome"`, e `trajeto.waypoints.00.nome` (que
-  // `escrever` lê como o índice 0) renomeava o rascunho pro nome exato de um
-  // lugar no ar. Nome que não mudou não paga a leitura, e um rascunho que já
-  // tinha um nome colidindo continua respondendo as outras perguntas.
-  //   O nome em branco nunca chega aqui (a folha recusa a caixa vazia antes), e
-  // por isso o recuo de `nomeDoRascunho` pro slug não pesa: medido, ler o nome
-  // cru em vez dele era mutação equivalente.
-  const nomeNovo = nomeDoRascunho(novoDoc, slug);
-  if (nomeNovo !== nomeDoRascunho(atual.doc, slug)) {
-    const recusa = await recusaDoNome(nomeNovo, slug);
-    if (recusa !== null) return recusa;
   }
   await salvarRascunho(getClient(), slug, novoDoc, Math.floor(Date.now() / 1000));
   return Response.json({ slug }, { headers: SEM_CACHE });
