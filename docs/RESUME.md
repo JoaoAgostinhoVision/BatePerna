@@ -68,6 +68,9 @@ regra "pin fora da vista"). Se não houver commit de código depois de `1f09660`
 Depois, arraste o pin pra acertar."
 ▶ **A 11e foi despachada** (`task-11e-PROMPT.md`; se não houver commit de código depois de `f4ecb34`, redespachar
 COMO ESTÁ). Depois: medir → revisão → **Tarefa 12** (brief com G1′, 12-I1..I3, 12-E5 acrescentados hoje).
+✅ **11e feita: `7b70416`** (2133/2133 em 104, tsc 0, build 0, mutar 42/0; 307 + no-store medido). **Revisão
+despachada** (`task-11e-review.md`; se não existir, redespachar). Abertas por ele: corrida edição×troca recriando o
+endereço velho; ponteiro `/__ultima__` do SW podendo abrir lugar escondido offline.
 📝 **Pacote de copy pro João (crescendo):** "Abre sábado e domingo. Abre das 8h às 10h e das 14h às 17h."; "abre
 domingo às 8h" dito num domingo; "Não sei — o app não diz nada sobre isto" com horário ausente (FALSO: sem horário
 nunca fecha); "Escolha uma hora, no formato HH:MM." pra faixa vazia; e todas as `PENDENTE` dos relatórios 11b/c/d/f. Ordem nova: 11d → **11f** → 11e → 12.
