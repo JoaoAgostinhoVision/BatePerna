@@ -55,6 +55,15 @@ export async function ensureSchema(client: Client): Promise<void> {
   // 2026-09-24, então ESTA tabela é a única procedência que existe — não há
   // `git blame` de socorro. Voltar a uma versão antiga GRAVA uma versão nova.
   //
+  // 🔴 A ÚNICA EXCEÇÃO AO APPEND-ONLY, e ela não toca no que foi DITO (Tarefa
+  // 11e): trocar o endereço (`trocarEndereco`) faz UPDATE no `ficha_slug` e no
+  // `slug` de dentro de cada `doc` daquele lugar. O slug é IDENTIDADE, não
+  // palavra do dono — e um lugar com o histórico partido entre dois endereços,
+  // ou com docs que dizem um endereço morando em outro (o "Ficha divergente" de
+  // `fichaDaVersao` derrubaria a home inteira), seria pior que o UPDATE. Nenhum
+  // texto, preço, aviso ou visibilidade muda; e o ATO fica gravado numa versão
+  // nova, com `endereco_anterior`.
+  //
   // `doc` é o JSON da ficha INTEIRA, não um campo. Versão de documento inteiro
   // torna "voltar" trivial e espelha o que o git fazia; o custo é não haver
   // diff por campo, que ninguém pediu.
@@ -78,6 +87,38 @@ export async function ensureSchema(client: Client): Promise<void> {
   // é o que valida, grava a versão 1 e apaga esta linha.
   await client.execute(`CREATE TABLE IF NOT EXISTS ficha_rascunhos (
     slug TEXT PRIMARY KEY, doc TEXT NOT NULL, atualizado_em INTEGER NOT NULL)`);
+  // 🔴 O ENDEREÇO É DADO NO BANCO (Tarefa 11e, decisão do João de 04/10): um
+  // lugar publicado muda de endereço SÓ quando ele manda, e o endereço antigo
+  // passa a levar ao novo — o link que já circula no WhatsApp não morre. Cada
+  // linha diz "quem abrir `velho` vai pra `novo`".
+  //
+  // SEM CADEIA, por construção (ver `trocarEndereco`): trocar A→B e depois B→C
+  // deixa A→C e B→C, nunca A→B→C. Uma consulta, uma resposta.
+  //
+  // ⚠️ E ELA SOBRESCREVE E APAGA, como `ficha_rascunhos`, e pela mesma régua: a
+  // linha não afirma nada sobre o lugar — é encanamento de link. A procedência
+  // ("este lugar morou em A") mora em `ficha_versoes.endereco_anterior`, que é
+  // append-only; aqui a linha pode sumir quando A for RETOMADO por outro lugar.
+  await client.execute(`CREATE TABLE IF NOT EXISTS enderecos_antigos (
+    velho TEXT PRIMARY KEY, novo TEXT NOT NULL, em INTEGER NOT NULL)`);
+  await migrarColunaEnderecoAnterior(client);
+}
+
+/** A coluna `endereco_anterior` de `ficha_versoes` (Tarefa 11e, I4 da
+ *  auditoria), pelo MESMO molde de `migrarColunaOculto` e pelas mesmas razões
+ *  (a tabela já está em produção; `ADD COLUMN` não tem `IF NOT EXISTS`).
+ *
+ *  Só a versão do ATO de trocar o endereço a preenche, com o endereço de onde o
+ *  lugar veio. Sem ela, o único registro de "este lugar morou em A" seria a
+ *  linha de `enderecos_antigos` — que some quando A é retomado (E5). Numa
+ *  tabela que é a única procedência do projeto, o fato sumiria do banco.
+ *
+ *  Nula em toda linha que já existe, e é a verdade: nenhuma delas trocou de
+ *  endereço. */
+async function migrarColunaEnderecoAnterior(client: Client): Promise<void> {
+  const colunas = await client.execute(`PRAGMA table_info(ficha_versoes)`);
+  if (colunas.rows.some((c) => String(c.name) === "endereco_anterior")) return;
+  await client.execute(`ALTER TABLE ficha_versoes ADD COLUMN endereco_anterior TEXT`);
 }
 
 /** A coluna `oculto` de `ficha_versoes`, por `ALTER TABLE` guardado.
@@ -252,6 +293,10 @@ export type FichaVersao = {
    *  o painel continua editando o lugar, e a versão seguinte pode devolvê-lo ao
    *  ar. Ver `versoesAtuais`. */
   oculto: boolean;
+  /** Só na versão do ATO de trocar o endereço (Tarefa 11e): o endereço de onde
+   *  o lugar veio. Ausente em toda outra versão — a chave nem existe, e não
+   *  `null`, pra uma versão comum continuar com a forma de sempre. */
+  endereco_anterior?: string;
 };
 
 function versaoDaLinha(r: Record<string, unknown>): FichaVersao {
@@ -266,10 +311,12 @@ function versaoDaLinha(r: Record<string, unknown>): FichaVersao {
     // nasceria escondida, o app inteiro fora do ar sem ninguém pedir. Mesma
     // régua das outras conversões desta função: à mão, e pro tipo certo.
     oculto: Number(r.oculto) === 1,
+    ...(r.endereco_anterior == null ? {} : { endereco_anterior: String(r.endereco_anterior) }),
   };
 }
 
-/** Grava uma versão NOVA — INSERT, nunca UPDATE (ver o comentário da tabela).
+/** Grava uma versão NOVA — INSERT, nunca UPDATE (ver o comentário da tabela;
+ *  a única exceção é a troca de endereço, `trocarEndereco`, e é de IDENTIDADE).
  *
  *  🔴 O `oculto` TEM DEFAULT `false` PRA NÃO MEXER NOS CHAMADORES ANTIGOS, E
  *  ISSO É UMA ARMADILHA PARA QUEM GRAVA UMA EDIÇÃO. Quem grava versão nova de um
@@ -478,4 +525,119 @@ export async function listarRascunhos(client: Client): Promise<Rascunho[]> {
  *  afirmou nada. */
 export async function apagarRascunho(client: Client, slug: string): Promise<void> {
   await client.execute({ sql: `DELETE FROM ficha_rascunhos WHERE slug = ?`, args: [slug] });
+}
+
+/** TROCA O ENDEREÇO DE UM LUGAR PUBLICADO, de `velho` pra `novo`, e o velho
+ *  passa a levar ao novo (Tarefa 11e, decisões do João de 04/10). Devolve
+ *  `false` SEM MUDAR NADA quando `velho` não é lugar, ou quando `novo` já é de
+ *  um lugar (no ar ou ESCONDIDO — lugar escondido é lugar, e volta) ou de um
+ *  rascunho. `novo` é de quem chama: a rota o calcula no servidor, do nome e da
+ *  cidade que o documento já diz (I6 da auditoria).
+ *
+ *  🔴 UM BATCH `write`, UMA TRANSAÇÃO: todos os passos ou nenhum (medido pela
+ *  auditoria nos dois drivers — local é `BEGIN IMMEDIATE`/`ROLLBACK`; remoto o
+ *  hrana condiciona cada passo ao anterior). Um lugar com o histórico partido
+ *  entre dois endereços, ou dois lugares no mesmo, é o que um meio-termo daria.
+ *
+ *  🔴 E UM BATCH NÃO RAMIFICA (I5): a conferência "novo livre" é o 1º passo
+ *  (o INSERT da linha `velho→novo`, só se velho é lugar e novo está livre), e
+ *  TODO passo seguinte é condicionado a ESSA linha existir com este `em`. Copiar
+ *  o `NOT EXISTS` em cada passo seria errado: depois do 1º UPDATE mover as
+ *  versões, "novo livre" vira falso e o resto ficaria no velho, EM SILÊNCIO.
+ *  E `client.transaction()` (que deixaria ler e decidir) é PROIBIDO aqui: em
+ *  `:memory:` o cliente 0.14 larga a conexão depois dela, e a consulta seguinte
+ *  abre um banco VAZIO — é assim que roda a suíte inteira.
+ *
+ *  Os passos, em ordem, e por que cada um:
+ *   1. a linha `velho→novo` — o portão (ver acima);
+ *   2. os ÓRFÃOS de `novo` (aviso e relato gravados lá por uma corrida depois
+ *      que o lugar de antes saiu dali) voltam pro lugar a que `novo` levava —
+ *      quem retoma um endereço não herda o "N foram hoje" de outro lugar;
+ *   3. o `slug` de DENTRO de cada `doc` vira `novo` (`json_set`, que sai byte a
+ *      byte igual ao `JSON.stringify` — medido). Sem isto, "voltar" gravaria um
+ *      doc que diz `velho` sob `novo` e o "Ficha divergente" derrubaria a home
+ *      INTEIRA. `json_valid` deixa a versão ilegível como está (M4): sem ele, um
+ *      doc torto estouraria o batch e o lugar nunca mais trocaria de endereço;
+ *   4. versões, avisos e relatos mudam de `ficha_slug`;
+ *   5. `freshness`: a linha órfã de `novo` sai antes (PK — é cache
+ *      recalculável, não afirmação do dono), e a do lugar vai junto;
+ *   6. quem apontava pro velho passa a apontar pro novo (sem cadeia);
+ *   7. a linha cujo `velho` é o NOVO some — é a retomada (E5), e a ida e volta
+ *      A→B→A não deixa um A→A;
+ *   8. a versão do ATO, por `INSERT … SELECT` da atual DENTRO do batch: herda o
+ *      `oculto` dela (C1 — com o default, trocar o endereço de um lugar
+ *      escondido o poria no ar) e grava `endereco_anterior`. */
+export async function trocarEndereco(client: Client, velho: string, novo: string, agora: number): Promise<boolean> {
+  // O portão de todo passo depois do 1º: a linha que o 1º acabou de gravar.
+  const porta = `EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ? AND novo = ? AND em = ?)`;
+  const p = [velho, novo, agora];
+  const rs = await client.batch(
+    [
+      {
+        sql: `INSERT INTO enderecos_antigos (velho, novo, em)
+              SELECT ?, ?, ?
+              WHERE EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
+                AND NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
+                AND NOT EXISTS (SELECT 1 FROM ficha_rascunhos WHERE slug = ?)
+              ON CONFLICT(velho) DO NOTHING`,
+        args: [velho, novo, agora, velho, novo, novo],
+      },
+      {
+        sql: `UPDATE avisos SET ficha_slug = (SELECT e.novo FROM enderecos_antigos e WHERE e.velho = ?)
+              WHERE ficha_slug = ? AND EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ?) AND ${porta}`,
+        args: [novo, novo, novo, ...p],
+      },
+      {
+        sql: `UPDATE confirmacoes SET ficha_slug = (SELECT e.novo FROM enderecos_antigos e WHERE e.velho = ?)
+              WHERE ficha_slug = ? AND EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ?) AND ${porta}`,
+        args: [novo, novo, novo, ...p],
+      },
+      {
+        sql: `UPDATE ficha_versoes SET doc = json_set(doc, '$.slug', ?)
+              WHERE ficha_slug = ? AND json_valid(doc) AND ${porta}`,
+        args: [novo, velho, ...p],
+      },
+      { sql: `UPDATE ficha_versoes SET ficha_slug = ? WHERE ficha_slug = ? AND ${porta}`, args: [novo, velho, ...p] },
+      { sql: `UPDATE avisos SET ficha_slug = ? WHERE ficha_slug = ? AND ${porta}`, args: [novo, velho, ...p] },
+      { sql: `UPDATE confirmacoes SET ficha_slug = ? WHERE ficha_slug = ? AND ${porta}`, args: [novo, velho, ...p] },
+      { sql: `DELETE FROM freshness WHERE ficha_slug = ? AND ${porta}`, args: [novo, ...p] },
+      { sql: `UPDATE freshness SET ficha_slug = ? WHERE ficha_slug = ? AND ${porta}`, args: [novo, velho, ...p] },
+      { sql: `UPDATE enderecos_antigos SET novo = ? WHERE novo = ? AND ${porta}`, args: [novo, velho, ...p] },
+      { sql: `DELETE FROM enderecos_antigos WHERE velho = ? AND ${porta}`, args: [novo, ...p] },
+      {
+        sql: `INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em, oculto, endereco_anterior)
+              SELECT ?, doc, 'painel', ?, oculto, ?
+              FROM ficha_versoes WHERE ficha_slug = ? AND ${porta}
+              ORDER BY id DESC LIMIT 1`,
+        args: [novo, agora, velho, novo, ...p],
+      },
+    ],
+    "write",
+  );
+  return rs[0].rowsAffected === 1;
+}
+
+/** Pra onde o endereço `velho` leva hoje, ou `null` se ele não é endereço
+ *  antigo de ninguém. NÃO diz se o lugar de lá está no ar: quem chama decide
+ *  (a página pública só leva a lugar visível; o painel leva sempre). */
+export async function enderecoNovoDe(client: Client, velho: string): Promise<string | null> {
+  const r = await client.execute({ sql: `SELECT novo FROM enderecos_antigos WHERE velho = ?`, args: [velho] });
+  return r.rows.length ? String(r.rows[0].novo) : null;
+}
+
+/** Os endereços antigos que levam a `novo`, em ordem — a página do lugar os
+ *  passa ao "✓ Fui", pra a fila offline subir os relatos guardados no
+ *  endereço de antes (I1 da auditoria). */
+export async function enderecosAntigosDe(client: Client, novo: string): Promise<string[]> {
+  const r = await client.execute({
+    sql: `SELECT velho FROM enderecos_antigos WHERE novo = ? ORDER BY velho`,
+    args: [novo],
+  });
+  return r.rows.map((l) => String(l.velho));
+}
+
+/** Todo endereço antigo — a semente os trata como "já tem" (E6). */
+export async function enderecosVelhos(client: Client): Promise<Set<string>> {
+  const r = await client.execute(`SELECT velho FROM enderecos_antigos`);
+  return new Set(r.rows.map((l) => String(l.velho)));
 }

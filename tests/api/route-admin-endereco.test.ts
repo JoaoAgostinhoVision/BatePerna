@@ -1,0 +1,244 @@
+import { createClient, type Client } from "@libsql/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MIN_SENHA } from "@/lib/admin-config";
+import { COOKIE_ADMIN } from "@/lib/admin-guarda";
+import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
+import {
+  criarRascunho,
+  enderecoNovoDe,
+  ensureSchema,
+  gravarVersao,
+  historico,
+  versaoAtual,
+} from "@/lib/db";
+import {
+  ENDERECO_JA_E_ESSE,
+  SEM_CIDADE_PRA_ENDERECO,
+  enderecoOcupadoPorLugar,
+  enderecoOcupadoPorRascunho,
+} from "@/lib/endereco";
+import { esquecerMemoria } from "@/lib/ficha-fonte";
+import { enderecoDeLugar } from "@/lib/rascunho";
+import { semearAcervo } from "../banco";
+import { lugarMarcador } from "../lugar-marcador";
+
+// Molde: `tests/api/route-admin-visibilidade.test.ts` — `Request` à mão, sessão
+// de verdade, acervo do BANCO. 🔴 ASSERÇÃO DUPLA: o código da resposta E o banco.
+
+const SENHA = "s".repeat(MIN_SENHA);
+const SEGREDO = "segredo-de-assinatura-do-teste-endereco";
+const AGORA = 1_759_100_000;
+const A = "lugar-marcador-bom-marcador";
+const B = "lugar-marcador-outra-marcadora";
+
+let c: Client;
+let cookieBom: string;
+let POST: typeof import("@/app/api/admin/endereco/route").POST;
+
+vi.mock("@/lib/db", async (io) => {
+  const mod = await io<typeof import("@/lib/db")>();
+  return { ...mod, getClient: () => c };
+});
+
+beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(AGORA * 1000);
+  c = createClient({ url: ":memory:" });
+  await ensureSchema(c);
+  await semearAcervo(c);
+  // O caso dele, com marcadores: nasceu em "Bom Marcador", a cidade foi corrigida.
+  await gravarVersao(c, A, JSON.stringify(lugarMarcador(A, "Lugar Marcador", "Bom Marcador")), "painel", AGORA - 100);
+  await gravarVersao(c, A, JSON.stringify(lugarMarcador(A, "Lugar Marcador", "Outra Marcadora")), "painel", AGORA - 50);
+
+  vi.stubEnv("ADMIN_SENHA", SENHA);
+  vi.stubEnv("ADMIN_SEGREDO", SEGREDO);
+  vi.resetModules();
+  ({ POST } = await import("@/app/api/admin/endereco/route"));
+  cookieBom = criarSessao(SEGREDO, AGORA, DURACAO_SESSAO_S);
+});
+
+afterEach(() => {
+  c.close();
+  vi.unstubAllEnvs();
+  vi.useRealTimers();
+});
+
+function pedido(corpo: unknown, cookie: string | null = cookieBom, cru = false): Request {
+  return new Request("http://x/api/admin/endereco", {
+    method: "POST",
+    headers: cookie ? { cookie: `${COOKIE_ADMIN}=${cookie}` } : undefined,
+    body: cru ? (corpo as string) : JSON.stringify(corpo),
+  });
+}
+
+/** O banco inteiro — o que "nada mudou" compara. */
+async function retrato(): Promise<Record<string, unknown[]>> {
+  const ler = async (sql: string) => (await c.execute(sql)).rows.map((r) => ({ ...r }));
+  return {
+    ficha_versoes: await ler("SELECT * FROM ficha_versoes ORDER BY id"),
+    avisos: await ler("SELECT * FROM avisos ORDER BY id"),
+    confirmacoes: await ler("SELECT * FROM confirmacoes ORDER BY id"),
+    freshness: await ler("SELECT * FROM freshness ORDER BY ficha_slug"),
+    enderecos_antigos: await ler("SELECT * FROM enderecos_antigos ORDER BY velho"),
+    ficha_rascunhos: await ler("SELECT * FROM ficha_rascunhos ORDER BY slug"),
+  };
+}
+
+describe("POST /api/admin/endereco — o caso dele", () => {
+  it("troca pro nome e a cidade de AGORA: 200 com o endereço novo, e o velho leva a ele", async () => {
+    const res = await POST(pedido({ slug: A }));
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await res.json()).toEqual({ slug: B });
+    expect(res.headers.get("cache-control")).toBe("no-store");
+
+    expect(await historico(c, A)).toEqual([]);
+    expect(await historico(c, B)).toHaveLength(3);
+    expect(await enderecoNovoDe(c, A)).toBe(B);
+  });
+
+  it("lugar escondido troca de endereço e continua escondido", async () => {
+    const doc = (await versaoAtual(c, A))!.doc;
+    await gravarVersao(c, A, doc, "painel", AGORA - 10, true);
+    expect((await POST(pedido({ slug: A }))).status).toBe(200);
+    expect((await versaoAtual(c, B))!.oculto).toBe(true);
+  });
+
+  it("voltar a uma versão de antes da troca: 200, e a home continua de pé", async () => {
+    const deAntes = (await historico(c, A)).at(-1)!.id;
+    expect((await POST(pedido({ slug: A }))).status).toBe(200);
+
+    const { PUT } = await import("@/app/api/admin/ficha/route");
+    const volta = await PUT(
+      new Request("http://x/api/admin/ficha", {
+        method: "PUT",
+        headers: { cookie: `${COOKIE_ADMIN}=${cookieBom}` },
+        body: JSON.stringify({ slug: B, versaoId: deAntes }),
+      }),
+    );
+    expect(volta.status, await volta.clone().text()).toBe(200);
+
+    // A home lê o acervo inteiro; uma versão que dissesse A sob B derrubaria TODOS.
+    esquecerMemoria();
+    const { getAllFichas } = await import("@/lib/ficha");
+    const slugs = (await getAllFichas()).map((f) => f.slug);
+    expect(slugs).toContain(B);
+    expect(slugs).not.toContain(A);
+    // Voltar restaura o DOCUMENTO (a cidade de antes), nunca o endereço.
+    expect(JSON.parse((await versaoAtual(c, B))!.doc)).toMatchObject({ slug: B, cidade: "Bom Marcador" });
+  });
+});
+
+describe("POST /api/admin/endereco — recusas, e nada muda", () => {
+  it("painel desligado: 404 de corpo vazio", async () => {
+    vi.stubEnv("ADMIN_SENHA", "");
+    const antes = await retrato();
+    const res = await POST(pedido({ slug: A }));
+    expect(res.status).toBe(404);
+    expect(await res.text()).toBe("");
+    expect(await retrato()).toEqual(antes);
+  });
+
+  it("sem sessão: 401 de corpo vazio", async () => {
+    const antes = await retrato();
+    const res = await POST(pedido({ slug: A }, null));
+    expect(res.status).toBe(401);
+    expect(await res.text()).toBe("");
+    expect(await retrato()).toEqual(antes);
+  });
+
+  it.each([
+    ["não é JSON", "{ isto não", true],
+    ["null", null, false],
+    ["sem slug", {}, false],
+    ["slug não é texto", { slug: 3 }, false],
+  ])("corpo malformado (%s): 400", async (_nome, corpo, cru) => {
+    const antes = await retrato();
+    const res = await POST(pedido(corpo, cookieBom, cru as boolean));
+    expect(res.status).toBe(400);
+    expect(await retrato()).toEqual(antes);
+  });
+
+  // 🔴 I6 da auditoria: o endereço novo sai do SERVIDOR, do nome e da cidade
+  // que o documento já diz. Um corpo que traga o novo é corpo malformado — um
+  // endereço com uma cidade que nenhum dado do lugar diz fere a linha vermelha.
+  it("um corpo com `novo` a mais é 400, e nada muda", async () => {
+    const antes = await retrato();
+    const res = await POST(pedido({ slug: A, novo: "lugar-marcador-cidade-inventada" }));
+    expect(res.status).toBe(400);
+    expect(await retrato()).toEqual(antes);
+  });
+
+  it("lugar que não existe: 400", async () => {
+    const antes = await retrato();
+    expect((await POST(pedido({ slug: "lugar-que-nao-existe-marcador" }))).status).toBe(400);
+    expect(await retrato()).toEqual(antes);
+  });
+
+  it("lugar sem cidade: 400 com a frase", async () => {
+    const antes = await retrato();
+    const res = await POST(pedido({ slug: "rampa-do-pepe" }));
+    expect(res.status).toBe(400);
+    expect(await res.text()).toBe(SEM_CIDADE_PRA_ENDERECO);
+    expect(await retrato()).toEqual(antes);
+  });
+
+  it("o endereço já é o do nome e da cidade: 400 com a frase", async () => {
+    await gravarVersao(c, A, JSON.stringify(lugarMarcador(A, "Lugar Marcador", "Bom Marcador")), "painel", AGORA - 10);
+    const antes = await retrato();
+    const res = await POST(pedido({ slug: A }));
+    expect(res.status).toBe(400);
+    expect(await res.text()).toBe(ENDERECO_JA_E_ESSE);
+    expect(await retrato()).toEqual(antes);
+  });
+
+  it("novo ocupado por lugar ESCONDIDO: 409 dizendo quem, e nada mudou em nenhuma tabela", async () => {
+    await gravarVersao(c, B, JSON.stringify(lugarMarcador(B, "Outro Marcador", "Cidade Marcadora")), "painel", AGORA - 5, true);
+    const antes = await retrato();
+    const res = await POST(pedido({ slug: A }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(enderecoOcupadoPorLugar(B, "Outro Marcador (Cidade Marcadora)"));
+    expect(await retrato()).toEqual(antes);
+  });
+
+  it("novo ocupado por um rascunho: 409 dizendo quem, e nada muda", async () => {
+    await criarRascunho(c, B, JSON.stringify({ slug: B, cidade: "Outra Marcadora", trajeto: { waypoints: [{ nome: "Lugar Marcador" }] } }), AGORA - 5);
+    const antes = await retrato();
+    const res = await POST(pedido({ slug: A }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(enderecoOcupadoPorRascunho(B, "Lugar Marcador (Outra Marcadora)"));
+    expect(await retrato()).toEqual(antes);
+  });
+});
+
+// 🔴 O CENÁRIO QUE MOTIVOU A TAREFA, ATÉ ONDE EXISTE CÓDIGO (E5): a Pedra do
+// Navio foi publicada com a cidade errada (Bom Jardim) e corrigida pra Floresta;
+// depois a Pedra do Navio de Bom Jardim DE VERDADE precisa do endereço
+// `pedra-do-navio-bom-jardim`. Aqui com marcadores. Publicar o rascunho é a
+// Tarefa 12 — este caso vai até o rascunho nascer no endereço retomado.
+describe("o cenário dele: retomar o endereço velho", () => {
+  it("antes da troca o lugar novo esbarra no endereço; depois, nasce nele, e o velho segue levando ao lugar corrigido", async () => {
+    const { POST: criar } = await import("@/app/api/admin/rascunho/route");
+    const novoLugar = () =>
+      criar(
+        new Request("http://x/api/admin/rascunho", {
+          method: "POST",
+          headers: { cookie: `${COOKIE_ADMIN}=${cookieBom}` },
+          body: JSON.stringify({ nome: "Lugar Marcador", cidade: "Bom Marcador" }),
+        }),
+      );
+
+    const antes = await novoLugar();
+    expect(antes.status, "o endereço ainda é do lugar corrigido").toBe(409);
+    // A frase diz a saída que agora existe (M7): trocar o endereço do outro.
+    expect(await antes.text()).toBe(enderecoDeLugar("Lugar Marcador (Outra Marcadora)"));
+
+    expect((await POST(pedido({ slug: A }))).status).toBe(200);
+
+    const depois = await novoLugar();
+    expect(depois.status, await depois.clone().text()).toBe(201);
+    expect(await depois.json()).toEqual({ slug: A });
+    // Enquanto é rascunho, o endereço velho continua levando ao lugar corrigido.
+    expect(await enderecoNovoDe(c, A)).toBe(B);
+    expect(await historico(c, A)).toEqual([]);
+  });
+});

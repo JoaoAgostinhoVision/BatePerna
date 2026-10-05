@@ -160,7 +160,9 @@ export async function POST(req: Request): Promise<Response> {
   // letra (conferido acima), então o endereço tem sempre um hífen no meio, e
   // nenhuma tela do app (`SLUGS_RESERVADOS`) tem: ele nunca chega a uma.
   // Enquanto é RASCUNHO, o endereço acompanha o nome e a cidade (ver o PUT);
-  // depois de publicado, não muda mais — link que já circula continua valendo.
+  // depois de publicado, só muda quando o dono MANDA (Tarefa 11e, pela porta
+  // `api/admin/endereco`), e o endereço velho continua levando ao novo — link
+  // que já circula continua valendo.
   const agora = Math.floor(Date.now() / 1000);
   const slug = slugDoNome(`${nome} ${cidade}`);
   if (await criarRascunho(getClient(), slug, docDoLugarNovo(slug, nome, cidade), agora)) {

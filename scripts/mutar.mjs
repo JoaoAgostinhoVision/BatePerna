@@ -856,7 +856,7 @@ let MUTACOES = [
     titulo: "a página reinlina o literal do PRECO",
     arquivo: PAGINA,
     edicoes: [{
-      inicio: 109, fim: 109,
+      inicio: 123, fim: 123,
       espera: '  const precoCurto = ficha.custo.valor?.match(PRECO)?.[0] ?? "Pago";',
       novo: '  const precoCurto = ficha.custo.valor?.match(/R\\$\\s?\\d+(?:[.,]\\d{2})?/)?.[0] ?? "Pago"; // mutacao N12',
     }],
@@ -1610,7 +1610,7 @@ const MUTACOES_ESPERADAS = {
   "N9": "src/lib/coerencia.ts@569-572→\"            frase:\\n              `${nomeDe(f)} tem ${inventados.map((d) => `\\\"${d}\\\"`).join(\\\", \\\")} na lista de dias, ` +\\n              \\\"e isso não é dia da semana.\\\", // mutacao N9: reverte a correcao da grafia\" · a frase do dia não reconhecido fala de GRAFIA e mostra os sete dias",
   "N10": "src/lib/coerencia.ts@601-603→\"          frase:\\n            `${nomeDe(f)} declara os sete dias da semana, o que é o mesmo que não declarar dia ` +\\n            \\\"nenhum. Deixe a lista de dias vazia: o app só fala de dia quando o lugar folga em algum.\\\", // mutacao N10\" · a frase da semana inteira não manda esvaziar a lista, porque o schema recusa",
   "N11": "src/lib/coerencia.ts@415-415→\"          frase: true // mutacao N11: colapsa a bifurcacao (sempre 24h)\" · a ficha genuinamente invertida recebe a frase da noite, não a das 24 horas",
-  "N12": "src/app/[slug]/page.tsx@109-109→\"  const precoCurto = ficha.custo.valor?.match(/R\\\\$\\\\s?\\\\d+(?:[.,]\\\\d{2})?/)?.[0] ?? \\\"Pago\\\"; // mutacao N12\" · o texto do regex de preço aparece UMA vez só em todo o src/ + a página continua montando o chip a partir do PRECO importado",
+  "N12": "src/app/[slug]/page.tsx@123-123→\"  const precoCurto = ficha.custo.valor?.match(/R\\\\$\\\\s?\\\\d+(?:[.,]\\\\d{2})?/)?.[0] ?? \\\"Pago\\\"; // mutacao N12\" · o texto do regex de preço aparece UMA vez só em todo o src/ + a página continua montando o chip a partir do PRECO importado",
   "B1a": "src/lib/coerencia.ts@415-415→\"          frase: true // mutacao B1a: sempre a frase das 24h\" · a ficha genuinamente invertida recebe a frase da noite, não a das 24 horas",
   "B1b": "src/lib/coerencia.ts@415-415→\"          frase: false // mutacao B1b: sempre a frase da noite\" · horário igual em abre e fecha é acusado, e a frase fala de 24 horas",
   "B2a": "src/lib/coerencia.ts@178-178→\"          frase: true // mutacao B2a: sempre o ramo ilegivel\" · custo completo AUSENTE recebe a frase do campo vazio",

@@ -252,6 +252,65 @@ describe("resolverNavegacao: ficha", () => {
   });
 });
 
+// 🔴 404 E REDIRECT SÃO RESPOSTA DEFINITIVA (Tarefa 11e, C2 da auditoria).
+// Até aqui, QUALQUER resposta não-`ok` caía na cópia guardada — 404 incluído.
+// Um lugar que o dono ESCONDEU dá 404, e quem já tinha aberto a ficha a
+// continuava vendo inteira, COM REDE, por até 30 dias. É conserto de defeito
+// da Tarefa 9 (esconder), que a 11e multiplica: o endereço velho de um lugar
+// trocado responde com redirect, e a cópia guardada daquela URL é a ficha de
+// antes. Só rede caída (`null`) e 5xx continuam servindo a cópia.
+describe("resolverNavegacao: 404 e redirect são definitivos", () => {
+  it("404 COM cópia: devolve o 404 e manda apagar a cópia daquela URL", async () => {
+    const naoAchou = resposta(404);
+    const cache = cacheFalso({ [FICHA]: resposta() });
+    const r = await resolverNavegacao({ url: `${FICHA}?fbclid=x`, buscarRede: async () => naoAchou, buscarCache: cache.buscar });
+    expect(r.resposta).toBe(naoAchou);
+    expect(r.gravarEm).toEqual([]);
+    expect(r.apagarEm).toEqual([FICHA]);
+  });
+
+  // ⚠️ Não dá pra construir um `opaqueredirect` de verdade no Node (é o que o
+  // navegador devolve a uma navegação com `redirect: "manual"`). O dublê tem os
+  // três campos que o navegador dá a ele — `ok: false`, `status: 0`, `type`.
+  it("redirect (opaqueredirect) COM cópia: devolve ELE, nunca a cópia, e apaga a cópia", async () => {
+    const redirecionou = { ok: false, status: 0, type: "opaqueredirect" } as unknown as Response;
+    const cache = cacheFalso({ [FICHA]: resposta() });
+    const r = await resolverNavegacao({ url: FICHA, buscarRede: async () => redirecionou, buscarCache: cache.buscar });
+    expect(r.resposta).toBe(redirecionou);
+    expect(r.gravarEm).toEqual([]);
+    expect(r.apagarEm).toEqual([FICHA]);
+  });
+
+  it("redirect com status 3xx visível (307) COM cópia: idem", async () => {
+    const redirecionou = new Response(null, { status: 307, headers: { location: "/outro" } });
+    const cache = cacheFalso({ [FICHA]: resposta() });
+    const r = await resolverNavegacao({ url: FICHA, buscarRede: async () => redirecionou, buscarCache: cache.buscar });
+    expect(r.resposta).toBe(redirecionou);
+    expect(r.apagarEm).toEqual([FICHA]);
+  });
+
+  it("500 COM cópia: serve a cópia, e não apaga nada", async () => {
+    const guardada = resposta();
+    const cache = cacheFalso({ [FICHA]: guardada });
+    const r = await resolverNavegacao({ url: FICHA, buscarRede: async () => resposta(500), buscarCache: cache.buscar });
+    expect(r.resposta).toBe(guardada);
+    expect(r.apagarEm).toEqual([]);
+  });
+
+  it("sem rede COM cópia: serve a cópia, e não apaga nada", async () => {
+    const guardada = resposta();
+    const cache = cacheFalso({ [FICHA]: guardada });
+    const r = await resolverNavegacao({ url: FICHA, buscarRede: semRede, buscarCache: cache.buscar });
+    expect(r.resposta).toBe(guardada);
+    expect(r.apagarEm).toEqual([]);
+  });
+
+  it("rede boa não apaga nada", async () => {
+    const r = await resolverNavegacao({ url: FICHA, buscarRede: async () => resposta(), buscarCache: cacheFalso().buscar });
+    expect(r.apagarEm).toEqual([]);
+  });
+});
+
 describe("resolverNavegacao: raiz", () => {
   it("com rede boa (200) devolve o que veio, e não grava", async () => {
     const ok = resposta(200);

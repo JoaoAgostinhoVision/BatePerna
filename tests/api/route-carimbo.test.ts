@@ -59,3 +59,36 @@ describe("route /api/carimbo", () => {
     expect(await res.json()).toMatchObject({ erro: true, estado: "frio" });
   });
 });
+
+// 🔴 A PÁGINA GUARDADA NO CELULAR CHAMA ESTA ROTA COM O ENDEREÇO DE ANTES
+// (Tarefa 11e, E4): a ficha guardada offline de /A pede o carimbo de A depois
+// que o dono trocou o endereço. A rota resolve A → B, e SÓ pra lugar no ar.
+describe("route /api/carimbo — endereço velho", () => {
+  const A = "lugar-marcador-bom-marcador";
+  const B = "lugar-marcador-outra-marcadora";
+
+  beforeEach(async () => {
+    const { gravarVersao, trocarEndereco } = await import("@/lib/db");
+    const { lugarMarcador } = await import("../lugar-marcador");
+    const banco = await bancoDeProducao();
+    await gravarVersao(banco, A, JSON.stringify(lugarMarcador(A, "Lugar Marcador", "Outra Marcadora")), "painel", AGORA_S - 10);
+    await trocarEndereco(banco, A, B, AGORA_S - 5);
+  });
+
+  it("o endereço velho devolve a leitura do lugar NOVO", async () => {
+    const { GET } = await import("@/app/api/carimbo/route");
+    const res = await GET(new Request(`http://x/api/carimbo?slug=${A}`));
+    expect(res.status).toBe(200);
+    expect(vi.mocked(resolverEstado).mock.calls[0][0].slug).toBe(B);
+  });
+
+  it("o novo ESCONDIDO: 404, como qualquer endereço que não existe", async () => {
+    const { gravarVersao, getClient, versaoAtual } = await import("@/lib/db");
+    const { esquecerMemoria } = await import("@/lib/ficha-fonte");
+    await gravarVersao(getClient(), B, (await versaoAtual(getClient(), B))!.doc, "painel", AGORA_S, true);
+    esquecerMemoria();
+    const { GET } = await import("@/app/api/carimbo/route");
+    expect((await GET(new Request(`http://x/api/carimbo?slug=${A}`))).status).toBe(404);
+    expect(resolverEstado).not.toHaveBeenCalled();
+  });
+});

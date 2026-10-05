@@ -313,6 +313,10 @@ export async function PUT(req: Request): Promise<Response> {
     );
     if (doPar !== null) return new Response(doPar, { status: 409, headers: TEXTO });
 
+    // E O ENDEREÇO TAMBÉM NÃO VOLTA (Tarefa 11e): `gravarVersao` não copia o
+    // `endereco_anterior` da versão antiga — voltar a uma versão de antes de uma
+    // troca de endereço restaura o DOCUMENTO (que já diz o endereço de agora,
+    // reescrito na troca), e o lugar continua onde está.
     const id = await gravarVersao(getClient(), slug, versao.doc, "painel", agora, atual?.oculto ?? false);
     return Response.json({ id }, { headers: { "cache-control": "no-store" } });
   }
@@ -397,7 +401,8 @@ export async function PUT(req: Request): Promise<Response> {
     // 🔴 A LISTA BRANCA saiu de `CAMPOS_EDITAVEIS = ["voz"]` e virou o registro
     // de `campos-da-ficha.ts` (2026-09-26). O que ela guarda é o mesmo: sem ela,
     // um corpo com `{"campo":"slug"}` renomearia o lugar e quebraria todo link
-    // que já circula. `campoPorCaminho` resolve caminho aninhado e índice de
+    // que já circula (trocar o endereço é OUTRA porta, `api/admin/endereco`, que
+    // guarda o velho e o redireciona). `campoPorCaminho` resolve caminho aninhado e índice de
     // waypoint (`trajeto.waypoints.0.nome`) pelo molde do registro.
     if (typeof campo !== "string" || campoPorCaminho(campo) === undefined) {
       return new Response("", { status: 400, headers: TEXTO });

@@ -46,6 +46,9 @@ export interface Resolucao {
   resposta: Response | null;
   /** Chaves onde gravar, todas em CACHE_ULTIMA_FICHA. Vazio = não grava. */
   gravarEm: string[];
+  /** Chaves a APAGAR de CACHE_ULTIMA_FICHA — a cópia de uma URL cuja resposta
+   *  de rede foi DEFINITIVA (404 ou redirect, ver `respostaDefinitiva`). */
+  apagarEm: string[];
 }
 
 /** O NOME DO PARÂMETRO QUE FORÇA O ESTADO DO CARIMBO.
@@ -238,6 +241,18 @@ async function primeiroQueTiver(
   return null;
 }
 
+/** Uma resposta que DIZ algo sobre a URL, em vez de falhar: 404 ("não existe
+ *  mais") ou redirect ("mora noutro endereço").
+ *
+ *  ⚠️ O REDIRECT DE UMA NAVEGAÇÃO CHEGA COMO `opaqueredirect`: navegação é
+ *  `redirect: "manual"`, então o preload e o `fetch(evento.request)` devolvem
+ *  uma resposta opaca, com `status` 0 e `ok` falso — o 307 nunca aparece. Por
+ *  isso as duas formas: o `type`, e o 3xx visível pra quem um dia buscar com
+ *  outro modo. */
+function respostaDefinitiva(r: Response): boolean {
+  return r.status === 404 || r.type === "opaqueredirect" || (r.status >= 300 && r.status < 400);
+}
+
 /** A decisão inteira de uma navegação, sem tocar em Cache nem em fetch: quem
  *  chama entrega as buscas e recebe o que devolver e onde gravar.
  *
@@ -258,22 +273,33 @@ export async function resolverNavegacao({
     // com o acervo guardado bem ali do lado — "/" é a porta do app agora, não
     // um redirect de servidor. Sem cópia guardada nenhuma, a resposta de rede
     // (o erro de verdade) ainda é melhor que inventar um null.
-    if (daRede?.ok) return { resposta: daRede, gravarEm: [] };
+    if (daRede?.ok) return { resposta: daRede, gravarEm: [], apagarEm: [] };
     const guardada = await primeiroQueTiver(buscarCache, planoDaRaiz());
-    return { resposta: guardada ?? daRede, gravarEm: [] };
+    return { resposta: guardada ?? daRede, gravarEm: [], apagarEm: [] };
   }
 
   // 🔴 ESTADO FORÇADO NUNCA VIRA MEMÓRIA. Ver `ehNavegacaoForcada`: servir,
   // sim — ele precisa ver o que pediu. Gravar, nunca: a cópia iria parar sob a
   // URL limpa e mentiria offline por tempo indeterminado.
   if (daRede?.ok) {
-    return { resposta: daRede, gravarEm: ehNavegacaoForcada(url) ? [] : chavesDeGravacao(url) };
+    return { resposta: daRede, gravarEm: ehNavegacaoForcada(url) ? [] : chavesDeGravacao(url), apagarEm: [] };
   }
 
-  // Rede caiu ou respondeu errado. Sem cópia desta ficha, devolve o erro de
-  // verdade — inventar "sem rede" esconderia um 404.
+  // 🔴 404 E REDIRECT SÃO A RESPOSTA, NÃO UMA FALHA (Tarefa 11e, C2 da
+  // auditoria). Até aqui caíam no ramo de baixo e serviam a CÓPIA: um lugar que
+  // o dono ESCONDEU dá 404, e quem já tinha aberto a ficha continuava vendo-a
+  // inteira, com rede, por até 30 dias (conserto de defeito da Tarefa 9). E o
+  // endereço VELHO de um lugar que trocou de endereço responde com redirect — a
+  // cópia dele é a ficha de antes. Os dois devolvem a resposta da rede e mandam
+  // apagar a cópia daquela URL: o servidor disse que ela não vale mais.
+  if (daRede && respostaDefinitiva(daRede)) {
+    return { resposta: daRede, gravarEm: [], apagarEm: [chaveDeFicha(url)] };
+  }
+
+  // Rede caiu ou respondeu errado (5xx). Sem cópia desta ficha, devolve o erro
+  // de verdade — inventar "sem rede" esconderia o erro.
   const guardada = await buscarCache(alvoDaFicha(url));
-  return { resposta: guardada ?? daRede, gravarEm: [] };
+  return { resposta: guardada ?? daRede, gravarEm: [], apagarEm: [] };
 }
 
 /** A IO que o aquecimento precisa, entregue por quem chama. Mesmo desenho do

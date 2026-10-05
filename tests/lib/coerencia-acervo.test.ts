@@ -357,15 +357,18 @@ describe("a cadeia de waypoints — o bloco Trajeto a lê, e o que fala do LUGAR
    *  sete que a spec §6 lista (fora o `page.tsx`, que é misto) MAIS a
    *  `coerencia.ts`, que nasceu depois da spec (Tarefa 3) e lê o `[0]` pro nome
    *  do lugar nas frases das regras — o comentário dela diz por quê — e a
-   *  `rascunho.ts` (Tarefa 11), que lê o `[0]` pro nome do lugar novo. A spec
-   *  contava 8 arquivos; com a coerência e o rascunho são 10 (9 cegos + o
-   *  misto). */
+   *  `rascunho.ts` (Tarefa 11), que lê o `[0]` pro nome do lugar novo, e os que
+   *  vieram depois, cada um com o porquê na lista. Quantos são não está escrito
+   *  aqui: a conta escrita à mão já envelheceu uma vez (dizia 10 e a 11f fez 11). */
   const CEGOS = [
     "src/app/CartaoTrilha.tsx",
     "src/app/ListaDoAcervo.tsx",
     "src/app/MapaHome.tsx",
     "src/app/admin/ListaDeLugares.tsx",
     "src/app/admin/PainelAdmin.tsx",
+    // Tarefa 11e: o endereço que o painel oferece é `nome-cidade`, e o nome é o
+    // do LUGAR — o ponto `[0]`, a mesma regra de quando o lugar nasce.
+    "src/app/admin/[slug]/page.tsx",
     "src/lib/coerencia.ts",
     "src/lib/ficha-fonte.ts",
     "src/lib/geo.ts",

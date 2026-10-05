@@ -1,5 +1,5 @@
 import type { Client } from "@libsql/client";
-import { gravarVersao, versoesAtuais } from "@/lib/db";
+import { enderecosVelhos, gravarVersao, versoesAtuais } from "@/lib/db";
 import type { Ficha } from "@/types/ficha";
 
 /** Põe no banco as fichas que ainda não estão lá, e SÓ essas.
@@ -26,10 +26,15 @@ export async function semear(
   // mesma família do defeito que o "IDEMPOTENTE" do docstring acima existe pra
   // impedir, entrando pela coluna nova.
   const jaTem = await versoesAtuais(client, { incluirOcultos: true });
+  // 🔴 E TODO ENDEREÇO ANTIGO CONTA COMO "JÁ TEM" (Tarefa 11e, E6). Um lugar
+  // cujo endereço o dono trocou não está mais em `versoesAtuais` sob o endereço
+  // de nascença — e a semente, que é o JSON de nascença, o regravaria lá,
+  // VISÍVEL: dois lugares públicos, um deles com a voz antiga no ar.
+  const velhos = await enderecosVelhos(client);
   const semeados: string[] = [];
   const pulados: string[] = [];
   for (const f of fichas) {
-    if (jaTem.has(f.slug) || semeados.includes(f.slug)) { pulados.push(f.slug); continue; }
+    if (jaTem.has(f.slug) || velhos.has(f.slug) || semeados.includes(f.slug)) { pulados.push(f.slug); continue; }
     await gravarVersao(client, f.slug, JSON.stringify(f), "semente", agora);
     semeados.push(f.slug);
   }

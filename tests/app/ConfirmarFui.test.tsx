@@ -235,6 +235,67 @@ describe("o relato não se perde sem sinal", () => {
   });
 });
 
+// 🔴 O ENDEREÇO TROCOU, E A FILA OFFLINE GUARDA O DE ANTES (Tarefa 11e, I1 da
+// auditoria). Quem contou "✓ Fui" sem sinal em /A tem `{slug: A}` na fila; se o
+// dono trocar o endereço pra /B, a pessoa abre /A online, é levada pra /B, e o
+// ✓ Fui monta com `slug = B`. Sem os ANTIGOS, o relato de A nunca subiria — e
+// morreria na meia-noite. E o "já contei hoje" de A vale em B: sem isso a mesma
+// pessoa contaria duas vezes no mesmo dia, o que a fila proíbe.
+describe("o endereço trocou: os relatos e o 'já contei' do endereço de antes", () => {
+  const A = "lugar-marcador-bom-marcador";
+  const B = "lugar-marcador-outra-marcadora";
+  const naFila = () => JSON.parse(localStorage.getItem(CHAVE_FILA) ?? "[]");
+
+  function redeBoa() {
+    const posts: RequestInit[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init?: RequestInit) => {
+        if (init?.method === "POST") posts.push(init);
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ foram: 1, barro: 0 }) });
+      }),
+    );
+    return posts;
+  }
+
+  it("relato {slug: A} na fila, ✓ Fui de B com antigos=[A]: o POST sobe e o relato sai da fila", async () => {
+    localStorage.setItem(CHAVE_FILA, JSON.stringify([{ slug: A, tipo: "seco", dia: diaRecife(Date.now()) }]));
+    const posts = redeBoa();
+    render(<ConfirmarFui slug={B} antigos={[A]} />);
+
+    await screen.findByText(/anotado/i);
+    expect(posts).toHaveLength(1);
+    // Sobe com o slug que a pessoa contou; o servidor resolve A → B e grava em B.
+    expect(JSON.parse(String(posts[0].body))).toEqual({ slug: A, tipo: "seco" });
+    expect(naFila()).toHaveLength(0);
+  });
+
+  it("sem os antigos, o relato de A fica na fila (o controle: é a prop que sobe)", async () => {
+    localStorage.setItem(CHAVE_FILA, JSON.stringify([{ slug: A, tipo: "seco", dia: diaRecife(Date.now()) }]));
+    const posts = redeBoa();
+    render(<ConfirmarFui slug={B} />);
+    await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(posts).toHaveLength(0);
+    expect(naFila()).toHaveLength(1);
+  });
+
+  it("já contou hoje em A: em B a tela já diz 'anotado', sem perguntar de novo", async () => {
+    localStorage.setItem(`bp:contou:${A}:${diaRecife(Date.now())}`, "1");
+    redeBoa();
+    render(<ConfirmarFui slug={B} antigos={[A]} />);
+    await screen.findByText(/anotado/i);
+    expect(screen.queryByRole("button", { name: /Fui/ })).toBeNull();
+  });
+
+  it("o 'já contou' de um lugar que NÃO é antigo deste não vale aqui", async () => {
+    localStorage.setItem(`bp:contou:veu-de-noiva-de-bonito:${diaRecife(Date.now())}`, "1");
+    redeBoa();
+    render(<ConfirmarFui slug={B} antigos={[A]} />);
+    await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
+  });
+});
+
 // 🔴 O PLACAR AFIRMAVA O QUE NÃO PERGUNTOU, e o conserto é SUBTRAÇÃO.
 // A condição era `if (!placar || placar.foram === 0)`, e os dois casos caíam na
 // mesma frase. Mas `placar === null` não é zero — é "não perguntei, ou perguntei

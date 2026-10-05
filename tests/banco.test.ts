@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { createClient } from "@libsql/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { versoesAtuais } from "@/lib/db";
+import { contarHoje, criarRascunho, insertConfirmacao, inserirAviso, listarRascunhos, trocarEndereco, versoesAtuais, avisoVigente } from "@/lib/db";
 import { bancoVazio, semearAcervo } from "./banco";
 
 /** 🔴 O TESTE DO HELPER DESTRUTIVO.
@@ -73,6 +73,32 @@ describe("semearAcervo só aceita banco descartável", () => {
     const fichas = await semearAcervo(c);
     expect(fichas.length, "o acervo do repositório está vazio").toBeGreaterThanOrEqual(3);
     expect((await versoesAtuais(c)).size).toBe(fichas.length);
+    c.close();
+  });
+});
+
+/** 🔴 O ISOLAMENTO ENTRE TESTES DO MESMO ARQUIVO (Tarefa 11e, I9 da auditoria).
+ *  `semearAcervo` é o `beforeEach` de vários arquivos com o MESMO cliente; com a
+ *  semente pulando todo endereço antigo (E6), uma troca de endereço num teste
+ *  deixaria o seguinte com um lugar a menos — verde ou vermelho pelo motivo
+ *  errado. E pela mesma razão os avisos, relatos e rascunhos de um teste não
+ *  podem atravessar pro outro. */
+describe("semearAcervo limpa o que a troca de endereço suja", () => {
+  it("um teste troca o endereço da Rampa; o seguinte, no mesmo cliente, acha as 3 fichas e nada do anterior", async () => {
+    const c = bancoVazio();
+    const fichas = await semearAcervo(c);
+    const AGORA = 1_759_000_000;
+    await inserirAviso(c, "rampa-do-pepe", "aviso marcador", "fechado", AGORA - 1, AGORA + 3600);
+    await insertConfirmacao(c, "rampa-do-pepe", AGORA - 1, "seco");
+    await criarRascunho(c, "lugar-marcador-cidade-marcador", "{}", AGORA);
+    expect(await trocarEndereco(c, "rampa-do-pepe", "lugar-marcador-x", AGORA)).toBe(true);
+
+    await semearAcervo(c);
+
+    expect([...(await versoesAtuais(c)).keys()].sort()).toEqual(fichas.map((f) => f.slug).sort());
+    expect(await avisoVigente(c, "rampa-do-pepe", AGORA)).toBeNull();
+    expect(await contarHoje(c, "rampa-do-pepe", AGORA)).toEqual({ foram: 0, barro: 0 });
+    expect(await listarRascunhos(c)).toEqual([]);
     c.close();
   });
 });

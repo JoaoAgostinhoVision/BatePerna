@@ -87,9 +87,15 @@ export const parDeRascunho = (quem: string): string =>
 // PENDENTE: redação minha, o João ainda não leu
 export const gemeoSemCidade = (quem: string): string =>
   `Já tem um lugar com esse nome que ainda está sem a cidade: ${quem}. Responda primeiro a cidade dele, pela lista do painel: só você sabe se é o mesmo lugar.`;
+// 🔴 FRASE NOVA NA TAREFA 11e (M7 da auditoria): a anterior terminava com "se
+// não for, o painel ainda não sabe dar outro endereço a este" — e deixou de ser
+// verdade quando o endereço passou a ser trocável. O caso que a motivou é o dele
+// (a Pedra do Navio publicada em Bom Jardim por engano e corrigida pra
+// Floresta): o painel do OUTRO lugar avisa que o endereço ainda diz a cidade
+// velha e oferece trocar, e depois disso este endereço fica livre.
 // PENDENTE: redação minha, o João ainda não leu
 export const enderecoDeLugar = (quem: string): string =>
-  `O endereço que sairia desse nome e dessa cidade já é de outro lugar do app: ${quem}. Se for o mesmo lugar, mude o que já existe pela lista; se não for, o painel ainda não sabe dar outro endereço a este.`;
+  `O endereço que sairia desse nome e dessa cidade já é de outro lugar do app: ${quem}. Se for o mesmo lugar, mude o que já existe pela lista. Se não for, e a cidade dele foi corrigida, o painel dele oferece trocar o endereço; depois disso, este fica livre.`;
 // PENDENTE: redação minha, o João ainda não leu
 export const enderecoDeRascunho = (quem: string): string =>
   `O endereço que sairia desse nome e dessa cidade já é de um lugar novo começado: ${quem}. Se for o mesmo lugar, continue por ele na lista do painel; se não for, o painel ainda não sabe dar outro endereço a este.`;

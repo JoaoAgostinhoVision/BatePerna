@@ -20,7 +20,7 @@ import { fichaSchema, type Ficha } from "@/types/ficha";
 // Se a varredura acusar um campo, a saída é ACRESCENTAR o caminho aqui com o
 // motivo escrito. Nunca afrouxar a varredura.
 const FORA_DE_PROPOSITO = new Set([
-  "slug", // é o endereço do lugar: trocar quebra link, cache offline e 247 referências de teste
+  "slug", // é o endereço do lugar: a troca é OUTRA porta (`api/admin/endereco`, Tarefa 11e), que guarda o velho e o redireciona
   "modos", // campo morto — uma única ocorrência em todo o `src/`, a linha que o declara
   "condicao.regra.tipo", // é `z.literal("chuva_binaria")`: não tem segundo valor pra escolher
 ]);

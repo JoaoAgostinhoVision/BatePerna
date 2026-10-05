@@ -31,10 +31,21 @@ import { diaRecife, guardar, pendentes, remover, type Relato } from "@/lib/fila-
 type Placar = { foram: number; barro: number };
 type Fase = "idle" | "perguntando" | "enviando" | "contado" | "erro";
 
-export default function ConfirmarFui({ slug }: { slug: string }) {
+/** `antigos`: os endereços de ANTES deste lugar (Tarefa 11e, I1 da auditoria).
+ *  O dono pode trocar o endereço; quem contou "✓ Fui" sem sinal no endereço
+ *  velho tem o relato guardado com o slug de lá, e quem abre o velho online é
+ *  levado pro novo — onde esta tela monta com o slug NOVO. Sem a lista, aquele
+ *  relato nunca subiria. E o "já contei hoje" de lá vale aqui: a mesma ida não
+ *  conta duas vezes no mesmo dia. O relato sobe com o slug com que foi contado;
+ *  o servidor resolve o endereço velho e grava no novo. */
+export default function ConfirmarFui({ slug, antigos = [] }: { slug: string; antigos?: readonly string[] }) {
   const [placar, setPlacar] = useState<Placar | null>(null);
   const [fase, setFase] = useState<Fase>("idle");
   const jaContouKey = `bp:contou:${slug}:${diaRecife(Date.now())}`;
+  // Texto, e não a lista: a dependência dos efeitos abaixo tem de ser estável
+  // (e `|` nunca aparece num endereço, que é só letra, número e hífen)
+  // entre renders, e uma lista nova a cada render os re-dispararia.
+  const meusSlugs = [slug, ...antigos].join("|");
   // Ref, e não estado: os ouvintes lá embaixo são registrados uma vez e leriam
   // um valor congelado. Mesmo motivo do `vivo` no `Carimbo.tsx`.
   const vivo = useRef(true);
@@ -42,7 +53,8 @@ export default function ConfirmarFui({ slug }: { slug: string }) {
   /** Sobe o que estiver guardado desta trilha. Falhou, fica na fila — a próxima
    *  volta tenta de novo. */
   const escoar = useCallback(async () => {
-    const meus = pendentes(Date.now()).filter((r) => r.slug === slug);
+    const deste = meusSlugs.split("|");
+    const meus = pendentes(Date.now()).filter((r) => deste.includes(r.slug));
     for (const r of meus) {
       try {
         const res = await fetch("/api/confirmar", {
@@ -64,11 +76,12 @@ export default function ConfirmarFui({ slug }: { slug: string }) {
         return; // sem sinal ainda: o resto da fila espera junto
       }
     }
-  }, [slug, jaContouKey]);
+  }, [meusSlugs, jaContouKey]);
 
   useEffect(() => {
     vivo.current = true;
-    if (typeof window !== "undefined" && localStorage.getItem(jaContouKey)) {
+    const dia = diaRecife(Date.now());
+    if (typeof window !== "undefined" && meusSlugs.split("|").some((s) => localStorage.getItem(`bp:contou:${s}:${dia}`))) {
       setFase("contado");
     }
     fetch(`/api/confirmar?slug=${encodeURIComponent(slug)}`)
@@ -77,7 +90,7 @@ export default function ConfirmarFui({ slug }: { slug: string }) {
       .catch(() => {});
     void escoar();
     return () => { vivo.current = false; };
-  }, [slug, jaContouKey, escoar]);
+  }, [slug, meusSlugs, escoar]);
 
   // A volta do bolso e a volta do cache do navegador — os dois mesmos gatilhos
   // que o carimbo usa pra reler a chuva. É quando o sinal costuma ter voltado.

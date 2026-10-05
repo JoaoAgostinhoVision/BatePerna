@@ -1,9 +1,11 @@
 import { cookies } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { COOKIE_ADMIN, avisarDesligado, sessaoValida } from "@/lib/admin-guarda";
-import { getFichaDoDono } from "@/lib/ficha";
+import { enderecoNovoDoDono, getFichaDoDono } from "@/lib/ficha";
+import { avisoDoEndereco } from "@/lib/endereco";
+import { cidadeDoDoc } from "@/lib/rascunho";
 import { atoDeVisibilidade, camposQueMudaram } from "@/lib/campos-mudados";
 import { PRAZO_AVISO_MS, resolverEstado } from "@/lib/carimbo-estado";
 import { comPrazo } from "@/lib/cache-rotas";
@@ -131,7 +133,14 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
   // pelo `getFicha`, que filtra os ocultos e dava 404 pro DONO justamente na
   // página onde mora o botão de mostrar o lugar de novo.
   const doDono = await getFichaDoDono(slug);
-  if (!doDono) notFound();
+  if (!doDono) {
+    // 🔴 O ENDEREÇO VELHO LEVA AO PAINEL NOVO (Tarefa 11e, M5 da auditoria):
+    // DEPOIS da sessão — sem ela, a caixa de senha não diz pra onde o endereço
+    // leva —, e SEM olhar `oculto`: esconder é tirar do público, não do dono.
+    const novo = await enderecoNovoDoDono(slug);
+    if (novo !== null) redirect(`/admin/${novo}`);
+    notFound();
+  }
   const { ficha, oculto } = doDono;
 
   const agora = Math.floor(Date.now() / 1000);
@@ -166,7 +175,19 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
           `voz` passou a ser editada dentro do bloco `campo-voz` da ficha
           inteira, pelo `EditorProsa`, como qualquer outro campo de prosa. Não
           há mais um componente de tela pra um campo só. */}
-      <FichaInteira ficha={ficha} vistaSemPonto={vistaSemPonto ?? undefined} />
+      <FichaInteira
+        ficha={ficha}
+        vistaSemPonto={vistaSemPonto ?? undefined}
+        // 🔴 As cidades que o lugar JÁ TEVE saem do histórico que esta página já
+        // leu; histórico que falhou chega aqui como lista vazia (`lerHistorico`),
+        // e o painel cala (I7).
+        avisoDoEndereco={avisoDoEndereco({
+          endereco: slug,
+          nome: ficha.trajeto.waypoints[0].nome,
+          cidade: ficha.cidade,
+          cidadesDoHistorico: linhas.map((v) => cidadeDoDoc(v.doc)),
+        })}
+      />
       {historicoErro && <p className="adm-erro" role="alert">{HISTORICO_ERRO_LEITURA}</p>}
       <HistoricoDaFicha versoes={versoes} />
     </main>

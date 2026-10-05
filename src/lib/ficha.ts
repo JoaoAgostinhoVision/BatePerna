@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { cache } from "react";
-import { getClient, versaoAtual, versoesAtuais } from "@/lib/db";
+import { enderecoNovoDe, enderecosAntigosDe, getClient, versaoAtual, versoesAtuais } from "@/lib/db";
 import { comPrazo } from "@/lib/cache-rotas";
 import { PRAZO_FICHA_MS, buscarFichas, fichaDaVersao } from "@/lib/ficha-fonte";
 import { fichaSchema, type Ficha } from "@/types/ficha";
@@ -131,4 +131,41 @@ export async function getFichaDoDono(slug: string): Promise<{ ficha: Ficha; ocul
   const v = await lerNoPrazo(versaoAtual(getClient(), slug));
   if (v == null) return null;
   return { ficha: fichaDaVersao(slug, v.doc), oculto: v.oculto };
+}
+
+/** O LUGAR NO AR a que um ENDEREÇO VELHO leva, ou `null` (Tarefa 11e, E4).
+ *
+ *  🔴 SÓ LUGAR VISÍVEL: o destino passa pelo `getFicha` do público, que filtra
+ *  os escondidos. O endereço velho de um lugar escondido é o MESMO 404 de
+ *  qualquer endereço que nunca existiu — não revela que ali houve um lugar, nem
+ *  pra onde ele foi. Usado pela página pública e pelas duas rotas que a página
+ *  guardada no celular chama com o endereço de antes (`/api/confirmar`,
+ *  `/api/carimbo`).
+ *
+ *  Banco que não responde a tempo ESTOURA (pela `lerNoPrazo` do dono): a página
+ *  cai no `error.tsx`, e o service worker serve a cópia guardada — um 404 aqui
+ *  apagaria essa cópia (ver `resolverNavegacao`) por uma falha que não é dele. */
+export async function fichaDoEnderecoAntigo(velho: string): Promise<Ficha | null> {
+  const novo = await lerNoPrazo(enderecoNovoDe(getClient(), velho));
+  return novo === null ? null : getFicha(novo);
+}
+
+/** Pra onde um endereço velho leva, pro DONO — escondido ou não (M5 da
+ *  auditoria da 11e: esconder é tirar do público, não do dono). */
+export async function enderecoNovoDoDono(velho: string): Promise<string | null> {
+  return lerNoPrazo(enderecoNovoDe(getClient(), velho));
+}
+
+/** Os endereços antigos que levam a `slug` — pro "✓ Fui" subir os relatos
+ *  guardados offline no endereço de antes (I1 da auditoria da 11e).
+ *
+ *  ⚠️ FALHA VIRA LISTA VAZIA, e é escolha: sem ela a página do lugar inteira
+ *  cairia por uma leitura acessória. O custo é o de antes desta tarefa — um
+ *  relato guardado no endereço velho espera até a meia-noite e some. */
+export async function antigosDoEndereco(slug: string): Promise<string[]> {
+  try {
+    return await lerNoPrazo(enderecosAntigosDe(getClient(), slug));
+  } catch {
+    return [];
+  }
 }

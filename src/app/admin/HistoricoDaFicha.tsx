@@ -2,6 +2,7 @@
 import { useState } from "react";
 import type { FichaVersao } from "@/lib/db";
 import { DE_VOLTA_AO_AR, ESCONDIDO } from "./campos/palavras";
+import { enderecoTrocado } from "@/lib/endereco";
 
 // PENDENTE: redação minha, o João ainda não leu
 const TITULO = "Histórico da ficha";
@@ -99,6 +100,12 @@ export default function HistoricoDaFicha({ versoes }: Props) {
             </button>
             {v.ato === "escondeu" && <span className="adm-marca-escondido">{ESCONDIDO}</span>}
             {v.ato === "mostrou" && <span className="adm-marca-escondido">{DE_VOLTA_AO_AR}</span>}
+            {/* 🔴 O ATO DE TROCAR O ENDEREÇO (Tarefa 11e, I4): a versão dele tem o
+                MESMO documento da anterior, e sem esta linha sairia só com data e
+                autor. É também a procedência que fica quando o endereço velho é
+                retomado por outro lugar. Voltar a uma versão restaura o
+                DOCUMENTO, nunca o endereço. */}
+            {v.endereco_anterior && <span className="adm-marca-escondido">{enderecoTrocado(v.endereco_anterior)}</span>}
             {v.mudou.length > 0 && (
               // 🔴 `<span>`, NÃO `<li>` aninhado: a linha da versão É o `<li>`, e
               // há teste contando `li` do histórico contra as versões do banco.

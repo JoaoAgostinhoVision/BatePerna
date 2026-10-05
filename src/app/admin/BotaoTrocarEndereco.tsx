@@ -1,0 +1,59 @@
+"use client";
+import { useState } from "react";
+import { ERRO_GRAVAR, ERRO_REDE } from "./campos/gravar";
+import { TROCANDO, TROCAR_MESMO, trocarPara } from "@/lib/endereco";
+
+/** O BOTÃO DE TROCAR O ENDEREÇO (Tarefa 11e) — mora DENTRO do aviso "o
+ *  endereço ainda diz X", e só lá (I8 da auditoria: é o desenho que o João viu;
+ *  botão solto seria um convite permanente contra a decisão dele de manter os
+ *  endereços de hoje).
+ *
+ *  🔴 DOIS TOQUES, como o "Tirar" do trajeto: trocar o endereço muda o link que
+ *  circula (o velho continua levando ao novo, mas é o tipo de coisa que não se
+ *  faz sem querer). O primeiro toque só pergunta.
+ *
+ *  🔴 O CORPO LEVA SÓ O `slug` — o endereço novo é conta do SERVIDOR, do nome e
+ *  da cidade que o documento diz (I6). `sugerido` serve só pra escrever o rótulo.
+ *  No sucesso a tela vai pro painel do endereço que a porta DEVOLVEU, relido do
+ *  banco; o endereço de agora já não é mais o deste lugar. */
+export default function BotaoTrocarEndereco({ slug, sugerido }: { slug: string; sugerido: string }) {
+  const [confirmando, setConfirmando] = useState(false);
+  const [indo, setIndo] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function tocar() {
+    if (indo) return;
+    if (!confirmando) {
+      setConfirmando(true);
+      return;
+    }
+    setErro(null);
+    setIndo(true);
+    try {
+      const r = await fetch("/api/admin/endereco", { method: "POST", body: JSON.stringify({ slug }) });
+      if (r.ok) {
+        location.assign(`/admin/${((await r.json()) as { slug: string }).slug}`);
+        return;
+      }
+      const frase = (await r.text()).trim();
+      setErro(frase === "" ? ERRO_GRAVAR : frase);
+    } catch {
+      setErro(ERRO_REDE);
+    } finally {
+      setIndo(false);
+    }
+  }
+
+  return (
+    <>
+      <button type="button" className="adm-editor-salvar" disabled={indo} onClick={tocar}>
+        {indo ? TROCANDO : confirmando ? TROCAR_MESMO : trocarPara(sugerido)}
+      </button>
+      {erro && (
+        <p className="adm-erro" role="alert">
+          {erro}
+        </p>
+      )}
+    </>
+  );
+}

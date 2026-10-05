@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "../ficha.css";
-import { getFicha } from "@/lib/ficha";
+import { antigosDoEndereco, fichaDoEnderecoAntigo, getFicha } from "@/lib/ficha";
 import { resolverEstado } from "@/lib/carimbo-estado";
 import { PRECO } from "@/lib/coerencia";
 import { rotuloPiso } from "@/lib/piso";
@@ -9,7 +9,7 @@ import { faseDe } from "@/lib/carimbo-fase";
 import { fechadoPeloDono } from "@/lib/aviso";
 import { aberturaDaFicha, rotuloFaixaCurta } from "@/lib/horario";
 import { rotuloDias } from "@/lib/semana";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import ConfirmarFui from "../ConfirmarFui";
 import MapaEstatico from "../MapaEstatico";
 import DistanciaDaqui from "../DistanciaDaqui";
@@ -83,7 +83,21 @@ export default async function Ficha({
 }) {
   const { slug } = await params;
   const ficha = await getFicha(slug);
-  if (!ficha) notFound();
+  if (!ficha) {
+    // 🔴 O ENDEREÇO VELHO LEVA AO NOVO (Tarefa 11e, E4) — só a lugar NO AR;
+    // escondido é o mesmo 404 de sempre. `redirect` (307), NUNCA
+    // `permanentRedirect` (308): o endereço velho é RETOMÁVEL (E5) — um lugar
+    // novo pode nascer nele —, e um 308 guardado por qualquer cache levaria o
+    // link do lugar novo pro de antes. Fica no CORPO da página, nunca no
+    // `generateMetadata`: lançado aqui, sem Suspense na frente, vira status HTTP
+    // de verdade com `location`. Fora de qualquer `try`: o redirect do Next é
+    // uma exceção, e um `catch` o engoliria.
+    const destino = await fichaDoEnderecoAntigo(slug);
+    if (destino) redirect(`/${destino.slug}`);
+    notFound();
+  }
+  // Os endereços de antes deste lugar, pro ✓ Fui (I1 da auditoria da 11e).
+  const antigos = await antigosDoEndereco(slug);
 
   const { debug } = await searchParams;
   const { estado, erro, calculadoEm, aviso } = await resolverEstado(ficha, debug);
@@ -418,7 +432,7 @@ export default async function Ficha({
           </div>
         )}
 
-        <ConfirmarFui slug={slug} />
+        <ConfirmarFui slug={slug} antigos={antigos} />
 
         {/* 🔴 "Agreste" SAIU em 2026-09-09. As duas primeiras fichas são do
             Agreste; Bonito é BREJO — palavra dele: "bonito é brejo", e o

@@ -15,6 +15,8 @@ import EditorLista from "./campos/EditorLista";
 import EditorNumeroDeMotor from "./campos/EditorNumeroDeMotor";
 import EditorProsa from "./campos/EditorProsa";
 import EditorWaypoints from "./campos/EditorWaypoints";
+import BotaoTrocarEndereco from "./BotaoTrocarEndereco";
+import { ROTULO_ENDERECO, aindaDiz } from "@/lib/endereco";
 import type { CampoNaTela, Editor, VistaNaTela } from "./campos/tipos";
 
 /** A FICHA INTEIRA NA TELA DO DONO (Task 5, 2026-09-27) — e desde a Task 6
@@ -484,8 +486,13 @@ function Bloco({ ficha, campo, vistaSemPonto }: { ficha: Ficha; campo: CampoDaFi
 export default function FichaInteira({
   ficha,
   vistaSemPonto,
+  avisoDoEndereco,
 }: {
   ficha: Ficha;
+  /** O aviso "o endereço ainda diz X" e o endereço que o nome e a cidade dão
+   *  (Tarefa 11e) — calculado pela PÁGINA, que tem o histórico
+   *  (`avisoDoEndereco`, em `src/lib/endereco.ts`). Ausente = sem aviso. */
+  avisoDoEndereco?: { diz: string; sugerido: string } | null;
   /** De onde o mapa de uma coordenada SEM PONTO começa (Tarefa 11f) — só
    *  quando `precisaDeVista(ficha)`. Calculada pela página (`vista-do-mapa`). */
   vistaSemPonto?: VistaNaTela;
@@ -510,6 +517,20 @@ export default function FichaInteira({
   return (
     <section className="adm-ficha-inteira" data-ficha-inteira={ficha.slug}>
       <h2>{TITULO}</h2>
+      {/* 🔴 O ENDEREÇO (Tarefa 11e), SÓ LEITURA: ele muda só quando o dono
+          manda, e a única porta é o botão de dentro do aviso — o desenho que ele
+          escolheu em 04/10. O aviso só existe quando a cidade foi corrigida e o
+          endereço ainda diz a de antes; nunca nas fichas que só ganharam cidade. */}
+      <div className="adm-campo" data-endereco={ficha.slug}>
+        <span className="adm-campo-rotulo">{ROTULO_ENDERECO}</span>
+        <p className="adm-editor-coord">{ficha.slug}</p>
+        {avisoDoEndereco && (
+          <>
+            <p className="adm-editor-ajuda">{aindaDiz(avisoDoEndereco.diz)}</p>
+            <BotaoTrocarEndereco slug={ficha.slug} sugerido={avisoDoEndereco.sugerido} />
+          </>
+        )}
+      </div>
       {grupos.map((g) => (
         <section key={g} className="adm-grupo" data-testid={`grupo-${g}`}>
           <h3>{TITULO_DO_GRUPO[g]}</h3>

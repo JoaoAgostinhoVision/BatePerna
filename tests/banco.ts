@@ -87,6 +87,15 @@ export async function semearAcervo(client: Client): Promise<Ficha[]> {
   await exigirBancoDescartavel(client);
   await ensureSchema(client);
   await client.execute("DELETE FROM ficha_versoes");
+  // 🔴 E AS OUTRAS CINCO TABELAS QUE UM TESTE SUJA (Tarefa 11e, I9 da
+  // auditoria). Com a semente pulando todo endereço antigo (E6), uma troca de
+  // endereço sobrevivendo pro teste seguinte o deixaria com um lugar a menos;
+  // aviso, relato e rascunho de um teste também não podem atravessar pro outro.
+  await client.execute("DELETE FROM enderecos_antigos");
+  await client.execute("DELETE FROM avisos");
+  await client.execute("DELETE FROM confirmacoes");
+  await client.execute("DELETE FROM freshness");
+  await client.execute("DELETE FROM ficha_rascunhos");
   const fichas = loadAll();
   await semear(client, fichas, AGORA_SEMENTE);
   esquecerMemoria();

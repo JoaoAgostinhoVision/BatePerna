@@ -1,4 +1,4 @@
-import { getFicha } from "@/lib/ficha";
+import { fichaDoEnderecoAntigo, getFicha } from "@/lib/ficha";
 import { resolverEstado } from "@/lib/carimbo-estado";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,11 @@ export const dynamic = "force-dynamic";
  *  rota e a página são a MESMA função, e por isso não podem divergir. */
 export async function GET(req: Request): Promise<Response> {
   const slug = new URL(req.url).searchParams.get("slug");
-  const ficha = slug ? await getFicha(slug) : null;
+  // 🔴 O ENDEREÇO VELHO TAMBÉM (Tarefa 11e, E4): a ficha guardada no celular
+  // pede o carimbo com o endereço de quando foi guardada. Resolve só pra lugar
+  // NO AR; `resolverEstado` usa o slug de DENTRO da ficha resolvida (o aviso
+  // é lido no endereço novo).
+  const ficha = slug ? ((await getFicha(slug)) ?? (await fichaDoEnderecoAntigo(slug))) : null;
   if (!ficha) return Response.json({ erro: "ficha não encontrada" }, { status: 404 });
 
   // no-store explícito: o service worker já trata /api/* como NetworkOnly, mas
