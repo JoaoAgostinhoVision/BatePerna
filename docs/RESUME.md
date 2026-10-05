@@ -77,6 +77,13 @@ V1–V5: gravação condicional no banco → 409 "recarregue"; o SW apaga pontei
 Se não houver commit de código depois de `7b70416`, redespachar com o mesmo brief.
 📌 **Levar ao João:** sem rede, depois que um lugar é escondido, a lista de trilhas guardada no celular some até a
 próxima visita online (preço da linha vermelha, ruling minha).
+✅ **Onda de fix da 11e: `8d5f904`** (2157/2157 em 105, tsc 0, build 0, mutar 42/0). Mas o **M6 é REAL e aberto:**
+aba velha de P, depois que Q retomou o endereço A, grava a voz em Q e esconde Q (200/200). **Onda de fix 2
+despachada** (`task-11e-fix2-brief.md`, U1–U3: toda gravação manda `baseId`, a versão que a tela abriu, e o banco
+confere `id = baseId AND ficha_slug = slug`). Se não houver commit de código depois de `8d5f904`, redespachar.
+🔴 **Trava de deploy +:** sem `npm run semear`, a tabela `enderecos_antigos` não existe e endereço desconhecido dá 500.
+📝 Copy +: `LUGAR_MUDOU_DE_ENDERECO` "Nada foi gravado: o endereço deste lugar mudou enquanto você mexia nele.
+Recarregue a página e tente de novo."
 📝 **Pacote de copy pro João (crescendo):** "Abre sábado e domingo. Abre das 8h às 10h e das 14h às 17h."; "abre
 domingo às 8h" dito num domingo; "Não sei — o app não diz nada sobre isto" com horário ausente (FALSO: sem horário
 nunca fecha); "Escolha uma hora, no formato HH:MM." pra faixa vazia; e todas as `PENDENTE` dos relatórios 11b/c/d/f. Ordem nova: 11d → **11f** → 11e → 12.
