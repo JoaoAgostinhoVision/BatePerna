@@ -2,7 +2,44 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — ATUALIZADO 04/10 (vence o bloco de 03/10 logo abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — PARADA DE 04/10 À NOITE (vence TUDO abaixo; ele: *"estou cansado"*)
+
+**Branch `painel-completo`, NADA NO AR.** Topo esperado: `docs(resume): 04/10 - a parada...`. Último código: `8d5f904`,
+medido por mim: **2157/2157 em 105**, `tsc` 0, build 0, `mutar.mjs` 42/0. A régua: se houver commit de código depois
+de `8d5f904`, meça tudo de novo.
+
+→ 🔴 **O PRIMEIRO PASSO, SEM PENSAR:** conferir árvore limpa e **redespachar a onda de fix 2 da 11e DO ZERO**:
+general-purpose, opus, background, com `.superpowers/sdd/2026-09-26-painel-completo/task-11e-fix2-PROMPT.md` COMO ESTÁ
+(o brief é `task-11e-fix2-brief.md`; U1: toda gravação manda `baseId` e o banco confere `id = baseId AND ficha_slug = slug`). Depois: medir eu mesmo → re-revisão da 11e (ondas 1+2) → **Tarefa 12**.
+
+🔴 **O STASH `onda2-11e-PARCIAL-parado-04-10-pode-ter-sabotagem` — NÃO dê `git stash pop`.** O implementador foi parado
+por mim NO MEIO DO TESTE DE MUTAÇÃO: pode ter sabotagem viva (o grep por `if (false)`/`mutac` não achou, mas não
+prova nada). Ninguém precisa dele. Quando a onda 2 fechar: `git stash drop`.
+
+**O que o dia 04/10 fez (todas com revisão + ondas de fix + re-revisão, medidas por mim):**
+- **11 fechada** (onda 2 uma pergunta por vez `6a04ccd`; onda 3 só F3).
+- **11b cidade** (`98afd82`→`bed8ed7`→`1de5d53`): dois lugares podem ter o MESMO nome (decisão dele); cidade
+  obrigatória; endereço do RASCUNHO = nome+cidade e acompanha até publicar; gêmeo de lugar SEM cidade espera.
+- **11c/11d horário em faixas** (`c577ca3`, `3f7546a`): 1–3 faixas (almoço), lê a forma velha do banco pra sempre,
+  editor com UM Salvar; 30.240 comparações velho×novo nas 3 fichas reais = zero diferença.
+- **11f mapa** (`1995a9c`→`1f09660`→`f4ecb34`): pedido dele ("latitude e longitude… que horror"); mapa sem pin
+  centrado na cidade, +/−, toque põe o pin, Salvar só pelo zoom do PIN; ponto novo do trajeto nasce SEM pin.
+- **11e endereço no banco** (`7b70416`→`8d5f904`): muda SÓ quando ele manda (decisão dele), o velho redireciona
+  (307), pode ser retomado; gravação condicional; SW apaga cópia/ponteiro/`/trilhas` no 404. **Falta o M6** (onda 2).
+
+**Ordem que falta:** onda 2 da 11e → re-revisão → **Tarefa 12** (publicar; o brief ganhou G1′, 12-I1..I3, 12-E5) →
+revisão final da branch COM `npm run build` → os agentes do projeto → **pacote de copy pro João** → `npm run semear`
+(cria `oculto`, `ficha_rascunhos`, `enderecos_antigos` em produção — SEM ISSO O `/admin` CAI) → UM `vercel --prod`
+→ `conferir-no-ar` → olhos dele no celular.
+
+**Esperando ELE (nada trava o código):** a CIDADE das 3 fichas (Pedra Furada de Venturosa, Rampa do Pepê, Cachoeira
+Véu de Noiva) — ele responde pelo painel, eu NÃO deduzo do slug; o pacote de copy (todas as `PENDENTE` dos relatórios
+11b/c/d/e/f + as frases listadas nos blocos abaixo); e saber que, sem rede, a lista guardada some depois que um lugar
+é escondido (ruling minha).
+
+⚪ Os blocos abaixo (04/10 durante o dia, 03/10, 01/10) são o histórico do dia — valem pro que vem DEPOIS da 11e.
+
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — HISTÓRICO DO DIA 04/10
 
 **A onda 2 da Tarefa 11 FOI FEITA: `6a04ccd`** (uma pergunta por vez, posição na URL `?slug=X&p=N`). Medido por mim:
 **1865/1865 em 96**, `tsc` 0, build 0 (`/admin/novo` 1.96 kB · 111 kB), `mutar.mjs` 42/0, árvore limpa, stash intocado.
