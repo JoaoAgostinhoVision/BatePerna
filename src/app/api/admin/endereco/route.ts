@@ -1,6 +1,6 @@
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
-import { getClient, lerRascunho, trocarEndereco, versaoAtual } from "@/lib/db";
+import { enderecoNovoDe, getClient, lerRascunho, trocarEndereco, versaoAtual } from "@/lib/db";
 import {
   ENDERECO_JA_E_ESSE,
   ENDERECO_NAO_TROCOU,
@@ -82,6 +82,13 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   if (!(await trocarEndereco(getClient(), slug, novo, agora))) {
+    // 🔴 DUAS ABAS (M1 da revisão da onda de fix): se a recusa é porque OUTRA
+    // requisição acabou de levar este lugar pro MESMO endereço, "nada mudou"
+    // seria falso. O endereço que vale é o novo, e a resposta diz isso — sem
+    // gravar nada (o batch não gravou: a porta dele exige o lugar no velho).
+    if ((await enderecoNovoDe(getClient(), slug)) === novo) {
+      return Response.json({ slug: novo }, { headers: { "cache-control": "no-store" } });
+    }
     return new Response(ENDERECO_NAO_TROCOU, { status: 409, headers: TEXTO });
   }
   return Response.json({ slug: novo }, { headers: { "cache-control": "no-store" } });

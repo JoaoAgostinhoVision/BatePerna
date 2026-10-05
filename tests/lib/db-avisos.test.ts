@@ -1,13 +1,27 @@
 import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { avisoVigente, avisosVigentes, ensureSchema, inserirAviso, retirarAviso } from "@/lib/db";
+import { avisoVigente, avisosVigentes, ensureSchema, gravarVersao, inserirAviso, retirarAviso } from "@/lib/db";
 
 let c: Client;
 const AGORA = 1_757_000_000;
-beforeEach(async () => { c = createClient({ url: ":memory:" }); await ensureSchema(c); });
+beforeEach(async () => {
+  c = createClient({ url: ":memory:" });
+  await ensureSchema(c);
+  // Aviso só se grava em LUGAR (onda de fix da 11e, I1): os dois endereços
+  // destes casos têm de existir. O documento não importa a esta tabela.
+  await gravarVersao(c, "rampa-do-pepe", "{}", "semente", AGORA - 1);
+  await gravarVersao(c, "veu-de-noiva-de-bonito", "{}", "semente", AGORA - 1);
+});
 afterEach(() => c.close());
 
 describe("avisos", () => {
+  it("endereço que não é lugar (nunca foi, ou o lugar saiu dele): não grava, devolve null", async () => {
+    expect(await inserirAviso(c, "lugar-marcador-sem-versao", "obra", "fechado", AGORA, AGORA + 3600)).toBeNull();
+    expect((await c.execute("SELECT COUNT(*) AS n FROM avisos")).rows[0].n).toBe(0);
+    // Controle: no lugar que existe, grava e devolve o id.
+    expect(await inserirAviso(c, "rampa-do-pepe", "obra", "fechado", AGORA, AGORA + 3600)).toBeTypeOf("number");
+  });
+
   it("grava e lê o vigente", async () => {
     await inserirAviso(c, "rampa-do-pepe", "em reforma", "fechado", AGORA, AGORA + 3600);
     const a = await avisoVigente(c, "rampa-do-pepe", AGORA);
@@ -37,7 +51,7 @@ describe("avisos", () => {
   // procedência, saber o que foi dito sobre um lugar e quando não é luxo.
   it("retirar tira da tela mas NAO apaga a linha", async () => {
     const id = await inserirAviso(c, "rampa-do-pepe", "obra", "frio", AGORA, AGORA + 3600);
-    await retirarAviso(c, id);
+    await retirarAviso(c, id!);
     expect(await avisoVigente(c, "rampa-do-pepe", AGORA)).toBeNull();
     const todas = await c.execute("SELECT COUNT(*) AS n FROM avisos");
     expect(Number(todas.rows[0].n), "a linha foi APAGADA — o historico morreu").toBe(1);

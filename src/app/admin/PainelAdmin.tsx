@@ -104,7 +104,10 @@ export default function PainelAdmin({ ficha, leitura, agora, aviso, avisoErro = 
         body: JSON.stringify({ slug: ficha.slug, texto, efeito: form.efeito, venceEm: agora + form.prazoSegundos }),
       });
       if (r.ok) { location.reload(); return; }
-      atualizar({ erro: "Não consegui publicar." });
+      // O 409 com frase é a porta dizendo que o lugar mudou de endereço no meio
+      // (onda de fix da 11e): a frase dela diz o que fazer.
+      const frase = r.status === 409 ? (await r.text()).trim() : "";
+      atualizar({ erro: frase === "" ? "Não consegui publicar." : frase });
     } catch {
       atualizar({ erro: "Sem rede." });
     } finally {

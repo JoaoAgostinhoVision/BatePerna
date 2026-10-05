@@ -9,6 +9,7 @@ import {
   ensureSchema,
   gravarVersao,
   historico,
+  trocarEndereco,
   versaoAtual,
 } from "@/lib/db";
 import {
@@ -35,9 +36,23 @@ let c: Client;
 let cookieBom: string;
 let POST: typeof import("@/app/api/admin/endereco/route").POST;
 
+// A CORRIDA de duas abas (M1 da revisão): o que roda logo depois da ÚLTIMA
+// leitura da rota (`lerRascunho`) e antes do batch dela.
+const corrida = vi.hoisted(() => ({ antesDoBatch: null as null | (() => Promise<void>) }));
+
 vi.mock("@/lib/db", async (io) => {
   const mod = await io<typeof import("@/lib/db")>();
-  return { ...mod, getClient: () => c };
+  return {
+    ...mod,
+    getClient: () => c,
+    lerRascunho: async (cliente: Client, slug: string) => {
+      const lido = await mod.lerRascunho(cliente, slug);
+      const meio = corrida.antesDoBatch;
+      corrida.antesDoBatch = null;
+      if (meio !== null) await meio();
+      return lido;
+    },
+  };
 });
 
 beforeEach(async () => {
@@ -125,6 +140,20 @@ describe("POST /api/admin/endereco — o caso dele", () => {
     expect(slugs).not.toContain(A);
     // Voltar restaura o DOCUMENTO (a cidade de antes), nunca o endereço.
     expect(JSON.parse((await versaoAtual(c, B))!.doc)).toMatchObject({ slug: B, cidade: "Bom Marcador" });
+  });
+});
+
+describe("POST /api/admin/endereco — duas abas no mesmo segundo (M1)", () => {
+  it("a 2ª passa das leituras, a 1ª troca no meio: a 2ª diz o endereço que vale (200) e não grava 2º ato", async () => {
+    corrida.antesDoBatch = async () => {
+      expect(await trocarEndereco(c, A, B, AGORA), "a 1ª aba não trocou").toBe(true);
+    };
+    const res = await POST(pedido({ slug: A }));
+    expect(corrida.antesDoBatch, "a corrida não aconteceu").toBeNull();
+    // "Nada mudou" seria falso: mudou, pela outra aba, e pro MESMO endereço.
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await res.json()).toEqual({ slug: B });
+    expect((await historico(c, B)).filter((v) => v.endereco_anterior === A), "um 2º ato").toHaveLength(1);
   });
 });
 

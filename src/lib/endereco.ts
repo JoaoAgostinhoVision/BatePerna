@@ -39,6 +39,11 @@ export function enderecoSugerido(nome: string, cidade: string | undefined): stri
  *      normalização do endereço), é o FIM do endereço, depois de um hífen;
  *   3. dessas, vale a de MAIOR endereço — "bom-marcador" ganha de "marcador"
  *      quando as duas servem, porque é a que o endereço de fato diz.
+ *  E uma cidade velha cujo fim do endereço está DENTRO do fim que é a cidade de
+ *  agora não conta (M2 da revisão da onda de fix): com "Marcador" velha e "Bom
+ *  Marcador" agora, o endereço `x-bom-marcador` diz a de AGORA — o nome é que
+ *  mudou, e renomear não é o caso do aviso. O inverso (velha "Bom Marcador",
+ *  agora "Marcador") continua avisando, e é verdadeiro.
  *  As três fichas que só GANHARAM cidade nunca avisam: não tiveram outra.
  *
  *  `cidadesDoHistorico` vem de todas as versões do lugar (`undefined` onde não
@@ -60,7 +65,8 @@ export function avisoDoEndereco({
   const agora = slugDoNome(cidade ?? "");
   const velhas = cidadesDoHistorico
     .map((c) => slugDoNome(c ?? ""))
-    .filter((c) => c !== "" && c !== agora && endereco.endsWith(`-${c}`));
+    .filter((c) => c !== "" && c !== agora && endereco.endsWith(`-${c}`))
+    .filter((c) => !(agora !== "" && endereco.endsWith(`-${agora}`) && `-${agora}`.endsWith(`-${c}`)));
   if (velhas.length === 0) return null;
   const diz = velhas.reduce((maior, c) => (c.length > maior.length ? c : maior));
   return { diz, sugerido };
@@ -95,6 +101,13 @@ export const enderecoOcupadoPorRascunho = (novo: string, quem: string): string =
   `O endereço ${novo} já é de um lugar novo começado: ${quem}. Enquanto for dele, este continua no endereço de agora.`;
 // PENDENTE: redação minha, o João ainda não leu
 export const ENDERECO_NAO_TROCOU = "Não consegui trocar o endereço: nada mudou. Recarregue a página e tente de novo.";
+
+/** A recusa das rotas de ESCRITA do painel (`ficha`, `visibilidade`, `aviso`)
+ *  quando o endereço do lugar mudou entre a leitura e a gravação (onda de fix
+ *  da Tarefa 11e, I1): nada foi gravado, e recarregar leva ao endereço novo. */
+// PENDENTE: redação minha, o João ainda não leu
+export const LUGAR_MUDOU_DE_ENDERECO =
+  "Nada foi gravado: o endereço deste lugar mudou enquanto você mexia nele. Recarregue a página e tente de novo.";
 
 /** A linha do histórico na versão do ATO (I4 da auditoria): de onde o lugar
  *  veio. Voltar a uma versão restaura o DOCUMENTO, nunca o endereço. */

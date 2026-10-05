@@ -1,6 +1,7 @@
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
 import { getClient, inserirAviso, retirarAviso, versaoAtual, type EfeitoAviso } from "@/lib/db";
+import { LUGAR_MUDOU_DE_ENDERECO } from "@/lib/endereco";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,16 @@ export async function POST(req: Request): Promise<Response> {
   // regra de `avisoVigente` (`vence_em > agora`).
   if (typeof venceEm !== "number" || venceEm <= agora) return new Response("", { status: 400 });
 
+  // 🔴 `inserirAviso` grava SÓ SE o lugar ainda mora em `slug` (onda de fix da
+  // 11e, I1): a troca de endereço entre a leitura acima e esta linha deixaria
+  // um "fechado" órfão no endereço velho, que nunca aparece no lugar.
   const id = await inserirAviso(getClient(), slug, texto.trim(), efeito as EfeitoAviso, agora, venceEm);
+  if (id === null) {
+    return new Response(LUGAR_MUDOU_DE_ENDERECO, {
+      status: 409,
+      headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+    });
+  }
   return Response.json({ id }, { headers: { "cache-control": "no-store" } });
 }
 

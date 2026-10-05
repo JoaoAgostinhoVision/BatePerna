@@ -134,6 +134,21 @@ describe("avisoDoEndereco", () => {
     ).toBeNull();
   });
 
+  // 🔴 M2 DA REVISÃO: a cidade velha é SUFIXO da de agora, e o nome mudou. O
+  // endereço termina com a cidade de AGORA (`-bom-marcador`), que por acaso
+  // termina com a velha (`-marcador`). Dizer "ainda diz marcador" seria falso,
+  // e o botão ofereceria uma troca por mudança de NOME, que ele recusou.
+  it("a cidade velha é sufixo da de agora, e o endereço já diz a de agora: sem aviso (nome mudado)", () => {
+    expect(
+      avisoDoEndereco({
+        endereco: "lugar-marcador-bom-marcador",
+        nome: "Nome Novo Marcador",
+        cidade: "Bom Marcador",
+        cidadesDoHistorico: ["Bom Marcador", "Marcador", "Bom Marcador"],
+      }),
+    ).toBeNull();
+  });
+
   it("uma cidade velha que NÃO é o fim do endereço não avisa (o endereço não a diz)", () => {
     expect(
       avisoDoEndereco({

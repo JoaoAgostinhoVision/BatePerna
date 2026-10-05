@@ -72,6 +72,18 @@ describe("BotaoVisibilidade", () => {
     liberar();
   });
 
+  // 🔴 ONDA DE FIX DA 11e (I1): a porta recusa com 409 E FRASE quando o lugar
+  // mudou de endereço no meio — a frase diz o que fazer (recarregar).
+  it("409 com frase: a frase da porta vai pra tela, e não recarrega", async () => {
+    const reload = vi.fn();
+    vi.stubGlobal("location", { ...window.location, reload });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("frase marcadora da porta", { status: 409 })));
+    render(<BotaoVisibilidade slug={SLUG} oculto={false} />);
+    fireEvent.click(screen.getByRole("button"));
+    expect((await screen.findByRole("alert")).textContent).toBe("frase marcadora da porta");
+    expect(reload).not.toHaveBeenCalled();
+  });
+
   it("recusa e rede caída viram recado na tela, e não recarregam", async () => {
     const reload = vi.fn();
     vi.stubGlobal("location", { ...window.location, reload });

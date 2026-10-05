@@ -119,6 +119,15 @@ describe("HistoricoDaFicha", () => {
     expect(screen.getByRole("alert").textContent).toMatch(/não consegui voltar/i);
   });
 
+  it("409 com frase (o lugar mudou de endereço no meio): a frase da porta vai pra tela", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("frase marcadora da porta", { status: 409 })));
+    const { container } = render(<HistoricoDaFicha versoes={VERSOES} />);
+    fireEvent.click(container.querySelector('button[data-abrir-versao="1"]')!);
+    fireEvent.click(container.querySelector('button[data-voltar-versao="1"]')!);
+    await waitFor(() => screen.getByRole("alert"));
+    expect(screen.getByRole("alert").textContent).toBe("frase marcadora da porta");
+  });
+
   it("fetch que rejeita mostra a mensagem de erro ao voltar", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("falhou")));
     const { container } = render(<HistoricoDaFicha versoes={VERSOES} />);

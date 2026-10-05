@@ -18,8 +18,9 @@ type Props = { slug: string; oculto: boolean };
  *  `location.reload()` — a tela vem do banco, nunca de estado otimista. Um
  *  botão que trocasse o próprio rótulo sozinho afirmaria que o lugar saiu do ar
  *  sem ter lido isso do banco. E as frases de erro são as MESMAS dos editores
- *  (`ERRO_GRAVAR`, `ERRO_REDE`): a porta responde corpo vazio em toda recusa,
- *  então não há português dela pra mostrar.
+ *  (`ERRO_GRAVAR`, `ERRO_REDE`): a porta responde corpo vazio em toda recusa —
+ *  menos no 409 de quando o lugar mudou de endereço no meio (onda de fix da
+ *  11e), que traz frase, e é ela que vai pra tela.
  *
  *  ⚠️ NÃO usa `usarGravacao` porque aquele hook fala com `/api/admin/ficha` por
  *  `PUT`; esta porta é outra, por `POST`. Generalizá-lo por um botão só seria
@@ -38,7 +39,10 @@ export default function BotaoVisibilidade({ slug, oculto }: Props) {
         body: JSON.stringify({ slug, oculto: !oculto }),
       });
       if (r.ok) { location.reload(); return; }
-      setErro(ERRO_GRAVAR);
+      // O 409 com frase é a porta dizendo que o lugar mudou de endereço no meio
+      // (onda de fix da 11e): a frase dela diz o que fazer.
+      const frase = r.status === 409 ? (await r.text()).trim() : "";
+      setErro(frase === "" ? ERRO_GRAVAR : frase);
     } catch {
       setErro(ERRO_REDE);
     } finally {

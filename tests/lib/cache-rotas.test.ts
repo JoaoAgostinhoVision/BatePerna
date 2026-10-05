@@ -259,6 +259,21 @@ describe("resolverNavegacao: ficha", () => {
 // da Tarefa 9 (esconder), que a 11e multiplica: o endereço velho de um lugar
 // trocado responde com redirect, e a cópia guardada daquela URL é a ficha de
 // antes. Só rede caída (`null`) e 5xx continuam servindo a cópia.
+/** O que todo 404/redirect de ficha apaga: a cópia dela (por caminho, sem a
+ *  query) e a lista guardada, que ainda a lista. */
+const apagarSemPonteiro: AlvoCache[] = [
+  { chave: FICHA, cache: CACHE_ULTIMA_FICHA, ignorarBusca: true },
+  AQUECIMENTO,
+];
+
+/** Uma resposta guardada com a URL de onde veio — o que o Cache do navegador
+ *  devolve (`Response.url`). No Node o construtor não deixa dizer a URL. */
+function daUrl(url: string): Response {
+  const r = resposta();
+  Object.defineProperty(r, "url", { value: url });
+  return r;
+}
+
 describe("resolverNavegacao: 404 e redirect são definitivos", () => {
   it("404 COM cópia: devolve o 404 e manda apagar a cópia daquela URL", async () => {
     const naoAchou = resposta(404);
@@ -266,7 +281,7 @@ describe("resolverNavegacao: 404 e redirect são definitivos", () => {
     const r = await resolverNavegacao({ url: `${FICHA}?fbclid=x`, buscarRede: async () => naoAchou, buscarCache: cache.buscar });
     expect(r.resposta).toBe(naoAchou);
     expect(r.gravarEm).toEqual([]);
-    expect(r.apagarEm).toEqual([FICHA]);
+    expect(r.apagarEm).toEqual(apagarSemPonteiro);
   });
 
   // ⚠️ Não dá pra construir um `opaqueredirect` de verdade no Node (é o que o
@@ -278,7 +293,7 @@ describe("resolverNavegacao: 404 e redirect são definitivos", () => {
     const r = await resolverNavegacao({ url: FICHA, buscarRede: async () => redirecionou, buscarCache: cache.buscar });
     expect(r.resposta).toBe(redirecionou);
     expect(r.gravarEm).toEqual([]);
-    expect(r.apagarEm).toEqual([FICHA]);
+    expect(r.apagarEm).toEqual(apagarSemPonteiro);
   });
 
   it("redirect com status 3xx visível (307) COM cópia: idem", async () => {
@@ -286,7 +301,7 @@ describe("resolverNavegacao: 404 e redirect são definitivos", () => {
     const cache = cacheFalso({ [FICHA]: resposta() });
     const r = await resolverNavegacao({ url: FICHA, buscarRede: async () => redirecionou, buscarCache: cache.buscar });
     expect(r.resposta).toBe(redirecionou);
-    expect(r.apagarEm).toEqual([FICHA]);
+    expect(r.apagarEm).toEqual(apagarSemPonteiro);
   });
 
   it("500 COM cópia: serve a cópia, e não apaga nada", async () => {
@@ -303,6 +318,42 @@ describe("resolverNavegacao: 404 e redirect são definitivos", () => {
     const r = await resolverNavegacao({ url: FICHA, buscarRede: semRede, buscarCache: cache.buscar });
     expect(r.resposta).toBe(guardada);
     expect(r.apagarEm).toEqual([]);
+  });
+
+  // 🔴 ONDA DE FIX DA 11e (I2 da revisão, ruling do orquestrador): o aparelho
+  // VIU o 404 e mesmo assim, sem rede, mostrava o lugar escondido por dois
+  // caminhos — o ponteiro da última ficha (`/__ultima__`) e a `/trilhas`
+  // guardada, que ainda o lista. Os dois saem junto com a cópia. O preço — sem
+  // rede, a lista só volta depois de uma visita online — é aceito pela linha
+  // vermelha.
+  it("404 com o ponteiro da última apontando PRA ELA: apaga a cópia, o ponteiro e a /trilhas guardada", async () => {
+    const naoAchou = resposta(404);
+    const cache = cacheFalso({ [FICHA]: resposta(), [CHAVE_ULTIMA]: daUrl(`${FICHA}?fbclid=y`) });
+    const r = await resolverNavegacao({ url: FICHA, buscarRede: async () => naoAchou, buscarCache: cache.buscar });
+    expect(r.resposta).toBe(naoAchou);
+    expect(r.apagarEm).toEqual([...apagarSemPonteiro, { chave: CHAVE_ULTIMA, cache: CACHE_ULTIMA_FICHA }]);
+  });
+
+  it("redirect (o endereço velho) com o ponteiro nele: o ponteiro sai também", async () => {
+    const redirecionou = { ok: false, status: 0, type: "opaqueredirect" } as unknown as Response;
+    const cache = cacheFalso({ [CHAVE_ULTIMA]: daUrl(FICHA) });
+    const r = await resolverNavegacao({ url: FICHA, buscarRede: async () => redirecionou, buscarCache: cache.buscar });
+    expect(r.apagarEm).toContainEqual({ chave: CHAVE_ULTIMA, cache: CACHE_ULTIMA_FICHA });
+  });
+
+  // Controle: o ponteiro de OUTRA ficha fica — ele não mostra o lugar escondido.
+  it("404 com o ponteiro apontando pra OUTRA ficha: o ponteiro fica", async () => {
+    const cache = cacheFalso({ [CHAVE_ULTIMA]: daUrl(OUTRA) });
+    const r = await resolverNavegacao({ url: FICHA, buscarRede: async () => resposta(404), buscarCache: cache.buscar });
+    expect(r.apagarEm).toEqual(apagarSemPonteiro);
+  });
+
+  // O ponteiro sem URL legível: não dá pra saber de quem é, e a dúvida cai pro
+  // lado da linha vermelha — apagar só custa o atalho offline da "/".
+  it("404 com um ponteiro cuja origem não se lê: o ponteiro sai", async () => {
+    const cache = cacheFalso({ [CHAVE_ULTIMA]: resposta() });
+    const r = await resolverNavegacao({ url: FICHA, buscarRede: async () => resposta(404), buscarCache: cache.buscar });
+    expect(r.apagarEm).toContainEqual({ chave: CHAVE_ULTIMA, cache: CACHE_ULTIMA_FICHA });
   });
 
   it("rede boa não apaga nada", async () => {

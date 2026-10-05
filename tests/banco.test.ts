@@ -92,12 +92,19 @@ describe("semearAcervo limpa o que a troca de endereço suja", () => {
     await insertConfirmacao(c, "rampa-do-pepe", AGORA - 1, "seco");
     await criarRascunho(c, "lugar-marcador-cidade-marcador", "{}", AGORA);
     expect(await trocarEndereco(c, "rampa-do-pepe", "lugar-marcador-x", AGORA)).toBe(true);
+    // 🔴 M4 DA REVISÃO: aviso e relato gravados DEPOIS da troca, no endereço
+    // novo. Os de cima a troca MOVE pra `lugar-marcador-x`, e por isso "a Rampa
+    // não tem aviso" seria verdade sem limpeza nenhuma.
+    expect(await inserirAviso(c, "lugar-marcador-x", "aviso marcador depois", "frio", AGORA, AGORA + 3600)).not.toBeNull();
+    await insertConfirmacao(c, "lugar-marcador-x", AGORA, "barro");
 
     await semearAcervo(c);
 
     expect([...(await versoesAtuais(c)).keys()].sort()).toEqual(fichas.map((f) => f.slug).sort());
     expect(await avisoVigente(c, "rampa-do-pepe", AGORA)).toBeNull();
     expect(await contarHoje(c, "rampa-do-pepe", AGORA)).toEqual({ foram: 0, barro: 0 });
+    expect(await avisoVigente(c, "lugar-marcador-x", AGORA), "aviso atravessou pro teste seguinte").toBeNull();
+    expect(await contarHoje(c, "lugar-marcador-x", AGORA), "relato atravessou pro teste seguinte").toEqual({ foram: 0, barro: 0 });
     expect(await listarRascunhos(c)).toEqual([]);
     c.close();
   });

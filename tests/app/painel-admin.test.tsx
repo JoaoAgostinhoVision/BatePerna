@@ -65,6 +65,19 @@ describe("PainelAdmin", () => {
     expect(corpo.venceEm).toBeGreaterThan(AGORA);
   });
 
+  it("409 com frase (o lugar mudou de endereco no meio): a frase da porta vai pra tela, sem recarregar", async () => {
+    const f = fichas[0];
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("frase marcadora da porta", { status: 409 })));
+    const reload = vi.fn();
+    vi.stubGlobal("location", { ...window.location, reload });
+    const { container } = render(<PainelAdmin ficha={f} leitura={leituraSeca} agora={AGORA} />);
+    fireEvent.change(container.querySelector(`textarea[data-slug="${f.slug}"]`)!, { target: { value: "em reforma" } });
+    fireEvent.click(container.querySelector(`button[data-publicar="${f.slug}"]`)!);
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("frase marcadora da porta"));
+    expect(reload).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
   // 🔴 CONSEQUENCIA A VISTA: escolher um efeito tem que mostrar o que vai a
   // tela, nao o nome do efeito. Numero sem consequencia e como se troca o
   // limiar de chuva de uma serra real sem perceber.

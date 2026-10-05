@@ -81,7 +81,10 @@ export default function HistoricoDaFicha({ versoes }: Props) {
         body: JSON.stringify({ slug, versaoId }),
       });
       if (r.ok) { location.reload(); return; }
-      setErro(ERRO_VOLTAR);
+      // O 409 com frase (o lugar mudou de endereço no meio, onda de fix da 11e;
+      // ou o par de outro lugar) diz o que fazer; sem frase, a nossa.
+      const frase = r.status === 409 ? (await r.text()).trim() : "";
+      setErro(frase === "" ? ERRO_VOLTAR : frase);
     } catch {
       setErro(ERRO_VOLTAR);
     } finally {

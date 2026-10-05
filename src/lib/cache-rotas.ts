@@ -46,9 +46,10 @@ export interface Resolucao {
   resposta: Response | null;
   /** Chaves onde gravar, todas em CACHE_ULTIMA_FICHA. Vazio = não grava. */
   gravarEm: string[];
-  /** Chaves a APAGAR de CACHE_ULTIMA_FICHA — a cópia de uma URL cuja resposta
-   *  de rede foi DEFINITIVA (404 ou redirect, ver `respostaDefinitiva`). */
-  apagarEm: string[];
+  /** O que APAGAR, cada um no seu cache — quando a resposta de rede de uma
+   *  ficha foi DEFINITIVA (404 ou redirect, ver `respostaDefinitiva`): a cópia
+   *  dela, o ponteiro da última se for ela, e a lista guardada. */
+  apagarEm: AlvoCache[];
 }
 
 /** O NOME DO PARÂMETRO QUE FORÇA O ESTADO DO CARIMBO.
@@ -253,6 +254,18 @@ function respostaDefinitiva(r: Response): boolean {
   return r.status === 404 || r.type === "opaqueredirect" || (r.status >= 300 && r.status < 400);
 }
 
+/** O ponteiro da última ficha (`CHAVE_ULTIMA`) é a cópia DESTA url?
+ *
+ *  A resposta guardada carrega a URL de onde veio (`Response.url`, que o Cache
+ *  do navegador preserva). Sem ponteiro, não. Com um ponteiro cuja URL não se
+ *  lê (vazia), SIM: não dá pra saber de quem ele é, e a dúvida cai pro lado da
+ *  linha vermelha — apagá-lo só custa o atalho offline da "/". */
+async function ponteiroEDaFicha(buscarCache: PedidoNavegacao["buscarCache"], url: string): Promise<boolean> {
+  const ponteiro = await buscarCache({ chave: CHAVE_ULTIMA, cache: CACHE_ULTIMA_FICHA });
+  if (ponteiro === null) return false;
+  return ponteiro.url === "" || chaveDeFicha(ponteiro.url) === chaveDeFicha(url);
+}
+
 /** A decisão inteira de uma navegação, sem tocar em Cache nem em fetch: quem
  *  chama entrega as buscas e recebe o que devolver e onde gravar.
  *
@@ -292,8 +305,17 @@ export async function resolverNavegacao({
   // endereço VELHO de um lugar que trocou de endereço responde com redirect — a
   // cópia dele é a ficha de antes. Os dois devolvem a resposta da rede e mandam
   // apagar a cópia daquela URL: o servidor disse que ela não vale mais.
+  //
+  // 🔴 E NÃO SÓ A CÓPIA DAQUELA URL (onda de fix da 11e, I2 da revisão): o
+  // aparelho que acabou de VER o 404 ainda mostrava o lugar escondido sem rede,
+  // por dois caminhos da "/" (`planoDaRaiz`) — o ponteiro da última ficha, se
+  // ele era ESTA, e a `/trilhas` guardada, que ainda a lista. Os dois saem
+  // junto. O preço: sem rede, a lista só volta depois de uma visita online —
+  // aceito pela linha vermelha (um lugar escondido nunca aparece).
   if (daRede && respostaDefinitiva(daRede)) {
-    return { resposta: daRede, gravarEm: [], apagarEm: [chaveDeFicha(url)] };
+    const apagarEm: AlvoCache[] = [alvoDaFicha(url), AQUECIMENTO];
+    if (await ponteiroEDaFicha(buscarCache, url)) apagarEm.push({ chave: CHAVE_ULTIMA, cache: CACHE_ULTIMA_FICHA });
+    return { resposta: daRede, gravarEm: [], apagarEm };
   }
 
   // Rede caiu ou respondeu errado (5xx). Sem cópia desta ficha, devolve o erro

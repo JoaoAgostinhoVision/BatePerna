@@ -1,6 +1,7 @@
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
-import { getClient, gravarVersao, versaoAtual } from "@/lib/db";
+import { getClient, gravarEdicao, versaoAtual } from "@/lib/db";
+import { LUGAR_MUDOU_DE_ENDERECO } from "@/lib/endereco";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +89,16 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ id: versao.id }, { headers: { "cache-control": "no-store" } });
   }
 
-  const id = await gravarVersao(getClient(), slug, versao.doc, "painel", agora, oculto);
+  // 🔴 CONDICIONAL (`gravarEdicao`, onda de fix da 11e, I1 da revisão): se a troca
+  // de endereço levou o lugar embora depois da leitura acima, o INSERT de sempre
+  // recriaria o lugar no endereço velho — e o dono leria 200 de um "esconder"
+  // com o lugar ainda no ar no endereço novo. `null` = nada gravado: 409.
+  const id = await gravarEdicao(getClient(), slug, versao.doc, agora, oculto);
+  if (id === null) {
+    return new Response(LUGAR_MUDOU_DE_ENDERECO, {
+      status: 409,
+      headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+    });
+  }
   return Response.json({ id }, { headers: { "cache-control": "no-store" } });
 }

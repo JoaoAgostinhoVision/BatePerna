@@ -84,6 +84,22 @@ describe("/admin/[slug] — o endereço e o aviso", () => {
     expect(within(bloco!).getByRole("button", { name: trocarPara(B) })).toBeTruthy();
   });
 
+  // 🔴 I4 DA REVISÃO: o aviso lê o histórico INTEIRO. No fluxo real o dono
+  // corrige a cidade e CONTINUA editando — cada edição é uma versão. Lendo só as
+  // últimas, o aviso (a única porta de trocar, I8) sumiria em silêncio.
+  it("três edições de outro campo DEPOIS da cidade corrigida: o aviso continua", async () => {
+    const { gravarVersao } = await import("@/lib/db");
+    for (const n of [1, 2, 3]) {
+      const doc = { ...lugarMarcador(A, "Lugar Marcador", "Outra Marcadora"), voz: `Uma voz marcadora editada, ${n}.` };
+      await gravarVersao(cliente, A, JSON.stringify(doc), "painel", T0 + 1 + n);
+    }
+    await comSessaoValida();
+    const { container } = render(await abrir(A));
+    const bloco = container.querySelector<HTMLElement>("[data-endereco]")!;
+    expect(within(bloco).getByText(aindaDiz("bom-marcador"))).toBeTruthy();
+    expect(within(bloco).getByRole("button", { name: trocarPara(B) })).toBeTruthy();
+  });
+
   it("lugar que só GANHOU cidade (nunca teve outra): o endereço aparece, sem aviso e sem botão", async () => {
     const { gravarVersao } = await import("@/lib/db");
     const S = "lugar-marcador-de-antes";

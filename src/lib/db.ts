@@ -223,16 +223,26 @@ export async function contarHoje(
   return { foram: Number(r?.foram ?? 0), barro: Number(r?.barro ?? 0) };
 }
 
+/** Grava um aviso — SÓ SE `slug` É LUGAR NA HORA DE GRAVAR, e devolve `null`
+ *  quando não é (onda de fix da Tarefa 11e, I1 da revisão).
+ *
+ *  🔴 A CONDIÇÃO MORA NO MESMO `INSERT`, NUNCA NUMA LEITURA ANTES. A rota lê o
+ *  lugar e grava depois; se a troca de endereço roda no meio, o aviso caía no
+ *  endereço VELHO — um "fechado" que o dono publicou e que nunca aparecia no
+ *  lugar, que já morava no novo. Com o `WHERE EXISTS`, quem decide é o banco no
+ *  instante da gravação. */
 export async function inserirAviso(
   client: Client, slug: string, texto: string, efeito: EfeitoAviso,
   criadoEm: number, venceEm: number,
-): Promise<number> {
+): Promise<number | null> {
   const r = await client.execute({
     sql: `INSERT INTO avisos (ficha_slug, texto, efeito, criado_em, vence_em)
-          VALUES (?, ?, ?, ?, ?) RETURNING id`,
-    args: [slug, texto, efeito, criadoEm, venceEm],
+          SELECT ?, ?, ?, ?, ?
+          WHERE EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
+          RETURNING id`,
+    args: [slug, texto, efeito, criadoEm, venceEm, slug],
   });
-  return Number(r.rows[0].id);
+  return r.rows.length ? Number(r.rows[0].id) : null;
 }
 
 function linha(r: Record<string, unknown>): AvisoLinha {
@@ -318,13 +328,21 @@ function versaoDaLinha(r: Record<string, unknown>): FichaVersao {
 /** Grava uma versão NOVA — INSERT, nunca UPDATE (ver o comentário da tabela;
  *  a única exceção é a troca de endereço, `trocarEndereco`, e é de IDENTIDADE).
  *
+ *  🔴 ESTA É A FORMA DO NASCIMENTO, INCONDICIONAL: a 1ª versão de um lugar (a
+ *  semente; a publicação, Tarefa 12) nasce em endereço VAZIO por definição. Quem
+ *  grava versão de um lugar QUE JÁ EXISTE (as rotas `ficha` e `visibilidade` do
+ *  painel) usa `gravarEdicao`, a forma condicional — ver lá o porquê (a corrida
+ *  com a troca de endereço). As duas formas são separadas pelo NOME, e cada rota
+ *  do painel importa só a sua; a prova é `tests/api/corrida-endereco.test.ts`.
+ *
  *  🔴 O `oculto` TEM DEFAULT `false` PRA NÃO MEXER NOS CHAMADORES ANTIGOS, E
  *  ISSO É UMA ARMADILHA PARA QUEM GRAVA UMA EDIÇÃO. Quem grava versão nova de um
  *  lugar QUE JÁ EXISTE tem de passar o `oculto` da versão ATUAL: com o default,
  *  o dono esconde um lugar, conserta um typo pelo celular, e o lugar VOLTA AO AR
  *  em silêncio. Visibilidade só muda pela porta que existe pra isso
  *  (`POST /api/admin/visibilidade`) — nunca de carona numa edição de campo. É o
- *  que `src/app/api/admin/ficha/route.ts` faz, com o porquê escrito lá. */
+ *  que `src/app/api/admin/ficha/route.ts` faz, com o porquê escrito lá — hoje
+ *  por `gravarEdicao`, onde o `oculto` nem tem default. */
 export async function gravarVersao(
   client: Client, slug: string, doc: string, autor: AutorVersao, criadoEm: number,
   oculto: boolean = false,
@@ -335,6 +353,33 @@ export async function gravarVersao(
     args: [slug, doc, autor, criadoEm, oculto ? 1 : 0],
   });
   return Number(r.rows[0].id);
+}
+
+/** Grava uma versão nova de um lugar QUE JÁ EXISTE — só se ele ainda mora em
+ *  `slug` na hora de gravar. Devolve `null` (sem gravar nada) quando não mora
+ *  mais (onda de fix da Tarefa 11e, I1 da revisão).
+ *
+ *  🔴 A CORRIDA QUE ISTO FECHA: a rota lê `versaoAtual(A)`, a troca de endereço
+ *  leva o lugar pra B, e a rota grava em A. Com o `INSERT` de sempre, isso
+ *  RECRIAVA o lugar em A (uma versão só, no ar) e travava A pra sempre — e o pior:
+ *  um "esconder" respondia 200 e o lugar seguia no ar em B. A condição mora NO
+ *  MESMO `INSERT` (`WHERE EXISTS`), nunca numa leitura antes: entre ler e gravar
+ *  é exatamente onde a troca cabe.
+ *
+ *  O `oculto` é OBRIGATÓRIO aqui, sem default: quem edita passa o da versão
+ *  atual (ver a armadilha descrita em `gravarVersao`). O autor é sempre o
+ *  painel — a semente nunca edita, ela só faz nascer. */
+export async function gravarEdicao(
+  client: Client, slug: string, doc: string, criadoEm: number, oculto: boolean,
+): Promise<number | null> {
+  const r = await client.execute({
+    sql: `INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em, oculto)
+          SELECT ?, ?, 'painel', ?, ?
+          WHERE EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
+          RETURNING id`,
+    args: [slug, doc, criadoEm, oculto ? 1 : 0, slug],
+  });
+  return r.rows.length ? Number(r.rows[0].id) : null;
 }
 
 /** A ficha de AGORA daquele lugar: a versão de maior `id`.
@@ -548,29 +593,44 @@ export async function apagarRascunho(client: Client, slug: string): Promise<void
  *  `:memory:` o cliente 0.14 larga a conexão depois dela, e a consulta seguinte
  *  abre um banco VAZIO — é assim que roda a suíte inteira.
  *
+ *  🔴 E A PORTA É "A LINHA DESTE `em` EXISTE **E** O VELHO AINDA TEM VERSÃO"
+ *  (M1 da revisão da onda de fix). Só a linha não bastava: duas requisições no
+ *  MESMO segundo davam o mesmo `(velho, novo, em)`, a 2ª passava pela porta
+ *  aberta pela 1ª e gravava um SEGUNDO ato — e respondia "nada mudou". Com o
+ *  velho ainda tendo versão, a 2ª acha o velho vazio e não faz nada. Por isso
+ *  mover as versões é o ÚLTIMO passo: até ele, o velho ainda tem versão em todo
+ *  passo deste batch (a subconsulta do próprio último passo não depende de
+ *  linha — é avaliada uma vez).
+ *
  *  Os passos, em ordem, e por que cada um:
  *   1. a linha `velho→novo` — o portão (ver acima);
- *   2. os ÓRFÃOS de `novo` (aviso e relato gravados lá por uma corrida depois
- *      que o lugar de antes saiu dali) voltam pro lugar a que `novo` levava —
+ *   2. os ÓRFÃOS de `novo` (relato gravado lá por uma corrida do "✓ Fui"
+ *      depois que o lugar de antes saiu dali; aviso, desde a onda de fix,
+ *      `inserirAviso` já não grava em endereço sem lugar — o passo fica pelos
+ *      dois) voltam pro lugar a que `novo` levava —
  *      quem retoma um endereço não herda o "N foram hoje" de outro lugar;
- *   3. o `slug` de DENTRO de cada `doc` vira `novo` (`json_set`, que sai byte a
+ *   3. avisos e relatos mudam de `ficha_slug`;
+ *   4. `freshness`: a linha órfã de `novo` sai antes (PK — é cache
+ *      recalculável, não afirmação do dono), e a do lugar vai junto;
+ *   5. quem apontava pro velho passa a apontar pro novo (sem cadeia);
+ *   6. a linha cujo `velho` é o NOVO some — é a retomada (E5), e a ida e volta
+ *      A→B→A não deixa um A→A;
+ *   7. a versão do ATO, por `INSERT … SELECT` da atual (ainda no velho) DENTRO
+ *      do batch, já no `novo` e já com o `slug` de dentro reescrito: herda o
+ *      `oculto` dela (C1 — com o default, trocar o endereço de um lugar
+ *      escondido o poria no ar) e grava `endereco_anterior`;
+ *   8. o `slug` de DENTRO de cada `doc` vira `novo` (`json_set`, que sai byte a
  *      byte igual ao `JSON.stringify` — medido). Sem isto, "voltar" gravaria um
  *      doc que diz `velho` sob `novo` e o "Ficha divergente" derrubaria a home
  *      INTEIRA. `json_valid` deixa a versão ilegível como está (M4): sem ele, um
  *      doc torto estouraria o batch e o lugar nunca mais trocaria de endereço;
- *   4. versões, avisos e relatos mudam de `ficha_slug`;
- *   5. `freshness`: a linha órfã de `novo` sai antes (PK — é cache
- *      recalculável, não afirmação do dono), e a do lugar vai junto;
- *   6. quem apontava pro velho passa a apontar pro novo (sem cadeia);
- *   7. a linha cujo `velho` é o NOVO some — é a retomada (E5), e a ida e volta
- *      A→B→A não deixa um A→A;
- *   8. a versão do ATO, por `INSERT … SELECT` da atual DENTRO do batch: herda o
- *      `oculto` dela (C1 — com o default, trocar o endereço de um lugar
- *      escondido o poria no ar) e grava `endereco_anterior`. */
+ *   9. as versões mudam de `ficha_slug` — por último (ver a porta). */
 export async function trocarEndereco(client: Client, velho: string, novo: string, agora: number): Promise<boolean> {
-  // O portão de todo passo depois do 1º: a linha que o 1º acabou de gravar.
-  const porta = `EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ? AND novo = ? AND em = ?)`;
-  const p = [velho, novo, agora];
+  // O portão de todo passo depois do 1º: a linha que o 1º acabou de gravar, e
+  // o lugar ainda no velho.
+  const porta = `EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ? AND novo = ? AND em = ?)
+              AND EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)`;
+  const p = [velho, novo, agora, velho];
   const rs = await client.batch(
     [
       {
@@ -592,12 +652,6 @@ export async function trocarEndereco(client: Client, velho: string, novo: string
               WHERE ficha_slug = ? AND EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ?) AND ${porta}`,
         args: [novo, novo, novo, ...p],
       },
-      {
-        sql: `UPDATE ficha_versoes SET doc = json_set(doc, '$.slug', ?)
-              WHERE ficha_slug = ? AND json_valid(doc) AND ${porta}`,
-        args: [novo, velho, ...p],
-      },
-      { sql: `UPDATE ficha_versoes SET ficha_slug = ? WHERE ficha_slug = ? AND ${porta}`, args: [novo, velho, ...p] },
       { sql: `UPDATE avisos SET ficha_slug = ? WHERE ficha_slug = ? AND ${porta}`, args: [novo, velho, ...p] },
       { sql: `UPDATE confirmacoes SET ficha_slug = ? WHERE ficha_slug = ? AND ${porta}`, args: [novo, velho, ...p] },
       { sql: `DELETE FROM freshness WHERE ficha_slug = ? AND ${porta}`, args: [novo, ...p] },
@@ -606,11 +660,17 @@ export async function trocarEndereco(client: Client, velho: string, novo: string
       { sql: `DELETE FROM enderecos_antigos WHERE velho = ? AND ${porta}`, args: [novo, ...p] },
       {
         sql: `INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em, oculto, endereco_anterior)
-              SELECT ?, doc, 'painel', ?, oculto, ?
+              SELECT ?, CASE WHEN json_valid(doc) THEN json_set(doc, '$.slug', ?) ELSE doc END, 'painel', ?, oculto, ?
               FROM ficha_versoes WHERE ficha_slug = ? AND ${porta}
               ORDER BY id DESC LIMIT 1`,
-        args: [novo, agora, velho, novo, ...p],
+        args: [novo, novo, agora, velho, velho, ...p],
       },
+      {
+        sql: `UPDATE ficha_versoes SET doc = json_set(doc, '$.slug', ?)
+              WHERE ficha_slug = ? AND json_valid(doc) AND ${porta}`,
+        args: [novo, velho, ...p],
+      },
+      { sql: `UPDATE ficha_versoes SET ficha_slug = ? WHERE ficha_slug = ? AND ${porta}`, args: [novo, velho, ...p] },
     ],
     "write",
   );

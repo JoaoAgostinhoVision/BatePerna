@@ -1,7 +1,8 @@
 import { ZodError } from "zod";
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
-import { type FichaVersao, getClient, gravarVersao, versaoAtual, versaoPorId, versoesAtuais } from "@/lib/db";
+import { type FichaVersao, getClient, gravarEdicao, versaoAtual, versaoPorId, versoesAtuais } from "@/lib/db";
+import { LUGAR_MUDOU_DE_ENDERECO } from "@/lib/endereco";
 import {
   RecusaDoTrajeto,
   acrescentarEtapa,
@@ -257,7 +258,7 @@ export async function PUT(req: Request): Promise<Response> {
     //
     // O `fichaSchema.parse` aqui existe só pra DECIDIR (400 se a versão antiga
     // não passa mais no schema de hoje) — o resultado do parse é DESCARTADO. O
-    // que vai pro `gravarVersao` é `versao.doc`, o texto exatamente como ele
+    // que vai pro `gravarEdicao` é `versao.doc`, o texto exatamente como ele
     // saiu do banco.
     //
     // A primeira versão desta rota gravava `JSON.stringify(fichaSchema.parse(...))`
@@ -290,8 +291,9 @@ export async function PUT(req: Request): Promise<Response> {
     // que vale é a DE AGORA, não a que a versão antiga tinha. Se ela viesse de
     // `versao.oculto`, voltar a uma versão de antes de o lugar ser escondido o
     // devolveria AO AR em silêncio: a mesma família do defeito da semente, agora
-    // pela porta do arquivo histórico. E com o default `false` de
-    // `gravarVersao` seria pior — TODO "voltar" desesconderia.
+    // pela porta do arquivo histórico. (O default `false` de `gravarVersao`
+    // seria pior — TODO "voltar" desesconderia —, e é por isso que a forma das
+    // edições, `gravarEdicao`, não tem default.)
     //
     // A leitura a mais é o preço, e é uma consulta indexada de uma linha na mesma
     // tabela que o `versaoPorId` acima já leu. Ela nunca devolve `null` aqui (a
@@ -313,11 +315,14 @@ export async function PUT(req: Request): Promise<Response> {
     );
     if (doPar !== null) return new Response(doPar, { status: 409, headers: TEXTO });
 
-    // E O ENDEREÇO TAMBÉM NÃO VOLTA (Tarefa 11e): `gravarVersao` não copia o
+    // E O ENDEREÇO TAMBÉM NÃO VOLTA (Tarefa 11e): `gravarEdicao` não copia o
     // `endereco_anterior` da versão antiga — voltar a uma versão de antes de uma
     // troca de endereço restaura o DOCUMENTO (que já diz o endereço de agora,
     // reescrito na troca), e o lugar continua onde está.
-    const id = await gravarVersao(getClient(), slug, versao.doc, "painel", agora, atual?.oculto ?? false);
+    const id = await gravarEdicao(getClient(), slug, versao.doc, agora, atual?.oculto ?? false);
+    // 🔴 `null` = o lugar saiu deste endereço entre a leitura e a gravação (a
+    // troca de endereço no meio, I1 da revisão da 11e): nada foi gravado.
+    if (id === null) return new Response(LUGAR_MUDOU_DE_ENDERECO, { status: 409, headers: TEXTO });
     return Response.json({ id }, { headers: { "cache-control": "no-store" } });
   }
 
@@ -514,14 +519,21 @@ export async function PUT(req: Request): Promise<Response> {
   }
 
   // 🔴 A VERSÃO NOVA HERDA A VISIBILIDADE DA ATUAL (`versao.oculto`), e sem este
-  // argumento a rota DESESCONDERIA o lugar a cada edição de campo: `gravarVersao`
-  // tem `oculto = false` por padrão. O dono esconde um lugar, conserta um typo na
+  // argumento a rota DESESCONDERIA o lugar a cada edição de campo (a forma de
+  // nascer, `gravarVersao`, tem `oculto = false` por padrão; a das edições,
+  // `gravarEdicao`, nem deixa omitir). O dono esconde um lugar, conserta um typo na
   // voz pelo celular, e o lugar VOLTA AO PÚBLICO sem ele pedir — uma decisão de
   // produto tomada de carona por um argumento omitido.
   //
   // Visibilidade só muda pela porta que existe pra isso
   // (`POST /api/admin/visibilidade`). Esta rota edita CONTEÚDO; nada aqui é um
   // canal pra mudar o que está no ar.
-  const id = await gravarVersao(getClient(), slug, novoDoc, "painel", agora, versao.oculto);
+  //
+  // 🔴 E A GRAVAÇÃO É CONDICIONAL (`gravarEdicao`, onda de fix da 11e, I1): se a
+  // troca de endereço levou o lugar embora depois da leitura lá em cima, gravar
+  // aqui recriaria o lugar no endereço velho. O banco decide no INSERT; `null`
+  // é 409 com a frase, e nada entrou.
+  const id = await gravarEdicao(getClient(), slug, novoDoc, agora, versao.oculto);
+  if (id === null) return new Response(LUGAR_MUDOU_DE_ENDERECO, { status: 409, headers: TEXTO });
   return Response.json({ id }, { headers: { "cache-control": "no-store" } });
 }

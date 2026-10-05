@@ -217,15 +217,18 @@ self.addEventListener("fetch", (evento) => {
 
       if (resposta && gravarEm.length > 0) guardar(evento, gravarEm, resposta);
       // 🔴 A cópia de uma URL que respondeu 404 ou redirect SAI do cache (Tarefa
-      // 11e, C2): sem isto, o lugar escondido continuaria abrindo offline pela
-      // cópia, e o endereço velho mostraria a ficha de antes. ⚠️ É a única linha
-      // desta decisão sem prova: este arquivo não é importável em teste (arrasta
-      // o serwist); a decisão de O QUE apagar está em `resolverNavegacao`.
+      // 11e, C2) — e com ela o ponteiro da última, se era ela, e a `/trilhas`
+      // guardada (onda de fix, I2): sem isto, o lugar escondido continuaria
+      // abrindo offline. Cada alvo no SEU cache. ⚠️ É a única linha desta decisão
+      // sem prova em teste: este arquivo não é importável (arrasta o serwist); a
+      // decisão de O QUE apagar está em `resolverNavegacao`, e esta foi medida
+      // no Chrome com o service worker ativo.
       if (apagarEm.length > 0) {
         evento.waitUntil(
           (async () => {
-            const cache = await caches.open(CACHE_ULTIMA_FICHA);
-            for (const chave of apagarEm) await cache.delete(chave, { ignoreSearch: true });
+            for (const { chave, cache: nome, ignorarBusca } of apagarEm) {
+              await (await caches.open(nome)).delete(chave, { ignoreSearch: ignorarBusca ?? false });
+            }
           })().catch(() => undefined),
         );
       }

@@ -7,6 +7,7 @@ import {
   enderecoNovoDe,
   enderecosAntigosDe,
   ensureSchema,
+  gravarEdicao,
   gravarVersao,
   historico,
   insertConfirmacao,
@@ -192,10 +193,67 @@ describe("recusa: nada muda em NENHUMA das tabelas", () => {
     expect(await retrato()).toEqual(antes);
   });
 
+  // 🔴 I3 DA REVISÃO: a recusa COM endereço antigo envolvido. Os casos de cima
+  // não têm linha nenhuma em `enderecos_antigos`, e por isso tirar a porta dos
+  // dois passos que mexem NELA sobrevivia à suíte inteira.
+  it("o lugar que recusa já veio de outro endereço (D→A): a linha D→A continua levando a ELE", async () => {
+    const D = "lugar-marcador-quarta-marcadora";
+    expect(await trocarEndereco(c, A, D, AGORA - 30)).toBe(true);
+    expect(await trocarEndereco(c, D, A, AGORA - 20)).toBe(true);
+    expect(await tabelaDeEnderecos(), "a premissa: o lugar mora em A e D leva a ele").toEqual([`${D}→${A}`]);
+    await gravarVersao(c, B, JSON.stringify(lugarMarcador(B, "Outro Marcador", "Outra Marcadora")), "painel", AGORA - 3);
+    const antes = await retrato();
+    expect(await trocarEndereco(c, A, B, AGORA)).toBe(false);
+    // Sem a porta no "repontar", D passaria a levar a B — a OUTRO lugar.
+    expect(await retrato()).toEqual(antes);
+  });
+
+  it("o novo é endereço antigo de outro lugar, com rascunho nele (B→E): a linha B→E não morre", async () => {
+    const E = "lugar-marcador-quinta-marcadora";
+    await gravarVersao(c, B, JSON.stringify(lugarMarcador(B, "Outro Marcador", "Outra Marcadora")), "painel", AGORA - 30);
+    expect(await trocarEndereco(c, B, E, AGORA - 20)).toBe(true);
+    expect(await criarRascunho(c, B, JSON.stringify({ slug: B }), AGORA - 10)).toBe(true);
+    expect(await tabelaDeEnderecos(), "a premissa: B leva ao outro lugar").toEqual([`${B}→${E}`]);
+    const antes = await retrato();
+    expect(await trocarEndereco(c, A, B, AGORA)).toBe(false);
+    // Sem a porta no "apagar a linha retomada", B→E sumiria: link velho de outro lugar, 404.
+    expect(await retrato()).toEqual(antes);
+  });
+
   it("velho que não é lugar nenhum: nada muda", async () => {
     const antes = await retrato();
     expect(await trocarEndereco(c, "lugar-que-nao-existe-marcador", B, AGORA)).toBe(false);
     expect(await retrato()).toEqual(antes);
+  });
+});
+
+describe("duas trocas no MESMO segundo (M1 da revisão)", () => {
+  it("a segunda devolve false e não grava um segundo ato", async () => {
+    // Com a freshness do lugar: ela é a tabela que a 2ª, de porta aberta, mexeria
+    // (o passo que joga fora a "órfã" do novo apagaria a do PRÓPRIO lugar).
+    await upsertFreshness(c, { slug: A, estado: "fresco", calculadoEm: AGORA, fonte: "f", previsaoBruta: "{}" });
+    expect(await trocarEndereco(c, A, B, AGORA)).toBe(true);
+    const antes = await retrato();
+    expect(await trocarEndereco(c, A, B, AGORA)).toBe(false);
+    expect(await retrato(), "a segunda troca mexeu no banco").toEqual(antes);
+    expect((await historico(c, B)).filter((v) => v.endereco_anterior === A)).toHaveLength(1);
+  });
+});
+
+describe("gravarEdicao: só grava onde o lugar mora (I1 da revisão)", () => {
+  it("no endereço que o lugar deixou: null, nada gravado, A não ressuscita", async () => {
+    const lida = (await versaoAtual(c, A))!;
+    await trocarEndereco(c, A, B, AGORA);
+    const antes = await retrato();
+    expect(await gravarEdicao(c, A, lida.doc, AGORA + 1, true)).toBeNull();
+    expect(await retrato()).toEqual(antes);
+  });
+
+  it("controle: onde o lugar mora, grava com o oculto pedido e devolve o id", async () => {
+    const lida = (await versaoAtual(c, A))!;
+    const id = await gravarEdicao(c, A, lida.doc, AGORA + 1, true);
+    expect(id).toBeTypeOf("number");
+    expect(await versaoAtual(c, A)).toMatchObject({ id, autor: "painel", oculto: true, criado_em: AGORA + 1 });
   });
 });
 
@@ -207,9 +265,15 @@ describe("o endereço velho é RETOMÁVEL (E5)", () => {
   });
 
   it("trocar PARA o endereço velho de outro lugar o retoma: a linha some, e o órfão de lá não vem junto", async () => {
-    // A foi pra B. Depois, um aviso ÓRFÃO ficou em A (a corrida do M1).
+    // A foi pra B. Depois, um aviso e um relato ÓRFÃOS ficaram em A. O relato
+    // ainda chega assim (o "✓ Fui" público resolve o endereço e grava depois);
+    // o aviso, desde a onda de fix (I1), `inserirAviso` recusa — então ele entra
+    // pela tabela, como dado de antes do conserto.
     await trocarEndereco(c, A, B, AGORA);
-    await inserirAviso(c, A, "aviso órfão marcador", "fechado", AGORA + 1, AGORA + 3600);
+    await c.execute({
+      sql: `INSERT INTO avisos (ficha_slug, texto, efeito, criado_em, vence_em) VALUES (?, ?, 'fechado', ?, ?)`,
+      args: [A, "aviso órfão marcador", AGORA + 1, AGORA + 3600],
+    });
     await insertConfirmacao(c, A, AGORA + 1, "barro");
     // Um OUTRO lugar, em C, pega o endereço A.
     await gravarVersao(c, C, JSON.stringify(lugarMarcador(C, "Terceiro Marcador", "Terceira Marcadora")), "painel", AGORA + 2);
