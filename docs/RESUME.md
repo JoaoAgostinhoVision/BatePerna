@@ -2,7 +2,21 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — PARADA DE 04/10 À NOITE (vence TUDO abaixo; ele: *"estou cansado"*)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 05/10 (vence TUDO abaixo, inclusive a parada de 04/10)
+
+✅ **Onda 2 da 11e FEITA: `da3e6fa`** (U1: toda gravação de lugar publicado leva `baseId`; o banco confere
+`id = baseId AND ficha_slug = slug`). Medido por mim: **2183/2183 em 107**, `tsc` 0, build 0 (com
+`TURSO_DATABASE_URL=file:` no scratch), `mutar.mjs` 42/0. Das 22 mutações da onda, o implementador rodou 19 (OOM
+matou a 20ª); **as 3 que faltavam eu rodei: as três morreram**, árvore limpa. **Stash `onda2-11e-PARCIAL` APAGADO.**
+
+→ 🔴 **PRÓXIMO PASSO:** a **re-revisão da 11e (ondas 1+2)** foi despachada com
+`.superpowers/sdd/2026-09-26-painel-completo/task-11e-rereview-PROMPT.md`. Se não existir `task-11e-rereview.md`,
+redespachar COMO ESTÁ. Depois: **Tarefa 12**, e a ordem abaixo segue igual.
+
+Nova frase pro pacote de copy: `LUGAR_MUDOU_DE_ENDERECO` diz "Recarregue a página", mas no caso da aba velha
+recarregar abre o painel do OUTRO lugar (que retomou o endereço). PENDENTE, decisão dele.
+
+## ▶ PARADA DE 04/10 À NOITE (histórico; ele: *"estou cansado"*)
 
 **Branch `painel-completo`, NADA NO AR.** Topo esperado: `docs(resume): 04/10 - a parada...`. Último código: `8d5f904`,
 medido por mim: **2157/2157 em 105**, `tsc` 0, build 0, `mutar.mjs` 42/0. A régua: se houver commit de código depois
