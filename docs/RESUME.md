@@ -9,9 +9,15 @@
 `TURSO_DATABASE_URL=file:` no scratch), `mutar.mjs` 42/0. Das 22 mutações da onda, o implementador rodou 19 (OOM
 matou a 20ª); **as 3 que faltavam eu rodei: as três morreram**, árvore limpa. **Stash `onda2-11e-PARCIAL` APAGADO.**
 
-→ 🔴 **PRÓXIMO PASSO:** a **re-revisão da 11e (ondas 1+2)** foi despachada com
-`.superpowers/sdd/2026-09-26-painel-completo/task-11e-rereview-PROMPT.md`. Se não existir `task-11e-rereview.md`,
-redespachar COMO ESTÁ. Depois: **Tarefa 12**, e a ordem abaixo segue igual.
+✅ **Re-revisão da 11e feita** (`task-11e-rereview.md`): **0 C · 2 I · 6 M**. N1 (linha vermelha, pré-existente):
+"Salvar" + "Esconder" quase juntos põem o lugar de volta no ar em silêncio (o `oculto`/`doc` lido antes e gravado
+depois). N2/N3: guardas ausentes (atomicidade da identidade; 409 `ENDERECO_NAO_TROCOU`). N6 (relato da fila offline
+de outro lugar) foi pro brief da 12 como **12-N6**. N4 → pacote de copy.
+
+→ 🔴 **PRÓXIMO PASSO:** a **onda de fix 3 da 11e** foi despachada com
+`.superpowers/sdd/2026-09-26-painel-completo/task-11e-fix3-PROMPT.md` (W1=N1, W2=N2, W3=N3, W4=N5/N7 de carona).
+Se não houver commit de código depois de `da3e6fa`, redespachar COMO ESTÁ (árvore suja = parar e medir, não apagar).
+Depois: medir eu mesmo → re-revisão curta → **Tarefa 12** (agora com 12-N6), e a ordem abaixo segue igual.
 
 Nova frase pro pacote de copy: `LUGAR_MUDOU_DE_ENDERECO` diz "Recarregue a página", mas no caso da aba velha
 recarregar abre o painel do OUTRO lugar (que retomou o endereço). PENDENTE, decisão dele.
