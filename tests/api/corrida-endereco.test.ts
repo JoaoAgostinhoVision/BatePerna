@@ -5,7 +5,7 @@ import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
 import { enderecoNovoDe, ensureSchema, gravarVersao, historico, trocarEndereco, versoesAtuais } from "@/lib/db";
 import { LUGAR_MUDOU_DE_ENDERECO } from "@/lib/endereco";
-import { semearAcervo } from "../banco";
+import { semearAcervo, base, comBaseAtual } from "../banco";
 import { lugarMarcador } from "../lugar-marcador";
 
 /** A CORRIDA EDIÇÃO × TROCA DE ENDEREÇO (onda de fix da Tarefa 11e, I1 da
@@ -63,7 +63,7 @@ async function retrato(): Promise<Record<string, unknown[]>> {
 
 function trocarNoMeio(): void {
   corrida.depoisDeLer = async () => {
-    expect(await trocarEndereco(c, A, B, AGORA), "a troca do meio não rodou").toBe(true);
+    expect(await trocarEndereco(c, A, B, AGORA, await base(c, A)), "a troca do meio não rodou").toBe(true);
     depoisDaTroca = await retrato();
   };
 }
@@ -118,25 +118,25 @@ const corpoAviso = () => ({ slug: A, texto: "aviso marcador do meio", efeito: "f
 
 describe("a corrida: lido antes da troca, gravado depois", () => {
   it("PUT de campo: 409, e A não ressuscita", async () => {
-    const { PUT } = await import("@/app/api/admin/ficha/route");
+    const PUT = comBaseAtual((await import("@/app/api/admin/ficha/route")).PUT, () => c);
     trocarNoMeio();
     await nadaGravado(await PUT(pedido("ficha", "PUT", CORPO_CAMPO)));
   });
 
   it("voltar a uma versão: 409, e A não ressuscita", async () => {
-    const { PUT } = await import("@/app/api/admin/ficha/route");
+    const PUT = comBaseAtual((await import("@/app/api/admin/ficha/route")).PUT, () => c);
     trocarNoMeio();
     await nadaGravado(await PUT(pedido("ficha", "PUT", { slug: A, versaoId: primeiraDeA })));
   });
 
   it("ESCONDER: 409 (nunca um 200 com o lugar no ar), e B continua como estava", async () => {
-    const { POST } = await import("@/app/api/admin/visibilidade/route");
+    const POST = comBaseAtual((await import("@/app/api/admin/visibilidade/route")).POST, () => c);
     trocarNoMeio();
     await nadaGravado(await POST(pedido("visibilidade", "POST", CORPO_ESCONDER)));
   });
 
   it("aviso: 409, e nenhum aviso órfão no endereço velho", async () => {
-    const { POST } = await import("@/app/api/admin/aviso/route");
+    const POST = comBaseAtual((await import("@/app/api/admin/aviso/route")).POST, () => c);
     trocarNoMeio();
     await nadaGravado(await POST(pedido("aviso", "POST", corpoAviso())));
   });
@@ -146,25 +146,25 @@ describe("a corrida: lido antes da troca, gravado depois", () => {
 // por outro motivo (corpo torto, coerência) passaria por prova da corrida.
 describe("controle: sem a corrida, os mesmos pedidos gravam", () => {
   it("PUT de campo: 200", async () => {
-    const { PUT } = await import("@/app/api/admin/ficha/route");
+    const PUT = comBaseAtual((await import("@/app/api/admin/ficha/route")).PUT, () => c);
     expect((await PUT(pedido("ficha", "PUT", CORPO_CAMPO))).status).toBe(200);
     expect(await historico(c, A)).toHaveLength(3);
   });
 
   it("voltar: 200", async () => {
-    const { PUT } = await import("@/app/api/admin/ficha/route");
+    const PUT = comBaseAtual((await import("@/app/api/admin/ficha/route")).PUT, () => c);
     expect((await PUT(pedido("ficha", "PUT", { slug: A, versaoId: primeiraDeA }))).status).toBe(200);
     expect(await historico(c, A)).toHaveLength(3);
   });
 
   it("esconder: 200", async () => {
-    const { POST } = await import("@/app/api/admin/visibilidade/route");
+    const POST = comBaseAtual((await import("@/app/api/admin/visibilidade/route")).POST, () => c);
     expect((await POST(pedido("visibilidade", "POST", CORPO_ESCONDER))).status).toBe(200);
     expect((await versoesAtuais(c)).has(A)).toBe(false);
   });
 
   it("aviso: 200", async () => {
-    const { POST } = await import("@/app/api/admin/aviso/route");
+    const POST = comBaseAtual((await import("@/app/api/admin/aviso/route")).POST, () => c);
     expect((await POST(pedido("aviso", "POST", corpoAviso()))).status).toBe(200);
     expect((await c.execute("SELECT ficha_slug FROM avisos")).rows.map((r) => r.ficha_slug)).toEqual([A]);
   });

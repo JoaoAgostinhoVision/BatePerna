@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { VersaoDaTela, comBase } from "./campos/gravar";
 import type { FichaVersao } from "@/lib/db";
 import { DE_VOLTA_AO_AR, ESCONDIDO } from "./campos/palavras";
 import { enderecoTrocado } from "@/lib/endereco";
@@ -70,6 +71,8 @@ export default function HistoricoDaFicha({ versoes }: Props) {
   const [aberta, setAberta] = useState<number | null>(null);
   const [voltando, setVoltando] = useState<number | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  // A versão que a tela abriu (onda de fix 2 da 11e): ver `VersaoDaTela`.
+  const baseId = useContext(VersaoDaTela);
 
   async function voltar(slug: string, versaoId: number) {
     if (voltando != null) return;
@@ -78,7 +81,7 @@ export default function HistoricoDaFicha({ versoes }: Props) {
     try {
       const r = await fetch("/api/admin/ficha", {
         method: "PUT",
-        body: JSON.stringify({ slug, versaoId }),
+        body: JSON.stringify(comBase({ slug, versaoId }, baseId)),
       });
       if (r.ok) { location.reload(); return; }
       // O 409 com frase (o lugar mudou de endereço no meio, onda de fix da 11e;

@@ -20,7 +20,7 @@ import {
 } from "@/lib/endereco";
 import { esquecerMemoria } from "@/lib/ficha-fonte";
 import { enderecoDeLugar } from "@/lib/rascunho";
-import { semearAcervo } from "../banco";
+import { semearAcervo, base, comBaseAtual } from "../banco";
 import { lugarMarcador } from "../lugar-marcador";
 
 // Molde: `tests/api/route-admin-visibilidade.test.ts` — `Request` à mão, sessão
@@ -68,7 +68,7 @@ beforeEach(async () => {
   vi.stubEnv("ADMIN_SENHA", SENHA);
   vi.stubEnv("ADMIN_SEGREDO", SEGREDO);
   vi.resetModules();
-  ({ POST } = await import("@/app/api/admin/endereco/route"));
+  POST = comBaseAtual((await import("@/app/api/admin/endereco/route")).POST, () => c);
   cookieBom = criarSessao(SEGREDO, AGORA, DURACAO_SESSAO_S);
 });
 
@@ -122,7 +122,7 @@ describe("POST /api/admin/endereco — o caso dele", () => {
     const deAntes = (await historico(c, A)).at(-1)!.id;
     expect((await POST(pedido({ slug: A }))).status).toBe(200);
 
-    const { PUT } = await import("@/app/api/admin/ficha/route");
+    const PUT = comBaseAtual((await import("@/app/api/admin/ficha/route")).PUT, () => c);
     const volta = await PUT(
       new Request("http://x/api/admin/ficha", {
         method: "PUT",
@@ -146,7 +146,7 @@ describe("POST /api/admin/endereco — o caso dele", () => {
 describe("POST /api/admin/endereco — duas abas no mesmo segundo (M1)", () => {
   it("a 2ª passa das leituras, a 1ª troca no meio: a 2ª diz o endereço que vale (200) e não grava 2º ato", async () => {
     corrida.antesDoBatch = async () => {
-      expect(await trocarEndereco(c, A, B, AGORA), "a 1ª aba não trocou").toBe(true);
+      expect(await trocarEndereco(c, A, B, AGORA, await base(c, A)), "a 1ª aba não trocou").toBe(true);
     };
     const res = await POST(pedido({ slug: A }));
     expect(corrida.antesDoBatch, "a corrida não aconteceu").toBeNull();

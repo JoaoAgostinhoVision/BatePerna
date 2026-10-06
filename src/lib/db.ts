@@ -223,24 +223,31 @@ export async function contarHoje(
   return { foram: Number(r?.foram ?? 0), barro: Number(r?.barro ?? 0) };
 }
 
-/** Grava um aviso — SÓ SE `slug` É LUGAR NA HORA DE GRAVAR, e devolve `null`
- *  quando não é (onda de fix da Tarefa 11e, I1 da revisão).
+/** Grava um aviso — SÓ SE A VERSÃO `baseId` (a que a tela do dono abriu) MORA
+ *  EM `slug` NA HORA DE GRAVAR, e devolve `null` quando não mora (onda de fix
+ *  da Tarefa 11e, I1 da revisão; e a onda de fix 2, M6).
  *
  *  🔴 A CONDIÇÃO MORA NO MESMO `INSERT`, NUNCA NUMA LEITURA ANTES. A rota lê o
  *  lugar e grava depois; se a troca de endereço roda no meio, o aviso caía no
  *  endereço VELHO — um "fechado" que o dono publicou e que nunca aparecia no
  *  lugar, que já morava no novo. Com o `WHERE EXISTS`, quem decide é o banco no
- *  instante da gravação. */
+ *  instante da gravação.
+ *
+ *  🔴 E O ENDEREÇO NÃO É IDENTIDADE (M6): se OUTRO lugar retomou `slug`, "existe
+ *  versão em `slug`" é verdade — a dele — e o aviso de um lugar caía no outro.
+ *  Quem identifica o lugar é a versão que a tela abriu: as versões andam com o
+ *  lugar na troca, então a da aba velha já mora no endereço novo, e aqui não
+ *  bate. Ver `gravarEdicao`. */
 export async function inserirAviso(
   client: Client, slug: string, texto: string, efeito: EfeitoAviso,
-  criadoEm: number, venceEm: number,
+  criadoEm: number, venceEm: number, baseId: number,
 ): Promise<number | null> {
   const r = await client.execute({
     sql: `INSERT INTO avisos (ficha_slug, texto, efeito, criado_em, vence_em)
           SELECT ?, ?, ?, ?, ?
-          WHERE EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
+          WHERE EXISTS (SELECT 1 FROM ficha_versoes WHERE id = ? AND ficha_slug = ?)
           RETURNING id`,
-    args: [slug, texto, efeito, criadoEm, venceEm, slug],
+    args: [slug, texto, efeito, criadoEm, venceEm, baseId, slug],
   });
   return r.rows.length ? Number(r.rows[0].id) : null;
 }
@@ -366,18 +373,32 @@ export async function gravarVersao(
  *  MESMO `INSERT` (`WHERE EXISTS`), nunca numa leitura antes: entre ler e gravar
  *  é exatamente onde a troca cabe.
  *
+ *  🔴 E "MORA EM `slug`" É PELA VERSÃO QUE A TELA ABRIU, NÃO POR "`slug` TEM
+ *  VERSÃO" (onda de fix 2 da 11e, M6 — medido pelas rotas reais). O lugar P sai
+ *  de A pra B, o lugar Q retoma A: A TEM versão (a de Q), e a aba velha de P em
+ *  `/admin/A` gravava a voz de P em Q e escondia Q, as duas com 200. O endereço
+ *  não é identidade. `baseId` é a versão que a página do painel renderizou; as
+ *  versões andam com o lugar na troca (`trocarEndereco`, passo 9), então a da
+ *  aba velha mora em B e `id = baseId AND ficha_slug = slug` não acha nada em A.
+ *  Esta condição SUBSTITUI a da onda 1 (que era só "`slug` tem versão"): ela a
+ *  contém — a corrida da onda 1 também move a versão `baseId` pra longe de A.
+ *
+ *  ⚠️ `baseId` NÃO É TRAVA DE CONCORRÊNCIA DO MESMO LUGAR: qualquer versão do
+ *  lugar, atual ou não, passa. Duas abas do mesmo lugar continuam gravando como
+ *  sempre gravaram (ruling U1 da onda 2); o que se confere é só identidade.
+ *
  *  O `oculto` é OBRIGATÓRIO aqui, sem default: quem edita passa o da versão
  *  atual (ver a armadilha descrita em `gravarVersao`). O autor é sempre o
  *  painel — a semente nunca edita, ela só faz nascer. */
 export async function gravarEdicao(
-  client: Client, slug: string, doc: string, criadoEm: number, oculto: boolean,
+  client: Client, slug: string, doc: string, criadoEm: number, oculto: boolean, baseId: number,
 ): Promise<number | null> {
   const r = await client.execute({
     sql: `INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em, oculto)
           SELECT ?, ?, 'painel', ?, ?
-          WHERE EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
+          WHERE EXISTS (SELECT 1 FROM ficha_versoes WHERE id = ? AND ficha_slug = ?)
           RETURNING id`,
-    args: [slug, doc, criadoEm, oculto ? 1 : 0, slug],
+    args: [slug, doc, criadoEm, oculto ? 1 : 0, baseId, slug],
   });
   return r.rows.length ? Number(r.rows[0].id) : null;
 }
@@ -603,7 +624,11 @@ export async function apagarRascunho(client: Client, slug: string): Promise<void
  *  linha — é avaliada uma vez).
  *
  *  Os passos, em ordem, e por que cada um:
- *   1. a linha `velho→novo` — o portão (ver acima);
+ *   1. a linha `velho→novo` — o portão (ver acima). "Velho é lugar" é "a
+ *      versão `baseId`, a que a tela do dono abriu, mora em `velho`" (onda de
+ *      fix 2, M6): se outro lugar retomou `velho`, a aba velha moveria ESSE
+ *      lugar. Ver `gravarEdicao`. É só aqui: todo passo seguinte depende da
+ *      linha que este grava;
  *   2. os ÓRFÃOS de `novo` (relato gravado lá por uma corrida do "✓ Fui"
  *      depois que o lugar de antes saiu dali; aviso, desde a onda de fix,
  *      `inserirAviso` já não grava em endereço sem lugar — o passo fica pelos
@@ -625,7 +650,9 @@ export async function apagarRascunho(client: Client, slug: string): Promise<void
  *      INTEIRA. `json_valid` deixa a versão ilegível como está (M4): sem ele, um
  *      doc torto estouraria o batch e o lugar nunca mais trocaria de endereço;
  *   9. as versões mudam de `ficha_slug` — por último (ver a porta). */
-export async function trocarEndereco(client: Client, velho: string, novo: string, agora: number): Promise<boolean> {
+export async function trocarEndereco(
+  client: Client, velho: string, novo: string, agora: number, baseId: number,
+): Promise<boolean> {
   // O portão de todo passo depois do 1º: a linha que o 1º acabou de gravar, e
   // o lugar ainda no velho.
   const porta = `EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ? AND novo = ? AND em = ?)
@@ -636,11 +663,11 @@ export async function trocarEndereco(client: Client, velho: string, novo: string
       {
         sql: `INSERT INTO enderecos_antigos (velho, novo, em)
               SELECT ?, ?, ?
-              WHERE EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
+              WHERE EXISTS (SELECT 1 FROM ficha_versoes WHERE id = ? AND ficha_slug = ?)
                 AND NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
                 AND NOT EXISTS (SELECT 1 FROM ficha_rascunhos WHERE slug = ?)
               ON CONFLICT(velho) DO NOTHING`,
-        args: [velho, novo, agora, velho, novo, novo],
+        args: [velho, novo, agora, baseId, velho, novo, novo],
       },
       {
         sql: `UPDATE avisos SET ficha_slug = (SELECT e.novo FROM enderecos_antigos e WHERE e.velho = ?)

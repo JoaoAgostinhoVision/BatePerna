@@ -38,8 +38,9 @@ const { criarSessao, DURACAO_SESSAO_S } = await import("@/lib/admin-sessao");
 const { aberturaDaFicha, agoraRecife, fechadoAgora, rotuloAbertura } = await import("@/lib/horario");
 const rota = await import("@/app/api/admin/ficha/route");
 const FichaInteira = (await import("@/app/admin/FichaInteira")).default;
+const { ComVersaoDaTela } = await import("@/app/admin/campos/gravar");
 const Ficha = (await import("@/app/[slug]/page")).default;
-const { bancoDeProducao, AGORA_SEMENTE } = await import("../banco");
+const { bancoDeProducao, AGORA_SEMENTE, base } = await import("../banco");
 const { TRES_PONTOS } = await import("../ficha-de-tres-pontos");
 
 const banco = await bancoDeProducao();
@@ -106,7 +107,14 @@ describe("o almoço pelo editor da ficha no ar, lido pela fonte pública", () =>
   it("'+ outra faixa', as quatro horas, UM Salvar → a fonte pública diz às 11h: fechado, abre às 14h", async () => {
     const { corpos, respostas, reload, assign } = comRotaDeVerdade();
     const antes = (await historico(banco, MARCADOR)).length;
-    render(<FichaInteira ficha={(await getFicha(MARCADOR))!} />);
+    // Dentro do provedor da página (onda de fix 2 da 11e): a versão que a tela
+    // abriu vai junto, e a porta de VERDADE a confere.
+    const daTela = await base(banco, MARCADOR);
+    render(
+      <ComVersaoDaTela id={daTela}>
+        <FichaInteira ficha={(await getFicha(MARCADOR))!} />
+      </ComVersaoDaTela>,
+    );
     const h = screen.getByTestId("campo-horario");
     fireEvent.click(h.querySelector("[data-mais-faixa]")!);
     const caixa = (i: number, chave: string) => h.querySelector<HTMLInputElement>(`[data-hora="horario.${i}.${chave}"]`)!;
@@ -119,7 +127,7 @@ describe("o almoço pelo editor da ficha no ar, lido pela fonte pública", () =>
     expect(assign, "a ficha no ar navegou: o padrão é recarregar").not.toHaveBeenCalled();
 
     // UMA requisição, com a lista inteira, aceita pela porta — e UMA versão nova.
-    expect(corpos).toEqual([{ slug: MARCADOR, campo: "horario", valor: ALMOCO }]);
+    expect(corpos).toEqual([{ slug: MARCADOR, campo: "horario", valor: ALMOCO, baseId: daTela }]);
     expect(respostas).toEqual([200]);
     expect(await historico(banco, MARCADOR)).toHaveLength(antes + 1);
 

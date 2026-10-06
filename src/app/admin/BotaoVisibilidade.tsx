@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { ERRO_GRAVAR, ERRO_REDE } from "./campos/gravar";
+import { useContext, useState } from "react";
+import { ERRO_GRAVAR, ERRO_REDE, VersaoDaTela, comBase } from "./campos/gravar";
 import { ESCONDER, ESCONDIDO, MOSTRAR_DE_NOVO, SALVANDO } from "./campos/palavras";
 
 type Props = { slug: string; oculto: boolean };
@@ -28,6 +28,8 @@ type Props = { slug: string; oculto: boolean };
 export default function BotaoVisibilidade({ slug, oculto }: Props) {
   const [indo, setIndo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // A versão que a tela abriu (onda de fix 2 da 11e): ver `VersaoDaTela`.
+  const baseId = useContext(VersaoDaTela);
 
   async function trocar() {
     if (indo) return;
@@ -36,7 +38,7 @@ export default function BotaoVisibilidade({ slug, oculto }: Props) {
     try {
       const r = await fetch("/api/admin/visibilidade", {
         method: "POST",
-        body: JSON.stringify({ slug, oculto: !oculto }),
+        body: JSON.stringify(comBase({ slug, oculto: !oculto }, baseId)),
       });
       if (r.ok) { location.reload(); return; }
       // O 409 com frase é a porta dizendo que o lugar mudou de endereço no meio

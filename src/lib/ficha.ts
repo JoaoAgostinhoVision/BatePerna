@@ -127,10 +127,14 @@ export async function getAcervoDoDono(): Promise<{ fichas: Ficha[]; ocultos: Set
  *  `getFicha` filtra os ocultos, e a página do lugar escondido dava 404 pro
  *  dono, justamente a página onde mora o botão de mostrá-lo de novo. Mesma
  *  regra da rota `api/admin/visibilidade`. */
-export async function getFichaDoDono(slug: string): Promise<{ ficha: Ficha; oculto: boolean } | null> {
+export async function getFichaDoDono(
+  slug: string,
+): Promise<{ ficha: Ficha; oculto: boolean; versaoId: number } | null> {
   const v = await lerNoPrazo(versaoAtual(getClient(), slug));
   if (v == null) return null;
-  return { ficha: fichaDaVersao(slug, v.doc), oculto: v.oculto };
+  // `versaoId`: a versão que a tela do dono abre — o `baseId` de toda gravação
+  // dela (onda de fix 2 da 11e, M6). Da MESMA leitura que deu a ficha.
+  return { ficha: fichaDaVersao(slug, v.doc), oculto: v.oculto, versaoId: v.id };
 }
 
 /** O LUGAR NO AR a que um ENDEREÇO VELHO leva, ou `null` (Tarefa 11e, E4).

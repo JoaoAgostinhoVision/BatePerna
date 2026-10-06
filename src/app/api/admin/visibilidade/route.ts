@@ -1,7 +1,7 @@
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
-import { getClient, gravarEdicao, versaoAtual } from "@/lib/db";
-import { LUGAR_MUDOU_DE_ENDERECO } from "@/lib/endereco";
+import { getClient, gravarEdicao, versaoAtual, versaoPorId } from "@/lib/db";
+import { LUGAR_MUDOU_DE_ENDERECO, baseIdValido } from "@/lib/endereco";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
  *  tem desde que a ficha saiu do git (2026-09-24). "Escondido" é um estado da
  *  versão de maior `id`, não uma linha que desapareceu.
  *
- *  O corpo é `{ slug, oculto: boolean }`. A ordem das guardas é a das rotas
+ *  O corpo é `{ slug, oculto: boolean, baseId }` (`baseId` desde a onda de fix 2
+ *  da 11e: a versão que a tela abriu). A ordem das guardas é a das rotas
  *  irmãs do admin: config → sessão → corpo → domínio → grava.
  *
  *  🔴 A EXISTÊNCIA DO LUGAR É CONFERIDA COM `versaoAtual`, NUNCA COM `getFicha`.
@@ -68,8 +69,11 @@ export async function POST(req: Request): Promise<Response> {
   // estoura na hora. Mesma guarda das rotas irmãs.
   if (typeof body !== "object" || body === null) return new Response("", { status: 400 });
 
-  const { slug, oculto } = body as { slug?: unknown; oculto?: unknown };
+  const { slug, oculto, baseId } = body as { slug?: unknown; oculto?: unknown; baseId?: unknown };
   if (typeof slug !== "string") return new Response("", { status: 400 });
+  // 🔴 A versão que a tela abriu — a identidade do lugar (onda de fix 2 da 11e,
+  // M6). Ver `gravarEdicao`.
+  if (!baseIdValido(baseId)) return new Response("", { status: 400 });
   // 🔴 `boolean` E NADA MAIS — nem `1`, nem `"true"`, nem ausente. Esta é a
   // bandeira que decide se um lugar real está no ar; um corpo malformado não
   // pode virar "esconde" nem "mostra" por coerção. Falha fechada, como o
@@ -85,7 +89,19 @@ export async function POST(req: Request): Promise<Response> {
   // nada de novo, e gravá-lo enche a tela dele de linhas sem conteúdo. O 200 é
   // honesto — o estado pedido é o estado que vale — e o `id` devolvido é o da
   // versão que JÁ o carrega, não o de uma linha nova que não existe.
+  //
+  // 🔴 MAS SÓ SE É O MESMO LUGAR (onda de fix 2, M6): a aba velha de P em A,
+  // depois que Q retomou A, pedindo "esconder" com Q já escondido leria 200 — "o
+  // estado pedido é o que vale" — de um lugar que não é o da tela dela. Aqui não
+  // há gravação pra carregar a condição, então ela é uma leitura; o que ela
+  // decide é só a resposta, nunca o banco.
   if (versao.oculto === oculto) {
+    if ((await versaoPorId(getClient(), baseId))?.ficha_slug !== slug) {
+      return new Response(LUGAR_MUDOU_DE_ENDERECO, {
+        status: 409,
+        headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+      });
+    }
     return Response.json({ id: versao.id }, { headers: { "cache-control": "no-store" } });
   }
 
@@ -93,7 +109,7 @@ export async function POST(req: Request): Promise<Response> {
   // de endereço levou o lugar embora depois da leitura acima, o INSERT de sempre
   // recriaria o lugar no endereço velho — e o dono leria 200 de um "esconder"
   // com o lugar ainda no ar no endereço novo. `null` = nada gravado: 409.
-  const id = await gravarEdicao(getClient(), slug, versao.doc, agora, oculto);
+  const id = await gravarEdicao(getClient(), slug, versao.doc, agora, oculto, baseId);
   if (id === null) {
     return new Response(LUGAR_MUDOU_DE_ENDERECO, {
       status: 409,

@@ -3,7 +3,7 @@ import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-li
 import type { Client } from "@libsql/client";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { TROCAR_MESMO, aindaDiz, enderecoTrocado, trocarPara } from "@/lib/endereco";
-import { bancoVazio, semearAcervo } from "../banco";
+import { bancoVazio, semearAcervo, base } from "../banco";
 import { lugarMarcador } from "../lugar-marcador";
 
 /** A TROCA DE ENDEREÇO NA TELA DO DONO (Tarefa 11e, E3 com I4/I7/I8 e M5 da
@@ -135,7 +135,7 @@ describe("/admin/[slug] — o endereço e o aviso", () => {
 
   it("depois da troca: a linha do ato no histórico mostra o endereço velho", async () => {
     const { trocarEndereco } = await import("@/lib/db");
-    await trocarEndereco(cliente, A, B, T0 + 5);
+    await trocarEndereco(cliente, A, B, T0 + 5, await base(cliente, A));
     await comSessaoValida();
     const { container } = render(await abrir(B));
     const hist = container.querySelector<HTMLElement>("[data-historico]")!;
@@ -148,7 +148,7 @@ describe("/admin/[slug] — o endereço e o aviso", () => {
 describe("/admin/[slug] — o endereço velho leva ao painel novo (M5)", () => {
   it("com sessão: redireciona pro painel do endereço novo", async () => {
     const { trocarEndereco } = await import("@/lib/db");
-    await trocarEndereco(cliente, A, B, T0 + 5);
+    await trocarEndereco(cliente, A, B, T0 + 5, await base(cliente, A));
     await comSessaoValida();
     await expect(abrir(A)).rejects.toThrow(`NEXT_REDIRECT /admin/${B}`);
     expect(notFoundFalso).not.toHaveBeenCalled();
@@ -156,7 +156,7 @@ describe("/admin/[slug] — o endereço velho leva ao painel novo (M5)", () => {
 
   it("lugar ESCONDIDO também (esconder é tirar do público, não do dono)", async () => {
     const { gravarVersao, trocarEndereco, versaoAtual } = await import("@/lib/db");
-    await trocarEndereco(cliente, A, B, T0 + 5);
+    await trocarEndereco(cliente, A, B, T0 + 5, await base(cliente, A));
     await gravarVersao(cliente, B, (await versaoAtual(cliente, B))!.doc, "painel", T0 + 6, true);
     await comSessaoValida();
     await expect(abrir(A)).rejects.toThrow(`NEXT_REDIRECT /admin/${B}`);
@@ -164,7 +164,7 @@ describe("/admin/[slug] — o endereço velho leva ao painel novo (M5)", () => {
 
   it("sem sessão: a caixa de senha, e não revela pra onde o endereço leva", async () => {
     const { trocarEndereco } = await import("@/lib/db");
-    await trocarEndereco(cliente, A, B, T0 + 5);
+    await trocarEndereco(cliente, A, B, T0 + 5, await base(cliente, A));
     cookiesFalso.mockResolvedValue({ get: () => undefined });
     render(await abrir(A));
     expect(redirectFalso).not.toHaveBeenCalled();

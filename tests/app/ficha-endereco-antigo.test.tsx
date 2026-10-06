@@ -1,6 +1,7 @@
 import { isValidElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { lugarMarcador } from "../lugar-marcador";
+import { base } from "../banco";
 
 /** 🔴 O ENDEREÇO VELHO LEVA AO NOVO — e só a um lugar NO AR (Tarefa 11e, E4).
  *
@@ -87,7 +88,7 @@ describe("a página pública num endereço velho", () => {
   });
 
   it("depois da troca, /velho REDIRECIONA (307) pra /novo", async () => {
-    await trocarEndereco(banco, A, B, quando++);
+    await trocarEndereco(banco, A, B, quando++, await base(banco, A));
     esquecerMemoria();
 
     await expect(abrir(A)).rejects.toThrow(`NEXT_REDIRECT /${B}`);
@@ -97,7 +98,7 @@ describe("a página pública num endereço velho", () => {
   });
 
   it("o endereço novo abre, e passa os ANTIGOS ao ✓ Fui (a fila offline de lá)", async () => {
-    await trocarEndereco(banco, A, B, quando++);
+    await trocarEndereco(banco, A, B, quando++, await base(banco, A));
     esquecerMemoria();
     const arvore = await abrir(B);
     const props = acharConfirmar(arvore as ReactNode);
@@ -112,7 +113,7 @@ describe("a página pública num endereço velho", () => {
   });
 
   it("o novo ESCONDIDO: /velho dá o mesmo 404, e não revela pra onde iria", async () => {
-    await trocarEndereco(banco, A, B, quando++);
+    await trocarEndereco(banco, A, B, quando++, await base(banco, A));
     await gravarVersao(banco, B, (await versaoAtual(banco, B))!.doc, "painel", quando++, true);
     esquecerMemoria();
 
@@ -125,7 +126,7 @@ describe("a página pública num endereço velho", () => {
   // nenhum dos dois o põe no ar.
   it("lugar escondido que troca de endereço: /novo dá 404 e /velho dá 404", async () => {
     await gravarVersao(banco, A, (await versaoAtual(banco, A))!.doc, "painel", quando++, true);
-    await trocarEndereco(banco, A, B, quando++);
+    await trocarEndereco(banco, A, B, quando++, await base(banco, A));
     esquecerMemoria();
 
     await expect(abrir(B)).rejects.toThrow("NEXT_NOT_FOUND");
@@ -136,7 +137,7 @@ describe("a página pública num endereço velho", () => {
   // O redirect mora no CORPO da página, nunca no `generateMetadata` (I3): o
   // metadata de um endereço velho é o do 404, e não decide nada.
   it("generateMetadata do endereço velho não redireciona", async () => {
-    await trocarEndereco(banco, A, B, quando++);
+    await trocarEndereco(banco, A, B, quando++, await base(banco, A));
     esquecerMemoria();
     await expect(pagina.generateMetadata({ params: Promise.resolve({ slug: A }) })).resolves.toEqual({});
     expect(redirectFalso).not.toHaveBeenCalled();

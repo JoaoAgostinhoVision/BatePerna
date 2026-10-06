@@ -1,7 +1,7 @@
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
 import { getClient, inserirAviso, retirarAviso, versaoAtual, type EfeitoAviso } from "@/lib/db";
-import { LUGAR_MUDOU_DE_ENDERECO } from "@/lib/endereco";
+import { LUGAR_MUDOU_DE_ENDERECO, baseIdValido } from "@/lib/endereco";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +33,8 @@ export async function POST(req: Request): Promise<Response> {
   // `senha`, só que aqui há quatro campos, então o corpo inteiro é checado.
   if (typeof body !== "object" || body === null) return new Response("", { status: 400 });
 
-  const { slug, texto, efeito, venceEm } = body as {
-    slug?: unknown; texto?: unknown; efeito?: unknown; venceEm?: unknown;
+  const { slug, texto, efeito, venceEm, baseId } = body as {
+    slug?: unknown; texto?: unknown; efeito?: unknown; venceEm?: unknown; baseId?: unknown;
   };
   // 🔴 A EXISTÊNCIA DO LUGAR SAI DE `versaoAtual`, NUNCA DE `getFicha` (R1 da onda
   // de conserto 1 da Task 9, 2026-10-01) — a mesma regra das rotas irmãs
@@ -55,11 +55,16 @@ export async function POST(req: Request): Promise<Response> {
   // mostra nada. `<=`, não `<` — no instante exato do prazo, já venceu, mesma
   // regra de `avisoVigente` (`vence_em > agora`).
   if (typeof venceEm !== "number" || venceEm <= agora) return new Response("", { status: 400 });
+  // 🔴 A versão que a tela abriu — a identidade do lugar (onda de fix 2 da 11e,
+  // M6). `inserirAviso` a confere no mesmo INSERT.
+  if (!baseIdValido(baseId)) return new Response("", { status: 400 });
 
-  // 🔴 `inserirAviso` grava SÓ SE o lugar ainda mora em `slug` (onda de fix da
-  // 11e, I1): a troca de endereço entre a leitura acima e esta linha deixaria
-  // um "fechado" órfão no endereço velho, que nunca aparece no lugar.
-  const id = await inserirAviso(getClient(), slug, texto.trim(), efeito as EfeitoAviso, agora, venceEm);
+  // 🔴 `inserirAviso` grava SÓ SE o lugar da tela ainda mora em `slug` (onda de
+  // fix da 11e, I1): a troca de endereço entre a leitura acima e esta linha
+  // deixaria um "fechado" órfão no endereço velho, que nunca aparece no lugar. E
+  // "o lugar da tela" é a versão `baseId`, não o endereço (onda 2, M6): sem
+  // isso, depois de outro lugar retomar `slug`, o aviso caía nele.
+  const id = await inserirAviso(getClient(), slug, texto.trim(), efeito as EfeitoAviso, agora, venceEm, baseId);
   if (id === null) {
     return new Response(LUGAR_MUDOU_DE_ENDERECO, {
       status: 409,

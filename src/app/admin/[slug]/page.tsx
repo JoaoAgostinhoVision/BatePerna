@@ -16,6 +16,7 @@ import { FONTES_DE_PRODUCAO, vistaDaCidade } from "@/lib/vista-do-mapa";
 import FichaInteira, { precisaDeVista, rotuloDe } from "../FichaInteira";
 import HistoricoDaFicha, { type VersaoNaTela } from "../HistoricoDaFicha";
 import PainelAdmin from "../PainelAdmin";
+import { ComVersaoDaTela } from "../campos/gravar";
 import "../admin.css";
 
 export const dynamic = "force-dynamic";
@@ -141,7 +142,7 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
     if (novo !== null) redirect(`/admin/${novo}`);
     notFound();
   }
-  const { ficha, oculto } = doDono;
+  const { ficha, oculto, versaoId } = doDono;
 
   const agora = Math.floor(Date.now() / 1000);
   // 🔴 SÓ COM UMA LINHA DE MAPA SEM PONTO (Tarefa 11f, m5): o schema não deixa
@@ -169,27 +170,33 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
   return (
     <main className="adm">
       <h1>Painel</h1>
-      <PainelAdmin ficha={ficha} leitura={leitura} aviso={aviso} avisoErro={avisoErro} agora={agora} />
-      <BotaoVisibilidade slug={slug} oculto={oculto} />
-      {/* 🔴 A Task 6 (2026-09-30) FECHOU A ESCADA: `EditorDeVoz` foi apagado e a
-          `voz` passou a ser editada dentro do bloco `campo-voz` da ficha
-          inteira, pelo `EditorProsa`, como qualquer outro campo de prosa. Não
-          há mais um componente de tela pra um campo só. */}
-      <FichaInteira
-        ficha={ficha}
-        vistaSemPonto={vistaSemPonto ?? undefined}
-        // 🔴 As cidades que o lugar JÁ TEVE saem do histórico que esta página já
-        // leu; histórico que falhou chega aqui como lista vazia (`lerHistorico`),
-        // e o painel cala (I7).
-        avisoDoEndereco={avisoDoEndereco({
-          endereco: slug,
-          nome: ficha.trajeto.waypoints[0].nome,
-          cidade: ficha.cidade,
-          cidadesDoHistorico: linhas.map((v) => cidadeDoDoc(v.doc)),
-        })}
-      />
-      {historicoErro && <p className="adm-erro" role="alert">{HISTORICO_ERRO_LEITURA}</p>}
-      <HistoricoDaFicha versoes={versoes} />
+      {/* 🔴 TUDO QUE GRAVA NESTA TELA FICA AQUI DENTRO (onda de fix 2 da 11e, M6):
+          a versão que esta página leu é a identidade do lugar em cada gravação
+          — editores, esconder, aviso, voltar, trocar o endereço. Ver
+          `VersaoDaTela`, em `../campos/gravar`. */}
+      <ComVersaoDaTela id={versaoId}>
+        <PainelAdmin ficha={ficha} leitura={leitura} aviso={aviso} avisoErro={avisoErro} agora={agora} />
+        <BotaoVisibilidade slug={slug} oculto={oculto} />
+        {/* 🔴 A Task 6 (2026-09-30) FECHOU A ESCADA: `EditorDeVoz` foi apagado e a
+            `voz` passou a ser editada dentro do bloco `campo-voz` da ficha
+            inteira, pelo `EditorProsa`, como qualquer outro campo de prosa. Não
+            há mais um componente de tela pra um campo só. */}
+        <FichaInteira
+          ficha={ficha}
+          vistaSemPonto={vistaSemPonto ?? undefined}
+          // 🔴 As cidades que o lugar JÁ TEVE saem do histórico que esta página já
+          // leu; histórico que falhou chega aqui como lista vazia (`lerHistorico`),
+          // e o painel cala (I7).
+          avisoDoEndereco={avisoDoEndereco({
+            endereco: slug,
+            nome: ficha.trajeto.waypoints[0].nome,
+            cidade: ficha.cidade,
+            cidadesDoHistorico: linhas.map((v) => cidadeDoDoc(v.doc)),
+          })}
+        />
+        {historicoErro && <p className="adm-erro" role="alert">{HISTORICO_ERRO_LEITURA}</p>}
+        <HistoricoDaFicha versoes={versoes} />
+      </ComVersaoDaTela>
     </main>
   );
 }

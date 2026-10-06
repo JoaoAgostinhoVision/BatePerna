@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState } from "react";
+import { createContext, createElement, useContext, useState, type ReactNode } from "react";
 
 /** PRA ONDE OS EDITORES GRAVAM — e se o número de motor pede prévia (Tarefa 11).
  *
@@ -35,6 +35,37 @@ export const PortaDoEditor = createContext<{
   previa: true,
   depoisDeGravar: null,
 });
+
+/** A VERSÃO QUE A TELA ABRIU — a identidade do lugar que esta tela mostra
+ *  (onda de fix 2 da Tarefa 11e, M6).
+ *
+ *  🔴 O ENDEREÇO NÃO É IDENTIDADE. O lugar P sai de A pra B, o lugar Q retoma A:
+ *  uma aba de P aberta antes, em `/admin/A`, mandava a voz de P e o "esconder"
+ *  pra A — e as duas caíam em Q, com 200. Toda gravação de um lugar que JÁ
+ *  EXISTE leva junto `baseId`, a versão que a página renderizou, e a porta só
+ *  grava se essa versão mora no endereço pedido (as versões andam com o lugar na
+ *  troca, então a da aba velha está em B).
+ *
+ *  Quem a põe aqui é a página do painel de UM lugar (`/admin/[slug]`), em volta
+ *  de TUDO que grava: os editores da ficha inteira (por `usarGravacao`), o botão
+ *  de esconder, o aviso, o "voltar" do histórico e a troca de endereço.
+ *  `null` (o padrão) = tela sem lugar publicado — o formulário de lugar NOVO, que
+ *  grava num rascunho e não manda `baseId` nenhum. Um editor da ficha no ar fora
+ *  deste provedor manda o corpo SEM `baseId`, e a porta recusa (400): falha
+ *  fechada, nunca uma gravação sem identidade. */
+export const VersaoDaTela = createContext<number | null>(null);
+
+/** O provedor, como componente — a página do painel é de servidor e não pode
+ *  montar `VersaoDaTela.Provider` direto. */
+export function ComVersaoDaTela({ id, children }: { id: number; children: ReactNode }) {
+  return createElement(VersaoDaTela.Provider, { value: id }, children);
+}
+
+/** O corpo com o `baseId` da tela, quando a tela tem um. A única forma de juntar
+ *  os dois — as cinco portas do painel o usam. */
+export function comBase(corpo: Record<string, unknown>, baseId: number | null): Record<string, unknown> {
+  return baseId === null ? corpo : { ...corpo, baseId };
+}
 
 /** A GRAVAÇÃO DE UM CAMPO, UMA VEZ SÓ — o que os editores desta pasta
  *  compartilham.
@@ -90,13 +121,14 @@ export function usarGravacao(): Gravacao {
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const { gravarEm, depoisDeGravar } = useContext(PortaDoEditor);
+  const baseId = useContext(VersaoDaTela);
 
   async function gravar(corpo: Record<string, unknown>): Promise<void> {
     if (salvando) return;
     setErro(null);
     setSalvando(true);
     try {
-      const r = await fetch(gravarEm, { method: "PUT", body: JSON.stringify(corpo) });
+      const r = await fetch(gravarEm, { method: "PUT", body: JSON.stringify(comBase(corpo, baseId)) });
       if (r.ok) {
         if (depoisDeGravar === null) location.reload();
         else location.assign(depoisDeGravar(((await r.json()) as { slug: string }).slug));

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ensureSchema, gravarVersao, trocarEndereco, versaoAtual } from "@/lib/db";
 import { esquecerMemoria } from "@/lib/ficha-fonte";
 import { lugarMarcador } from "../lugar-marcador";
-import { semearAcervo } from "../banco";
+import { semearAcervo, base } from "../banco";
 
 let client: Client;
 vi.mock("@/lib/db", async (importOriginal) => {
@@ -66,7 +66,7 @@ describe("route /api/confirmar — endereço velho", () => {
 
   beforeEach(async () => {
     await gravarVersao(client, A, JSON.stringify(lugarMarcador(A, "Lugar Marcador", "Outra Marcadora")), "painel", AGORA - 10);
-    await trocarEndereco(client, A, B, AGORA - 5);
+    await trocarEndereco(client, A, B, AGORA - 5, await base(client, A));
     esquecerMemoria();
   });
 

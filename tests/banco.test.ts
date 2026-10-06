@@ -4,7 +4,7 @@ import path from "node:path";
 import { createClient } from "@libsql/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { contarHoje, criarRascunho, insertConfirmacao, inserirAviso, listarRascunhos, trocarEndereco, versoesAtuais, avisoVigente } from "@/lib/db";
-import { bancoVazio, semearAcervo } from "./banco";
+import { bancoVazio, semearAcervo, base } from "./banco";
 
 /** 🔴 O TESTE DO HELPER DESTRUTIVO.
  *
@@ -88,14 +88,14 @@ describe("semearAcervo limpa o que a troca de endereço suja", () => {
     const c = bancoVazio();
     const fichas = await semearAcervo(c);
     const AGORA = 1_759_000_000;
-    await inserirAviso(c, "rampa-do-pepe", "aviso marcador", "fechado", AGORA - 1, AGORA + 3600);
+    await inserirAviso(c, "rampa-do-pepe", "aviso marcador", "fechado", AGORA - 1, AGORA + 3600, await base(c, "rampa-do-pepe"));
     await insertConfirmacao(c, "rampa-do-pepe", AGORA - 1, "seco");
     await criarRascunho(c, "lugar-marcador-cidade-marcador", "{}", AGORA);
-    expect(await trocarEndereco(c, "rampa-do-pepe", "lugar-marcador-x", AGORA)).toBe(true);
+    expect(await trocarEndereco(c, "rampa-do-pepe", "lugar-marcador-x", AGORA, await base(c, "rampa-do-pepe"))).toBe(true);
     // 🔴 M4 DA REVISÃO: aviso e relato gravados DEPOIS da troca, no endereço
     // novo. Os de cima a troca MOVE pra `lugar-marcador-x`, e por isso "a Rampa
     // não tem aviso" seria verdade sem limpeza nenhuma.
-    expect(await inserirAviso(c, "lugar-marcador-x", "aviso marcador depois", "frio", AGORA, AGORA + 3600)).not.toBeNull();
+    expect(await inserirAviso(c, "lugar-marcador-x", "aviso marcador depois", "frio", AGORA, AGORA + 3600, await base(c, "lugar-marcador-x"))).not.toBeNull();
     await insertConfirmacao(c, "lugar-marcador-x", AGORA, "barro");
 
     await semearAcervo(c);

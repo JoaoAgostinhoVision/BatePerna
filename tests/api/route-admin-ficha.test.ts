@@ -5,7 +5,7 @@ import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
 import { ensureSchema, gravarVersao, historico, salvarRascunho, versaoAtual, versoesAtuais } from "@/lib/db";
 import { CIDADE_SEM_LETRA, CIDADE_VAZIA, gemeoSemCidade, parDeLugar, parDeRascunho } from "@/lib/rascunho";
-import { semearAcervo } from "../banco";
+import { semearAcervo, comBaseAtual } from "../banco";
 import { fichaSchema, type Ficha } from "@/types/ficha";
 import type { Violacao } from "@/lib/coerencia";
 import { RECUSA_TIRAR_O_LUGAR } from "@/lib/campos-da-ficha";
@@ -80,7 +80,7 @@ beforeEach(async () => {
   vi.stubEnv("ADMIN_SENHA", SENHA);
   vi.stubEnv("ADMIN_SEGREDO", SEGREDO);
   vi.resetModules();
-  ({ PUT } = await import("@/app/api/admin/ficha/route"));
+  PUT = comBaseAtual((await import("@/app/api/admin/ficha/route")).PUT, () => c);
 
   cookieBom = criarSessao(SEGREDO, AGORA, DURACAO_SESSAO_S);
 });

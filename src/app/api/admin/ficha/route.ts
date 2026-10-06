@@ -2,7 +2,7 @@ import { ZodError } from "zod";
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
 import { type FichaVersao, getClient, gravarEdicao, versaoAtual, versaoPorId, versoesAtuais } from "@/lib/db";
-import { LUGAR_MUDOU_DE_ENDERECO } from "@/lib/endereco";
+import { LUGAR_MUDOU_DE_ENDERECO, baseIdValido } from "@/lib/endereco";
 import {
   RecusaDoTrajeto,
   acrescentarEtapa,
@@ -164,6 +164,8 @@ function acervoComo(versoes: Map<string, FichaVersao>, slug: string, doc: string
  *     dele e nunca `0`, que é o lugar (409 com frase) (Tarefa 10).
  *  As duas da Tarefa 10 passam pela coerência e herdam a visibilidade, pelo
  *  MESMO caminho das outras (ver `mudar`).
+ *  E TODAS as seis levam junto `baseId`, a versão que a tela abriu (onda de fix
+ *  2 da 11e, M6): sem ele, 400; com ele de OUTRO lugar, 409 e nada gravado.
  *
  *  ⚠️ E EXISTIA UM QUARTO, NÃO DECLARADO, que esta tarefa fecha — medido no
  *  Step 0: `{slug, campo: "piso"}`, **sem `valor` e sem `naoSei`**, gravava 200
@@ -203,6 +205,7 @@ export async function PUT(req: Request): Promise<Response> {
     valor?: unknown;
     naoSei?: unknown;
     versaoId?: unknown;
+    baseId?: unknown;
     ponto?: unknown;
     lat?: unknown;
     lng?: unknown;
@@ -212,6 +215,12 @@ export async function PUT(req: Request): Promise<Response> {
   const { slug, campo, valor, naoSei, versaoId, ponto, lat, lng, acrescentarEtapa: etapaNova, tirarEtapa: etapaFora } =
     corpo;
   if (typeof slug !== "string") return new Response("", { status: 400, headers: TEXTO });
+  // 🔴 A VERSÃO QUE A TELA ABRIU, EM TODA FORMA DE CORPO (onda de fix 2 da 11e,
+  // M6): é ela, e não o endereço, que diz DE QUAL LUGAR é a gravação. Quem
+  // confere é `gravarEdicao`, no mesmo INSERT. Não é uma família de chave: vem
+  // junto de qualquer uma, e não entra na contagem abaixo.
+  const { baseId } = corpo;
+  if (!baseIdValido(baseId)) return new Response("", { status: 400, headers: TEXTO });
 
   // 🔴 C6 da revisão do controlador: os dois formatos são MUTUAMENTE
   // EXCLUSIVOS. `"campo" in corpo` (e não `campo !== undefined`) porque
@@ -319,7 +328,7 @@ export async function PUT(req: Request): Promise<Response> {
     // `endereco_anterior` da versão antiga — voltar a uma versão de antes de uma
     // troca de endereço restaura o DOCUMENTO (que já diz o endereço de agora,
     // reescrito na troca), e o lugar continua onde está.
-    const id = await gravarEdicao(getClient(), slug, versao.doc, agora, atual?.oculto ?? false);
+    const id = await gravarEdicao(getClient(), slug, versao.doc, agora, atual?.oculto ?? false, baseId);
     // 🔴 `null` = o lugar saiu deste endereço entre a leitura e a gravação (a
     // troca de endereço no meio, I1 da revisão da 11e): nada foi gravado.
     if (id === null) return new Response(LUGAR_MUDOU_DE_ENDERECO, { status: 409, headers: TEXTO });
@@ -533,7 +542,7 @@ export async function PUT(req: Request): Promise<Response> {
   // troca de endereço levou o lugar embora depois da leitura lá em cima, gravar
   // aqui recriaria o lugar no endereço velho. O banco decide no INSERT; `null`
   // é 409 com a frase, e nada entrou.
-  const id = await gravarEdicao(getClient(), slug, novoDoc, agora, versao.oculto);
+  const id = await gravarEdicao(getClient(), slug, novoDoc, agora, versao.oculto, baseId);
   if (id === null) return new Response(LUGAR_MUDOU_DE_ENDERECO, { status: 409, headers: TEXTO });
   return Response.json({ id }, { headers: { "cache-control": "no-store" } });
 }

@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { VersaoDaTela, comBase } from "./campos/gravar";
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import type { AvisoLinha, EfeitoAviso } from "@/lib/db";
@@ -89,6 +90,8 @@ type Props = {
  *  novo. */
 export default function PainelAdmin({ ficha, leitura, agora, aviso, avisoErro = false }: Props) {
   const [form, setForm] = useState<EstadoForm>(formInicial());
+  // A versão que a tela abriu (onda de fix 2 da 11e): ver `VersaoDaTela`.
+  const baseId = useContext(VersaoDaTela);
 
   function atualizar(patch: Partial<EstadoForm>) {
     setForm((atual) => ({ ...atual, ...patch }));
@@ -101,7 +104,9 @@ export default function PainelAdmin({ ficha, leitura, agora, aviso, avisoErro = 
     try {
       const r = await fetch("/api/admin/aviso", {
         method: "POST",
-        body: JSON.stringify({ slug: ficha.slug, texto, efeito: form.efeito, venceEm: agora + form.prazoSegundos }),
+        body: JSON.stringify(
+          comBase({ slug: ficha.slug, texto, efeito: form.efeito, venceEm: agora + form.prazoSegundos }, baseId),
+        ),
       });
       if (r.ok) { location.reload(); return; }
       // O 409 com frase é a porta dizendo que o lugar mudou de endereço no meio

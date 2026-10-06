@@ -4,7 +4,7 @@ import { MIN_SENHA } from "@/lib/admin-config";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
 import { ensureSchema, gravarVersao, historico, versaoAtual, versoesAtuais } from "@/lib/db";
-import { semearAcervo } from "../banco";
+import { semearAcervo, comBaseAtual } from "../banco";
 import type { Ficha } from "@/types/ficha";
 
 // Molde: `tests/api/route-admin-ficha.test.ts` — `Request` à mão, `process.env`
@@ -44,7 +44,7 @@ beforeEach(async () => {
   vi.stubEnv("ADMIN_SENHA", SENHA);
   vi.stubEnv("ADMIN_SEGREDO", SEGREDO);
   vi.resetModules();
-  ({ POST } = await import("@/app/api/admin/visibilidade/route"));
+  POST = comBaseAtual((await import("@/app/api/admin/visibilidade/route")).POST, () => c);
 
   cookieBom = criarSessao(SEGREDO, AGORA, DURACAO_SESSAO_S);
 });

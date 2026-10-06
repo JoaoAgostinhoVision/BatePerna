@@ -143,3 +143,49 @@ export async function gravarEdicao(
   await gravarVersao(client, ficha.slug, JSON.stringify(nova), "painel", quando);
   return nova;
 }
+
+/** Um id que NENHUMA versão tem, mas que é um `baseId` válido na forma — o que
+ *  `base` devolve pra endereço sem lugar. Se fosse `0` (inválido), a recusa
+ *  "slug que não é lugar → 400" passaria a sair da guarda do `baseId`, e a guarda
+ *  do lugar ficaria sem prova (duas portas em série). */
+export const BASE_DE_NINGUEM = 999_999_999;
+
+/** A versão ATUAL de `slug` — o `baseId` de uma tela do painel aberta AGORA
+ *  (onda de fix 2 da 11e, M6). SQL cru, de propósito: vários arquivos dublam
+ *  `versaoAtual` pra montar uma corrida, e este helper não pode disparar o dublê. */
+export async function base(client: Client, slug: string): Promise<number> {
+  const r = await client.execute({
+    sql: `SELECT id FROM ficha_versoes WHERE ficha_slug = ? ORDER BY id DESC LIMIT 1`,
+    args: [slug],
+  });
+  return r.rows.length ? Number(r.rows[0].id) : BASE_DE_NINGUEM;
+}
+
+/** A rota do painel como uma ABA ABERTA AGORA a chama: o corpo que tem `slug` e
+ *  NÃO tem `baseId` ganha o `baseId` da versão atual daquele slug, lido na hora
+ *  do pedido (onda de fix 2 da 11e). É o que deixa as provas que existiam antes
+ *  da onda medirem o que mediam — uma tela fresca —, sem copiar o `baseId` em
+ *  cada corpo. Corpo que já traz a chave `baseId` vai como está; corpo que não é
+ *  JSON de objeto também. A prova de que a rota EXIGE o `baseId` não passa por
+ *  aqui: ela chama a rota crua (`tests/api/aba-velha-retomada.test.ts`). */
+export function comBaseAtual(
+  rota: (req: Request) => Promise<Response>,
+  client: () => Client,
+): (req: Request) => Promise<Response> {
+  return async (req) => {
+    const texto = await req.text();
+    let corpo: unknown;
+    try {
+      corpo = JSON.parse(texto);
+    } catch {
+      corpo = undefined;
+    }
+    const comSlug =
+      typeof corpo === "object" && corpo !== null && !Array.isArray(corpo) &&
+      typeof (corpo as { slug?: unknown }).slug === "string" && !("baseId" in corpo);
+    const novo = comSlug
+      ? JSON.stringify({ ...(corpo as Record<string, unknown>), baseId: await base(client(), (corpo as { slug: string }).slug) })
+      : texto;
+    return rota(new Request(req.url, { method: req.method, headers: req.headers, body: novo }));
+  };
+}

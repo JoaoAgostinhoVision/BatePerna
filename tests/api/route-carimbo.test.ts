@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { base } from "../banco";
 
 const AGORA_MS = Date.UTC(2027, 0, 15, 11, 0);
 const AGORA_S = Math.floor(AGORA_MS / 1000);
@@ -72,7 +73,7 @@ describe("route /api/carimbo — endereço velho", () => {
     const { lugarMarcador } = await import("../lugar-marcador");
     const banco = await bancoDeProducao();
     await gravarVersao(banco, A, JSON.stringify(lugarMarcador(A, "Lugar Marcador", "Outra Marcadora")), "painel", AGORA_S - 10);
-    await trocarEndereco(banco, A, B, AGORA_S - 5);
+    await trocarEndereco(banco, A, B, AGORA_S - 5, await base(banco, A));
   });
 
   it("o endereço velho devolve a leitura do lugar NOVO", async () => {

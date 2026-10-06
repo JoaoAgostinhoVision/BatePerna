@@ -102,9 +102,19 @@ export const enderecoOcupadoPorRascunho = (novo: string, quem: string): string =
 // PENDENTE: redação minha, o João ainda não leu
 export const ENDERECO_NAO_TROCOU = "Não consegui trocar o endereço: nada mudou. Recarregue a página e tente de novo.";
 
-/** A recusa das rotas de ESCRITA do painel (`ficha`, `visibilidade`, `aviso`)
- *  quando o endereço do lugar mudou entre a leitura e a gravação (onda de fix
- *  da Tarefa 11e, I1): nada foi gravado, e recarregar leva ao endereço novo. */
+/** O `baseId` de uma gravação do painel (onda de fix 2 da 11e, M6): a versão que
+ *  a tela abriu, a IDENTIDADE do lugar — o endereço não é. Inteiro positivo e
+ *  nada mais: ausente, texto, `1.5`, `0`, `null` ou `1e999` (que o `JSON.parse`
+ *  vira `Infinity`, e o driver estoura) são 400 nas cinco portas. */
+export function baseIdValido(v: unknown): v is number {
+  return typeof v === "number" && Number.isSafeInteger(v) && v > 0;
+}
+
+/** A recusa das rotas de ESCRITA do painel (`ficha`, `visibilidade`, `aviso`,
+ *  `endereco`) quando a versão que a tela abriu não mora mais no endereço pedido
+ *  — o lugar mudou de endereço entre a leitura e a gravação (onda de fix da
+ *  Tarefa 11e, I1), ou já tinha mudado quando a aba velha gravou e outro lugar
+ *  retomou o endereço (onda de fix 2, M6): nada foi gravado. */
 // PENDENTE: redação minha, o João ainda não leu
 export const LUGAR_MUDOU_DE_ENDERECO =
   "Nada foi gravado: o endereço deste lugar mudou enquanto você mexia nele. Recarregue a página e tente de novo.";
