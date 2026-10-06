@@ -14,7 +14,13 @@ matou a 20ª); **as 3 que faltavam eu rodei: as três morreram**, árvore limpa.
 depois). N2/N3: guardas ausentes (atomicidade da identidade; 409 `ENDERECO_NAO_TROCOU`). N6 (relato da fila offline
 de outro lugar) foi pro brief da 12 como **12-N6**. N4 → pacote de copy.
 
-→ 🔴 **PRÓXIMO PASSO:** a **onda de fix 3 da 11e** foi despachada com
+✅ **Onda de fix 3 FEITA: `88cab2e`.** O implementador foi morto por OOM na 6ª mutação (de novo); EU terminei: 10
+mutações restantes uma por vez com `sha1sum -c` → **15/15 morreram**; 2195/2195 em 108, `tsc` 0, build 0, mutar 42/0.
+→ 🔴 **PRÓXIMO PASSO:** re-revisão CURTA despachada (`task-11e-rereview2-PROMPT.md`). Se não existir
+`task-11e-rereview2.md`, redespachar COMO ESTÁ. Depois: **Tarefa 12** (com 12-N6).
+⚠️ Lição: mutação com suíte inteira estoura memória nos agentes — rode-as EU, sequenciais, com conferência de sha1.
+
+(histórico) a **onda de fix 3 da 11e** foi despachada com
 `.superpowers/sdd/2026-09-26-painel-completo/task-11e-fix3-PROMPT.md` (W1=N1, W2=N2, W3=N3, W4=N5/N7 de carona).
 Se não houver commit de código depois de `da3e6fa`, redespachar COMO ESTÁ (árvore suja = parar e medir, não apagar).
 Depois: medir eu mesmo → re-revisão curta → **Tarefa 12** (agora com 12-N6), e a ordem abaixo segue igual.
