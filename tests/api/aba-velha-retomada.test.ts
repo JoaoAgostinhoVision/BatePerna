@@ -119,7 +119,10 @@ describe("M6: a aba velha de P, em /admin/A, depois que Q retomou A", () => {
     await recusadoEQIntacto(res, antes);
   });
 
-  it("MOSTRAR, com Q já escondido (o pedido que não grava nada): 409, nunca um 200 sobre Q", async () => {
+  // N7 da re-revisão (onda de fix 3): este caso se chamava "MOSTRAR" e mandava
+  // `oculto: true` — é o ESCONDER que acha o estado já valendo e não grava. O
+  // MOSTRAR de verdade (que grava) é o caso seguinte.
+  it("ESCONDER de novo, com Q já escondido (o pedido que não grava nada): 409, nunca um 200 sobre Q", async () => {
     await gravarVersao(c, A, (await versaoAtual(c, A))!.doc, "painel", AGORA - 10, true);
     const { POST } = await import("@/app/api/admin/visibilidade/route");
     const antes = await retrato();
@@ -127,6 +130,17 @@ describe("M6: a aba velha de P, em /admin/A, depois que Q retomou A", () => {
     expect(res.status).toBe(409);
     expect(await res.text()).toBe(LUGAR_MUDOU_DE_ENDERECO);
     expect(await retrato()).toEqual(antes);
+  });
+
+  it("MOSTRAR, com Q escondido (o pedido que grava): 409, e Q continua fora do ar", async () => {
+    await gravarVersao(c, A, (await versaoAtual(c, A))!.doc, "painel", AGORA - 10, true);
+    const { POST } = await import("@/app/api/admin/visibilidade/route");
+    const antes = await retrato();
+    const res = await POST(pedido("visibilidade", "POST", { slug: A, oculto: false, baseId: baseVelhaDeP }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(LUGAR_MUDOU_DE_ENDERECO);
+    expect(await retrato(), "a aba velha gravou no banco").toEqual(antes);
+    expect((await versoesAtuais(c)).has(A), "a aba velha de P pôs Q no ar").toBe(false);
   });
 
   it("aviso: 409, e nenhum aviso de P pendurado em Q", async () => {

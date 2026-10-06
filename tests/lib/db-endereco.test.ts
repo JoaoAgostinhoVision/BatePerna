@@ -9,6 +9,7 @@ import {
   ensureSchema,
   gravarEdicao,
   gravarVersao,
+  gravarVisibilidade,
   historico,
   insertConfirmacao,
   inserirAviso,
@@ -19,7 +20,7 @@ import {
 import { fichaDaVersao } from "@/lib/ficha-fonte";
 import { semear } from "@/lib/semente";
 import { lugarMarcador } from "../lugar-marcador";
-import { base } from "../banco";
+import { base, clienteQueIntercala } from "../banco";
 
 /** A TROCA DE ENDEREÇO NO BANCO (Tarefa 11e, decisões do João de 04/10): o
  *  endereço de um lugar publicado é DADO, muda só quando ele manda, e o antigo
@@ -246,15 +247,28 @@ describe("gravarEdicao: só grava onde o lugar mora (I1 da revisão)", () => {
     const lida = (await versaoAtual(c, A))!;
     await trocarEndereco(c, A, B, AGORA, await base(c, A));
     const antes = await retrato();
-    expect(await gravarEdicao(c, A, lida.doc, AGORA + 1, true, lida.id)).toBeNull();
+    expect(await gravarEdicao(c, A, lida.doc, AGORA + 1, lida.id)).toBeNull();
+    expect(await gravarVisibilidade(c, A, true, AGORA + 1, lida.id)).toBeNull();
     expect(await retrato()).toEqual(antes);
   });
 
-  it("controle: onde o lugar mora, grava com o oculto pedido e devolve o id", async () => {
+  it("controle: onde o lugar mora, grava herdando o oculto da versão ATUAL (escondido fica escondido) e devolve o id", async () => {
     const lida = (await versaoAtual(c, A))!;
-    const id = await gravarEdicao(c, A, lida.doc, AGORA + 1, true, lida.id);
+    const id = await gravarEdicao(c, A, lida.doc, AGORA + 1, lida.id);
     expect(id).toBeTypeOf("number");
-    expect(await versaoAtual(c, A)).toMatchObject({ id, autor: "painel", oculto: true, criado_em: AGORA + 1 });
+    expect(await versaoAtual(c, A)).toMatchObject({ id, autor: "painel", oculto: false, criado_em: AGORA + 1 });
+    await gravarVersao(c, A, lida.doc, "painel", AGORA + 2, true);
+    const id2 = await gravarEdicao(c, A, lida.doc, AGORA + 3, lida.id);
+    expect(await versaoAtual(c, A)).toMatchObject({ id: id2, oculto: true, criado_em: AGORA + 3 });
+  });
+
+  it("controle: gravarVisibilidade grava o oculto pedido com o documento da versão ATUAL, verbatim", async () => {
+    const lida = (await versaoAtual(c, A))!;
+    const docNovo = lida.doc.replace("Uma voz marcadora", "Outra voz marcadora");
+    expect(docNovo).not.toBe(lida.doc);
+    await gravarVersao(c, A, docNovo, "painel", AGORA + 1);
+    const id = await gravarVisibilidade(c, A, true, AGORA + 2, lida.id);
+    expect(await versaoAtual(c, A)).toMatchObject({ id, autor: "painel", oculto: true, criado_em: AGORA + 2, doc: docNovo });
   });
 });
 
@@ -271,7 +285,8 @@ describe("a identidade é a VERSÃO que a tela abriu, não o endereço (onda de 
 
   it("gravarEdicao com a versão de P, em A: null, e Q intacto", async () => {
     const antes = await retrato();
-    expect(await gravarEdicao(c, A, (await versaoAtual(c, A))!.doc, AGORA + 3, true, deP)).toBeNull();
+    expect(await gravarEdicao(c, A, (await versaoAtual(c, A))!.doc, AGORA + 3, deP)).toBeNull();
+    expect(await gravarVisibilidade(c, A, true, AGORA + 3, deP)).toBeNull();
     expect(await retrato()).toEqual(antes);
   });
 
@@ -287,18 +302,82 @@ describe("a identidade é a VERSÃO que a tela abriu, não o endereço (onda de 
     expect(await retrato()).toEqual(antes);
   });
 
-  it("controle: com a versão de Q, em A, as três gravam", async () => {
+  it("controle: com a versão de Q, em A, as quatro gravam", async () => {
     const deQ = await base(c, A);
-    expect(await gravarEdicao(c, A, (await versaoAtual(c, A))!.doc, AGORA + 3, false, deQ)).toBeTypeOf("number");
+    expect(await gravarEdicao(c, A, (await versaoAtual(c, A))!.doc, AGORA + 3, deQ)).toBeTypeOf("number");
+    expect(await gravarVisibilidade(c, A, true, AGORA + 3, deQ)).toBeTypeOf("number");
     expect(await inserirAviso(c, A, "aviso marcador de Q", "fechado", AGORA + 3, AGORA + 3600, deQ)).toBeTypeOf("number");
     expect(await trocarEndereco(c, A, "lugar-marcador-destino-de-q", AGORA + 4, deQ)).toBe(true);
   });
 
-  it("controle: com a versão de P, em B (onde P mora), as três gravam — mesmo não sendo a atual de P", async () => {
+  it("controle: com a versão de P, em B (onde P mora), as quatro gravam — mesmo não sendo a atual de P", async () => {
     expect(deP).not.toBe(await base(c, B));
-    expect(await gravarEdicao(c, B, (await versaoAtual(c, B))!.doc, AGORA + 3, false, deP)).toBeTypeOf("number");
+    expect(await gravarEdicao(c, B, (await versaoAtual(c, B))!.doc, AGORA + 3, deP)).toBeTypeOf("number");
+    expect(await gravarVisibilidade(c, B, true, AGORA + 3, deP)).toBeTypeOf("number");
     expect(await inserirAviso(c, B, "aviso marcador de P", "fechado", AGORA + 3, AGORA + 3600, deP)).toBeTypeOf("number");
     expect(await trocarEndereco(c, B, "lugar-marcador-destino-de-p", AGORA + 4, deP)).toBe(true);
+  });
+});
+
+// 🔴 N2 da re-revisão (onda de fix 3): as corridas acima intercalam ENTRE a
+// leitura de quem chama e a chamada da função; nenhuma entra DENTRO dela. Uma
+// gravação que conferisse a identidade num `SELECT` e gravasse num `INSERT …
+// VALUES` incondicional passava verde em todas. Aqui a retomada roda
+// IMEDIATAMENTE ANTES do `INSERT` (o `clienteQueIntercala`): só a condição no
+// MESMO statement vê o banco já trocado.
+describe("a identidade é conferida NA MESMA consulta que grava (N2)", () => {
+  /** P sai de A pra B e Q (em C) retoma A — o M6 — no instante antes do INSERT. */
+  async function retomarA(): Promise<void> {
+    expect(await trocarEndereco(c, A, B, AGORA, await base(c, A)), "P não saiu de A").toBe(true);
+    await gravarVersao(c, C, JSON.stringify(lugarMarcador(C, "Lugar Q Marcador", "Cidade Q Marcadora")), "painel", AGORA + 1);
+    expect(await trocarEndereco(c, C, A, AGORA + 2, await base(c, C)), "Q não retomou A").toBe(true);
+  }
+
+  it("gravarEdicao com a retomada logo antes do INSERT: null, e nada de P cai em Q", async () => {
+    const deP = await base(c, A);
+    const docDeP = (await versaoAtual(c, A))!.doc;
+    let depois: Record<string, unknown[]> | null = null;
+    const { cliente, disparos } = clienteQueIntercala(c, /^INSERT INTO ficha_versoes\b/, async () => {
+      await retomarA();
+      depois = await retrato();
+    });
+    expect(await gravarEdicao(cliente, A, docDeP, AGORA + 3, deP)).toBeNull();
+    expect(disparos(), "o dublê nunca disparou: nada foi intercalado").toBeGreaterThan(0);
+    expect(await retrato(), "a gravação de P entrou depois da retomada").toEqual(depois);
+  });
+
+  it("gravarVisibilidade com a retomada logo antes do INSERT: null, e Q continua no ar", async () => {
+    const deP = await base(c, A);
+    let depois: Record<string, unknown[]> | null = null;
+    const { cliente, disparos } = clienteQueIntercala(c, /^INSERT INTO ficha_versoes\b/, async () => {
+      await retomarA();
+      depois = await retrato();
+    });
+    expect(await gravarVisibilidade(cliente, A, true, AGORA + 3, deP)).toBeNull();
+    expect(disparos(), "o dublê nunca disparou: nada foi intercalado").toBeGreaterThan(0);
+    expect(await retrato(), "o esconder de P entrou depois da retomada").toEqual(depois);
+  });
+
+  it("inserirAviso com a retomada logo antes do INSERT: null, e nenhum aviso de P em Q", async () => {
+    const deP = await base(c, A);
+    let depois: Record<string, unknown[]> | null = null;
+    const { cliente, disparos } = clienteQueIntercala(c, /^INSERT INTO avisos\b/, async () => {
+      await retomarA();
+      depois = await retrato();
+    });
+    expect(await inserirAviso(cliente, A, "aviso marcador de P", "fechado", AGORA + 3, AGORA + 3600, deP)).toBeNull();
+    expect(disparos(), "o dublê nunca disparou: nada foi intercalado").toBeGreaterThan(0);
+    expect(await retrato(), "o aviso de P entrou depois da retomada").toEqual(depois);
+  });
+
+  it("controle: o mesmo dublê, intercalando nada que mude o lugar, grava as duas", async () => {
+    const deP = await base(c, A);
+    const g = clienteQueIntercala(c, /^INSERT INTO ficha_versoes\b/, async () => {});
+    expect(await gravarEdicao(g.cliente, A, (await versaoAtual(c, A))!.doc, AGORA + 3, deP)).toBeTypeOf("number");
+    expect(g.disparos()).toBe(1);
+    const a = clienteQueIntercala(c, /^INSERT INTO avisos\b/, async () => {});
+    expect(await inserirAviso(a.cliente, A, "aviso marcador", "fechado", AGORA + 3, AGORA + 3600, deP)).toBeTypeOf("number");
+    expect(a.disparos()).toBe(1);
   });
 });
 

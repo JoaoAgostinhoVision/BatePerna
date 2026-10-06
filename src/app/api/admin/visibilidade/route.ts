@@ -1,6 +1,6 @@
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
-import { getClient, gravarEdicao, versaoAtual, versaoPorId } from "@/lib/db";
+import { estadoDaTela, getClient, gravarVisibilidade, versaoAtual } from "@/lib/db";
 import { LUGAR_MUDOU_DE_ENDERECO, baseIdValido } from "@/lib/endereco";
 
 export const dynamic = "force-dynamic";
@@ -72,7 +72,7 @@ export async function POST(req: Request): Promise<Response> {
   const { slug, oculto, baseId } = body as { slug?: unknown; oculto?: unknown; baseId?: unknown };
   if (typeof slug !== "string") return new Response("", { status: 400 });
   // 🔴 A versão que a tela abriu — a identidade do lugar (onda de fix 2 da 11e,
-  // M6). Ver `gravarEdicao`.
+  // M6). Ver `gravarVisibilidade`.
   if (!baseIdValido(baseId)) return new Response("", { status: 400 });
   // 🔴 `boolean` E NADA MAIS — nem `1`, nem `"true"`, nem ausente. Esta é a
   // bandeira que decide se um lugar real está no ar; um corpo malformado não
@@ -95,21 +95,36 @@ export async function POST(req: Request): Promise<Response> {
   // estado pedido é o que vale" — de um lugar que não é o da tela dela. Aqui não
   // há gravação pra carregar a condição, então ela é uma leitura; o que ela
   // decide é só a resposta, nunca o banco.
+  //
+  // 🔴 E O ESTADO E A IDENTIDADE SAEM DA MESMA CONSULTA (`estadoDaTela`, onda de
+  // fix 3, N5): com duas trocas entre a leitura de cima e uma 2ª leitura (Q sai
+  // de A, P volta pra A), "Q escondido" e "a versão da tela mora em A" eram
+  // verdades de instantes diferentes, e a rota respondia 200 a um "esconder" com
+  // P no ar. Se, relido junto, o estado já não é o pedido, o pedido GRAVA.
   if (versao.oculto === oculto) {
-    if ((await versaoPorId(getClient(), baseId))?.ficha_slug !== slug) {
+    const agoraNaTela = await estadoDaTela(getClient(), slug, baseId);
+    if (agoraNaTela === null || !agoraNaTela.daTela) {
       return new Response(LUGAR_MUDOU_DE_ENDERECO, {
         status: 409,
         headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
       });
     }
-    return Response.json({ id: versao.id }, { headers: { "cache-control": "no-store" } });
+    if (agoraNaTela.oculto === oculto) {
+      return Response.json({ id: agoraNaTela.id }, { headers: { "cache-control": "no-store" } });
+    }
   }
 
-  // 🔴 CONDICIONAL (`gravarEdicao`, onda de fix da 11e, I1 da revisão): se a troca
-  // de endereço levou o lugar embora depois da leitura acima, o INSERT de sempre
-  // recriaria o lugar no endereço velho — e o dono leria 200 de um "esconder"
-  // com o lugar ainda no ar no endereço novo. `null` = nada gravado: 409.
-  const id = await gravarEdicao(getClient(), slug, versao.doc, agora, oculto, baseId);
+  // 🔴 CONDICIONAL (`gravarVisibilidade`, onda de fix da 11e, I1 da revisão): se
+  // a troca de endereço levou o lugar embora depois da leitura acima, o INSERT de
+  // sempre recriaria o lugar no endereço velho — e o dono leria 200 de um
+  // "esconder" com o lugar ainda no ar no endereço novo. `null` = nada gravado:
+  // 409.
+  //
+  // 🔴 E O DOCUMENTO NÃO VEM DAQUI (onda de fix 3, N1): `gravarVisibilidade` copia
+  // o `doc` da versão atual DENTRO do próprio INSERT. Com o `versao.doc` lido
+  // acima, um "Salvar" de campo que terminasse no meio era apagado por este
+  // esconder — a voz que o dono acabou de salvar sumia, com 200 nos dois.
+  const id = await gravarVisibilidade(getClient(), slug, oculto, agora, baseId);
   if (id === null) {
     return new Response(LUGAR_MUDOU_DE_ENDERECO, {
       status: 409,

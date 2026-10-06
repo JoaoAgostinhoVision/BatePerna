@@ -189,3 +189,45 @@ export function comBaseAtual(
     return rota(new Request(req.url, { method: req.method, headers: req.headers, body: novo }));
   };
 }
+
+/** UM CLIENTE QUE INTERCALA (onda de fix 3 da 11e, N1/N2 da re-revisão): o
+ *  `Client` de teste, intacto, exceto que IMEDIATAMENTE ANTES do 1º `execute`
+ *  cujo SQL começa com `gatilho` ele roda `antes()` — e só uma vez.
+ *
+ *  🔴 É O QUE PROVA "NA MESMA CONSULTA". As corridas de antes intercalavam
+ *  entre a leitura da ROTA e a chamada da função de gravar; aqui o outro pedido
+ *  entra DENTRO da função, entre qualquer `SELECT` que ela faça e o `INSERT`.
+ *  Uma gravação que confira (ou leia) numa consulta e grave noutra passa a ver
+ *  o mundo velho, e o teste acusa.
+ *
+ *  🔴 E CONTA QUANTAS VEZES DISPAROU. O gatilho é TEXTO de SQL: se a gravação
+ *  mudar de forma (outro começo de statement, `batch` em vez de `execute`), o
+ *  dublê nunca dispara e o teste mediria o vazio. Quem usa afirma
+ *  `disparos > 0`. `batch` e o resto passam direto, sem gatilho. */
+export function clienteQueIntercala(
+  real: Client,
+  gatilho: RegExp,
+  antes: () => Promise<void>,
+): { cliente: Client; disparos: () => number } {
+  let armado = true;
+  let disparos = 0;
+  const cliente = new Proxy(real, {
+    get(alvo, chave) {
+      if (chave === "execute") {
+        return async (...args: Parameters<Client["execute"]>) => {
+          const primeiro = args[0] as unknown;
+          const sql = typeof primeiro === "string" ? primeiro : (primeiro as { sql: string }).sql;
+          if (armado && gatilho.test(sql.trimStart())) {
+            armado = false;
+            disparos++;
+            await antes();
+          }
+          return (alvo.execute as (...a: unknown[]) => ReturnType<Client["execute"]>)(...args);
+        };
+      }
+      const v = Reflect.get(alvo, chave, alvo) as unknown;
+      return typeof v === "function" ? (v as (...a: unknown[]) => unknown).bind(alvo) : v;
+    },
+  });
+  return { cliente, disparos: () => disparos };
+}

@@ -16,7 +16,12 @@ beforeEach(async () => {
 afterEach(() => c.close());
 
 describe("avisos", () => {
-  it("endereço que não é lugar (nunca foi, ou o lugar saiu dele): não grava, devolve null", async () => {
+  // N7 da re-revisão (onda de fix 3): o nome dizia também "ou o lugar saiu dele",
+  // que este caso não prova (o `base` de um endereço vazio é uma versão que não
+  // existe). O lugar que SAI é provado em `tests/lib/db-endereco.test.ts` (a
+  // identidade da versão, e a retomada dentro do INSERT) e em
+  // `tests/api/corrida-endereco.test.ts`.
+  it("endereço que nunca foi lugar (a versão-base não existe): não grava, devolve null", async () => {
     expect(await inserirAviso(c, "lugar-marcador-sem-versao", "obra", "fechado", AGORA, AGORA + 3600, await base(c, "lugar-marcador-sem-versao"))).toBeNull();
     expect((await c.execute("SELECT COUNT(*) AS n FROM avisos")).rows[0].n).toBe(0);
     // Controle: no lugar que existe, grava e devolve o id.

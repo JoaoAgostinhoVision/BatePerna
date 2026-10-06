@@ -338,8 +338,9 @@ function versaoDaLinha(r: Record<string, unknown>): FichaVersao {
  *  🔴 ESTA É A FORMA DO NASCIMENTO, INCONDICIONAL: a 1ª versão de um lugar (a
  *  semente; a publicação, Tarefa 12) nasce em endereço VAZIO por definição. Quem
  *  grava versão de um lugar QUE JÁ EXISTE (as rotas `ficha` e `visibilidade` do
- *  painel) usa `gravarEdicao`, a forma condicional — ver lá o porquê (a corrida
- *  com a troca de endereço). As duas formas são separadas pelo NOME, e cada rota
+ *  painel) usa `gravarEdicao` (conteúdo) ou `gravarVisibilidade`, as formas
+ *  condicionais — ver lá o porquê (a corrida com a troca de endereço, e a de
+ *  duas gravações do mesmo lugar). As formas são separadas pelo NOME, e cada rota
  *  do painel importa só a sua; a prova é `tests/api/corrida-endereco.test.ts`.
  *
  *  🔴 O `oculto` TEM DEFAULT `false` PRA NÃO MEXER NOS CHAMADORES ANTIGOS, E
@@ -349,7 +350,8 @@ function versaoDaLinha(r: Record<string, unknown>): FichaVersao {
  *  em silêncio. Visibilidade só muda pela porta que existe pra isso
  *  (`POST /api/admin/visibilidade`) — nunca de carona numa edição de campo. É o
  *  que `src/app/api/admin/ficha/route.ts` faz, com o porquê escrito lá — hoje
- *  por `gravarEdicao`, onde o `oculto` nem tem default. */
+ *  por `gravarEdicao`, que nem recebe o `oculto`: lê o da versão atual no
+ *  próprio INSERT (onda de fix 3 da 11e). */
 export async function gravarVersao(
   client: Client, slug: string, doc: string, autor: AutorVersao, criadoEm: number,
   oculto: boolean = false,
@@ -387,20 +389,81 @@ export async function gravarVersao(
  *  lugar, atual ou não, passa. Duas abas do mesmo lugar continuam gravando como
  *  sempre gravaram (ruling U1 da onda 2); o que se confere é só identidade.
  *
- *  O `oculto` é OBRIGATÓRIO aqui, sem default: quem edita passa o da versão
- *  atual (ver a armadilha descrita em `gravarVersao`). O autor é sempre o
- *  painel — a semente nunca edita, ela só faz nascer. */
+ *  🔴 O `oculto` NÃO VEM DE QUEM CHAMA: é o da versão ATUAL, lido DENTRO deste
+ *  mesmo INSERT (onda de fix 3 da 11e, N1 da re-revisão — linha vermelha). Esta
+ *  é a forma das edições de CONTEÚDO (campo e voltar), e visibilidade não é
+ *  assunto delas (ver a armadilha descrita em `gravarVersao`). Até a onda 3 a
+ *  rota passava o `oculto` que tinha LIDO antes; o dono tocava "Salvar" e, com
+ *  o PUT ainda trabalhando, "Esconder" na mesma tela — o esconder gravava, e o
+ *  PUT gravava depois o `oculto` de antes: os dois 200, e **o lugar de volta no
+ *  ar em silêncio**. Lido aqui, entre ler e gravar não cabe ninguém. Mudar a
+ *  visibilidade é `gravarVisibilidade`. O autor é sempre o painel — a semente
+ *  nunca edita, ela só faz nascer. */
 export async function gravarEdicao(
-  client: Client, slug: string, doc: string, criadoEm: number, oculto: boolean, baseId: number,
+  client: Client, slug: string, doc: string, criadoEm: number, baseId: number,
 ): Promise<number | null> {
   const r = await client.execute({
     sql: `INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em, oculto)
-          SELECT ?, ?, 'painel', ?, ?
+          SELECT ?, ?, 'painel', ?,
+                 (SELECT oculto FROM ficha_versoes WHERE ficha_slug = ? ORDER BY id DESC LIMIT 1)
           WHERE EXISTS (SELECT 1 FROM ficha_versoes WHERE id = ? AND ficha_slug = ?)
           RETURNING id`,
-    args: [slug, doc, criadoEm, oculto ? 1 : 0, baseId, slug],
+    args: [slug, doc, criadoEm, slug, baseId, slug],
   });
   return r.rows.length ? Number(r.rows[0].id) : null;
+}
+
+/** Esconde um lugar, ou o devolve ao ar: uma versão nova com o `oculto` pedido
+ *  e o DOCUMENTO DA VERSÃO ATUAL, copiado DENTRO deste mesmo INSERT (onda de fix
+ *  3 da 11e, N1 — o mesmo `INSERT … SELECT` do passo 7 da troca de endereço).
+ *  Devolve `null`, sem gravar nada, quando a versão `baseId` não mora em `slug`
+ *  — a mesma identidade de `gravarEdicao`, no mesmo statement.
+ *
+ *  🔴 POR QUE O DOCUMENTO NÃO VEM DE QUEM CHAMA: a rota lia a versão atual e
+ *  gravava o `doc` dela depois. Com um "Salvar" de campo no meio, o esconder
+ *  regravava o documento de ANTES e a voz que o dono acabara de salvar sumia —
+ *  perda, com 200 nos dois. Visibilidade não é assunto de conteúdo, nem o
+ *  contrário. O documento vai VERBATIM (sem `json_set`, sem renormalizar): ver
+ *  `src/app/api/admin/visibilidade/route.ts`. */
+export async function gravarVisibilidade(
+  client: Client, slug: string, oculto: boolean, criadoEm: number, baseId: number,
+): Promise<number | null> {
+  const r = await client.execute({
+    sql: `INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em, oculto)
+          SELECT ficha_slug, doc, 'painel', ?, ?
+          FROM ficha_versoes
+          WHERE ficha_slug = ?
+            AND EXISTS (SELECT 1 FROM ficha_versoes WHERE id = ? AND ficha_slug = ?)
+          ORDER BY id DESC LIMIT 1
+          RETURNING id`,
+    args: [criadoEm, oculto ? 1 : 0, slug, baseId, slug],
+  });
+  return r.rows.length ? Number(r.rows[0].id) : null;
+}
+
+/** O que a porta da visibilidade precisa pra decidir que um pedido NÃO grava
+ *  nada (o estado pedido já vale) — numa consulta SÓ (onda de fix 3 da 11e, N5
+ *  da re-revisão): a versão atual de `slug` (`id`, `oculto`) e se a versão
+ *  `baseId`, a que a tela abriu, mora em `slug` (`daTela`). `null` = `slug` não
+ *  tem versão.
+ *
+ *  🔴 POR QUE NUMA SÓ: a rota lia o estado numa consulta e a identidade noutra.
+ *  Com duas trocas de endereço entre as duas (o lugar de lá sai, o da tela
+ *  volta), o estado era de um lugar e a identidade do outro — e um "esconder"
+ *  respondia 200 com o lugar da tela no ar. Aqui as duas respostas são do mesmo
+ *  instante do banco. */
+export async function estadoDaTela(
+  client: Client, slug: string, baseId: number,
+): Promise<{ id: number; oculto: boolean; daTela: boolean } | null> {
+  const r = await client.execute({
+    sql: `SELECT id, oculto,
+                 EXISTS (SELECT 1 FROM ficha_versoes WHERE id = ? AND ficha_slug = ?) AS da_tela
+          FROM ficha_versoes WHERE ficha_slug = ? ORDER BY id DESC LIMIT 1`,
+    args: [baseId, slug, slug],
+  });
+  if (!r.rows.length) return null;
+  const l = r.rows[0];
+  return { id: Number(l.id), oculto: Number(l.oculto) === 1, daTela: Number(l.da_tela) === 1 };
 }
 
 /** A ficha de AGORA daquele lugar: a versão de maior `id`.

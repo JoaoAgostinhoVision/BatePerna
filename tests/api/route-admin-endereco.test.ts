@@ -14,6 +14,7 @@ import {
 } from "@/lib/db";
 import {
   ENDERECO_JA_E_ESSE,
+  ENDERECO_NAO_TROCOU,
   SEM_CIDADE_PRA_ENDERECO,
   enderecoOcupadoPorLugar,
   enderecoOcupadoPorRascunho,
@@ -155,6 +156,37 @@ describe("POST /api/admin/endereco — duas abas no mesmo segundo (M1)", () => {
     expect(await res.json()).toEqual({ slug: B });
     expect((await historico(c, B)).filter((v) => v.endereco_anterior === A), "um 2º ato").toHaveLength(1);
   });
+});
+
+// 🔴 N3 da re-revisão (onda de fix 3): os pré-cheques passaram, e o endereço
+// novo é ocupado ANTES do batch — quem decide é o 1º passo dele, que recusa. A
+// rota tem de dizer "nada mudou" (409 `ENDERECO_NAO_TROCOU`), e nunca o 200
+// "trocado" do caso das duas abas: com ele, o dono iria pro `/admin/<novo>`, o
+// painel de OUTRO lugar (ou de um rascunho).
+describe("POST /api/admin/endereco — o endereço novo é ocupado entre os pré-cheques e o batch (N3)", () => {
+  const OCUPAR = {
+    "por outro lugar": () =>
+      gravarVersao(c, B, JSON.stringify(lugarMarcador(B, "Outro Marcador", "Cidade Marcadora")), "painel", AGORA - 5),
+    "por um rascunho": () =>
+      criarRascunho(c, B, JSON.stringify({ slug: B, cidade: "Outra Marcadora", trajeto: { waypoints: [{ nome: "Lugar Marcador" }] } }), AGORA - 5),
+  } as const;
+
+  for (const [como, ocupar] of Object.entries(OCUPAR)) {
+    it(`ocupado ${como}: 409 com a frase "nada mudou", e o banco igual ao de depois da ocupação`, async () => {
+      let depois: Record<string, unknown[]> | null = null;
+      corrida.antesDoBatch = async () => {
+        await ocupar();
+        depois = await retrato();
+      };
+      const res = await POST(pedido({ slug: A }));
+      expect(corrida.antesDoBatch, "a corrida não aconteceu").toBeNull();
+      expect(depois, "a ocupação do meio não rodou").not.toBeNull();
+      expect(res.status, await res.clone().text()).toBe(409);
+      expect(await res.text()).toBe(ENDERECO_NAO_TROCOU);
+      expect(await retrato(), "a troca recusada mexeu no banco").toEqual(depois);
+      expect(await enderecoNovoDe(c, A)).toBeNull();
+    });
+  }
 });
 
 describe("POST /api/admin/endereco — recusas, e nada muda", () => {

@@ -300,15 +300,13 @@ export async function PUT(req: Request): Promise<Response> {
     // que vale é a DE AGORA, não a que a versão antiga tinha. Se ela viesse de
     // `versao.oculto`, voltar a uma versão de antes de o lugar ser escondido o
     // devolveria AO AR em silêncio: a mesma família do defeito da semente, agora
-    // pela porta do arquivo histórico. (O default `false` de `gravarVersao`
-    // seria pior — TODO "voltar" desesconderia —, e é por isso que a forma das
-    // edições, `gravarEdicao`, não tem default.)
+    // pela porta do arquivo histórico. E "de agora" é a do INSTANTE DA GRAVAÇÃO,
+    // não a desta leitura: `gravarEdicao` lê o `oculto` da versão atual dentro
+    // do próprio INSERT (onda de fix 3 da 11e, N1) — um "Esconder" tocado
+    // enquanto este pedido trabalha não é desfeito por ele.
     //
-    // A leitura a mais é o preço, e é uma consulta indexada de uma linha na mesma
-    // tabela que o `versaoPorId` acima já leu. Ela nunca devolve `null` aqui (a
-    // versão de cima existe, logo o lugar tem versão), mas o `?? false` está
-    // escrito porque falha fechada num campo de visibilidade significa "no ar",
-    // que é o estado de todo lugar que ninguém escondeu.
+    // A leitura daqui serve só ao par (nome, cidade) logo abaixo. Ela nunca
+    // devolve `null` (a versão de cima existe, logo o lugar tem versão).
     const atual = await versaoAtual(getClient(), slug);
 
     // 🔴 O PAR (NOME, CIDADE), TAMBÉM AO VOLTAR (onda de fix 2 da 11b, Y3 — o
@@ -328,7 +326,7 @@ export async function PUT(req: Request): Promise<Response> {
     // `endereco_anterior` da versão antiga — voltar a uma versão de antes de uma
     // troca de endereço restaura o DOCUMENTO (que já diz o endereço de agora,
     // reescrito na troca), e o lugar continua onde está.
-    const id = await gravarEdicao(getClient(), slug, versao.doc, agora, atual?.oculto ?? false, baseId);
+    const id = await gravarEdicao(getClient(), slug, versao.doc, agora, baseId);
     // 🔴 `null` = o lugar saiu deste endereço entre a leitura e a gravação (a
     // troca de endereço no meio, I1 da revisão da 11e): nada foi gravado.
     if (id === null) return new Response(LUGAR_MUDOU_DE_ENDERECO, { status: 409, headers: TEXTO });
@@ -527,12 +525,18 @@ export async function PUT(req: Request): Promise<Response> {
     return new Response(aDizer.frase, { status: 409, headers: TEXTO });
   }
 
-  // 🔴 A VERSÃO NOVA HERDA A VISIBILIDADE DA ATUAL (`versao.oculto`), e sem este
-  // argumento a rota DESESCONDERIA o lugar a cada edição de campo (a forma de
-  // nascer, `gravarVersao`, tem `oculto = false` por padrão; a das edições,
-  // `gravarEdicao`, nem deixa omitir). O dono esconde um lugar, conserta um typo na
-  // voz pelo celular, e o lugar VOLTA AO PÚBLICO sem ele pedir — uma decisão de
-  // produto tomada de carona por um argumento omitido.
+  // 🔴 A VERSÃO NOVA HERDA A VISIBILIDADE DA ATUAL, e sem isso a rota
+  // DESESCONDERIA o lugar a cada edição de campo (a forma de nascer,
+  // `gravarVersao`, tem `oculto = false` por padrão). O dono esconde um lugar,
+  // conserta um typo na voz pelo celular, e o lugar VOLTA AO PÚBLICO sem ele pedir
+  // — uma decisão de produto tomada de carona por um argumento omitido.
+  //
+  // 🔴 E "A ATUAL" É A DO INSTANTE DO INSERT, NÃO A LIDA LÁ EM CIMA (onda de fix 3
+  // da 11e, N1 — linha vermelha): `gravarEdicao` nem recebe o `oculto`, lê no
+  // próprio INSERT. Esta rota é a mais lenta do painel (a coerência acima roda
+  // sobre o acervo inteiro); com o `versao.oculto` daqui, um "Esconder" tocado
+  // na mesma tela enquanto ela trabalha dava 200, e este PUT gravava depois o
+  // `oculto` de antes: o lugar de volta no ar em silêncio.
   //
   // Visibilidade só muda pela porta que existe pra isso
   // (`POST /api/admin/visibilidade`). Esta rota edita CONTEÚDO; nada aqui é um
@@ -542,7 +546,7 @@ export async function PUT(req: Request): Promise<Response> {
   // troca de endereço levou o lugar embora depois da leitura lá em cima, gravar
   // aqui recriaria o lugar no endereço velho. O banco decide no INSERT; `null`
   // é 409 com a frase, e nada entrou.
-  const id = await gravarEdicao(getClient(), slug, novoDoc, agora, versao.oculto, baseId);
+  const id = await gravarEdicao(getClient(), slug, novoDoc, agora, baseId);
   if (id === null) return new Response(LUGAR_MUDOU_DE_ENDERECO, { status: 409, headers: TEXTO });
   return Response.json({ id }, { headers: { "cache-control": "no-store" } });
 }
