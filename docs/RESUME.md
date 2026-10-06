@@ -2,7 +2,26 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 05/10 (vence TUDO abaixo, inclusive a parada de 04/10)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — PARADA DE 05/10 (vence TUDO abaixo)
+
+**Branch `painel-completo`, NADA NO AR.** Último código **`88cab2e`** (onda 3 da 11e), medido por mim: **2195/2195
+em 108**, `tsc` 0, build 0, `mutar.mjs` 42/0. Sem stash. Se houver commit de CÓDIGO depois de `88cab2e`, meça tudo de novo.
+
+→ 🔴 **O PRIMEIRO PASSO, SEM PENSAR:**
+1. `git status --short`. A re-revisão curta estava EM VOO quando a sessão fechou e o revisor SABOTA código pra medir.
+   **Se houver `src/` ou `tests/` modificado: é sabotagem viva do revisor** (todo código bom está commitado em
+   `88cab2e`) → `git diff` pra ver, depois `git checkout -- <arquivos>` e confirme árvore limpa.
+2. Se NÃO existir `.superpowers/sdd/2026-09-26-painel-completo/task-11e-rereview2.md` (ou estiver incompleto):
+   redespachar `task-11e-rereview2-PROMPT.md` COMO ESTÁ (general-purpose, opus, background).
+3. Achados dela → onda curta se houver I/C; senão **Tarefa 12** (brief `task-12-brief.md`, agora com 12-N6, 12-N2,
+   12-helper no fim). Auditar o brief da 12 ANTES de despachar.
+4. Mutação com suíte inteira: **EU rodo**, uma por vez, com `sha1sum -c` depois de cada (os agentes morreram 2× por OOM
+   com a sabotagem viva). Harness da onda 3: `scratchpad/f3/mut-f3.cjs` (scratchpad é por sessão — pode ter sumido).
+
+**Ordem que falta (igual):** re-revisão curta → Tarefa 12 → revisão final da branch COM `npm run build` → agentes do
+projeto → **pacote de copy pro João** → `npm run semear` → UM `vercel --prod` → `conferir-no-ar` → olhos dele no celular.
+
+## ▶ 05/10 DURANTE O DIA (histórico)
 
 ✅ **Onda 2 da 11e FEITA: `da3e6fa`** (U1: toda gravação de lugar publicado leva `baseId`; o banco confere
 `id = baseId AND ficha_slug = slug`). Medido por mim: **2183/2183 em 107**, `tsc` 0, build 0 (com
