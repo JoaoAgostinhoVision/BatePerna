@@ -97,7 +97,11 @@ afterEach(() => {
 });
 
 await bancoDeProducao();
-const ACERVO = await getAllFichas();
+// O painel edita o DOCUMENTO (`Ficha`), não a ficha como o público a vê: desde
+// 07/10 `getAllFichas` devolve `FichaNoAr`, com `origem` a mais. O `parse` a
+// tira (o zod descarta chave desconhecida) — nos lugares do João a regra e o
+// nível do documento são os mesmos do `noAr`, então nada mais muda.
+const ACERVO: Ficha[] = (await getAllFichas()).map((f) => fichaSchema.parse(f));
 
 function exigir(slug: string): Ficha {
   if (ACERVO.length < 2) throw new Error("com uma ficha só este arquivo não separa nada");
@@ -152,7 +156,7 @@ describe("EditorProsa — a caixa de texto (absorveu o `EditorDeVoz`)", () => {
   // ⇦ editor-de-voz: "mostra a voz atual da ficha no campo"
   it("a caixa abre com o que está no banco, no bloco do campo", () => {
     render(<FichaInteira ficha={semHorario} />);
-    expect(emCampo("voz").getByDisplayValue(semHorario.voz)).toBeTruthy();
+    expect(emCampo("voz").getByDisplayValue(semHorario.voz!)).toBeTruthy();
     // e não é "está em algum lugar da tela": a caixa de OUTRO campo de prosa
     // tem o valor DELE, não o da voz.
     expect(emCampo("acesso").getByDisplayValue(semHorario.acesso)).toBeTruthy();

@@ -149,17 +149,17 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
         `${caminho} não trouxe o valor dentro do controle`,
       ).toBeTruthy();
 
-    naCaixa("voz", semHorario.voz); // prosa
+    naCaixa("voz", semHorario.voz!); // prosa
     naCaixa("acesso", semHorario.acesso); // prosa
     naCaixa("custo.valor", semHorario.custo.valor!); // prosa opcional PREENCHIDA
     naCaixa("piso", semHorario.piso!); // lista de uma
-    naCaixa("condicao.severidade", semHorario.condicao.severidade); // lista de uma
+    naCaixa("condicao.severidade", semHorario.condicao.severidade!); // lista de uma
     // 🔴 `numero` (Task 7): os TRÊS, não um de amostra — o limiar é fracionário
     // (`0.2`) e as janelas são inteiras, e um editor que coagisse pra inteiro
     // mostraria `0` no campo que decide se o lugar fecha.
-    naCaixa("condicao.regra.limiar_mm", String(semHorario.condicao.regra.limiar_mm));
-    naCaixa("condicao.regra.janela_passado_horas", String(semHorario.condicao.regra.janela_passado_horas));
-    naCaixa("condicao.regra.janela_previsao_horas", String(semHorario.condicao.regra.janela_previsao_horas));
+    naCaixa("condicao.regra.limiar_mm", String(semHorario.condicao.regra!.limiar_mm));
+    naCaixa("condicao.regra.janela_passado_horas", String(semHorario.condicao.regra!.janela_passado_horas));
+    naCaixa("condicao.regra.janela_previsao_horas", String(semHorario.condicao.regra!.janela_previsao_horas));
 
     // lista de VÁRIOS: o valor é o conjunto marcado, não um texto
     const dias = within(screen.getByTestId("campo-dias"));
@@ -321,7 +321,7 @@ describe("FichaInteira — o componente serve os três lugares", () => {
     for (const f of ACERVO) {
       const { unmount } = render(<FichaInteira ficha={f} />);
       for (const outra of ACERVO.filter((x) => x.slug !== f.slug)) {
-        expect(screen.queryByText(outra.voz), `${outra.slug} vazou na tela de ${f.slug}`).toBeNull();
+        expect(screen.queryByText(outra.voz!), `${outra.slug} vazou na tela de ${f.slug}`).toBeNull();
         expect(screen.queryByText(outra.promessa)).toBeNull();
       }
       unmount();

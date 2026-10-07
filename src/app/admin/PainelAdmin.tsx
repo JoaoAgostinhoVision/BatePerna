@@ -1,7 +1,7 @@
 "use client";
 import { useContext, useState } from "react";
 import { VersaoDaTela, comBase } from "./campos/gravar";
-import type { Ficha } from "@/types/ficha";
+import type { FichaNoAr } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import type { AvisoLinha, EfeitoAviso } from "@/lib/db";
 import { falaMolhada, vozDaFicha } from "@/lib/severidade";
@@ -33,7 +33,7 @@ const AVISO_ERRO_LEITURA = "Não consegui ler o aviso publicado — a seção ab
  *  sai de `falaMolhada`, a mesma língua que a ficha fala, porque foi a língua
  *  de um lugar virando a língua de todos que este arquivo existe pra não
  *  repetir (ver `src/lib/severidade.ts`). */
-function consequencia(efeito: EfeitoAviso, ficha: Ficha): string {
+function consequencia(efeito: EfeitoAviso, ficha: FichaNoAr): string {
   if (efeito === "fechado") return "O lugar vai aparecer FECHADO, e não por causa de chuva.";
   if (efeito === "frio") {
     const voz = vozDaFicha(ficha.condicao);
@@ -48,7 +48,7 @@ function consequencia(efeito: EfeitoAviso, ficha: Ficha): string {
  *  Task 5 (2026-09-25), quando `/admin` virou lista: a extração é pra a lista
  *  e o painel do lugar nunca poderem discordar sobre o que está na tela
  *  agora — ver o porquê completo (calendário, dono, erro) no módulo extraído. */
-function motorAgora(leitura: LeituraCarimbo, ficha: Ficha, agora: number): string {
+function motorAgora(leitura: LeituraCarimbo, ficha: FichaNoAr, agora: number): string {
   return `Na tela agora: ${marcaAgora(ficha, leitura, agora)}`;
 }
 
@@ -71,7 +71,7 @@ function formInicial(): EstadoForm {
 }
 
 type Props = {
-  ficha: Ficha;
+  ficha: FichaNoAr;
   leitura: LeituraCarimbo;
   agora: number;
   /** Row do banco, com `id` — a `Aviso` que viaja na leitura não tem id de

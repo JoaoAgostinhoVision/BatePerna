@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Ficha } from "@/types/ficha";
+import type { FichaNoAr } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import BotaoDesistir from "./BotaoDesistir";
 import { marcaAgora } from "./marca-agora";
@@ -20,7 +20,7 @@ export const IR_PUBLICAR = "publicar";
 export type RascunhoNaLista = { slug: string; nome: string; cidade?: string };
 
 type Props = {
-  fichas: Ficha[];
+  fichas: FichaNoAr[];
   leituras: Record<string, LeituraCarimbo>;
   /** Os slugs ESCONDIDOS do público (Task 9). Obrigatório de propósito: quem
    *  monta a lista tem de dizer quais estão escondidos, e uma página que

@@ -7,7 +7,8 @@ import { getFichasComCondicao } from "@/lib/ficha";
 import { bancoDeProducao, gravarEdicao } from "../banco";
 import { CHAVE_FILTROS, SEM_FILTRO } from "@/lib/filtros";
 import { CHAVE_LOCAL } from "@/lib/local";
-import type { Ficha } from "@/types/ficha";
+import type { FichaNoAr } from "@/types/ficha";
+import { doJoao } from "../no-ar";
 
 vi.mock("@/lib/carimbo-estado", async (real) => ({
   ...(await real<typeof import("@/lib/carimbo-estado")>()),
@@ -58,8 +59,8 @@ async function leituras(estado: "fresco" | "frio", erro = false) {
 // Ficha mínima e sintética — mesmo padrão de tests/lib/ficha.test.ts
 // (fichaComNome): só os campos que a home lê (slug, nome do 1º waypoint,
 // promessa). Não depende do conteúdo real do projeto.
-function fichaFake(slug: string): Ficha {
-  return {
+function fichaFake(slug: string): FichaNoAr {
+  return doJoao({
     slug,
     modos: [],
     rotulo_escaneio: "",
@@ -79,7 +80,7 @@ function fichaFake(slug: string): Ficha {
     },
     discriminador: { formato: "", como_ler: "", permissao_abortar: "" },
     custo: { tag: "gratis" },
-  };
+  });
 }
 
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(AGORA_S * 1000); });

@@ -16,6 +16,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import type { Ficha } from "@/types/ficha";
+import { doJoao } from "../no-ar";
 
 // Onde a pessoa está.
 const VOCE = { lat: -8.0, lng: -36.0 };
@@ -89,7 +90,7 @@ const { FICHA } = vi.hoisted(() => ({
 // provaria nada sobre o banco de qualquer forma.
 vi.mock("@/lib/ficha", async (real) => ({
   ...(await real<typeof import("@/lib/ficha")>()),
-  getFicha: async () => FICHA,
+  getFicha: async () => (await import("../no-ar")).doJoao(FICHA),
 }));
 
 vi.mock("@/lib/carimbo-estado", async (real) => ({
@@ -143,7 +144,7 @@ async function asDuasTelas() {
 
   const cartao = render(
     <LocalVivo>
-      <CartaoTrilha ficha={FICHA} inicial={LEITURA} />
+      <CartaoTrilha ficha={doJoao(FICHA)} inicial={LEITURA} />
     </LocalVivo>,
   );
   const pagina = render(
@@ -190,7 +191,7 @@ describe("uma trilha, UM km", () => {
 
     const cartao = render(
       <LocalVivo>
-        <CartaoTrilha ficha={FICHA} inicial={LEITURA} />
+        <CartaoTrilha ficha={doJoao(FICHA)} inicial={LEITURA} />
       </LocalVivo>,
     );
     const kmDoCartao = kmMostrado(cartao.container.querySelector(".cartao-meta")?.textContent);
@@ -310,7 +311,7 @@ describe("o número que a tela mostra é o número que o filtro compara", () => 
     guardarLocal();
     const cartao = render(
       <LocalVivo>
-        <CartaoTrilha ficha={FRONTEIRA} inicial={LEITURA} />
+        <CartaoTrilha ficha={doJoao(FRONTEIRA)} inicial={LEITURA} />
       </LocalVivo>,
     );
     const meta = cartao.container.querySelector(".cartao-meta")?.textContent;

@@ -1,10 +1,14 @@
 import { createClient, type Client } from "@libsql/client";
 import { describe, expect, it, vi } from "vitest";
-import { ensureSchema, gravarVersao, versoesAtuais } from "@/lib/db";
+import { ensureSchema, gravarVersao, lerAcervoComOrigem } from "@/lib/db";
 import { buscarFichas, PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
+import { REGRA_PADRAO_INICIAL } from "@/lib/regra-padrao";
 import rampa from "../../content/fichas/rampa-do-pepe.json";
 
-const umaLinha = (doc: unknown) => new Map([["rampa-do-pepe", { doc: JSON.stringify(doc), oculto: false }]]);
+const umaLinha = (doc: unknown) => ({
+  linhas: new Map([["rampa-do-pepe", { doc: JSON.stringify(doc), oculto: false, contribuidor: null, conferido: true }]]),
+  padrao: REGRA_PADRAO_INICIAL,
+});
 
 /** Uma leitura BOA, medida — a premissa de toda prova "com leitura boa antes".
  *  Sem ela, as provas de baixo seriam a de "banco fora numa instância que nunca
@@ -57,10 +61,13 @@ describe("buscarFichas", () => {
   });
 
   it("ordena por nome do primeiro waypoint, como a home espera", async () => {
-    const fichas = await buscarFichas(async () => new Map([
-      ["b", { doc: JSON.stringify({ ...rampa, slug: "b", trajeto: { waypoints: [{ ...rampa.trajeto.waypoints[0], nome: "Zebu" }] } }), oculto: false }],
-      ["a", { doc: JSON.stringify({ ...rampa, slug: "a", trajeto: { waypoints: [{ ...rampa.trajeto.waypoints[0], nome: "Abacate" }] } }), oculto: false }],
-    ]));
+    const fichas = await buscarFichas(async () => ({
+      linhas: new Map([
+        ["b", { doc: JSON.stringify({ ...rampa, slug: "b", trajeto: { waypoints: [{ ...rampa.trajeto.waypoints[0], nome: "Zebu" }] } }), oculto: false, contribuidor: null, conferido: true }],
+        ["a", { doc: JSON.stringify({ ...rampa, slug: "a", trajeto: { waypoints: [{ ...rampa.trajeto.waypoints[0], nome: "Abacate" }] } }), oculto: false, contribuidor: null, conferido: true }],
+      ]),
+      padrao: REGRA_PADRAO_INICIAL,
+    }));
     expect(fichas.map((f) => f.trajeto.waypoints[0].nome)).toEqual(["Abacate", "Zebu"]);
   });
 
@@ -69,7 +76,7 @@ describe("buscarFichas", () => {
   // entra no ramo do banco fora: estoura, nunca lista vazia (que é a home
   // dizendo "não existe trilha nenhuma").
   it("banco de pé mas com a tabela VAZIA: estoura, nunca lista vazia", async () => {
-    await expect(buscarFichas(async () => new Map())).rejects.toThrow(/sem nenhuma linha/);
+    await expect(buscarFichas(async () => ({ linhas: new Map(), padrao: REGRA_PADRAO_INICIAL }))).rejects.toThrow(/sem nenhuma linha/);
   });
 
   // 🔴 I5 DA REVISÃO FINAL: a chave do Map (o `ficha_slug` do banco) é a
@@ -82,7 +89,10 @@ describe("buscarFichas", () => {
   it("chave do banco e slug de dentro do documento divergem: estoura, nunca serve a ficha errada", async () => {
     const doc = { ...rampa, slug: "pedra-furada-de-venturosa" };
     await expect(
-      buscarFichas(async () => new Map([["rampa-do-pepe", { doc: JSON.stringify(doc), oculto: false }]])),
+      buscarFichas(async () => ({
+        linhas: new Map([["rampa-do-pepe", { doc: JSON.stringify(doc), oculto: false, contribuidor: null, conferido: true }]]),
+        padrao: REGRA_PADRAO_INICIAL,
+      })),
     ).rejects.toThrow(/divergente/);
   });
 });
@@ -117,7 +127,7 @@ describe("buscarFichas sem memória: leitura boa antes, banco fora depois", () =
 
   it("tabela VAZIA depois de uma leitura boa: estoura", async () => {
     await leituraBoa();
-    await expect(buscarFichas(async () => new Map())).rejects.toThrow(/sem nenhuma linha/);
+    await expect(buscarFichas(async () => ({ linhas: new Map(), padrao: REGRA_PADRAO_INICIAL }))).rejects.toThrow(/sem nenhuma linha/);
   });
 });
 
@@ -130,16 +140,16 @@ describe("buscarFichas sem memória: leitura boa antes, banco fora depois", () =
 // do vazio era feita sobre o mapa JÁ FILTRADO pelo SQL, e esconder TODOS os
 // lugares caía nela: o app público caía (ou, com a memória que existia até
 // 07/10, servia os escondidos). Agora a leitura traz o acervo inteiro
-// (`incluirOcultos: true`, como `getAllFichas`), o vazio se decide por ele, e
+// (`lerAcervoComOrigem`, como `getAllFichas`), o vazio se decide por ele, e
 // o filtro do público acontece depois — tudo escondido é `[]` honesto.
 //
-// 🔴 ESTE BLOCO USA `versoesAtuais` DE VERDADE, contra um banco de verdade, em
+// 🔴 ESTE BLOCO USA `lerAcervoComOrigem` DE VERDADE, contra um banco de verdade, em
 // vez de um `Map` montado à mão: o que ele mede é a JUNÇÃO das peças — a coluna
 // `oculto` lida pelo SQL e o filtro em `buscarFichas`.
 // ═══════════════════════════════════════════════════════════════════════════
 describe("buscarFichas contra o banco: lugar escondido", () => {
   const doc = (slug: string) => JSON.stringify({ ...rampa, slug });
-  const lerTudo = (c: Client) => versoesAtuais(c, { incluirOcultos: true });
+  const lerTudo = (c: Client) => lerAcervoComOrigem(c);
 
   async function banco(): Promise<Client> {
     const c = createClient({ url: ":memory:" });

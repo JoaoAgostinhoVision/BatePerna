@@ -1,5 +1,5 @@
 "use client";
-import type { Ficha } from "@/types/ficha";
+import type { FichaNoAr } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { SEM_FILTRO } from "@/lib/filtros";
 import { aberturaDaFicha, fechadoHoje, type Agora } from "@/lib/horario";
@@ -8,7 +8,7 @@ import CartaoTrilha from "./CartaoTrilha";
 import { useMexerFiltros } from "./filtros";
 import { useLeiturasMapa } from "./leituras";
 
-export type ParFolha = { ficha: Ficha; leitura: LeituraCarimbo };
+export type ParFolha = { ficha: FichaNoAr; leitura: LeituraCarimbo };
 
 /** A folha de cartões da home: agrupada por veredito quando dá pra confiar em
  *  todo mundo, lisa quando não dá.

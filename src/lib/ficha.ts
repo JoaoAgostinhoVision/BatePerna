@@ -1,10 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
 import { cache } from "react";
-import { enderecoNovoDe, enderecosAntigosDe, getClient, identidadeDoLugar, versaoAtual, versoesAtuais } from "@/lib/db";
+import {
+  enderecoNovoDe,
+  enderecosAntigosDe,
+  getClient,
+  identidadeDoLugar,
+  lerAcervoComOrigem,
+  lugarDoDono,
+  type OrigemDoLugar,
+} from "@/lib/db";
 import { comPrazo } from "@/lib/cache-rotas";
 import { PRAZO_FICHA_MS, buscarFichas, fichaDaVersao } from "@/lib/ficha-fonte";
-import { fichaSchema, type Ficha } from "@/types/ficha";
+import { noAr } from "@/lib/regra-padrao";
+import { fichaSchema, type Ficha, type FichaNoAr } from "@/types/ficha";
 // `ordenarPorNome` mora em `ficha-fonte.ts` desde 2026-09-25 (Task 3 do plano
 // "ficha no banco"): ela foi pro único lugar que a usa em produção, junto do
 // `buscarFichas` que lê do banco. Se este módulo a importasse de lá e
@@ -77,7 +86,8 @@ export function loadAll(dir: string = FICHAS_DIR): Ficha[] {
  *  porquê escrito lá. Em teste o efeito colateral é bom: cada chamada relê o
  *  banco, que é o que faz "grava versão nova e vê a mudança chegar" funcionar.
  *
- *  🔴 `incluirOcultos: true` NA LEITURA DO PÚBLICO, E NÃO É ENGANO (C1 da
+ *  🔴 OS ESCONDIDOS VÊM NA LEITURA DO PÚBLICO (`lerAcervoComOrigem`, que traz
+ *  os escondidos), E NÃO É ENGANO (C1 da
  *  revisão final do painel completo, 2026-10-06): `buscarFichas` decide "banco
  *  sem semente" pelo acervo INTEIRO e só depois tira os escondidos — ver o
  *  porquê lá. Com o filtro padrão do SQL, esconder todos os lugares parecia
@@ -85,15 +95,14 @@ export function loadAll(dir: string = FICHAS_DIR): Ficha[] {
  *  escondidos). O escondido continua fora de toda superfície pública: quem
  *  filtra é `buscarFichas`, antes de devolver. */
 export const getAllFichas = cache(
-  async (): Promise<Ficha[]> =>
-    buscarFichas(() => versoesAtuais(getClient(), { incluirOcultos: true })),
+  async (): Promise<FichaNoAr[]> => buscarFichas(() => lerAcervoComOrigem(getClient())),
 );
 
-export async function getFicha(slug: string): Promise<Ficha | null> {
+export async function getFicha(slug: string): Promise<FichaNoAr | null> {
   return (await getAllFichas()).find((f) => f.slug === slug) ?? null;
 }
 
-export async function getFichasComCondicao(): Promise<Ficha[]> {
+export async function getFichasComCondicao(): Promise<FichaNoAr[]> {
   return (await getAllFichas()).filter((f) => f.condicao != null);
 }
 
@@ -115,38 +124,47 @@ async function lerNoPrazo<T>(leitura: Promise<T>): Promise<T> {
  *  ocultos, então o lugar escondido sumia da lista do próprio dono, sem caminho
  *  de volta pela tela. Fazer aquele caminho devolver os escondidos os poria em
  *  toda superfície pública que a usa — a home, o acervo, a ficha. (Desde 06/10
- *  ela LÊ com `incluirOcultos`, mas tira os escondidos antes de devolver; ver
+ *  ela LÊ os escondidos também, mas os tira antes de devolver; ver
  *  `buscarFichas`. Até 07/10 ela também memorizava o que lia, e esta porta
  *  separada mantinha o escondido fora daquela memória — B1 da auditoria da
  *  Task 9; a memória saiu em 07/10.) Por isso esta leitura é OUTRA porta: lê
- *  com `incluirOcultos`, usa a MESMA conta de documento (`fichaDaVersao`) e
+ *  com os escondidos, usa a MESMA conta de documento (`fichaDaVersao`) e
  *  devolve os escondidos marcados.
  *
  *  🔴 BANCO FORA É ERRO, não lista velha — como o público, desde 07/10. É a
  *  tela de quem edita: mostrar uma versão antiga pra quem vai mudá-la é pior que
  *  a página de erro. O prazo é o mesmo do público (`PRAZO_FICHA_MS`). */
-export async function getAcervoDoDono(): Promise<{ fichas: Ficha[]; ocultos: Set<string> }> {
-  const linhas = await lerNoPrazo(versoesAtuais(getClient(), { incluirOcultos: true }));
-  const fichas = ordenarPorNome([...linhas.entries()].map(([slug, v]) => fichaDaVersao(slug, v.doc)));
-  const ocultos = new Set([...linhas.values()].filter((v) => v.oculto).map((v) => v.ficha_slug));
+export async function getAcervoDoDono(): Promise<{ fichas: FichaNoAr[]; ocultos: Set<string> }> {
+  const { linhas, padrao } = await lerNoPrazo(lerAcervoComOrigem(getClient()));
+  const fichas = ordenarPorNome([...linhas.entries()].map(([slug, l]) => noAr(fichaDaVersao(slug, l.doc), l, padrao)));
+  const ocultos = new Set([...linhas.entries()].filter(([, l]) => l.oculto).map(([slug]) => slug));
   return { fichas, ocultos };
 }
 
 /** UM lugar, pro DONO — escondido ou não. `null` só quando o lugar não existe.
  *
- *  🔴 A EXISTÊNCIA É CONFERIDA COM `versaoAtual`, NUNCA COM `getFicha` — a
+ *  🔴 A EXISTÊNCIA É CONFERIDA COM `lugarDoDono` (a versão atual, escondida ou
+ *  não, desde 07/10 com a origem e a regra padrão no mesmo batch; até ali era
+ *  `versaoAtual`), NUNCA COM `getFicha` — a
  *  pré-condição que a Task 5 deixou escrita em `admin/[slug]/page.tsx`: o
  *  `getFicha` filtra os ocultos, e a página do lugar escondido dava 404 pro
  *  dono, justamente a página onde mora o botão de mostrá-lo de novo. Mesma
- *  regra da rota `api/admin/visibilidade`. */
+ *  regra da rota `api/admin/visibilidade`.
+ *
+ *  🔴 DUAS FICHAS, E CADA UMA TEM SEU USO (07/10): `ficha` é o DOCUMENTO cru —
+ *  é o que a ficha inteira edita, e um lugar sem regra própria aparece SEM
+ *  regra lá, pra o João calibrar (Task 8). `noAr` é o que o público vê — é o
+ *  que o carimbo do painel mostra. Trocar uma pela outra faria o painel
+ *  mostrar a regra padrão como se fosse do lugar. */
 export async function getFichaDoDono(
   slug: string,
-): Promise<{ ficha: Ficha; oculto: boolean; versaoId: number } | null> {
-  const v = await lerNoPrazo(versaoAtual(getClient(), slug));
-  if (v == null) return null;
+): Promise<{ ficha: Ficha; noAr: FichaNoAr; oculto: boolean; versaoId: number; origem: OrigemDoLugar } | null> {
+  const l = await lerNoPrazo(lugarDoDono(getClient(), slug));
+  if (l == null) return null;
+  const ficha = fichaDaVersao(slug, l.versao.doc);
   // `versaoId`: a versão que a tela do dono abre — o `baseId` de toda gravação
   // dela (onda de fix 2 da 11e, M6). Da MESMA leitura que deu a ficha.
-  return { ficha: fichaDaVersao(slug, v.doc), oculto: v.oculto, versaoId: v.id };
+  return { ficha, noAr: noAr(ficha, l.origem, l.padrao), oculto: l.versao.oculto, versaoId: l.versao.id, origem: l.origem };
 }
 
 /** O LUGAR NO AR a que um ENDEREÇO VELHO leva, ou `null` (Tarefa 11e, E4).
@@ -161,7 +179,7 @@ export async function getFichaDoDono(
  *  Banco que não responde a tempo ESTOURA (pela `lerNoPrazo` do dono): a página
  *  cai no `error.tsx`, e o service worker serve a cópia guardada — um 404 aqui
  *  apagaria essa cópia (ver `resolverNavegacao`) por uma falha que não é dele. */
-export async function fichaDoEnderecoAntigo(velho: string): Promise<Ficha | null> {
+export async function fichaDoEnderecoAntigo(velho: string): Promise<FichaNoAr | null> {
   const novo = await lerNoPrazo(enderecoNovoDe(getClient(), velho));
   return novo === null ? null : getFicha(novo);
 }

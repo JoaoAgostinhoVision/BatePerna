@@ -12,10 +12,10 @@ import { cleanup, render } from "@testing-library/react";
  *  ESCONDIDOS na home, no acervo e no link direto, com o banco de pé.
  *
  *  A cadeia medida é a de produção — `getAllFichas` → `buscarFichas` →
- *  `versoesAtuais` → SQL contra o `:memory:` que o `getClient` de verdade abre
+ *  `lerAcervoComOrigem` → SQL contra o `:memory:` que o `getClient` de verdade abre
  *  (`tests/banco.ts`). Sem dublê de getter: por isso a mutação "o vazio decide
- *  pelo mapa filtrado" morre AQUI, esteja ela no `getAllFichas` (tirar o
- *  `incluirOcultos`) ou no `buscarFichas` (filtrar antes de perguntar o vazio).
+ *  pelo mapa filtrado" morre AQUI, esteja ela na leitura do acervo (deixar
+ *  os escondidos de fora) ou no `buscarFichas` (filtrar antes de perguntar o vazio).
  *
  *  ⚠️ CADA CASO LÊ O ACERVO COM OS TRÊS NO AR ANTES DE ESCONDER. Era o pior dos
  *  dois lados enquanto havia memória; sem ela (07/10), é o que mantém estas

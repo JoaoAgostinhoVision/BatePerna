@@ -22,7 +22,8 @@ import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { falaMolhada } from "@/lib/severidade";
 import { CHAVE_FILTROS, SEM_FILTRO } from "@/lib/filtros";
 import { CHAVE_GPS, CHAVE_LOCAL } from "@/lib/local";
-import type { Ficha } from "@/types/ficha";
+import type { FichaNoAr } from "@/types/ficha";
+import { doJoao } from "../no-ar";
 import {
   MAPA_ALTURA_HOME_PX,
   MAPA_JANELA_VISIVEL_HOME_PX,
@@ -37,8 +38,8 @@ afterEach(() => { cleanup(); });
 // (fichaFake): só os campos que o mapa lê. Não exporta o de lá nem move:
 // duplicar sete linhas de fixture custa menos que acoplar dois arquivos de
 // teste.
-function fichaFake(slug: string): Ficha {
-  return {
+function fichaFake(slug: string): FichaNoAr {
+  return doJoao({
     slug,
     modos: [],
     rotulo_escaneio: "",
@@ -58,7 +59,7 @@ function fichaFake(slug: string): Ficha {
     },
     discriminador: { formato: "", como_ler: "", permissao_abortar: "" },
     custo: { tag: "gratis" },
-  };
+  });
 }
 
 // O acervo vem do BANCO desde 2026-09-25. Semeado no TOPO de propósito: estas
@@ -243,8 +244,8 @@ describe("MapaHome: o enquadramento usa a janela que a tela mostra, não a caixa
   }
 
   // Ficha sintética mínima — mesmo padrão de fichaFake em tests/app/home.test.tsx.
-  function fichaEm(slug: string, coords: { lat: number; lng: number }): Ficha {
-    return {
+  function fichaEm(slug: string, coords: { lat: number; lng: number }): FichaNoAr {
+    return doJoao({
       slug,
       modos: [],
       rotulo_escaneio: "",
@@ -264,7 +265,7 @@ describe("MapaHome: o enquadramento usa a janela que a tela mostra, não a caixa
       },
       discriminador: { formato: "", como_ler: "", permissao_abortar: "" },
       custo: { tag: "gratis" },
-    };
+    });
   }
 
   it("duas trilhas a ~60km entre si (leste-oeste): os dois pins caem dentro da janela visível, com o alvo de toque inteiro", () => {
@@ -372,7 +373,7 @@ describe("MapaHome com a localização da pessoa", () => {
   // exercido pelo fixture real — e é o ramo que sai errado ("2 trilha fora").
   // Sintéticas, mesmo padrão do fichaFake de tests/app/home.test.tsx.
   it("duas trilhas fora: o aviso vai pro plural", async () => {
-    const longe: Ficha[] = [fichaFake("uma"), fichaFake("outra")];
+    const longe: FichaNoAr[] = [fichaFake("uma"), fichaFake("outra")];
     const dobradas = Object.fromEntries(
       longe.map((f) => [f.slug, { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000, aviso: null }]),
     );
@@ -514,14 +515,14 @@ describe("MapaHome: o filtro zerou a lista", () => {
   const VOCE = { lat: -8.2, lng: -35.56 };
   const PAGO = { custo: { tag: "pago" as const, valor: "R$ 5" } };
 
-  function fichaEm(slug: string, lng: number, pago: boolean): Ficha {
+  function fichaEm(slug: string, lng: number, pago: boolean): FichaNoAr {
     const f = fichaFake(slug);
     f.condicao.coords = { lat: VOCE.lat, lng };
     if (pago) f.custo = PAGO.custo;
     return f;
   }
 
-  const parDe = (f: Ficha): ParFolha => ({
+  const parDe = (f: FichaNoAr): ParFolha => ({
     ficha: f,
     leitura: { estado: "fresco", erro: false, calculadoEm: Math.floor(Date.now() / 1000), aviso: null },
   });

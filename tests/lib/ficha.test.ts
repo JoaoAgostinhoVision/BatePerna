@@ -44,7 +44,7 @@ function fichaComNome(nome: string): Ficha {
 /** 🔴 OS TRÊS GETTERS LEEM O BANCO DESDE 2026-09-25, e é por isso que estes
  *  testes ganharam um banco `:memory:` semeado com o acervo do repositório.
  *  Nada aqui mocka os getters: o caminho exercitado é o de produção inteiro
- *  (`getAllFichas` → `buscarFichas` → `comPrazo` → `versoesAtuais` → SQL), e a
+ *  (`getAllFichas` → `buscarFichas` → `comPrazo` → `lerAcervoComOrigem` → SQL), e a
  *  única peça trocada é para onde o `getClient` aponta. Ver `tests/banco.ts`.
  *
  *  Os testes de `loadAll(dir)` com diretório sintético, mais abaixo, NÃO usam o
@@ -488,7 +488,7 @@ describe("a linha de relance não repete o título logo abaixo dela", () => {
 
     for (const f of acervo) {
       expect(
-        primeira(f.rotulo_escaneio),
+        primeira(f.rotulo_escaneio!),
         `${f.slug}: "${f.rotulo_escaneio}" repete a abertura de "${f.trajeto.waypoints[0].nome}"`,
       ).not.toBe(primeira(f.trajeto.waypoints[0].nome));
     }
@@ -548,22 +548,31 @@ describe("os getters leem o banco, e não o disco", () => {
     expect((await getFicha(acervo[0].slug))!.slug).toBe(acervo[0].slug);
   });
 
-  // 🔴 UMA CONSULTA POR PEDIDO DE ACERVO — não uma por ficha. `versoesAtuais`
-  // existe por isso (o irmão do `avisosVigentes`), e a home tem N lugares: N
-  // consultas saindo do celular no portão é o que esta família evita. Sem este
-  // teste, um `getFicha` reescrito pra consultar `versaoAtual` por slug passaria
-  // verde e a home ficaria N vezes mais lenta em silêncio.
+  // 🔴 UMA CONSULTA POR PEDIDO DE ACERVO — não uma por ficha. A leitura do
+  // acervo existe por isso (o irmão do `avisosVigentes`), e a home tem N
+  // lugares: N consultas saindo do celular no portão é o que esta família
+  // evita. Sem este teste, um `getFicha` reescrito pra consultar `versaoAtual`
+  // por slug passaria verde e a home ficaria N vezes mais lenta em silêncio.
+  //
+  // Desde 07/10 a leitura é UM `batch` (`lerAcervoComOrigem`: versões, origem e
+  // regra padrão num retrato só) — uma ida ao banco, como antes. O espião conta
+  // as IDAS que tocam `ficha_versoes`, de `execute` e de `batch` juntos: um
+  // `execute` a mais ao lado do batch continua vermelho aqui.
   it("uma chamada do getter é UMA consulta ao banco, qualquer que seja o acervo", async () => {
-    const espiao = vi.spyOn(banco, "execute");
+    const execute = vi.spyOn(banco, "execute");
+    const batch = vi.spyOn(banco, "batch");
+    const idas = () =>
+      [...execute.mock.calls, ...batch.mock.calls].filter((c) => JSON.stringify(c[0]).includes("ficha_versoes"))
+        .length;
     await getAllFichas();
-    const lidas = espiao.mock.calls.filter((c) => JSON.stringify(c[0]).includes("ficha_versoes"));
-    expect(lidas.length, "o getter passou a consultar o banco mais de uma vez por pedido").toBe(1);
+    expect(idas(), "o getter passou a consultar o banco mais de uma vez por pedido").toBe(1);
 
-    espiao.mockClear();
+    execute.mockClear();
+    batch.mockClear();
     await getFicha("rampa-do-pepe");
-    const daFicha = espiao.mock.calls.filter((c) => JSON.stringify(c[0]).includes("ficha_versoes"));
-    expect(daFicha.length, "pedir UMA ficha passou a custar mais de uma consulta").toBe(1);
-    espiao.mockRestore();
+    expect(idas(), "pedir UMA ficha passou a custar mais de uma consulta").toBe(1);
+    execute.mockRestore();
+    batch.mockRestore();
   });
 
   // 🔴 GUARDA DE FONTE, e o porquê é uma MEDIÇÃO (2026-09-25). A dedução por

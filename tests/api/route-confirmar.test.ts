@@ -279,12 +279,17 @@ describe("route /api/confirmar — a identidade do lugar", () => {
     const fichasRecusadas = () =>
       new Proxy(client, {
         get(alvo, chave) {
-          if (chave === "execute") {
-            return async (...args: Parameters<Client["execute"]>) => {
-              const primeiro = args[0] as unknown;
-              const sql = typeof primeiro === "string" ? primeiro : (primeiro as { sql: string }).sql;
-              if (/^SELECT \* FROM ficha_versoes WHERE id IN/.test(sql.trimStart())) throw new Error("banco fora (dublê)");
-              return alvo.execute(...args);
+          // Desde 07/10 a leitura das fichas é UM `batch` (`lerAcervoComOrigem`):
+          // o acervo inteiro, a versão mais nova de cada lugar. É ela que falha.
+          // (Até ali era um `execute` de `versoesAtuais`, interceptado aqui; ele
+          // saiu porque nenhuma leitura desta rota passa mais por lá.)
+          if (chave === "batch") {
+            return async (...args: Parameters<Client["batch"]>) => {
+              const sqls = args[0].map((st) => (typeof st === "string" ? st : (st as { sql: string }).sql));
+              if (sqls.some((sql) => /FROM ficha_versoes v[\s\S]*GROUP BY ficha_slug/.test(sql))) {
+                throw new Error("banco fora (dublê)");
+              }
+              return alvo.batch(...args);
             };
           }
           const v = Reflect.get(alvo, chave, alvo) as unknown;

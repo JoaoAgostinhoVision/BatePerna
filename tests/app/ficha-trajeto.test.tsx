@@ -3,6 +3,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { gravarVersao } from "@/lib/db";
 import { ordenarPorNome } from "@/lib/ficha-fonte";
 import { DESTINO, NOTA_DO_SEGUNDO, SEGUNDO, TERCEIRO, TRES_PONTOS, tresPontos } from "../ficha-de-tres-pontos";
+import { doJoao } from "../no-ar";
 import { AGORA_SEMENTE, bancoDeProducao } from "../banco";
 
 /** A CADEIA DE WAYPOINTS NA TELA (Tarefa 10, spec §6).
@@ -99,7 +100,7 @@ describe("o bloco Trajeto lê a cadeia", () => {
 describe("o que fala do LUGAR continua no waypoint 0", () => {
   it("a home mostra o nome do DESTINO, não o da primeira etapa", () => {
     const leitura = { estado: "fresco" as const, erro: false, calculadoEm: 1_800_000_000, aviso: null };
-    render(<CartaoTrilha ficha={TRES_PONTOS} inicial={leitura} />);
+    render(<CartaoTrilha ficha={doJoao(TRES_PONTOS)} inicial={leitura} />);
     expect(screen.getByText(DESTINO)).toBeTruthy();
     expect(screen.queryByText(SEGUNDO)).toBeNull();
   });

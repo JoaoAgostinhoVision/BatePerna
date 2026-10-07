@@ -4,10 +4,11 @@ import ListaDeLugares from "@/app/admin/ListaDeLugares";
 import { marcaAgora } from "@/app/admin/marca-agora";
 import { loadAll } from "@/lib/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+import { doJoao } from "../no-ar";
 
 afterEach(() => cleanup());
 
-const FICHAS = loadAll();
+const FICHAS = loadAll().map(doJoao);
 
 // Não importa o estado do motor pra provar link -> slug — qualquer leitura
 // "seca" serve.

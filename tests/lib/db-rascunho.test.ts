@@ -5,6 +5,7 @@ import {
   criarRascunho,
   ensureSchema,
   gravarVersao,
+  lerAcervoComOrigem,
   lerRascunho,
   listarRascunhos,
   moverRascunho,
@@ -38,7 +39,7 @@ afterEach(() => {
 
 describe("ficha_rascunhos", () => {
   // 🔴 A razão de o rascunho existir: o que está em `ficha_versoes` está no ar
-  // (a home lê `versoesAtuais`), então um lugar meio preenchido NUNCA pode
+  // (a home lê `lerAcervoComOrigem`), então um lugar meio preenchido NUNCA pode
   // morar lá. As três leituras que mostram lugar — a do público, a do dono com
   // os escondidos, e o getter de produção — medidas com o acervo semeado (sem
   // ficha nenhuma, `buscarFichas` estoura e o caso não provaria nada).
@@ -50,7 +51,7 @@ describe("ficha_rascunhos", () => {
     expect((await versoesAtuais(c)).has(S)).toBe(false);
     expect((await versoesAtuais(c, { incluirOcultos: true })).has(S)).toBe(false);
     expect(await versaoAtual(c, S)).toBeNull();
-    const publicas = await buscarFichas(() => versoesAtuais(c));
+    const publicas = await buscarFichas(() => lerAcervoComOrigem(c));
     expect(publicas.length, "a premissa: a leitura pública leu o acervo").toBe(fichas.length);
     expect(publicas.map((f) => f.slug)).not.toContain(S);
     // e o rascunho existe de verdade — sem isto, "não aparece" passaria com

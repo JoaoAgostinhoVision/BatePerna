@@ -3,6 +3,7 @@ import { PISOS } from "@/lib/piso";
 import { SEVERIDADES } from "@/lib/severidade";
 import { DIAS } from "@/lib/semana";
 import { HHMM, faixasDe } from "@/lib/horario";
+import type { Severidade } from "@/lib/severidade";
 
 /** 🔴 UMA COORDENADA DO PLANETA: finita e na faixa (Tarefa 8, onda de conserto
  *  1, R2). Até 2026-10-01 era `z.number()` cru, e a revisão mediu os dois buracos
@@ -91,27 +92,33 @@ export const regraSchema = z.object({
 
 export const condicaoSchema = z.object({
   coords: z.object({ lat: latSchema, lng: lngSchema }),
-  regra: regraSchema,
+  regra: regraSchema.optional(),
   // COM QUE FORÇA esta trilha fala quando choveu. A `regra` acima diz SE
   // choveu; este campo diz o que isso significa AQUI — e são coisas diferentes,
   // o que o acervo provou em 2026-09-10: as três fichas usam a mesma
   // `chuva_binaria` e têm três respostas distintas na voz dele ("molhou, não
   // vá" / "espera passar umas 3 horas" / "dá pra ir com cuidado").
   //
-  // 🔴 OBRIGATÓRIO, e é o ponto do campo. Opcional com padrão, ficha nova
-  // entraria calada herdando a severidade da Rampa — que é exatamente o defeito
-  // que ele existe pra fechar. Sem ele o schema recusa a ficha, e a pergunta vai
+  // 🔴 OBRIGATÓRIO NOS LUGARES DO JOÃO, e é o ponto do campo. Opcional com
+  // padrão, ficha nova entraria calada herdando a severidade da Rampa — que é
+  // exatamente o defeito que ele existe pra fechar. Sem ele a porta recusa a ficha, e a pergunta vai
   // pro dono do lugar antes de ir à tela. As palavras de cada nível moram em
   // `src/lib/severidade.ts`, nunca aqui.
-  severidade: z.enum(SEVERIDADES),
-  regra_texto: z.string(),
-  ressalva_proxy: z.string(),
+  //
+  // Desde 07/10 é OPCIONAL no schema: o lugar mandado por quem usa não tem
+  // severidade, e a leitura pública o completa com a regra padrão do banco
+  // (`noAr`). Quem continua exigindo nos lugares do João é o registro
+  // (`campos-da-ficha.ts`), pela porta de publicar dele — o defeito que o
+  // "obrigatório" fechava (ficha nova herdando a voz da Rampa) continua fechado lá.
+  severidade: z.enum(SEVERIDADES).optional(),
+  regra_texto: z.string().optional(),
+  ressalva_proxy: z.string().optional(),
 });
 
 export const discriminadorSchema = z.object({
-  formato: z.string(),
-  como_ler: z.string(),
-  permissao_abortar: z.string(),
+  formato: z.string().optional(),
+  como_ler: z.string().optional(),
+  permissao_abortar: z.string().optional(),
 });
 
 export const fichaSchema = z.object({
@@ -131,15 +138,16 @@ export const fichaSchema = z.object({
   //
   // Ausente é silêncio, a régua de sempre: nenhuma tela escreve "sem cidade".
   cidade: z.string().optional(),
-  rotulo_escaneio: z.string(),
+  // 🔴 opcionais desde 07/10: o lugar mandado por quem usa não os tem, e a página CALA cada um (spec, Parte 1). O registro continua exigindo nos do João.
+  rotulo_escaneio: z.string().optional(),
   promessa: z.string(),
-  voz: z.string(),
-  premio: z.string(),
+  voz: z.string().optional(),
+  premio: z.string().optional(),
   trajeto: z.object({ waypoints: z.array(waypointSchema).min(1) }),
   acesso: z.string(),
-  avisos: z.string(),
+  avisos: z.string().optional(),
   condicao: condicaoSchema,
-  discriminador: discriminadorSchema,
+  discriminador: discriminadorSchema.optional(),
   // `curto` é o CHIP do topo da ficha — a forma curta do custo, na palavra de
   // quem conhece o lugar.
   //
@@ -291,3 +299,15 @@ export type Waypoint = z.infer<typeof waypointSchema>;
 export type Regra = z.infer<typeof regraSchema>;
 export type Condicao = z.infer<typeof condicaoSchema>;
 export type Ficha = z.infer<typeof fichaSchema>;
+
+/** De onde veio o lugar, como o PÚBLICO o vê. `regraPropria` é derivada do
+ *  documento (`condicao.regra` presente), nunca coluna: ver `noAr`. */
+export type OrigemNoAr = { conferido: boolean; regraPropria: boolean };
+
+/** A ficha como a LEITURA DO PÚBLICO a entrega (`buscarFichas`): o documento,
+ *  com a regra EFETIVA (a própria, ou a padrão do banco) e a origem. Toda tela
+ *  pública recebe ESTA, e não a `Ficha` crua — é dela que sai a marca. */
+export type FichaNoAr = Omit<Ficha, "condicao"> & {
+  condicao: Omit<Condicao, "regra" | "severidade"> & { regra: Regra; severidade: Severidade };
+  origem: OrigemNoAr;
+};

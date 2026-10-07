@@ -171,7 +171,7 @@ export default async function Ficha({
   // `formato` é obrigatório no schema, mas string vazia passa: nesse caso a
   // linha não vira " — a checagem é sua" com travessão órfão. Cala a metade
   // que não sabe e mantém a que é do app.
-  const formatoGate = ficha.discriminador.formato.trim();
+  const formatoGate = (ficha.discriminador?.formato ?? "").trim();
   const tituloGate = formatoGate ? `${formatoGate} — a checagem é sua` : "A checagem é sua";
 
   // 🔴 O HORÁRIO GANHOU LUGAR NA TELA (2026-09-09, decisão dele: "preço e
@@ -194,7 +194,7 @@ export default async function Ficha({
   const faixaDias = ficha.dias?.length ? rotuloDias(ficha.dias) : null;
 
   // Ressalva: negrito na primeira oração (até o travessão).
-  const [ressalvaLead, ...ressalvaResto] = ficha.condicao.ressalva_proxy.split("—");
+  const [ressalvaLead, ...ressalvaResto] = (ficha.condicao.ressalva_proxy ?? "").split("—");
   const mapa = `https://www.google.com/maps/search/?api=1&query=${wp.lat},${wp.lng}`;
 
   // A Moldura é o <main className="bp" data-state>: o estado começa no que o
@@ -401,8 +401,8 @@ export default async function Ficha({
             dela. */}
         <div className="gate" data-nivel="b">
           <div className="k">{tituloGate}</div>
-          <div className="read">{ficha.discriminador.como_ler}</div>
-          <div className="perm">“{ficha.discriminador.permissao_abortar}”</div>
+          <div className="read">{ficha.discriminador?.como_ler}</div>
+          <div className="perm">“{ficha.discriminador?.permissao_abortar}”</div>
         </div>
 
         {/* 🔴 O TÍQUETE VIROU NÍVEL B, e não é óbvio por quê — decisão dele em

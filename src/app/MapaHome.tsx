@@ -12,7 +12,7 @@ import {
   tilesParaCaixa,
   urlTile,
 } from "@/lib/mapa";
-import type { Ficha } from "@/types/ficha";
+import type { FichaNoAr } from "@/types/ficha";
 import type { Coord } from "@/lib/geo";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { coordDe } from "@/lib/local";
@@ -81,7 +81,7 @@ export default function MapaHome({
   leituras,
   agora,
 }: {
-  fichas: Ficha[];
+  fichas: FichaNoAr[];
   leituras: Record<string, LeituraCarimbo>;
   /** O relógio de Recife, lido UMA vez lá em cima. Chega por prop desde
    *  2026-09-12: antes este componente e o irmão dele chamavam
@@ -143,7 +143,7 @@ export default function MapaHome({
   // agora": o defeito que o próprio comentário do `PinTrilha` conta que já
   // aconteceu uma vez, com outra causa.
 
-  const comLeitura: { ficha: Ficha; leitura: LeituraCarimbo }[] = fichas.flatMap((f) => {
+  const comLeitura: { ficha: FichaNoAr; leitura: LeituraCarimbo }[] = fichas.flatMap((f) => {
     const leitura = leituras[f.slug];
     return leitura ? [{ ficha: f, leitura }] : [];
   });

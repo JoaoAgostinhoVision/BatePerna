@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { getFichasComCondicao } from "@/lib/ficha";
 import { fichaSchema } from "@/types/ficha";
+import { obrigatoriosFaltando } from "@/lib/porta-de-publicar";
 import { marcaDe, subDe } from "@/lib/carimbo-fase";
 import { SEVERIDADES, falaMolhada, tomDe, vozDaFicha } from "@/lib/severidade";
 import { regraDe, semComentarios } from "../css";
@@ -121,14 +122,23 @@ describe("o acervo inteiro, e o guarda cresce com ele", () => {
     expect([...usados].sort()).toEqual([...SEVERIDADES].sort());
   });
 
-  it("o schema RECUSA ficha sem nível", () => {
+  // 🔴 REESCRITO EM 07/10 (C1 da pré-auditoria), nunca apagado. Desde a spec do
+  // lugar de quem usa, o SCHEMA aceita ficha sem nível: o lugar mandado por
+  // quem usa não tem, e a leitura pública o completa com a regra padrão do
+  // banco (`noAr`). O defeito que este caso fechava — ficha nova entrando
+  // calada com a severidade herdada — continua fechado pela porta de publicar
+  // do JOÃO, que exige o nível (`obrigatorio: true` no registro).
+  it("ficha sem nível: o schema aceita, e a porta do JOÃO a recusa", () => {
     const boa = JSON.parse(
       readFileSync(path.join(process.cwd(), "content", "fichas", "rampa-do-pepe.json"), "utf8"),
     );
     expect(fichaSchema.safeParse(boa).success).toBe(true); // controle
+    expect(obrigatoriosFaltando(boa)).not.toContain("condicao.severidade"); // controle: a Rampa responde
     const semNivel = { ...boa.condicao };
     delete semNivel.severidade;
-    expect(fichaSchema.safeParse({ ...boa, condicao: semNivel }).success).toBe(false);
+    const sem = { ...boa, condicao: semNivel };
+    expect(fichaSchema.safeParse(sem).success).toBe(true);
+    expect(obrigatoriosFaltando(sem)).toContain("condicao.severidade");
   });
 
   it("o schema RECUSA nível inventado", () => {

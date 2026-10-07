@@ -20,7 +20,8 @@ export const dynamic = "force-dynamic";
  *  da Task 9, que a passou pra `versaoAtual` pelo mesmo motivo), e aqui seria uma
  *  PORTA DE MÃO ÚNICA: `getFicha` é a leitura do PÚBLICO, e não devolve
  *  escondido (até 06/10 porque `versoesAtuais` os escondia por padrão; desde
- *  então ela lê com `incluirOcultos` e é `buscarFichas` que os tira antes de
+ *  então ela lê o acervo com os escondidos — `lerAcervoComOrigem` desde 07/10 —
+ *  e é `buscarFichas` que os tira antes de
  *  servir) — então o lugar escondido "não existiria" pra esta rota, e
  *  `{ oculto: false }` levaria 400. O dono esconderia um lugar e
  *  **nunca mais o devolveria ao ar sem um desenvolvedor**, que é exatamente o

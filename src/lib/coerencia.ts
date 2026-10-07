@@ -124,7 +124,7 @@ export const PRECO = /R\$\s?\d+(?:[.,]\d{2})?/;
  *  regras de "a prosa diz uma coisa e o campo diz outra" trabalham. */
 const prosaDe = (f: Ficha) =>
   [f.voz, f.acesso, f.avisos, f.promessa, f.premio, f.condicao.regra_texto,
-    f.discriminador.como_ler].join(" \n ").toLowerCase();
+    f.discriminador?.como_ler].join(" \n ").toLowerCase();
 
 /** O nome do lugar como o dono o escreveu (`waypoints[0]`, O LUGAR), nunca o slug — e a cidade entre
  *  parênteses quando há (Tarefa 11b): dois lugares de mesmo nome compararem-se dizia "X e X". Sem cidade,
@@ -312,7 +312,7 @@ const TABELA: readonly Regra[] = [
         const vistos = new Map<string, Ficha>();
         const achados: Achado[] = [];
         for (const f of fichas) {
-          const k = String(f[campo]).trim().toLowerCase();
+          if (f[campo] === undefined) continue; const k = String(f[campo]).trim().toLowerCase(); // ausente é silêncio (07/10): dois lugares sem voz não emprestam nada
           const dono = vistos.get(k);
           if (dono) {
             achados.push({
@@ -477,7 +477,7 @@ const TABELA: readonly Regra[] = [
     regra: "janela-nao-zerada",
     achar: (fichas) =>
       fichas.flatMap((f) => {
-        const r = f.condicao.regra;
+        const r = f.condicao.regra; if (!r) return []; // sem regra própria (07/10): a padrão é conferida na tela dela
         const achados: Achado[] = [];
         // 🔴 PASSADO ZERO É ACEITO — decisão do João, 2026-10-01, simétrica à
         // da previsão. Medido com `avaliar` (passado 0, previsão 6, limiar 0.2):
@@ -627,7 +627,7 @@ const TABELA: readonly Regra[] = [
     regra: "janela-dentro-do-provedor",
     achar: (fichas) =>
       fichas.flatMap((f) => {
-        const r = f.condicao.regra;
+        const r = f.condicao.regra; if (!r) return []; // sem regra própria (07/10): a padrão é conferida na tela dela
         const achados: Achado[] = [];
         if (r.janela_previsao_horas > TETO_PREVISAO_HORAS) {
           achados.push({

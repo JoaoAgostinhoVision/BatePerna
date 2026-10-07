@@ -1,5 +1,5 @@
 "use client";
-import type { Ficha } from "@/types/ficha";
+import type { FichaNoAr } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { fatosDaTrilha } from "@/lib/fatos-da-trilha";
 import { aberturaDaFicha, type Agora } from "@/lib/horario";
@@ -30,7 +30,7 @@ export default function CartaoTrilha({
   inicial,
   agora = null,
 }: {
-  ficha: Ficha;
+  ficha: FichaNoAr;
   inicial: LeituraCarimbo;
   /** O relógio de Recife (`Agora`), ou `null` no primeiro render. Chega por prop
    *  e não de um hook daqui: são N cartões, e um hook por cartão faria o número

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getFicha } from "@/lib/ficha";
 import { janelaMaxima, resolverEstado, resolverEstados } from "@/lib/carimbo-estado";
-import type { Ficha } from "@/types/ficha";
+import type { FichaNoAr } from "@/types/ficha";
 import { bancoDeProducao } from "../banco";
 
 const AGORA_MS = Date.UTC(2027, 0, 15, 11, 0);
@@ -25,7 +25,7 @@ function ficha() {
 }
 
 /** Uma ficha mínima com regra própria. Só o que resolverEstados olha. */
-function fichaFake(slug: string, passado: number, previsao: number, lat: number): Ficha {
+function fichaFake(slug: string, passado: number, previsao: number, lat: number): FichaNoAr {
   const base = ficha();
   return {
     ...base,

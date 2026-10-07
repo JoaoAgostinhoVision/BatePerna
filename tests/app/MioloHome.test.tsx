@@ -11,15 +11,16 @@ import LocalVivo from "@/app/local";
 import { CHAVE_FILTROS, SEM_FILTRO } from "@/lib/filtros";
 import { CHAVE_LOCAL } from "@/lib/local";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
-import type { Ficha } from "@/types/ficha";
+import type { FichaNoAr } from "@/types/ficha";
+import { doJoao } from "../no-ar";
 
 const AGORA_S = Math.floor(Date.UTC(2027, 0, 15, 11, 0) / 1000);
 
 // Mesmo padrão sintético dos outros arquivos de teste da home (fichaFake): só
 // os campos que o miolo, o mapa e o cartão leem. `content/fichas/` tem UMA
 // ficha hoje, e não dá pra provar "três desenham a mesma lista" com uma.
-function fichaFake(slug: string): Ficha {
-  return {
+function fichaFake(slug: string): FichaNoAr {
+  return doJoao({
     slug,
     modos: [],
     rotulo_escaneio: "",
@@ -39,14 +40,14 @@ function fichaFake(slug: string): Ficha {
     },
     discriminador: { formato: "", como_ler: "", permissao_abortar: "" },
     custo: { tag: "gratis" },
-  };
+  });
 }
 
 const PAGO = { custo: { tag: "pago" as const, valor: "R$ 5" } };
 
 const agoraSeg = () => Math.floor(Date.now() / 1000);
 
-const par = (slug: string, estado: "fresco" | "frio", over: Partial<Ficha> = {}): ParFolha => ({
+const par = (slug: string, estado: "fresco" | "frio", over: Partial<FichaNoAr> = {}): ParFolha => ({
   ficha: { ...fichaFake(slug), ...over },
   leitura: { estado, erro: false, calculadoEm: agoraSeg(), aviso: null },
 });

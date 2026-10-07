@@ -93,10 +93,10 @@ const escolha = (caminho: string) => bloco(caminho).querySelector<HTMLSelectElem
 const horas = () => [...bloco("horario").querySelectorAll<HTMLInputElement>("[data-hora]")];
 
 const LIMIAR = "condicao.regra.limiar_mm";
-const limiarDe = (f: Ficha): number => f.condicao.regra.limiar_mm;
+const limiarDe = (f: Ficha): number => f.condicao.regra!.limiar_mm;
 const comLimiar = (f: Ficha, n: number): Ficha => ({
   ...f,
-  condicao: { ...f.condicao, regra: { ...f.condicao.regra, limiar_mm: n } },
+  condicao: { ...f.condicao, regra: { ...f.condicao.regra!, limiar_mm: n } },
 });
 const outrosPisos = PISOS.filter((p) => p !== RAMPA.piso);
 const h0 = COM_HORARIO.horario![0];
@@ -108,7 +108,7 @@ const CASOS: Caso[] = [
     ficha: RAMPA,
     ler: () => caixa("voz").value,
     mudar: (v) => fireEvent.change(caixa("voz"), { target: { value: v } }),
-    salvo: RAMPA.voz,
+    salvo: RAMPA.voz!,
     x: "voz marcadora X",
     y: "voz marcadora Y",
     fichaCom: (v) => ({ ...RAMPA, voz: v }),

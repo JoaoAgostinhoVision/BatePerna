@@ -739,7 +739,7 @@ describe("PUT /api/admin/ficha — o portão da coerência", () => {
     expect(res.status).toBe(409);
     // E nada foi gravado: a versão de cima continua sendo a do limiar zerado.
     const doc = JSON.parse((await versaoAtual(c, SLUG))!.doc) as Ficha;
-    expect(doc.condicao.regra.janela_passado_horas).toBe(ficha.condicao.regra.janela_passado_horas);
+    expect(doc.condicao.regra!.janela_passado_horas).toBe(ficha.condicao.regra!.janela_passado_horas);
     expect(await historico(c, SLUG)).toHaveLength(2);
   });
 
@@ -1020,7 +1020,7 @@ describe("PUT /api/admin/ficha — e o lugar escondido", () => {
 describe("PUT /api/admin/ficha — a regra de chuva: o teto do provedor e as janelas zero", () => {
   const nomeDe = (f: Ficha) => f.trajeto.waypoints[0].nome;
   const regraGravada = async () =>
-    (JSON.parse((await versaoAtual(c, SLUG))!.doc) as Ficha).condicao.regra;
+    (JSON.parse((await versaoAtual(c, SLUG))!.doc) as Ficha).condicao.regra!;
 
   // 🔴 F2: `480` no lugar de `48`. Antes desta onda a porta gravava com 200, e a
   // busca da tela inicial (uma só, com a maior janela do acervo) passava a ser
@@ -1056,7 +1056,7 @@ describe("PUT /api/admin/ficha — a regra de chuva: o teto do provedor e as jan
   // 🔴 DECISÃO DO JOÃO, 2026-10-01: previsão zero vale — "só olhar a chuva que
   // já caiu". A porta grava.
   it("previsão 0: a porta GRAVA (200)", async () => {
-    expect(ficha.condicao.regra.janela_passado_horas, "a premissa: o passado está vivo").toBeGreaterThan(0);
+    expect(ficha.condicao.regra!.janela_passado_horas, "a premissa: o passado está vivo").toBeGreaterThan(0);
 
     const res = await PUT(pedido({ slug: SLUG, campo: "condicao.regra.janela_previsao_horas", valor: 0 }, cookieBom));
 
@@ -1079,13 +1079,13 @@ describe("PUT /api/admin/ficha — a regra de chuva: o teto do provedor e as jan
     const frase = await res.text();
     expect(frase).toContain("pra trás");
     expect(frase).toContain("nunca fecha");
-    expect((await regraGravada()).janela_passado_horas).toBe(ficha.condicao.regra.janela_passado_horas);
+    expect((await regraGravada()).janela_passado_horas).toBe(ficha.condicao.regra!.janela_passado_horas);
   });
 
   // 🔴 DECISÃO DO JOÃO, 2026-10-01, simétrica: passado zero vale também — a regra
   // fecha pela previsão. A porta grava.
   it("passado 0: a porta GRAVA (200)", async () => {
-    expect(ficha.condicao.regra.janela_previsao_horas, "a premissa: a previsão está viva").toBeGreaterThan(0);
+    expect(ficha.condicao.regra!.janela_previsao_horas, "a premissa: a previsão está viva").toBeGreaterThan(0);
 
     const res = await PUT(pedido({ slug: SLUG, campo: "condicao.regra.janela_passado_horas", valor: 0 }, cookieBom));
 
@@ -1106,7 +1106,7 @@ describe("PUT /api/admin/ficha — a regra de chuva: o teto do provedor e as jan
 
     expect(res.status).toBe(409);
     expect(await res.text()).toContain("nunca fecha");
-    expect((await regraGravada()).janela_previsao_horas).toBe(ficha.condicao.regra.janela_previsao_horas);
+    expect((await regraGravada()).janela_previsao_horas).toBe(ficha.condicao.regra!.janela_previsao_horas);
   });
 
   it("passado negativo: 409, e a frase não diz que o lugar nunca fecha", async () => {

@@ -3,7 +3,8 @@ import { render, cleanup } from "@testing-library/react";
 import FolhaTrilhas from "@/app/FolhaTrilhas";
 import { agoraRecife } from "@/lib/horario";
 import { LeiturasProvider } from "@/app/leituras";
-import type { Ficha } from "@/types/ficha";
+import type { FichaNoAr } from "@/types/ficha";
+import { doJoao } from "../no-ar";
 
 const AGORA_S = Math.floor(Date.UTC(2027, 0, 15, 11, 0) / 1000);
 
@@ -19,8 +20,8 @@ const relogio = () => agoraRecife(Math.floor(Date.now() / 1000));
 // Mesmo padrão sintético de tests/app/home.test.tsx (fichaFake): só os campos
 // que a folha (e o cartão, por baixo) leem. Não depende do conteúdo real do
 // projeto — hoje tem uma ficha só, e não dá pra provar dois grupos com uma.
-function fichaFake(slug: string): Ficha {
-  return {
+function fichaFake(slug: string): FichaNoAr {
+  return doJoao({
     slug,
     modos: [],
     rotulo_escaneio: "",
@@ -40,7 +41,7 @@ function fichaFake(slug: string): Ficha {
     },
     discriminador: { formato: "", como_ler: "", permissao_abortar: "" },
     custo: { tag: "gratis" },
-  };
+  });
 }
 
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(AGORA_S * 1000); });
@@ -231,7 +232,7 @@ describe("o agrupamento pergunta o TOM, não o estado", () => {
         .nextElementSibling!.querySelectorAll(".cartao"),
     ).map((a) => a.getAttribute("id"));
 
-  const molhada = (slug: string, severidade: Ficha["condicao"]["severidade"]) => {
+  const molhada = (slug: string, severidade: FichaNoAr["condicao"]["severidade"]) => {
     const f = fichaFake(slug);
     return {
       ficha: { ...f, condicao: { ...f.condicao, severidade } },

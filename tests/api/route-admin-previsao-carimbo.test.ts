@@ -7,7 +7,7 @@ import { CAMPOS_DA_FICHA } from "@/lib/campos-da-ficha";
 import { ensureSchema, getFreshness, gravarVersao, historico, upsertFreshness } from "@/lib/db";
 import { TETO_PASSADO_HORAS, TETO_PREVISAO_HORAS } from "@/lib/weather";
 import type { Ficha } from "@/types/ficha";
-import { semearAcervo } from "../banco";
+import { semearAcervo, semearLugarDaPessoa } from "../banco";
 
 /** A PRÉVIA DO CARIMBO (Task 7, 2026-09-30; onda de conserto 1, 2026-10-01) — o
  *  que a tela do lugar diria com o número novo, sem gravar nada.
@@ -205,7 +205,7 @@ describe("POST /api/admin/previsao-carimbo — a consequência do número", () =
   it("a fala leva o número NOVO, não o que está gravado", async () => {
     const pedra = exigir(PEDRA);
     expect(pedra.condicao.severidade, "esta ficha deixou de ser a do `espera`").toBe("espera");
-    expect(pedra.condicao.regra.janela_passado_horas, "o valor gravado mudou").toBe(3);
+    expect(pedra.condicao.regra!.janela_passado_horas, "o valor gravado mudou").toBe(3);
     ceu(CHUVA_ATRAS);
 
     const doze = await prever(PEDRA, "janela_passado_horas", 12);
@@ -233,7 +233,7 @@ describe("POST /api/admin/previsao-carimbo — a chuva vem AO VIVO, com a regra 
   // (passado 6 → `past_days=1`), a busca traria um dia só.
   it("a busca sai com os dias da regra NOVA e as coordenadas do lugar", async () => {
     const rampa = exigir(RAMPA);
-    expect(rampa.condicao.regra.janela_passado_horas, "a premissa: o gravado cabe em 1 dia").toBeLessThanOrEqual(24);
+    expect(rampa.condicao.regra!.janela_passado_horas, "a premissa: o gravado cabe em 1 dia").toBeLessThanOrEqual(24);
 
     await prever(RAMPA, "janela_passado_horas", 72);
     await prever(RAMPA, "janela_previsao_horas", 48);
@@ -621,6 +621,31 @@ describe("POST /api/admin/previsao-carimbo — as guardas", () => {
 
   it("slug que não existe no acervo: 400", async () => {
     const { status } = await prever("morro-inventado", "limiar_mm", 1);
+    expect(status).toBe(400);
+    expect(espiaoFetch).not.toHaveBeenCalled();
+  });
+
+  // 🔴 LUGAR SEM REGRA PRÓPRIA (07/10): não há número de motor pra prever — a
+  // tela dele é "Calibrar" (Task 8), não o editor de número. O lugar mandado por
+  // quem usa o app é o caso real; recusa sem perguntar ao provedor.
+  it("lugar SEM regra própria (o de quem usa o app): 400, sem perguntar ao provedor", async () => {
+    const slug = await semearLugarDaPessoa(c, { nome: "Pedra Mandada", cidade: "Cidade Teste" });
+    const { status } = await prever(slug, "limiar_mm", 1);
+    expect(status).toBe(400);
+    expect(espiaoFetch).not.toHaveBeenCalled();
+  });
+
+  // O outro galho da mesma guarda: regra no documento e nível NÃO — estado que
+  // nenhuma porta produz, mas o schema aceita desde 07/10. Sem a guarda a prévia
+  // montaria a fala com o nível `undefined`. O controle é a mesma ficha COM o
+  // nível, que responde.
+  it("regra gravada SEM nível: 400, sem perguntar ao provedor (e com o nível, 200)", async () => {
+    const rampa = exigir(RAMPA);
+    expect((await prever(RAMPA, "limiar_mm", 1)).status, "o controle: com o nível, a prévia responde").toBe(200);
+    espiaoFetch.mockClear();
+    const { severidade: _nivel, ...semNivel } = rampa.condicao;
+    await gravarVersao(c, RAMPA, JSON.stringify({ ...rampa, condicao: semNivel }), "painel", AGORA);
+    const { status } = await prever(RAMPA, "limiar_mm", 1);
     expect(status).toBe(400);
     expect(espiaoFetch).not.toHaveBeenCalled();
   });

@@ -1,5 +1,5 @@
 import { fatosDaTrilha } from "@/lib/fatos-da-trilha";
-import type { Ficha } from "@/types/ficha";
+import type { FichaNoAr } from "@/types/ficha";
 
 /** A LISTA DO QUE EXISTE — o acervo inteiro, sem carimbo, com os fatos
  *  permanentes de cada lugar.
@@ -36,7 +36,7 @@ export default function ListaDoAcervo({
   fichas,
 }: {
   titulo: string;
-  fichas: Ficha[];
+  fichas: FichaNoAr[];
 }) {
   return (
     <div className="lista">

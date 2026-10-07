@@ -134,8 +134,8 @@ const QUEBRAS: Record<string, () => Ficha[]> = {
   // é o PAR: as duas janelas em zero.
   "janela-nao-zerada": () => {
     const f = pedra();
-    f.condicao.regra.janela_passado_horas = 0;
-    f.condicao.regra.janela_previsao_horas = 0;
+    f.condicao.regra!.janela_passado_horas = 0;
+    f.condicao.regra!.janela_previsao_horas = 0;
     return com(f);
   },
 
@@ -143,7 +143,7 @@ const QUEBRAS: Record<string, () => Ficha[]> = {
   // tela inicial inteira.
   "janela-dentro-do-provedor": () => {
     const f = pedra();
-    f.condicao.regra.janela_previsao_horas = 480;
+    f.condicao.regra!.janela_previsao_horas = 480;
     return com(f);
   },
 
@@ -241,14 +241,14 @@ describe("violacoesDoAcervo", () => {
 
   it("janela de chuva zerada é pega", () => {
     const f = rampa();
-    f.condicao.regra.janela_passado_horas = 0;
-    f.condicao.regra.janela_previsao_horas = 0;
+    f.condicao.regra!.janela_passado_horas = 0;
+    f.condicao.regra!.janela_previsao_horas = 0;
     expect(violacoesDoAcervo([f]).map((x) => x.regra)).toContain("janela-nao-zerada");
   });
 
   it("a frase da violação nomeia o lugar e não é o identificador da regra", () => {
     const f = rampa();
-    f.condicao.regra.limiar_mm = 0;
+    f.condicao.regra!.limiar_mm = 0;
     const v = violacoesDoAcervo([f]);
     expect(v.length).toBeGreaterThan(0);
     expect(v[0].frase.length).toBeGreaterThan(20);
@@ -310,7 +310,7 @@ describe("violacoesDoAcervo", () => {
       ["limiar_mm", 0],
     ] as const) {
       const f = rampa();
-      f.condicao.regra[campo] = valor;
+      f.condicao.regra![campo] = valor;
       expect(
         violacoesDoAcervo([f]).filter((x) => x.regra === "janela-nao-zerada").length,
         `${campo} = ${valor} não produziu violação: esse exame da regra está desligado`,
@@ -323,8 +323,8 @@ describe("violacoesDoAcervo", () => {
   // hora atrás → `frio`; seco → `fresco`. A regra fecha pelo passado.
   it("previsão ZERO sozinha não é violação: a regra ainda fecha pelo passado", () => {
     const f = rampa();
-    f.condicao.regra.janela_previsao_horas = 0;
-    expect(f.condicao.regra.janela_passado_horas, "a premissa: o passado está vivo").toBeGreaterThan(0);
+    f.condicao.regra!.janela_previsao_horas = 0;
+    expect(f.condicao.regra!.janela_passado_horas, "a premissa: o passado está vivo").toBeGreaterThan(0);
     expect(violacoesDoAcervo([f]).map((x) => x.regra)).not.toContain("janela-nao-zerada");
   });
 
@@ -332,8 +332,8 @@ describe("violacoesDoAcervo", () => {
   // chuva nenhuma. A frase que sai é a do PASSADO, e nesse par ela é verdade.
   it("previsão 0 E passado 0: violação, com a frase de que o lugar nunca fecha", () => {
     const f = rampa();
-    f.condicao.regra.janela_previsao_horas = 0;
-    f.condicao.regra.janela_passado_horas = 0;
+    f.condicao.regra!.janela_previsao_horas = 0;
+    f.condicao.regra!.janela_passado_horas = 0;
     const v = violacoesDoAcervo([f]).filter((x) => x.regra === "janela-nao-zerada");
     expect(v).toHaveLength(1);
     expect(v[0].frase).toContain("nunca fecha");
@@ -345,8 +345,8 @@ describe("violacoesDoAcervo", () => {
   // hora adiante → `frio`; seco → `fresco`. A regra fecha pela previsão.
   it("passado ZERO sozinho não é violação: a regra ainda fecha pela previsão", () => {
     const f = rampa();
-    f.condicao.regra.janela_passado_horas = 0;
-    expect(f.condicao.regra.janela_previsao_horas, "a premissa: a previsão está viva").toBeGreaterThan(0);
+    f.condicao.regra!.janela_passado_horas = 0;
+    expect(f.condicao.regra!.janela_previsao_horas, "a premissa: a previsão está viva").toBeGreaterThan(0);
     expect(violacoesDoAcervo([f]).map((x) => x.regra)).not.toContain("janela-nao-zerada");
   });
 
@@ -355,8 +355,8 @@ describe("violacoesDoAcervo", () => {
   // par e a do negativo.
   it("passado 0 E previsão negativa: as duas frases, a do par e a do negativo", () => {
     const f = rampa();
-    f.condicao.regra.janela_passado_horas = 0;
-    f.condicao.regra.janela_previsao_horas = -2;
+    f.condicao.regra!.janela_passado_horas = 0;
+    f.condicao.regra!.janela_previsao_horas = -2;
     const frases = violacoesDoAcervo([f]).filter((x) => x.regra === "janela-nao-zerada").map((x) => x.frase);
     expect(frases).toHaveLength(2);
     expect(frases.some((x) => x.includes("nunca fecha"))).toBe(true);
@@ -365,7 +365,7 @@ describe("violacoesDoAcervo", () => {
 
   it("passado NEGATIVO: a frase não diz que o lugar nunca fecha, e diz o número", () => {
     const f = rampa();
-    f.condicao.regra.janela_passado_horas = -5;
+    f.condicao.regra!.janela_passado_horas = -5;
     const v = violacoesDoAcervo([f]).filter((x) => x.regra === "janela-nao-zerada");
     expect(v).toHaveLength(1);
     expect(v[0].frase).not.toContain("nunca fecha");
@@ -375,7 +375,7 @@ describe("violacoesDoAcervo", () => {
 
   it("previsão NEGATIVA: a frase não diz que o lugar nunca fecha, e aponta o 0", () => {
     const f = rampa();
-    f.condicao.regra.janela_previsao_horas = -5;
+    f.condicao.regra!.janela_previsao_horas = -5;
     const v = violacoesDoAcervo([f]).filter((x) => x.regra === "janela-nao-zerada");
     expect(v).toHaveLength(1);
     expect(v[0].frase).not.toContain("nunca fecha");
@@ -392,7 +392,7 @@ describe("violacoesDoAcervo", () => {
       ["janela_passado_horas", TETO_PASSADO_HORAS, "pra trás"],
     ] as const) {
       const noTeto = rampa();
-      noTeto.condicao.regra[campo] = teto;
+      noTeto.condicao.regra![campo] = teto;
       expect(
         violacoesDoAcervo([noTeto]).filter((x) => x.regra === "janela-dentro-do-provedor"),
         `${campo} = ${teto} (o teto exato) foi recusado`,
@@ -400,7 +400,7 @@ describe("violacoesDoAcervo", () => {
 
       for (const acima of [teto + 1, teto + 0.5]) {
         const f = rampa();
-        f.condicao.regra[campo] = acima;
+        f.condicao.regra![campo] = acima;
         const v = violacoesDoAcervo([f]).filter((x) => x.regra === "janela-dentro-do-provedor");
         expect(v, `${campo} = ${acima} passou pelo teto`).toHaveLength(1);
         expect(v[0].frase).toContain(f.trajeto.waypoints[0].nome);
@@ -413,7 +413,7 @@ describe("violacoesDoAcervo", () => {
   it("os QUATRO textos que distinguem um lugar do outro são conferidos, um a um", () => {
     for (const campo of ["voz", "promessa", "premio", "rotulo_escaneio"] as const) {
       const f = veu();
-      f[campo] = rampa()[campo];
+      f[campo] = rampa()[campo]!;
       expect(
         violacoesDoAcervo(com(f)).filter((x) => x.regra === "texto-emprestado").length,
         `copiar o campo ${campo} de uma ficha pra outra não produziu violação: esse ` +
@@ -547,7 +547,7 @@ describe("violacoesDoAcervo", () => {
   it("campo de prosa fora da lista pode ser igual em duas fichas", () => {
     for (const campo of ["acesso", "avisos"] as const) {
       const f = veu();
-      f[campo] = rampa()[campo];
+      f[campo] = rampa()[campo]!;
       expect(
         violacoesDoAcervo(com(f)).filter((x) => x.regra === "texto-emprestado"),
         `${campo} igual em duas fichas foi acusado: esse texto não existe pra ` +

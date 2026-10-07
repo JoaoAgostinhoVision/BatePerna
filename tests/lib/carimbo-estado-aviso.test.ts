@@ -75,8 +75,8 @@ const H = 3600;
 vi.mock("@/lib/weather", () => ({ fetchPrecip: vi.fn(), fetchPrecipMulti: vi.fn() }));
 
 // 🔴 O DUBLÊ DO BANCO FICOU PARCIAL EM 2026-09-25, e a mudança é obrigatória: a
-// ficha passou a vir do banco, então `getFicha` precisa do `versoesAtuais` de
-// verdade. O que continua dublado é só o que este arquivo mede — o aviso — e o
+// ficha passou a vir do banco, então `getFicha` precisa da leitura do acervo de
+// verdade (`lerAcervoComOrigem` desde 07/10). O que continua dublado é só o que este arquivo mede — o aviso — e o
 // `getClient`, que aponta pro `:memory:` daqui em vez do Turso.
 let cliente: Client;
 vi.mock("@/lib/db", async (real) => ({

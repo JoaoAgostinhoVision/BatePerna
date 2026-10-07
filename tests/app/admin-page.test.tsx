@@ -129,8 +129,8 @@ describe("/admin — a página", () => {
 vi.mock("@/lib/carimbo-estado", () => ({ resolverEstados: vi.fn() }));
 
 // 🔴 O DUBLÊ DO BANCO FICOU PARCIAL EM 2026-09-25: a página lê o acervo do
-// BANCO (`getAllFichas` virou `async`), então ela precisa do `versoesAtuais` de
-// verdade — com o dublê total de antes, a lista estouraria antes de mostrar
+// BANCO (`getAllFichas` virou `async`), então ela precisa da leitura do acervo de
+// verdade (`lerAcervoComOrigem` desde 07/10) — com o dublê total de antes, a lista estouraria antes de mostrar
 // coisa nenhuma, e o teste da porta morreria por um motivo que não é a porta.
 // `avisosVigentes` saiu do dublê na Task 5 (2026-09-25): a lista não lê mais
 // os avisos vigentes do acervo inteiro — isso virou responsabilidade de
@@ -258,7 +258,10 @@ describe("/admin — a porta", () => {
     expect(depois.map((f) => f.slug), "o painel pôs o escondido na leitura do público").not.toContain(SLUG_ESCONDIDO);
 
     // o banco cai: sem memória (07/10), a home estoura em vez de servir o de antes
-    cliente = { execute: () => Promise.reject(new Error("turso fora")) } as unknown as Client;
+    cliente = {
+      execute: () => Promise.reject(new Error("turso fora")),
+      batch: () => Promise.reject(new Error("turso fora")),
+    } as unknown as Client;
     await expect(getAllFichas()).rejects.toThrow(/banco fora/);
   });
 });

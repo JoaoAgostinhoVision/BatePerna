@@ -97,7 +97,9 @@ const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS, COM_CIDADE } = vi.hoi
 // decoração.
 vi.mock("@/lib/ficha", async (real) => {
   const mod = await real<typeof import("@/lib/ficha")>();
-  const sinteticas = [SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS, COM_CIDADE] as unknown as TipoFicha[];
+  // Como a leitura do público as entregaria: do João, conferidas (`doJoao`).
+  const { doJoao } = await import("../no-ar");
+  const sinteticas = ([SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS, COM_CIDADE] as unknown as TipoFicha[]).map(doJoao);
   return {
     ...mod,
     getFicha: async (slug: string) =>
@@ -558,9 +560,9 @@ describe("o chrome da ficha parou de falar de UM lugar", () => {
       // ficha da Rampa. Começar pelo campo é o que separa ler da ficha de
       // repetir a palavra por coincidência.
       expect(
-        t.toLowerCase().startsWith(f.discriminador.formato.trim().toLowerCase()),
+        t.toLowerCase().startsWith(f.discriminador!.formato!.trim().toLowerCase()),
         `[${f.slug}] o título da checagem ("${t}") não começa pelo formato da ficha ` +
-          `("${f.discriminador.formato}") — a tela voltou a supor onde se checa`,
+          `("${f.discriminador!.formato}") — a tela voltou a supor onde se checa`,
       ).toBe(true);
       // A outra metade continua sendo do app, e é o que dá sentido à frase.
       expect(t.endsWith("a checagem é sua"), `[${f.slug}] a metade do app sumiu do título`).toBe(true);
@@ -573,7 +575,7 @@ describe("o chrome da ficha parou de falar de UM lugar", () => {
   // única coisa que prova que a tela lê a ficha em vez de repetir uma palavra.
   // MEDIDO: hoje o acervo tem "entrada", "estrada" e "trecho de terra".
   it("fichas com formatos diferentes mostram títulos diferentes", async () => {
-    const formatos = new Set(acervo.map((f) => f.discriminador.formato.trim().toLowerCase()));
+    const formatos = new Set(acervo.map((f) => f.discriminador!.formato!.trim().toLowerCase()));
     expect(
       formatos.size,
       "todas as fichas têm o mesmo `formato`: este teste ficou oco, e o de cima também",

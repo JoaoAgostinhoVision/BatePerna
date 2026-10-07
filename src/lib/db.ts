@@ -636,7 +636,8 @@ export async function versaoPorId(client: Client, id: number): Promise<FichaVers
  *  🔴 O PADRÃO É SÓ O QUE ESTÁ NO AR. Lugar cuja versão de maior `id` tem
  *  `oculto = 1` NÃO SAI DAQUI. É o lado seguro pra quem chamar sem pensar —
  *  mas, desde 2026-10-06, NENHUM chamador de produção usa o padrão: todos os
- *  da lista abaixo passam `incluirOcultos`, inclusive a leitura do público.
+ *  da lista abaixo passam `incluirOcultos` — os itens 3 e 5 até 07/10, quando
+ *  passaram a ler `lerAcervoComOrigem`, que traz os escondidos pela mesma razão.
  *
  *  🔴 QUEM TEM DE PASSAR `{ incluirOcultos: true }`, E POR QUÊ (medido antes de
  *  escrever a coluna, porque o padrão novo muda estes em silêncio):

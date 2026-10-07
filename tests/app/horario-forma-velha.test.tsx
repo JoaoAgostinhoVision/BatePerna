@@ -21,7 +21,7 @@ import { cleanup, render } from "@testing-library/react";
  *  não pela que ele tem.
  *
  *  O caminho medido é o da tela pública inteira — `[slug]/page.tsx` →
- *  `getFicha` → `buscarFichas` → `versoesAtuais` → SQL — e o do painel
+ *  `getFicha` → `buscarFichas` → `lerAcervoComOrigem` → SQL — e o do painel
  *  (`getAcervoDoDono`). A única peça trocada é para onde o `getClient` aponta. */
 
 vi.mock("next/navigation", () => ({ notFound: vi.fn(() => { throw new Error("NEXT_NOT_FOUND"); }) }));

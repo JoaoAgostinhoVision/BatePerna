@@ -3,7 +3,7 @@ import "./home.css";
 import { getFichasComCondicao } from "@/lib/ficha";
 import { resolverEstados, type LeituraCarimbo } from "@/lib/carimbo-estado";
 import { fechadoPeloDono } from "@/lib/aviso";
-import type { Ficha } from "@/types/ficha";
+import type { FichaNoAr } from "@/types/ficha";
 import Appbar from "./Appbar";
 import BarraNavegacao from "./BarraNavegacao";
 import FiltrosVivos from "./filtros";
@@ -35,7 +35,7 @@ export default async function Home() {
   // de um `.get(...)!` afirmando o que o filtro logo abaixo não garante — é o
   // que impede um `undefined` de estourar no portão se um dia essa premissa
   // parar de valer.
-  const comLeitura: { ficha: Ficha; leitura: LeituraCarimbo }[] = fichas.flatMap((f) => {
+  const comLeitura: { ficha: FichaNoAr; leitura: LeituraCarimbo }[] = fichas.flatMap((f) => {
     const leitura = leituras.get(f.slug);
     return leitura ? [{ ficha: f, leitura }] : [];
   });

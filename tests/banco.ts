@@ -15,9 +15,9 @@ import type { Ficha } from "@/types/ficha";
  *  🔴 POR QUE ISTO NÃO MOCKA OS GETTERS. Um teste que troque `getAllFichas`
  *  inteiro por uma lista de fichas não prova nada sobre o banco: passaria
  *  igualzinho se o getter continuasse lendo o JSON, se a consulta de
- *  `versoesAtuais` pegasse a linha errada, ou se o `fichaSchema.parse` do
+ *  `lerAcervoComOrigem` pegasse a linha errada, ou se o `fichaSchema.parse` do
  *  `buscarFichas` estourasse. O caminho daqui é o de produção inteiro —
- *  `getAllFichas` → `buscarFichas` → `comPrazo` → `versoesAtuais` → SQL —, e a
+ *  `getAllFichas` → `buscarFichas` → `comPrazo` → `lerAcervoComOrigem` → SQL —, e a
  *  única peça trocada é PARA ONDE o `getClient` aponta.
  *
  *  Duas portas, porque os testes chegam de dois jeitos:

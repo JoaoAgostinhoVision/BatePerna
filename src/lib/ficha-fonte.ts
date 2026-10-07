@@ -1,5 +1,7 @@
 import { comPrazo } from "@/lib/cache-rotas";
-import { fichaSchema, type Ficha } from "@/types/ficha";
+import type { AcervoComOrigem } from "@/lib/db";
+import { noAr } from "@/lib/regra-padrao";
+import { fichaSchema, type Ficha, type FichaNoAr } from "@/types/ficha";
 
 /** A ordem em que o acervo aparece. Veio de `ficha.ts` em 2026-09-24 para não
  *  fechar um ciclo de VALOR entre os dois módulos (`ficha.ts` passou a importar
@@ -13,7 +15,7 @@ import { fichaSchema, type Ficha } from "@/types/ficha";
  *  🔴 NOME IGUAL DESEMPATA PELA CIDADE (Tarefa 11b): dois lugares podem ter o
  *  mesmo nome, e o empate deixava a ordem a do banco. Sem cidade vem antes
  *  (`""` é o menor texto) — é só ordem, não afirma nada. */
-export function ordenarPorNome(fichas: Ficha[]): Ficha[] {
+export function ordenarPorNome<F extends Ficha>(fichas: F[]): F[] {
   return [...fichas].sort(
     (a, b) =>
       a.trajeto.waypoints[0].nome.localeCompare(b.trajeto.waypoints[0].nome, "pt-BR") ||
@@ -65,24 +67,27 @@ export const PRAZO_FICHA_MS = 2_000;
  *  ramo do banco fora e estoura — nunca `[]` como se não existisse trilha em
  *  Pernambuco.
  *
- *  Por isso `ler` tem de trazer os ESCONDIDOS também (`versoesAtuais` com
- *  `incluirOcultos: true`) e dizer, linha a linha, quem está escondido: o
+ *  Por isso `ler` tem de trazer os ESCONDIDOS também (`lerAcervoComOrigem`,
+ *  que os traz) e dizer, linha a linha, quem está escondido: o
  *  filtro do público acontece AQUI, DEPOIS da pergunta do vazio. Quando a
  *  pergunta era feita sobre o mapa JÁ FILTRADO, o dono escondendo TODOS os
  *  lugares (três toques no celular) caía no ramo do banco fora e derrubava o
- *  app público inteiro. Tudo escondido é `[]` honesto, não erro. */
-export async function buscarFichas(
-  ler: () => Promise<Map<string, { doc: string; oculto: boolean }>>,
-): Promise<Ficha[]> {
-  let linhas: Map<string, { doc: string; oculto: boolean }> | null;
+ *  app público inteiro. Tudo escondido é `[]` honesto, não erro.
+ *
+ *  🔴 DESDE 07/10 ELA DEVOLVE `FichaNoAr`: cada lugar sai com a regra efetiva e
+ *  a ORIGEM, lidas no MESMO batch das versões (`lerAcervoComOrigem`). É daqui
+ *  que toda tela pública tira a marca de "não conferido". */
+export async function buscarFichas(ler: () => Promise<AcervoComOrigem>): Promise<FichaNoAr[]> {
+  let lido: AcervoComOrigem | null;
   try {
-    linhas = await comPrazo(ler(), PRAZO_FICHA_MS, null);
+    lido = await comPrazo(ler(), PRAZO_FICHA_MS, null);
   } catch {
-    linhas = null;
+    lido = null;
   }
-  if (linhas === null || linhas.size === 0) {
+  if (lido === null || lido.linhas.size === 0) {
     throw new Error("Não consegui ler as fichas: banco fora, ou sem nenhuma linha.");
   }
+  const { linhas, padrao } = lido;
   // 🔴 I5 da revisão final (2026-09-26): a chave do Map é o `ficha_slug` do
   // BANCO — a identidade de verdade da linha —, e o `slug` de DENTRO do
   // documento é só o que o dono digitou lá dentro. Os três escritores de
@@ -93,8 +98,8 @@ export async function buscarFichas(
   // pela chave) e a ficha (que lê o `slug` de dentro) discordariam sobre
   // qual morro é qual — a mesma classe de defeito, agora no leitor que roda
   // em produção.
-  const noAr = [...linhas.entries()].filter(([, l]) => !l.oculto);
-  return ordenarPorNome(noAr.map(([slug, l]) => fichaDaVersao(slug, l.doc)));
+  const visiveis = [...linhas.entries()].filter(([, l]) => !l.oculto);
+  return ordenarPorNome(visiveis.map(([slug, l]) => noAr(fichaDaVersao(slug, l.doc), l, padrao)));
 }
 
 /** O documento de UMA versão virando `Ficha` — com a trava do I5 (o `slug` de

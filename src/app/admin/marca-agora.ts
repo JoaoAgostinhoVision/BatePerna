@@ -1,4 +1,4 @@
-import type { Ficha } from "@/types/ficha";
+import type { FichaNoAr } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { vozDaFicha } from "@/lib/severidade";
 import { faseDe, marcaDe } from "@/lib/carimbo-fase";
@@ -31,7 +31,7 @@ import { aberturaDaFicha, agoraRecife, fechadoAgora } from "@/lib/horario";
  *  `erro` não precisa de ramo próprio: `faseDe` já o transforma em
  *  `sem-informacoes`, e é `marcaDe` quem decide a palavra ("SEM
  *  INFORMAÇÕES") — vocabulário único, nunca dois. */
-export function marcaAgora(ficha: Ficha, leitura: LeituraCarimbo, agora: number): string {
+export function marcaAgora(ficha: FichaNoAr, leitura: LeituraCarimbo, agora: number): string {
   const fase = faseDe({
     conferindo: false,
     erro: leitura.erro,

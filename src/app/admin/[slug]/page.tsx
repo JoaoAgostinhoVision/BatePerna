@@ -142,14 +142,14 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
     if (novo !== null) redirect(`/admin/${novo}`);
     notFound();
   }
-  const { ficha, oculto, versaoId } = doDono;
+  const { ficha, noAr, oculto, versaoId } = doDono;
 
   const agora = Math.floor(Date.now() / 1000);
   // 🔴 SÓ COM UMA LINHA DE MAPA SEM PONTO (Tarefa 11f, m5): o schema não deixa
   // isso chegar, e uma ficha sã abre sem ir ao serviço de geocoding.
   const vistaSemPonto = precisaDeVista(ficha) ? await vistaDaCidade(ficha, FONTES_DE_PRODUCAO) : null;
   const [leitura, { aviso, erro: avisoErro }, { versoes: linhas, erro: historicoErro }] = await Promise.all([
-    resolverEstado(ficha),
+    resolverEstado(noAr),
     lerAvisoVigente(slug, agora),
     lerHistorico(slug),
   ]);
@@ -175,7 +175,7 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
           — editores, esconder, aviso, voltar, trocar o endereço. Ver
           `VersaoDaTela`, em `../campos/gravar`. */}
       <ComVersaoDaTela id={versaoId}>
-        <PainelAdmin ficha={ficha} leitura={leitura} aviso={aviso} avisoErro={avisoErro} agora={agora} />
+        <PainelAdmin ficha={noAr} leitura={leitura} aviso={aviso} avisoErro={avisoErro} agora={agora} />
         <BotaoVisibilidade slug={slug} oculto={oculto} />
         {/* 🔴 A Task 6 (2026-09-30) FECHOU A ESCADA: `EditorDeVoz` foi apagado e a
             `voz` passou a ser editada dentro do bloco `campo-voz` da ficha

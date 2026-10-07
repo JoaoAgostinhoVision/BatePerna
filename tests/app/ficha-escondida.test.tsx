@@ -113,12 +113,16 @@ describe("a página pública de um lugar escondido", () => {
   it("lido no ar, escondido, e o banco cai: a página ESTOURA, nunca mostra o escondido", async () => {
     await expect(abrir(), "a premissa: a página abriu com o lugar no ar").resolves.toBeTruthy();
     await esconder(AGORA_SEMENTE + 60);
+    // Os dois jeitos de ir ao banco caem juntos: desde 07/10 a leitura das
+    // fichas é um `batch` (`lerAcervoComOrigem`), e o resto segue `execute`.
     const queda = vi.spyOn(banco, "execute").mockRejectedValue(new Error("turso fora"));
+    const quedaDoBatch = vi.spyOn(banco, "batch").mockRejectedValue(new Error("turso fora"));
     try {
       await expect(abrir()).rejects.toThrow(/banco fora/);
       expect(notFoundFalso, "estourou pela leitura, não pelo 404").not.toHaveBeenCalled();
     } finally {
       queda.mockRestore();
+      quedaDoBatch.mockRestore();
     }
   });
 });

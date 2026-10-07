@@ -1,4 +1,4 @@
-import type { Ficha } from "@/types/ficha";
+import type { FichaNoAr } from "@/types/ficha";
 import { avaliar, type Estado } from "@/lib/motor";
 import { fetchPrecip, fetchPrecipMulti, type JanelaMax } from "@/lib/weather";
 import { aplicarAviso, daLinha, type Aviso } from "@/lib/aviso";
@@ -46,14 +46,14 @@ export type LeituraCarimbo = {
  *  As duas buscas saem JUNTAS: uma não depende da outra, e em série o pior
  *  caso somaria os dois prazos (2 s + 4 s), encostando nos 6 s do service
  *  worker. Em paralelo, o pior caso é o do clima. */
-export async function resolverEstado(ficha: Ficha, debug?: string): Promise<LeituraCarimbo> {
+export async function resolverEstado(ficha: FichaNoAr, debug?: string): Promise<LeituraCarimbo> {
   const agora = Math.floor(Date.now() / 1000);
   const [aviso, base] = await Promise.all([lerAviso(ficha.slug, agora), semAviso(ficha, debug, agora)]);
   return aplicarAviso(base, aviso);
 }
 
 /** O carimbo só-clima, que é o que este módulo sempre fez. */
-async function semAviso(ficha: Ficha, debug: string | undefined, agora: number): Promise<LeituraCarimbo> {
+async function semAviso(ficha: FichaNoAr, debug: string | undefined, agora: number): Promise<LeituraCarimbo> {
   if (debug === "fresco" || debug === "frio")
     return { estado: debug, erro: false, calculadoEm: agora, aviso: null };
   try {
@@ -98,7 +98,7 @@ async function lerAvisos(agora: number): Promise<Map<string, Aviso>> {
 /** A janela que cobre TODAS as regras: o maior passado e a maior previsão,
  *  cada eixo escolhido por si — uma trilha pode pedir passado longo e previsão
  *  curta, outra o oposto, e a requisição única precisa satisfazer as duas. */
-export function janelaMaxima(fichas: Ficha[]): JanelaMax {
+export function janelaMaxima(fichas: FichaNoAr[]): JanelaMax {
   return {
     passadoHoras: Math.max(...fichas.map((f) => f.condicao.regra.janela_passado_horas)),
     previsaoHoras: Math.max(...fichas.map((f) => f.condicao.regra.janela_previsao_horas)),
@@ -114,7 +114,7 @@ export function janelaMaxima(fichas: Ficha[]): JanelaMax {
  *  Falhou a busca — rede, prazo, ou lista de tamanho errado — e NINGUÉM recebe
  *  carimbo. Meia home preenchida parece defeito e a pessoa não sabe quais
  *  confiar; todas sem leitura é uma frase honesta que ela entende. */
-export async function resolverEstados(fichas: Ficha[]): Promise<Map<string, LeituraCarimbo>> {
+export async function resolverEstados(fichas: FichaNoAr[]): Promise<Map<string, LeituraCarimbo>> {
   const agora = Math.floor(Date.now() / 1000);
   if (fichas.length === 0) return new Map();
   // Juntas, pela mesma razão de `resolverEstado`: em série os prazos somam.
@@ -125,7 +125,7 @@ export async function resolverEstados(fichas: Ficha[]): Promise<Map<string, Leit
 }
 
 /** O clima de todas, que é o que `resolverEstados` sempre fez. */
-async function climaDeTodas(fichas: Ficha[], agora: number): Promise<Map<string, LeituraCarimbo>> {
+async function climaDeTodas(fichas: FichaNoAr[], agora: number): Promise<Map<string, LeituraCarimbo>> {
   try {
     const series = await fetchPrecipMulti(
       fichas.map((f) => f.condicao.coords),

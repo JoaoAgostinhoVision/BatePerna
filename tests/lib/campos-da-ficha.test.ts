@@ -39,6 +39,14 @@ const EDITADOS_INTEIROS = new Map<string, readonly string[]>([["condicao.coords"
 // "nenhuma entrada diverge" — que continua recusando qualquer OUTRA divergência
 // — e vigiada pelo caso "nenhuma exceção fantasma", que exige as duas metades
 // do motivo valendo de verdade.
+//
+// Desde 07/10 (o lugar mandado por quem usa o app) ela ganhou os campos que a
+// pessoa não responde, com UM motivo compartilhado. As folhas de
+// `condicao.regra.*` NÃO entram: dentro do objeto `regra` elas continuam
+// obrigatórias, e registro e schema concordam.
+const SO_DO_JOAO =
+  "opcional no schema desde 07/10: o lugar mandado por quem usa o app não tem este campo, e a página " +
+  "cala o bloco; obrigatório no registro porque é o registro que a porta de publicar do JOÃO lê";
 const OBRIGATORIO_SO_NO_REGISTRO = new Map<string, string>([
   [
     "cidade",
@@ -46,6 +54,9 @@ const OBRIGATORIO_SO_NO_REGISTRO = new Map<string, string>([
       "obrigatória no schema, `fichaSchema.parse` estouraria na leitura pública e " +
       "`buscarFichas` derrubaria a lista inteira, não uma ficha",
   ],
+  ...["rotulo_escaneio", "voz", "premio", "avisos", "condicao.severidade", "condicao.regra_texto",
+      "condicao.ressalva_proxy", "discriminador.formato", "discriminador.como_ler",
+      "discriminador.permissao_abortar"].map((c) => [c, SO_DO_JOAO] as [string, string]),
 ]);
 
 type DefZod = {
@@ -171,8 +182,9 @@ describe("a varredura do schema, antes de ela guardar coisa nenhuma", () => {
   });
 
   // 🔴 CONTROLE POSITIVO DO GUARDA DOS BLOCOS OPCIONAIS (I-1 da revisão da 11d).
-  // Contra o `fichaSchema` de hoje a expectativa é `[]` — e um `[]` é o que um
-  // guarda CEGO também devolve: arrancar o `saida.push(caminho)` ficava verde na
+  // Contra o `fichaSchema` de então a expectativa era `[]` (desde 07/10 são os
+  // dois blocos de lá, ver o guarda) — e um `[]` é o que um guarda CEGO também
+  // devolve: arrancar o `saida.push(caminho)` ficava verde na
   // suíte inteira (52ª espécie: a condição ficou inalcançável quando o `horario`
   // virou lista). Este schema sintético TEM o que o guarda procura, nos três
   // lugares onde ele sabe procurar: no 1º nível, aninhado num objeto, e dentro
@@ -230,7 +242,7 @@ describe("o registro cobre o schema", () => {
     }
   });
 
-  // 🔴 O GUARDA DOS BLOCOS OPCIONAIS FICA, COM A EXPECTATIVA VAZIA (Tarefa
+  // 🔴 O GUARDA DOS BLOCOS OPCIONAIS FICA, COM A EXPECTATIVA VAZIA ATÉ 07/10 (Tarefa
   // 11c; 11d-I1 da auditoria). Ele nasceu do ruling H1: um OBJETO opcional no
   // schema, com folhas obrigatórias por dentro, é um campo cujo "não sei" só
   // existe no nível do objeto — e por 9 dias o `horario` foi um assim, sem
@@ -238,11 +250,23 @@ describe("o registro cobre o schema", () => {
   // folha só, editada inteira), e o schema não tem bloco opcional nenhum. Quem
   // acrescentar um recebe o vermelho aqui, em vez de o campo nascer sem "não
   // sei". Sem esta varredura, "não há bloco opcional" seria uma frase minha.
-  it("o schema não tem bloco opcional nenhum — o `horario` virou lista", () => {
+  //
+  // 🔴 E DESDE 07/10 O SCHEMA TEM DOIS (C1 da pré-auditoria da rodada do lugar
+  // de quem usa): `condicao.regra` e `discriminador` são OBJETOS opcionais, por
+  // decisão da spec — o lugar mandado por quem usa não os tem. O "não sei" de
+  // cada um, escrito, como a mensagem abaixo exige:
+  //  - `condicao.regra`: não há "não sei" de folha. A regra entra INTEIRA pelo
+  //    "Calibrar" (Task 8), e meia regra continua recusada pelo schema;
+  //  - `discriminador`: nasce folha a folha pelo painel (`BLOCOS_QUE_NASCEM`,
+  //    Task 8), e as três folhas são opcionais no schema.
+  // Nos lugares do JOÃO, o "não sei" de cada folha dos dois continua recusado
+  // pelo REGISTRO (`obrigatorio: true`; `OBRIGATORIO_SO_NO_REGISTRO`, acima).
+  // A lista é EXATA: um terceiro bloco opcional continua vermelho aqui.
+  it("o schema tem EXATAMENTE os dois blocos opcionais de 07/10 — `condicao.regra` e `discriminador`", () => {
     expect(
-      BLOCOS_DO_SCHEMA,
+      [...BLOCOS_DO_SCHEMA].sort(),
       "bloco opcional novo no schema: decida como o \"não sei\" dele chega à tela, e escreva o motivo",
-    ).toEqual([]);
+    ).toEqual(["condicao.regra", "discriminador"]);
   });
 
   // 🔴 O HORÁRIO É UMA FOLHA SÓ — a lista inteira de faixas —, e é ela que o

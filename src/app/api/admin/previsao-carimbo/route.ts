@@ -201,6 +201,12 @@ export async function POST(req: Request): Promise<Response> {
     return new Response("", { status: 400 });
   }
 
+  // Lugar sem regra própria (07/10) não tem número de motor pra prever: a tela
+  // dele é "Calibrar" (Task 8), que não passa por aqui.
+  if (ficha.condicao.regra === undefined || ficha.condicao.severidade === undefined) {
+    return new Response("", { status: 400 });
+  }
+
   // A regra candidata: a gravada com UM número trocado. O `regraSchema` é a
   // mesma fonte que a porta de escrita usa, então uma regra que não viraria
   // documento também não vira prévia.

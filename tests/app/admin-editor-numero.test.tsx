@@ -265,7 +265,7 @@ describe("A prévia — a consequência antes de gravar", () => {
 
     digitar(LIMIAR, "9");
     await waitFor(() => expect(previsaoDe(LIMIAR).textContent).toContain(MARCA_DA_ROTA));
-    digitar(LIMIAR, String(FICHA.condicao.regra.limiar_mm));
+    digitar(LIMIAR, String(FICHA.condicao.regra!.limiar_mm));
 
     expect(chamadas(fetchFalso, ROTA_PREVISAO), "pediu prévia do número que já está no banco").toHaveLength(1);
     expect(previsaoDe(LIMIAR).textContent, "a prévia do número abandonado ficou na tela").toBe("");
@@ -586,7 +586,7 @@ describe("A espera do dedo — uma pergunta por PAUSA, não por tecla (onda de c
     render(<FichaInteira ficha={FICHA} />);
 
     digitar(LIMIAR, "9");
-    digitar(LIMIAR, String(FICHA.condicao.regra.limiar_mm));
+    digitar(LIMIAR, String(FICHA.condicao.regra!.limiar_mm));
     act(() => {
       vi.advanceTimersByTime(ESPERA_PREVIA_MS * 3);
     });

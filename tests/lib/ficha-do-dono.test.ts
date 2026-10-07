@@ -31,7 +31,8 @@ beforeEach(async () => {
 afterEach(() => vi.useRealTimers());
 
 /** Um banco que aceita a consulta e nunca responde — o Turso pendurado. */
-const pendurado = () => ({ execute: () => new Promise<never>(() => {}) }) as unknown as Client;
+const pendurado = () =>
+  ({ execute: () => new Promise<never>(() => {}), batch: () => new Promise<never>(() => {}) }) as unknown as Client;
 
 /** Roda a leitura com o relógio falso e diz como ela terminou DEPOIS do prazo:
  *  `"pendurada"` se ainda não terminou. Medir o estado depois de avançar o
