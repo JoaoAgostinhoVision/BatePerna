@@ -8,6 +8,7 @@ import { regraDe, semComentarios, valorDe } from "../css";
 import type { Piso } from "@/lib/piso";
 import { rotuloFaixa } from "@/lib/horario";
 import { SEVERIDADES } from "@/lib/severidade";
+import { MEIA_LINHA_REGRA_PADRAO } from "@/lib/origem";
 import Carimbo from "@/app/Carimbo";
 import Moldura from "@/app/Moldura";
 import SeloTrilha from "@/app/SeloTrilha";
@@ -22,7 +23,7 @@ afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
  *  "rampa-do-pepe"`): nível `nao-va`, janela de 6h. Fixa aqui porque este
  *  arquivo testa o CARIMBO, não a severidade — quem prova que cada nível fala
  *  a sua língua é `tests/lib/severidade.test.ts`. */
-const VOZ_RAMPA = { severidade: "nao-va", horasPassado: 6 } as const;
+const VOZ_RAMPA = { severidade: "nao-va", horasPassado: 6, regraPropria: true } as const;
 
 /** A frase dele de 11/09, que é o caso que fez o aviso do dono existir: um
  *  fechado que NÃO é chuva e NÃO é calendário. */
@@ -736,7 +737,7 @@ describe("a ficha e o cartão dizem a MESMA palavra", () => {
       SEVERIDADES.map((severidade) => [estado, severidade] as const),
     ),
   )("com leitura %s e nível %s, carimbo e selo não divergem", (estado, severidade) => {
-    const voz = { severidade, horasPassado: 6 } as const;
+    const voz = { severidade, horasPassado: 6, regraPropria: true } as const;
     const carimbo = render(
       <Carimbo estado={estado} erro={false} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="rampa-do-pepe" voz={voz} />,
     ).container.querySelector(".mark")?.textContent;
@@ -1187,5 +1188,34 @@ describe("Carimbo — janela zerada corta o pedaço dela", () => {
         cleanup();
       }
     }
+  });
+});
+
+describe("a meia-linha da regra padrão", () => {
+  it("aparece no carimbo de lugar SEM regra própria", () => {
+    const { container } = render(
+      <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="x"
+        voz={{ severidade: "cuidado", horasPassado: 6, regraPropria: false }} />,
+    );
+    const linha = container.querySelector('[data-marca="regra-padrao"]');
+    expect(linha?.textContent).toBe(MEIA_LINHA_REGRA_PADRAO);
+  });
+
+  it("NÃO aparece no carimbo de lugar com regra própria", () => {
+    const { container } = render(
+      <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="x" voz={VOZ_RAMPA} />,
+    );
+    expect(container.querySelector('[data-marca="regra-padrao"]')).toBeNull();
+    expect(container.textContent).not.toContain(MEIA_LINHA_REGRA_PADRAO);
+  });
+
+  // Ela é sobre a REGRA, não sobre o tempo: continua com o lugar fechado,
+  // sem informação, ou conferindo.
+  it("continua na fase 'sem informações'", () => {
+    const { container } = render(
+      <Carimbo estado="frio" erro={true} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="x"
+        voz={{ severidade: "cuidado", horasPassado: 6, regraPropria: false }} />,
+    );
+    expect(container.querySelector('[data-marca="regra-padrao"]')).not.toBeNull();
   });
 });

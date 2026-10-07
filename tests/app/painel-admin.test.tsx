@@ -110,7 +110,7 @@ describe("PainelAdmin", () => {
       fireEvent.change(container.querySelector(`select[data-efeito="${f.slug}"]`)!, {
         target: { value: "frio" },
       });
-      const voz = vozDaFicha(f.condicao);
+      const voz = vozDaFicha(f);
       const fala = falaMolhada(voz.severidade, voz.horasPassado);
       marcasEsperadas.add(fala.marca);
       expect(screen.getByText(new RegExp(fala.marca.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))).not.toBeNull();

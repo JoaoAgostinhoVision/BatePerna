@@ -51,7 +51,7 @@ const FRASES: Readonly<Record<string, string>> = {
   piso: "Sem ele, a ficha não mostra a linha do chão da via, e o carimbo não diz o que a chuva faz ali.",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   // ⚠️ MEDIDA COMO FALSA E MANTIDA POR DECISÃO DELE: perguntado, ele escolheu "Manter como estão"
-  // (07/10), sabendo que o agente a mediu falsa — o carimbo seco diz "seco · carro comum" sempre (carimbo-fase.ts) e nenhuma tela
+  // (07/10), sabendo que o agente a mediu falsa — o carimbo seco diz "seco · carro comum" em lugar com regra própria (carimbo-fase.ts) e nenhuma tela
   // pública lê `carroComum`.
   // Não "conserte" sem ele; e não a tome por verdade.
   carroComum: "Sem ele, o app não afirma nada sobre que carro chega.",

@@ -41,5 +41,5 @@ export function marcaAgora(ficha: FichaNoAr, leitura: LeituraCarimbo, agora: num
     // O instante do retrato também decide o prazo do aviso — o mesmo `agora`.
     fechadoPeloDono: fechadoPeloDono(leitura.aviso, agora),
   });
-  return marcaDe(fase, leitura.estado, vozDaFicha(ficha.condicao));
+  return marcaDe(fase, leitura.estado, vozDaFicha(ficha));
 }

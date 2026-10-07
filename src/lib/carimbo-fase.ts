@@ -1,5 +1,6 @@
 import type { Estado } from "@/lib/motor";
 import { falaMolhada, type Voz } from "@/lib/severidade";
+import { SECO_SEM_CARRO } from "@/lib/origem";
 
 /** Quanto tempo o "Conferindo…" pode ficar na tela.
  *
@@ -100,8 +101,9 @@ export function sintomaDe({ erro, venceu, falhou }: Situacao): Sintoma {
  *  vez na mesma família: o bloco acima dizia que "Não vá" é palavra dele — e é,
  *  mas é a palavra da RAMPA, e este arquivo serve o acervo inteiro. Quem
  *  responde agora é `falaMolhada` em `src/lib/severidade.ts`, lendo o nível que
- *  a própria ficha declara. O ramo SECO continua aqui: "Pode ir" e "seco ·
- *  carro comum" são os mesmos em todo o acervo.
+ *  a própria ficha declara. O ramo SECO continua aqui: "Pode ir" é o
+ *  mesmo em todo o acervo; a linha de baixo, "seco · carro comum", só em lugar
+ *  COM regra própria (em 07/10 o sem-regra-própria passou a dizer só "seco").
  *
  *  ✅ O `sub` mudou-se pra cá em 2026-08-27, quando a fase `fechado` obrigou a
  *  mexer nele — era a dívida anotada aqui mesmo, e deixá-la de pé teria sido
@@ -130,7 +132,11 @@ export function marcaDe(fase: Fase, estado: Estado, voz: Voz): string {
  *  assim em 2026-08-27**, de olhos abertos, sabendo que a 3ª ficha de asfalto o
  *  quebra. Não é esquecimento — e o molde pra resolver já existe
  *  (`chuvaNoPiso`). A dívida gêmea do ramo molhado ("barro · …") mudou-se pra
- *  `severidade.ts` junto com as palavras, e continua anotada lá. */
+ *  `severidade.ts` junto com as palavras, e continua anotada lá.
+ *
+ *  ✅ 07/10: deixou de ser universal. Em lugar SEM regra própria a linha diz só
+ *  "seco" (decisão dele, spec de 07/10, Parte 4); com regra própria, segue como
+ *  ele decidiu em 27/08. */
 export function subDe(
   fase: Fase,
   estado: Estado,
@@ -141,7 +147,7 @@ export function subDe(
   if (fase === "conferindo") return "lendo a chuva agora";
   if (fase === "sem-informacoes") return "tome cuidado";
   return estado === "fresco"
-    ? "seco · carro comum"
+    ? (voz.regraPropria ? "seco · carro comum" : SECO_SEM_CARRO)
     : falaMolhada(voz.severidade, voz.horasPassado).sub;
 }
 

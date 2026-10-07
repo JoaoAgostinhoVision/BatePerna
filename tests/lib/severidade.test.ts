@@ -37,19 +37,19 @@ describe("falaMolhada: cada trilha fala com a força que a ficha DELA declara", 
   // Verde em tudo que só monte a Rampa. Só o cruzamento pelos TRÊS níveis mata.
   it("a palavra do carimbo muda com o nível, e não com o estado só", () => {
     const ditas = SEVERIDADES.map((severidade) =>
-      marcaDe("afirmando", "frio", { severidade, horasPassado: 6 }),
+      marcaDe("afirmando", "frio", { severidade, horasPassado: 6, regraPropria: true }),
     );
     expect(new Set(ditas).size).toBe(3);
     // E o ramo SECO não é assunto do nível: continua um só pro acervo inteiro.
     const secas = SEVERIDADES.map((severidade) =>
-      marcaDe("afirmando", "fresco", { severidade, horasPassado: 6 }),
+      marcaDe("afirmando", "fresco", { severidade, horasPassado: 6, regraPropria: true }),
     );
     expect(new Set(secas)).toEqual(new Set(["Pode ir"]));
   });
 
   it("a linha de baixo obedece ao nível pela mesma régua", () => {
     const ditas = SEVERIDADES.map((severidade) =>
-      subDe("afirmando", "frio", { severidade, horasPassado: 6 }),
+      subDe("afirmando", "frio", { severidade, horasPassado: 6, regraPropria: true }),
     );
     expect(ditas.length).toBe(3);
     expect(new Set(ditas).size).toBeGreaterThan(1);
@@ -93,7 +93,7 @@ describe("falaMolhada: cada trilha fala com a força que a ficha DELA declara", 
   // As duas são números da mesma `regra`, e trocá-las não quebra tipo nenhum.
   it("a voz da ficha carrega a janela de PASSADO, que é a que o nível cita", () => {
     for (const f of ACERVO) {
-      const voz = vozDaFicha(f.condicao);
+      const voz = vozDaFicha(f);
       expect(voz.horasPassado, f.slug).toBe(f.condicao.regra.janela_passado_horas);
       expect(voz.severidade, f.slug).toBe(f.condicao.severidade);
     }
@@ -302,5 +302,11 @@ describe("as palavras saíram do carimbo-fase de verdade", () => {
     // Controle: o ramo SECO continua aqui, e é o certo — ele não depende do nível.
     expect(codigo).toContain(`"Pode ir"`);
     expect(codigo).toContain(`"seco · carro comum"`);
+  });
+
+  it("vozDaFicha leva a regra própria da origem", () => {
+    const base = { condicao: { severidade: "espera" as const, regra: { janela_passado_horas: 3 } } };
+    expect(vozDaFicha({ ...base, origem: { regraPropria: true } })).toEqual({ severidade: "espera", horasPassado: 3, regraPropria: true });
+    expect(vozDaFicha({ ...base, origem: { regraPropria: false } }).regraPropria).toBe(false);
   });
 });

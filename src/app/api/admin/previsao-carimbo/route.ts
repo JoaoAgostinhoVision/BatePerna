@@ -245,7 +245,10 @@ export async function POST(req: Request): Promise<Response> {
   // e a fala do nível `espera` é literalmente `Espera {n}h`: montada a partir da
   // ficha do banco, o dono digitaria 12 e leria "Espera 6h" ao lado de um estado
   // calculado com 12.
-  const voz = vozDaFicha({ severidade: ficha.condicao.severidade, regra: nova });
+  const voz = vozDaFicha({
+    condicao: { severidade: ficha.condicao.severidade, regra: nova },
+    origem: { regraPropria: true }, // a prévia é de uma regra que o dono escreve: própria por definição
+  });
 
   // `afirmando` de propósito: a prévia responde "o que a CHUVA diria com esta
   // regra". As outras fases (`fechado`, `conferindo`, `sem-informacoes`) não

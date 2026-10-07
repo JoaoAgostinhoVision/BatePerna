@@ -16,7 +16,7 @@ const OK = { conferindo: false, erro: false, venceu: false, falhou: false, fecha
 /** A voz da RAMPA DO PEPÊ — nível `nao-va`, janela de 6h. É a ficha cuja `voz`
  *  deu a palavra "Não vá" ao app inteiro até 2026-09-10; aqui ela é UMA das
  *  três, e as outras duas são provadas em `tests/lib/severidade.test.ts`. */
-const RAMPA = { severidade: "nao-va", horasPassado: 6 } as const;
+const RAMPA = { severidade: "nao-va", horasPassado: 6, regraPropria: true } as const;
 
 // 🔴 O DEFEITO QUE ESTES TESTES TRANCAM (2026-08-27). "Pode subir"/"Não suba"
 // supunham LADEIRA em todo lugar do acervo. Era verdade da Rampa do Pepê, e o
@@ -211,5 +211,22 @@ describe("prazos", () => {
 
   it("o piso entre buscas automáticas é de 30s", () => {
     expect(PISO_AUTO_MS).toBe(30_000);
+  });
+});
+
+describe("a linha seca depende de quem calibrou a chuva", () => {
+  it("com regra própria, a de sempre: 'seco · carro comum'", () => {
+    expect(subDe("afirmando", "fresco", { severidade: "nao-va", horasPassado: 6, regraPropria: true })).toBe("seco · carro comum");
+  });
+
+  it("sem regra própria, só 'seco' — ninguém conferiu que carro comum chega", () => {
+    expect(subDe("afirmando", "fresco", { severidade: "cuidado", horasPassado: 6, regraPropria: false })).toBe("seco");
+  });
+
+  // O ramo molhado não muda: a fala é a da severidade, própria ou padrão.
+  it("o ramo molhado é o mesmo com e sem regra própria", () => {
+    const com = subDe("afirmando", "frio", { severidade: "cuidado", horasPassado: 6, regraPropria: true });
+    const sem = subDe("afirmando", "frio", { severidade: "cuidado", horasPassado: 6, regraPropria: false });
+    expect(sem).toBe(com);
   });
 });

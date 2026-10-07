@@ -29,8 +29,9 @@ export const SEVERIDADES = ["nao-va", "espera", "cuidado"] as const;
 export type Severidade = (typeof SEVERIDADES)[number];
 
 /** As duas linhas do carimbo no ramo MOLHADO: a palavra grande e a linha de
- *  baixo. O ramo seco não é assunto deste módulo — ele é o mesmo em todo o
- *  acervo ("Pode ir" / "seco · carro comum"), e continua em `carimbo-fase.ts`. */
+ *  baixo. O ramo seco não é assunto deste módulo — "Pode ir" é o mesmo em
+ *  todo o acervo e a linha seca ("seco · carro comum", ou só "seco" sem regra
+ *  própria) continua em `carimbo-fase.ts`. */
 export type Fala = { marca: string; sub: string };
 
 /** 🔴 A PROCEDÊNCIA DE CADA PALAVRA, e ela é o conteúdo deste arquivo — não um
@@ -77,8 +78,13 @@ const FALA_MOLHADA: Record<Severidade, (horasPassado: number) => Fala> = {
  *
  *  Um objeto e não dois parâmetros soltos: os dois só fazem sentido juntos, e
  *  soltos um call site poderia passar a severidade de uma ficha com a janela de
- *  outra sem o compilador piscar. */
-export type Voz = { severidade: Severidade; horasPassado: number };
+ *  outra sem o compilador piscar.
+ *
+ *  🔴 `regraPropria` (07/10): a linha SECA depende de alguém ter calibrado a
+ *  chuva deste lugar — sem regra própria, ninguém conferiu que carro comum
+ *  chega, e o carimbo diz só "seco". Mora aqui pela razão do docblock: os
+ *  quatro que dizem a linha recebem ESTA `Voz`, montada num lugar só. */
+export type Voz = { severidade: Severidade; horasPassado: number; regraPropria: boolean };
 
 /** A voz de uma ficha, montada num lugar só.
  *
@@ -86,11 +92,15 @@ export type Voz = { severidade: Severidade; horasPassado: number };
  *  mão — quatro montagens é a família de defeito que este projeto já pagou três
  *  vezes (a palavra e a cor nascendo de commits diferentes). Recebe a `condicao`
  *  estruturalmente, e não a `Ficha` inteira, pra este módulo continuar sem zod. */
-export function vozDaFicha(condicao: {
-  severidade: Severidade;
-  regra: { janela_passado_horas: number };
+export function vozDaFicha(f: {
+  condicao: { severidade: Severidade; regra: { janela_passado_horas: number } };
+  origem: { regraPropria: boolean };
 }): Voz {
-  return { severidade: condicao.severidade, horasPassado: condicao.regra.janela_passado_horas };
+  return {
+    severidade: f.condicao.severidade,
+    horasPassado: f.condicao.regra.janela_passado_horas,
+    regraPropria: f.origem.regraPropria,
+  };
 }
 
 /** O que esta trilha diz quando choveu.

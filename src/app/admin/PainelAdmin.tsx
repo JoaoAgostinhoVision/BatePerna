@@ -36,7 +36,7 @@ const AVISO_ERRO_LEITURA = "Não consegui ler o aviso publicado — a seção ab
 function consequencia(efeito: EfeitoAviso, ficha: FichaNoAr): string {
   if (efeito === "fechado") return "O lugar vai aparecer FECHADO, e não por causa de chuva.";
   if (efeito === "frio") {
-    const voz = vozDaFicha(ficha.condicao);
+    const voz = vozDaFicha(ficha);
     return `O carimbo vai dizer "${falaMolhada(voz.severidade, voz.horasPassado).marca}".`;
   }
   if (efeito === "fresco") return `O carimbo vai dizer "Pode ir", mesmo se tiver chovido.`;

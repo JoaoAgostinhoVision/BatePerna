@@ -335,7 +335,7 @@ describe("SeloTrilha — o relógio da validade", () => {
 
     render(
       <Profiler id="selo" onRender={registrar}>
-        <SeloTrilha leitura={leituraVelha} voz={{ severidade: "nao-va", horasPassado: 6 }} />
+        <SeloTrilha leitura={leituraVelha} voz={{ severidade: "nao-va", horasPassado: 6, regraPropria: true }} />
       </Profiler>,
     );
 

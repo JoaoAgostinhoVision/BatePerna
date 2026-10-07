@@ -67,7 +67,7 @@ export default function CartaoTrilha({
         <SeloTrilha
           leitura={leitura}
           abertura={aberturaDaFicha(ficha)}
-          voz={vozDaFicha(ficha.condicao)}
+          voz={vozDaFicha(ficha)}
           agora={agora}
         />
       </span>
