@@ -61,8 +61,8 @@ as mesmas funções de banco e as mesmas portas (`porta-de-publicar`, `porta-de-
   rótulo de escaneio, regra/texto da regra, ressalva, discriminador (o que olhar na entrada), piso, carro comum,
   secaRapido. Consequência no schema: esses campos passam a ser **opcionais no `fichaSchema`** (um schema só,
   sem ramo por origem). Quem continua EXIGINDO cada um nos lugares do João é a porta de publicar dele
-  (`porta-de-publicar`, como já faz com as obrigatórias do formulário); a porta da pessoa exige só as 5
-  obrigatórias dela. A página pública aprende a calar cada campo ausente.
+  (`porta-de-publicar`, como já faz com as obrigatórias do formulário); a porta da pessoa exige só as 6
+  obrigatórias dela (nome, cidade, ponto, o que é, como se chega, custa ou é grátis). A página pública aprende a calar cada campo ausente.
 - Fora desta rodada: foto, comentário, trajeto com mais de um ponto.
 
 ## Parte 2 — a marca
