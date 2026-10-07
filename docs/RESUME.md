@@ -23,13 +23,17 @@ unexpectedly` (tinypool) — um processo morre, ~20 testes não rodam, nenhuma a
 `route-admin-previsao-carimbo.test.ts`, que isolado passou 10/10. Carga/paralelismo, causa-raiz NÃO achada.
 Regra: rodar de novo e relatar as duas; outro erro qualquer é achado.
 
-→ 🔴 **PRÓXIMO PASSO:** a **revisão da 12 está despachada** (`task-12-review.md`). Se não existir, redespachar
-(revisor opus fresco, escopo `a7f0eaf..34d1b17`, COM `npm run build`). Depois: onda de fix → **brief da 12b**
-(seção "Recorte" da auditoria: id estável = `MIN(id)` do lugar; servidor 200 `{ignorado:true}`, nunca 4xx que trave
-a fila; envio online, placar e "já contei" pela mesma identidade; reancorar o N12 do `mutar.mjs`) → **o deploy
-único só sai com 12 E 12b**.
+✅ **Revisão da 12 FEITA** (`task-12-review.md`): **0 C · 0 I · 8 M**, aprovada; build 0 medido pelo revisor.
+
+→ 🔴 **EM VOO, DOIS AGENTES:**
+1. **Onda de fix da 12** (`task-12-fix-brief.md`, os 8 M; relatório `task-12-fix-report.md`). Se não houver commit de
+   código depois de `34d1b17`, redespachar com o mesmo brief (árvore suja = parar e medir).
+2. **Auditoria do brief da 12b** (`task-12b-brief.md` → `task-12b-auditoria.md`; só leitura). Se não existir, redespachar.
+Depois: medir a onda eu mesmo → colar a auditoria da 12b no brief → despachar a 12b (o "PENDENTE-JOÃO" do legado
+fica implementado como "aceitar", troca de uma linha) → revisão final da branch COM build → **deploy só com 12 E 12b
+e com a resposta dele**.
 ❓ **Pergunta ao João, pendente:** relatos "✓ Fui" que já estiverem na fila offline SEM identidade no dia do deploy:
-aceitar como hoje ou descartar.
+aceitar como hoje ou descartar. (A fila já descarta relatos de outro dia: a janela é SÓ o dia do deploy.)
 
 (histórico abaixo)
 
