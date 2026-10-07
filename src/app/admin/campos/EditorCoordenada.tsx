@@ -17,6 +17,7 @@ import {
   urlTile,
   zoomDeTiles,
 } from "@/lib/mapa";
+import BotaoDesfazer from "./BotaoDesfazer";
 import { usarGravacao } from "./gravar";
 import { SALVANDO, SALVAR } from "./palavras";
 import type { CampoNaTela, PropsDoEditor, VistaNaTela } from "./tipos";
@@ -109,7 +110,14 @@ import type { CampoNaTela, PropsDoEditor, VistaNaTela } from "./tipos";
  *
  *  ⚠️ NENHUM TEXTO SOBRE UM LUGAR ESPECÍFICO mora aqui: a coordenada e a vista
  *  vêm da prop; as frases fixas servem a todo lugar, e o crédito do OSM é
- *  licença. */
+ *  licença.
+ *
+ *  O "DESFAZER" (Tarefa 15) mede o PIN contra o ponto que a prop traz AGORA (a
+ *  vista não é dado: mexer nela sozinha não é mudança). Um toque volta o pin ao
+ *  ponto salvo — contado como posto de perto, como o ponto que veio do banco —
+ *  e a VISTA à de quando a tela abriu (centrada nele); sem ponto salvo, o pin
+ *  SOME, e com ele o Salvar. Não grava. A metade `.lng` não tem estado, e não
+ *  tem Desfazer. */
 
 type Par = { lat: number; lng: number };
 type Vista = { centro: Par; z: number };
@@ -477,12 +485,21 @@ function ComMapa({
   const [zDoPin, setZDoPin] = useState(MAPA_ZOOM_EDITOR);
   const [pinAVista, setPinAVista] = useState(true);
   const [vista, setVista] = useState<Vista>({ centro: vistaInicial.centro, z: vistaInicial.z });
-  const { erro, salvando, gravar } = usarGravacao();
+  const { erro, salvando, gravar, limparErro } = usarGravacao();
   const ajudaDoPortao = portaoDoSalvar({ zDoPin, zDaVista: vista.z, pinAVista });
 
   function mover(par: Par, zDoGesto: number): void {
     setAtual(par);
     setZDoPin(zDoGesto);
+  }
+
+  const mudou = atual === null || inicial === null ? atual !== inicial : atual.lat !== inicial.lat || atual.lng !== inicial.lng;
+
+  function desfazer(): void {
+    setAtual(inicial);
+    setZDoPin(MAPA_ZOOM_EDITOR);
+    setVista({ centro: vistaInicial.centro, z: vistaInicial.z });
+    limparErro();
   }
 
   function salvar(par: Par): void {
@@ -520,6 +537,7 @@ function ComMapa({
           {salvando ? SALVANDO : SALVAR}
         </button>
       )}
+      <BotaoDesfazer mudou={mudou} salvando={salvando} aoDesfazer={desfazer} />
       {erro && (
         <p className="adm-erro" role="alert">
           {erro}

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import BotaoDesfazer from "./BotaoDesfazer";
 import BotaoNaoSei from "./BotaoNaoSei";
 import { usarGravacao } from "./gravar";
 import { NADA_ESCOLHIDO, SALVANDO, SALVAR } from "./palavras";
@@ -39,7 +40,11 @@ import type { PropsDoEditor } from "./tipos";
  *  ⚠️ NADA É PRÉ-PREENCHIDO (§4.4). Com o campo AUSENTE, o `<select>` abre numa
  *  opção em branco — sem texto, porque texto de exemplo num campo de lugar real
  *  é resposta plausível que se grava sem querer. Salvar sem escolher é recusado
- *  aqui, sem viagem. */
+ *  aqui, sem viagem.
+ *
+ *  O "Desfazer" (Tarefa 15) volta as marcações ao `valor` de AGORA (a prop). A
+ *  diferença é de CONJUNTO: desmarcar e marcar de novo o mesmo dia muda a ordem
+ *  dos toques, não a resposta — e a ordem que grava é a do registro. */
 const jaEscolhidas = (valor: unknown): readonly string[] => {
   if (typeof valor === "string") return [valor];
   if (Array.isArray(valor)) return valor.filter((v): v is string => typeof v === "string");
@@ -48,9 +53,11 @@ const jaEscolhidas = (valor: unknown): readonly string[] => {
 
 export default function EditorLista({ campo, valor, slug }: PropsDoEditor) {
   const opcoes = campo.opcoes ?? [];
-  const [marcadas, setMarcadas] = useState<readonly string[]>(jaEscolhidas(valor));
+  const salvas = jaEscolhidas(valor);
+  const [marcadas, setMarcadas] = useState<readonly string[]>(salvas);
   const gravacao = usarGravacao();
-  const { erro, salvando, gravar, recusarAqui } = gravacao;
+  const { erro, salvando, gravar, recusarAqui, limparErro } = gravacao;
+  const mudou = marcadas.length !== salvas.length || marcadas.some((o) => !salvas.includes(o));
 
   function salvar(): void {
     // A ordem do REGISTRO, não a dos toques — ver o docblock.
@@ -113,6 +120,14 @@ export default function EditorLista({ campo, valor, slug }: PropsDoEditor) {
       >
         {salvando ? SALVANDO : SALVAR}
       </button>
+      <BotaoDesfazer
+        mudou={mudou}
+        salvando={salvando}
+        aoDesfazer={() => {
+          setMarcadas(salvas);
+          limparErro();
+        }}
+      />
       <BotaoNaoSei campo={campo} valor={valor} slug={slug} gravacao={gravacao} />
       {erro && (
         <p className="adm-erro" role="alert">

@@ -222,3 +222,12 @@ export const MOSTRAR_DE_NOVO = "Mostrar de novo";
  *  as duas marcam o ATO, nunca o estado. */
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const DE_VOLTA_AO_AR = "de volta ao ar";
+
+/** O "Desfazer" dos editores (Tarefa 15, 07/10 — o segundo dos "dois cancelar"
+ *  que ele pediu olhando o painel no ar). Volta o que está na tela ao valor
+ *  SALVO — a prop `valor`, lida a cada render — e não grava nada: nenhum
+ *  `fetch`, nenhuma confirmação (o que se perde é só o que ainda não foi
+ *  salvo, e está na tela de quem toca). Só aparece quando a tela difere do
+ *  salvo. Uma palavra pros sete editores, pelo motivo do topo deste arquivo. */
+// PENDENTE: redação minha (Tarefa 15, 07/10). Ele aprovou o DESENHO no chat ("pode fazer assim"), não leu a palavra.
+export const DESFAZER = "Desfazer";

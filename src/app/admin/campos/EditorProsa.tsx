@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import BotaoDesfazer from "./BotaoDesfazer";
 import BotaoNaoSei from "./BotaoNaoSei";
 import { usarGravacao } from "./gravar";
 import { CAIXA_VAZIA, SALVANDO, SALVAR } from "./palavras";
@@ -22,11 +23,15 @@ import type { PropsDoEditor } from "./tipos";
  *  inclusive só-espaços; isto poupa uma ida ao banco.
  *
  *  ⚠️ NENHUM TEXTO SOBRE UM LUGAR ESPECÍFICO mora aqui. O que entra na caixa
- *  vem da prop `valor`, e o rótulo vem do registro pela prop `campo.rotulo`. */
+ *  vem da prop `valor`, e o rótulo vem do registro pela prop `campo.rotulo`.
+ *
+ *  O "Desfazer" (Tarefa 15) volta a caixa ao `valor` de AGORA — a prop, não a
+ *  caixa da montagem — e tira a recusa da tela; não grava nada. */
 export default function EditorProsa({ campo, valor, slug }: PropsDoEditor) {
-  const [texto, setTexto] = useState(typeof valor === "string" ? valor : "");
+  const salvo = typeof valor === "string" ? valor : "";
+  const [texto, setTexto] = useState(salvo);
   const gravacao = usarGravacao();
-  const { erro, salvando, gravar, recusarAqui } = gravacao;
+  const { erro, salvando, gravar, recusarAqui, limparErro } = gravacao;
 
   function salvar(): void {
     // `trim()` pra casar com a porta, que conta só-espaços como vazia.
@@ -58,6 +63,14 @@ export default function EditorProsa({ campo, valor, slug }: PropsDoEditor) {
       >
         {salvando ? SALVANDO : SALVAR}
       </button>
+      <BotaoDesfazer
+        mudou={texto !== salvo}
+        salvando={salvando}
+        aoDesfazer={() => {
+          setTexto(salvo);
+          limparErro();
+        }}
+      />
       <BotaoNaoSei campo={campo} valor={valor} slug={slug} gravacao={gravacao} />
       {erro && (
         <p className="adm-erro" role="alert">

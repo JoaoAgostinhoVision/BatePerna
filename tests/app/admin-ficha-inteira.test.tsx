@@ -460,6 +460,9 @@ describe("FichaInteira — os guardas do que cresce: rótulo e CSS", () => {
     // de morta estando viva no primeiro almoço que ele cadastrar.
     const maisFaixa = container.querySelectorAll<HTMLButtonElement>("[data-mais-faixa]");
     expect(maisFaixa.length, "nenhum '+ outra faixa' na tela: o toque abaixo não aconteceria").toBeGreaterThan(0);
+    // ⚠️ E É ESTE MESMO TOQUE que põe o "Desfazer" (`.adm-editor-desfazer`,
+    // Tarefa 15) na medição: a faixa a mais deixa o horário diferente do salvo.
+    // Sem mudança nenhuma ele não existe, e a regra dele pareceria morta.
     for (const b of maisFaixa) fireEvent.click(b);
     const classes = [...new Set([...container.querySelectorAll("[class]")].flatMap((e) => [...e.classList]))];
     expect(classes.length, "nenhuma classe foi lida: o teste ficaria oco").toBeGreaterThan(0);

@@ -23,6 +23,7 @@ import {
   VISTA_SEM_CIDADE,
 } from "@/app/admin/campos/EditorCoordenada";
 import { ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
+import { DESISTIR, DESISTIR_MESMO, ERRO_DESISTIR } from "@/app/admin/BotaoDesistir";
 import {
   ANTERIOR,
   AVISO_RASCUNHO,
@@ -41,6 +42,7 @@ import {
   CAIXA_VAZIA,
   COM_ESTE_NUMERO,
   DE_VOLTA_AO_AR,
+  DESFAZER,
   ESCONDER,
   ESCONDIDO,
   HORA_VAZIA,
@@ -1497,6 +1499,13 @@ describe("Os editores servem os três lugares", () => {
     AVISO_PUBLICAR,
     TITULO_FALTA,
     TITULO_CALA,
+    // Tarefa 15: os dois "cancelar". O "Desfazer" só existe com a tela diferente
+    // do salvo; o "Desistir", no formulário e na lista de rascunhos — nenhuma em
+    // repouso nas três fichas.
+    DESFAZER,
+    DESISTIR,
+    DESISTIR_MESMO,
+    ERRO_DESISTIR,
   ];
 
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem

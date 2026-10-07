@@ -41,6 +41,7 @@ import {
   zoomDeTiles,
 } from "@/lib/mapa";
 import { IR_PUBLICAR, LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
+import { DESISTIR } from "@/app/admin/BotaoDesistir";
 import { regraDe, semComentarios } from "../css";
 import { bancoVazio, salvarRascunho, semearAcervo } from "../banco";
 
@@ -1210,7 +1211,8 @@ describe("/admin — a lista ganha a porta do lugar novo e a dos rascunhos", () 
     // O link de CONTINUAR é o do nome; o outro do item é o "publicar" (Tarefa 12).
     const continuar = within(item).getByRole("link", { name: new RegExp(NOME) });
     expect(continuar.textContent).toBe(NOME);
-    expect(item.textContent).toBe(NOME + IR_PUBLICAR);
+    // E o "Desistir deste lugar" (Tarefa 15), o terceiro toque do item.
+    expect(item.textContent).toBe(NOME + IR_PUBLICAR + DESISTIR);
   });
 
   // 🔴 TAREFA 12 (R3): a segunda porta pra tela de publicar — e é um LINK, que

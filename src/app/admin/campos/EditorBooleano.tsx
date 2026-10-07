@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import BotaoDesfazer from "./BotaoDesfazer";
 import BotaoNaoSei from "./BotaoNaoSei";
 import { usarGravacao } from "./gravar";
 import { NADA_ESCOLHIDO, NAO, SALVANDO, SALVAR, SIM } from "./palavras";
@@ -22,11 +23,15 @@ import type { PropsDoEditor } from "./tipos";
  *  línguas sobre o mesmo campo.
  *
  *  ⚠️ `aria-label` no grupo, sem rótulo visível: o bloco da ficha já imprime a
- *  pergunta em `.adm-campo-rotulo`. */
+ *  pergunta em `.adm-campo-rotulo`.
+ *
+ *  O "Desfazer" (Tarefa 15) volta a marcação ao `valor` de AGORA (a prop), e
+ *  AUSENTE volta a nada marcado — nunca a um "não" que ele não disse. */
 export default function EditorBooleano({ campo, valor, slug }: PropsDoEditor) {
-  const [marcado, setMarcado] = useState<boolean | null>(typeof valor === "boolean" ? valor : null);
+  const salvo = typeof valor === "boolean" ? valor : null;
+  const [marcado, setMarcado] = useState<boolean | null>(salvo);
   const gravacao = usarGravacao();
-  const { erro, salvando, gravar, recusarAqui } = gravacao;
+  const { erro, salvando, gravar, recusarAqui, limparErro } = gravacao;
 
   function salvar(): void {
     // 🔴 `=== null`, nunca `!marcado`: `false` é resposta, e um `!` aqui
@@ -63,6 +68,14 @@ export default function EditorBooleano({ campo, valor, slug }: PropsDoEditor) {
       >
         {salvando ? SALVANDO : SALVAR}
       </button>
+      <BotaoDesfazer
+        mudou={marcado !== salvo}
+        salvando={salvando}
+        aoDesfazer={() => {
+          setMarcado(salvo);
+          limparErro();
+        }}
+      />
       <BotaoNaoSei campo={campo} valor={valor} slug={slug} gravacao={gravacao} />
       {erro && (
         <p className="adm-erro" role="alert">

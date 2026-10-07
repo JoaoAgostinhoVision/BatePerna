@@ -271,7 +271,7 @@
 .adm-pergunta-pulada { margin: 0; font-size: .85rem; color: #777; }
 /* Tarefa 12 — o "publicar" do rascunho na lista: alvo de dedo ao lado do nome,
    com a borda de `.adm-novo-passo`. */
-.adm-item-publicar { display: inline-block; margin-top: .4rem; padding: .6rem 1rem; border: 1px solid #999; border-radius: 10px; text-decoration: none; color: inherit; }
+.adm-item-publicar { display: inline-block; margin-top: .4rem; margin-right: .4rem; padding: .6rem 1rem; border: 1px solid #999; border-radius: 10px; text-decoration: none; color: inherit; }
 /* A tela de publicar: o grid de `.adm-novo`; as listas e o aviso são texto de
    apoio, como `.adm-novo-aviso`; o nome do lugar, como `.adm-item-nome`. */
 .adm-publicar { display: grid; gap: 1.2rem; }
@@ -279,3 +279,13 @@
 .adm-publicar-titulo { margin: 0 0 .4rem; font-weight: bold; }
 .adm-publicar-falta ul, .adm-publicar-cala ul { margin: 0; padding-left: 1.2rem; display: grid; gap: .4rem; }
 .adm-publicar-aviso { margin: 0; font-size: .85rem; color: #777; }
+/* Tarefa 15 — o "Desistir deste lugar": o mesmo botão no formulário (no grid de
+   `.adm-novo`, por isso o `justify-self`, que o impede de esticar) e no item do
+   rascunho (ao lado do `.adm-item-publicar`, com o mesmo alvo de dedo; o respiro
+   entre os dois é a `margin-right` dele). ⚠️ Uma regra só, sem variante
+   `.adm-item .adm-rascunho-desistir`: o guarda de CSS acha a classe em qualquer
+   seletor que a contenha, e apagar esta sobreviveria à suíte (medido). */
+.adm-rascunho-desistir { justify-self: start; margin-top: .4rem; padding: .6rem 1rem; font-size: .95rem; border-radius: 10px; }
+/* Tarefa 15 — o "Desfazer" dos editores: o mesmo botão de `.adm-editor-nao-sei`,
+   sem valor novo; ele não grava nada. */
+.adm-editor-desfazer { padding: .6rem; font-size: .95rem; border-radius: 8px; }

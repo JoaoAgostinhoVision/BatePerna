@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { MAPA_ZOOM_EDITOR } from "@/lib/mapa";
+import BotaoDesfazer from "./BotaoDesfazer";
 import { MapaDoPin, portaoDoSalvar } from "./EditorCoordenada";
 import { usarGravacao } from "./gravar";
 import { CAIXA_VAZIA, SALVANDO, SALVAR } from "./palavras";
@@ -48,7 +49,14 @@ import { CAIXA_VAZIA, SALVANDO, SALVAR } from "./palavras";
  *  vista afastada (abaixo do `MAPA_ZOOM_EDITOR`) não se confirma — nem depois
  *  de aproximar, até ser tocado ou arrastado de perto (onda de fix da 11f, C-1
  *  da revisão) —, e o pin fora da parte visível também não. Sem pin (antes do
- *  primeiro toque), não há Salvar: a vista nunca é gravada. */
+ *  primeiro toque), não há Salvar: a vista nunca é gravada.
+ *
+ *  🔴 O "DESFAZER" (Tarefa 15) SÓ VALE PRO PONTO NOVO. É o único estado daqui
+ *  que diverge do salvo: tirar o último grava na hora (depois do segundo toque),
+ *  e o "Tirar mesmo?" já se desfaz recarregando. O salvo do ponto novo é sempre
+ *  NENHUM ponto novo — então o Desfazer aparece com nome escrito ou pin posto
+ *  (abrir não é mudar), e o toque limpa os dois, volta a vista ao último ponto e
+ *  FECHA o ponto novo, como a tela relida do banco mostraria. Não grava. */
 
 /** O nome da caixa do ponto novo. "O nome" é a palavra que o painel já usa pra
  *  essa folha de todo ponto (`ROTULO_DO_PONTO.nome`), e "ponto" é a que o
@@ -103,7 +111,16 @@ export default function EditorWaypoints({
   const [vista, setVista] = useState({ centro: ultimo, z: MAPA_ZOOM_EDITOR });
   const ajudaDoPortao = portaoDoSalvar({ zDoPin, zDaVista: vista.z, pinAVista });
   const [confirmandoTirar, setConfirmandoTirar] = useState(false);
-  const { erro, salvando, gravar, recusarAqui } = usarGravacao();
+  const { erro, salvando, gravar, recusarAqui, limparErro } = usarGravacao();
+
+  function desfazerPontoNovo(): void {
+    setNome("");
+    // Sem `setZDoPin`: sem pin ele não vale nada, e o próximo toque o regrava.
+    setPin(null);
+    setVista({ centro: ultimo, z: MAPA_ZOOM_EDITOR });
+    setAberto(false);
+    limparErro();
+  }
 
   function acrescentar(posto: Par): void {
     if (nome.trim() === "") {
@@ -158,6 +175,7 @@ export default function EditorWaypoints({
               {salvando ? SALVANDO : SALVAR}
             </button>
           )}
+          <BotaoDesfazer mudou={nome !== "" || pin !== null} salvando={salvando} aoDesfazer={desfazerPontoNovo} />
         </>
       ) : (
         <button type="button" className="adm-editor-salvar" onClick={() => setAberto(true)}>

@@ -1,5 +1,6 @@
 "use client";
 import { useState, type FormEvent } from "react";
+import BotaoDesistir from "./BotaoDesistir";
 import EditorFaixas from "./campos/EditorFaixas";
 import EditorBooleano from "./campos/EditorBooleano";
 import EditorCoordenada from "./campos/EditorCoordenada";
@@ -185,6 +186,10 @@ export default function FormularioDeLugar({
     <PortaDoEditor.Provider value={porta}>
       <section className="adm-novo" data-rascunho={slug}>
         <p className="adm-novo-aviso">{AVISO_RASCUNHO}</p>
+        {/* Desistir (Tarefa 15): em TODA pergunta, porque este componente só
+            existe com o rascunho já nascido — a tela do nome e da cidade é o
+            `ComecarLugarNovo`, sem ele. Apagado, volta ao painel. */}
+        <BotaoDesistir slug={slug} voltarAoPainel />
         <p className="adm-novo-posicao">{posicaoNaTela(posicao, total)}</p>
         <Pergunta key={pergunta.campo.caminho} pergunta={pergunta} slug={slug} proxima={proxima} />
         <nav className="adm-novo-passos">

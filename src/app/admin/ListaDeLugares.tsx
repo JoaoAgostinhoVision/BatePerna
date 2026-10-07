@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
+import BotaoDesistir from "./BotaoDesistir";
 import { marcaAgora } from "./marca-agora";
 import { ESCONDIDO } from "./campos/palavras";
 import { enderecoDePublicar } from "./novo/enderecos";
@@ -55,7 +56,9 @@ type Props = {
  *  Cada rascunho tem DOIS links (Tarefa 12, R3 da auditoria de 06/10): o nome
  *  continua as perguntas; o "publicar" abre a tela de publicar, que mostra o que
  *  falta e o que o app vai calar ANTES de pôr no ar — nada vai ao ar pelo toque
- *  na lista.
+ *  na lista. E um TERCEIRO toque, desde a Tarefa 15: o "Desistir deste lugar"
+ *  (`BotaoDesistir`), que apaga o rascunho em dois toques — só o rascunho; um
+ *  lugar no ar não tem o botão.
  *
  *  🔴 O LUGAR ESCONDIDO ESTÁ NA LISTA, MARCADO (Task 9, 2026-10-01). Esconder
  *  tira do PÚBLICO, não do dono: sem ele aqui, não haveria caminho pela tela
@@ -103,6 +106,8 @@ export default function ListaDeLugares({ fichas, leituras, ocultos, rascunhos, a
                 <a href={enderecoDePublicar(r.slug)} className="adm-item-publicar">
                   {IR_PUBLICAR}
                 </a>
+                {/* Tarefa 15: desistir, em dois toques; a lista se relê do banco. */}
+                <BotaoDesistir slug={r.slug} />
               </li>
             ))}
           </ul>

@@ -1,0 +1,86 @@
+"use client";
+import { useState } from "react";
+import { ERRO_REDE } from "./campos/gravar";
+
+/** DESISTIR DE UM LUGAR NOVO — apagar o RASCUNHO (Tarefa 15, 07/10: o João,
+ *  olhando o painel no ar, *"ficou faltando o botão de cancelar"*; escolheu os
+ *  dois cancelar, e este é o primeiro). Mora em DOIS lugares, o mesmo botão:
+ *  em toda pergunta do `/admin/novo` (`FormularioDeLugar`, perto do aviso de
+ *  rascunho) e em cada item de "Começados, ainda fora do ar" (`ListaDeLugares`,
+ *  ao lado do "publicar"). A tela do nome e da cidade (`ComecarLugarNovo`) NÃO o
+ *  tem: ali o rascunho ainda não nasceu, e não há nada pra apagar. A tela de
+ *  publicar também não — o desenho aprovado não a cita.
+ *
+ *  🔴 DOIS TOQUES, no molde do "Tirar mesmo?" do `EditorWaypoints`: o primeiro
+ *  troca o rótulo pela pergunta (`DESISTIR_MESMO`) e não manda nada; só o
+ *  segundo chama `DELETE /api/admin/rascunho` com `{slug}`. O estado de
+ *  "confirmar" é desta tela: recarregar desfaz. E, como lá, não há palavra de
+ *  espera ("Desistindo…"): o "Tirar mesmo?" não tem, e o botão só se desliga
+ *  enquanto a porta responde.
+ *
+ *  🔴 NUNCA TIRA LUGAR DO AR. A rota só apaga `ficha_rascunhos`; um slug de
+ *  lugar publicado é um DELETE que não toca na versão dele — provado pela página
+ *  PÚBLICA em `tests/app/desistir-nao-tira-do-ar.test.tsx`. Por isso o botão não
+ *  aparece em lugar no ar nenhum, e a frase fala só do que foi RESPONDIDO.
+ *
+ *  🔴 O MOLDE DE SUCESSO É O DO PAINEL: a tela vem do banco, nunca de estado
+ *  otimista. No formulário, `location.assign("/admin")` (a pergunta de um
+ *  rascunho que não existe mais seria 404); na lista, `location.reload()` — a
+ *  lista relida não o tem mais. Na FALHA (porta recusou, ou sem rede), nada
+ *  navega: a pergunta continua na tela, com a frase. `voltarAoPainel` é um
+ *  booleano, e não uma função, porque a lista é componente de SERVIDOR e função
+ *  não atravessa pra cá. */
+
+// PENDENTE: redação minha (Tarefa 15, 07/10). Ele aprovou o DESENHO no chat ("pode fazer assim"), não leu a frase.
+export const DESISTIR = "Desistir deste lugar";
+// PENDENTE: redação minha (Tarefa 15, 07/10). Ele aprovou o DESENHO no chat ("pode fazer assim"), não leu a frase.
+export const DESISTIR_MESMO = "Desistir mesmo? O que foi respondido some.";
+/** A porta recusou (a sessão venceu, ou o corpo não chegou). A rota responde
+ *  corpo VAZIO nessas recusas, então a frase é desta tela. Não reaproveita o
+ *  `ERRO_GRAVAR` ("Não consegui salvar."): desistir não é salvar, e a frase
+ *  diria o contrário do que ele tentou. A falta de rede é `ERRO_REDE`, a mesma
+ *  do painel inteiro. */
+// PENDENTE: redação minha (Tarefa 15, 07/10). Ainda não lida por ele.
+export const ERRO_DESISTIR = "Não consegui desistir deste lugar.";
+
+export default function BotaoDesistir({ slug, voltarAoPainel = false }: { slug: string; voltarAoPainel?: boolean }) {
+  const [confirmando, setConfirmando] = useState(false);
+  const [indo, setIndo] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function desistir(): Promise<void> {
+    if (!confirmando) {
+      setConfirmando(true);
+      return;
+    }
+    if (indo) return;
+    setErro(null);
+    setIndo(true);
+    try {
+      const r = await fetch("/api/admin/rascunho", { method: "DELETE", body: JSON.stringify({ slug }) });
+      if (r.ok) {
+        if (voltarAoPainel) location.assign("/admin");
+        else location.reload();
+        return;
+      }
+      setErro(ERRO_DESISTIR);
+    } catch {
+      setErro(ERRO_REDE);
+    } finally {
+      setIndo(false);
+    }
+  }
+
+  return (
+    <>
+      <button type="button" className="adm-rascunho-desistir" disabled={indo} onClick={desistir}>
+        {confirmando ? DESISTIR_MESMO : DESISTIR}
+      </button>
+      {erro && (
+        <p className="adm-erro" role="alert">
+          {erro}
+        </p>
+      )}
+    </>
+  );
+}

@@ -115,6 +115,10 @@ export type Gravacao = {
    *  chamada** nesses casos, que é a única forma de provar que é isso que
    *  acontece. */
   recusarAqui: (frase: string) => void;
+  /** Tira a frase da tela, sem viagem — o "Desfazer" (Tarefa 15) a limpa junto
+   *  com o valor: a recusa era sobre o que estava na caixa, e isso voltou ao
+   *  salvo. */
+  limparErro: () => void;
 };
 
 export function usarGravacao(): Gravacao {
@@ -143,5 +147,5 @@ export function usarGravacao(): Gravacao {
     }
   }
 
-  return { erro, salvando, gravar, recusarAqui: setErro };
+  return { erro, salvando, gravar, recusarAqui: setErro, limparErro: () => setErro(null) };
 }

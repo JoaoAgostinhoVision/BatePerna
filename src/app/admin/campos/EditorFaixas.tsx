@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import BotaoDesfazer from "./BotaoDesfazer";
 import BotaoNaoSei from "./BotaoNaoSei";
 import { usarGravacao } from "./gravar";
 import { HORAS_JUNTAS, HORA_VAZIA, MAIS_FAIXA, SALVANDO, SALVAR, TIRAR_FAIXA } from "./palavras";
@@ -33,7 +34,10 @@ import type { PropsDoEditor } from "./tipos";
  *  aparecendo de volta na caixa não é pré-preenchimento.
  *
  *  Nenhum editor importa o registro nem `@/lib/horario` — o contrato é de props
- *  (ver o topo de `tipos.ts`); o valor chega `unknown` e é estreitado aqui. */
+ *  (ver o topo de `tipos.ts`); o valor chega `unknown` e é estreitado aqui.
+ *
+ *  O "Desfazer" (Tarefa 15) volta a LISTA inteira ao `valor` de AGORA (a prop):
+ *  as horas, e também as faixas acrescentadas ou tiradas sem Salvar. Não grava. */
 
 type Faixa = { abre: string; fecha: string };
 
@@ -73,7 +77,12 @@ function faixasDoValor(valor: unknown): Faixa[] {
 export default function EditorFaixas({ campo, valor, slug }: PropsDoEditor) {
   const [faixas, setFaixas] = useState<Faixa[]>(() => faixasDoValor(valor));
   const gravacao = usarGravacao();
-  const { erro, salvando, gravar, recusarAqui } = gravacao;
+  const { erro, salvando, gravar, recusarAqui, limparErro } = gravacao;
+  // Hora por hora, e não `JSON.stringify`: o documento pode trazer as chaves em
+  // outra ordem, e isso não é mudança que ele fez.
+  const salvas = faixasDoValor(valor);
+  const mudou =
+    faixas.length !== salvas.length || faixas.some((f, i) => f.abre !== salvas[i].abre || f.fecha !== salvas[i].fecha);
 
   function mudar(i: number, chave: keyof Faixa, hora: string): void {
     setFaixas((antes) => antes.map((f, j) => (j === i ? { ...f, [chave]: hora } : f)));
@@ -143,6 +152,14 @@ export default function EditorFaixas({ campo, valor, slug }: PropsDoEditor) {
       >
         {salvando ? SALVANDO : SALVAR}
       </button>
+      <BotaoDesfazer
+        mudou={mudou}
+        salvando={salvando}
+        aoDesfazer={() => {
+          setFaixas(salvas);
+          limparErro();
+        }}
+      />
       <BotaoNaoSei campo={campo} valor={valor} slug={slug} gravacao={gravacao} naoTem />
       {erro && (
         <p className="adm-erro" role="alert">

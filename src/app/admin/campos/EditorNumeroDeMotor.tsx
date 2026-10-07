@@ -1,6 +1,7 @@
 "use client";
 import { useContext, useEffect, useRef, useState } from "react";
 import { TETO_PASSADO_HORAS, TETO_PREVISAO_HORAS } from "@/lib/weather";
+import BotaoDesfazer from "./BotaoDesfazer";
 import { PortaDoEditor, usarGravacao } from "./gravar";
 import {
   ALEM_DO_PROVEDOR,
@@ -105,7 +106,12 @@ export const ESPERA_PREVIA_MS = 500;
  *
  *  ⚠️ NENHUM TEXTO SOBRE UM LUGAR ESPECÍFICO mora aqui. O número vem da prop
  *  `valor`, o rótulo vem do registro por `campo.rotulo`, e a fala da prévia vem da
- *  rota. */
+ *  rota.
+ *
+ *  O "Desfazer" (Tarefa 15) volta a caixa ao `valor` de AGORA (a prop), tira a
+ *  recusa da tela e 🔴 CANCELA A PRÉVIA que estava esperando o dedo parar: sem
+ *  isso, 500 ms depois de desfazer a tela iria ao provedor de chuva por um número
+ *  que não está mais na caixa — a busca que a espera existe pra não fazer. */
 
 /** O que a prévia está dizendo agora. `para` é o número que ela responde, e ele
  *  existe por uma razão medida de rede, não por zelo: duas respostas podem chegar
@@ -149,9 +155,10 @@ function recusaDe(folha: string, n: number): string | null {
 }
 
 export default function EditorNumeroDeMotor({ campo, valor, slug }: PropsDoEditor) {
-  const [texto, setTexto] = useState(typeof valor === "number" ? String(valor) : "");
+  const salvo = typeof valor === "number" ? String(valor) : "";
+  const [texto, setTexto] = useState(salvo);
   const [previsao, setPrevisao] = useState<Previsao | null>(null);
-  const { erro, salvando, gravar, recusarAqui } = usarGravacao();
+  const { erro, salvando, gravar, recusarAqui, limparErro } = usarGravacao();
   // Sem prévia no RASCUNHO (Tarefa 11): ver `PortaDoEditor` em `./gravar`.
   const { previa: comPrevia } = useContext(PortaDoEditor);
   const folha = campo.caminho.slice(campo.caminho.lastIndexOf(".") + 1);
@@ -209,6 +216,13 @@ export default function EditorNumeroDeMotor({ campo, valor, slug }: PropsDoEdito
     }
   }
 
+  function desfazer(): void {
+    cancelarEspera();
+    setPrevisao(null);
+    setTexto(salvo);
+    limparErro();
+  }
+
   function salvar(): void {
     if (numero === null) {
       recusarAqui(CAIXA_VAZIA);
@@ -253,6 +267,7 @@ export default function EditorNumeroDeMotor({ campo, valor, slug }: PropsDoEdito
       >
         {salvando ? SALVANDO : SALVAR}
       </button>
+      <BotaoDesfazer mudou={texto !== salvo} salvando={salvando} aoDesfazer={desfazer} />
       {erro && (
         <p className="adm-erro" role="alert">
           {erro}
