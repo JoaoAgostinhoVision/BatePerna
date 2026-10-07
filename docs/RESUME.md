@@ -40,10 +40,14 @@ auditoria só como nota; `rowsAffected` com `RETURNING` volta 0 no libsql local 
 ✅ **Revisão da 12b FEITA** (`task-12b-review.md`): **0 C · 1 I · 5 M**. I1 (regressão): 2xx que não é placar
 (portal de Wi-Fi) apagava o relato e dizia "anotado".
 
-→ 🔴 **A onda de fix da 12b ESTÁ DESPACHADA** (`task-12b-fix-brief.md`: I1, fila em chave nova `v2`, provas, legado
-pelo SQL, e a decisão do João substituindo o PENDENTE com o ramo "descartar" removido). Se não houver commit de
-código depois de `159b828`, redespachar com o mesmo brief. Depois: medir eu mesmo → re-revisão curta →
-**revisão final da branch inteira COM build** → agentes do projeto → pacote de copy → deploy.
+✅ **Onda de fix da 12b FEITA: `e1c63be`.** Medido por mim: **2341/2341 em 112**, `tsc` 0, build 0, mutar 42/0;
+nenhum resto de `PENDENTE-JOÃO`/"descartar" em `src`/`tests`. Fila nova em `bp:fila-relato:v2`.
+
+→ 🔴 **A REVISÃO FINAL DA BRANCH ESTÁ DESPACHADA** (`final-review.md`; escopo `main..e1c63be`, COM build; a
+re-revisão curta da onda da 12b foi embutida nela). Se não existir, redespachar. Depois: onda de fix se houver →
+agentes do projeto (`contracao-honesta`, `prova-que-trava`, `voz-do-lugar`, `procedencia`) → **pacote de copy pro
+João** (todas as `PENDENTE`: `grep -rn PENDENTE src`) → `npm run semear` → UM `vercel --prod --yes` → `conferir-no-ar`
+(marcador: `GET /api/admin/publicar` 404 no velho, 405 no novo) → olhos dele no celular.
 
 ✅ **DECISÃO DO JOÃO (06/10): relato legado sem identidade → "aceitar como hoje".** O código já está assim
 (`RELATO_LEGADO = "aceitar"`); na onda de fix da 12b, trocar o comentário `PENDENTE-JOÃO` pelo registro da decisão
