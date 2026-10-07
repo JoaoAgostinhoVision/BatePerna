@@ -30,11 +30,16 @@
 - **Toda condição de corrida mora NO MESMO statement que grava** (`WHERE EXISTS` / batch `write`), nunca numa leitura antes. É a régua de `gravarEdicao`, `publicarRascunho` e `trocarEndereco`.
 - **Falha fechada no admin**, como hoje: rota/página sob `/admin` e `/api/admin/*` → **404** com o painel desligado, **401** sem sessão, ANTES de qualquer leitura. Use `lerConfigAdmin` + `avisarDesligado` + `sessaoValida` + `tokenDoCookie`.
 - **As rotas da pessoa** (`/api/contribuir/*`): **401** sem sessão Clerk; **503** com frase quando o Clerk não responde; **403** com frase quando ela está bloqueada; **404** quando o lugar/rascunho não é DELA (nunca revela que existe); **409** quando o lugar dela já foi conferido. Nenhuma alcança lugar do João.
+- 🔴 **A pessoa NUNCA recebe frase do painel nem o nome do que é de outro** (I3 da pré-auditoria). Toda colisão dela — par, gêmeo sem cidade, endereço ocupado, endereço antigo — responde **409 com `NOME_JA_EM_USO`** (`src/lib/porta-da-pessoa.ts`, PENDENTE), que não nomeia lugar nem rascunho de ninguém. As rotas dela leem a colisão ESTRUTURADA (`colisaoDoPar`/`colisaoDaMudanca`, Task 1) e nunca as funções que devolvem frase do painel (`parOcupado`, `parDaMudanca`, `enderecoDeLugar`, `enderecoDeRascunho`).
+- 🔴 **O painel do João não lista nem age sobre rascunho de quem usa** (ruling de produto da pré-auditoria): `listarRascunhos`, `lerRascunho`, `regravarRascunho`, `moverRascunho` e `apagarRascunho` são SÓ do João (`contribuidor IS NULL`). A colisão por par lê TODO rascunho (`todosOsRascunhos`), e a frase "continue por ele, na lista do painel" só sai quando o rascunho que colide é do João.
+- 🔴 **O lugar dela nunca toma o endereço antigo de outro lugar** (ruling de produto da pré-auditoria): o link velho do João continua levando ao lugar dele. Recusado no rascunho (`criarRascunhoDaPessoa`/`moverRascunhoDaPessoa`) e, por corrida, no próprio batch do publicar (`publicarRascunho` com contribuidor).
 - **Nada é pré-preenchido** (spec do painel §4.4): nenhum campo herda de outro lugar, de busca externa, de mim ou da regra padrão.
 - **Mutação medida.** Cada tarefa lista as mutações à mão que as provas dela têm de matar, e prova que cada uma APLICOU (`git diff --stat` não-vazio) antes de rodar a suíte. Mutação que sobrevive = prova que falta, escrita NA tarefa.
 - **Arquivo de rota ou de página do Next não exporta nada além do que o Next aceita** (`tests/deploy/exports-de-rota.test.ts` trava as rotas; o `next build` trava as páginas). Frase de tela mora num módulo de palavras ou num componente, nunca em `route.ts`/`page.tsx`.
 - **`git add` por caminho, nunca `git add -A`.** **`docs/RESUME.md` nunca entra em commit de tarefa.**
 - **O Clerk é dublado em todo teste**: `vi.mock("@/lib/contribuidor-sessao", ...)` nas rotas e páginas; `vi.mock("@clerk/nextjs/server", ...)` só no teste do próprio adaptador e do middleware. Nenhuma chave real em teste.
+- 🔴 **O estado do dublê do Clerk mora em `globalThis`, nunca num `const` de módulo** (C2 da pré-auditoria, MEDIDO em 07/10 com o vitest 2.1.9 do repo). As rotas da pessoa são testadas com `vi.resetModules()` no `beforeEach`; a fábrica do `vi.mock` reimporta `tests/sessao-da-pessoa.ts` depois do reset, e com o estado num `const` a rota lê uma instância e o teste muda OUTRA — medido: "sem sessão" esperava 401 e recebeu 200, "Clerk fora" esperava 503 e recebeu 200. Com `globalThis.__sessaoDaPessoa ??= {…}`, as duas sondas passaram. A sonda da Task 10 trava isto; ninguém "conserta" a rota nem afrouxa o caso por causa do dublê.
+- **Frase exportada sob `src/app/admin/**` entra em `CUNHADAS_AQUI`** (`tests/app/admin-editores-de-campo.test.tsx`) NO MESMO commit (I1 da pré-auditoria): o caso "toda frase que o painel EXPORTA está no controle de completude do cerco" fica vermelho sem isso. Tarefas que fazem: 6, 7, 8, 13, 15.
 
 ---
 
@@ -44,7 +49,7 @@ Cinco classes de entrada que a spec implica, que nenhuma prova da spec cobre, e 
 
 1. **A pessoa manda pela API um campo que a tela dela não pergunta** — `voz`, `condicao.regra.limiar_mm`, `discriminador.como_ler`, `condicao.severidade` — pra escrever com a voz do app ou se autocalibrar. Esperado: **400, nada gravado**; e a porta de publicar da pessoa recusa documento com chave fora da lista dela mesmo que ele tenha entrado por outro caminho. *(Task 10, Step 1 "campo fora da lista dela"; Task 11, Step 1 "documento com chave fora da lista")*
 2. **A aba velha da pessoa grava DEPOIS que o João tocou "Conferi" ou "Bloquear"** (ou ele confere no meio do PUT dela). Esperado: **409/403, nada gravado**, decidido no MESMO `INSERT` — o lugar conferido nunca volta a ser editado por ela. *(Task 12, Step 1 "a corrida com o Conferi"; Task 15, Step 1 "bloqueada no meio do formulário")*
-3. **Nome + cidade iguais a um lugar do João, ou a um endereço antigo dele.** Esperado: **409 com a frase do par**, e nunca uma versão nova do lugar do João no endereço dele; endereço antigo retomado só pelo publicar, com a régua de hoje. *(Task 10, Step 1 "o par de um lugar do João")*
+3. **Nome + cidade iguais a um lugar do João, ou a um endereço antigo dele.** Esperado: **409 com a frase DELA (`NOME_JA_EM_USO`), que não nomeia ninguém** — nunca a do painel —, e nunca uma versão nova do lugar do João no endereço dele. Endereço antigo de outro lugar **nunca é tomado por lugar dela** (ruling de produto da pré-auditoria): o rascunho dela não nasce nem se muda pra lá, e o publicar dela recusa no próprio batch; o publicar do JOÃO continua retomando, com a régua de hoje. *(Task 1, Step 1 "quem usa não publica num endereço antigo"; Task 10, Step 1 "o par de um lugar do João" e "um endereço antigo de um lugar do João"; Task 11, Step 1 "o endereço virou endereço antigo")*
 4. **Sessão do Clerk vence no meio do formulário.** Esperado: o PUT responde **401 sem tocar o rascunho**; a tela recarrega, o Clerk pede login e devolve à MESMA pergunta (`?p=N` na URL). *(Task 10, Step 1 "401 não toca o rascunho"; Task 13, Step 1 "com recarregarSe401, o 401 recarrega")*
 5. **`regra_padrao` sem linha, com severidade torta, ou gravada pelo painel como 0/0 ou limiar 0.** Esperado: leitura sem linha/torta **estoura** (erro honesto — nunca um carimbo com número inventado); gravação 0/0 ou limiar ≤ 0 **recusada com frase**, nada gravado. *(Task 1, Step 1 "severidade torta estoura"; Task 7, Step 1 "zera as duas janelas")*
 
@@ -54,8 +59,11 @@ Cinco classes de entrada que a spec implica, que nenhuma prova da spec cobre, e 
 
 | Arquivo | Papel | Tarefa |
 |---|---|---|
-| `src/lib/regra-padrao.ts` (novo) | tipo `RegraPadrao`, `REGRA_PADRAO_INICIAL`, `noAr`, `problemaDaRegraPadrao` — puro, sem zod | 1, 2, 7 |
-| `src/lib/db.ts` | tabelas novas, `lerRegraPadrao`/`gravarRegraPadrao`, `lerAcervoComOrigem`, `lugarDoDono`, `publicarRascunho(…, contribuidor)`, `listarRascunhos` só do João | 1 |
+| `src/lib/regra-padrao.ts` (novo) | tipo `RegraPadrao`, `REGRA_PADRAO_INICIAL`, `noAr` — puro, sem zod | 1, 2 |
+| `src/lib/porta-da-regra-padrao.ts` (novo) | `formaDaRegra`, `lerRegraDoCorpo` e as frases da recusa — SÓ servidor | 7, 8 |
+| `src/lib/db.ts` | tabelas novas, `lerRegraPadrao`/`gravarRegraPadrao`, `lerAcervoComOrigem`, `lugarDoDono`, `publicarRascunho(…, contribuidor)` (recusa endereço antigo pra ela), `listarRascunhos`/`lerRascunho`/`regravarRascunho`/`moverRascunho`/`apagarRascunho` só do João, `todosOsRascunhos`/`rascunhoDeQualquerUm` (só colisão) | 1 |
+| `src/lib/par-de-lugar.ts`, `src/lib/rascunho.ts`, `src/app/api/admin/rascunho/route.ts`, `src/app/api/admin/endereco/route.ts` | a colisão ESTRUTURADA (`colisaoDoPar` & cia., `fraseDoPainel`) lendo todo rascunho; as duas frases do painel pro rascunho de quem usa | 1 |
+| `tests/app/admin-editores-de-campo.test.tsx` | `CUNHADAS_AQUI` ganha cada frase nova exportada sob `src/app/admin` | 6, 7, 8, 13, 15 |
 | `src/types/ficha.ts` | os campos que a pessoa não responde viram opcionais; `FichaNoAr` | 2 |
 | `src/lib/ficha-fonte.ts`, `src/lib/ficha.ts` | leitura pública devolve `FichaNoAr` | 2 |
 | `src/lib/severidade.ts`, `src/lib/carimbo-fase.ts`, `src/app/Carimbo.tsx` | `Voz.regraPropria`, "seco" sem "carro comum", meia-linha | 3 |
@@ -77,10 +85,14 @@ Cinco classes de entrada que a spec implica, que nenhuma prova da spec cobre, e 
 
 **Files:**
 - Create: `src/lib/regra-padrao.ts`
-- Modify: `src/lib/db.ts` — `ensureSchema` (fim, depois de `migrarColunaEnderecoAnterior`, :105), `AutorVersao` (:394), `publicarRascunho` (:957-993), `listarRascunhos` (:759-764); funções novas no fim do arquivo
+- Modify: `src/lib/db.ts` — `ensureSchema` (fim, logo depois da CHAMADA `await migrarColunaEnderecoAnterior(client);`, que está em `:105`; a função mora em `:119`), `AutorVersao` (:394), `publicarRascunho` (:957-993), `regravarRascunho` (:689), `moverRascunho` (:737), `lerRascunho` (:749), `listarRascunhos` (:759-764), `apagarRascunho` (:776); funções novas no fim do arquivo
+- Modify: `src/lib/par-de-lugar.ts` — a colisão por par passa a ser ESTRUTURADA (`colisaoDoPar`, `colisaoDaTroca`, `colisaoDaMudanca`, `fraseDoPainel`) e a ler `todosOsRascunhos`; `parOcupado`/`parDaTroca`/`parDaMudanca` ficam, com a mesma assinatura, como as portas do painel (I3, I4)
+- Modify: `src/lib/rascunho.ts` — duas frases do painel pro rascunho de quem usa: `parDeRascunhoDeQuemUsa`, `enderecoDeRascunhoDeQuemUsa` (I4)
+- Modify: `src/app/api/admin/rascunho/route.ts` — `quemOcupa` (:116-122) lê `rascunhoDeQualquerUm` (I4)
+- Modify: `src/app/api/admin/endereco/route.ts` — a leitura do rascunho que ocupa o endereço novo (:89) passa a `rascunhoDeQualquerUm` (M11: a `lerRascunho` filtrada não o veria)
 - Modify: `src/app/admin/HistoricoDaFicha.tsx:11` (o rótulo do autor novo)
 - Modify: `tests/banco.ts` — `semearAcervo` (:84-100) limpa as tabelas novas; helper `semearLugarDaPessoa`
-- Test: `tests/lib/db-origem.test.ts` (criar), `tests/app/historico-da-ficha.test.tsx` (acrescentar um caso)
+- Test: `tests/lib/db-origem.test.ts` (criar), `tests/app/historico-da-ficha.test.tsx` (acrescentar um caso), `tests/api/route-admin-rascunho.test.ts` (acrescentar dois casos), `tests/api/route-admin-endereco.test.ts` (acrescentar um caso)
 
 **Interfaces:**
 - Consumes: `SEVERIDADES`, `Severidade` de `@/lib/severidade`; o `publicarRascunho` de hoje.
@@ -95,8 +107,19 @@ Cinco classes de entrada que a spec implica, que nenhuma prova da spec cobre, e 
     - `export async function gravarRegraPadrao(client: Client, r: RegraPadrao, agora: number): Promise<void>`
     - `export async function lerAcervoComOrigem(client: Client): Promise<AcervoComOrigem>` — a versão atual de TODO lugar (escondidos inclusive) + a origem + a regra padrão, num batch `read` só
     - `export async function lugarDoDono(client: Client, slug: string): Promise<{ versao: FichaVersao; origem: OrigemDoLugar; padrao: RegraPadrao } | null>`
-    - `export async function publicarRascunho(client, slug, doc, agora, atualizadoEm, contribuidor: string | null = null): Promise<boolean>` — `null` é o João, como hoje
-    - `listarRascunhos` passa a devolver SÓ os rascunhos do João (`contribuidor IS NULL`)
+    - `export async function publicarRascunho(client, slug, doc, agora, atualizadoEm, contribuidor: string | null = null): Promise<boolean>` — `null` é o João, como hoje; com contribuidor, recusa `slug` que é endereço antigo de outro lugar
+    - `listarRascunhos`, `lerRascunho`, `regravarRascunho`, `moverRascunho`, `apagarRascunho` passam a alcançar SÓ os rascunhos do João (`contribuidor IS NULL`) — mesmas assinaturas
+    - `export type RascunhoComDono = Rascunho & { contribuidor: string | null }`
+    - `export async function todosOsRascunhos(client: Client): Promise<RascunhoComDono[]>` — SÓ pra colisão
+    - `export async function rascunhoDeQualquerUm(client: Client, slug: string): Promise<RascunhoComDono | null>` — SÓ pra escolher a frase de quem ocupa
+  - `src/lib/par-de-lugar.ts`:
+    - `export type Colisao = { de: "lugar" | "rascunho-do-joao" | "rascunho-de-quem-usa"; semCidade: boolean; quem: string }`
+    - `export async function colisaoDoPar(nome: string, cidade: string, o: { exceto: string | null; nomeNovo: boolean }): Promise<Colisao | null>`
+    - `export async function colisaoDaTroca(atual: string, slug: string, nome: string, cidade: string): Promise<Colisao | null>`
+    - `export async function colisaoDaMudanca(atual: string, slug: string, campo: unknown, valor: unknown): Promise<Colisao | null>`
+    - `export function fraseDoPainel(c: Colisao): string`
+    - `parOcupado`, `parDaTroca`, `parDaMudanca`: mesmas assinaturas de hoje (`Promise<string | null>`), agora `fraseDoPainel` da colisão
+  - `src/lib/rascunho.ts`: `export const parDeRascunhoDeQuemUsa = (quem: string): string`, `export const enderecoDeRascunhoDeQuemUsa = (quem: string): string`
   - `tests/banco.ts`: `export const PESSOA_DE_TESTE = "user_pessoa_de_teste"` e `export async function semearLugarDaPessoa(client: Client, o: { nome: string; cidade: string; contribuidor?: string; agora?: number }): Promise<string>` (devolve o slug)
 
 🔴 **O desenho da tabela de origem, e por que linha AUSENTE é o João.** `origem_do_lugar` só tem linha de lugar mandado por quem usa. A alternativa (linha pra todo lugar, ausente = não conferido) obrigaria a semente, o publicar do João e `tests/banco.ts` a escreverem linha — três portas que podem esquecer, e o esquecimento poria "Mandado por alguém que usa o app" num lugar DELE. Aqui só uma porta faz nascer linha, e ela mora no MESMO batch que põe a versão 1 da pessoa no ar: ou os dois, ou nenhum. A Task 5 prova o outro lado (lugar da pessoa sem marca = vermelho).
@@ -109,15 +132,22 @@ Cinco classes de entrada que a spec implica, que nenhuma prova da spec cobre, e 
 import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  apagarRascunho,
   criarRascunho,
+  enderecoNovoDe,
   ensureSchema,
   gravarRegraPadrao,
   gravarVersao,
   lerAcervoComOrigem,
+  lerRascunho,
   lerRegraPadrao,
   listarRascunhos,
   lugarDoDono,
+  moverRascunho,
   publicarRascunho,
+  rascunhoDeQualquerUm,
+  regravarRascunho,
+  todosOsRascunhos,
   versaoAtual,
 } from "@/lib/db";
 import { REGRA_PADRAO_INICIAL } from "@/lib/regra-padrao";
@@ -239,6 +269,37 @@ describe("publicar de quem usa", () => {
     await expect(semearLugarDaPessoa(c, { nome: "Pedra Mandada", cidade: "Cidade Teste" })).rejects.toThrow(/não publicou/);
     expect(await contarOrigens()).toBe(0);
   });
+
+  // 🔴 RULING DE PRODUTO DA PRÉ-AUDITORIA (07/10): o lugar dela NUNCA toma o
+  // endereço antigo de outro lugar — o link velho que circula (WhatsApp)
+  // continua levando ao lugar de onde ele veio. A recusa mora no 1º passo do
+  // batch: a corrida (o João troca um endereço DEPOIS que o rascunho dela
+  // nasceu) não passa.
+  it("quem usa não publica num endereço antigo de outro lugar, e o link velho continua", async () => {
+    const slug = "pedra-mandada-cidade-teste";
+    await c.execute({
+      sql: "INSERT INTO enderecos_antigos (velho, novo, em) VALUES (?, 'rampa-do-pepe', ?)",
+      args: [slug, AGORA_SEMENTE],
+    });
+    await expect(semearLugarDaPessoa(c, { nome: "Pedra Mandada", cidade: "Cidade Teste" })).rejects.toThrow(/não publicou/);
+    expect(await versaoAtual(c, slug)).toBeNull();
+    expect(await enderecoNovoDe(c, slug)).toBe("rampa-do-pepe");
+    expect(await contarOrigens()).toBe(0);
+  });
+
+  // O controle do caso de cima: a recusa é SÓ de quem usa. O publicar do JOÃO
+  // continua retomando o endereço antigo (E5 da Tarefa 11e, a régua de hoje).
+  it("o publicar do JOÃO continua retomando o endereço antigo", async () => {
+    const slug = "lugar-do-joao-cidade";
+    const doc = JSON.stringify({ slug, modos: [] });
+    await c.execute({
+      sql: "INSERT INTO enderecos_antigos (velho, novo, em) VALUES (?, 'rampa-do-pepe', ?)",
+      args: [slug, AGORA_SEMENTE],
+    });
+    expect(await criarRascunho(c, slug, doc, AGORA_SEMENTE)).toBe(true);
+    expect(await publicarRascunho(c, slug, doc, AGORA_SEMENTE + 1, AGORA_SEMENTE)).toBe(true);
+    expect(await enderecoNovoDe(c, slug)).toBeNull();
+  });
 });
 
 describe("a lista de rascunhos do painel é só do João", () => {
@@ -249,6 +310,50 @@ describe("a lista de rascunhos do painel é só do João", () => {
       args: ["da-pessoa-cidade", JSON.stringify({ slug: "da-pessoa-cidade" }), AGORA_SEMENTE, PESSOA_DE_TESTE],
     });
     expect((await listarRascunhos(c)).map((r) => r.slug)).toEqual(["do-joao-cidade"]);
+  });
+});
+
+// 🔴 M11 E I4 DA PRÉ-AUDITORIA, e o ruling de produto: o painel do João NÃO
+// age sobre rascunho de quem usa (nem lê, nem regrava, nem move, nem apaga —
+// um caso por porta), mas a COLISÃO o vê, com o dono.
+describe("o rascunho de quem usa: o painel não alcança, a colisão vê", () => {
+  const DELA = "da-pessoa-cidade";
+  const DOC_DELA = JSON.stringify({ slug: DELA });
+  beforeEach(async () => {
+    await c.execute({
+      sql: "INSERT INTO ficha_rascunhos (slug, doc, atualizado_em, contribuidor) VALUES (?, ?, ?, ?)",
+      args: [DELA, DOC_DELA, AGORA_SEMENTE, PESSOA_DE_TESTE],
+    });
+  });
+
+  it("lerRascunho do painel não o lê", async () => {
+    expect(await lerRascunho(c, DELA)).toBeNull();
+    expect(await rascunhoDeQualquerUm(c, DELA), "a premissa: o rascunho dela está no banco").not.toBeNull();
+  });
+
+  it("regravarRascunho do painel não o regrava", async () => {
+    expect(await regravarRascunho(c, DELA, '{"x":1}', AGORA_SEMENTE + 1)).toBe(false);
+    expect((await rascunhoDeQualquerUm(c, DELA))?.doc).toBe(DOC_DELA);
+  });
+
+  it("moverRascunho do painel não o move", async () => {
+    expect(await moverRascunho(c, DELA, "outro-cidade", '{"slug":"outro-cidade"}', AGORA_SEMENTE + 1)).toBe(false);
+    expect((await rascunhoDeQualquerUm(c, DELA))?.slug).toBe(DELA);
+  });
+
+  it("apagarRascunho do painel não o apaga", async () => {
+    expect(await apagarRascunho(c, DELA)).toBe(false);
+    expect(await rascunhoDeQualquerUm(c, DELA)).not.toBeNull();
+  });
+
+  it("todosOsRascunhos e rascunhoDeQualquerUm o veem, com o dono — e os do João com dono nulo", async () => {
+    await criarRascunho(c, "do-joao-cidade", JSON.stringify({ slug: "do-joao-cidade" }), AGORA_SEMENTE + 1);
+    expect((await todosOsRascunhos(c)).map((r) => [r.slug, r.contribuidor])).toEqual([
+      ["do-joao-cidade", null],
+      [DELA, PESSOA_DE_TESTE],
+    ]);
+    expect(await rascunhoDeQualquerUm(c, DELA)).toMatchObject({ slug: DELA, contribuidor: PESSOA_DE_TESTE });
+    expect(await rascunhoDeQualquerUm(c, "ninguem-cidade")).toBeNull();
   });
 });
 
@@ -297,10 +402,71 @@ it("a versão gravada por quem usa o app diz 'quem mandou', e nenhuma outra diz"
 });
 ```
 
+Em `tests/api/route-admin-rascunho.test.ts` (I4 da pré-auditoria), um `describe` novo no fim do arquivo — importe `PESSOA_DE_TESTE` de `../banco`, `rascunhoDeQualquerUm` de `@/lib/db` e `enderecoDeRascunhoDeQuemUsa`, `parDeRascunhoDeQuemUsa` de `@/lib/rascunho`; `criar`, `NOME`, `CIDADE`, `S` e `listarRascunhos` já existem no arquivo:
+
+```ts
+// 🔴 I4 DA PRÉ-AUDITORIA (07/10): o rascunho de quem usa o app não está na lista
+// do painel — então a frase "continue por ele, na lista do painel" seria
+// MENTIRA quando é ele que colide. E a colisão tem de VÊ-LO (`todosOsRascunhos`),
+// senão dois rascunhos de mesmo par virariam dois lugares no mesmo par.
+describe("o rascunho de quem usa o app, visto do painel", () => {
+  async function rascunhoDela(slug: string, nome: string, cidade: string): Promise<void> {
+    await c.execute({
+      sql: "INSERT INTO ficha_rascunhos (slug, doc, atualizado_em, contribuidor) VALUES (?, ?, ?, ?)",
+      args: [slug, JSON.stringify({ slug, modos: [], cidade, trajeto: { waypoints: [{ nome }] } }), AGORA - 5, PESSOA_DE_TESTE],
+    });
+  }
+
+  it("o PAR de um rascunho dela: 409 com a frase de quem usa — nunca 'na lista do painel' —, e nada nasce", async () => {
+    await rascunhoDela(S, NOME, CIDADE);
+    const res = await criar("lugar   marcador UM", " cidade marcador UM ");
+    expect(res.status).toBe(409);
+    const frase = await res.text();
+    expect(frase).toBe(parDeRascunhoDeQuemUsa(`${NOME} (${CIDADE})`));
+    expect(frase).not.toMatch(/lista do painel/);
+    expect(await listarRascunhos(c)).toEqual([]);
+    expect((await rascunhoDeQualquerUm(c, S))?.contribuidor).toBe(PESSOA_DE_TESTE);
+  });
+
+  // A fronteira entre o nome e a cidade que anda (o molde do caso "endereço
+  // ocupado por um RASCUNHO de nome diferente", lá em cima).
+  it("o ENDEREÇO de um rascunho dela, de nome diferente: 409 com a frase de quem usa, e ele não muda", async () => {
+    await rascunhoDela("lugar-marcador-cidade-marcador", "Lugar Marcador", "Cidade Marcador");
+    const res = await criar("Lugar Marcador Cidade", "Marcador");
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(enderecoDeRascunhoDeQuemUsa("Lugar Marcador (Cidade Marcador)"));
+    expect(await rascunhoDeQualquerUm(c, "lugar-marcador-cidade-marcador")).toMatchObject({ contribuidor: PESSOA_DE_TESTE });
+  });
+});
+```
+
+(Os controles já existem no mesmo arquivo: "nome E cidade de um rascunho que já existe: 409" espera `parDeRascunho` e "endereço ocupado por um RASCUNHO de nome diferente" espera `enderecoDeRascunho` — com rascunho do JOÃO, a frase dele não muda.)
+
+Em `tests/api/route-admin-endereco.test.ts`, logo depois do caso "novo ocupado por um rascunho: 409 dizendo quem, e nada muda", um irmão com o MESMO arranjo, trocando só o dono do rascunho (importe `PESSOA_DE_TESTE` de `../banco`):
+
+```ts
+  // M11 da pré-auditoria: a `lerRascunho` do painel não vê rascunho de quem usa;
+  // a frase de quem ocupa lê `rascunhoDeQualquerUm`. Sem isso, a troca seria
+  // recusada pelo batch e a resposta seria "nada mudou", sem dizer por quê.
+  it("novo ocupado por um rascunho de QUEM USA: 409 dizendo quem, e nada muda", async () => {
+    await c.execute({
+      sql: "INSERT INTO ficha_rascunhos (slug, doc, atualizado_em, contribuidor) VALUES (?, ?, ?, ?)",
+      args: [B, JSON.stringify({ slug: B, cidade: "Outra Marcadora", trajeto: { waypoints: [{ nome: "Lugar Marcador" }] } }), AGORA - 5, PESSOA_DE_TESTE],
+    });
+    const antes = await retrato();
+    const res = await POST(pedido({ slug: A }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(enderecoOcupadoPorRascunho(B, "Lugar Marcador (Outra Marcadora)"));
+    expect(await retrato()).toEqual(antes);
+  });
+```
+
+(Se o caso vizinho preparar `A` com uma linha antes de `criarRascunho`, repita a mesma preparação aqui — o que muda é SÓ o `contribuidor` do rascunho.)
+
 - [ ] **Step 2: Rodar e confirmar que falham**
 
-Run: `npx vitest run tests/lib/db-origem.test.ts tests/app/historico-da-ficha.test.tsx`
-Expected: FAIL — `lerRegraPadrao`/`lerAcervoComOrigem` não exportados; `semearLugarDaPessoa` não existe.
+Run: `npx vitest run tests/lib/db-origem.test.ts tests/app/historico-da-ficha.test.tsx tests/api/route-admin-rascunho.test.ts tests/api/route-admin-endereco.test.ts`
+Expected: FAIL — `lerRegraPadrao`/`lerAcervoComOrigem`/`todosOsRascunhos`/`rascunhoDeQualquerUm` não exportados; `semearLugarDaPessoa` e as duas frases de quem usa não existem.
 
 - [ ] **Step 3: Escrever `src/lib/regra-padrao.ts`**
 
@@ -440,7 +606,8 @@ export async function lerRegraPadrao(client: Client): Promise<RegraPadrao> {
   return regraDaLinha(r.rows[0] as unknown as Record<string, unknown> | undefined);
 }
 
-/** Quem confere os números é a rota (`problemaDaRegraPadrao`, Task 7). */
+/** Quem confere os números é a rota, por `lerRegraDoCorpo`
+ *  (`src/lib/porta-da-regra-padrao.ts`, Task 7). */
 export async function gravarRegraPadrao(client: Client, r: RegraPadrao, agora: number): Promise<void> {
   await client.execute({
     sql: `UPDATE regra_padrao SET janela_previsao_horas = ?, janela_passado_horas = ?,
@@ -525,7 +692,11 @@ Em `publicarRascunho` (`:957`), o docblock fica e ganha no fim:
  *  transação: lugar da pessoa no ar sem origem seria lido como do João, SEM
  *  MARCA. O 1º passo confere também que o rascunho é de quem publica
  *  (`contribuidor IS ?`: o painel não publica rascunho dela, ela não publica o
- *  dele) e que ela não está bloqueada (`id = NULL` nunca casa: o João passa). */
+ *  dele), que ela não está bloqueada (`id = NULL` nunca casa: o João passa) e
+ *  — ruling de produto da pré-auditoria de 07/10 — que o endereço NÃO é
+ *  endereço antigo de outro lugar quando quem publica é ela (`? IS NULL OR …`:
+ *  o João continua retomando, com a régua de hoje). O link velho do João
+ *  continua levando ao lugar dele. */
 ```
 
 E a função inteira passa a ser:
@@ -548,8 +719,9 @@ export async function publicarRascunho(
               WHERE NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
                 AND EXISTS (SELECT 1 FROM ficha_rascunhos
                             WHERE slug = ? AND atualizado_em = ? AND contribuidor IS ?)
-                AND NOT EXISTS (SELECT 1 FROM contribuidores WHERE id = ? AND bloqueado = 1)`,
-        args: [slug, doc, autor, agora, slug, slug, atualizadoEm, contribuidor, contribuidor],
+                AND NOT EXISTS (SELECT 1 FROM contribuidores WHERE id = ? AND bloqueado = 1)
+                AND (? IS NULL OR NOT EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ?))`,
+        args: [slug, doc, autor, agora, slug, slug, atualizadoEm, contribuidor, contribuidor, contribuidor, slug],
       },
       {
         sql: `UPDATE avisos SET ficha_slug = (SELECT e.novo FROM enderecos_antigos e WHERE e.velho = ?)
@@ -592,7 +764,170 @@ Em `listarRascunhos` (`:759`), o SQL vira o de baixo, e o docblock ganha: *"SÓ 
      ORDER BY atualizado_em DESC, slug ASC`,
 ```
 
-- [ ] **Step 7: O rótulo do autor no histórico**
+- [ ] **Step 7: O painel não alcança o rascunho dela, e a colisão o vê (M11, I4 e I3 da pré-auditoria)**
+
+🔴 **Ruling de produto (07/10):** o painel do João NÃO lista nem age sobre rascunho de quem usa — só sobre lugar publicado. As quatro portas de rascunho do painel ganham `AND contribuidor IS NULL` no MESMO statement, com o docblock de cada uma acrescido de *"SÓ os do João (07/10): o rascunho de quem usa o app é dela até publicar, e o painel não age sobre ele."*:
+
+- `lerRascunho` (`:749`): `` `SELECT slug, doc, atualizado_em FROM ficha_rascunhos WHERE slug = ? AND contribuidor IS NULL` ``
+- `regravarRascunho` (`:689`): `` `UPDATE ficha_rascunhos SET doc = ?, atualizado_em = MAX(?, atualizado_em + 1) WHERE slug = ? AND contribuidor IS NULL` ``
+- `moverRascunho` (`:737`): o `WHERE slug = ?` vira `WHERE slug = ? AND contribuidor IS NULL` (os dois `NOT EXISTS` do destino ficam como estão — o destino continua livre nas duas tabelas, de QUALQUER dono)
+- `apagarRascunho` (`:776`): `` `DELETE FROM ficha_rascunhos WHERE slug = ? AND contribuidor IS NULL` ``
+
+(`criarRascunho` NÃO muda: o `ON CONFLICT(slug) DO NOTHING` já recusa o endereço de um rascunho dela. `/admin/novo?slug=` e `/admin/novo/publicar` leem por `lerRascunho`, então o rascunho dela vira 404 lá sem linha nova.)
+
+E no FIM de `db.ts`, as duas leituras que veem TODO rascunho — e que só a COLISÃO usa:
+
+```ts
+/** O rascunho e DE QUEM ele é (`contribuidor`: null = do João). */
+export type RascunhoComDono = Rascunho & { contribuidor: string | null };
+
+const comDono = (r: Record<string, unknown>): RascunhoComDono => ({
+  slug: String(r.slug),
+  doc: String(r.doc),
+  atualizado_em: Number(r.atualizado_em),
+  contribuidor: r.contribuidor == null ? null : String(r.contribuidor),
+});
+
+/** 🔴 TODO RASCUNHO, de quem for — e SÓ pra colisão (I4 da pré-auditoria de
+ *  07/10). A lista do painel (`listarRascunhos`) é só do João; a colisão por
+ *  par não pode ser: um rascunho do João e um de quem usa com o mesmo par,
+ *  publicados, seriam dois lugares no mesmo par. */
+export async function todosOsRascunhos(client: Client): Promise<RascunhoComDono[]> {
+  const r = await client.execute(
+    `SELECT slug, doc, atualizado_em, contribuidor FROM ficha_rascunhos ORDER BY atualizado_em DESC, slug ASC`,
+  );
+  return r.rows.map((l) => comDono(l as unknown as Record<string, unknown>));
+}
+
+/** O rascunho que mora em `slug`, de quem for — SÓ pra escolher a FRASE de uma
+ *  colisão de endereço (quem ocupa). Nunca pra editar: as portas que editam são
+ *  as do João (`lerRascunho` & cia.) e as dela (`*RascunhoDaPessoa`, Task 10). */
+export async function rascunhoDeQualquerUm(client: Client, slug: string): Promise<RascunhoComDono | null> {
+  const r = await client.execute({
+    sql: `SELECT slug, doc, atualizado_em, contribuidor FROM ficha_rascunhos WHERE slug = ?`,
+    args: [slug],
+  });
+  return r.rows.length ? comDono(r.rows[0] as unknown as Record<string, unknown>) : null;
+}
+```
+
+`src/lib/rascunho.ts`, logo depois de `enderecoDeRascunho` — as duas frases do PAINEL quando quem colide é rascunho de quem usa (o João não o vê na lista, então "continue por ele na lista do painel" seria mentira). Elas nomeiam o rascunho: é o painel dele, que já lê nome e e-mail de quem manda.
+
+```ts
+// PENDENTE: redação minha, o João ainda não leu (I4 da pré-auditoria de 07/10)
+export const parDeRascunhoDeQuemUsa = (quem: string): string =>
+  `Alguém que usa o app está mandando um lugar com esse nome: ${quem}. Ele ainda não foi publicado; se for o mesmo lugar, espere ele ir ao ar e confira por lá.`;
+// PENDENTE: redação minha, o João ainda não leu (I4 da pré-auditoria de 07/10)
+export const enderecoDeRascunhoDeQuemUsa = (quem: string): string =>
+  `O endereço que sairia desse nome e dessa cidade já é de um lugar que alguém que usa o app está mandando: ${quem}. Se for o mesmo lugar, espere ele ir ao ar e confira por lá; se não for, o painel ainda não sabe dar outro endereço a este.`;
+```
+
+(Nenhuma das duas diz "nessa cidade": o rascunho dela sempre tem cidade, mas a frase do par vale também no ramo do gêmeo, e lá não seria verdade.)
+
+`src/lib/par-de-lugar.ts` — a colisão vira DADO, e a frase vira escolha de quem responde. O docblock de `parOcupado` vai inteiro pra `colisaoDoPar` (com "Contra: … todo rascunho" passando a "todo rascunho, de QUALQUER dono — `todosOsRascunhos`, I4 de 07/10"), e ganha ao fim: *"🔴 DESDE 07/10 DEVOLVE O QUE COLIDIU, NÃO A FRASE (I3 da pré-auditoria): o painel fala por `fraseDoPainel`; a rota de quem usa responde uma frase só dela, que não nomeia ninguém (`NOME_JA_EM_USO`, Task 10)."*:
+
+```ts
+import { getClient, todosOsRascunhos, versoesAtuais } from "@/lib/db";
+import {
+  cidadeDoDoc, gemeoSemCidade, nomeComCidade, nomeDoRascunho, parDeLugar, parDeRascunho, parDeRascunhoDeQuemUsa,
+  slugDoNome,
+} from "@/lib/rascunho";
+
+/** O QUE COLIDIU — sem frase. `quem` é o nome (e a cidade, se houver) de quem
+ *  JÁ EXISTE, lido do dado. */
+export type Colisao = {
+  de: "lugar" | "rascunho-do-joao" | "rascunho-de-quem-usa";
+  semCidade: boolean;
+  quem: string;
+};
+
+export async function colisaoDoPar(
+  nome: string,
+  cidade: string,
+  { exceto, nomeNovo }: { exceto: string | null; nomeNovo: boolean },
+): Promise<Colisao | null> {
+  const n = slugDoNome(nome);
+  const c = slugDoNome(cidade);
+  if (n === "") return null;
+  const bate = (doc: string, slug: string): { semCidade: boolean; quem: string } | null => {
+    const nomeDeles = nomeDoRascunho(doc, slug);
+    if (slug === exceto || slugDoNome(nomeDeles) !== n) return null;
+    const deles = cidadeDoDoc(doc);
+    if (deles === undefined || slugDoNome(deles) === "") return nomeNovo ? { semCidade: true, quem: nomeDeles } : null;
+    return slugDoNome(deles) === c ? { semCidade: false, quem: nomeComCidade(nomeDeles, deles) } : null;
+  };
+  for (const v of (await versoesAtuais(getClient(), { incluirOcultos: true })).values()) {
+    const achou = bate(v.doc, v.ficha_slug);
+    if (achou !== null) return { de: "lugar", ...achou };
+  }
+  for (const r of await todosOsRascunhos(getClient())) {
+    const achou = bate(r.doc, r.slug);
+    if (achou !== null) return { de: r.contribuidor === null ? "rascunho-do-joao" : "rascunho-de-quem-usa", ...achou };
+  }
+  return null;
+}
+
+/** A FRASE DO PAINEL pra uma colisão — as de hoje, e a de quem usa quando o
+ *  rascunho que colide é DELA (ele não está na lista do painel). */
+export function fraseDoPainel(c: Colisao): string {
+  if (c.de === "rascunho-de-quem-usa") return parDeRascunhoDeQuemUsa(c.quem);
+  if (c.semCidade) return gemeoSemCidade(c.quem);
+  return c.de === "lugar" ? parDeLugar(c.quem) : parDeRascunho(c.quem);
+}
+
+/** A porta do PAINEL: a colisão, na frase do painel. Mesma assinatura de hoje. */
+export async function parOcupado(
+  nome: string,
+  cidade: string,
+  o: { exceto: string | null; nomeNovo: boolean },
+): Promise<string | null> {
+  const c = await colisaoDoPar(nome, cidade, o);
+  return c === null ? null : fraseDoPainel(c);
+}
+
+export async function colisaoDaTroca(atual: string, slug: string, nome: string, cidade: string): Promise<Colisao | null> {
+  const nomeNovo = slugDoNome(nome) !== slugDoNome(nomeDoRascunho(atual, ""));
+  return colisaoDoPar(nome, cidade, { exceto: slug, nomeNovo });
+}
+
+export async function parDaTroca(atual: string, slug: string, nome: string, cidade: string): Promise<string | null> {
+  const c = await colisaoDaTroca(atual, slug, nome, cidade);
+  return c === null ? null : fraseDoPainel(c);
+}
+
+export async function colisaoDaMudanca(atual: string, slug: string, campo: unknown, valor: unknown): Promise<Colisao | null> {
+  if ((campo !== CAMPO_DO_NOME && campo !== CAMPO_DA_CIDADE) || typeof valor !== "string") return null;
+  const nome = campo === CAMPO_DO_NOME ? valor : nomeDoRascunho(atual, "");
+  const cidade = campo === CAMPO_DA_CIDADE ? valor : (cidadeDoDoc(atual) ?? "");
+  return colisaoDaTroca(atual, slug, nome, cidade);
+}
+
+export async function parDaMudanca(atual: string, slug: string, campo: unknown, valor: unknown): Promise<string | null> {
+  const c = await colisaoDaMudanca(atual, slug, campo, valor);
+  return c === null ? null : fraseDoPainel(c);
+}
+```
+
+(Os docblocks de `parDaTroca`, `CAMPO_DO_NOME`/`CAMPO_DA_CIDADE` e `parDaMudanca` ficam onde estão; `colisaoDaTroca`/`colisaoDaMudanca` ganham uma linha cada: *"O dado da colisão; a frase é de quem responde."* As duas constantes `CAMPO_DO_NOME`/`CAMPO_DA_CIDADE` sobem pra antes de `colisaoDaMudanca` se o `tsc` reclamar de uso antes da declaração.)
+
+`src/app/api/admin/rascunho/route.ts`, `quemOcupa` (`:116-122`; importe `rascunhoDeQualquerUm` de `@/lib/db` e `enderecoDeRascunhoDeQuemUsa` de `@/lib/rascunho`; `lerRascunho` continua importado pelos outros usos do arquivo):
+
+```ts
+async function quemOcupa(slug: string): Promise<string> {
+  const lugar = await versaoAtual(getClient(), slug);
+  if (lugar !== null) return enderecoDeLugar(nomeComCidade(nomeDoRascunho(lugar.doc, slug), cidadeDoDoc(lugar.doc)));
+  // `rascunhoDeQualquerUm`, NUNCA `lerRascunho` (só do João desde 07/10): o
+  // rascunho de quem usa ocupa o endereço do mesmo jeito, e a frase é outra.
+  const r = await rascunhoDeQualquerUm(getClient(), slug);
+  const doc = r?.doc ?? "";
+  const quem = nomeComCidade(nomeDoRascunho(doc, slug), cidadeDoDoc(doc));
+  return r !== null && r.contribuidor !== null ? enderecoDeRascunhoDeQuemUsa(quem) : enderecoDeRascunho(quem);
+}
+```
+
+`src/app/api/admin/endereco/route.ts:89`: `const rascunho = await lerRascunho(getClient(), novo);` vira `const rascunho = await rascunhoDeQualquerUm(getClient(), novo);` (importe-a de `@/lib/db`; tire `lerRascunho` do import se ficar sem uso). A frase (`enderecoOcupadoPorRascunho`) não fala de lista nenhuma e vale pro rascunho dela também.
+
+- [ ] **Step 8: O rótulo do autor no histórico**
 
 `src/app/admin/HistoricoDaFicha.tsx:11` (importe `type AutorVersao` de `@/lib/db`):
 
@@ -607,7 +942,7 @@ const AUTOR = {
 
 O `satisfies` é o guarda: autor novo sem rótulo não compila.
 
-- [ ] **Step 8: `tests/banco.ts` limpa o que é novo e ganha o lugar da pessoa**
+- [ ] **Step 9: `tests/banco.ts` limpa o que é novo e ganha o lugar da pessoa**
 
 Em `semearAcervo`, depois de `DELETE FROM ficha_rascunhos`:
 
@@ -668,12 +1003,12 @@ export async function semearLugarDaPessoa(
 
 ⚠️ O documento acima ainda NÃO passa no `fichaSchema` de hoje (faltam `voz`, `premio` etc.): nesta tarefa ele só é lido pelo SQL. Ele passa a abrir na Task 2, e é isso que a Task 2 prova.
 
-- [ ] **Step 9: Rodar e confirmar que passam**
+- [ ] **Step 10: Rodar e confirmar que passam**
 
-Run: `npx vitest run tests/lib/db-origem.test.ts tests/app/historico-da-ficha.test.tsx tests/lib/db-rascunho.test.ts tests/api/route-admin-publicar.test.ts tests/banco.test.ts`
-Expected: PASS. Os três últimos provam que o publicar e os rascunhos do João não mudaram.
+Run: `npx vitest run tests/lib/db-origem.test.ts tests/app/historico-da-ficha.test.tsx tests/lib/db-rascunho.test.ts tests/api/route-admin-publicar.test.ts tests/banco.test.ts tests/api/route-admin-rascunho.test.ts tests/api/route-admin-endereco.test.ts tests/api/route-admin-ficha.test.ts tests/lib/db-endereco.test.ts`
+Expected: PASS. `db-rascunho`, `route-admin-publicar`, `banco`, `route-admin-ficha` e `db-endereco` provam que o publicar, os rascunhos, o par e o endereço do João não mudaram; os dois `route-admin-*` de rascunho e endereço, que o rascunho dela tem a frase dele.
 
-- [ ] **Step 10: Mutações, com `git diff --stat` provando que aplicaram**
+- [ ] **Step 11: Mutações, com `git diff --stat` provando que aplicaram**
 
 | # | mutação | morre em |
 |---|---|---|
@@ -687,20 +1022,32 @@ Expected: PASS. Os três últimos provam que o publicar e os rascunhos do João 
 | M8 | `regraDaLinha` troca o `throw` da severidade por `"cuidado"` | "severidade torta estoura" |
 | M9 | tira `WHERE contribuidor IS NULL` de `listarRascunhos` | "o rascunho de quem usa não aparece em listarRascunhos" |
 | M10 | `JOIN_ORIGEM` usa `o.lugar = v.id` | "a origem acompanha o lugar com 2 versões e endereço novo" |
+| M11 | tira `AND contribuidor IS NULL` de `lerRascunho` | "lerRascunho do painel não o lê" |
+| M12 | tira `AND contribuidor IS NULL` de `regravarRascunho` | "regravarRascunho do painel não o regrava" |
+| M13 | tira `AND contribuidor IS NULL` de `moverRascunho` | "moverRascunho do painel não o move" |
+| M14 | tira `AND contribuidor IS NULL` de `apagarRascunho` | "apagarRascunho do painel não o apaga" |
+| M15 | `colisaoDoPar` volta a ler `listarRascunhos` (a do painel) | "o PAR de um rascunho dela: 409 com a frase de quem usa" (o par não o vê; quem recusa é o endereço, com a frase do endereço) |
+| M16 | `fraseDoPainel` devolve `parDeRascunho` pra todo rascunho (sem o ramo de quem usa) | "o PAR de um rascunho dela: 409 com a frase de quem usa" |
+| M17 | `quemOcupa` (rota do rascunho do painel) volta a `lerRascunho` | "o ENDEREÇO de um rascunho dela, de nome diferente: 409 com a frase de quem usa" |
+| M18 | a rota do endereço volta a `lerRascunho` | "novo ocupado por um rascunho de QUEM USA: 409 dizendo quem" |
+| M19 | tira o `AND (? IS NULL OR NOT EXISTS (… enderecos_antigos …))` do 1º passo | "quem usa não publica num endereço antigo de outro lugar" |
+| M20 | o mesmo passo vira `AND NOT EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ?)` (a recusa vale pro João também) **e** o 10º arg (`contribuidor`) sai dos `args` — sem tirar o arg, o `velho = ?` casaria com o contribuidor e a mutação não mediria nada | "o publicar do JOÃO continua retomando o endereço antigo" |
 
-- [ ] **Step 11: Os portões**
+- [ ] **Step 12: Os portões**
 
 Run: `npx vitest run && npx tsc --noEmit && npm run build`
 Expected: tudo verde, build exit 0.
 
-- [ ] **Step 12: Commit, e o harness com a árvore limpa**
+- [ ] **Step 13: Commit, e o harness com a árvore limpa**
 
 ```bash
-git add src/lib/regra-padrao.ts src/lib/db.ts src/app/admin/HistoricoDaFicha.tsx tests/banco.ts tests/lib/db-origem.test.ts tests/app/historico-da-ficha.test.tsx
+git add src/lib/regra-padrao.ts src/lib/db.ts src/lib/par-de-lugar.ts src/lib/rascunho.ts src/app/api/admin/rascunho/route.ts src/app/api/admin/endereco/route.ts src/app/admin/HistoricoDaFicha.tsx tests/banco.ts tests/lib/db-origem.test.ts tests/app/historico-da-ficha.test.tsx tests/api/route-admin-rascunho.test.ts tests/api/route-admin-endereco.test.ts
 git commit -m "feat(banco): origem do lugar, regra padrao da chuva e o publicar de quem usa"
 node scripts/mutar.mjs
 ```
 Expected: 42/0/0.
+
+📝 **Frases novas desta tarefa, pro pacote de copy:** `"quem mandou"` (histórico), `parDeRascunhoDeQuemUsa`, `enderecoDeRascunhoDeQuemUsa` (painel, `src/lib/rascunho.ts`).
 
 ---
 
@@ -715,8 +1062,9 @@ Expected: 42/0/0.
 - Modify (tipo `Ficha` → `FichaNoAr`, sem mudar comportamento): `src/lib/carimbo-estado.ts`, `src/app/page.tsx`, `src/app/FolhaTrilhas.tsx`, `src/app/CartaoTrilha.tsx`, `src/app/ListaDoAcervo.tsx`, `src/app/MapaHome.tsx`, `src/app/admin/marca-agora.ts`, `src/app/admin/PainelAdmin.tsx`, `src/app/admin/ListaDeLugares.tsx`, `src/app/admin/page.tsx`, `src/app/admin/[slug]/page.tsx`
 - Modify: `src/app/[slug]/page.tsx` — só o que o `tsc` exige (`?.`/`??`) nas linhas DEPOIS do `const precoCurto`; nenhuma linha nasce acima dele
 - Modify: `src/app/api/admin/previsao-carimbo/route.ts` — recusa lugar sem regra própria
-- Modify: `tests/lib/campos-da-ficha.test.ts` — `OBRIGATORIO_SO_NO_REGISTRO` (:42-49) ganha os campos novos
-- Modify: `tests/lib/ficha-fonte.test.ts`, `tests/lib/db-rascunho.test.ts:53`, `tests/lib/ficha-do-dono.test.ts:34`, `tests/app/admin-page.test.tsx:261`, `tests/app/admin-tela-de-publicar.test.tsx:289` (dublês e chamadas)
+- Modify: `tests/lib/campos-da-ficha.test.ts` — `OBRIGATORIO_SO_NO_REGISTRO` (:42-49) ganha os campos novos; 🔴 o guarda "o schema não tem bloco opcional nenhum" (:233-246) é REESCRITO pra listar os dois blocos de 07/10 (C1 da pré-auditoria)
+- Modify: `tests/lib/severidade.test.ts` — 🔴 o caso "o schema RECUSA ficha sem nível" (:124-132) é REESCRITO: o schema aceita, a porta do João recusa (C1 da pré-auditoria)
+- Modify: `tests/lib/ficha-fonte.test.ts`, `tests/lib/db-rascunho.test.ts:53`, `tests/lib/ficha-do-dono.test.ts:34`, `tests/app/admin-page.test.tsx:261` (dublês e chamadas)
 - Create: `tests/no-ar.ts` (helper `doJoao`)
 - Test: `tests/lib/regra-padrao.test.ts` (criar), `tests/lib/ficha-da-pessoa.test.ts` (criar), `tests/lib/leitura-publica-da-pessoa.test.ts` (criar)
 
@@ -1159,16 +1507,20 @@ A lista esperada, e o que cada um faz (nenhum muda o que desenha):
 
 - [ ] **Step 8: Os testes que já existiam, nas formas novas**
 
-- `tests/lib/ficha-fonte.test.ts` — todo `ler` passa a devolver `{ linhas, padrao: REGRA_PADRAO_INICIAL }`, e cada linha ganha `contribuidor: null, conferido: true`. O helper `umaLinha` do arquivo vira:
-  ```ts
-  const umaLinha = (doc: unknown) => ({
-    linhas: new Map([[(doc as { slug: string }).slug, { doc: JSON.stringify(doc), oculto: false, contribuidor: null, conferido: true }]]),
-    padrao: REGRA_PADRAO_INICIAL,
-  });
-  ```
-  e `lerTudo(c)` vira `lerAcervoComOrigem(c)`. Os casos de "Map vazio estoura" passam `{ linhas: new Map(), padrao: REGRA_PADRAO_INICIAL }`. Nenhum caso muda de sentido.
+- `tests/lib/ficha-fonte.test.ts` — todo `ler` passa a devolver `{ linhas, padrao: REGRA_PADRAO_INICIAL }`, e cada linha ganha `contribuidor: null, conferido: true` (importe `REGRA_PADRAO_INICIAL` de `@/lib/regra-padrao` e `lerAcervoComOrigem` de `@/lib/db`). Os pontos, um a um (M3 da pré-auditoria — conferidos no arquivo de hoje):
+  - o helper `umaLinha` (`:7`), que hoje é `new Map([["rampa-do-pepe", { doc, oculto: false }]])`, vira:
+    ```ts
+    const umaLinha = (doc: unknown) => ({
+      linhas: new Map([["rampa-do-pepe", { doc: JSON.stringify(doc), oculto: false, contribuidor: null, conferido: true }]]),
+      padrao: REGRA_PADRAO_INICIAL,
+    });
+    ```
+  - os dois `Map` montados à mão — o de "ordena por nome do primeiro waypoint" (`:60`) e o de "chave do banco e slug de dentro do documento divergem" (`:85`) — viram `{ linhas: new Map([...as mesmas entradas, cada uma com contribuidor: null, conferido: true]), padrao: REGRA_PADRAO_INICIAL }`;
+  - os dois `new Map()` vazios (`:72` e `:120`) viram `{ linhas: new Map(), padrao: REGRA_PADRAO_INICIAL }`;
+  - o helper LOCAL `lerTudo` do bloco "contra o banco" (`:142`, hoje `versoesAtuais(c, { incluirOcultos: true })`) vira `const lerTudo = (c: Client) => lerAcervoComOrigem(c);` — todos os usos dele (`:156` a `:205`) ficam como estão; `versoesAtuais` sai do import se ficar sem uso.
+  Nenhum caso muda de sentido.
 - `tests/lib/db-rascunho.test.ts:53` — `buscarFichas(() => lerAcervoComOrigem(c))`.
-- Os dublês de banco que só têm `execute` ganham `batch` do mesmo jeito: `tests/lib/ficha-do-dono.test.ts:34` (`batch: () => new Promise<never>(() => {})`), o dublê que RECUSA no mesmo arquivo (≈`:84-95`), `tests/app/admin-page.test.tsx:261` (`batch: () => Promise.reject(new Error("turso fora"))`), `tests/app/admin-tela-de-publicar.test.tsx:289` (`batch: () => new Promise(() => {})`). Sem isto o caso mede um `TypeError` em vez do prazo — vermelho pelo motivo errado.
+- Os dublês de banco que só têm `execute` e chegam a uma leitura que agora é `batch` ganham `batch` do mesmo jeito — são DOIS (grep `execute: (` em `tests/`): `tests/lib/ficha-do-dono.test.ts:34` (o `pendurado`: `batch: () => new Promise<never>(() => {})`) e `tests/app/admin-page.test.tsx:261` (`batch: () => Promise.reject(new Error("turso fora"))`). Sem isto o caso mede um `TypeError` em vez do prazo/da recusa — vermelho pelo motivo errado. (O terceiro dublê, `tests/app/admin-tela-de-publicar.test.tsx:289`, NÃO muda: aquela página lê o rascunho por `lerRascunho`, que é `execute` — um `batch` lá seria inócuo.)
 - Todo teste que monta `Ficha` à mão e a dá a um componente PÚBLICO ou a um dublê de `getFicha`/`getAllFichas`/`getFichasComCondicao`/`resolverEstado(s)` embrulha com `doJoao(...)` (de `tests/no-ar.ts`). Pela grep de hoje: `tests/app/{home,MioloHome,FolhaTrilhas,MapaHome,km-uma-fonte,ficha,CartaoTrilha}.test.tsx` e quem mais o `tsc` apontar. Dentro de `vi.hoisted`, importe o helper com `await import("../no-ar")` no corpo do `vi.mock`.
 - `tests/lib/campos-da-ficha.test.ts:42` — `OBRIGATORIO_SO_NO_REGISTRO` ganha, com UM motivo compartilhado:
   ```ts
@@ -1181,11 +1533,54 @@ A lista esperada, e o que cada um faz (nenhum muda o que desenha):
       "discriminador.permissao_abortar"].map((c) => [c, SO_DO_JOAO] as [string, string]),
   ```
   As folhas de `condicao.regra.*` NÃO entram: dentro do objeto `regra` elas continuam obrigatórias, e registro e schema concordam. Se o varredor do arquivo acusar alguma delas, é porque ele lê "opcional" pelo PAI — PARE e relate antes de acrescentar.
+- 🔴 **`tests/lib/campos-da-ficha.test.ts:233-246` — o guarda dos blocos opcionais, REESCRITO, nunca apagado (C1 da pré-auditoria).** Com `condicao.regra` e `discriminador` OBJETOS opcionais, `BLOCOS_DO_SCHEMA` deixa de ser `[]` e o caso "o schema não tem bloco opcional nenhum — o `horario` virou lista" fica vermelho. A spec torna esses dois blocos opcionais; o guarda passa a listá-los EXPLICITAMENTE e continua travando o RESTO. O comentário 🔴 de cima do caso ganha, ao fim, o parágrafo de 07/10, e o caso inteiro vira:
+  ```ts
+  // 🔴 E DESDE 07/10 O SCHEMA TEM DOIS (C1 da pré-auditoria da rodada do lugar
+  // de quem usa): `condicao.regra` e `discriminador` são OBJETOS opcionais, por
+  // decisão da spec — o lugar mandado por quem usa não os tem. O "não sei" de
+  // cada um, escrito, como a mensagem abaixo exige:
+  //  - `condicao.regra`: não há "não sei" de folha. A regra entra INTEIRA pelo
+  //    "Calibrar" (Task 8), e meia regra continua recusada pelo schema;
+  //  - `discriminador`: nasce folha a folha pelo painel (`BLOCOS_QUE_NASCEM`,
+  //    Task 8), e as três folhas são opcionais no schema.
+  // Nos lugares do JOÃO, o "não sei" de cada folha dos dois continua recusado
+  // pelo REGISTRO (`obrigatorio: true`; `OBRIGATORIO_SO_NO_REGISTRO`, acima).
+  // A lista é EXATA: um terceiro bloco opcional continua vermelho aqui.
+  it("o schema tem EXATAMENTE os dois blocos opcionais de 07/10 — `condicao.regra` e `discriminador`", () => {
+    expect(
+      [...BLOCOS_DO_SCHEMA].sort(),
+      "bloco opcional novo no schema: decida como o \"não sei\" dele chega à tela, e escreva o motivo",
+    ).toEqual(["condicao.regra", "discriminador"]);
+  });
+  ```
+  O caso irmão do `horario` (logo abaixo) fica como está — ele continua verdade.
+- 🔴 **`tests/lib/severidade.test.ts:124-132` — "o schema RECUSA ficha sem nível", REESCRITO, nunca apagado (C1 da pré-auditoria).** Com `condicao.severidade` opcional no schema o caso fica vermelho. O que ele trancava (ficha nova herdando calada a voz da Rampa) continua trancado um degrau acima, pela porta de publicar do JOÃO, que lê o registro. Importe `obrigatoriosFaltando` de `@/lib/porta-de-publicar`; o caso vira:
+  ```ts
+  // 🔴 REESCRITO EM 07/10 (C1 da pré-auditoria), nunca apagado. Desde a spec do
+  // lugar de quem usa, o SCHEMA aceita ficha sem nível: o lugar mandado por
+  // quem usa não tem, e a leitura pública o completa com a regra padrão do
+  // banco (`noAr`). O defeito que este caso fechava — ficha nova entrando
+  // calada com a severidade herdada — continua fechado pela porta de publicar
+  // do JOÃO, que exige o nível (`obrigatorio: true` no registro).
+  it("ficha sem nível: o schema aceita, e a porta do JOÃO a recusa", () => {
+    const boa = JSON.parse(
+      readFileSync(path.join(process.cwd(), "content", "fichas", "rampa-do-pepe.json"), "utf8"),
+    );
+    expect(fichaSchema.safeParse(boa).success).toBe(true); // controle
+    expect(obrigatoriosFaltando(boa)).not.toContain("condicao.severidade"); // controle: a Rampa responde
+    const semNivel = { ...boa.condicao };
+    delete semNivel.severidade;
+    const sem = { ...boa, condicao: semNivel };
+    expect(fichaSchema.safeParse(sem).success).toBe(true);
+    expect(obrigatoriosFaltando(sem)).toContain("condicao.severidade");
+  });
+  ```
+  O vizinho "o schema RECUSA nível inventado" fica como está (o `z.enum` continua lá).
 
 - [ ] **Step 9: Rodar os testes novos e os vizinhos**
 
-Run: `npx vitest run tests/lib/regra-padrao.test.ts tests/lib/ficha-da-pessoa.test.ts tests/lib/leitura-publica-da-pessoa.test.ts tests/lib/ficha-fonte.test.ts tests/lib/ficha-do-dono.test.ts tests/lib/campos-da-ficha.test.ts tests/lib/coerencia.test.ts tests/lib/coerencia-acervo.test.ts`
-Expected: PASS.
+Run: `npx vitest run tests/lib/regra-padrao.test.ts tests/lib/ficha-da-pessoa.test.ts tests/lib/leitura-publica-da-pessoa.test.ts tests/lib/ficha-fonte.test.ts tests/lib/ficha-do-dono.test.ts tests/lib/campos-da-ficha.test.ts tests/lib/severidade.test.ts tests/lib/coerencia.test.ts tests/lib/coerencia-acervo.test.ts`
+Expected: PASS — inclusive os dois guardas reescritos do C1 ("o schema tem EXATAMENTE os dois blocos opcionais de 07/10" e "ficha sem nível: o schema aceita, e a porta do JOÃO a recusa").
 
 - [ ] **Step 10: Mutações**
 
@@ -1201,6 +1596,8 @@ Expected: PASS.
 | M8 | `discriminador?.como_ler` → `discriminador.como_ler` em `prosaDe` | "ficha sem regra e sem checagem não derruba nenhuma regra" |
 | M9 | `getFichaDoDono` devolve `ficha: noAr(…)` | "getFichaDoDono devolve o documento CRU" |
 | M10 | `voz: z.string()` (volta a obrigatória) | "`voz` é opcional no schema" **e** "abre no fichaSchema com só as perguntas dela" |
+| M11 | um TERCEIRO bloco opcional: o `custo: z.object({ … })` do `fichaSchema` (`src/types/ficha.ts:156`) ganha `.optional()` | "o schema tem EXATAMENTE os dois blocos opcionais de 07/10" (C1: o guarda continua travando o resto) |
+| M12 | `condicao.severidade` volta a `obrigatorio: false` no registro (`src/lib/campos-da-ficha.ts:136`) | "ficha sem nível: o schema aceita, e a porta do JOÃO a recusa" |
 
 - [ ] **Step 11: Os portões**
 
@@ -1209,7 +1606,7 @@ Run: `npx vitest run && npx tsc --noEmit && npm run build`
 - [ ] **Step 12: Commit e harness**
 
 ```bash
-git add src/types/ficha.ts src/lib/regra-padrao.ts src/lib/ficha-fonte.ts src/lib/ficha.ts src/lib/coerencia.ts src/lib/carimbo-estado.ts src/app/page.tsx src/app/FolhaTrilhas.tsx src/app/CartaoTrilha.tsx src/app/ListaDoAcervo.tsx src/app/MapaHome.tsx "src/app/[slug]/page.tsx" src/app/admin/marca-agora.ts src/app/admin/PainelAdmin.tsx src/app/admin/ListaDeLugares.tsx src/app/admin/page.tsx "src/app/admin/[slug]/page.tsx" src/app/api/admin/previsao-carimbo/route.ts tests/no-ar.ts tests/lib/regra-padrao.test.ts tests/lib/ficha-da-pessoa.test.ts tests/lib/leitura-publica-da-pessoa.test.ts tests/lib/ficha-fonte.test.ts tests/lib/db-rascunho.test.ts tests/lib/ficha-do-dono.test.ts tests/lib/campos-da-ficha.test.ts tests/app/admin-page.test.tsx tests/app/admin-tela-de-publicar.test.tsx
+git add src/types/ficha.ts src/lib/regra-padrao.ts src/lib/ficha-fonte.ts src/lib/ficha.ts src/lib/coerencia.ts src/lib/carimbo-estado.ts src/app/page.tsx src/app/FolhaTrilhas.tsx src/app/CartaoTrilha.tsx src/app/ListaDoAcervo.tsx src/app/MapaHome.tsx "src/app/[slug]/page.tsx" src/app/admin/marca-agora.ts src/app/admin/PainelAdmin.tsx src/app/admin/ListaDeLugares.tsx src/app/admin/page.tsx "src/app/admin/[slug]/page.tsx" src/app/api/admin/previsao-carimbo/route.ts tests/no-ar.ts tests/lib/regra-padrao.test.ts tests/lib/ficha-da-pessoa.test.ts tests/lib/leitura-publica-da-pessoa.test.ts tests/lib/ficha-fonte.test.ts tests/lib/db-rascunho.test.ts tests/lib/ficha-do-dono.test.ts tests/lib/campos-da-ficha.test.ts tests/lib/severidade.test.ts tests/app/admin-page.test.tsx
 # + cada arquivo de teste que o Step 8 embrulhou com doJoao, por caminho
 git commit -m "feat(ficha): o que a pessoa nao responde vira opcional; o publico le FichaNoAr com a regra efetiva"
 node scripts/mutar.mjs
@@ -1259,11 +1656,15 @@ export const FAIXA_NAO_CONFERIDO = "Mandado por alguém que usa o app. O BatePer
 // PENDENTE: redação minha, o João ainda não leu
 export const MEIA_LINHA_REGRA_PADRAO = "regra padrão — ninguém calibrou a chuva aqui";
 
-/** A linha seca de um lugar SEM regra própria. Não é palavra nova: é a de
- *  sempre ("seco · carro comum") com a metade que ninguém conferiu tirada —
- *  decisão dele na spec de 07/10, Parte 4: "ninguém conferiu que carro comum
- *  chega". (A rodada "como se chega" depois alimenta esta linha.) */
-// LIDA: a palavra é da spec de 07/10, Parte 4, aprovada por ele ("a linha seca diz só 'seco'").
+/** A linha seca de um lugar SEM regra própria: a de sempre ("seco · carro
+ *  comum", LIDA) com a metade que ninguém conferiu tirada — a spec de 07/10,
+ *  Parte 4: "ninguém conferiu que carro comum chega". (A rodada "como se
+ *  chega" depois alimenta esta linha.)
+ *
+ *  🔴 PENDENTE, e não LIDA (I6 da pré-auditoria): ele aprovou o DESENHO ("está
+ *  certo, pode seguir"), não leu a frase na tela — e "pode seguir" nunca é "li
+ *  e aprovei" (memória "trava removida por quem escreveu"). Vai pro pacote. */
+// PENDENTE: subtração de "seco · carro comum" (LIDA); a palavra é da spec de 07/10, Parte 4 — o João ainda não leu a tela
 export const SECO_SEM_CARRO = "seco";
 ```
 
@@ -1499,7 +1900,7 @@ node scripts/mutar.mjs
 ```
 Expected: 42/0/0 (`[slug]/page.tsx` mudou na linha 252, abaixo da N12).
 
-📝 **Frases novas desta tarefa, pro pacote de copy:** `ETIQUETA_NAO_CONFERIDO`, `FAIXA_NAO_CONFERIDO`, `MEIA_LINHA_REGRA_PADRAO` (as duas primeiras só vão à tela na Task 5).
+📝 **Frases novas desta tarefa, pro pacote de copy:** `ETIQUETA_NAO_CONFERIDO`, `FAIXA_NAO_CONFERIDO`, `MEIA_LINHA_REGRA_PADRAO` (as duas primeiras só vão à tela na Task 5), e `SECO_SEM_CARRO` ("seco" — a subtração da linha LIDA, PENDENTE pelo I6).
 
 ---
 
@@ -1628,6 +2029,8 @@ describe("o lugar da pessoa, que não tem nenhum deles", () => {
 });
 ```
 
+📝 **A cobertura de "um teste por campo opcionalizado" (spec, Testes), campo a campo** (M13 da pré-auditoria): `rotulo_escaneio`, `premio`, `voz`, `condicao.ressalva_proxy`, `avisos` e `discriminador` (e as folhas `como_ler`/`permissao_abortar`) têm caso AQUI; `condicao.regra` e `condicao.severidade` não têm bloco — a página não cala, ela usa a regra padrão, e quem prova é a Task 3 ("a ficha da pessoa diz 'seco'… e mostra a meia-linha"). **`condicao.regra_texto` não tem caso de "cala" porque nenhuma tela pública o mostra** — a prova é o grep, rodado na pré-auditoria e repetível: `grep -rn "regra_texto" src/app --include=*.tsx | grep -v "src/app/admin/"` → nada (os únicos leitores fora do painel são `src/lib/coerencia.ts:126`, onde o `join` trata `undefined` como texto vazio, e comentários de `src/lib/piso.ts`). Se um dia uma tela pública passar a mostrá-lo, o caso entra na tabela `CASOS` abaixo.
+
 ⚠️ O seletor dos Avisos é `[data-bloco="avisos"]`, que NÃO existe hoje — o bloco é um `.sec` igual ao do Acesso, sem identidade endereçável (a mesma razão do `data-bloco="trajeto"` que a página já tem). O Step 3 dá a ele o atributo; sem isso o teste mediria "algum `.sec` sumiu".
 
 - [ ] **Step 2: Rodar e confirmar que falham**
@@ -1740,7 +2143,7 @@ Expected: 42/0/0.
 
 **Files:**
 - Modify: `src/app/[slug]/page.tsx` — import de `@/lib/origem` (topo), o título do cartão do link (`:61`), `data-lugar` no `.screen` (:231), a faixa abaixo do nome (depois de `:239`). 🔴 **O import e qualquer linha nova no `generateMetadata` ficam ACIMA da N12: esta tarefa REANCORA a N12** (Step 5).
-- Modify: `src/app/CartaoTrilha.tsx` (:59-73), `src/app/ListaDoAcervo.tsx` (:49-53), `src/app/PinTrilha.tsx` (props e o `<a>`, :115-163), `src/app/MapaHome.tsx` (:248-258)
+- Modify: `src/app/CartaoTrilha.tsx` (:59-73), `src/app/ListaDoAcervo.tsx` (:49-53), `src/app/PinTrilha.tsx` (as props e o `<a>`, que está em :61-68 — o arquivo tem 70 linhas), `src/app/MapaHome.tsx` (:248-258)
 - Modify: `src/app/home.css`, `src/app/ficha.css` (as três classes da marca)
 - Modify: `scripts/mutar.mjs` — a entrada `id: "N12"` (≈:855-861) e o texto cravado `src/app/[slug]/page.tsx@125-125` (≈:1613)
 - Test: `tests/app/marca-em-toda-superficie.test.tsx` (criar)
@@ -1995,7 +2398,9 @@ E o cartão do link (`generateMetadata`, `:61`), NA MESMA LINHA:
   const nome = ficha.trajeto.waypoints[0].nome + (ficha.cidade ? ` — ${ficha.cidade}` : "") + (ficha.origem.conferido ? "" : ` · ${ETIQUETA_NAO_CONFERIDO}`); // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Formato meu (" — Cidade"). PENDENTE: o " · não conferido" é redação minha (07/10), o João ainda não leu.
 ```
 
-(O cartão do WhatsApp é superfície pública — ele sai do app pra conversa e fica lá. Sem a etiqueta, um link de lugar não conferido chegaria sem marca nenhuma: escolha 4 no fim do plano.)
+(O cartão do WhatsApp é superfície pública — ele sai do app pra conversa e fica lá. Sem a etiqueta, um link de lugar não conferido chegaria sem marca nenhuma: escolha 6 no fim do plano.)
+
+⚠️ **Esta linha carrega DUAS marcas, e é de propósito** (M9 da pré-auditoria): o `LIDA:` é do formato de antes (`nome — Cidade`), o `PENDENTE` é do `· não conferido` novo. Ela NÃO se parte em duas: é alvo do cerco de `waypoints[0]` e mora acima da N12. Como o guarda da Task 16 não lê `[slug]/page.tsx`, esta frase entra no relatório da tarefa e na lista da Task 16 (Step 3) POR NOME — "o `· ${ETIQUETA_NAO_CONFERIDO}` do `const nome` do `generateMetadata`" —, não só pelo `grep`.
 
 O import (`import { ETIQUETA_NAO_CONFERIDO, FAIXA_NAO_CONFERIDO } from "@/lib/origem";`) entra no topo — é a linha que desloca a N12.
 
@@ -2087,12 +2492,12 @@ Expected: N12 "morreu"; depois 42/0/0.
 ### Task 6: O painel — "Mandados por quem usa o app, ainda não conferidos", e o "Conferi"
 
 **Files:**
-- Create: `src/lib/db-contribuidor.ts` (as funções de banco que são só da pessoa e dos atos do João sobre ela; cresce nas Tasks 10, 12 e 14)
+- Create: `src/lib/db-contribuidor.ts` (as funções de banco que são só da pessoa e dos atos do João sobre ela; cresce nas Tasks 10, 12 e 15)
 - Create: `src/app/api/admin/conferir/route.ts`
 - Modify: `src/app/admin/campos/palavras.ts` (a frase do 409 — arquivo de rota do Next não exporta nada além dos métodos: `tests/deploy/exports-de-rota.test.ts`)
 - Create: `src/app/admin/SecaoNaoConferidos.tsx` (servidor), `src/app/admin/CaixaDaOrigem.tsx` (cliente: quem mandou + o botão de dois toques)
 - Modify: `src/app/admin/page.tsx` (a seção no topo; a lista normal só com os conferidos), `src/app/admin/[slug]/page.tsx` (a caixa da origem, dentro do `ComVersaoDaTela`), `src/app/admin/admin.css`
-- Test: `tests/lib/db-conferir.test.ts`, `tests/api/route-admin-conferir.test.ts`, `tests/app/admin-nao-conferidos.test.tsx` (criar os três)
+- Test: `tests/lib/db-conferir.test.ts`, `tests/api/route-admin-conferir.test.ts`, `tests/app/admin-nao-conferidos.test.tsx` (criar os três); `tests/app/admin-page.test.tsx` (um caso); `tests/app/admin-editores-de-campo.test.tsx` (`CUNHADAS_AQUI` ganha as cinco frases — I1 da pré-auditoria)
 
 **Interfaces:**
 - Consumes: `origem_do_lugar`, `contribuidores` (Task 1); `getAcervoDoDono`/`getFichaDoDono` com `origem` (Task 2); `baseIdValido`, `LUGAR_MUDOU_DE_ENDERECO` de `@/lib/endereco`; `VersaoDaTela`, `comBase`, `ERRO_REDE` de `src/app/admin/campos/gravar.ts`.
@@ -2681,10 +3086,30 @@ com, antes do `return`:
 
 `src/app/admin/admin.css`: `.adm-nao-conferidos`, `.adm-origem` (molde de `.adm-visibilidade`), `.adm-quem` (fonte menor).
 
-- [ ] **Step 7: Rodar e confirmar que passam**
+- [ ] **Step 7: O controle de completude do cerco do painel, e rodar**
 
-Run: `npx vitest run tests/lib/db-conferir.test.ts tests/api/route-admin-conferir.test.ts tests/app/admin-nao-conferidos.test.tsx tests/app/admin-page.test.tsx tests/app/admin-lugar.test.tsx tests/app/admin-lista.test.tsx`
-Expected: PASS.
+🔴 **I1 da pré-auditoria.** `tests/app/admin-editores-de-campo.test.tsx` — o caso "toda frase que o painel EXPORTA está no controle de completude do cerco" lê, pelo parser do TypeScript, todo `export const X = "…"` sob `src/app/admin/**` e exige o texto em `CUNHADAS_AQUI`. As cinco frases desta tarefa moram lá; sem isto a suíte fecha VERMELHA. Importe cada uma do módulo onde mora (junte ao import que já existe de `@/app/admin/campos/palavras`, se houver) e acrescente ao FIM de `CUNHADAS_AQUI`, no molde dos blocos de lá:
+
+```ts
+import { NAO_CONFERIU } from "@/app/admin/campos/palavras";
+import { TITULO_NAO_CONFERIDOS } from "@/app/admin/SecaoNaoConferidos";
+import { CONFERI, CONFERI_MESMO, MANDADO_POR } from "@/app/admin/CaixaDaOrigem";
+```
+
+```ts
+    // Rodada do lugar de quem usa (07/10), Task 6: a seção do topo do painel e
+    // a caixa da origem no lugar. Nenhuma aparece no render das três fichas —
+    // são de lugar mandado por quem usa, e o 409 só existe em recusa —, e é por
+    // isso que é esta lista que as cerca.
+    NAO_CONFERIU,
+    TITULO_NAO_CONFERIDOS,
+    MANDADO_POR,
+    CONFERI,
+    CONFERI_MESMO,
+```
+
+Run: `npx vitest run tests/lib/db-conferir.test.ts tests/api/route-admin-conferir.test.ts tests/app/admin-nao-conferidos.test.tsx tests/app/admin-page.test.tsx tests/app/admin-lugar.test.tsx tests/app/admin-lista.test.tsx tests/app/admin-editores-de-campo.test.tsx`
+Expected: PASS — inclusive "toda frase que o painel EXPORTA está no controle de completude do cerco" e "nenhuma frase fixa do painel nomeia um lugar do acervo".
 
 - [ ] **Step 8: Mutações**
 
@@ -2707,7 +3132,7 @@ Run: `npx vitest run && npx tsc --noEmit && npm run build`
 - [ ] **Step 10: Commit e harness**
 
 ```bash
-git add src/lib/db-contribuidor.ts src/app/api/admin/conferir/route.ts src/app/admin/campos/palavras.ts src/app/admin/SecaoNaoConferidos.tsx src/app/admin/CaixaDaOrigem.tsx src/app/admin/page.tsx "src/app/admin/[slug]/page.tsx" src/app/admin/admin.css tests/lib/db-conferir.test.ts tests/api/route-admin-conferir.test.ts tests/app/admin-nao-conferidos.test.tsx tests/app/admin-page.test.tsx
+git add src/lib/db-contribuidor.ts src/app/api/admin/conferir/route.ts src/app/admin/campos/palavras.ts src/app/admin/SecaoNaoConferidos.tsx src/app/admin/CaixaDaOrigem.tsx src/app/admin/page.tsx "src/app/admin/[slug]/page.tsx" src/app/admin/admin.css tests/lib/db-conferir.test.ts tests/api/route-admin-conferir.test.ts tests/app/admin-nao-conferidos.test.tsx tests/app/admin-page.test.tsx tests/app/admin-editores-de-campo.test.tsx
 git commit -m "feat(painel): os lugares nao conferidos no topo, e o Conferi em dois toques"
 node scripts/mutar.mjs
 ```
@@ -2722,8 +3147,8 @@ node scripts/mutar.mjs
 - Create: `src/lib/porta-da-regra-padrao.ts` (lê e confere o corpo; SÓ servidor)
 - Create: `src/app/api/admin/regra-padrao/route.ts` (`PUT`)
 - Create: `src/app/admin/chuva/page.tsx` (servidor), `src/app/admin/TelaDaRegraPadrao.tsx` (cliente)
-- Modify: `src/app/admin/page.tsx` (o link pra tela), `src/app/admin/campos/palavras.ts` (o título), `src/lib/rascunho.ts:43` (`SLUGS_RESERVADOS` ganha `"chuva"`)
-- Test: `tests/lib/porta-da-regra-padrao.test.ts`, `tests/api/route-admin-regra-padrao.test.ts`, `tests/app/admin-regra-padrao.test.tsx` (criar)
+- Modify: `src/app/admin/page.tsx` (o link pra tela, e os imports de `Link` e `TITULO_REGRA_PADRAO`), `src/app/admin/campos/palavras.ts` (o título), `src/lib/rascunho.ts:43` (`SLUGS_RESERVADOS` ganha `"chuva"`)
+- Test: `tests/lib/porta-da-regra-padrao.test.ts`, `tests/api/route-admin-regra-padrao.test.ts`, `tests/app/admin-regra-padrao.test.tsx` (criar); `tests/app/admin-editores-de-campo.test.tsx` (`CUNHADAS_AQUI` — I1)
 
 **Interfaces:**
 - Consumes: `lerRegraPadrao`, `gravarRegraPadrao` (Task 1); `SEVERIDADES`; `TETO_PREVISAO_HORAS`, `TETO_PASSADO_HORAS` de `@/lib/weather`; `rotuloDe` de `src/app/admin/FichaInteira.tsx` (os rótulos JÁ LIDOS dos três números e da severidade).
@@ -2744,7 +3169,7 @@ node scripts/mutar.mjs
 ```ts
 import { describe, expect, it } from "vitest";
 import {
-  JANELA_ALEM_DO_PASSADO, JANELA_ALEM_DA_PREVISAO, JANELA_NEGATIVA, JANELAS_ZERADAS, LIMIAR_SEM_CHUVA, lerRegraDoCorpo,
+  JANELA_ALEM_DO_PASSADO, JANELA_ALEM_DA_PREVISAO, JANELA_NEGATIVA_PADRAO, JANELAS_ZERADAS, LIMIAR_SEM_CHUVA, lerRegraDoCorpo,
 } from "@/lib/porta-da-regra-padrao";
 import { TETO_PASSADO_HORAS, TETO_PREVISAO_HORAS } from "@/lib/weather";
 
@@ -2780,8 +3205,8 @@ describe("lerRegraDoCorpo", () => {
   });
 
   it("janela negativa: recusada com a frase, em cada uma das duas", () => {
-    expect(lerRegraDoCorpo({ ...BOA, janela_previsao_horas: -1 })).toEqual({ frase: JANELA_NEGATIVA });
-    expect(lerRegraDoCorpo({ ...BOA, janela_passado_horas: -1 })).toEqual({ frase: JANELA_NEGATIVA });
+    expect(lerRegraDoCorpo({ ...BOA, janela_previsao_horas: -1 })).toEqual({ frase: JANELA_NEGATIVA_PADRAO });
+    expect(lerRegraDoCorpo({ ...BOA, janela_passado_horas: -1 })).toEqual({ frase: JANELA_NEGATIVA_PADRAO });
   });
 
   it("limiar 0 ou negativo: recusado com a frase", () => {
@@ -2932,8 +3357,9 @@ import { SEVERIDADES, type Severidade } from "@/lib/severidade";
 import type { RegraPadrao } from "@/lib/regra-padrao";
 import { TETO_PASSADO_HORAS, TETO_PREVISAO_HORAS } from "@/lib/weather";
 
+// (`_PADRAO` no nome: `JANELA_NEGATIVA` já existe em `src/app/admin/campos/palavras.ts`, com outro texto — M10 da pré-auditoria)
 // PENDENTE: redação minha, o João ainda não leu
-export const JANELA_NEGATIVA = "Nada foi gravado: uma janela de chuva não pode ser negativa. Escreva 0 ou mais horas.";
+export const JANELA_NEGATIVA_PADRAO = "Nada foi gravado: uma janela de chuva não pode ser negativa. Escreva 0 ou mais horas.";
 // PENDENTE: redação minha, o João ainda não leu
 export const JANELAS_ZERADAS =
   "Nada foi gravado: com as duas janelas em 0 a regra nunca olha chuva nenhuma, e todo lugar sem regra própria ficaria 'seco' pra sempre.";
@@ -2974,7 +3400,7 @@ export function formaDaRegra(corpo: unknown): RegraPadrao | null {
 export function lerRegraDoCorpo(corpo: unknown): { regra: RegraPadrao } | { frase: string } | null {
   const regra = formaDaRegra(corpo);
   if (regra === null) return null;
-  if (regra.janela_previsao_horas < 0 || regra.janela_passado_horas < 0) return { frase: JANELA_NEGATIVA };
+  if (regra.janela_previsao_horas < 0 || regra.janela_passado_horas < 0) return { frase: JANELA_NEGATIVA_PADRAO };
   if (regra.janela_previsao_horas === 0 && regra.janela_passado_horas === 0) return { frase: JANELAS_ZERADAS };
   if (!(regra.limiar_mm > 0)) return { frase: LIMIAR_SEM_CHUVA };
   if (regra.janela_previsao_horas > TETO_PREVISAO_HORAS) return { frase: JANELA_ALEM_DA_PREVISAO };
@@ -3170,14 +3596,34 @@ Em `src/app/admin/campos/palavras.ts` (página do Next não exporta nada além d
 export const TITULO_REGRA_PADRAO = "Regra padrão da chuva";
 ```
 
-Em `src/app/admin/page.tsx`, logo depois da `ListaDeLugares`: `<Link href="/admin/chuva" className="adm-novo-link">{TITULO_REGRA_PADRAO}</Link>`.
+Em `src/app/admin/page.tsx`, logo depois da `ListaDeLugares`: `<Link href="/admin/chuva" className="adm-novo-link">{TITULO_REGRA_PADRAO}</Link>` — com os dois imports que a página ainda NÃO tem (M8 da pré-auditoria; hoje ela não importa `next/link`):
 
-`src/lib/rascunho.ts:43`: `["admin", "api", "chuva", "icones", "trilhas", "novo"]` (e `"contribuir"` entra na Task 9, junto da pasta).
+```ts
+import Link from "next/link";
+import { TITULO_REGRA_PADRAO } from "./campos/palavras";
+```
 
-- [ ] **Step 6: Rodar e confirmar que passam**
+`src/lib/rascunho.ts:43`: `["admin", "api", "chuva", "icones", "trilhas", "novo"]` (e `"contribuir"` entra na Task 14, que é quem cria a pasta `src/app/contribuir/`).
 
-Run: `npx vitest run tests/lib/porta-da-regra-padrao.test.ts tests/api/route-admin-regra-padrao.test.ts tests/app/admin-regra-padrao.test.tsx tests/api/route-admin-rascunho.test.ts`
-Expected: PASS (o último prova a reserva do `chuva`).
+- [ ] **Step 6: O controle de completude do cerco do painel, e rodar**
+
+🔴 **I1 da pré-auditoria** (o porquê está na Task 6, Step 7). `SALVAR_REGRA` e `VALE_PARA` (`src/app/admin/TelaDaRegraPadrao.tsx`) e `TITULO_REGRA_PADRAO` (`src/app/admin/campos/palavras.ts`) entram em `CUNHADAS_AQUI` de `tests/app/admin-editores-de-campo.test.tsx`, importadas de onde moram. As frases de `src/lib/porta-da-regra-padrao.ts` NÃO entram: o portão lê só `src/app/admin/**`.
+
+```ts
+import { SALVAR_REGRA, VALE_PARA } from "@/app/admin/TelaDaRegraPadrao";
+// e TITULO_REGRA_PADRAO no import que já existe de "@/app/admin/campos/palavras"
+```
+
+```ts
+    // Task 7 (07/10): a tela da regra padrão. Moram em /admin/chuva, fora do
+    // render das três fichas.
+    SALVAR_REGRA,
+    VALE_PARA,
+    TITULO_REGRA_PADRAO,
+```
+
+Run: `npx vitest run tests/lib/porta-da-regra-padrao.test.ts tests/api/route-admin-regra-padrao.test.ts tests/app/admin-regra-padrao.test.tsx tests/api/route-admin-rascunho.test.ts tests/app/admin-editores-de-campo.test.tsx`
+Expected: PASS (o `route-admin-rascunho` prova a reserva do `chuva`; o último, o cerco do painel com as três frases novas).
 
 - [ ] **Step 7: Mutações**
 
@@ -3199,12 +3645,12 @@ Run: `npx vitest run && npx tsc --noEmit && npm run build`
 - [ ] **Step 9: Commit e harness**
 
 ```bash
-git add src/lib/porta-da-regra-padrao.ts src/app/api/admin/regra-padrao/route.ts src/app/admin/chuva/page.tsx src/app/admin/TelaDaRegraPadrao.tsx src/app/admin/page.tsx src/app/admin/campos/palavras.ts src/lib/rascunho.ts tests/lib/porta-da-regra-padrao.test.ts tests/api/route-admin-regra-padrao.test.ts tests/app/admin-regra-padrao.test.tsx
+git add src/lib/porta-da-regra-padrao.ts src/app/api/admin/regra-padrao/route.ts src/app/admin/chuva/page.tsx src/app/admin/TelaDaRegraPadrao.tsx src/app/admin/page.tsx src/app/admin/campos/palavras.ts src/lib/rascunho.ts tests/lib/porta-da-regra-padrao.test.ts tests/api/route-admin-regra-padrao.test.ts tests/app/admin-regra-padrao.test.tsx tests/app/admin-editores-de-campo.test.tsx
 git commit -m "feat(painel): a regra padrao da chuva, editavel pelo celular"
 node scripts/mutar.mjs
 ```
 
-📝 **Frases novas:** `JANELA_NEGATIVA`, `JANELAS_ZERADAS`, `LIMIAR_SEM_CHUVA`, `JANELA_ALEM_DA_PREVISAO`, `JANELA_ALEM_DO_PASSADO`, `SALVAR_REGRA`, `VALE_PARA`, `TITULO_REGRA_PADRAO`.
+📝 **Frases novas:** `JANELA_NEGATIVA_PADRAO`, `JANELAS_ZERADAS`, `LIMIAR_SEM_CHUVA`, `JANELA_ALEM_DA_PREVISAO`, `JANELA_ALEM_DO_PASSADO`, `SALVAR_REGRA`, `VALE_PARA`, `TITULO_REGRA_PADRAO`.
 
 ---
 
@@ -3214,7 +3660,7 @@ node scripts/mutar.mjs
 - Create: `src/lib/calibrar.ts`, `src/app/api/admin/calibrar/route.ts`, `src/app/admin/campos/EditorCalibrar.tsx`
 - Modify: `src/app/admin/FichaInteira.tsx` (:486-556 — sem regra própria, o grupo da condição mostra o "Calibrar" no lugar dos quatro editores da regra)
 - Modify: `src/lib/campos-da-ficha.ts` — `aplicarCampo` (:404-415): o `discriminador` ausente NASCE quando o João preenche uma folha dele
-- Test: `tests/lib/calibrar.test.ts`, `tests/api/route-admin-calibrar.test.ts`, `tests/app/admin-calibrar.test.tsx` (criar); `tests/lib/aplicar-campo.test.ts` (acrescentar)
+- Test: `tests/lib/calibrar.test.ts`, `tests/api/route-admin-calibrar.test.ts`, `tests/app/admin-calibrar.test.tsx` (criar); `tests/lib/aplicar-campo.test.ts` (acrescentar); `tests/app/admin-editores-de-campo.test.tsx` (`CUNHADAS_AQUI` — I1)
 
 **Interfaces:**
 - Consumes: `formaDaRegra` (Task 7); `violacaoIntroduzida` de `@/lib/porta-de-coerencia`; `gravarEdicao`, `versaoAtual`, `versoesAtuais` de `@/lib/db`; `LUGAR_MUDOU_DE_ENDERECO`, `baseIdValido` de `@/lib/endereco`.
@@ -3454,19 +3900,23 @@ describe("a ficha inteira de um lugar sem regra própria", () => {
   it("mostra o Calibrar, e NÃO os editores de número da regra", () => {
     const { container, getByRole } = render(<FichaInteira ficha={PESSOA} />);
     expect(getByRole("button", { name: CALIBRAR })).not.toBeNull();
-    expect(container.querySelector('[data-campo="condicao.regra.limiar_mm"]')).toBeNull();
+    expect(container.querySelector('[data-testid="campo-condicao.regra.limiar_mm"]')).toBeNull();
+    expect(container.querySelector('[data-testid="campo-condicao.severidade"]')).toBeNull();
   });
 
+  // É também o CONTROLE do caso de cima: o MESMO seletor acha o bloco na Rampa
+  // — sem ele, o `toBeNull()` de lá passaria por vacuidade.
   it("a da Rampa (com regra) mostra os editores de sempre, e não o Calibrar", () => {
     const rampa = loadAll().find((f) => f.slug === "rampa-do-pepe")!;
     const { container, queryByRole } = render(<FichaInteira ficha={rampa} />);
     expect(queryByRole("button", { name: CALIBRAR })).toBeNull();
-    expect(container.querySelector('[data-campo="condicao.regra.limiar_mm"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="campo-condicao.regra.limiar_mm"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="campo-condicao.severidade"]')).not.toBeNull();
   });
 });
 ```
 
-⚠️ Confira em `tests/app/admin-ficha-inteira.test.tsx` qual atributo identifica o bloco de um campo (o plano supõe `data-campo="<caminho>"`); use o que o arquivo usa.
+(O bloco de um campo na ficha inteira é `data-testid={\`campo-${campo.caminho}\`}` — `src/app/admin/FichaInteira.tsx:474`, conferido na pré-auditoria; NÃO existe `data-campo` — M4.)
 
 - [ ] **Step 2: Rodar e confirmar que falham**
 
@@ -3727,9 +4177,24 @@ it("depois de calibrado, a ficha da pessoa volta a 'seco · carro comum' e a mei
 });
 ```
 
-- [ ] **Step 8: Rodar e confirmar que passam**
+- [ ] **Step 8: O controle de completude do cerco do painel, e rodar**
 
-Run: `npx vitest run tests/lib/calibrar.test.ts tests/lib/aplicar-campo.test.ts tests/api/route-admin-calibrar.test.ts tests/app/admin-calibrar.test.tsx tests/app/carimbo-da-pessoa.test.tsx tests/app/admin-ficha-inteira.test.tsx tests/api/route-admin-ficha.test.ts`
+🔴 **I1 da pré-auditoria** (o porquê está na Task 6, Step 7). `CALIBRAR`, `CALIBRAR_AJUDA` e `FALTA_UM_DOS_QUATRO` (`src/app/admin/campos/EditorCalibrar.tsx`) entram em `CUNHADAS_AQUI` de `tests/app/admin-editores-de-campo.test.tsx`. `JA_TEM_REGRA` mora em `src/lib/calibrar.ts` e fica fora do portão (ele lê só `src/app/admin/**`).
+
+```ts
+import { CALIBRAR, CALIBRAR_AJUDA, FALTA_UM_DOS_QUATRO } from "@/app/admin/campos/EditorCalibrar";
+```
+
+```ts
+    // Task 8 (07/10): o "Calibrar" de um lugar sem regra própria. Só aparece na
+    // ficha de lugar SEM regra — nenhuma das três fichas do acervo —, e a recusa
+    // só depois de um toque.
+    CALIBRAR,
+    CALIBRAR_AJUDA,
+    FALTA_UM_DOS_QUATRO,
+```
+
+Run: `npx vitest run tests/lib/calibrar.test.ts tests/lib/aplicar-campo.test.ts tests/api/route-admin-calibrar.test.ts tests/app/admin-calibrar.test.tsx tests/app/carimbo-da-pessoa.test.tsx tests/app/admin-ficha-inteira.test.tsx tests/api/route-admin-ficha.test.ts tests/app/admin-editores-de-campo.test.tsx`
 Expected: PASS.
 
 - [ ] **Step 9: Mutações**
@@ -3739,11 +4204,12 @@ Expected: PASS.
 | M1 | `calibrarDoc` sem o `throw new JaTemRegra()` | "lugar que JÁ tem regra é recusado" **e** a rota "lugar que já tem regra: 409" |
 | M2 | a rota sem `violacaoIntroduzida` | "as duas janelas zeradas: 409 com a frase da coerência" |
 | M3 | a rota grava com `gravarVersao(…, "painel", agora)` em vez de `gravarEdicao` | "a aba velha … 409" **e** "calibrar não muda a visibilidade" |
-| M4 | `BLOCOS_QUE_NASCEM` com `"condicao"` também | "uma folha da regra ausente continua recusada" (a regra nasceria pela metade e o schema recusaria — se SOBREVIVER porque o schema já recusa, a prova é a mesma; anote) |
-| M5 | `BLOCOS_QUE_NASCEM` vazio | "preencher uma folha do discriminador ausente" |
-| M6 | `FichaInteira` sem o filtro `visiveis` | "mostra o Calibrar, e NÃO os editores de número da regra" |
-| M7 | `EditorCalibrar` começa com os valores da padrão | "os quatro campos começam VAZIOS" |
-| M8 | tira a recusa da caixa vazia do editor | "com uma caixa vazia, não chama a rota" |
+| M4 | `BLOCOS_QUE_NASCEM` vazio | "preencher uma folha do discriminador ausente" |
+| M5 | `FichaInteira` sem o filtro `visiveis` | "mostra o Calibrar, e NÃO os editores de número da regra" (pelo seletor `data-testid="campo-…"`, que o caso da Rampa prova que acha) |
+| M6 | `EditorCalibrar` começa com os valores da padrão | "os quatro campos começam VAZIOS" |
+| M7 | tira a recusa da caixa vazia do editor | "com uma caixa vazia, não chama a rota" |
+
+(Saiu da tabela — M5 da pré-auditoria — a mutação "`BLOCOS_QUE_NASCEM` com `"condicao"` também": ela é EQUIVALENTE. Com `criar` ligado, `condicao.regra.limiar_mm` faria nascer `{ limiar_mm }`, e o `regraSchema` recusa a regra sem `tipo` e sem as duas janelas — o mesmo `throw` de hoje. Nenhum caso pode matá-la, e a prova de que meia regra não nasce é o próprio schema, que o caso "uma folha da regra ausente continua recusada" exercita.)
 
 - [ ] **Step 10: Os portões**
 
@@ -3752,7 +4218,7 @@ Run: `npx vitest run && npx tsc --noEmit && npm run build`
 - [ ] **Step 11: Commit e harness**
 
 ```bash
-git add src/lib/calibrar.ts src/app/api/admin/calibrar/route.ts src/app/admin/campos/EditorCalibrar.tsx src/app/admin/FichaInteira.tsx src/lib/campos-da-ficha.ts tests/lib/calibrar.test.ts tests/lib/aplicar-campo.test.ts tests/api/route-admin-calibrar.test.ts tests/app/admin-calibrar.test.tsx tests/app/carimbo-da-pessoa.test.tsx
+git add src/lib/calibrar.ts src/app/api/admin/calibrar/route.ts src/app/admin/campos/EditorCalibrar.tsx src/app/admin/FichaInteira.tsx src/lib/campos-da-ficha.ts tests/lib/calibrar.test.ts tests/lib/aplicar-campo.test.ts tests/api/route-admin-calibrar.test.ts tests/app/admin-calibrar.test.tsx tests/app/carimbo-da-pessoa.test.tsx tests/app/admin-editores-de-campo.test.tsx
 git commit -m "feat(painel): calibrar a chuva de um lugar sem regra propria, e a checagem nasce folha a folha"
 node scripts/mutar.mjs
 ```
@@ -3989,10 +4455,11 @@ Expected: PASS. (O último é o guarda de exports de rota que já existe; confir
 | # | mutação | morre em |
 |---|---|---|
 | M1 | `matcher` ganha `"/((?!_next).*)"` (o padrão da documentação, que pega TUDO) | "NÃO passa pelo Clerk: /" e os vizinhos |
-| M2 | `matcher` perde `"/contribuir"` (só o `:path*`) | "passa pelo Clerk: /contribuir" — se sobreviver porque o `:path*` casa o vazio, anote e mantenha as duas entradas pela legibilidade |
-| M3 | `lerContribuidor` sem o `try` do `auth()` | "o Clerk não responde … estoura ClerkFora" |
-| M4 | `lerContribuidor` devolve `nome: ""` sem perfil | "perfil sem nome: null" |
-| M5 | `import { auth } from "@clerk/nextjs/server"` em `src/app/page.tsx` | "nenhum outro arquivo de src/ importa @clerk" |
+| M2 | `lerContribuidor` sem o `try` do `auth()` | "o Clerk não responde … estoura ClerkFora" |
+| M3 | `lerContribuidor` devolve `nome: ""` sem perfil | "perfil sem nome: null" |
+| M4 | `import { auth } from "@clerk/nextjs/server"` em `src/app/page.tsx` | "nenhum outro arquivo de src/ importa @clerk" |
+
+(Saiu da tabela — M5 da pré-auditoria — a mutação "o `matcher` perde `"/contribuir"`": no `path-to-regexp` do Next, `"/contribuir/:path*"` já casa `/contribuir` (o `*` aceita zero segmentos), então ela é EQUIVALENTE e nenhum caso a mata. A entrada `"/contribuir"` fica no `matcher` pela leitura — quem abre o arquivo vê a raiz da tela sem precisar saber do `*` —, e é declaradamente redundante.)
 
 - [ ] **Step 9: Os portões — o build SEM chave**
 
@@ -4019,7 +4486,7 @@ node scripts/mutar.mjs
 - Test: `tests/lib/campos-da-pessoa.test.ts`, `tests/lib/db-rascunho-da-pessoa.test.ts`, `tests/api/route-contribuir-rascunho.test.ts` (criar); `tests/sessao-da-pessoa.ts` (helper de teste: o dublê do Clerk)
 
 **Interfaces:**
-- Consumes: `lerContribuidor`, `QuemContribui` (Task 9); `clienteQueIntercala` de `tests/banco.ts`; `aplicarNoRascunho`, `gravarPontoNoRascunho`, `lerCaminho` de `@/lib/campos-da-ficha`; `parOcupado`, `parDaMudanca`, `CAMPO_DO_NOME`, `CAMPO_DA_CIDADE` de `@/lib/par-de-lugar`; `slugDoNome`, `docDoLugarNovo`, `docNoEndereco`, `nomeDoRascunho`, `cidadeDoDoc`, `NOME_VAZIO`, `CIDADE_VAZIA`, `NOME_SEM_LETRA`, `CIDADE_SEM_LETRA` de `@/lib/rascunho`; `Rascunho` de `@/lib/db`.
+- Consumes: `lerContribuidor`, `QuemContribui` (Task 9); `clienteQueIntercala` de `tests/banco.ts`; `aplicarNoRascunho`, `gravarPontoNoRascunho`, `lerCaminho` de `@/lib/campos-da-ficha`; `colisaoDoPar`, `colisaoDaMudanca`, `CAMPO_DO_NOME`, `CAMPO_DA_CIDADE` de `@/lib/par-de-lugar` (Task 1 — a colisão ESTRUTURADA; NUNCA `parOcupado`/`parDaMudanca`, que devolvem a frase do painel: I3); `slugDoNome`, `docDoLugarNovo`, `docNoEndereco`, `nomeDoRascunho`, `cidadeDoDoc`, `NOME_VAZIO`, `CIDADE_VAZIA`, `NOME_SEM_LETRA`, `CIDADE_SEM_LETRA` de `@/lib/rascunho`; `Rascunho`, `rascunhoDeQualquerUm` (Task 1; nos testes, pra olhar o banco sem o filtro do painel) de `@/lib/db`.
 - Produces:
   - `src/lib/campos-da-pessoa.ts`:
     - `export const CAMPOS_DA_PESSOA: readonly string[]` — `trajeto.waypoints.0.nome`, `cidade`, `promessa`, `acesso`, `avisos`, `custo.tag`, `custo.valor`, `horario`, `dias`
@@ -4030,9 +4497,9 @@ node scripts/mutar.mjs
     - `export function tirarDoRascunhoDaPessoa(doc: string, caminho: string): string` — o "não sei" DELA (recusa obrigatório da lista dela, não do registro)
     - `export function obrigatoriosDaPessoaFaltando(doc: unknown): string[]`
     - `export function chavesForaDaPessoa(doc: unknown): string[]`
-  - `src/lib/porta-da-pessoa.ts`: `export async function portaDaPessoa(agora: number): Promise<{ pessoa: QuemContribui } | { resposta: Response }>`; frases `CLERK_FORA`, `BLOQUEADA`, `RASCUNHO_DELA_SUMIU`
-  - `src/lib/db-contribuidor.ts`: `registrarContribuidor(client, p: QuemContribui, agora): Promise<void>`, `estaBloqueado(client, id): Promise<boolean>`, `criarRascunhoDaPessoa(client, slug, doc, agora, id): Promise<boolean>`, `lerRascunhoDaPessoa(client, slug, id): Promise<Rascunho | null>`, `rascunhosDaPessoa(client, id): Promise<Rascunho[]>`, `regravarRascunhoDaPessoa(client, slug, doc, agora, id): Promise<boolean>`, `moverRascunhoDaPessoa(client, de, para, doc, agora, id): Promise<boolean>`, `apagarRascunhoDaPessoa(client, slug, id): Promise<boolean>`
-  - `tests/sessao-da-pessoa.ts`: `export const sessao: { atual: QuemContribui | null; fora: boolean }` e `export const PESSOA: QuemContribui` / `OUTRA: QuemContribui`
+  - `src/lib/porta-da-pessoa.ts`: `export async function portaDaPessoa(agora: number): Promise<{ pessoa: QuemContribui } | { resposta: Response }>`; frases `CLERK_FORA`, `BLOQUEADA`, `RASCUNHO_DELA_SUMIU`, `NOME_JA_EM_USO` (o 409 de TODA colisão dela — I3)
+  - `src/lib/db-contribuidor.ts`: `registrarContribuidor(client, p: QuemContribui, agora): Promise<void>`, `estaBloqueado(client, id): Promise<boolean>`, `criarRascunhoDaPessoa(client, slug, doc, agora, id): Promise<boolean>`, `lerRascunhoDaPessoa(client, slug, id): Promise<Rascunho | null>`, `rascunhosDaPessoa(client, id): Promise<Rascunho[]>`, `regravarRascunhoDaPessoa(client, slug, doc, agora, id): Promise<boolean>`, `moverRascunhoDaPessoa(client, de, para, doc, agora, id): Promise<boolean>`, `apagarRascunhoDaPessoa(client, slug, id): Promise<boolean>` — `criar` e `mover` recusam endereço antigo de outro lugar (ruling da pré-auditoria)
+  - `tests/sessao-da-pessoa.ts`: `export const sessao: { atual: QuemContribui | null; fora: boolean }` — 🔴 o MESMO objeto em toda instância do módulo, guardado em `globalThis.__sessaoDaPessoa` (C2) — e `export const PESSOA: QuemContribui` / `OUTRA: QuemContribui`, `export const moduloFalso`
 
 🔴 **A LISTA DELA, E POR QUE ELA É FECHADA NA PORTA** (Review Focus 1). A tela dela pergunta oito coisas; a API não pode aceitar uma nona. `voz`, `premio`, `condicao.regra.*`, `condicao.severidade`, `discriminador.*`, `custo.curto`, `piso`, `secaRapido`, `carroComum`, etapas do trajeto: tudo **400, nada gravado**. Se ela pudesse escrever `condicao.regra`, calibraria o próprio lugar e a meia-linha sumiria; se pudesse escrever `voz`, o app falaria com a voz dele na boca de qualquer um.
 
@@ -4050,11 +4517,24 @@ import type { QuemContribui } from "@/lib/contribuidor-sessao";
  *
  *    vi.mock("@/lib/contribuidor-sessao", async () => (await import("../sessao-da-pessoa")).moduloFalso);
  *
- *  e muda `sessao.atual` / `sessao.fora` em cada caso. Nenhuma chave real. */
+ *  e muda `sessao.atual` / `sessao.fora` em cada caso. Nenhuma chave real.
+ *
+ *  🔴 O ESTADO MORA EM `globalThis`, NÃO NUM `const` DESTE MÓDULO (C2 da
+ *  pré-auditoria de 07/10, MEDIDO com o vitest 2.1.9 do repo). Os testes de
+ *  rota fazem `vi.resetModules()` no `beforeEach` e reimportam a rota; a
+ *  fábrica do `vi.mock` roda de novo e reimporta ESTE arquivo. Com o estado
+ *  num `const` aqui, nascia um `sessao` novo: a rota lia o novo e o teste
+ *  mudava o velho — medido num experimento com este mesmo molde, "sem sessão"
+ *  esperava 401 e recebeu 200, "Clerk fora" esperava 503 e recebeu 200. Com o
+ *  `??=` em `globalThis`, toda instância deste módulo devolve o MESMO objeto, e
+ *  as duas sondas passaram. A SONDA de `tests/api/route-contribuir-rascunho.test.ts`
+ *  trava isto: volte a um `const` local e ela fica vermelha. */
 export const PESSOA: QuemContribui = { id: "user_pessoa_de_teste", nome: "Maria Teste", email: "maria@teste.invalid" };
 export const OUTRA: QuemContribui = { id: "user_outra_pessoa", nome: "Outra Pessoa", email: null };
 
-export const sessao: { atual: QuemContribui | null; fora: boolean } = { atual: PESSOA, fora: false };
+type Sessao = { atual: QuemContribui | null; fora: boolean };
+const g = globalThis as typeof globalThis & { __sessaoDaPessoa?: Sessao };
+export const sessao: Sessao = (g.__sessaoDaPessoa ??= { atual: PESSOA, fora: false });
 
 class ClerkFora extends Error {}
 export const moduloFalso = {
@@ -4169,7 +4649,7 @@ describe("o que falta, e o que sobra", () => {
 ```ts
 import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { criarRascunho, lerRascunho, listarRascunhos } from "@/lib/db";
+import { criarRascunho, listarRascunhos, rascunhoDeQualquerUm } from "@/lib/db";
 import {
   apagarRascunhoDaPessoa, criarRascunhoDaPessoa, estaBloqueado, lerRascunhoDaPessoa, moverRascunhoDaPessoa,
   rascunhosDaPessoa, regravarRascunhoDaPessoa, registrarContribuidor, contribuidorPorId,
@@ -4218,7 +4698,7 @@ describe("o rascunho dela é dela", () => {
     expect(await regravarRascunhoDaPessoa(c, "pedra-cidade", '{"x":1}', A + 1, OUTRA.id)).toBe(false);
     expect(await moverRascunhoDaPessoa(c, "pedra-cidade", "outro-cidade", doc("outro-cidade"), A + 1, OUTRA.id)).toBe(false);
     expect(await apagarRascunhoDaPessoa(c, "pedra-cidade", OUTRA.id)).toBe(false);
-    expect((await lerRascunho(c, "pedra-cidade"))?.doc).toBe(doc("pedra-cidade"));
+    expect((await rascunhoDeQualquerUm(c, "pedra-cidade"))?.doc).toBe(doc("pedra-cidade"));
   });
 
   it("ela não alcança rascunho do João", async () => {
@@ -4232,6 +4712,17 @@ describe("o rascunho dela é dela", () => {
     expect(await criarRascunhoDaPessoa(c, "rampa-do-pepe", doc("rampa-do-pepe"), A, PESSOA.id)).toBe(false);
     await criarRascunho(c, "do-joao-cidade", doc("do-joao-cidade"), A);
     expect(await criarRascunhoDaPessoa(c, "do-joao-cidade", doc("do-joao-cidade"), A, PESSOA.id)).toBe(false);
+  });
+
+  // 🔴 Ruling de produto da pré-auditoria (07/10): endereço antigo de outro
+  // lugar não é dela — o link velho continua levando ao lugar de onde veio.
+  it("não nasce, nem se muda, pra um endereço antigo de outro lugar", async () => {
+    await c.execute({ sql: "INSERT INTO enderecos_antigos (velho, novo, em) VALUES ('velho-cidade', 'rampa-do-pepe', ?)", args: [A] });
+    expect(await criarRascunhoDaPessoa(c, "velho-cidade", doc("velho-cidade"), A, PESSOA.id)).toBe(false);
+    expect(await criarRascunhoDaPessoa(c, "pedra-cidade", doc("pedra-cidade"), A, PESSOA.id)).toBe(true);
+    expect(await moverRascunhoDaPessoa(c, "pedra-cidade", "velho-cidade", doc("velho-cidade"), A + 1, PESSOA.id)).toBe(false);
+    expect(await rascunhoDeQualquerUm(c, "velho-cidade")).toBeNull();
+    expect((await rascunhoDeQualquerUm(c, "pedra-cidade"))?.contribuidor).toBe(PESSOA.id);
   });
 
   it("bloqueada: não cria, não regrava, não move", async () => {
@@ -4256,9 +4747,9 @@ describe("o rascunho dela é dela", () => {
 ```ts
 import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { lerRascunho } from "@/lib/db";
+import { rascunhoDeQualquerUm } from "@/lib/db";
 import { contribuidorPorId, criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
-import { BLOQUEADA, CLERK_FORA, RASCUNHO_DELA_SUMIU } from "@/lib/porta-da-pessoa";
+import { BLOQUEADA, CLERK_FORA, NOME_JA_EM_USO, RASCUNHO_DELA_SUMIU } from "@/lib/porta-da-pessoa";
 import { clienteQueIntercala, semearAcervo } from "../banco";
 import { OUTRA, PESSOA, sessao } from "../sessao-da-pessoa";
 
@@ -4287,17 +4778,33 @@ afterEach(() => { c.close(); vi.useRealTimers(); });
 const pedido = (metodo: string, corpo?: unknown, busca = "") =>
   new Request(`http://x/api/contribuir/rascunho${busca}`, { method: metodo, body: corpo === undefined ? undefined : JSON.stringify(corpo) });
 const SLUG = "pedra-mandada-cidade-teste";
-const docDe = async (slug = SLUG) => JSON.parse((await lerRascunho(c, slug))!.doc);
+const docDe = async (slug = SLUG) => JSON.parse((await rascunhoDeQualquerUm(c, slug))!.doc);
 async function comecar(): Promise<void> {
   const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }));
   expect(res.status, await res.clone().text()).toBe(201);
 }
 
 describe("a porta: sessão, Clerk, bloqueio", () => {
+  // 🔴 A SONDA DO DUBLÊ (C2 da pré-auditoria, MEDIDO em 07/10). Roda ANTES dos
+  // outros casos da porta: se a rota não enxerga a sessão que o teste muda,
+  // todo 401/503/404 abaixo mede o dublê, não a rota. Com o estado do dublê
+  // num `const` de módulo, o `vi.resetModules()` do `beforeEach` dava à rota
+  // OUTRA instância de `sessao` — e esta sonda fica vermelha (medido: 200 onde
+  // se esperava 401). Ela muda a sessão nos TRÊS sentidos e exige que a rota
+  // veja cada um.
+  it("SONDA: a rota vê a sessão que o teste muda, nos três sentidos", async () => {
+    sessao.atual = null;
+    expect((await rota.GET(pedido("GET"))).status, "a rota não viu sessao.atual = null").toBe(401);
+    sessao.atual = PESSOA;
+    expect((await rota.GET(pedido("GET"))).status, "a rota não viu sessao.atual = PESSOA").toBe(200);
+    sessao.fora = true;
+    expect((await rota.GET(pedido("GET"))).status, "a rota não viu sessao.fora = true").toBe(503);
+  });
+
   it("sem sessão: 401, e nada nasce", async () => {
     sessao.atual = null;
     expect((await rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }))).status).toBe(401);
-    expect(await lerRascunho(c, SLUG)).toBeNull();
+    expect(await rascunhoDeQualquerUm(c, SLUG)).toBeNull();
   });
 
   it("Clerk fora: 503 com a frase, e nada nasce", async () => {
@@ -4305,7 +4812,7 @@ describe("a porta: sessão, Clerk, bloqueio", () => {
     const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }));
     expect(res.status).toBe(503);
     expect(await res.text()).toBe(CLERK_FORA);
-    expect(await lerRascunho(c, SLUG)).toBeNull();
+    expect(await rascunhoDeQualquerUm(c, SLUG)).toBeNull();
   });
 
   it("bloqueada: 403 com a frase, e nada nasce", async () => {
@@ -4313,7 +4820,7 @@ describe("a porta: sessão, Clerk, bloqueio", () => {
     const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }));
     expect(res.status).toBe(403);
     expect(await res.text()).toBe(BLOQUEADA);
-    expect(await lerRascunho(c, SLUG)).toBeNull();
+    expect(await rascunhoDeQualquerUm(c, SLUG)).toBeNull();
   });
 
   it("toda porta aberta registra quem contribui, com nome e e-mail (só pro painel)", async () => {
@@ -4332,11 +4839,46 @@ describe("POST — começar", () => {
 
   // Review Focus 3: o par de um lugar do João. As fichas dele nasceram sem
   // cidade, então nome igual É colisão (o gêmeo sem cidade).
-  it("o par de um lugar do João: 409 com a frase do par, e nada nasce", async () => {
+  // 🔴 I3 da pré-auditoria: a frase é a DELA — nunca "responda primeiro a cidade
+  // dele, pela lista do painel" (ela não tem painel) —, e não nomeia ninguém.
+  it("o par de um lugar do João: 409 com a frase DELA, e nada nasce", async () => {
     const res = await rota.POST(pedido("POST", { nome: "Rampa do Pepê", cidade: "Cidade Teste" }));
     expect(res.status).toBe(409);
-    expect((await res.text()).length).toBeGreaterThan(20);
+    const frase = await res.text();
+    expect(frase).toBe(NOME_JA_EM_USO);
+    expect(frase).not.toMatch(/painel/i);
     expect((await c.execute("SELECT COUNT(*) AS n FROM ficha_rascunhos")).rows[0].n).toBe(0);
+  });
+
+  // I3: o rascunho de OUTRA pessoa não é revelado — nem o nome, nem a cidade.
+  it("o par de um rascunho de OUTRA pessoa: 409 com a frase dela, sem o nome dele, e ele fica", async () => {
+    const doc = JSON.stringify({ slug: SLUG, modos: [], cidade: "Cidade Teste", trajeto: { waypoints: [{ nome: "Pedra Mandada" }] } });
+    await criarRascunhoDaPessoa(c, SLUG, doc, AGORA, OUTRA.id);
+    const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(NOME_JA_EM_USO);
+    expect(await rascunhoDeQualquerUm(c, SLUG)).toMatchObject({ doc, contribuidor: OUTRA.id });
+  });
+
+  // I3: o ENDEREÇO ocupado (nome diferente, mesmo endereço — a fronteira entre
+  // o nome e a cidade que anda) também responde a frase dela, nunca a do painel
+  // (`enderecoDeRascunho` mandaria "continuar por ele na lista do painel").
+  it("o endereço de um rascunho de OUTRA pessoa, de nome diferente: 409 com a frase dela", async () => {
+    const outro = "lugar-marcador-cidade-marcador";
+    await criarRascunhoDaPessoa(c, outro, JSON.stringify({ slug: outro, modos: [], cidade: "Cidade Marcador", trajeto: { waypoints: [{ nome: "Lugar Marcador" }] } }), AGORA, OUTRA.id);
+    const res = await rota.POST(pedido("POST", { nome: "Lugar Marcador Cidade", cidade: "Marcador" }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(NOME_JA_EM_USO);
+    expect((await rascunhoDeQualquerUm(c, outro))?.contribuidor).toBe(OUTRA.id);
+  });
+
+  // Ruling de produto da pré-auditoria: endereço antigo de outro lugar não é dela.
+  it("um endereço antigo de um lugar do João: 409 com a frase dela, nada nasce, e o link velho continua", async () => {
+    await c.execute({ sql: "INSERT INTO enderecos_antigos (velho, novo, em) VALUES (?, 'rampa-do-pepe', ?)", args: [SLUG, AGORA] });
+    const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(NOME_JA_EM_USO);
+    expect(await rascunhoDeQualquerUm(c, SLUG)).toBeNull();
   });
 
   it.each([[{ nome: "", cidade: "C" }], [{ nome: "N", cidade: " " }], [{ nome: "N" }], [{ nome: "N", cidade: "C", voz: "x" }]])(
@@ -4387,8 +4929,18 @@ describe("PUT — responder", () => {
   it("trocar o nome muda o endereço do rascunho, e a resposta diz o novo", async () => {
     const res = await rota.PUT(pedido("PUT", { slug: SLUG, campo: "trajeto.waypoints.0.nome", valor: "Pedra Nova" }));
     expect(await res.json()).toEqual({ slug: "pedra-nova-cidade-teste" });
-    expect(await lerRascunho(c, SLUG)).toBeNull();
+    expect(await rascunhoDeQualquerUm(c, SLUG)).toBeNull();
     expect((await docDe("pedra-nova-cidade-teste")).slug).toBe("pedra-nova-cidade-teste");
+  });
+
+  // I3 da pré-auditoria: renomear pro nome de um lugar do João esbarra no par
+  // (o gêmeo sem cidade) — e a frase é a DELA.
+  it("renomear pro nome de um lugar do João: 409 com a frase dela, e o rascunho não muda", async () => {
+    const antes = await docDe();
+    const res = await rota.PUT(pedido("PUT", { slug: SLUG, campo: "trajeto.waypoints.0.nome", valor: "Rampa do Pepê" }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(NOME_JA_EM_USO);
+    expect(await docDe()).toEqual(antes);
   });
 
   it("rascunho de OUTRA pessoa: 404, e ele não muda", async () => {
@@ -4429,9 +4981,9 @@ describe("GET e DELETE", () => {
   it("DELETE do dela: 200 e some; do de outra: 404 e fica", async () => {
     await criarRascunhoDaPessoa(c, "da-outra-cidade", JSON.stringify({ slug: "da-outra-cidade" }), AGORA, OUTRA.id);
     expect((await rota.DELETE(pedido("DELETE", { slug: "da-outra-cidade" }))).status).toBe(404);
-    expect(await lerRascunho(c, "da-outra-cidade")).not.toBeNull();
+    expect(await rascunhoDeQualquerUm(c, "da-outra-cidade")).not.toBeNull();
     expect((await rota.DELETE(pedido("DELETE", { slug: SLUG }))).status).toBe(200);
-    expect(await lerRascunho(c, SLUG)).toBeNull();
+    expect(await rascunhoDeQualquerUm(c, SLUG)).toBeNull();
   });
 });
 ```
@@ -4549,6 +5101,13 @@ import type { QuemContribui } from "@/lib/contribuidor-sessao";
  *  pode bloquear entre a porta da rota e a gravação). */
 const LIVRE = `NOT EXISTS (SELECT 1 FROM contribuidores WHERE id = ? AND bloqueado = 1)`;
 
+/** 🔴 O endereço não é endereço ANTIGO de outro lugar (ruling de produto da
+ *  pré-auditoria de 07/10): o link velho que circula continua levando ao lugar
+ *  de onde veio, e o rascunho dela não nasce nem se muda pra lá. Em SQL, pra
+ *  morar NO statement que grava; o `publicarRascunho` (Task 1) confere de novo,
+ *  no batch, pra corrida. Um `?`: o endereço. */
+const SEM_ENDERECO_ANTIGO = `NOT EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ?)`;
+
 const rascunho = (r: Record<string, unknown>): Rascunho => ({
   slug: String(r.slug), doc: String(r.doc), atualizado_em: Number(r.atualizado_em),
 });
@@ -4576,9 +5135,10 @@ export async function estaBloqueado(client: Client, id: string): Promise<boolean
 export async function criarRascunhoDaPessoa(client: Client, slug: string, doc: string, agora: number, id: string): Promise<boolean> {
   const r = await client.execute({
     sql: `INSERT INTO ficha_rascunhos (slug, doc, atualizado_em, contribuidor)
-          SELECT ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?) AND ${LIVRE}
+          SELECT ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
+                             AND ${SEM_ENDERECO_ANTIGO} AND ${LIVRE}
           ON CONFLICT(slug) DO NOTHING`,
-    args: [slug, doc, agora, id, slug, id],
+    args: [slug, doc, agora, id, slug, slug, id],
   });
   return r.rowsAffected === 1;
 }
@@ -4611,14 +5171,15 @@ export async function regravarRascunhoDaPessoa(client: Client, slug: string, doc
 }
 
 /** A régua de `moverRascunho` (o destino livre nas duas tabelas, num UPDATE
- *  só), e só no rascunho DELA, livre. */
+ *  só), e só no rascunho DELA, livre — e o destino não é endereço antigo. */
 export async function moverRascunhoDaPessoa(client: Client, de: string, para: string, doc: string, agora: number, id: string): Promise<boolean> {
   const r = await client.execute({
     sql: `UPDATE ficha_rascunhos SET slug = ?, doc = ?, atualizado_em = MAX(?, atualizado_em + 1)
            WHERE slug = ? AND contribuidor = ? AND ${LIVRE}
              AND NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
-             AND NOT EXISTS (SELECT 1 FROM ficha_rascunhos WHERE slug = ?)`,
-    args: [para, doc, agora, de, id, id, para, para],
+             AND NOT EXISTS (SELECT 1 FROM ficha_rascunhos WHERE slug = ?)
+             AND ${SEM_ENDERECO_ANTIGO}`,
+    args: [para, doc, agora, de, id, id, para, para, para],
   });
   return r.rowsAffected === 1;
 }
@@ -4649,6 +5210,20 @@ export const BLOQUEADA = "Esta conta não pode mais mandar nem mudar lugares no 
 // PENDENTE: redação minha, o João ainda não leu
 export const RASCUNHO_DELA_SUMIU =
   "Nada foi gravado: este rascunho não está mais neste endereço. Ele foi publicado, apagado, ou mudou de nome ou de cidade: volte pela sua lista de lugares.";
+/** 🔴 O 409 DE TODA COLISÃO DELA (I3 da pré-auditoria de 07/10) — o par, o
+ *  gêmeo sem cidade, o endereço ocupado por lugar ou rascunho de outro, e o
+ *  endereço antigo de outro lugar. UMA frase, e de propósito: as do painel
+ *  falam do painel ("pela lista do painel", "responda a cidade dele") e
+ *  NOMEIAM quem ocupa — um rascunho de outra pessoa, ou um lugar escondido do
+ *  João. Esta diz o que é verdade nos quatro casos e não nomeia ninguém.
+ *
+ *  📝 DECISÃO DO JOÃO, pro pacote de copy: em dois casos ela fica SEM saída —
+ *  o gêmeo sem cidade (só o João responde a cidade do lugar dele) e um lugar
+ *  real diferente com o mesmo nome na mesma cidade. A frase não inventa
+ *  saída; o que fazer nesses dois é dele. */
+// PENDENTE: redação minha, o João ainda não leu
+export const NOME_JA_EM_USO =
+  "Nada foi gravado: este nome já está em uso no BatePerna, por um lugar no ar ou por um que alguém está mandando. Se for o mesmo lugar, ele já está (ou logo estará) no app.";
 
 /** A PORTA DE TODA ROTA DE QUEM CONTRIBUI, nesta ordem: o Clerk respondeu
  *  (senão 503 com frase), há sessão (senão 401 — e a tela recarrega e pede
@@ -4679,16 +5254,16 @@ export async function portaDaPessoa(agora: number): Promise<{ pessoa: QuemContri
 ```ts
 import { aplicarNoRascunho, type ValorDeCampo } from "@/lib/campos-da-ficha";
 import { ehCampoDaPessoa, pontoNoRascunhoDaPessoa, tirarDoRascunhoDaPessoa } from "@/lib/campos-da-pessoa";
-import { getClient, lerRascunho, versaoAtual } from "@/lib/db";
+import { getClient } from "@/lib/db";
 import {
   apagarRascunhoDaPessoa, criarRascunhoDaPessoa, lerRascunhoDaPessoa, moverRascunhoDaPessoa, rascunhosDaPessoa,
   regravarRascunhoDaPessoa,
 } from "@/lib/db-contribuidor";
-import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, parDaMudanca, parOcupado } from "@/lib/par-de-lugar";
-import { RASCUNHO_DELA_SUMIU, portaDaPessoa } from "@/lib/porta-da-pessoa";
+import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, colisaoDaMudanca, colisaoDoPar } from "@/lib/par-de-lugar";
+import { NOME_JA_EM_USO, RASCUNHO_DELA_SUMIU, portaDaPessoa } from "@/lib/porta-da-pessoa";
 import {
   CIDADE_SEM_LETRA, CIDADE_VAZIA, NOME_SEM_LETRA, NOME_VAZIO, cidadeDoDoc, docDoLugarNovo,
-  docNoEndereco, enderecoDeLugar, enderecoDeRascunho, nomeComCidade, nomeDoRascunho, slugDoNome,
+  docNoEndereco, nomeDoRascunho, slugDoNome,
 } from "@/lib/rascunho";
 
 export const dynamic = "force-dynamic";
@@ -4713,17 +5288,15 @@ function recusar400(erro: unknown): Response {
   return new Response(nossa ? erro.message : "", { status: 400, headers: TEXTO });
 }
 
-/** Quem ocupa `slug` — a frase do 409, a mesma do painel. */
-async function quemOcupa(slug: string): Promise<string> {
-  const lugar = await versaoAtual(getClient(), slug);
-  if (lugar !== null) return enderecoDeLugar(nomeComCidade(nomeDoRascunho(lugar.doc, slug), cidadeDoDoc(lugar.doc)));
-  const r = await lerRascunho(getClient(), slug);
-  const doc = r?.doc ?? "";
-  return enderecoDeRascunho(nomeComCidade(nomeDoRascunho(doc, slug), cidadeDoDoc(doc)));
-}
+const emUso = (): Response => new Response(NOME_JA_EM_USO, { status: 409, headers: TEXTO });
 
-/** COMEÇAR: o nome e a cidade, como no painel (mesmas frases, mesma colisão
- *  pelo par, mesmo endereço). O rascunho nasce DELA. */
+/** COMEÇAR: o nome e a cidade, como no painel (mesmas frases de campo, mesma
+ *  colisão pelo par, mesmo endereço). O rascunho nasce DELA.
+ *
+ *  🔴 I3 da pré-auditoria: TODA colisão — o par, o gêmeo sem cidade, o
+ *  endereço ocupado, o endereço antigo — responde `NOME_JA_EM_USO`. A rota lê a
+ *  colisão ESTRUTURADA (`colisaoDoPar`) e nunca pergunta QUEM ocupa: nada do
+ *  painel ("pela lista do painel") e nenhum nome de outro chega a ela. */
 export async function POST(req: Request): Promise<Response> {
   const agora = agoraS();
   const porta = await portaDaPessoa(agora);
@@ -4740,14 +5313,16 @@ export async function POST(req: Request): Promise<Response> {
   if (slugDoNome(nome) === "") return new Response(NOME_SEM_LETRA, { status: 400, headers: TEXTO });
   if (slugDoNome(cidade) === "") return new Response(CIDADE_SEM_LETRA, { status: 400, headers: TEXTO });
 
-  const doPar = await parOcupado(nome, cidade, { exceto: null, nomeNovo: true });
-  if (doPar !== null) return new Response(doPar, { status: 409, headers: TEXTO });
+  if ((await colisaoDoPar(nome, cidade, { exceto: null, nomeNovo: true })) !== null) return emUso();
 
   const slug = slugDoNome(`${nome} ${cidade}`);
   if (await criarRascunhoDaPessoa(getClient(), slug, docDoLugarNovo(slug, nome, cidade), agora, porta.pessoa.id)) {
     return Response.json({ slug }, { status: 201, headers: SEM_CACHE });
   }
-  return new Response(await quemOcupa(slug), { status: 409, headers: TEXTO });
+  // Endereço de um lugar, de um rascunho de outro, ou endereço antigo: o
+  // banco recusou, e a frase é a dela. (A Task 15 põe antes daqui a
+  // conferência do bloqueio.)
+  return emUso();
 }
 
 /** RESPONDER uma pergunta dela. Três corpos, mutuamente exclusivos:
@@ -4781,8 +5356,7 @@ export async function PUT(req: Request): Promise<Response> {
   const atual = await lerRascunhoDaPessoa(getClient(), slug, id);
   if (atual === null) return new Response("", { status: 404, headers: TEXTO });
 
-  const doPar = await parDaMudanca(atual.doc, slug, campo, valor);
-  if (doPar !== null) return new Response(doPar, { status: 409, headers: TEXTO });
+  if ((await colisaoDaMudanca(atual.doc, slug, campo, valor)) !== null) return emUso();
 
   let novoDoc: string;
   try {
@@ -4802,7 +5376,8 @@ export async function PUT(req: Request): Promise<Response> {
       if ((await lerRascunhoDaPessoa(getClient(), slug, id)) === null) {
         return new Response(RASCUNHO_DELA_SUMIU, { status: 409, headers: TEXTO });
       }
-      return new Response(await quemOcupa(destino), { status: 409, headers: TEXTO });
+      // O destino está ocupado (lugar, rascunho de outro, endereço antigo): a frase dela.
+      return emUso();
     }
   }
   if (!(await regravarRascunhoDaPessoa(getClient(), slug, novoDoc, agora, id))) {
@@ -4858,11 +5433,17 @@ Expected: PASS.
 | M6 | `regravarRascunhoDaPessoa` sem `${LIVRE}` | "bloqueada: não cria, não regrava, não move" |
 | M7 | `registrarContribuidor` com `bloqueado = 0` no `DO UPDATE` | "registrar de novo não desbloqueia" |
 | M8 | `registrarContribuidor` sem `COALESCE` | "perfil que não veio (null) não apaga o que já havia" |
-| M9 | `portaDaPessoa` sem o `try` | "Clerk fora: 503" |
-| M10 | `portaDaPessoa` confere bloqueio ANTES de sessão | "sem sessão: 401" (com sessão nula não há id pra conferir — se sobreviver, anote) |
-| M11 | `tirarDoRascunhoDaPessoa` sem a guarda de opcional | "recusa obrigatório dela" |
-| M12 | `chavesForaDaPessoa` sem o ramo das etapas | "`trajeto.waypoints.1` sobra" |
-| M13 | o POST sem `parOcupado` | "o par de um lugar do João: 409" |
+| M9 | `portaDaPessoa` sem o `try` | "Clerk fora: 503" **e** a SONDA |
+| M10 | `tirarDoRascunhoDaPessoa` sem a guarda de opcional | "recusa obrigatório dela" |
+| M11 | `chavesForaDaPessoa` sem o ramo das etapas | "`trajeto.waypoints.1` sobra" |
+| M12 | o POST sem `colisaoDoPar` | "o par de um lugar do João: 409 com a frase DELA" (o endereço `rampa-do-pepe-cidade-teste` está livre: nasce, 201) |
+| M13 | o POST volta a responder a frase do painel (`parOcupado`, com o `quemOcupa` de antes) | "o par de um lugar do João: 409 com a frase DELA" **e** "o endereço de um rascunho de OUTRA pessoa" |
+| M14 | o PUT sem `colisaoDaMudanca` | "renomear pro nome de um lugar do João: 409 com a frase dela" (sem o par, o rascunho se muda: 200) |
+| M15 | tira o `${SEM_ENDERECO_ANTIGO}` de `criarRascunhoDaPessoa` | "não nasce, nem se muda, pra um endereço antigo" **e** "um endereço antigo de um lugar do João: 409" |
+| M16 | tira o `${SEM_ENDERECO_ANTIGO}` de `moverRascunhoDaPessoa` (e o último `para` dos args) | "não nasce, nem se muda, pra um endereço antigo" |
+| M17 | `tests/sessao-da-pessoa.ts` volta ao estado num `const` do módulo (`export const sessao = { atual: PESSOA, fora: false }`, sem `globalThis`) — mutação do DUBLÊ, não da rota | a SONDA: "a rota vê a sessão que o teste muda" (medido na pré-auditoria: 200 onde se esperava 401) |
+
+(Saiu da tabela — M5 da pré-auditoria — a mutação "`portaDaPessoa` confere o bloqueio ANTES da sessão": sem sessão não há `id` pra conferir, então ela não é uma reordenação aplicável — só um `TypeError` em `null.id`, que mataria o caso pelo motivo errado. A ordem sessão → bloqueio é imposta pelo tipo, não por prova.)
 
 - [ ] **Step 9: Os portões**
 
@@ -4876,7 +5457,7 @@ git commit -m "feat(contribuir): a rota do rascunho de quem usa, so com os campo
 node scripts/mutar.mjs
 ```
 
-📝 **Frases novas:** `CLERK_FORA`, `BLOQUEADA`, `RASCUNHO_DELA_SUMIU`.
+📝 **Frases novas:** `CLERK_FORA`, `BLOQUEADA`, `RASCUNHO_DELA_SUMIU`, `NOME_JA_EM_USO` — esta com a nota de decisão dele (os dois casos sem saída: o gêmeo sem cidade e o lugar real diferente de mesmo nome na mesma cidade).
 
 ---
 
@@ -4884,12 +5465,12 @@ node scripts/mutar.mjs
 
 **Files:**
 - Modify: `src/lib/porta-da-pessoa.ts` — `prepararPublicacaoDaPessoa`, `fraseDaPessoa` e as frases
-- Modify: `src/lib/porta-de-coerencia.ts:230-244` — `violacaoIntroduzidaInteira` (a mesma conta, devolvendo a `Violacao`); `violacaoIntroduzida` passa a chamá-la
+- Modify: `src/lib/porta-de-coerencia.ts:127-141` (a função `violacaoIntroduzida` de hoje; o arquivo tem 141 linhas) — `violacaoIntroduzidaInteira` (a mesma conta, devolvendo a `Violacao`); `violacaoIntroduzida` passa a chamá-la
 - Create: `src/app/api/contribuir/publicar/route.ts`
 - Test: `tests/lib/porta-da-pessoa.test.ts`, `tests/api/route-contribuir-publicar.test.ts` (criar)
 
 **Interfaces:**
-- Consumes: `portaDaPessoa`, `RASCUNHO_DELA_SUMIU` (Task 10); `obrigatoriosDaPessoaFaltando`, `chavesForaDaPessoa` (Task 10); `lerRascunhoDaPessoa` (Task 10); `publicarRascunho(…, contribuidor)` (Task 1); `parOcupado`; `faixasDe`, `problemaDasFaixas` de `@/lib/horario`; `FORMA_ERRADA`, `SLUG_DE_DENTRO`, `RASCUNHO_ILEGIVEL`, `RASCUNHO_MUDOU` de `@/lib/porta-de-publicar` (já LIDAS por ele, e não falam de painel); `REGRAS`, `type Violacao` de `@/lib/coerencia`.
+- Consumes: `portaDaPessoa`, `RASCUNHO_DELA_SUMIU`, `NOME_JA_EM_USO` (Task 10); `obrigatoriosDaPessoaFaltando`, `chavesForaDaPessoa` (Task 10); `lerRascunhoDaPessoa` (Task 10); `publicarRascunho(…, contribuidor)` (Task 1); `colisaoDoPar`, `rascunhoDeQualquerUm` (Task 1), `enderecoNovoDe` de `@/lib/db` — NUNCA `parOcupado` nem `enderecoDeLugar` (frases do painel, I3); `faixasDe`, `problemaDasFaixas` de `@/lib/horario`; `FORMA_ERRADA`, `SLUG_DE_DENTRO`, `RASCUNHO_ILEGIVEL`, `RASCUNHO_MUDOU` de `@/lib/porta-de-publicar` (já LIDAS por ele, e não falam de painel); `REGRAS`, `type Violacao` de `@/lib/coerencia`.
 - Produces:
   - `src/lib/porta-de-coerencia.ts`: `export function violacaoIntroduzidaInteira(versoes, slug, antes, depois): Violacao | null`
   - `src/lib/porta-da-pessoa.ts`:
@@ -4922,8 +5503,16 @@ const COMPLETO = {
 const preparar = (doc: unknown) => prepararPublicacaoDaPessoa(JSON.stringify(doc), SLUG);
 
 describe("prepararPublicacaoDaPessoa", () => {
-  it("o documento completo dela vai ao ar como está", () => {
-    expect(preparar(COMPLETO)).toEqual({ doc: JSON.stringify(COMPLETO) });
+  // 🔴 I2 da pré-auditoria (MEDIDO com o zod do repo): o `fichaSchema.parse`
+  // devolve as chaves na ordem da FORMA do schema (`promessa, trajeto,
+  // acesso`), não na do documento (`promessa, acesso, trajeto`). Comparar o
+  // TEXTO ficaria vermelho com a porta certa — e o "conserto" óbvio (devolver
+  // o texto cru) desfaria a normalização. Compara-se o OBJETO: vai ao ar o
+  // documento normalizado, com as mesmas respostas, e a ordem é irrelevante.
+  it("o documento completo dela vai ao ar com as mesmas respostas (normalizado)", () => {
+    const r = preparar(COMPLETO);
+    expect("doc" in r, JSON.stringify(r)).toBe(true);
+    expect(JSON.parse((r as { doc: string }).doc)).toEqual(COMPLETO);
   });
 
   it("ilegível: a frase de sempre", () => {
@@ -4975,9 +5564,9 @@ describe("fraseDaPessoa", () => {
 ```ts
 import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { lerAcervoComOrigem, lerRascunho, versaoAtual } from "@/lib/db";
+import { enderecoNovoDe, lerAcervoComOrigem, rascunhoDeQualquerUm, versaoAtual } from "@/lib/db";
 import { criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
-import { FALTA_DA_PESSOA, FRASE_DA_PESSOA, JA_NO_AR_DA_PESSOA } from "@/lib/porta-da-pessoa";
+import { FALTA_DA_PESSOA, FRASE_DA_PESSOA, JA_NO_AR_DA_PESSOA, NOME_JA_EM_USO } from "@/lib/porta-da-pessoa";
 import { RASCUNHO_MUDOU } from "@/lib/porta-de-publicar";
 import { semearAcervo } from "../banco";
 import { OUTRA, PESSOA, sessao } from "../sessao-da-pessoa";
@@ -5009,7 +5598,7 @@ afterEach(() => { c.close(); vi.useRealTimers(); });
 
 async function rascunho(doc: unknown = COMPLETO, dono = PESSOA.id): Promise<number> {
   await criarRascunhoDaPessoa(c, SLUG, JSON.stringify(doc), AGORA - 10, dono);
-  return (await lerRascunho(c, SLUG))!.atualizado_em;
+  return (await rascunhoDeQualquerUm(c, SLUG))!.atualizado_em;
 }
 const pedido = (corpo: unknown) => new Request("http://x/api/contribuir/publicar", { method: "POST", body: JSON.stringify(corpo) });
 
@@ -5018,7 +5607,7 @@ describe("POST /api/contribuir/publicar", () => {
     const res = await POST(pedido({ slug: SLUG, atualizadoEm: await rascunho() }));
     expect(res.status, await res.clone().text()).toBe(200);
     expect((await lerAcervoComOrigem(c)).linhas.get(SLUG)).toMatchObject({ oculto: false, conferido: false, contribuidor: PESSOA.id });
-    expect(await lerRascunho(c, SLUG)).toBeNull();
+    expect(await rascunhoDeQualquerUm(c, SLUG)).toBeNull();
   });
 
   it("rascunho de OUTRA pessoa: 404, e nada vai ao ar", async () => {
@@ -5041,6 +5630,29 @@ describe("POST /api/contribuir/publicar", () => {
     expect(res.status).toBe(409);
     expect(await res.text()).toBe(FRASE_DA_PESSOA["texto-emprestado"]);
     expect(await versaoAtual(c, SLUG)).toBeNull();
+  });
+
+  // 🔴 I3 da pré-auditoria: a colisão do publicar responde a frase DELA, que
+  // não nomeia ninguém (a Rampa nasceu sem cidade: nome igual é o gêmeo).
+  it("o nome de um lugar do João: 409 com a frase DELA, que não nomeia ninguém, e nada vai ao ar", async () => {
+    const comNomeDaRampa = { ...COMPLETO, trajeto: { waypoints: [{ ...COMPLETO.trajeto.waypoints[0], nome: "Rampa do Pepê" }] } };
+    const res = await POST(pedido({ slug: SLUG, atualizadoEm: await rascunho(comNomeDaRampa) }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(NOME_JA_EM_USO);
+    expect(await versaoAtual(c, SLUG)).toBeNull();
+  });
+
+  // Ruling de produto da pré-auditoria: o João troca um endereço DEPOIS que o
+  // rascunho dela nasceu, e o endereço dela vira endereço antigo. O batch
+  // recusa, e a frase é a dela — nunca o "Nada foi publicado. Recarregue" mudo.
+  it("o endereço virou endereço antigo de outro lugar depois que ela começou: 409 com a frase dela, e o link velho continua", async () => {
+    const em = await rascunho();
+    await c.execute({ sql: "INSERT INTO enderecos_antigos (velho, novo, em) VALUES (?, 'rampa-do-pepe', ?)", args: [SLUG, AGORA] });
+    const res = await POST(pedido({ slug: SLUG, atualizadoEm: em }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(NOME_JA_EM_USO);
+    expect(await versaoAtual(c, SLUG)).toBeNull();
+    expect(await enderecoNovoDe(c, SLUG)).toBe("rampa-do-pepe");
   });
 
   it("o texto diz a hora de fechar e o horário não foi respondido: 409 com a frase dela", async () => {
@@ -5179,15 +5791,15 @@ export function prepararPublicacaoDaPessoa(texto: string, slug: string): { doc: 
 `src/app/api/contribuir/publicar/route.ts`:
 
 ```ts
-import { getClient, lerRascunho, publicarRascunho, versaoAtual, versoesAtuais } from "@/lib/db";
+import { enderecoNovoDe, getClient, publicarRascunho, rascunhoDeQualquerUm, versaoAtual, versoesAtuais } from "@/lib/db";
 import { lerRascunhoDaPessoa } from "@/lib/db-contribuidor";
-import { parOcupado } from "@/lib/par-de-lugar";
+import { colisaoDoPar } from "@/lib/par-de-lugar";
 import { violacaoIntroduzidaInteira } from "@/lib/porta-de-coerencia";
 import { NADA_PUBLICADO, RASCUNHO_MUDOU } from "@/lib/porta-de-publicar";
 import {
-  JA_NO_AR_DA_PESSOA, RASCUNHO_DELA_SUMIU, fraseDaPessoa, portaDaPessoa, prepararPublicacaoDaPessoa,
+  JA_NO_AR_DA_PESSOA, NOME_JA_EM_USO, RASCUNHO_DELA_SUMIU, fraseDaPessoa, portaDaPessoa, prepararPublicacaoDaPessoa,
 } from "@/lib/porta-da-pessoa";
-import { cidadeDoDoc, enderecoDeLugar, nomeComCidade, nomeDoRascunho } from "@/lib/rascunho";
+import { cidadeDoDoc, nomeDoRascunho } from "@/lib/rascunho";
 
 export const dynamic = "force-dynamic";
 
@@ -5195,14 +5807,21 @@ const TEXTO = { "content-type": "text/plain; charset=utf-8", "cache-control": "n
 const recusa = (status: 400 | 409, frase: string) => new Response(frase, { status, headers: TEXTO });
 
 /** Por que o banco recusou — a régua de `porQueRecusou` do painel, com as
- *  frases DELA onde a do painel falaria do painel. */
+ *  frases DELA onde a do painel falaria do painel ou NOMEARIA quem ocupa (I3
+ *  da pré-auditoria: o endereço ocupado por um lugar é `NOME_JA_EM_USO`, nunca
+ *  `enderecoDeLugar`, que diz o nome de um lugar talvez escondido).
+ *  `rascunhoDeQualquerUm`, e NÃO `lerRascunho`: desde 07/10 aquela é só do
+ *  João, e o rascunho daqui é dela. O último ramo é o ruling do endereço
+ *  antigo: o batch recusou porque o endereço virou antigo depois que o
+ *  rascunho nasceu. */
 async function porQueRecusou(slug: string, atualizadoEm: number): Promise<string> {
   const lugar = await versaoAtual(getClient(), slug);
-  const r = await lerRascunho(getClient(), slug);
+  const r = await rascunhoDeQualquerUm(getClient(), slug);
   if (r !== null && r.atualizado_em !== atualizadoEm) return RASCUNHO_MUDOU;
   if (lugar !== null && r === null) return JA_NO_AR_DA_PESSOA;
-  if (lugar !== null) return enderecoDeLugar(nomeComCidade(nomeDoRascunho(lugar.doc, slug), cidadeDoDoc(lugar.doc)));
+  if (lugar !== null) return NOME_JA_EM_USO;
   if (r === null) return RASCUNHO_DELA_SUMIU;
+  if ((await enderecoNovoDe(getClient(), slug)) !== null) return NOME_JA_EM_USO;
   return NADA_PUBLICADO;
 }
 
@@ -5245,8 +5864,9 @@ export async function POST(req: Request): Promise<Response> {
   if ("frase" in preparo) return recusa(400, preparo.frase);
   const { doc } = preparo;
 
-  const doPar = await parOcupado(nomeDoRascunho(doc, ""), cidadeDoDoc(doc) ?? "", { exceto: slug, nomeNovo: true });
-  if (doPar !== null) return recusa(409, doPar);
+  // I3: a colisão estruturada, e a frase dela — nunca `parOcupado` (a do painel).
+  const colisao = await colisaoDoPar(nomeDoRascunho(doc, ""), cidadeDoDoc(doc) ?? "", { exceto: slug, nomeNovo: true });
+  if (colisao !== null) return recusa(409, NOME_JA_EM_USO);
 
   const violacao = violacaoIntroduzidaInteira(await versoesAtuais(getClient(), { incluirOcultos: true }), slug, null, doc);
   if (violacao !== null) return recusa(409, fraseDaPessoa(violacao));
@@ -5270,14 +5890,16 @@ Expected: PASS (os dois últimos provam que a refatoração da coerência não m
 | # | mutação | morre em |
 |---|---|---|
 | M1 | `prepararPublicacaoDaPessoa` sem o `chavesForaDaPessoa` | "documento com chave fora da lista (`voz`)…" e vizinhos |
-| M2 | a rota usa `prepararPublicacao` (a do João) | "o documento completo dela vai ao ar" (o do João exige voz etc.) **e** "faltando obrigatório dela" |
+| M2 | a rota usa `prepararPublicacao` (a do João) | "200: no ar NA HORA, não conferido, dela" (o do João exige voz etc.: 400) **e** "faltando obrigatório dela: 400 com a frase" (a frase é a do João) |
 | M3 | a rota devolve `violacao.frase` | "a promessa IGUAL à de um lugar do João: … a frase DELA" |
 | M4 | `fraseDaPessoa` devolve `v.frase` quando não há entrada | "regra sem frase dela: a de reserva" |
 | M5 | a rota chama `publicarRascunho(…)` SEM o `id` | "200: no ar NA HORA, não conferido, dela" (o publicar recusa: o rascunho é dela) |
 | M6 | a rota sem `violacaoIntroduzidaInteira` | "a promessa IGUAL…" **e** "o texto diz a hora de fechar…" |
 | M7 | `lerRascunhoDaPessoa` trocado por `lerRascunho` na rota | "rascunho de OUTRA pessoa: 404" |
 | M8 | uma chave de `FRASE_DA_PESSOA` com typo (`"texto-emprestad"`) | "toda chave de FRASE_DA_PESSOA é uma regra que existe" |
-
+| M9 | a rota responde a colisão com `fraseDoPainel(colisao)` | "o nome de um lugar do João: 409 com a frase DELA" |
+| M10 | `porQueRecusou` sem o ramo do `enderecoNovoDe` | "o endereço virou endereço antigo de outro lugar…" (cai no `NADA_PUBLICADO`) |
+| M11 | `porQueRecusou` volta a `lerRascunho` (a do João) | "o endereço virou endereço antigo de outro lugar…" (o rascunho dela some da leitura e a frase vira `RASCUNHO_DELA_SUMIU`) |
 - [ ] **Step 8: Os portões**
 
 Run: `npx vitest run && npx tsc --noEmit && npm run build`
@@ -5290,7 +5912,7 @@ git commit -m "feat(contribuir): publicar o lugar de quem usa, no ar na hora e m
 node scripts/mutar.mjs
 ```
 
-📝 **Frases novas:** `FALTA_DA_PESSOA`, `FORA_DA_LISTA_DELA`, `JA_NO_AR_DA_PESSOA`, `RECUSA_DA_PESSOA`, e as seis de `FRASE_DA_PESSOA`.
+📝 **Frases novas:** `FALTA_DA_PESSOA`, `FORA_DA_LISTA_DELA`, `JA_NO_AR_DA_PESSOA`, `RECUSA_DA_PESSOA`, e as seis de `FRASE_DA_PESSOA`. (A colisão usa `NOME_JA_EM_USO`, da Task 10.)
 
 ---
 
@@ -5304,7 +5926,7 @@ node scripts/mutar.mjs
 - Test: `tests/lib/db-lugar-da-pessoa.test.ts`, `tests/api/route-contribuir-lugar.test.ts` (criar); `tests/lib/campos-da-pessoa.test.ts` (acrescentar)
 
 **Interfaces:**
-- Consumes: `portaDaPessoa`, `fraseDaPessoa`, `ehCampoDaPessoa`, `OPCIONAIS_DA_PESSOA` (Tasks 10-11); `aplicarCampo`, `gravarPonto` de `@/lib/campos-da-ficha`; `violacaoIntroduzidaInteira` (Task 11); `parDaMudanca`; `lugarDoDono` (Task 1); `baseIdValido`, `LUGAR_MUDOU_DE_ENDERECO` de `@/lib/endereco`; `clienteQueIntercala` de `tests/banco.ts`; `conferirLugar` (Task 6).
+- Consumes: `portaDaPessoa`, `fraseDaPessoa`, `ehCampoDaPessoa`, `OPCIONAIS_DA_PESSOA` (Tasks 10-11); `aplicarCampo`, `gravarPonto` de `@/lib/campos-da-ficha`; `violacaoIntroduzidaInteira` (Task 11); `colisaoDaMudanca` (Task 1) e `NOME_JA_EM_USO` (Task 10) — nunca `parDaMudanca`, a frase do painel (I3); `lugarDoDono` (Task 1); `baseIdValido`, `LUGAR_MUDOU_DE_ENDERECO` de `@/lib/endereco`; `clienteQueIntercala` de `tests/banco.ts`; `conferirLugar` (Task 6).
 - Produces:
   - `src/lib/db-contribuidor.ts`:
     - `export async function gravarEdicaoDaPessoa(client: Client, slug: string, doc: string, agora: number, baseId: number, id: string): Promise<number | null>`
@@ -5420,7 +6042,7 @@ import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { historico, versaoAtual } from "@/lib/db";
 import { conferirLugar } from "@/lib/db-contribuidor";
-import { JA_CONFERIDO } from "@/lib/porta-da-pessoa";
+import { JA_CONFERIDO, NOME_JA_EM_USO } from "@/lib/porta-da-pessoa";
 import { clienteQueIntercala, semearAcervo, semearLugarDaPessoa } from "../banco";
 import { OUTRA, PESSOA, sessao } from "../sessao-da-pessoa";
 
@@ -5479,6 +6101,16 @@ describe("PUT /api/contribuir/lugar", () => {
     await PUT(pedido({ slug: SLUG, baseId: await base(), campo: "trajeto.waypoints.0.nome", valor: "Pedra Renomeada" }));
     expect(JSON.parse((await versaoAtual(c, SLUG))!.doc).trajeto.waypoints[0].nome).toBe("Pedra Renomeada");
     expect(await versaoAtual(c, "pedra-renomeada-cidade-teste")).toBeNull();
+  });
+
+  // I3 da pré-auditoria: renomear pro nome de um lugar do João (o gêmeo sem
+  // cidade) é 409 com a frase DELA — nunca "responda a cidade dele, pela lista
+  // do painel" —, e nada é gravado.
+  it("renomear pro nome de um lugar do João: 409 com a frase dela, nada gravado", async () => {
+    const res = await PUT(pedido({ slug: SLUG, baseId: await base(), campo: "trajeto.waypoints.0.nome", valor: "Rampa do Pepê" }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(NOME_JA_EM_USO);
+    expect(await versoes()).toBe(1);
   });
 
   it("lugar de OUTRA pessoa, ou do João: 404, nada gravado", async () => {
@@ -5619,9 +6251,9 @@ import { ehCampoDaPessoa, pontoDaPessoa, tirarCampoDaPessoa } from "@/lib/campos
 import { getClient, lugarDoDono, versoesAtuais } from "@/lib/db";
 import { estaBloqueado, gravarEdicaoDaPessoa } from "@/lib/db-contribuidor";
 import { LUGAR_MUDOU_DE_ENDERECO, baseIdValido } from "@/lib/endereco";
-import { parDaMudanca } from "@/lib/par-de-lugar";
+import { colisaoDaMudanca } from "@/lib/par-de-lugar";
 import { violacaoIntroduzidaInteira } from "@/lib/porta-de-coerencia";
-import { BLOQUEADA, JA_CONFERIDO, fraseDaPessoa, portaDaPessoa } from "@/lib/porta-da-pessoa";
+import { BLOQUEADA, JA_CONFERIDO, NOME_JA_EM_USO, fraseDaPessoa, portaDaPessoa } from "@/lib/porta-da-pessoa";
 
 export const dynamic = "force-dynamic";
 
@@ -5673,8 +6305,10 @@ export async function PUT(req: Request): Promise<Response> {
   if (lugar === null || lugar.origem.contribuidor !== id) return new Response("", { status: 404, headers: TEXTO });
   if (lugar.origem.conferido) return new Response(JA_CONFERIDO, { status: 409, headers: TEXTO });
 
-  const doPar = await parDaMudanca(lugar.versao.doc, slug, campo, valor);
-  if (doPar !== null) return new Response(doPar, { status: 409, headers: TEXTO });
+  // I3: a colisão estruturada, e a frase DELA (nunca a do painel, que nomeia quem ocupa).
+  if ((await colisaoDaMudanca(lugar.versao.doc, slug, campo, valor)) !== null) {
+    return new Response(NOME_JA_EM_USO, { status: 409, headers: TEXTO });
+  }
 
   let novo: string;
   try {
@@ -5696,7 +6330,7 @@ export async function PUT(req: Request): Promise<Response> {
 }
 ```
 
-(`parDaMudanca` recebe `exceto: slug` por dentro — confira que, num lugar NO AR, ele não acusa o próprio lugar; o teste "trocar o nome" prova.)
+(`colisaoDaMudanca` recebe `exceto: slug` por dentro — confira que, num lugar NO AR, ela não acusa o próprio lugar; o teste "trocar o nome" prova.)
 
 - [ ] **Step 6: Rodar e confirmar que passam**
 
@@ -5715,6 +6349,8 @@ Expected: PASS.
 | M6 | a rota sem `ehCampoDaPessoa` | "campo fora da lista dela (`voz`)…" |
 | M7 | a rota troca o endereço quando o nome muda (chama `trocarEndereco`) | "trocar o nome muda o documento e NÃO o endereço" |
 | M8 | `lugaresDaPessoa` com `ORDER BY o.lugar ASC` | "só os dela … o mais novo primeiro" |
+| M9 | a rota sem `colisaoDaMudanca` | "renomear pro nome de um lugar do João: 409 com a frase dela" (sem o par, grava: 200) |
+| M10 | a rota responde a colisão com `fraseDoPainel(colisao)` | "renomear pro nome de um lugar do João: 409 com a frase dela" |
 
 - [ ] **Step 8: Os portões**
 
@@ -5739,7 +6375,7 @@ node scripts/mutar.mjs
 - Modify: `src/app/admin/campos/gravar.ts` (`PortaDoEditor` ganha `recarregarSe401`; `usarGravacao` o respeita)
 - Modify: `src/app/admin/FormularioDeLugar.tsx` (`FormularioDeLugar`, `ComecarLugarNovo` e o `Pergunta` recebem `onde`; `INSTRUMENTO` e `Pergunta` passam a ser exportados)
 - Modify: `src/app/admin/TelaDePublicar.tsx`, `src/app/admin/BotaoDesistir.tsx` (`onde`)
-- Test: `tests/app/formulario-da-pessoa.test.tsx` (criar)
+- Test: `tests/app/formulario-da-pessoa.test.tsx` (criar); `tests/app/admin-editores-de-campo.test.tsx` (`CUNHADAS_AQUI` ganha `AVISO_PUBLICAR_PESSOA` — I1)
 
 **Interfaces:**
 - Consumes: nada novo — são client components do painel.
@@ -5999,10 +6635,18 @@ e `TelaDePublicar({ …, onde = "painel" })`: `fetch(ROTAS[onde].publicarApi, �
 
 `src/app/admin/BotaoDesistir.tsx`: `BotaoDesistir({ slug, voltarAoPainel = false, onde = "painel" })`: `fetch(ROTAS[onde].rascunhoApi, { method: "DELETE", … })`; sucesso com `voltarAoPainel` → `location.assign(ROTAS[onde].desistiu)`; e o `reload` no 401 como os outros.
 
-- [ ] **Step 6: Rodar e confirmar que passam — e que o do João não mudou**
+- [ ] **Step 6: O controle de completude do cerco, e rodar — o do João não mudou**
+
+🔴 **I1 da pré-auditoria** (o porquê está na Task 6, Step 7). `AVISO_PUBLICAR_PESSOA` mora em `src/app/admin/TelaDePublicar.tsx` e entra em `CUNHADAS_AQUI` de `tests/app/admin-editores-de-campo.test.tsx` — junte-a ao import que já existe de `@/app/admin/TelaDePublicar` (o que traz `AVISO_PUBLICAR`) e acrescente ao fim do arranjo:
+
+```ts
+    // Task 13 (07/10): o aviso da tela de publicar DE QUEM USA. Só aparece com
+    // `onde="contribuir"` — nunca no painel do João, nunca nas três fichas.
+    AVISO_PUBLICAR_PESSOA,
+```
 
 Run: `npx vitest run tests/app/formulario-da-pessoa.test.tsx tests/app/admin-formulario-de-lugar.test.tsx tests/app/admin-tela-de-publicar.test.tsx tests/app/admin-desistir.test.tsx tests/app/admin-editores-de-campo.test.tsx tests/app/admin-desfazer.test.tsx`
-Expected: PASS — os cinco arquivos do painel sem edição de asserção (só `recarregarSe401: false` onde montam um `Provider` à mão).
+Expected: PASS — os arquivos do painel sem edição de asserção (só `recarregarSe401: false` onde montam um `Provider` à mão, e a frase nova em `CUNHADAS_AQUI`).
 
 - [ ] **Step 7: Mutações**
 
@@ -6022,7 +6666,7 @@ Run: `npx vitest run && npx tsc --noEmit && npm run build`
 - [ ] **Step 9: Commit e harness**
 
 ```bash
-git add src/app/admin/novo/enderecos.ts src/app/admin/campos/gravar.ts src/app/admin/FormularioDeLugar.tsx src/app/admin/TelaDePublicar.tsx src/app/admin/BotaoDesistir.tsx tests/app/formulario-da-pessoa.test.tsx
+git add src/app/admin/novo/enderecos.ts src/app/admin/campos/gravar.ts src/app/admin/FormularioDeLugar.tsx src/app/admin/TelaDePublicar.tsx src/app/admin/BotaoDesistir.tsx tests/app/formulario-da-pessoa.test.tsx tests/app/admin-editores-de-campo.test.tsx
 # + os testes do painel que ganharam `recarregarSe401: false`, por caminho
 git commit -m "feat(formulario): o formulario de lugar novo serve quem usa, sem mudar o do painel"
 node scripts/mutar.mjs
@@ -6048,6 +6692,10 @@ node scripts/mutar.mjs
   - `src/app/contribuir/sessao.ts`: `export async function quemNaTela(): Promise<{ pessoa: QuemContribui } | { frase: string }>` (sem sessão → `irPraEntrar()`, que não volta)
   - `src/app/contribuir/perguntas.ts`: `export const ORDEM_DA_PESSOA: readonly string[]`; `export function montarPerguntasDaPessoa(doc: unknown): PerguntaNaTela[]`
   - as quatro páginas; `EdicaoDaPessoa` (props `{ slug: string; versaoId: number; perguntas: PerguntaNaTela[] }`)
+  - `src/app/BarraNavegacao.tsx`: `export const MANDAR_UM_LUGAR` — o item da barra leva a **`/contribuir`** ("Meus lugares"), não a `/contribuir/novo` (I5)
+  - `src/app/contribuir/palavras.ts`: `MANDAR_UM_LUGAR_NOVO` (o link do TOPO de "Meus lugares" pra `/contribuir/novo`), `TITULO_MEUS`, `CONFERIDO`, `MUDAR`, `TITULO_MANDAR`
+
+🔴 **"+ mandar um lugar" leva a `/contribuir`, que É "Meus lugares", com "+ mandar um lugar novo" no topo** (I5 da pré-auditoria, ruling). Assim a lista dela tem entrada na tela — e toda frase que manda "voltar pela sua lista de lugares" (`RASCUNHO_DELA_SUMIU`) ou "conferir na sua lista de lugares" (`JA_NO_AR_DA_PESSOA`) tem destino: a barra. Uma tela faz as duas funções; quem nunca mandou nada vê a lista vazia e o link de mandar no topo. As duas palavras são DIFERENTES de propósito (M10): a barra diz "+ mandar um lugar" e leva à lista; o topo da lista diz "+ mandar um lugar novo" e leva às perguntas — a mesma palavra em duas fontes, levando a dois lugares, é o que o M10 apontou.
 
 🔴 **NENHUMA PERGUNTA NOVA.** As oito perguntas dela são as do painel (`PERGUNTAS`, tiradas do questionário que ele já leu), escolhidas pela lista dela e na ordem da spec. O que muda é QUAIS e QUAIS são obrigatórias — a régua dela (`OPCIONAIS_DA_PESSOA`), não a do registro. A pergunta do mapa é a do ponto 0 (`trajeto.waypoints.0.lat`), que grava o ponto e a coordenada da chuva juntos (Task 10). (Escolha 5 no fim do plano: a spec descreve a pergunta 4 como "o que é, em uma frase"; a pergunta do painel pro mesmo campo, `promessa`, é *"Em uma frase, por que alguém pegaria o carro pra ir até aí?"* — e fica ela, já lida.)
 
@@ -6065,6 +6713,7 @@ import { BLOQUEADA, CLERK_FORA, JA_CONFERIDO } from "@/lib/porta-da-pessoa";
 import { conferirLugar, criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
 import { versaoAtual } from "@/lib/db";
 import { ETIQUETA_NAO_CONFERIDO } from "@/lib/origem";
+import { MANDAR_UM_LUGAR_NOVO } from "@/app/contribuir/palavras";
 import { bancoDeProducao, semearAcervo, semearLugarDaPessoa } from "../banco";
 import { OUTRA, PESSOA, sessao } from "../sessao-da-pessoa";
 
@@ -6134,6 +6783,25 @@ describe("a porta das páginas", () => {
 });
 
 describe("Meus lugares", () => {
+  // 🔴 I5 da pré-auditoria: "Meus lugares" é onde a barra leva, e é por aqui
+  // que se manda um lugar novo. Quem nunca mandou nada (OUTRA, aqui) vê o link
+  // no TOPO — o primeiro link da tela, antes de qualquer lista.
+  it("quem nunca mandou nada: o primeiro link da tela é '+ mandar um lugar novo', pras perguntas", async () => {
+    sessao.atual = OUTRA;
+    const { container } = render(await Meus());
+    const primeiro = container.querySelector("main a");
+    expect(primeiro?.getAttribute("href")).toBe("/contribuir/novo");
+    expect(primeiro?.textContent).toBe(MANDAR_UM_LUGAR_NOVO);
+    expect(container.querySelector('[data-testid="meus-lugares"]')).toBeNull();
+  });
+
+  it("com lugares, o link do topo continua antes da lista", async () => {
+    const { container } = render(await Meus());
+    const links = [...container.querySelectorAll("main a")];
+    expect(links[0]?.getAttribute("href")).toBe("/contribuir/novo");
+    expect(container.querySelector('[data-testid="meus-lugares"]'), "a premissa: a lista dela existe").not.toBeNull();
+  });
+
   it("mostra o dela, marcado como não conferido, com o link de editar; o de outra não aparece", async () => {
     await semearLugarDaPessoa(banco, { nome: "Pedra Da Outra", cidade: "Cidade Teste", contribuidor: OUTRA.id });
     const { container } = render(await Meus());
@@ -6191,13 +6859,17 @@ describe("editar o dela no ar", () => {
 });
 ```
 
-Em `tests/app/BarraNavegacao.test.tsx` (leia o arquivo; ele pode cravar DOIS itens — atualize pra três e acrescente):
+Em `tests/app/BarraNavegacao.test.tsx` (leia o arquivo; ele pode cravar DOIS itens — atualize pra três e acrescente; importe `MANDAR_UM_LUGAR` de `@/app/BarraNavegacao`):
 
 ```ts
-it("a entrada de quem quer mandar um lugar leva às perguntas dela", () => {
+// I5 da pré-auditoria: a barra leva à LISTA dela ("Meus lugares", que tem o
+// "+ mandar um lugar novo" no topo) — e é por ela que as frases "volte pela sua
+// lista de lugares" têm destino.
+it("a entrada de quem quer mandar um lugar leva à lista dela, /contribuir", () => {
   const { container } = render(<BarraNavegacao aqui="hoje" />);
-  const a = container.querySelector('a[href="/contribuir/novo"]');
+  const a = container.querySelector('a[href="/contribuir"]');
   expect(a?.textContent).toContain(MANDAR_UM_LUGAR);
+  expect(container.querySelector('a[href="/contribuir/novo"]')).toBeNull();
 });
 ```
 
@@ -6288,8 +6960,12 @@ export function montarPerguntasDaPessoa(doc: unknown): PerguntaNaTela[] {
 
 // PENDENTE: redação minha, o João ainda não leu
 export const TITULO_MEUS = "Os lugares que você mandou";
+/** O link do TOPO de "Meus lugares", pras perguntas. Palavra DIFERENTE do item
+ *  da barra (`MANDAR_UM_LUGAR`, "+ mandar um lugar", que leva a esta lista): a
+ *  mesma palavra em duas fontes, levando a dois lugares, era o M10 da
+ *  pré-auditoria. */
 // PENDENTE: redação minha, o João ainda não leu
-export const MANDAR_OUTRO = "+ mandar um lugar";
+export const MANDAR_UM_LUGAR_NOVO = "+ mandar um lugar novo";
 // PENDENTE: redação minha, o João ainda não leu
 export const CONFERIDO = "conferido pelo BatePerna";
 // PENDENTE: redação minha, o João ainda não leu
@@ -6317,7 +6993,7 @@ import { ETIQUETA_NAO_CONFERIDO } from "@/lib/origem";
 import { cidadeDoDoc, nomeDoRascunho } from "@/lib/rascunho";
 import { ESCONDIDO } from "../admin/campos/palavras";
 import { TITULO_RASCUNHOS } from "../admin/ListaDeLugares";
-import { CONFERIDO, MANDAR_OUTRO, MUDAR, TITULO_MEUS } from "./palavras";
+import { CONFERIDO, MANDAR_UM_LUGAR_NOVO, MUDAR, TITULO_MEUS } from "./palavras";
 import { quemNaTela } from "./sessao";
 import "../admin/admin.css";
 
@@ -6334,7 +7010,9 @@ export default async function MeusLugares() {
   return (
     <main className="adm">
       <h1>{TITULO_MEUS}</h1>
-      <Link href="/contribuir/novo" className="adm-novo-link">{MANDAR_OUTRO}</Link>
+      {/* 🔴 I5: o PRIMEIRO link da tela. A barra traz a pessoa pra cá, e é
+          daqui que se manda um lugar novo — com ou sem lugares na lista. */}
+      <Link href="/contribuir/novo" className="adm-novo-link">{MANDAR_UM_LUGAR_NOVO}</Link>
       {lugares.length > 0 && (
         <ul className="adm-lista" data-testid="meus-lugares">
           {lugares.map((l) => (
@@ -6528,11 +7206,13 @@ export default function EdicaoDaPessoa({ slug, versaoId, perguntas }: { slug: st
 export const MANDAR_UM_LUGAR = "+ mandar um lugar";
 ```
 
-e, depois do laço dos destinos (dentro do `<nav>`), um terceiro item — link comum, sem `aria-current` (não é uma "seção" do app; sem sessão, o Clerk pede login, spec Parte 1):
+e, depois do laço dos destinos (dentro do `<nav>`), um terceiro item — link comum, sem `aria-current` (não é uma "seção" do app; sem sessão, o Clerk pede login, spec Parte 1). Ele leva à LISTA dela, `/contribuir`, que tem o "+ mandar um lugar novo" no topo (I5 da pré-auditoria):
 
 ```tsx
-      <a className="barra-item barra-mandar" href="/contribuir/novo">{MANDAR_UM_LUGAR}</a>
+      <a className="barra-item barra-mandar" href="/contribuir">{MANDAR_UM_LUGAR}</a>
 ```
+
+(O docblock da barra diz "Dois destinos e só"; ganha ao fim: *"E desde 07/10 um terceiro item, que não é seção: a lista de quem manda um lugar (`/contribuir`), de onde ela manda um novo."*)
 
 `src/lib/rascunho.ts:43`: `["admin", "api", "chuva", "contribuir", "icones", "trilhas", "novo"]`.
 `src/lib/despacho.ts:2`: `new Set(["trilhas", "icones", "admin", "contribuir"])`.
@@ -6567,6 +7247,9 @@ Expected: PASS. A varredura da Task 5 continua verde: as páginas de `/contribui
 | M6 | `quemNaTela` sem a checagem de bloqueio | "bloqueada: a frase, e nenhum caminho" |
 | M7 | tira o objeto `/contribuir` do `sw.ts` | "a rota do /contribuir vem antes de ...defaultCache" |
 | M8 | tira `"contribuir"` de `SLUGS_RESERVADOS` | "todo segmento estático de rota é reservado" |
+| M9 | a barra volta a levar a `/contribuir/novo` | "a entrada de quem quer mandar um lugar leva à lista dela, /contribuir" |
+| M10 | "Meus lugares" sem o link do topo (só a lista) | "quem nunca mandou nada: o primeiro link da tela é '+ mandar um lugar novo'" |
+| M11 | o link do topo desce pra depois da lista | "com lugares, o link do topo continua antes da lista" |
 
 - [ ] **Step 8: Os portões**
 
@@ -6580,7 +7263,7 @@ git commit -m "feat(contribuir): as telas de quem manda um lugar, e a entrada na
 node scripts/mutar.mjs
 ```
 
-📝 **Frases novas:** `MANDAR_UM_LUGAR`, `TITULO_MEUS`, `MANDAR_OUTRO`, `CONFERIDO`, `MUDAR`, `TITULO_MANDAR`.
+📝 **Frases novas:** `MANDAR_UM_LUGAR` (barra → `/contribuir`), `TITULO_MEUS`, `MANDAR_UM_LUGAR_NOVO` (topo da lista → `/contribuir/novo`), `CONFERIDO`, `MUDAR`, `TITULO_MANDAR`.
 
 ---
 
@@ -6592,7 +7275,7 @@ node scripts/mutar.mjs
 - Create: `src/app/admin/BotaoBloquear.tsx`
 - Modify: `src/app/admin/CaixaDaOrigem.tsx` (o botão, e as props `contribuidor`/`bloqueado`), `src/app/admin/[slug]/page.tsx` (passa as duas), `src/app/admin/campos/palavras.ts` (as palavras)
 - Modify: `src/app/api/contribuir/rascunho/route.ts`, `src/app/api/contribuir/publicar/route.ts` — quando o banco recusa, conferir se foi o bloqueio (a frase certa)
-- Test: `tests/lib/db-bloquear.test.ts`, `tests/api/route-admin-contribuidor.test.ts`, `tests/app/admin-bloquear.test.tsx` (criar); `tests/api/route-contribuir-rascunho.test.ts` (acrescentar a corrida)
+- Test: `tests/lib/db-bloquear.test.ts`, `tests/api/route-admin-contribuidor.test.ts`, `tests/app/admin-bloquear.test.tsx` (criar); `tests/api/route-contribuir-rascunho.test.ts` (acrescentar a corrida); `tests/app/admin-editores-de-campo.test.tsx` (`CUNHADAS_AQUI` — I1)
 
 **Interfaces:**
 - Consumes: `contribuidores`, `origem_do_lugar` (Task 1); `LIVRE` e as gravações dela (Tasks 10-12); `getAllFichas`; `clienteQueIntercala`; `CaixaDaOrigem` (Task 6).
@@ -6614,6 +7297,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { historico, lerAcervoComOrigem, versaoAtual } from "@/lib/db";
 import {
   bloquearContribuidor, conferirLugar, contribuidorPorId, criarRascunhoDaPessoa, desbloquearContribuidor, estaBloqueado,
+  registrarContribuidor,
 } from "@/lib/db-contribuidor";
 import { AGORA_SEMENTE, semearAcervo, semearLugarDaPessoa } from "../banco";
 import { OUTRA, PESSOA } from "../sessao-da-pessoa";
@@ -6666,6 +7350,17 @@ describe("bloquearContribuidor", () => {
     expect(await contribuidorPorId(c, PESSOA.id)).toBeNull();
     await bloquearContribuidor(c, PESSOA.id, T);
     expect(await estaBloqueado(c, PESSOA.id)).toBe(true);
+  });
+
+  // 🔴 M6 da pré-auditoria: o caso de cima NÃO mata o `ON CONFLICT … DO
+  // NOTHING` — sem linha prévia, o INSERT nasce bloqueado de qualquer jeito. É
+  // ESTE que o mata: quem já passou pela porta TEM linha (`bloqueado = 0`), e
+  // só o `DO UPDATE SET bloqueado = 1` a bloqueia.
+  it("quem JÁ passou pela porta (com linha, desbloqueada) também é bloqueado — nome e e-mail ficam", async () => {
+    await registrarContribuidor(c, PESSOA, T - 10);
+    expect(await estaBloqueado(c, PESSOA.id), "a premissa: a linha existe, desbloqueada").toBe(false);
+    await bloquearContribuidor(c, PESSOA.id, T);
+    expect(await contribuidorPorId(c, PESSOA.id)).toEqual({ id: PESSOA.id, nome: PESSOA.nome, email: PESSOA.email, bloqueado: true });
   });
 
   it("e a leitura do público deixa de ver os lugares dela", async () => {
@@ -6866,7 +7561,7 @@ export async function desbloquearContribuidor(client: Client, id: string): Promi
 }
 ```
 
-⚠️ Confira (o teste "esconde TODOS" pega) que o `rowsAffected` de um `INSERT … SELECT` sem `RETURNING` conta as linhas no driver local — o comentário de `gravarRelatoDoLugar` mediu que com `RETURNING` ele mente. Se mentir aqui também, troque por `RETURNING ficha_slug` e conte `rs[1].rows.length`.
+(O `rowsAffected` de um `INSERT … SELECT` SEM `RETURNING` conta as linhas certas no libsql 0.14 — MEDIDO na pré-auditoria de 07/10; o comentário de `gravarRelatoDoLugar` mediu que é COM `RETURNING` que ele mente. Não ponha `RETURNING` aqui. O teste "esconde TODOS" trava o número.)
 
 - [ ] **Step 4: A rota e o botão**
 
@@ -6972,17 +7667,41 @@ export default function BotaoBloquear({ contribuidor, bloqueado }: { contribuido
 
 - [ ] **Step 5: A frase certa quando o banco recusa por bloqueio**
 
-Em `src/app/api/contribuir/rascunho/route.ts`, nos três pontos em que uma gravação devolve `false` (`criarRascunhoDaPessoa`, `moverRascunhoDaPessoa`, `regravarRascunhoDaPessoa`), ANTES de escolher a frase de hoje:
+Nas duas rotas, os imports que ainda não estão lá (M8 da pré-auditoria): `estaBloqueado` de `@/lib/db-contribuidor` (junte ao import que já existe desse módulo) e `BLOQUEADA` de `@/lib/porta-da-pessoa` (idem).
+
+Em `src/app/api/contribuir/rascunho/route.ts`, nos três pontos em que uma gravação devolve `false`, ANTES de escolher a frase de hoje. O `id` NÃO existe no `POST` (lá a pessoa é `porta.pessoa`) — use o nome que cada método tem (M8 da pré-auditoria):
+
+- no `POST`, quando `criarRascunhoDaPessoa` devolve `false`, antes do `return emUso();`:
+  ```ts
+  if (await estaBloqueado(getClient(), porta.pessoa.id)) return new Response(BLOQUEADA, { status: 403, headers: TEXTO });
+  ```
+- no `PUT`, quando `moverRascunhoDaPessoa` devolve `false` (antes do `lerRascunhoDaPessoa` que escolhe entre `RASCUNHO_DELA_SUMIU` e `emUso()`) e quando `regravarRascunhoDaPessoa` devolve `false` (antes do `RASCUNHO_DELA_SUMIU`):
+  ```ts
+  if (await estaBloqueado(getClient(), id)) return new Response(BLOQUEADA, { status: 403, headers: TEXTO });
+  ```
+
+E em `src/app/api/contribuir/publicar/route.ts`, antes do `return recusa(409, await porQueRecusou(slug, atualizadoEm))` final (lá o `id` existe: `const id = porta.pessoa.id`):
 
 ```ts
-    if (await estaBloqueado(getClient(), id)) return new Response(BLOQUEADA, { status: 403, headers: TEXTO });
+  if (await estaBloqueado(getClient(), id)) return new Response(BLOQUEADA, { status: 403, headers: TEXTO });
 ```
 
-E em `src/app/api/contribuir/publicar/route.ts`, antes do `return recusa(409, await porQueRecusou(…))` final — o mesmo. (A rota do lugar, Task 12, já faz.)
+(A rota do lugar, Task 12, já faz.)
 
-- [ ] **Step 6: Rodar e confirmar que passam**
+- [ ] **Step 6: O controle de completude do cerco do painel, e rodar**
 
-Run: `npx vitest run tests/lib/db-bloquear.test.ts tests/api/route-admin-contribuidor.test.ts tests/app/admin-bloquear.test.tsx tests/api/route-contribuir-rascunho.test.ts tests/api/route-contribuir-publicar.test.ts tests/app/admin-nao-conferidos.test.tsx`
+🔴 **I1 da pré-auditoria** (o porquê está na Task 6, Step 7). `BLOQUEAR`, `BLOQUEAR_MESMO` e `DESBLOQUEAR` (`src/app/admin/campos/palavras.ts`) entram em `CUNHADAS_AQUI` de `tests/app/admin-editores-de-campo.test.tsx`, no import que já existe de `@/app/admin/campos/palavras`:
+
+```ts
+    // Task 15 (07/10): bloquear quem mandou. Só na caixa da origem de um lugar
+    // mandado por quem usa — nenhuma das três fichas —, e o "mesmo?" só depois
+    // do 1º toque.
+    BLOQUEAR,
+    BLOQUEAR_MESMO,
+    DESBLOQUEAR,
+```
+
+Run: `npx vitest run tests/lib/db-bloquear.test.ts tests/api/route-admin-contribuidor.test.ts tests/app/admin-bloquear.test.tsx tests/api/route-contribuir-rascunho.test.ts tests/api/route-contribuir-publicar.test.ts tests/app/admin-nao-conferidos.test.tsx tests/app/admin-editores-de-campo.test.tsx`
 Expected: PASS.
 
 - [ ] **Step 7: Mutações**
@@ -6994,7 +7713,7 @@ Expected: PASS.
 | M3 | sem o filtro `contribuidor = ?` (esconde todos de quem usa) | "não encosta nos lugares de outra pessoa" |
 | M4 | esconder por `UPDATE ficha_versoes SET oculto = 1` | "esconder é VERSÃO NOVA (append-only)" |
 | M5 | `desbloquearContribuidor` também grava versão `oculto = 0` | "desfaz o bloqueio e deixa os lugares escondidos" |
-| M6 | `ON CONFLICT … DO NOTHING` no 1º passo | "bloqueia, e esconde…" (`estaBloqueado` falso pra quem já tinha linha) |
+| M6 | `ON CONFLICT … DO NOTHING` no 1º passo | "quem JÁ passou pela porta (com linha, desbloqueada) também é bloqueado" **e** "bloqueada no meio do formulário: 403 com a frase" (nos dois a pessoa já tem linha; sem o `DO UPDATE` ela fica `bloqueado = 0`). NÃO "bloqueia, e esconde…": sem linha prévia o INSERT nasce bloqueado com ou sem `DO UPDATE` (M6 da pré-auditoria) |
 | M7 | a rota do rascunho sem o `estaBloqueado` depois da recusa | "bloqueada no meio do formulário: 403 com a frase" |
 | M8 | `BotaoBloquear` bloqueia no 1º toque | "bloquear pede o segundo toque" |
 
@@ -7005,7 +7724,7 @@ Run: `npx vitest run && npx tsc --noEmit && npm run build`
 - [ ] **Step 9: Commit e harness**
 
 ```bash
-git add src/lib/db-contribuidor.ts src/app/api/admin/contribuidor/route.ts src/app/admin/BotaoBloquear.tsx src/app/admin/CaixaDaOrigem.tsx "src/app/admin/[slug]/page.tsx" src/app/admin/campos/palavras.ts src/app/api/contribuir/rascunho/route.ts src/app/api/contribuir/publicar/route.ts tests/lib/db-bloquear.test.ts tests/api/route-admin-contribuidor.test.ts tests/app/admin-bloquear.test.tsx tests/api/route-contribuir-rascunho.test.ts tests/app/admin-nao-conferidos.test.tsx
+git add src/lib/db-contribuidor.ts src/app/api/admin/contribuidor/route.ts src/app/admin/BotaoBloquear.tsx src/app/admin/CaixaDaOrigem.tsx "src/app/admin/[slug]/page.tsx" src/app/admin/campos/palavras.ts src/app/api/contribuir/rascunho/route.ts src/app/api/contribuir/publicar/route.ts tests/lib/db-bloquear.test.ts tests/api/route-admin-contribuidor.test.ts tests/app/admin-bloquear.test.tsx tests/api/route-contribuir-rascunho.test.ts tests/app/admin-nao-conferidos.test.tsx tests/app/admin-editores-de-campo.test.tsx
 git commit -m "feat(painel): bloquear quem mandou esconde os lugares dela; desbloquear desfaz so o bloqueio"
 node scripts/mutar.mjs
 ```
@@ -7031,9 +7750,14 @@ node scripts/mutar.mjs
 `tests/lib/frases-da-rodada-marcadas.test.ts`:
 
 ```ts
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+
+/** A BASE DA RODADA: o commit de onde a execução partiu (07/10). Frase que já
+ *  existia aqui pode ter `LIDA:`; frase que nasceu DEPOIS, não (I6). */
+const BASE = "cc6c467";
 
 /** Os módulos onde as palavras desta rodada (07/10) moram. Arquivo de palavras
  *  NOVO desta rodada entra aqui; os do painel que ganharam frase também. */
@@ -7060,10 +7784,41 @@ function frasesExportadas(fonte: string): { nome: string; linha: number }[] {
   });
 }
 
-/** Marca = `PENDENTE` ou `LIDA:` num comentário nas 3 linhas de cima (o
- *  docblock da constante pode ficar entre ela e a marca). */
-function marcada(linhas: string[], i: number): boolean {
-  return linhas.slice(Math.max(0, i - 3), i).some((l) => /\/\/.*(PENDENTE|LIDA:)/.test(l));
+/** A marca de uma constante: `PENDENTE` ou `LIDA:` num comentário nas 3
+ *  linhas de cima (o docblock da constante pode ficar entre ela e a marca).
+ *  `PENDENTE` ganha quando as duas aparecem. */
+function marcaDe(linhas: string[], i: number): "PENDENTE" | "LIDA" | null {
+  const acima = linhas.slice(Math.max(0, i - 3), i).filter((l) => /\/\//.test(l));
+  if (acima.some((l) => /PENDENTE/.test(l))) return "PENDENTE";
+  if (acima.some((l) => /LIDA:/.test(l))) return "LIDA";
+  return null;
+}
+
+/** Os nomes das constantes de texto que o arquivo exportava na BASE. Arquivo
+ *  que não existia lá = nenhum (toda frase dele é nova). */
+function nomesNaBase(arquivo: string): Set<string> {
+  let antes = "";
+  try {
+    antes = execFileSync("git", ["show", `${BASE}:${arquivo}`], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+  } catch {
+    antes = "";
+  }
+  return new Set(frasesExportadas(antes).map((f) => f.nome));
+}
+
+/** 🔴 I6 DA PRÉ-AUDITORIA: `LIDA:` só vale pra frase que JÁ EXISTIA na base.
+ *  Frase que nasceu nesta rodada e diz `LIDA:` é marca escrita por mim — e
+ *  "pode seguir" (aprovar o DESENHO) nunca é "li e aprovei" a frase (memória
+ *  "trava removida por quem escreveu"). Foi o `SECO_SEM_CARRO` do plano
+ *  original, e o guarda de antes o aceitava. */
+function problemasDaMarca(fonte: string, base: Set<string>): string[] {
+  const linhas = fonte.split(/\r?\n/);
+  return frasesExportadas(fonte).flatMap((f) => {
+    const marca = marcaDe(linhas, f.linha);
+    if (marca === null) return [`${f.nome}: sem marca`];
+    if (marca === "LIDA" && !base.has(f.nome)) return [`${f.nome}: LIDA numa frase que não existia em ${BASE} — nasce PENDENTE`];
+    return [];
+  });
 }
 
 describe("toda frase nova desta rodada nasce marcada", () => {
@@ -7072,23 +7827,35 @@ describe("toda frase nova desta rodada nasce marcada", () => {
     expect(total).toBeGreaterThanOrEqual(30);
   });
 
-  it.each(ARQUIVOS)("%s: toda constante de texto exportada tem PENDENTE ou LIDA na linha de cima", (arquivo) => {
-    const fonte = readFileSync(path.join(process.cwd(), arquivo), "utf8");
-    const linhas = fonte.split(/\r?\n/);
-    const semMarca = frasesExportadas(fonte).filter((f) => !marcada(linhas, f.linha)).map((f) => f.nome);
-    expect(semMarca).toEqual([]);
+  // Não-vacuidade da leitura da BASE: se o `git show` falhasse sempre, toda
+  // frase pareceria nova — o guarda ficaria MAIS estrito, nunca mais frouxo;
+  // mesmo assim, ele tem de saber ler a base de verdade.
+  it("o guarda lê a base: um arquivo que já existia nela devolve as frases de lá", () => {
+    expect(nomesNaBase("src/lib/porta-de-publicar.ts").has("RASCUNHO_MUDOU")).toBe(true);
+    expect(nomesNaBase("src/lib/origem.ts").size, "origem.ts nasce nesta rodada").toBe(0);
   });
 
-  // O controle: o guarda SABE achar uma frase sem marca.
+  it.each(ARQUIVOS)("%s: toda constante de texto exportada tem marca, e LIDA só em frase que já existia", (arquivo) => {
+    const fonte = readFileSync(path.join(process.cwd(), arquivo), "utf8");
+    expect(problemasDaMarca(fonte, nomesNaBase(arquivo))).toEqual([]);
+  });
+
+  // Os controles: o guarda SABE achar uma frase sem marca, e uma LIDA nova.
   it("controle: uma frase sem marca é achada", () => {
     const fonte = 'const x = 1;\nexport const FRASE = "sem marca";\n';
-    const linhas = fonte.split("\n");
-    expect(frasesExportadas(fonte).filter((f) => !marcada(linhas, f.linha)).map((f) => f.nome)).toEqual(["FRASE"]);
+    expect(problemasDaMarca(fonte, new Set())).toEqual(["FRASE: sem marca"]);
+  });
+
+  it("controle: LIDA numa frase nova é achada; LIDA numa frase da base passa; PENDENTE sempre passa", () => {
+    const fonte = '// LIDA: aprovada\nexport const NOVA = "x";\n// LIDA: aprovada\nexport const VELHA = "y";\n// PENDENTE: minha\nexport const OUTRA = "z";\n';
+    expect(problemasDaMarca(fonte, new Set(["VELHA"]))).toEqual([
+      `NOVA: LIDA numa frase que não existia em ${BASE} — nasce PENDENTE`,
+    ]);
   });
 });
 ```
 
-⚠️ As frases que moram em arquivos do painel que JÁ existiam (`src/app/admin/campos/palavras.ts`, `src/app/admin/TelaDePublicar.tsx`, `src/app/admin/HistoricoDaFicha.tsx`, o título do link em `src/app/[slug]/page.tsx`) não entram na lista acima porque esses arquivos têm frases antigas com outras marcas; elas entram na LISTA DO RELATÓRIO (Step 3), conferidas à mão com `git diff 2d13a1f -- <arquivo> | grep -n "PENDENTE"`.
+⚠️ As frases que moram em arquivos que JÁ existiam (`src/app/admin/campos/palavras.ts`, `src/app/admin/TelaDePublicar.tsx`, `src/app/admin/HistoricoDaFicha.tsx`, `src/lib/rascunho.ts` — as duas arrow functions `parDeRascunhoDeQuemUsa`/`enderecoDeRascunhoDeQuemUsa`, que o regex de `export const NOME = "…"` não vê —, e o título do link em `src/app/[slug]/page.tsx`) não entram na lista acima porque esses arquivos têm frases antigas com outras marcas (ou formas que o regex não lê); elas entram na LISTA DO RELATÓRIO (Step 3), conferidas à mão com `git diff cc6c467 -- <arquivo> | grep -n "PENDENTE"`. As frases novas de `src/app/admin/**` estão, além disso, cercadas por `CUNHADAS_AQUI` (I1).
 
 `FRASE_DA_PESSOA` (um objeto, não uma constante de texto) é conferida por um caso a mais, no mesmo arquivo:
 
@@ -7106,12 +7873,16 @@ it("cada frase de FRASE_DA_PESSOA tem PENDENTE na linha de cima", () => {
 Run: `npx vitest run tests/lib/frases-da-rodada-marcadas.test.ts`
 Expected: PASS. Se acusar frase sem marca, a correção é MARCAR (`// PENDENTE: redação minha, o João ainda não leu`), nunca tirar a frase do guarda.
 
-Mutações: tire o `// PENDENTE` de cima de `FAIXA_NAO_CONFERIDO` → o caso de `src/lib/origem.ts` fica vermelho; tire o de uma entrada de `FRASE_DA_PESSOA` → o último caso fica vermelho.
+Mutações: tire o `// PENDENTE` de cima de `FAIXA_NAO_CONFERIDO` → o caso de `src/lib/origem.ts` fica vermelho; troque o `// PENDENTE` de cima de `SECO_SEM_CARRO` por `// LIDA: aprovada na spec` (o I6) → o caso de `src/lib/origem.ts` fica vermelho com "LIDA numa frase que não existia"; tire o de uma entrada de `FRASE_DA_PESSOA` → o último caso fica vermelho.
 
 - [ ] **Step 3: A lista das frases da rodada, pro relatório**
 
-Run: `git diff 2d13a1f -- src | grep -n "^+.*PENDENTE" `
-Cole no relatório, por extenso, cada frase NOVA marcada `PENDENTE` nesta rodada, agrupada por tela (pública · painel · telas de quem contribui · recusas da porta dela), com o arquivo e a constante. É a matéria-prima do pacote de copy.
+Run: `git diff cc6c467 -- src | grep -n "^+.*PENDENTE" `
+Cole no relatório, por extenso, cada frase NOVA marcada `PENDENTE` nesta rodada, agrupada por tela (pública · painel · telas de quem contribui · recusas da porta dela), com o arquivo e a constante. É a matéria-prima do pacote de copy. Confira POR NOME, não só pelo `grep` (M9 da pré-auditoria), estas que moram fora do guarda ou dividem linha com marca antiga:
+- o `· ${ETIQUETA_NAO_CONFERIDO}` do `const nome` do `generateMetadata` (`src/app/[slug]/page.tsx`) — o `PENDENTE` divide a linha com um `LIDA:` do formato antigo;
+- `SECO_SEM_CARRO` ("seco") — a subtração de uma frase LIDA, PENDENTE pelo I6;
+- `"quem mandou"` (`HistoricoDaFicha.tsx`), `parDeRascunhoDeQuemUsa`, `enderecoDeRascunhoDeQuemUsa` (`src/lib/rascunho.ts`);
+- `NOME_JA_EM_USO`, com a nota de DECISÃO DELE: os dois casos em que a pessoa fica sem saída (o gêmeo sem cidade de um lugar do João; um lugar real diferente com o mesmo nome na mesma cidade).
 
 - [ ] **Step 4: Os portões finais da branch**
 
@@ -7148,7 +7919,7 @@ Cada uma está no código com o porquê; aqui, juntas, pra revisão dele.
 5. **"As 5 obrigatórias dela" são 6** na lista da própria spec: nome, cidade, ponto, o que é, como se chega, custa-ou-é-grátis. O plano exige as seis.
 6. **O cartão do link no WhatsApp leva a etiqueta** (`· não conferido` no título). A spec lista quatro superfícies; o cartão do link é superfície pública que sai do app e fica na conversa — sem a marca, o lugar não conferido circularia sem ela. A palavra é PENDENTE.
 7. **As oito perguntas dela usam o texto das perguntas do painel**, já lidas por ele. A pergunta 4 da spec ("o que é, em uma frase") cai no texto do painel pro mesmo campo (`promessa`: "Em uma frase, por que alguém pegaria o carro pra ir até aí?"). "Horário e dias" são duas telas (são dois campos, dois instrumentos).
-8. **O rascunho dela não aparece na lista de rascunhos do painel**, e o publicar do painel não leva ao ar rascunho dela (nem ela o dele). A spec não diz; o rascunho dela não afirma nada até publicar, e é dela.
+8. **O painel do João não lista nem age sobre rascunho de quem usa — só sobre lugar publicado** (ruling de produto da pré-auditoria, 07/10). O rascunho dela não aparece na lista de rascunhos do painel, as portas de rascunho do painel (`lerRascunho`, `regravarRascunho`, `moverRascunho`, `apagarRascunho`, e por elas `/admin/novo?slug=`) não o alcançam, e o publicar do painel não o leva ao ar (nem ela o dele). A spec só dá a ele lugar no ar; o rascunho dela não afirma nada até publicar, e é dela. Se ele quiser ver rascunhos dela, é rodada futura. A COLISÃO, ao contrário, vê todo rascunho (`todosOsRascunhos`), e quando o que colide é rascunho dela o painel diz isso com frase própria (`parDeRascunhoDeQuemUsa`, `enderecoDeRascunhoDeQuemUsa`) — nunca "continue por ele na lista do painel".
 9. **Clerk sem `<ClerkProvider>`**, entrada pela tela hospedada (`redirectToSignIn`), middleware SÓ em `/contribuir` e `/api/contribuir`: o app público não carrega Clerk nenhum. O `vercel env pull` vai pra `.env.development.local`, não `.env.local` (que guarda o Turso da semente).
 10. **Mudar nome ou cidade de um lugar dela no ar muda o documento, não o endereço** — a régua de 04/10 (endereço de lugar publicado só muda quando o João manda).
 11. **As recusas da coerência "ganham versão pra ela"** em seis regras — as que os campos dela alcançam — e uma frase de reserva pro resto; a frase do painel (que nomeia outro lugar) nunca chega a ela. `preco-legivel-no-custo` ficou de fora porque só examina ficha paga COM chip, e ela não escreve chip.
@@ -7156,6 +7927,9 @@ Cada uma está no código com o porquê; aqui, juntas, pra revisão dele.
 13. **A tela da regra padrão mora em `/admin/chuva`**: segmento de tela com hífen colidiria com o endereço de um lugar (régua que um teste já trava).
 14. **O "Calibrar" começa vazio e não mostra a regra padrão como referência** — seria convidar a copiá-la, e "ninguém calibrou" continuaria verdade com outra roupa.
 15. **Editar o lugar dela no ar é uma tela com as perguntas todas**, não uma por tela (no rascunho é uma por tela).
+16. **O lugar dela nunca toma o endereço antigo de outro lugar** (ruling de produto da pré-auditoria, 07/10). A regra de 04/10 diz que o endereço antigo leva ao novo; um lugar novo tomando o link quebraria isso pro link que já circula. O rascunho dela não nasce nem se muda pra um endereço antigo, e o publicar dela recusa no batch (a corrida). O publicar do JOÃO continua retomando, como hoje. Custo: em caso raro, ela vê a recusa de colisão.
+17. **Toda colisão dela responde UMA frase, que não nomeia ninguém** (`NOME_JA_EM_USO`; I3 da pré-auditoria). As do painel falam do painel e nomeiam quem ocupa — que pode ser o rascunho de outra pessoa ou um lugar escondido. Em dois casos ela fica sem saída (o gêmeo sem cidade de um lugar do João, e um lugar real diferente de mesmo nome na mesma cidade): a frase não inventa saída, e o que fazer é decisão dele, no pacote de copy.
+18. **"+ mandar um lugar" leva à lista dela (`/contribuir`), com "+ mandar um lugar novo" no topo** (I5 da pré-auditoria, ruling): toda frase que manda "voltar pela sua lista de lugares" tem destino. A spec dizia "com login → formulário"; agora é um toque a mais.
 
 ---
 
@@ -7182,8 +7956,48 @@ Cada uma está no código com o porquê; aqui, juntas, pra revisão dele.
 | Testes da spec: marca; rotas 401/bloqueio/de outra/conferido/nunca do João; regra padrão; "seco"; cala por campo; bloquear/conferir; migração; portões | 1-15 |
 | Ordem item 6 (copy → leitura → deploy) | 16 (PARADA) |
 
-**2. Placeholders.** Varri "TBD", "TODO", "implement later", "similar to". Os ⚠️ que mandam CONFERIR algo (`data-campo` no teste da ficha inteira; `rowsAffected` de `INSERT…SELECT`; o operador do teto) são medição a fazer com o comportamento esperado escrito ao lado, não lacuna de desenho.
+**2. Placeholders.** Varri "TBD", "TODO", "implement later", "similar to". Dos três ⚠️ que mandavam CONFERIR algo, dois foram resolvidos pela pré-auditoria (o seletor da ficha inteira é `data-testid="campo-<caminho>"`; o `rowsAffected` de `INSERT…SELECT` sem `RETURNING` conta certo no libsql 0.14, medido); resta o operador do teto (Task 7), com o comportamento esperado escrito ao lado.
 
-**3. Tipos.** `OrigemDoLugar`/`LinhaDoAcervo`/`AcervoComOrigem` (Task 1) → `buscarFichas`/`noAr` (Task 2); `OrigemNoAr` (`conferido`, `regraPropria`) → `Voz.regraPropria` (Task 3) e a marca (Task 5); `QuemContribui` (Task 9) ≠ `Contribuidor` (Task 6, tem `bloqueado`) — nomes diferentes de propósito; `RegraPadrao` em todo lugar; `publicarRascunho(…, contribuidor)`; `violacaoIntroduzidaInteira` (Task 11) usada nas Tasks 11-12; `IDENTIDADE` e `LIVRE` declarados nas Tasks 6 e 10 e usados depois; `ROTAS`/`Onde` (Task 13) → páginas (Task 14).
+**3. Tipos.** `OrigemDoLugar`/`LinhaDoAcervo`/`AcervoComOrigem` (Task 1) → `buscarFichas`/`noAr` (Task 2); `OrigemNoAr` (`conferido`, `regraPropria`) → `Voz.regraPropria` (Task 3) e a marca (Task 5); `QuemContribui` (Task 9) ≠ `Contribuidor` (Task 6, tem `bloqueado`) — nomes diferentes de propósito; `RegraPadrao` em todo lugar; `publicarRascunho(…, contribuidor)`; `violacaoIntroduzidaInteira` (Task 11) usada nas Tasks 11-12; `IDENTIDADE` e `LIVRE` declarados nas Tasks 6 e 10 e usados depois; `ROTAS`/`Onde` (Task 13) → páginas (Task 14). Da pré-auditoria: `Colisao`/`colisaoDoPar`/`colisaoDaMudanca` (Task 1) → rotas da pessoa (Tasks 10, 11, 12) e `fraseDoPainel` → `parOcupado`/`parDaTroca`/`parDaMudanca` (assinaturas de hoje, painel intacto); `RascunhoComDono`/`todosOsRascunhos`/`rascunhoDeQualquerUm` (Task 1) → `colisaoDoPar`, os `quemOcupa`/`porQueRecusou` e os testes das Tasks 10-11; `NOME_JA_EM_USO` (Task 10) → Tasks 10, 11, 12; `SEM_ENDERECO_ANTIGO` (Task 10) ao lado de `LIVRE`; `MANDAR_UM_LUGAR_NOVO` (Task 14).
 
-**4. Review Focus.** As cinco linhas têm caso na tarefa dona: campo fora da lista (10, 11), corrida com Conferi/Bloquear (12, 15), par do João (10), sessão vencida (10, 13), regra padrão torta (1, 7).
+**4. Review Focus.** As cinco linhas têm caso na tarefa dona: campo fora da lista (10, 11), corrida com Conferi/Bloquear (12, 15), par do João e endereço antigo (1, 10, 11), sessão vencida (10, 13), regra padrão torta (1, 7).
+
+---
+
+## Emendas da pré-auditoria (07/10)
+
+Fonte: `.superpowers/sdd/2026-10-07-lugar-de-quem-usa/preflight.md` (2 C · 6 I · 13 M) e as rulings no fim de `progress.md`. Aplicadas no texto das tarefas ANTES da Task 1. Cada linha: o achado → o que mudou, e onde.
+
+**Critical**
+
+- **C1** (T2 deixava dois guardas vermelhos) → Task 2, Files e Step 8: o guarda de `tests/lib/campos-da-ficha.test.ts` passa a exigir EXATAMENTE `["condicao.regra", "discriminador"]`, com o "não sei" de cada bloco escrito; o caso de `tests/lib/severidade.test.ts` vira "ficha sem nível: o schema aceita, e a porta do JOÃO a recusa" (`obrigatoriosFaltando`). Nenhum guarda apagado. Step 9 roda `severidade.test.ts`; Step 10 ganha M11 (terceiro bloco opcional) e M12 (`condicao.severidade` com `obrigatorio: false`); `severidade.test.ts` no `git add`.
+- **C2** (dublê do Clerk cego ao `vi.resetModules()`) → MEDIDO de novo nesta emenda, com o vitest 2.1.9 do repo, num arquivo descartável (apagado): o molde de estado num `const` falhou as duas sondas (401 e 503 esperados, 200 recebidos); o molde `globalThis.__sessaoDaPessoa ??= {…}` passou as três. Global Constraints: regra nova do dublê. Task 10, Step 1: `tests/sessao-da-pessoa.ts` com o estado em `globalThis` e o porquê medido no docblock; o caso "SONDA: a rota vê a sessão que o teste muda, nos três sentidos" abre a `describe` da porta; Step 8 ganha M17 (o dublê volta ao `const` → a sonda fica vermelha) e M9 também mata pela sonda. Tasks 11, 12, 14 e 15 herdam o helper sem mudança de texto.
+
+**Important**
+
+- **I1** (frases novas sob `src/app/admin` fora de `CUNHADAS_AQUI`) → Global Constraints (regra) e Mapa de arquivos; Task 6 Step 7, Task 7 Step 6, Task 8 Step 8, Task 13 Step 6, Task 15 Step 6: cada uma importa as suas frases e as acrescenta a `CUNHADAS_AQUI`, roda `tests/app/admin-editores-de-campo.test.tsx`, e põe o arquivo no `git add` e em Files.
+- **I2** (T11 comparava TEXTO contra a porta que normaliza) → Task 11, Step 1: o caso vira "o documento completo dela vai ao ar com as mesmas respostas (normalizado)" e compara o OBJETO (`JSON.parse(doc)` `toEqual` `COMPLETO`), com o porquê medido no comentário. Step 7: M2 aponta pros casos da ROTA que a matam.
+- **I3** (a pessoa recebia frase do painel e o nome de rascunho alheio) → Global Constraints (regra); Task 1, Step 7: `par-de-lugar.ts` devolve a colisão ESTRUTURADA (`Colisao`, `colisaoDoPar`, `colisaoDaTroca`, `colisaoDaMudanca`) e `fraseDoPainel` fala pelo painel (as portas do painel mantêm a assinatura); Task 10: `NOME_JA_EM_USO` (PENDENTE, com a nota de decisão dele sobre os dois casos sem saída), a rota do rascunho sem `quemOcupa`/`parOcupado`/`parDaMudanca`, quatro casos novos no POST e um no PUT, mutações M12–M14; Task 11: a rota de publicar e o `porQueRecusou` respondem `NOME_JA_EM_USO`, caso "o nome de um lugar do João", M9; Task 12: a rota do lugar com `colisaoDaMudanca`, caso "renomear pro nome de um lugar do João", M9–M10. Escolha 17.
+- **I4** (o filtro de `listarRascunhos` mudava em silêncio a colisão e uma frase do João mentia) → Task 1, Files/Interfaces/Step 7: `todosOsRascunhos` e `rascunhoDeQualquerUm`; `colisaoDoPar` lê todo rascunho; `fraseDoPainel` usa `parDeRascunhoDeQuemUsa` quando o rascunho é dela; `quemOcupa` do painel usa `rascunhoDeQualquerUm` e `enderecoDeRascunhoDeQuemUsa`; casos novos em `tests/api/route-admin-rascunho.test.ts` (par e endereço de rascunho dela); mutações M15–M17; frases no 📝 da tarefa e na lista da Task 16.
+- **I5** ("Meus lugares" sem entrada na tela) → Task 14, Interfaces e Step 5: a barra leva a `/contribuir`; "Meus lugares" tem `MANDAR_UM_LUGAR_NOVO` como primeiro link; casos novos em `contribuir-telas.test.tsx` (quem nunca mandou nada; o link antes da lista) e o da barra reescrito pra `/contribuir`; mutações M9–M11. Escolha 18.
+- **I6** (`SECO_SEM_CARRO` nascia `LIDA:`) → Task 3, Step 1: nasce `PENDENTE` com o porquê no docblock, e entra no 📝 da tarefa. Task 16, Step 1: o guarda só aceita `LIDA:` em frase que já existia em `cc6c467` (lido por `git show`), com controle de leitura da base e controle da `LIDA` nova; Step 2 ganha a mutação do I6.
+
+**Minor**
+
+- **M1** (`problemaDaRegraPadrao` fantasma) → Task 1, docblock de `gravarRegraPadrao` aponta `lerRegraDoCorpo` (`porta-da-regra-padrao.ts`, Task 7); Mapa de arquivos: `regra-padrao.ts` → tarefas 1, 2; linha nova `porta-da-regra-padrao.ts` → 7, 8.
+- **M2** (âncoras de linha) → Task 5, Files: `PinTrilha.tsx` `<a>` em `:61-68` (70 linhas). Task 11, Files: `porta-de-coerencia.ts:127-141`. Task 1, Files: MEDIDO de novo — a CHAMADA `await migrarColunaEnderecoAnterior(client);` está mesmo em `:105` (o preflight dizia `:116`); o texto agora diz "a chamada em `:105`, a função em `:119`", pra não haver ambiguidade.
+- **M3** (instruções do Step 8 da T2 apontando pro que não existe) → Task 2, Step 8: os pontos de `ficha-fonte.test.ts` listados um a um (`umaLinha` `:7`, os `Map` à mão `:60`/`:85`, os vazios `:72`/`:120`, o helper LOCAL `lerTudo` `:142` — que EXISTE, local ao bloco; o preflight o deu como fantasma); o "dublê que RECUSA" de `ficha-do-dono.test.ts` saiu (não existe); o `:289` de `admin-tela-de-publicar.test.tsx` saiu da lista, de Files e do `git add`, com a razão certa (a página lê por `execute`).
+- **M4** (seletor `data-campo` fantasma) → Task 8, Step 1: `[data-testid="campo-condicao.regra.limiar_mm"]` (e o da severidade), com o caso da Rampa como controle do mesmo seletor; o ⚠️ saiu.
+- **M5** (mutações que a tarefa esperava ver sobreviver) → Task 8: a do `BLOCOS_QUE_NASCEM` com `"condicao"` saiu da tabela como EQUIVALENTE (o `regraSchema` recusa a meia regra de qualquer jeito), tabela renumerada. Task 9: a do `matcher` sem `"/contribuir"` saiu como EQUIVALENTE (o `:path*` aceita zero segmentos; a entrada fica pela leitura, declarada redundante). Task 10: a "bloqueio antes da sessão" saiu (não é reordenação aplicável: sem sessão não há `id`, só um `TypeError`).
+- **M6** (T15 M6 citava o caso errado) → Task 15: caso novo em `db-bloquear.test.ts` ("quem JÁ passou pela porta … também é bloqueado", com `registrarContribuidor` antes), e a M6 passa a morrer nele e em "bloqueada no meio do formulário: 403".
+- **M7** (textos de ordem) → Task 6, Files: "cresce nas Tasks 10, 12 e 15". Task 7, Step 5: "`contribuir` entra na Task 14, que é quem cria a pasta".
+- **M8** (nome não ligado / import omitido) → Task 15, Step 5: `porta.pessoa.id` no `POST`, `id` no `PUT` e no publicar, e os imports de `estaBloqueado`/`BLOQUEADA` nas duas rotas. Task 7, Step 5: `import Link from "next/link"` e o import de `TITULO_REGRA_PADRAO` em `admin/page.tsx`.
+- **M9** (a marca do título do link na mesma linha de um `LIDA:`) → Task 5, Step 3: a linha fica (alvo do cerco, acima da N12), com o ⚠️ explicando as duas marcas; Task 16, Step 3: ela entra na lista POR NOME, com as outras que o guarda não lê.
+- **M10** (palavra em duas fontes; nome repetido com textos diferentes) → Task 14: `MANDAR_OUTRO` virou `MANDAR_UM_LUGAR_NOVO` ("+ mandar um lugar novo"), palavra diferente da barra porque leva a outro lugar. Task 7: `JANELA_NEGATIVA` da porta virou `JANELA_NEGATIVA_PADRAO` (teste, código e 📝).
+- **M11** (as portas de rascunho do painel alcançavam o rascunho dela) → ruling de produto aplicado: Task 1, Step 7, `AND contribuidor IS NULL` em `lerRascunho`/`regravarRascunho`/`moverRascunho`/`apagarRascunho`, um caso cada em `db-origem.test.ts` (M11–M14 da tabela); a rota do endereço do painel passa a `rascunhoDeQualquerUm` (caso novo em `route-admin-endereco.test.ts`, M18). Propagado: os testes das Tasks 10 e 11 que liam o rascunho dela por `lerRascunho(c, …)` passam a `rascunhoDeQualquerUm` (senão leriam `null` e passariam por vacuidade), e o `porQueRecusou` da Task 11 também. Escolha 8 reescrita.
+- **M12** (endereço antigo decidido pelo plano) → ruling de produto aplicado: Global Constraints e Review Focus 3; Task 1: o 1º passo do `publicarRascunho` recusa endereço antigo quando quem publica é ela (`? IS NULL OR NOT EXISTS …`), dois casos (ela recusada; o João continua retomando), M19–M20; Task 10: `SEM_ENDERECO_ANTIGO` em `criarRascunhoDaPessoa`/`moverRascunhoDaPessoa`, caso de banco e caso de rota, M15–M16; Task 11: o `porQueRecusou` diz `NOME_JA_EM_USO` quando o endereço virou antigo depois, caso e M10. Escolha 16.
+- **M13** (`condicao.regra_texto` sem caso de "cala") → Task 4: o 📝 de cobertura campo a campo, com o grep que prova que nenhuma tela pública mostra `regra_texto`.
+
+**Também corrigido ao passar:** Task 5 citava "escolha 4" pro cartão do WhatsApp (é a escolha 6); Task 11 M2 citava um caso de `lib` pra uma mutação de rota; Task 15 trocou o ⚠️ do `rowsAffected` pelo resultado MEDIDO no preflight (conta certo sem `RETURNING`); o Self-review (Placeholders, Tipos, Review Focus) acompanha as emendas.
+
+**Não resolvido no texto:** nada. Duas coisas ficam, de propósito, como DECISÃO DELE no pacote de copy (não são lacuna do plano): o que a pessoa faz nos dois casos em que `NOME_JA_EM_USO` a deixa sem saída (o gêmeo sem cidade de um lugar do João; um lugar real diferente de mesmo nome na mesma cidade), e se ele quer, numa rodada futura, ver os rascunhos de quem usa.
