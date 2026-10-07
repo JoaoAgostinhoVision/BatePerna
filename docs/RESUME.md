@@ -65,6 +65,11 @@ texto visível). Se não houver commit de código depois de `c9c6bcb`, redespach
 **pacote de copy pro João** (todas as `PENDENTE` + as perguntas de `agente-voz.md`/`agente-procedencia.md`), num
 Artifact pro celular. Depois: ele lê → onda de copy → `npm run semear` → UM `vercel --prod --yes` → `conferir-no-ar`
 → olhos dele no celular.
+📄 **PACOTE DE COPY PUBLICADO (07/10): https://claude.ai/artifact/63z3vvcrNjWN2CgvMA8L53** — 231 frases (222
+`PENDENTE` + 9 sem marcação), 31 com alerta, e 3 decisões no topo (M4, "trilha"×"lugar", "BatePerna · PE"). As
+respostas dele ficam no banco do artifact, coleção `respostas` (doc por id de frase: `{v: serve|muda|duvida|escolha,
+texto}`) — LER com `ArtifactData list`. Fonte: `scratchpad` da sessão de 06/10 (`copy-pack.json`, `gerar-pacote.cjs`,
+`pacote-modelo.html`); o JSON aponta `arquivo:linha` de `29d50ba`.
 (O comando `RELATO_LEGADO`/PENDENTE-JOÃO citado no histórico abaixo JÁ foi feito em `e1c63be`; a constante não existe mais.)
 ❓ **Pergunta ao João (M4 da revisão final):** com o banco FORA DO AR, uma instância que ainda lembra de um lugar que
 ele acabou de esconder continua mostrando esse lugar até o banco voltar. Aceitar (é a família "conteúdo velho na
