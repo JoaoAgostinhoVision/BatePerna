@@ -9,11 +9,18 @@
 `VS-DOC-SEM-SLUG` nas duas formas, `ESTADO-SEM-SLUG`) MORRERAM, cada uma pelo seu teste, uma por vez com `sha1sum -c`.
 ✅ **11e FECHADA.**
 
-→ 🔴 **PRÓXIMO PASSO:** a **auditoria do brief da Tarefa 12** foi despachada (`task-12-auditoria.md`). Se o arquivo
-não existir, redespachar (auditor fresco, opus: referências podres, contradições entre as 5 camadas de emenda, a
-TABELA DE MUTAÇÃO, recorte do 12-N6, copy, fechamento). Depois: colar as correções aceitas no fim do brief →
-despachar a 12 → a ordem de sempre (revisão final COM build → agentes → copy → `semear` → UM `vercel --prod` →
-`conferir-no-ar` → olhos dele).
+✅ **Auditoria do brief da 12 FEITA** (`task-12-auditoria.md`: **1 C · 13 I · 8 M**, todas aceitas). C1: `gravarVersao`
+não cabe em batch e o dublê não dispara em batch — publicar vira `publicarRascunho`, UM batch no molde de
+`trocarEndereco`. Rulings R1–R6 coladas no fim do brief (R2: o PUT do rascunho deixa de ser upsert NESTA tarefa;
+R3: a tela mora em `/admin/novo/publicar?slug=S`; R4: **12-N6 SAI e vira Tarefa 12b**; R5: Step 4 do MapaHome sai).
+
+→ 🔴 **PRÓXIMO PASSO:** a **Tarefa 12 está despachada** (`task-12-PROMPT.md`, relatório em `task-12-report.md`). Se
+não houver commit de código depois de `a7f0eaf`, redespachar COMO ESTÁ (árvore suja = parar e medir, não apagar).
+Depois: medir eu mesmo → revisão da 12 → **escrever o brief da 12b** (seção "Recorte" da auditoria: id estável =
+`MIN(id)` do lugar; servidor responde 200 `{ignorado:true}`, nunca 4xx que trave a fila; envio online, placar e
+"já contei" pela mesma identidade; reancorar o N12 do `mutar.mjs`) → **o deploy único só sai com 12 E 12b**.
+❓ **Pergunta ao João, pendente:** relatos "✓ Fui" que já estiverem na fila offline SEM identidade no dia do deploy:
+aceitar como hoje ou descartar.
 
 (histórico abaixo)
 
