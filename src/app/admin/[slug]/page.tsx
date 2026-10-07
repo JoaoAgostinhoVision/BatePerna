@@ -46,7 +46,7 @@ const ESTOUROU_HISTORICO = Symbol("prazo do historico da ficha");
  *  a verdade sobre a consulta que ele governa, não repetir o do irmão. */
 const PRAZO_HISTORICO_MS = 2_000;
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 const HISTORICO_ERRO_LEITURA = "Não consegui ler o histórico — pode estar incompleto.";
 
 /** O aviso vigente de UM lugar — mesmo molde do `lerAvisosVigentes` que a

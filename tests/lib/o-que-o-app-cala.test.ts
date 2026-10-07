@@ -123,7 +123,7 @@ describe("oQueOAppCala", () => {
   // 🔴 M8 da auditoria: "f.length > 15" passa com qualquer frase. Aqui cada
   // frase é a do QUESTIONÁRIO, por subtração (o trecho depois do travessão,
   // com a primeira letra maiúscula e sem o negrito), ou uma das duas que ele não
-  // cobre e que são redação minha, PENDENTE no código.
+  // cobre e que são redação minha, que ele leu e marcou "Serve" (07/10).
   it("cada frase é a do questionário por subtração, ou uma das duas que ele não cobre", () => {
     const doc = readFileSync(path.join(process.cwd(), "docs", "questionario-ficha.md"), "utf8")
       .replace(/\r\n/g, "\n")

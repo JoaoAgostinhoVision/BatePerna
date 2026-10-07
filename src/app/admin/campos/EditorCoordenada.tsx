@@ -116,47 +116,47 @@ type Vista = { centro: Par; z: number };
 
 /** A ajuda da coordenada ainda sem ponto: o mapa nasce sem pin, e é o toque
  *  dele que o põe. Na linha da `DICA_DO_PONTO_NOVO` do `EditorWaypoints`. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const MARQUE_NO_MAPA = "Toque no mapa onde fica o ponto. Depois, arraste o pin pra acertar.";
 
 /** O portão do Salvar (C1): o pin foi posto com a vista afastada, e a vista
  *  ainda está afastada. Trocada na onda de fix da 11f (C-1): a anterior,
  *  "Aproxime o mapa (+) pra poder salvar.", ensinava o furo — aproximar sem
  *  tocar de novo salvava o toque de longe. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const APROXIME_PRA_SALVAR = "Aproxime o mapa (+) e toque de novo no ponto pra poder salvar.";
 
 /** O portão do Salvar (C-1 da revisão da 11f): a vista já está perto, mas o pin
  *  foi posto de longe — falta o toque (ou o arrasto) de perto. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const TOQUE_DE_PERTO = "O pin foi posto de longe: toque de novo no ponto, ou arraste o pin, pra poder salvar.";
 
 /** O portão do Salvar (C-1 da revisão da 11f): o pin saiu da parte visível do
  *  mapa (arrastando o fundo), e ninguém grava o que não está vendo. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const PIN_FORA_DA_VISTA = "O pin saiu do mapa: arraste o mapa até ele, ou toque no ponto, pra poder salvar.";
 
 /** A vista caiu no acervo: a cidade do lugar não foi achada (ou o serviço não
  *  respondeu), e o mapa começa na região dos lugares do app. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const VISTA_SEM_CIDADE = "Não achei a cidade no mapa: ele começa na região dos lugares do app.";
 
 /** A vista caiu no acervo porque a cidade foi achada MAIS DE UMA VEZ em
  *  Pernambuco e não há como saber qual é (I-2 da revisão da 11f): "não achei"
  *  seria falso. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const VISTA_CIDADE_AMBIGUA = "Achei mais de um lugar com o nome dessa cidade: o mapa começa na região dos lugares do app.";
 
 /** Sem ponto e sem vista nenhuma (cidade não achada E acervo vazio — impossível
  *  hoje, mas com ramo, e não um número inventado). */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const SEM_VISTA = "Sem mapa: não achei de onde começar.";
 
 /** Os nomes do + e do − pra quem lê a tela em voz alta (o glifo sozinho não é
  *  nome). Os glifos "+" e "−" são o desenho do botão. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const APROXIMAR = "Aproximar o mapa";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const AFASTAR = "Afastar o mapa";
 
 /** 🔴 FINITOS, não só `number` (onda 1 da Task 8, R3): `NaN` e `Infinity` são

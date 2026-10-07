@@ -45,17 +45,17 @@ export const SLUGS_RESERVADOS: readonly string[] = ["admin", "api", "icones", "t
 /** O nome com a cidade entre parênteses, quando há cidade — é como uma frase do
  *  painel distingue dois lugares de mesmo nome. Sem cidade, só o nome: nunca
  *  "sem cidade", que seria palavra nova pra um silêncio. */
-// PENDENTE: formato meu (" (Cidade)"), o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Formato meu (" (Cidade)").
 export const nomeComCidade = (nome: string, cidade: string | undefined): string =>
   cidade ? `${nome} (${cidade})` : nome;
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const NOME_VAZIO = "O lugar precisa de um nome: escreva como você o chama.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const NOME_SEM_LETRA = "Esse nome não tem letra nem número, e não dá pra fazer o endereço dele.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const CIDADE_VAZIA = "O lugar precisa da cidade onde ele fica: é ela que separa dois lugares de mesmo nome.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const CIDADE_SEM_LETRA = "Essa cidade não tem letra nem número, e não dá pra fazer o endereço do lugar com ela.";
 
 /** 🔴 AS CINCO RECUSAS DE COLISÃO, e cada uma diz o que é VERDADE no caso dela.
@@ -78,13 +78,13 @@ export const CIDADE_SEM_LETRA = "Essa cidade não tem letra nem número, e não 
  *     nasceu, depois de renomeado ou de ter a cidade corrigida. A frase diz o
  *     que é verdade e a única saída que existe: se é o MESMO lugar, seguir por
  *     ele. Se não é, o painel não tem saída hoje, e a frase diz isso. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const parDeLugar = (quem: string): string =>
   `Já existe no app um lugar com esse nome nessa cidade: ${quem}. Mude o que já existe pela lista.`;
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const parDeRascunho = (quem: string): string =>
   `Já tem um lugar novo começado com esse nome nessa cidade: ${quem}. Continue por ele, na lista do painel.`;
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const gemeoSemCidade = (quem: string): string =>
   `Já tem um lugar com esse nome que ainda está sem a cidade: ${quem}. Responda primeiro a cidade dele, pela lista do painel: só você sabe se é o mesmo lugar.`;
 // 🔴 FRASE NOVA NA TAREFA 11e (M7 da auditoria): a anterior terminava com "se
@@ -93,17 +93,17 @@ export const gemeoSemCidade = (quem: string): string =>
 // (a Pedra do Navio publicada em Bom Jardim por engano e corrigida pra
 // Floresta): o painel do OUTRO lugar avisa que o endereço ainda diz a cidade
 // velha e oferece trocar, e depois disso este endereço fica livre.
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const enderecoDeLugar = (quem: string): string =>
   `O endereço que sairia desse nome e dessa cidade já é de outro lugar do app: ${quem}. Se for o mesmo lugar, mude o que já existe pela lista. Se não for, e a cidade dele foi corrigida, o painel dele oferece trocar o endereço; depois disso, este fica livre.`;
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const enderecoDeRascunho = (quem: string): string =>
   `O endereço que sairia desse nome e dessa cidade já é de um lugar novo começado: ${quem}. Se for o mesmo lugar, continue por ele na lista do painel; se não for, o painel ainda não sabe dar outro endereço a este.`;
 
 /** A recusa do PUT do rascunho quando ele já não mora no endereço pedido
  *  (Tarefa 12, I1 da auditoria de 06/10): publicado, apagado ou movido entre a
  *  leitura e a gravação. Nada foi gravado — e nenhum rascunho renasceu ali. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const RASCUNHO_NAO_EXISTE_MAIS =
   "Nada foi gravado: este rascunho não está mais neste endereço. Ele foi publicado, apagado, ou mudou de nome ou de cidade: volte pela lista do painel.";
 

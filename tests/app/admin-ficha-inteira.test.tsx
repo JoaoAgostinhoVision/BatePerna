@@ -207,12 +207,12 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     // o código certo pelo motivo errado", que mordeu três vezes nesta rodada.
     const frase = bloco.querySelector(".adm-campo-ausente");
     expect(frase, "o parágrafo de ausência sumiu do bloco").not.toBeNull();
-    expect(frase!.textContent).toMatch(/não sei|não diz/i);
+    expect(frase!.textContent).toBe("Ainda sem dados");
     expect(bloco.hasAttribute("data-ausente")).toBe(true);
   });
 
   // 🔴 O PAR SIMÉTRICO, e sem ele o caso de cima fica VERDE numa tela que
-  // escreve "não sei" em TODOS os blocos — a espécie "guarda que sai com o
+  // escreve "Ainda sem dados" em TODOS os blocos — a espécie "guarda que sai com o
   // código certo pelo motivo errado", que mordeu três vezes nesta rodada.
   it("campo preenchido NÃO traz a marca de ausente — e só os três ausentes de verdade a trazem", () => {
     const { container } = render(<FichaInteira ficha={semHorario} />);
@@ -222,7 +222,7 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     // `voz` é OBRIGATÓRIO, então não há botão de "não sei" nenhum neste bloco —
     // é o que deixa a asserção de `textContent` continuar valendo depois da
     // Task 6.
-    expect(cheio.textContent).not.toMatch(/não sei|não diz/i);
+    expect(cheio.textContent).not.toMatch(/ainda sem dados/i);
 
     // 🔴 2, cravado e com motivo: nesta ficha falta exatamente o `horario` (uma
     // entrada só desde a Tarefa 11c) — e a `cidade`, que NENHUMA ficha real
@@ -308,7 +308,7 @@ describe("FichaInteira — o horário, uma entrada só (a lista de faixas)", () 
     render(<FichaInteira ficha={semHorario} />);
     const bloco = screen.getByTestId("campo-horario");
     expect(bloco.hasAttribute("data-ausente")).toBe(true);
-    expect(bloco.querySelector(".adm-campo-ausente")!.textContent).toMatch(/não sei|não diz/i);
+    expect(bloco.querySelector(".adm-campo-ausente")!.textContent).toBe("Ainda sem dados");
     const caixas = [...bloco.querySelectorAll<HTMLInputElement>("input[type=time]")];
     expect(caixas.map((c) => c.value)).toEqual(["", ""]);
   });

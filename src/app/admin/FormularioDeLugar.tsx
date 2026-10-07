@@ -70,26 +70,26 @@ import { enderecoDaPergunta, enderecoDePublicar } from "./novo/enderecos";
  *  ⚠️ NENHUM TEXTO SOBRE UM LUGAR ESPECÍFICO mora aqui: as perguntas e os
  *  rótulos chegam por prop, e as palavras fixas abaixo servem a todo lugar. */
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const AVISO_RASCUNHO = "Isto é um rascunho: nada daqui aparece no app até você publicar.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const PULAR = "Pular";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const PULADA = "Pulada: o app vai calar sobre isto.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const COMECAR = "Começar";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const COMECANDO = "Começando…";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const ANTERIOR = "Anterior";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const PROXIMA = "Próxima";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const RESPONDIDA = "respondida";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const SEM_RESPOSTA = "sem resposta";
 /** "Pergunta N de M". */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const posicaoNaTela = (n: number, total: number): string => `Pergunta ${n} de ${total}`;
 
 /** O endereço da pergunta N mora em `./novo/enderecos` desde a Tarefa 12 (a

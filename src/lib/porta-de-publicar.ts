@@ -12,20 +12,20 @@ import { fichaSchema } from "@/types/ficha";
  *  além dos métodos — e as frases têm de ser importáveis pelos testes. Este
  *  módulo importa o registro e o zod: SÓ SERVIDOR. */
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const RASCUNHO_ILEGIVEL = "Nada foi publicado: o rascunho guardado não é um documento que o app consiga ler.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const FALTA_OBRIGATORIO =
   "Nada foi publicado: ainda falta responder pergunta que todo lugar precisa ter. As que faltam estão listadas nesta tela.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const FORMA_ERRADA =
   "Nada foi publicado: uma resposta deste rascunho não está na forma que o app lê. Volte às perguntas e responda de novo a que estiver estranha.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const SLUG_DE_DENTRO = "Nada foi publicado: o rascunho diz um endereço e mora em outro.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const RASCUNHO_MUDOU =
   "Nada foi publicado: o rascunho mudou desde que você abriu esta tela. Recarregue a página pra ver o que vai ao ar.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const RASCUNHO_SUMIU =
   "Nada foi publicado: este rascunho não está mais neste endereço. Ele foi apagado, ou mudou de nome ou de cidade: volte pela lista do painel.";
 /** 🔴 O DUPLO TOQUE (M4 da auditoria): o 1º pedido publicou e apagou o
@@ -33,10 +33,10 @@ export const RASCUNHO_SUMIU =
  *  que o lugar dali é o deste rascunho — a mesma leitura também é a de um
  *  rascunho que mudou de endereço e outro lugar que nasceu neste —, só o que é
  *  verdade nos dois casos, e onde conferir. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const JA_PUBLICADO_OU_OCUPADO =
   "Nada foi publicado agora: este endereço já é de um lugar do app, e o rascunho não está mais aqui. Se você tocou duas vezes, o lugar foi publicado no primeiro toque: confira na lista do painel.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const NADA_PUBLICADO = "Nada foi publicado. Recarregue a página e tente de novo.";
 
 /** Os campos OBRIGATÓRIOS do registro que `doc` não responde (12-I1), pelo

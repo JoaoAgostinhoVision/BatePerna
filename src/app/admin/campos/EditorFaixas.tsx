@@ -45,9 +45,9 @@ const MAXIMO = 3;
  *  `horario.abre`/`horario.fecha` tinham em `FichaInteira` até a 11c, quando as
  *  duas folhas deixaram de ser campos; vieram pra cá com o marcador. */
 const HORA_DE: Record<keyof Faixa, string> = {
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   abre: "A hora de abrir",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   fecha: "A hora de fechar",
 };
 

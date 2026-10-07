@@ -129,7 +129,7 @@ const prosaDe = (f: Ficha) =>
 /** O nome do lugar como o dono o escreveu (`waypoints[0]`, O LUGAR), nunca o slug — e a cidade entre
  *  parênteses quando há (Tarefa 11b): dois lugares de mesmo nome compararem-se dizia "X e X". Sem cidade,
  *  só o nome. A `cidade` NÃO entra em `TEXTOS_QUE_DISTINGUEM`: dois lugares na mesma cidade são o normal. */
-const nomeDe = (f: Ficha) => f.trajeto.waypoints[0].nome + (f.cidade ? ` (${f.cidade})` : ""); // PENDENTE: formato meu (" (Cidade)"), o João ainda não leu
+const nomeDe = (f: Ficha) => f.trajeto.waypoints[0].nome + (f.cidade ? ` (${f.cidade})` : ""); // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Formato meu (" (Cidade)").
 
 /** O que uma regra acha. O identificador da regra é carimbado pela tabela lá
  *  embaixo, nunca escrito aqui dentro — assim nenhuma regra pode carimbar o
@@ -174,7 +174,7 @@ const TABELA: readonly Regra[] = [
           // frase dizia *"o custo está escrito como """* — ele não escreveu
           // vazio, ele não escreveu NADA, e são dois consertos diferentes: num
           // ele corrige o texto, no outro ele preenche um campo que não existe.
-          // O que a tela faz nesse caso: `page.tsx` cai no literal "Pago".
+          // O que a tela faz nesse caso: mostra o chip (o curto) e não desenha a linha do custo; "Pago" não vai pra tela (medido 07/10).
           frase: f.custo.valor
             // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             ? `Em ${nomeDe(f)}, o custo está escrito como "${f.custo.valor}" e o app não ` +
@@ -213,11 +213,11 @@ const TABELA: readonly Regra[] = [
           // escondia um defeito DIFERENTE: o chip existe e não tem número nenhum
           // dentro (ele escreveu só "no portão"). Achado na revisão 2/5.
           frase: noCurto
-            // PENDENTE: redação minha, o João ainda não leu
+            // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             ? `O chip do topo de ${nomeDe(f)} diz ${noCurto} e o custo completo diz ` +
               `${noValor}. A pessoa lê o chip antes de sair de casa e o custo completo só ` +
               "quando chega."
-            // PENDENTE: redação minha, o João ainda não leu
+            // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             : `O chip do topo de ${nomeDe(f)} não mostra preço nenhum ("${f.custo.curto}") e ` +
               `o custo completo diz ${noValor}. A pessoa lê o chip antes de sair de casa, e ` +
               "sem o número ali ela não sabe quanto levar.",
@@ -247,7 +247,7 @@ const TABELA: readonly Regra[] = [
         if (palavras <= 4) return [];
         return [{
           slug: f.slug,
-          // PENDENTE: redação minha, o João ainda não leu
+          // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
           frase:
             `O chip de ${nomeDe(f)} tem ${palavras} palavras ("${f.custo.curto}") e estoura a ` +
             "pílula do topo da ficha. Cabem até 4.",
@@ -265,7 +265,7 @@ const TABELA: readonly Regra[] = [
         if (f.custo.curto !== f.custo.valor) return [];
         return [{
           slug: f.slug,
-          // PENDENTE: redação minha, o João ainda não leu
+          // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
           frase:
             `O chip de ${nomeDe(f)} está igual ao custo completo. O chip é a forma curta, pra ` +
             "ler no topo da ficha; repetido, ele não diz nada de novo.",
@@ -292,7 +292,7 @@ const TABELA: readonly Regra[] = [
       return [...porFrase.values()].flatMap((grupo) =>
         grupo.slice(1).map((f) => ({
           slug: f.slug,
-          // PENDENTE: redação minha, o João ainda não leu
+          // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
           frase:
             `${grupo.map(nomeDe).join(" e ")} explicam o chão com a MESMA frase: ` +
             `"${f.secaRapido}". Ou uma delas está falando do lugar da outra, ou a frase é ` +
@@ -317,7 +317,7 @@ const TABELA: readonly Regra[] = [
           if (dono) {
             achados.push({
               slug: f.slug,
-              // PENDENTE: redação minha, o João ainda não leu
+              // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
               frase:
                 `${nomeDe(dono)} e ${nomeDe(f)} têm ${rotulo} exatamente igual: ` +
                 `"${String(f[campo])}". Esse texto existe pra distinguir um lugar do outro na ` +
@@ -370,7 +370,7 @@ const TABELA: readonly Regra[] = [
         if (estranhos.length === 0) return [];
         return [{
           slug: f.slug,
-          // PENDENTE: redação minha, o João ainda não leu
+          // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
           frase:
             `${nomeDe(f)} declara o piso "${f.piso}" e o texto da ficha fala de ` +
             `${estranhos.join(", ")}. Uma das duas coisas está errada, e a tela mostra as duas ` +
@@ -413,7 +413,7 @@ const TABELA: readonly Regra[] = [
         return [{
           slug: f.slug,
           frase: abre === fecha
-            // PENDENTE: redação minha, o João ainda não leu
+            // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             ? `${nomeDe(f)} abre e fecha no mesmo horário (${faixa.abre}) — assim o app ` +
               "entende que o lugar está aberto 24 horas e nunca fecha. Se for isso, diga no " +
               "texto da ficha; se não for, um dos dois horários está errado."
@@ -436,7 +436,7 @@ const TABELA: readonly Regra[] = [
         if (!citada || f.horario) return [];
         return [{
           slug: f.slug,
-          // PENDENTE: redação minha, o João ainda não leu
+          // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
           frase:
             `O texto de ${nomeDe(f)} diz que fecha às ${citada[1]}h, mas a ficha não tem ` +
             "horário preenchido. O carimbo nunca vai fechar, e a pessoa leu que fecha.",
@@ -458,7 +458,7 @@ const TABELA: readonly Regra[] = [
         if (f.horario.some((x) => Number(citada[1]) === Number(x.fecha.split(":")[0]))) return [];
         return [{
           slug: f.slug,
-          // PENDENTE: redação minha, o João ainda não leu
+          // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
           frase:
             `O texto de ${nomeDe(f)} diz que fecha às ${citada[1]}h e o horário da ficha diz ` +
             `${f.horario[f.horario.length - 1].fecha}. As duas frases aparecem na mesma tela.`,
@@ -486,7 +486,7 @@ const TABELA: readonly Regra[] = [
         if (!(r.janela_passado_horas >= 0)) {
           achados.push({
             slug: f.slug,
-            // PENDENTE: redação minha, o João ainda não leu
+            // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             frase:
               `A regra de chuva de ${nomeDe(f)} olha ${r.janela_passado_horas} horas pra trás, ` +
               "e janela negativa não existe.",
@@ -499,7 +499,7 @@ const TABELA: readonly Regra[] = [
         if (r.janela_passado_horas === 0 && !(r.janela_previsao_horas > 0)) {
           achados.push({
             slug: f.slug,
-            // PENDENTE: redação minha, o João ainda não leu
+            // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             frase:
               `A regra de chuva de ${nomeDe(f)} olha 0 hora pra trás: assim ela nunca vê chuva ` +
               "nenhuma e o lugar nunca fecha.",
@@ -515,7 +515,7 @@ const TABELA: readonly Regra[] = [
         if (!(r.janela_previsao_horas >= 0)) {
           achados.push({
             slug: f.slug,
-            // PENDENTE: redação minha, o João ainda não leu
+            // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             frase:
               `A regra de chuva de ${nomeDe(f)} olha ${r.janela_previsao_horas} horas pra frente, ` +
               "e janela negativa não existe: use 0 pra olhar só a chuva que já caiu.",
@@ -524,7 +524,7 @@ const TABELA: readonly Regra[] = [
         if (!(r.limiar_mm > 0)) {
           achados.push({
             slug: f.slug,
-            // PENDENTE: redação minha, o João ainda não leu
+            // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             frase:
               `O limite de chuva de ${nomeDe(f)} é 0 mm: qualquer orvalho fecha o lugar, e o ` +
               "app passa a dizer não o ano inteiro.",
@@ -549,7 +549,7 @@ const TABELA: readonly Regra[] = [
         if (new Set(f.dias).size !== f.dias.length) {
           achados.push({
             slug: f.slug,
-            // PENDENTE: redação minha, o João ainda não leu
+            // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             frase:
               `${nomeDe(f)} tem o mesmo dia repetido na lista de dias, e a tela diria esse dia ` +
               "duas vezes na mesma frase.",
@@ -559,7 +559,7 @@ const TABELA: readonly Regra[] = [
         if (inventados.length > 0) {
           achados.push({
             slug: f.slug,
-            // PENDENTE: redação minha, o João ainda não leu
+            // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             // 🔴 A VERSÃO ANTERIOR DESTA FRASE DIZIA AO DONO QUE SEGUNDA-FEIRA
             // NÃO É DIA DA SEMANA (achado na revisão de 2026-09-27). Ele digita
             // "segunda" e lia *"isso não é dia da semana"* — é, claro que é. O
@@ -591,7 +591,7 @@ const TABELA: readonly Regra[] = [
         if (!f.dias?.length || f.dias.length < 7) return [];
         return [{
           slug: f.slug,
-          // PENDENTE: redação minha, o João ainda não leu
+          // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
           // 🔴 A VERSÃO ANTERIOR MANDAVA FAZER O QUE O SCHEMA RECUSA (achado na
           // revisão de 2026-09-27): dizia *"deixe a lista de dias vazia"*, e
           // `dias` é `z.array(...).min(1).optional()` — lista VAZIA é inválida (o
@@ -632,7 +632,7 @@ const TABELA: readonly Regra[] = [
         if (r.janela_previsao_horas > TETO_PREVISAO_HORAS) {
           achados.push({
             slug: f.slug,
-            // PENDENTE: redação minha, o João ainda não leu
+            // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             frase:
               `A regra de chuva de ${nomeDe(f)} olha ${r.janela_previsao_horas} horas pra frente, e a ` +
               `previsão do tempo só vai até ${TETO_PREVISAO_HORAS} horas. Com esse número a busca de ` +
@@ -642,7 +642,7 @@ const TABELA: readonly Regra[] = [
         if (r.janela_passado_horas > TETO_PASSADO_HORAS) {
           achados.push({
             slug: f.slug,
-            // PENDENTE: redação minha, o João ainda não leu
+            // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             frase:
               `A regra de chuva de ${nomeDe(f)} olha ${r.janela_passado_horas} horas pra trás, e o ` +
               `histórico de chuva só volta ${TETO_PASSADO_HORAS} horas. Com esse número a busca de ` +

@@ -47,13 +47,13 @@ import type { CampoNaTela, PerguntaNaTela } from "../campos/tipos";
  *  Todas nasceram PENDENTE na primeira ida à tela, mesmo vindo do questionário;
  *  as que ele leu no pacote de copy (07/10) dizem `LIDA:`. */
 export const PERGUNTAS: Readonly<Record<string, string>> = {
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   "trajeto.waypoints.0.nome": "Como você chama esse lugar, do jeito que chamaria conversando com alguém que já foi?",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha (Tarefa 11b).
   cidade: "Em que cidade fica esse lugar?",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   "trajeto.waypoints.0.lat": "Qual é a latitude e a longitude desse ponto?",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   "trajeto.waypoints.0.nota":
     "Tem alguma coisa que vale avisar sobre esse trecho específico — um detalhe de como é chegar ali, o que se vê no caminho?",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
@@ -69,15 +69,15 @@ export const PERGUNTAS: Readonly<Record<string, string>> = {
   // "lugar" por decisão dele (07/10), tomada ANTES de ele marcar "Serve".
   rotulo_escaneio:
     "Se esse lugar tivesse uma etiqueta de três ou quatro palavras — o tipo de coisa que dá pra ler de relance, sem parar pra pensar — o que ela diria?",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   acesso: "Como alguém chega até lá — que tipo de carro serve, tem algum trecho que exige cuidado?",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   piso:
     "Pensando no caminho INTEIRO de carro até lá, da estrada principal até onde o carro para — qual é o PIOR trecho? Vale o pior pedaço mesmo que ele seja curto, e mesmo que ele seja justamente o último: não é a média dos trechos, e não é o piso que predomina no caminho.",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   secaRapido:
     "Quando faz umas horas que não chove, o que é que faz o chão desse lugar estar bom de novo? É o relevo, é o tipo de terra, é sol batendo? Responda em uma frase curta, do jeito que você diria pra um amigo no telefone.",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   avisos: "O que pode dar errado, e o que a pessoa devia saber antes de decidir ir?",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela. O pacote mostrava "trilha"; a tela diz
   // "lugar" por decisão dele (07/10), tomada ANTES de ele marcar "Serve".
@@ -93,14 +93,14 @@ export const PERGUNTAS: Readonly<Record<string, string>> = {
   // "lugar" por decisão dele (07/10), tomada ANTES de ele marcar "Serve".
   "condicao.regra_texto":
     "Escreva a mesma regra acima, mas como frase — do jeito que você explicaria pra alguém por que o lugar está fechado ou aberto hoje.",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   "condicao.ressalva_proxy": "O que a previsão do tempo não enxerga, que só quem está no lugar enxerga?",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   "discriminador.formato": "Em uma ou duas palavras, que tipo de checagem é essa — o que ela descreve?",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   "discriminador.como_ler":
     "Já na entrada, o que a pessoa deve olhar pra confirmar se dá pra ir — não a previsão, a coisa concreta que ela vê com os próprios olhos?",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   "discriminador.permissao_abortar": "O que você diria pra alguém que chegou até ali e decidiu não seguir?",
   // 🔴 A pergunta do custo é UMA no questionário e cobre DOIS campos: a
   // primeira frase é a `tag` (custa ou não), a segunda é o `valor`.
@@ -109,15 +109,15 @@ export const PERGUNTAS: Readonly<Record<string, string>> = {
   "custo.tag": "Entrar nesse lugar custa alguma coisa?",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   "custo.valor": "Se custar, quanto, e como é cobrado (no portão, antecipado, por pessoa, por carro)?",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   "custo.curto":
     "Como caberia isso em três ou quatro palavras, pro chip do topo da tela? O preço mais o onde — na sua palavra.",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   carroComum:
     'Um carro comum chega até lá? (Sim / não. Se a resposta for "sim, mas só com o chão seco", ainda é sim — a ressalva de chuva quem diz é o carimbo.)',
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   horario: "Esse lugar tem hora pra abrir e pra fechar? Se tiver, que horas?",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   dias: "Esse lugar abre todo dia, ou tem dia que não abre? Se tiver, em que dias ele abre?",
 };
 

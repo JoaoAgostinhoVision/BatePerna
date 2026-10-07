@@ -18,23 +18,23 @@
  *  mudaram pra cá quando o editor de booleano passou a escrevê-las — duas
  *  cópias da mesma palavra é como um "Sim" e um "sim" acabam na mesma tela.
  *  Desde a Tarefa 11d só o interruptor as usa. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const SIM = "Sim";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const NAO = "Não";
 
 /** O rótulo do botão que grava. Vinha de `EditorDeVoz.tsx:58`, escrito inline e
  *  SEM marcador. */
-// PENDENTE: estava no ar sem marcador, vindo do `EditorDeVoz`; o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Estava no ar sem marcador, vindo do `EditorDeVoz`.
 export const SALVAR = "Salvar";
-// PENDENTE: estava no ar sem marcador, vindo do `EditorDeVoz`; o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Estava no ar sem marcador, vindo do `EditorDeVoz`.
 export const SALVANDO = "Salvando…";
 
 /** A recusa de "nada escolhido" — vale pra lista fechada (nenhuma opção) e pro
  *  interruptor (nem sim nem não). Uma frase só porque a pergunta é a mesma; e
  *  ela NÃO promete o "não sei", porque campo obrigatório não tem esse botão e a
  *  frase apareceria prometendo o que não está na tela. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const NADA_ESCOLHIDO = "Escolha uma das opções.";
 
 /** A recusa de hora em branco. Ela DIZ O FORMATO porque o dono pode ter digitado
@@ -61,21 +61,21 @@ export const NADA_ESCOLHIDO = "Escolha uma das opções.";
  *  `type="time"`: se ele deixar de ser, o caso fica vermelho e esta frase
  *  precisa de outra decisão — que é de PRODUTO (a rota devolveria a frase do
  *  `ZodError`?), não de render. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const HORA_VAZIA = "Escolha uma hora, no formato HH:MM.";
 
 /** A ajuda das horas que entram JUNTAS: as duas horas de uma faixa só gravam
  *  com as duas preenchidas. Nasceu no `EditorBloco` (o bloco `horario`
  *  ausente, apagado na Tarefa 11d) e é do `EditorFaixas` desde a 11c — o nome
  *  da constante perdeu o "bloco" na 11d; o texto é o mesmo. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const HORAS_JUNTAS = "Estes campos entram juntos: um sozinho não vira ficha.";
 
 /** Os dois botões que MEXEM NA LISTA de faixas sem gravar nada (Tarefa 11d).
  *  Quem grava é o Salvar, um só, com a lista inteira. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const MAIS_FAIXA = "+ outra faixa";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const TIRAR_FAIXA = "Tirar esta faixa";
 
 /** A recusa de caixa de texto vazia — o outro lado do "não sei" (§4.1 do
@@ -87,13 +87,13 @@ export const TIRAR_FAIXA = "Tirar esta faixa";
  *  requisição sair. Esta recusa acontece ANTES da viagem, e o campo já está
  *  rotulado na linha de cima. A garantia continua sendo a porta; isto poupa uma
  *  ida ao Turso numa rede de interior. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const CAIXA_VAZIA = "Caixa vazia não grava: escreva algo.";
 
 /** ─────────────────────────────────────────────────────────────────────────────
  *  AS PALAVRAS DO NÚMERO DE MOTOR (Task 7) — e a PROCEDÊNCIA de cada pedaço está
  *  escrita ao lado de cada uma, porque três delas afirmam o que acontece com um
- *  lugar real quando o número muda. Nenhuma é fala dele; todas são `PENDENTE`.
+ *  lugar real quando o número muda. Nenhuma é fala dele; todas nasceram `PENDENTE` e ele leu todas (Serve, 07/10).
  *
  *  🔴 ELAS MORAM AQUI, E NÃO EM `src/lib/`, DE PROPÓSITO. O cerco de nome de
  *  lugar varre todo literal de `src/app/admin/**`; copy de editor em `src/lib/`
@@ -125,7 +125,7 @@ export const CAIXA_VAZIA = "Caixa vazia não grava: escreva algo.";
  *
  *  ⚠️ Ela NÃO cita nenhum dos nomes de campo: o rótulo do campo está na linha de
  *  cima, e repeti-lo aqui faria a tela perguntar duas vezes. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const REGRA_QUE_MENTE =
   "Zero ou menos não é regra: assim o lugar passa a dizer não para sempre. Use um número maior que zero.";
 
@@ -133,7 +133,7 @@ export const REGRA_QUE_MENTE =
  *  que o zero passou a valer (2026-10-01). Ela não diz "o lugar nunca fecha",
  *  porque não é verdade: a janela do passado continua avisando. Diz o que é (não
  *  existe janela negativa) e mostra a saída que ele provavelmente queria. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const JANELA_NEGATIVA =
   "Janela negativa não existe. Use 0 pra olhar só a chuva que já caiu, ou um número maior que zero.";
 
@@ -142,7 +142,7 @@ export const JANELA_NEGATIVA =
  *  previsão). É a irmã de cima MENOS o *"pra olhar só a chuva que já caiu"*, que
  *  é a fala dele sobre a PREVISÃO zero e aqui seria falsa: o passado zero olha só
  *  a chuva prevista. Não acrescenta palavra que a irmã não tenha. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const JANELA_PASSADO_NEGATIVA =
   "Janela negativa não existe. Use 0 ou um número maior que zero.";
 
@@ -159,7 +159,7 @@ export const JANELA_PASSADO_NEGATIVA =
  *  é falsa pra lugar OCULTO — a home lê `getAllFichas`, que o filtra, então a
  *  janela dele não entra na busca da home enquanto ele estiver escondido. A
  *  recusa continua certa; a frase só não afirma o que não vale sempre. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const ALEM_DO_PROVEDOR =
   "Esse número passa do que a previsão do tempo alcança: até 384 horas pra frente e 2232 pra trás. Use um número menor.";
 
@@ -173,12 +173,12 @@ export const ALEM_DO_PROVEDOR =
  *  pontos não são minhas nem desta tela: elas vêm do motor, por
  *  `src/lib/severidade.ts` e `src/lib/carimbo-fase.ts`, que são as MESMAS que a
  *  tela pública imprime. É o ponto da prévia. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const COM_ESTE_NUMERO = "Com este número, a tela do lugar diria:";
 
 /** Enquanto a prévia não chegou. Irmã do `SALVANDO`, e pelo mesmo motivo: numa
  *  rede de interior, campo que não responde parece campo quebrado. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const PREVENDO = "Conferindo o que muda…";
 
 /** A prévia não veio — o provedor de chuva recusou, a rede caiu, o prazo
@@ -189,12 +189,12 @@ export const PREVENDO = "Conferindo o que muda…";
  *  aqui…"*), pra quando a chuva GUARDADA faltava. A prévia passou a buscar a
  *  chuva ao vivo, aquele estado deixou de existir, e a frase foi apagada junto —
  *  ela prometia um "ainda" que nada no sistema cumpria. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const PREVISAO_FALHOU = "Não consegui conferir o que muda.";
 
 /** ─────────────────────────────────────────────────────────────────────────────
- *  AS PALAVRAS DO ESCONDER (Task 9, 2026-10-01). Nenhuma é fala dele; todas são
- *  `PENDENTE`. Moram aqui porque três pedaços da tela as escrevem — a lista
+ *  AS PALAVRAS DO ESCONDER (Task 9, 2026-10-01). Nenhuma é fala dele; todas nasceram
+ *  `PENDENTE` e ele leu todas (Serve, 07/10). Moram aqui porque três pedaços da tela as escrevem — a lista
  *  (`ListaDeLugares`, servidor), o histórico e o botão (`"use client"`) — e uma
  *  palavra com três cópias é como "escondido" e "oculto" acabam na mesma tela.
  *
@@ -205,20 +205,20 @@ export const PREVISAO_FALHOU = "Não consegui conferir o que muda.";
 /** Na lista, a marca de um lugar que ESTÁ fora do ar pro público (estado). No
  *  histórico, a marca da versão que o ESCONDEU (ato — R2 da onda de conserto 1
  *  da Task 9): edições feitas com ele já escondido não a levam. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const ESCONDIDO = "escondido";
 
 /** O botão com o lugar no ar. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const ESCONDER = "Esconder este lugar";
 
 /** O botão com o lugar escondido. O "de novo" diz que ele já esteve no ar e
  *  volta como estava — nada se perdeu. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const MOSTRAR_DE_NOVO = "Mostrar de novo";
 
 /** A marca da versão que MOSTROU o lugar de novo, no histórico (R2 da onda de
  *  conserto 1 da Task 9). Irmã de `ESCONDIDO`, que marca a versão que escondeu:
  *  as duas marcam o ATO, nunca o estado. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const DE_VOLTA_AO_AR = "de volta ao ar";

@@ -155,7 +155,7 @@ export function rotuloDiaSeguinteAberto(dias: readonly Dia[], dia: number): stri
   const falta = diasAteAbrir(dias, amanha);
   if (falta === null) return null;
   if (falta === 0) return "abre amanhã";
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   return `abre ${NOME[DIAS[(amanha + falta) % 7]]}`;
 }
 

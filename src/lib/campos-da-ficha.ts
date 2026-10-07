@@ -455,7 +455,7 @@ export class RecusaDoTrajeto extends Error {}
  *  trocaria o lugar pela primeira etapa do caminho até ele, em silêncio, em
  *  todas as telas. "Ponto 1" é a palavra do painel (`FichaInteira`), que conta
  *  os pontos a partir de 1. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const RECUSA_TIRAR_O_LUGAR = "O Ponto 1 é o próprio lugar: ele não sai do trajeto.";
 
 /** ACRESCENTA UM PONTO NO FIM do trajeto e devolve o JSON novo (Tarefa 10).
@@ -478,7 +478,7 @@ export const RECUSA_TIRAR_O_LUGAR = "O Ponto 1 é o próprio lugar: ele não sai
  *  gravado como chegou; em branco é recusado com frase, como toda caixa vazia. */
 export function acrescentarEtapa(docAtual: string, nome: string, lat: number, lng: number): string {
   if (nome.trim() === "") {
-    // PENDENTE: redação minha, o João ainda não leu
+    // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
     throw new Error("o ponto novo precisa de um nome: escreva algo");
   }
   const atual = fichaSchema.parse(JSON.parse(docAtual));
@@ -512,7 +512,7 @@ export function tirarEtapa(docAtual: string, indice: number): string {
   if (indice >= pontos.length) throw new Error(itemInexistente(indice, pontos.length));
   if (indice !== pontos.length - 1) {
     throw new RecusaDoTrajeto(
-      // PENDENTE: redação minha, o João ainda não leu
+      // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
       `Só o último ponto sai: este trajeto tem ${pontos.length} pontos, e o último é o Ponto ${pontos.length}.`,
     );
   }
@@ -570,7 +570,7 @@ function recusarNaoSeiObrigatorio(caminho: string): void {
 function abrirRascunho(docAtual: string): Record<string, unknown> {
   const doc: unknown = JSON.parse(docAtual);
   if (typeof doc !== "object" || doc === null || Array.isArray(doc)) {
-    // PENDENTE: redação minha, o João ainda não leu
+    // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
     throw new Error("o rascunho guardado não é um documento");
   }
   return doc as Record<string, unknown>;
@@ -584,7 +584,7 @@ export function aplicarNoRascunho(docAtual: string, caminho: string, valor: Valo
   // rascunho com latitude sem longitude — a janela que a Tarefa 8 (R1) fechou
   // na ficha no ar.
   if (/^trajeto\.waypoints\.\d+\.(lat|lng)$/.test(caminho)) {
-    // PENDENTE: redação minha, o João ainda não leu
+    // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
     throw new Error("a coordenada do ponto entra inteira: a latitude e a longitude juntas, no mesmo Salvar");
   }
   const atual = abrirRascunho(docAtual);

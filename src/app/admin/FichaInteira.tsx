@@ -60,7 +60,7 @@ import type { CampoNaTela, Editor, VistaNaTela } from "./campos/tipos";
 // ─────────────────────────────────────────────────────────────────────────────
 // 🔴 TODA A COPY NOVA DESTA TELA MORA NESTE BLOCO, e é de propósito.
 //
-// Quase nenhuma o João leu (as que ele leu dizem `LIDA:`). A regra é: eu escrevo, marco
+// Quase todas o João já leu (as lidas dizem `LIDA:`; a de ausência é fala dele). A regra é: eu escrevo, marco
 // `PENDENTE`, mostro por extenso, ele lê, ele decide. Quantas são não está
 // escrito aqui de propósito — o número sai de contar os marcadores
 // `PENDENTE` deste arquivo, e prosa com número à mão já nasceu falsa neste
@@ -93,9 +93,9 @@ import type { CampoNaTela, Editor, VistaNaTela } from "./campos/tipos";
 //    esta trilha fala quando choveu"), com "trilha" trocado por "lugar". Fica
 //    dito porque é uma pergunta que o app passa a FAZER na tela do dono sem o
 //    questionário nunca ter feito;
-//  - o resto (o título da tela, a frase de ausência, "Ponto N") é redação
-//    minha sem fonte anterior. 🔴 "Sim"/"Não" SAÍRAM DESTE ARQUIVO na Task 6
-//    (foram pra `./campos/palavras`, ainda `PENDENTE`, porque o interruptor
+//  - o resto (o título da tela, "Ponto N") é redação minha sem fonte anterior;
+//    a frase de ausência é fala dele (07/10). 🔴 "Sim"/"Não" SAÍRAM DESTE ARQUIVO na Task 6
+//    (foram pra `./campos/palavras`, hoje `LIDA`, porque o interruptor
 //    também as escreve) — junto com as frases novas dos editores, que moram
 //    lá e em cada arquivo de `./campos/`.
 //
@@ -104,11 +104,11 @@ import type { CampoNaTela, Editor, VistaNaTela } from "./campos/tipos";
 // FORMA do dado; o dado é a prop.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 const TITULO = "A ficha inteira";
 
-// PENDENTE: redação minha, o João ainda não leu
-const AUSENTE = "Não sei — o app não diz nada sobre isto.";
+// FALA DELE: "Ainda sem dados" — ele trocou a frase no pacote de copy (07/10); sem ponto final, como ele escreveu.
+const AUSENTE = "Ainda sem dados";
 
 /** O prefixo do bloco de um campo que vive dentro de uma LISTA — hoje só os
  *  waypoints têm índice. Conta a partir de **1**: o dono não conta pontos do
@@ -122,22 +122,22 @@ const AUSENTE = "Não sei — o app não diz nada sobre isto.";
  *  `Parada` o bloco saía `Parada 1 · O nome do ponto` — duas palavras para a
  *  mesma coisa na mesma linha, que é o *"dois idiomas na mesma tela"* que este
  *  arquivo condena duas vezes. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 const parada = (n: number): string => `Ponto ${n}`;
 
 /** O título de cada grupo. Chaveado por `GrupoDaFicha`, então um grupo novo no
  *  registro NÃO compila até ganhar título aqui — o `Record` é o guarda, não a
  *  minha memória. */
 const TITULO_DO_GRUPO: Record<GrupoDaFicha, string> = {
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   voz: "O que o lugar é, na voz de quem foi",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   chegar: "Como se chega, e o que se encontra no caminho",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   custo: "O que custa",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   quando: "Quando dá pra ir",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   condicao: "O que a chuva faz aqui",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   discriminador: "O que se olha na entrada pra decidir",
@@ -157,68 +157,68 @@ const TITULO_DO_GRUPO: Record<GrupoDaFicha, string> = {
  *  nesta rodada. */
 export const ROTULOS: Record<string, string> = {
   // — o que o lugar é, na voz de quem foi —
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   rotulo_escaneio: "O rótulo de escaneio",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   promessa: "A promessa",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   voz: "A voz",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   premio: "O prêmio",
 
   // — como se chega, e o que se encontra no caminho —
-  // PENDENTE: redação minha, o João ainda não leu
+  // PENDENTE: redação minha; ele leu e marcou "Dúvida" — dúvida dele em 07/10: quer automático pela seleção do lugar — rodada própria
   cidade: "A cidade",
   // 🔴 As quatro folhas de um PONTO do trajeto NÃO ENTRAM AQUI: elas vêm no
   // registro como MOLDE (`[]` = qualquer índice) e o rótulo delas mora em
   // `ROTULO_DO_PONTO`, logo abaixo. Ver a justificativa lá.
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   acesso: "O acesso",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   avisos: "Os avisos",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   piso: "O piso da via",
   // PENDENTE: redação minha, o João ainda não leu
   carroComum: "Carro comum chega até lá?",
 
   // — o que custa —
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   "custo.tag": "Custa ou é grátis",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   "custo.valor": "Quanto é, e como se paga",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   "custo.curto": "O custo em três ou quatro palavras",
 
   // — quando dá pra ir —
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   horario: "Este lugar tem hora pra abrir e pra fechar?",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   dias: "Os dias da semana em que abre",
 
   // — o que a chuva faz aqui —
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   "condicao.coords": "A coordenada de onde se mede a chuva, e onde o pin aparece no mapa da home",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   "condicao.regra.janela_previsao_horas": "Quantas horas pra frente olhar se vem chuva",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   "condicao.regra.janela_passado_horas": "Quantas horas pra trás olhar se choveu",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   "condicao.regra.limiar_mm": "De quantos milímetros de chuva conta",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   "condicao.severidade": "Com que força este lugar fala quando choveu",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   "condicao.regra_texto": "O texto da regra",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   "condicao.ressalva_proxy": "A ressalva do proxy",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   secaRapido: "Por que o chão firma rápido aqui",
 
   // — o que se olha na entrada pra decidir —
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   "discriminador.formato": "O formato",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   "discriminador.como_ler": "O que se lê no lugar",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   "discriminador.permissao_abortar": "A permissão de dar meia-volta",
 };
 
@@ -243,13 +243,13 @@ export const ROTULOS: Record<string, string> = {
  *  folhas de nome igual em pais diferentes colidiriam aqui — e o teste de
  *  cobertura de rótulos fica vermelho antes de a tela mentir. */
 export const ROTULO_DO_PONTO: Record<string, string> = {
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   nome: "O nome",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   lat: "A latitude",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   lng: "A longitude",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   nota: "A nota",
 };
 

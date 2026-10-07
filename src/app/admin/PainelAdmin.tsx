@@ -25,7 +25,7 @@ const ATALHOS = [
  *  3 dias é escolha do controlador desta task, não do João. */
 const VENCE_EM_BREVE_SEGUNDOS = 3 * DIA;
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 const AVISO_ERRO_LEITURA = "Não consegui ler o aviso publicado — a seção abaixo pode estar incompleta.";
 
 /** A linha que é o ponto da tela: o que vai pra tela se este efeito for

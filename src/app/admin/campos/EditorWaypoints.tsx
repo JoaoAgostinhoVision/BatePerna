@@ -53,10 +53,10 @@ import { CAIXA_VAZIA, SALVANDO, SALVAR } from "./palavras";
 /** O nome da caixa do ponto novo. "O nome" é a palavra que o painel já usa pra
  *  essa folha de todo ponto (`ROTULO_DO_PONTO.nome`), e "ponto" é a que o
  *  trajeto usa. Vai como `aria-label`. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const NOME_DO_PONTO_NOVO = "O nome do ponto novo";
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const ACRESCENTAR_PONTO = "Acrescentar um ponto no fim do trajeto";
 
 /** A ajuda do mapa SEM PIN do ponto novo: a vista começa no último ponto, mas o
@@ -65,16 +65,16 @@ export const ACRESCENTAR_PONTO = "Acrescentar um ponto no fim do trajeto";
  *  pin pré-posto no último ponto, que deixou de existir. Some com o toque, e
  *  mora EMBAIXO do mapa (como a `MARQUE_NO_MAPA`): uma linha que some em cima
  *  faria o mapa pular debaixo do dedo. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const DICA_DO_PONTO_NOVO = "Toque no mapa onde fica o ponto novo. Depois, arraste o pin pra acertar.";
 
 /** `rotulo` é o "Ponto N" que o servidor já escreve no bloco de cada ponto —
  *  uma forma só de nomear um ponto na tela inteira. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const tirarPonto = (rotulo: string): string => `Tirar o ${rotulo}`;
 
 /** O segundo toque do "tirar" (R2 da onda de conserto 1, decisão do João). */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const TIRAR_MESMO = "Tirar mesmo?";
 
 type Par = { lat: number; lng: number };

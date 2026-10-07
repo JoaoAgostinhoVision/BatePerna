@@ -22,15 +22,15 @@ import { ERRO_GRAVAR, ERRO_REDE } from "./campos/gravar";
  *  ⚠️ NENHUM TEXTO SOBRE UM LUGAR ESPECÍFICO mora aqui: as frases e os pedidos
  *  chegam por prop, e as palavras fixas abaixo servem a todo lugar. */
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const PUBLICAR = "Publicar";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const PUBLICANDO = "Publicando…";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const AVISO_PUBLICAR = "Publicar põe este lugar no ar, pra quem abrir o app.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const TITULO_FALTA = "Antes de publicar, falta responder:";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const TITULO_CALA = "O que o app vai calar sobre este lugar:";
 
 /** Uma pergunta obrigatória ainda sem resposta: o texto dela e o endereço da

@@ -93,9 +93,9 @@ export function comBase(corpo: Record<string, unknown>, baseId: number | null): 
  *  troca a tela é só o SUCESSO — `location.reload()`, ou `location.assign` pra
  *  próxima pergunta no formulário de lugar novo (ver `depoisDeGravar`). */
 
-// PENDENTE: vinha do `EditorDeVoz` já marcado; o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Vinha do `EditorDeVoz` já marcado.
 export const ERRO_GRAVAR = "Não consegui salvar.";
-// PENDENTE: vinha do `EditorDeVoz` já marcado; o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Vinha do `EditorDeVoz` já marcado.
 export const ERRO_REDE = "Sem rede.";
 
 export type Gravacao = {

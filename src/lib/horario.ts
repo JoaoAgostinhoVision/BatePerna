@@ -90,30 +90,30 @@ const especial = (f: Faixa): boolean => minutosDeHHMM(f.abre) >= minutosDeHHMM(f
  *     estava testado). Faixas que se TOCAM (8–10 e 10–14) passam (M4). */
 export function problemaDasFaixas(lista: unknown): string | null {
   if (!Array.isArray(lista)) {
-    // PENDENTE: redação minha, o João ainda não leu
+    // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
     return "o horário é uma lista de faixas, cada uma com a hora de abrir e a de fechar";
   }
   if (lista.length === 0) {
-    // PENDENTE: redação minha, o João ainda não leu
+    // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
     return 'o horário precisa de pelo menos uma faixa: se o lugar não tem hora pra abrir e fechar, use "não tem"';
   }
   if (lista.length > 3) {
-    // PENDENTE: redação minha, o João ainda não leu
+    // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
     return "o horário cabe em até 3 faixas";
   }
   for (const f of lista as unknown[]) {
     const faixa = (typeof f === "object" && f !== null ? f : {}) as Record<string, unknown>;
     if (typeof faixa.abre !== "string" || typeof faixa.fecha !== "string") {
-      // PENDENTE: redação minha, o João ainda não leu
+      // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
       return "cada faixa do horário precisa da hora de abrir e da hora de fechar";
     }
     const estranha = Object.keys(faixa).find((k) => k !== "abre" && k !== "fecha");
     if (estranha !== undefined) {
-      // PENDENTE: redação minha, o João ainda não leu
+      // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
       return `uma faixa do horário só tem a hora de abrir e a de fechar ("${estranha}" não é parte dela)`;
     }
     if (!HHMM.test(faixa.abre) || !HHMM.test(faixa.fecha)) {
-      // PENDENTE: redação minha, o João ainda não leu
+      // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
       return `"${faixa.abre}" ou "${faixa.fecha}" não é uma hora (o formato é 08:00)`;
     }
   }
@@ -126,28 +126,28 @@ export function problemaDasFaixas(lista: unknown): string | null {
     // (`especial`); só a palavra se bifurca.
     const eh =
       sozinha.abre === sozinha.fecha
-        ? // PENDENTE: redação minha, o João ainda não leu
+        ? // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
           "é de 24 horas"
         : minutosDeHHMM(sozinha.fecha) === 0
-          ? // PENDENTE: redação minha, o João ainda não leu
+          ? // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             "fecha à meia-noite"
-          : // PENDENTE: redação minha, o João ainda não leu
+          : // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             "passa da meia-noite";
-    // PENDENTE: redação minha, o João ainda não leu
+    // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
     return `a faixa ${rotuloFaixaCurta([sozinha])} ${eh}, e uma faixa assim só vale sozinha no horário`;
   }
   for (let i = 1; i < faixas.length; i++) {
     const antes = faixas[i - 1];
     const agora = faixas[i];
     if (minutosDeHHMM(agora.abre) < minutosDeHHMM(antes.abre)) {
-      // PENDENTE: redação minha, o João ainda não leu
+      // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
       return (
         `as faixas vão na ordem do dia: a ${rotuloFaixaCurta([agora])} vem antes da ` +
         `${rotuloFaixaCurta([antes])}`
       );
     }
     if (minutosDeHHMM(agora.abre) < minutosDeHHMM(antes.fecha)) {
-      // PENDENTE: redação minha, o João ainda não leu
+      // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
       return `as faixas ${rotuloFaixaCurta([antes])} e ${rotuloFaixaCurta([agora])} se sobrepõem`;
     }
   }
@@ -312,7 +312,7 @@ export function rotuloHora(hhmm: string): string {
  *  podendo escrever a mesma faixa de formas diferentes — a família de sempre.
  *  O travessão é o EN DASH, e é o que separa uma faixa de uma subtração. */
 export function rotuloFaixaCurta(horario: Horario): string {
-  // PENDENTE: redação minha, o João ainda não leu — o " · " entre as faixas
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha — o " · " entre as faixas.
   return naOrdemDoDia(horario).map((f) => `${rotuloHora(f.abre)}–${rotuloHora(f.fecha)}`).join(" · ");
 }
 
@@ -341,7 +341,7 @@ export function rotuloAbertura(abertura: Abertura, agora: Agora): string | null 
     // 🔴 O "amanhã" OLHA `dias` desde a 11c (11c-I5): domingo 18h, num lugar de
     // sábado e domingo, "abre amanhã" era mentira — segunda está fechado.
     const dia = abertura.dias ? rotuloDiaSeguinteAberto(abertura.dias, agora.dia) : "abre amanhã";
-    // PENDENTE: redação minha, o João ainda não leu — o dia pelo nome + a hora
+    // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha — o dia pelo nome + a hora.
     return dia === null ? null : `${dia} às ${rotuloHora(primeiraDoDia(abertura.horario).abre)}`;
   }
   return null;
@@ -362,7 +362,7 @@ export function rotuloFaixa(abertura: Abertura): string {
     // Com intervalo, "fecha às X, abre às Y" não diz qual das faixas: a frase
     // passa a dizer as faixas, na ordem do dia.
     const das = naOrdemDoDia(faixas).map((f) => `das ${rotuloHora(f.abre)} às ${rotuloHora(f.fecha)}`);
-    // PENDENTE: redação minha, o João ainda não leu
+    // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
     partes.push(`Abre ${das.slice(0, -1).join(", ")} e ${das[das.length - 1]}.`);
   }
   return partes.join(" ");

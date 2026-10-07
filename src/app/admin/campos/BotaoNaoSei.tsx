@@ -59,11 +59,11 @@ import type { PropsDoEditor } from "./tipos";
  *  próprio editor dele (uma faixa de caixas vazias). Nada aqui é irreversível
  *  pelo celular. */
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const NAO_SEI = "Não sei — o app cala sobre isto";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const NAO_TEM = "Não tem — o app cala sobre isto";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const TIRANDO = "Tirando…";
 
 export default function BotaoNaoSei({

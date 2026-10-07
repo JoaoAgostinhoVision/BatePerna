@@ -58,7 +58,7 @@ export async function generateMetadata({
   // 🔴 A CIDADE NO TÍTULO (Tarefa 11b, 11b-I6): o link de duas Pedras do Navio
   // saía IDÊNTICO no WhatsApp. "Nome — Cidade" só quando há cidade; sem ela,
   // igual a antes — o app não escreve "sem cidade" em lugar nenhum.
-  const nome = ficha.trajeto.waypoints[0].nome + (ficha.cidade ? ` — ${ficha.cidade}` : ""); // PENDENTE: formato meu (" — Cidade"), o João ainda não leu
+  const nome = ficha.trajeto.waypoints[0].nome + (ficha.cidade ? ` — ${ficha.cidade}` : ""); // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Formato meu (" — Cidade").
   return {
     title: nome,
     description: ficha.promessa,
@@ -354,7 +354,7 @@ export default async function Ficha({
                 ficha no celular, e o link já leva ao mapa daquele ponto. */}
             {ficha.trajeto.waypoints.length > 1 && (
               <>
-                {/* PENDENTE: redação minha, o João ainda não leu */}
+                {/* LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha. */}
                 <div className="k etapas-k">No caminho até lá</div>
                 <ol className="etapas">
                   {ficha.trajeto.waypoints.slice(1).map((etapa, i) => (

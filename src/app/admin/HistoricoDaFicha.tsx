@@ -5,15 +5,15 @@ import type { FichaVersao } from "@/lib/db";
 import { DE_VOLTA_AO_AR, ESCONDIDO } from "./campos/palavras";
 import { enderecoTrocado } from "@/lib/endereco";
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 const TITULO = "Histórico da ficha";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 const AUTOR = { painel: "você, pelo painel", semente: "acervo original" } as const;
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 const VOLTAR = "voltar a esta";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 const VOLTANDO = "Voltando…";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 const ERRO_VOLTAR = "Não consegui voltar a esta versão.";
 
 /** Uma versão como a TELA a recebe: a linha do banco e, já resolvidos no

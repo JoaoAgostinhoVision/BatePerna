@@ -77,29 +77,29 @@ export function avisoDoEndereco({
 // endereço ainda diz X" e "trocar para Y"; mesmo assim são redação minha até ele
 // ler a tela de verdade.
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const ROTULO_ENDERECO = "endereço";
-// PENDENTE: redação minha, o João ainda não leu
+// PENDENTE: redação minha; ele leu e marcou "Dúvida" — dúvida dele em 07/10: quer automático pela seleção do lugar — rodada própria
 export const aindaDiz = (cidade: string): string => `⚠ o endereço ainda diz ${cidade}`;
-// PENDENTE: redação minha, o João ainda não leu
+// PENDENTE: redação minha; ele leu e marcou "Dúvida" — dúvida dele em 07/10: quer automático pela seleção do lugar — rodada própria
 export const trocarPara = (novo: string): string => `trocar para ${novo}`;
-// PENDENTE: redação minha, o João ainda não leu
+// PENDENTE: redação minha; ele leu e marcou "Dúvida" — dúvida dele em 07/10: quer automático pela seleção do lugar — rodada própria
 export const TROCAR_MESMO = "Trocar mesmo? O endereço de agora vai levar ao novo.";
-// PENDENTE: redação minha, o João ainda não leu
+// PENDENTE: redação minha; ele leu e marcou "Dúvida" — dúvida dele em 07/10: quer automático pela seleção do lugar — rodada própria
 export const TROCANDO = "Trocando…";
 
 // As recusas da porta (`POST /api/admin/endereco`), no corpo do 400/409.
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const SEM_CIDADE_PRA_ENDERECO = "Esse lugar ainda não tem cidade: responda a cidade primeiro, e o endereço sai do nome e dela.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const ENDERECO_JA_E_ESSE = "O endereço desse lugar já é o do nome e da cidade dele.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const enderecoOcupadoPorLugar = (novo: string, quem: string): string =>
   `O endereço ${novo} já é de outro lugar do app: ${quem}. Enquanto for dele, este continua no endereço de agora.`;
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const enderecoOcupadoPorRascunho = (novo: string, quem: string): string =>
   `O endereço ${novo} já é de um lugar novo começado: ${quem}. Enquanto for dele, este continua no endereço de agora.`;
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const ENDERECO_NAO_TROCOU = "Não consegui trocar o endereço: nada mudou. Recarregue a página e tente de novo.";
 
 /** O `baseId` de uma gravação do painel (onda de fix 2 da 11e, M6): a versão que
@@ -115,11 +115,11 @@ export function baseIdValido(v: unknown): v is number {
  *  — o lugar mudou de endereço entre a leitura e a gravação (onda de fix da
  *  Tarefa 11e, I1), ou já tinha mudado quando a aba velha gravou e outro lugar
  *  retomou o endereço (onda de fix 2, M6): nada foi gravado. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const LUGAR_MUDOU_DE_ENDERECO =
   "Nada foi gravado: o endereço deste lugar mudou enquanto você mexia nele. Recarregue a página e tente de novo.";
 
 /** A linha do histórico na versão do ATO (I4 da auditoria): de onde o lugar
  *  veio. Voltar a uma versão restaura o DOCUMENTO, nunca o endereço. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const enderecoTrocado = (velho: string): string => `endereço trocado; antes era ${velho}`;

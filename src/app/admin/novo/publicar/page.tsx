@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 /** 🔴 Fora do índice. Painel de admin no Google é convite. */
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 const TITULO_PUBLICAR = "Publicar lugar novo";
 
 const ESTOUROU = Symbol("prazo do rascunho");
