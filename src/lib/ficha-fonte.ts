@@ -58,21 +58,31 @@ export function esquecerMemoria(): void {
  *  boa nunca seria servida. É o `catch` quem trata os dois jeitos de o banco
  *  falhar (pendurar e recusar) da mesma forma.
  *
- *  🔴 ACHADO DA REVISÃO FINAL (C1, 2026-09-26): `linhas === null` cobria só a
- *  RECUSA/ESTOURO do banco — não cobria um `Map` VAZIO, que é uma leitura
- *  BEM-SUCEDIDA e diferente de "banco fora". Um Turso DE PÉ com a tabela
- *  `ficha_versoes` ainda sem linha nenhuma (schema aplicado sem a semente
- *  rodar depois) devolvia `[]`, nenhum ramo de erro disparava, e `[]` ficava
- *  MEMORIZADO como "última boa" — a home e o acervo passavam a afirmar, em
- *  silêncio, que não existe trilha nenhuma em Pernambuco. Por isso o mapa
- *  vazio entra no MESMO ramo do banco fora: sem cópia em memória, estoura;
- *  com cópia, serve a última boa. "Acervo vazio" hoje só existe por essa
- *  falta de semente — criar/apagar ficha pelo painel é rodada futura —,
- *  então esta trava não custa nada ao caminho normal. */
+ *  🔴 "BANCO SEM SEMENTE" SE DECIDE PELO ACERVO INTEIRO, ESCONDIDOS INCLUSIVE
+ *  (C1 da revisão final de 26/09, refeito no C1 da revisão final do painel
+ *  completo, 2026-10-06). Um `Map` VAZIO é uma leitura BEM-SUCEDIDA, mas só tem
+ *  uma causa: a tabela `ficha_versoes` sem linha nenhuma (schema aplicado sem a
+ *  semente rodar depois) — versão nunca é apagada. Esse vazio entra no MESMO
+ *  ramo do banco fora: sem cópia em memória, estoura; com cópia, serve a última
+ *  boa — nunca `[]` memorizado como se não existisse trilha em Pernambuco.
+ *
+ *  Por isso `ler` tem de trazer os ESCONDIDOS também (`versoesAtuais` com
+ *  `incluirOcultos: true`) e dizer, linha a linha, quem está escondido: o
+ *  filtro do público acontece AQUI, DEPOIS da pergunta do vazio. Quando a
+ *  pergunta era feita sobre o mapa JÁ FILTRADO, o dono escondendo TODOS os
+ *  lugares (três toques no celular) caía no ramo do banco fora: a instância
+ *  quente servia os escondidos pela memória, e a fria derrubava o app público
+ *  inteiro. Agora, tudo escondido é `[]` honesto — e é `[]` que se memoriza.
+ *
+ *  🔴 A MEMÓRIA NUNCA VÊ UM ESCONDIDO: `ultimaBoa` recebe a lista JÁ FILTRADA
+ *  (B1 da auditoria da Task 9). Um caso irmão continua aberto e é do dono
+ *  decidir (M4 da revisão final de 06/10): a instância memorizou P no ar, o
+ *  dono esconde P, e o banco cai antes da próxima leitura boa — ela serve P
+ *  enquanto durar a queda. */
 export async function buscarFichas(
-  ler: () => Promise<Map<string, { doc: string }>>,
+  ler: () => Promise<Map<string, { doc: string; oculto: boolean }>>,
 ): Promise<Ficha[]> {
-  let linhas: Map<string, { doc: string }> | null;
+  let linhas: Map<string, { doc: string; oculto: boolean }> | null;
   try {
     linhas = await comPrazo(ler(), PRAZO_FICHA_MS, null);
   } catch {
@@ -94,7 +104,8 @@ export async function buscarFichas(
   // pela chave) e a ficha (que lê o `slug` de dentro) discordariam sobre
   // qual morro é qual — a mesma classe de defeito, agora no leitor que roda
   // em produção.
-  const fichas = ordenarPorNome([...linhas.entries()].map(([slug, l]) => fichaDaVersao(slug, l.doc)));
+  const noAr = [...linhas.entries()].filter(([, l]) => !l.oculto);
+  const fichas = ordenarPorNome(noAr.map(([slug, l]) => fichaDaVersao(slug, l.doc)));
   ultimaBoa = fichas;
   return fichas;
 }

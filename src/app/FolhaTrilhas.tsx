@@ -93,10 +93,12 @@ export default function FolhaTrilhas({
     // tela se contradiz: a linha diz "0 trilhas" SEM o sufixo "· 1 filtro
     // ligado", e logo abaixo o aviso culpa filtros que não existem.
     //
-    // Hoje o ramo é INALCANÇÁVEL nesse formato — aquele `pares` vem do acervo
-    // local, que nunca é vazio. Ele passa a ser alcançável se (a) o acervo virar dado
-    // remoto/paginado, ou (b) entrar um recorte que zere por outra razão que
-    // não um filtro ligado. Aí a saída barata é distinguir os dois casos por
+    // 🔴 DESDE 2026-10-06 O RAMO É ALCANÇÁVEL nesse formato (antes não era): o
+    // dono pode esconder TODOS os lugares pelo painel, e aí a leitura pública
+    // devolve `[]` honesto (C1 da revisão final do painel completo) — `pares`
+    // vazio, nenhum filtro ligado, e esta frase culpando filtros que não
+    // existem. Também ficaria alcançável se entrasse um recorte que zere por
+    // outra razão que não um filtro ligado. A saída barata é distinguir os dois casos por
     // `visiveis.length === 0 && contarLigados(filtros) > 0` e escrever a outra
     // frase pro caso sem filtro. **Deixado de propósito: é decisão de produto,
     // não conserto de implementação.**

@@ -173,7 +173,8 @@ describe("ficha_versoes — esconder", () => {
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔴 A MIGRAÇÃO. `ficha_versoes` JÁ EXISTE EM PRODUÇÃO desde 2026-09-26, então a
 // coluna `oculto` entra por `ALTER TABLE` — e `ADD COLUMN` não tem
-// `IF NOT EXISTS` no SQLite, num `ensureSchema` que roda em TODO boot.
+// `IF NOT EXISTS` no SQLite, num `ensureSchema` que roda a cada `npm run semear`
+// (que pode ser repetido) — nunca no boot do app.
 // ═══════════════════════════════════════════════════════════════════════════
 describe("ensureSchema e a coluna oculto", () => {
   it("ensureSchema roda DUAS vezes seguidas sem estourar, e a tabela continua servindo", async () => {

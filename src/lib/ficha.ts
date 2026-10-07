@@ -75,9 +75,17 @@ export function loadAll(dir: string = FICHAS_DIR): Ficha[] {
  *  a dedução por pedido — o que existe é o guarda de FONTE em
  *  `tests/lib/ficha.test.ts` ("o getter está embrulhado em cache()"), com o
  *  porquê escrito lá. Em teste o efeito colateral é bom: cada chamada relê o
- *  banco, que é o que faz "grava versão nova e vê a mudança chegar" funcionar. */
+ *  banco, que é o que faz "grava versão nova e vê a mudança chegar" funcionar.
+ *
+ *  🔴 `incluirOcultos: true` NA LEITURA DO PÚBLICO, E NÃO É ENGANO (C1 da
+ *  revisão final do painel completo, 2026-10-06): `buscarFichas` decide "banco
+ *  sem semente" pelo acervo INTEIRO e só depois tira os escondidos — ver o
+ *  porquê lá. Com o filtro padrão do SQL, esconder todos os lugares parecia
+ *  banco vazio, e a memória servia os escondidos. O escondido continua fora de
+ *  toda superfície pública: quem filtra é `buscarFichas`, antes de memorizar. */
 export const getAllFichas = cache(
-  async (): Promise<Ficha[]> => buscarFichas(() => versoesAtuais(getClient())),
+  async (): Promise<Ficha[]> =>
+    buscarFichas(() => versoesAtuais(getClient(), { incluirOcultos: true })),
 );
 
 export async function getFicha(slug: string): Promise<Ficha | null> {
@@ -105,10 +113,12 @@ async function lerNoPrazo<T>(leitura: Promise<T>): Promise<T> {
  *  🔴 POR QUE NÃO `getAllFichas`. Aquela é a leitura do PÚBLICO: filtra os
  *  ocultos (então o lugar escondido sumia da lista do próprio dono, sem caminho
  *  de volta pela tela) e MEMORIZA o que leu em `ultimaBoa`, que a home serve
- *  quando o banco cai. Ligar `incluirOcultos` naquele caminho poria o escondido
- *  na memória do público — e no primeiro tropeço do Turso a home o mostraria de
- *  volta. Por isso esta leitura é OUTRA porta: lê com `incluirOcultos`, usa a
- *  MESMA conta de documento (`fichaDaVersao`) e não toca na memória.
+ *  quando o banco cai. Fazer aquele caminho devolver os escondidos poria o
+ *  escondido na memória do público — e no primeiro tropeço do Turso a home o
+ *  mostraria de volta. (Desde 06/10 ela LÊ com `incluirOcultos`, mas tira os
+ *  escondidos antes de memorizar; ver `buscarFichas`.) Por isso esta leitura é
+ *  OUTRA porta: lê com `incluirOcultos`, usa a MESMA conta de documento
+ *  (`fichaDaVersao`), devolve os escondidos marcados e não toca na memória.
  *
  *  🔴 SEM MEMÓRIA, ENTÃO BANCO FORA É ERRO, não lista velha. É a tela de quem
  *  edita: mostrar uma versão antiga pra quem vai mudá-la é pior que a página de

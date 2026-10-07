@@ -130,9 +130,14 @@ async function migrarColunaEnderecoAnterior(client: Client): Promise<void> {
  *  coluna, que é o pior dos dois mundos.
  *
  *  🔴 E `ALTER TABLE ... ADD COLUMN` NÃO TEM `IF NOT EXISTS` NO SQLITE.
- *  `ensureSchema` roda em TODO boot e o resto deste arquivo depende de ela ser
- *  idempotente; sem o guarda, o SEGUNDO boot estouraria com "duplicate column
- *  name: oculto" e derrubaria o app inteiro. O guarda pergunta ao próprio banco
+ *  `ensureSchema` roda a cada `npm run semear` (e `scripts/apply-schema.ts`),
+ *  que pode ser repetido — NUNCA no boot do app: o app em produção não cria
+ *  coluna nem tabela. Sem o guarda, a SEGUNDA semente estouraria com
+ *  "duplicate column name: oculto". E sem a semente rodar ANTES do deploy, a
+ *  coluna e as tabelas novas não existem no banco, e o código PÚBLICO que as
+ *  consulta (o "✓ Fui" pergunta por `oculto`; o endereço velho, por
+ *  `enderecos_antigos`) estoura com "no such column/table" — a ordem
+ *  `semear` → deploy não protege só o painel. O guarda pergunta ao próprio banco
  *  (`PRAGMA table_info`) em vez de capturar a mensagem de erro do driver: a
  *  mensagem é do driver e muda com a versão dele, o pragma é a pergunta de
  *  verdade.
@@ -578,11 +583,12 @@ export async function versaoPorId(client: Client, id: number): Promise<FichaVers
  *  família evita.
  *
  *  🔴 O PADRÃO É SÓ O QUE ESTÁ NO AR. Lugar cuja versão de maior `id` tem
- *  `oculto = 1` NÃO SAI DAQUI — é assim que a home, o acervo e a página do
- *  lugar param de mostrá-lo, sem nenhuma delas saber que "esconder" existe.
+ *  `oculto = 1` NÃO SAI DAQUI. É o lado seguro pra quem chamar sem pensar —
+ *  mas, desde 2026-10-06, NENHUM chamador de produção usa o padrão: todos os
+ *  da lista abaixo passam `incluirOcultos`, inclusive a leitura do público.
  *
  *  🔴 QUEM TEM DE PASSAR `{ incluirOcultos: true }`, E POR QUÊ (medido antes de
- *  escrever a coluna, porque o padrão novo muda estes dois em silêncio):
+ *  escrever a coluna, porque o padrão novo muda estes em silêncio):
  *
  *   1. **O portão de coerência** (`src/app/api/admin/ficha/route.ts`): duas das
  *      regras comparam uma ficha com as outras, e **lugar escondido
@@ -595,6 +601,16 @@ export async function versaoPorId(client: Client, id: number): Promise<FichaVers
  *   3. **A lista do painel** (`getAcervoDoDono`, em `src/lib/ficha.ts`; Task 9,
  *      2026-10-01): esconder é tirar do PÚBLICO, não do dono — sem os ocultos
  *      o lugar escondido sumia da lista dele, sem caminho de volta pela tela.
+ *   4. **A publicação** (`src/app/api/admin/publicar/route.ts`): a mesma
+ *      coerência por diferença do item 1, e pelo mesmo porquê — o lugar novo
+ *      é medido contra os escondidos também, porque escondido volta.
+ *   5. **A leitura do PÚBLICO** (`getAllFichas`, em `src/lib/ficha.ts`; C1 da
+ *      revisão final do painel completo, 2026-10-06): `buscarFichas` decide
+ *      "banco sem semente" pelo acervo INTEIRO e só depois tira os escondidos,
+ *      antes de memorizar. Com o padrão, esconder TODOS os lugares parecia
+ *      banco vazio, e a memória do público servia os escondidos.
+ *   (E `parOcupado`, em `src/lib/par-de-lugar.ts`: o par nome+cidade de um
+ *   lugar escondido continua ocupado, pela mesma razão do item 1.)
  *
  *  🔴 E O FILTRO FICA **FORA** DA SUBCONSULTA, DE PROPÓSITO. Dentro dela
  *  (`SELECT MAX(id) ... WHERE oculto <> 1`) o lugar escondido continuaria
@@ -985,4 +1001,12 @@ export async function enderecosAntigosDe(client: Client, novo: string): Promise<
 export async function enderecosVelhos(client: Client): Promise<Set<string>> {
   const r = await client.execute(`SELECT velho FROM enderecos_antigos`);
   return new Set(r.rows.map((l) => String(l.velho)));
+}
+
+/** Todo endereço com RASCUNHO — a semente também os trata como "já tem" (M3 da
+ *  revisão final do painel completo, 2026-10-06): versão ao lado de rascunho no
+ *  mesmo endereço é o estado que `criarRascunho` declara impossível. */
+export async function enderecosComRascunho(client: Client): Promise<Set<string>> {
+  const r = await client.execute(`SELECT slug FROM ficha_rascunhos`);
+  return new Set(r.rows.map((l) => String(l.slug)));
 }

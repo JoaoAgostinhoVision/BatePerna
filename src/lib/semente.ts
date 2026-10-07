@@ -1,5 +1,5 @@
 import type { Client } from "@libsql/client";
-import { enderecosVelhos, gravarVersao, versoesAtuais } from "@/lib/db";
+import { enderecosComRascunho, enderecosVelhos, gravarVersao, versoesAtuais } from "@/lib/db";
 import type { Ficha } from "@/types/ficha";
 
 /** Põe no banco as fichas que ainda não estão lá, e SÓ essas.
@@ -31,10 +31,16 @@ export async function semear(
   // de nascença — e a semente, que é o JSON de nascença, o regravaria lá,
   // VISÍVEL: dois lugares públicos, um deles com a voz antiga no ar.
   const velhos = await enderecosVelhos(client);
+  // 🔴 E TODO ENDEREÇO COM RASCUNHO TAMBÉM (M3 da revisão final, 2026-10-06).
+  // Um rascunho no endereço de um JSON do disco faria a semente gravar a versão
+  // AO LADO dele — rascunho e lugar no mesmo endereço, o estado que
+  // `criarRascunho` declara impossível. Sem caminho real hoje (os JSONs já
+  // estão no banco de produção); é guarda barato, não trava de deploy.
+  const comRascunho = await enderecosComRascunho(client);
   const semeados: string[] = [];
   const pulados: string[] = [];
   for (const f of fichas) {
-    if (jaTem.has(f.slug) || velhos.has(f.slug) || semeados.includes(f.slug)) { pulados.push(f.slug); continue; }
+    if (jaTem.has(f.slug) || velhos.has(f.slug) || comRascunho.has(f.slug) || semeados.includes(f.slug)) { pulados.push(f.slug); continue; }
     await gravarVersao(client, f.slug, JSON.stringify(f), "semente", agora);
     semeados.push(f.slug);
   }

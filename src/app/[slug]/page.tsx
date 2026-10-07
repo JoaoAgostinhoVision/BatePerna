@@ -434,6 +434,14 @@ export default async function Ficha({
           </div>
         )}
 
+        {/* ⚠️ `lugar` e a ficha vêm de DUAS leituras, não de uma (M5 da revisão
+            final, 2026-10-06): a ficha do `getFicha` lá em cima, a identidade
+            do `identidadeDoEndereco` depois. Uma troca P: A→B seguida de Q
+            publicando/retomando A exatamente entre as duas daria a página de P
+            com a identidade de Q — milissegundos e dois atos do dono. Mesma
+            classe já declarada do M5 da auditoria da 12b; só nota. (Fica aqui,
+            e não junto da leitura, pra não deslocar a linha que a mutação N12
+            de `scripts/mutar.mjs` crava por número.) */}
         <ConfirmarFui slug={slug} lugar={lugar} antigos={antigos} />
 
         {/* 🔴 "Agreste" SAIU em 2026-09-09. As duas primeiras fichas são do

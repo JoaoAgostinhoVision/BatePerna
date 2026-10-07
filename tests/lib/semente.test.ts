@@ -1,6 +1,6 @@
 import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { ensureSchema, gravarVersao, historico, versaoAtual } from "@/lib/db";
+import { criarRascunho, ensureSchema, gravarVersao, historico, lerRascunho, versaoAtual } from "@/lib/db";
 import { semear } from "@/lib/semente";
 import type { Ficha } from "@/types/ficha";
 
@@ -89,5 +89,19 @@ describe("semear", () => {
     expect(r.semeados).toEqual(["morro-a"]);
     expect(r.pulados).toEqual(["morro-a"]);
     expect(await historico(c, "morro-a")).toHaveLength(1);
+  });
+
+  // 🔴 M3 DA REVISÃO FINAL (2026-10-06): um RASCUNHO no endereço de um JSON do
+  // disco conta como "já tem". Sem isto a semente gravaria a versão AO LADO do
+  // rascunho — o estado que `criarRascunho` declara impossível. O outro lugar do
+  // MESMO lote entra, e é isso que prova que o pulo é do rascunho, não da
+  // semente quebrada.
+  it("endereço com RASCUNHO é pulado, e o rascunho fica intacto", async () => {
+    expect(await criarRascunho(c, "morro-a", '{"rascunho":"do dono"}', AGORA)).toBe(true);
+    const r = await semear(c, [fichaFalsa("morro-a", "voz a"), fichaFalsa("morro-b", "voz b")], AGORA);
+    expect(r.pulados).toEqual(["morro-a"]);
+    expect(r.semeados).toEqual(["morro-b"]);
+    expect(await historico(c, "morro-a")).toHaveLength(0);
+    expect((await lerRascunho(c, "morro-a"))?.doc).toBe('{"rascunho":"do dono"}');
   });
 });
