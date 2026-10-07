@@ -165,7 +165,11 @@ describe("ficha_rascunhos", () => {
   it("apagarRascunho tira só aquele", async () => {
     await salvarRascunho(c, "lugar-marcador-a", "{}", 1);
     await salvarRascunho(c, "lugar-marcador-b", "{}", 2);
-    await apagarRascunho(c, "lugar-marcador-a");
+    expect(await apagarRascunho(c, "lugar-marcador-a"), "apagou e disse que não").toBe(true);
+    expect((await listarRascunhos(c)).map((r) => r.slug)).toEqual(["lugar-marcador-b"]);
+    // Sem linha naquele endereço: diz que NÃO apagou (é o 404 da rota).
+    expect(await apagarRascunho(c, "lugar-marcador-a"), "o 2º apagar do mesmo").toBe(false);
+    expect(await apagarRascunho(c, "lugar-marcador-nunca-houve")).toBe(false);
     expect((await listarRascunhos(c)).map((r) => r.slug)).toEqual(["lugar-marcador-b"]);
   });
 

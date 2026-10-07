@@ -766,9 +766,16 @@ export async function listarRascunhos(client: Client): Promise<Rascunho[]> {
 /** Tira o rascunho — o `DELETE` do painel. Pode apagar sem culpa pela mesma
  *  razão de `ficha_rascunhos` sobrescrever: rascunho nunca afirmou nada.
  *  (Publicar NÃO passa por aqui: o rascunho sai DENTRO do batch de
- *  `publicarRascunho`, como o último passo dele.) */
-export async function apagarRascunho(client: Client, slug: string): Promise<void> {
-  await client.execute({ sql: `DELETE FROM ficha_rascunhos WHERE slug = ?`, args: [slug] });
+ *  `publicarRascunho`, como o último passo dele.)
+ *
+ *  Devolve SE APAGOU (M1 da revisão da Tarefa 15): `false` quando não havia
+ *  rascunho naquele endereço — movido noutra aba, publicado, ou já apagado. É o
+ *  `rowsAffected` de um DELETE simples, sem `RETURNING` (medido no libsql local:
+ *  1 com a linha, 0 sem ela). A rota responde 404 nesse caso, pra a tela não
+ *  dizer "desisti" de um rascunho que continua lá. */
+export async function apagarRascunho(client: Client, slug: string): Promise<boolean> {
+  const r = await client.execute({ sql: `DELETE FROM ficha_rascunhos WHERE slug = ?`, args: [slug] });
+  return r.rowsAffected === 1;
 }
 
 /** TROCA O ENDEREÇO DE UM LUGAR PUBLICADO, de `velho` pra `novo`, e o velho

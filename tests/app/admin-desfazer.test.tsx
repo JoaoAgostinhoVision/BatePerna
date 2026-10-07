@@ -237,6 +237,47 @@ describe("EditorLista (várias) — a diferença é de CONJUNTO, não de ordem d
     expect(fetchFalso).not.toHaveBeenCalled();
     expect(desfazerEm(bloco("dias"))).toBeNull();
   });
+
+  it("só DESMARCAR um dia salvo já é mudança: o Desfazer aparece e volta aos dois dias", () => {
+    // I1 da revisão da Tarefa 15: o arrependimento mais comum numa lista
+    // múltipla. Desmarcar deixa um subconjunto do salvo — "algum marcado que
+    // não está no salvo" é falso, e só a CONTAGEM acusa a diferença.
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={COM_DIAS} />);
+    alternar("sab");
+    expect(marcados(), "a premissa: só o domingo ficou").toEqual(["dom"]);
+    expect(desfazerEm(bloco("dias")), "desmarcar um dia salvo não contou como mudança").not.toBeNull();
+    desfazer(bloco("dias"));
+    expect(marcados().sort()).toEqual(["dom", "sab"]);
+    expect(fetchFalso).not.toHaveBeenCalled();
+    expect(desfazerEm(bloco("dias"))).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe("Desfazer desligado enquanto o editor grava", () => {
+  it("EditorProsa: mudar, Salvar (a porta ainda não respondeu) — o Desfazer está desligado e o toque não volta a caixa", async () => {
+    // M3 da revisão da Tarefa 15: voltar a caixa no meio de um Salvar mostraria
+    // uma coisa na tela enquanto outra vai pra porta.
+    let soltar: (r: Response) => void = () => {};
+    const fetchFalso = vi.fn(() => new Promise<Response>((ok) => (soltar = ok)));
+    vi.stubGlobal("fetch", fetchFalso);
+    const reloadFalso = vi.fn();
+    vi.stubGlobal("location", { ...window.location, reload: reloadFalso });
+    render(<FichaInteira ficha={RAMPA} />);
+    fireEvent.change(caixa("voz"), { target: { value: "voz marcadora X" } });
+    salvarEm("voz");
+    expect(fetchFalso, "a premissa: o Salvar foi à porta").toHaveBeenCalledTimes(1);
+    const botao = desfazerEm(bloco("voz")) as HTMLButtonElement | null;
+    expect(botao, "a premissa: a mudança continua na tela, com o Desfazer").not.toBeNull();
+    expect(botao!.disabled, "o Desfazer ficou ligado no meio do Salvar").toBe(true);
+    fireEvent.click(botao!);
+    expect(caixa("voz").value, "o Desfazer voltou a caixa no meio do Salvar").toBe("voz marcadora X");
+    await act(async () => {
+      soltar(Response.json({ id: 99 }));
+    });
+    expect(reloadFalso).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -418,6 +459,23 @@ describe("EditorCoordenada — o pin volta ao ponto salvo", () => {
     expect(bloco(PAR).querySelector("[data-pin]"), "o pin sumiu de um ponto que tem coordenada").not.toBeNull();
     expect(fetchFalso).not.toHaveBeenCalled();
     expect(desfazerEm(bloco(PAR))).toBeNull();
+  });
+
+  it("um toque na MESMA linha do pin muda só a longitude — e isso também é mudança", () => {
+    // M4 da revisão da Tarefa 15: a latitude sai do `top` em pixel, e um toque
+    // na linha horizontal do pin dá a MESMA latitude exata.
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={RAMPA} />);
+    const pin = bloco(PAR).querySelector<HTMLElement>("[data-pin]")!;
+    const yDoPin = Number.parseFloat(pin.style.top);
+    tocarNoMapa(bloco(PAR), L / 2 + 60, yDoPin);
+    const agora = parDe(coordEm(bloco(PAR)));
+    expect(agora.lat, "a premissa: a latitude é a mesma").toBe(RAMPA.condicao.coords.lat);
+    expect(agora.lng, "a premissa: a longitude mudou").not.toBe(RAMPA.condicao.coords.lng);
+    expect(desfazerEm(bloco(PAR)), "mudar só a longitude não contou como mudança").not.toBeNull();
+    desfazer(bloco(PAR));
+    expect(coordEm(bloco(PAR))).toBe(salvoTexto);
+    expect(fetchFalso).not.toHaveBeenCalled();
   });
 
   it("a vista volta junto: o pin desfeito aparece no MEIO do mapa, onde a vista do ponto salvo o põe", () => {

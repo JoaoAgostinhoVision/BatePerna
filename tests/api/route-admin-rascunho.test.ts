@@ -948,8 +948,26 @@ describe("GET e DELETE", () => {
     const alvo = acervo[0];
     expect((await rota.DELETE(pedido("DELETE", { slug: S }, cookieBom))).status).toBe(200);
     expect(await lerRascunho(c, S)).toBeNull();
-    expect((await rota.DELETE(pedido("DELETE", { slug: alvo.slug }, cookieBom))).status).toBe(200);
+    // Lugar no ar SEM rascunho: nada a apagar — 404 (M1 da revisão da Tarefa
+    // 15; antes era 200), e a versão dele fica.
+    const vazio = await rota.DELETE(pedido("DELETE", { slug: alvo.slug }, cookieBom));
+    expect(vazio.status).toBe(404);
+    expect(await vazio.text()).toBe("");
     expect(await historico(c, alvo.slug)).toHaveLength(1);
+  });
+
+  it("DELETE de um endereço sem rascunho é 404, não sucesso: o 2º DELETE do mesmo, e o endereço VELHO de um rascunho movido", async () => {
+    expect((await rota.DELETE(pedido("DELETE", { slug: S }, cookieBom))).status).toBe(200);
+    expect((await rota.DELETE(pedido("DELETE", { slug: S }, cookieBom))).status, "o 2º DELETE do mesmo").toBe(404);
+    // Um rascunho que mudou de endereço (o PUT do nome, noutra aba): o DELETE
+    // no endereço velho não apaga nada, e o rascunho fica no novo.
+    expect((await criar(NOME)).status).toBe(201);
+    const ren = await mudar({ slug: S, campo: "trajeto.waypoints.0.nome", valor: "Nome Marcador Novo" });
+    const NOVO = "nome-marcador-novo-cidade-marcador-um";
+    expect(await ren.json(), "a premissa: o rascunho mudou de endereço").toEqual({ slug: NOVO });
+    const res = await rota.DELETE(pedido("DELETE", { slug: S }, cookieBom));
+    expect(res.status, "DELETE no endereço velho").toBe(404);
+    expect(await lerRascunho(c, NOVO), "o rascunho movido sumiu").not.toBeNull();
   });
 
   it("sem cookie: GET e DELETE 401, e nada sai", async () => {

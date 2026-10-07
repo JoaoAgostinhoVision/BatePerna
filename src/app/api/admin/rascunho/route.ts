@@ -64,7 +64,12 @@ const SEM_CACHE = { "cache-control": "no-store" } as const;
  *     A terceira existe pra o editor de coordenada servir aqui SEM MUDAR: ele
  *     grava o ponto do trajeto inteiro, num corpo só, por essa forma.
  *   - `GET` — a lista; com `?slug=`, o documento de um.
- *   - `DELETE {slug}` — tira o rascunho. Nunca toca em `ficha_versoes`.
+ *   - `DELETE {slug}` — tira o rascunho. Nunca toca em `ficha_versoes`. 200
+ *     `{slug}` quando apagou; **404** (corpo vazio) quando não havia rascunho
+ *     naquele endereço — movido noutra aba (o nome ou a cidade mudou),
+ *     publicado, ou já apagado. Antes era 200 nos dois, e a tela de desistir
+ *     voltava ao painel como se tivesse desistido, com o rascunho ainda lá sob
+ *     o endereço novo (M1 da revisão da Tarefa 15).
  *
  *  🔴 O QUE ESTA PORTA NÃO FAZ, E É O PONTO: `fichaSchema.parse` do documento
  *  inteiro e o portão de coerência. Rascunho incompleto é o estado normal, e a
@@ -299,7 +304,8 @@ export async function DELETE(req: Request): Promise<Response> {
   const corpo = await corpoDe(req);
   if (corpo === null || typeof corpo.slug !== "string") return new Response("", { status: 400, headers: TEXTO });
   // Só `ficha_rascunhos`: um slug de lugar no ar sem rascunho é um DELETE que
-  // não apaga nada, nunca uma porta pra tirar lugar do ar.
-  await apagarRascunho(getClient(), corpo.slug);
+  // não apaga nada, nunca uma porta pra tirar lugar do ar — e responde 404,
+  // como todo endereço sem rascunho: "não apagou" nunca sai como sucesso.
+  if (!(await apagarRascunho(getClient(), corpo.slug))) return new Response("", { status: 404, headers: TEXTO });
   return Response.json({ slug: corpo.slug }, { headers: SEM_CACHE });
 }

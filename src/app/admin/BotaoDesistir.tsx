@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ERRO_REDE } from "./campos/gravar";
 
 /** DESISTIR DE UM LUGAR NOVO — apagar o RASCUNHO (Tarefa 15, 07/10: o João,
@@ -18,6 +18,13 @@ import { ERRO_REDE } from "./campos/gravar";
  *  espera ("Desistindo…"): o "Tirar mesmo?" não tem, e o botão só se desliga
  *  enquanto a porta responde.
  *
+ *  🔴 A TRAVA DO DUPLO ENVIO É UM `useRef`, NÃO O ESTADO (M2 da revisão): um
+ *  2º clique que chega ANTES de a tela redesenhar vê o `indo` da renderização
+ *  de antes (`false`) e o botão ainda sem `disabled` — com `if (indo) return`
+ *  saíam DOIS `DELETE` (medido em `tests/app/admin-desistir.test.tsx`). O ref
+ *  é lido na hora, não na renderização. O `disabled={indo}` fica: é o que a
+ *  tela mostra.
+ *
  *  🔴 NUNCA TIRA LUGAR DO AR. A rota só apaga `ficha_rascunhos`; um slug de
  *  lugar publicado é um DELETE que não toca na versão dele — provado pela página
  *  PÚBLICA em `tests/app/desistir-nao-tira-do-ar.test.tsx`. Por isso o botão não
@@ -27,15 +34,19 @@ import { ERRO_REDE } from "./campos/gravar";
  *  otimista. No formulário, `location.assign("/admin")` (a pergunta de um
  *  rascunho que não existe mais seria 404); na lista, `location.reload()` — a
  *  lista relida não o tem mais. Na FALHA (porta recusou, ou sem rede), nada
- *  navega: a pergunta continua na tela, com a frase. `voltarAoPainel` é um
- *  booleano, e não uma função, porque a lista é componente de SERVIDOR e função
- *  não atravessa pra cá. */
+ *  navega: a pergunta continua na tela, com a frase. 404 é falha também: a
+ *  rota o dá quando não havia rascunho naquele endereço (movido noutra aba
+ *  quando o nome ou a cidade mudou) — "desisti" seria mentira, e o rascunho
+ *  continua na lista com o endereço novo (M1 da revisão da Tarefa 15).
+ *  `voltarAoPainel` é um booleano, e não uma função, porque a lista é
+ *  componente de SERVIDOR e função não atravessa pra cá. */
 
 // PENDENTE: redação minha (Tarefa 15, 07/10). Ele aprovou o DESENHO no chat ("pode fazer assim"), não leu a frase.
 export const DESISTIR = "Desistir deste lugar";
 // PENDENTE: redação minha (Tarefa 15, 07/10). Ele aprovou o DESENHO no chat ("pode fazer assim"), não leu a frase.
 export const DESISTIR_MESMO = "Desistir mesmo? O que foi respondido some.";
-/** A porta recusou (a sessão venceu, ou o corpo não chegou). A rota responde
+/** A porta recusou (a sessão venceu, o corpo não chegou, ou não havia
+ *  rascunho naquele endereço — 404). A rota responde
  *  corpo VAZIO nessas recusas, então a frase é desta tela. Não reaproveita o
  *  `ERRO_GRAVAR` ("Não consegui salvar."): desistir não é salvar, e a frase
  *  diria o contrário do que ele tentou. A falta de rede é `ERRO_REDE`, a mesma
@@ -47,13 +58,19 @@ export default function BotaoDesistir({ slug, voltarAoPainel = false }: { slug: 
   const [confirmando, setConfirmando] = useState(false);
   const [indo, setIndo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const emVoo = useRef(false);
 
   async function desistir(): Promise<void> {
     if (!confirmando) {
       setConfirmando(true);
       return;
     }
-    if (indo) return;
+    // ⚠️ O 2º TOQUE. Dois toques rápidos SÃO a confirmação (M5 da revisão da
+    // Tarefa 15, aceito): o 1º redesenha com a pergunta antes do 2º chegar, e o
+    // 2º apaga — o mesmo comportamento do "Tirar mesmo?" do `EditorWaypoints`,
+    // de propósito. Se um dia pedir intervalo mínimo, é nos dois botões juntos.
+    if (emVoo.current) return;
+    emVoo.current = true;
     setErro(null);
     setIndo(true);
     try {
@@ -67,6 +84,7 @@ export default function BotaoDesistir({ slug, voltarAoPainel = false }: { slug: 
     } catch {
       setErro(ERRO_REDE);
     } finally {
+      emVoo.current = false;
       setIndo(false);
     }
   }

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Client } from "@libsql/client";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
-import { criarRascunho, lerRascunho } from "@/lib/db";
+import { criarRascunho, lerRascunho, moverRascunho } from "@/lib/db";
 import { docDoLugarNovo } from "@/lib/rascunho";
 import { DESISTIR, DESISTIR_MESMO, ERRO_DESISTIR } from "@/app/admin/BotaoDesistir";
 import { AVISO_RASCUNHO } from "@/app/admin/FormularioDeLugar";
@@ -205,6 +205,52 @@ describe("/admin/novo — desistir do lugar novo", () => {
     expect(fetchFalso).toHaveBeenCalledTimes(1);
     expect(assign).not.toHaveBeenCalled();
     expect(reload).not.toHaveBeenCalled();
+  });
+
+  it("o rascunho mudou de endereço noutra aba: o DELETE no velho é 404, nada some, a frase na tela, e nada navega", async () => {
+    // M1 da revisão da Tarefa 15. A tela abriu no endereço S; noutra aba o nome
+    // mudou e o rascunho foi pra outro endereço (o que o PUT do nome faz).
+    const { chamadas, assign, reload } = await comRotaDeVerdade();
+    const { container } = await paginaNovo(S, "1");
+    const aqui = formulario(container);
+    const NOVO = "lugar-marcador-movido";
+    expect(await moverRascunho(cliente, S, NOVO, (await lerRascunho(cliente, S))!.doc, 2)).toBe(true);
+    tocar(aqui, DESISTIR);
+    tocar(aqui, DESISTIR_MESMO);
+    expect((await within(aqui).findByRole("alert")).textContent).toBe(ERRO_DESISTIR);
+    expect(chamadas).toEqual([{ url: "/api/admin/rascunho", metodo: "DELETE", corpo: { slug: S } }]);
+    expect(assign, "a tela voltou ao painel como se tivesse desistido").not.toHaveBeenCalled();
+    expect(reload).not.toHaveBeenCalled();
+    expect(await lerRascunho(cliente, NOVO), "o rascunho movido sumiu").not.toBeNull();
+    expect(within(aqui).getByText(AVISO_RASCUNHO)).toBeTruthy();
+  });
+
+  it("dois toques no 'Desistir mesmo?' antes de a tela redesenhar: UMA ida à porta só", async () => {
+    // M2 da revisão da Tarefa 15. Os dois cliques no MESMO `act`: o 2º chega
+    // com a tela ainda sem o `disabled` e com o estado da renderização de antes
+    // — é a trava de dentro do botão que o segura, não o atributo.
+    let soltar: (r: Response) => void = () => {};
+    const { fetchFalso } = comResposta(() => new Promise<Response>((ok) => (soltar = ok)));
+    const { container } = await paginaNovo(S, "1");
+    const aqui = formulario(container);
+    tocar(aqui, DESISTIR);
+    const mesmo = within(aqui).getByRole("button", { name: DESISTIR_MESMO });
+    act(() => {
+      mesmo.click();
+      mesmo.click();
+    });
+    await act(async () => {
+      soltar(new Response("", { status: 401 }));
+    });
+    expect(fetchFalso, "o duplo toque mandou dois DELETE").toHaveBeenCalledTimes(1);
+    expect(within(aqui).getByRole("alert").textContent).toBe(ERRO_DESISTIR);
+    // E a trava se SOLTA quando a porta responde: depois da recusa, um novo
+    // toque tenta de novo — trava presa deixaria o botão mudo pra sempre.
+    tocar(aqui, DESISTIR_MESMO);
+    await act(async () => {
+      soltar(new Response("", { status: 401 }));
+    });
+    expect(fetchFalso, "depois da recusa, o toque de novo não foi à porta").toHaveBeenCalledTimes(2);
   });
 
   it("as frases de recusa são DIFERENTES — sem isso as duas asserções acima não distinguiriam caminho nenhum", () => {
