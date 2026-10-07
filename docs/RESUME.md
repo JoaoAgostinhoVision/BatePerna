@@ -32,6 +32,10 @@ código `6d11d68`, 2364/2364, tsc 0, build 0, mutar 42/0), NADA NO AR. O deploy 
 - **ficha-18 → "Campo novo: como se chega"** (carro comum / moto / ônibus / só a pé, no lugar do sim/não de
   `carroComum`): mexe em schema, formulário, ficha e carimbo ("seco · carro comum"). **Rodada PRÓPRIA, DEPOIS deste
   deploy.** O rótulo de hoje fica PENDENTE e sobe como está.
+✅ **14 (`f5f349c`) e 14b (`8750f6c`) FEITAS + `f779f8c` (marcador da ficha-18).** Medido por mim no `f779f8c`:
+2364/2364 em 113, tsc 0, build 0, mutar 42/0. Sobram 6 PENDENTE de verdade em `src` (ficha-14, -18, -40..43).
+🔴 **PRÓXIMO: o OK DELE pro deploy** (perguntado em 07/10) → `npm run semear` → UM `vercel --prod --yes` →
+`conferir-no-ar` → olhos dele no celular. Lembrar: sem memória, banco fora = erro público (decisão dele).
 ✅ **ELE LEU O PACOTE INTEIRO (07/10):** 223 "Serve", `ficha-02` "Mudar" → **"Ainda sem dados"**, e 5 "Dúvida"
 (`ficha-14`, `ficha-40..43`): quer **cidade e endereço AUTOMÁTICOS "pela seleção do lugar"** (revê o "endereço só
 muda quando ele manda" de 04/10). Perguntei: **rodada própria DEPOIS do deploy** (junto do "como se chega"). As 192
