@@ -49,19 +49,20 @@ conseguia ontem?* Esforço meu entra depois, como nota de rodapé.
 A rodada de 2026-09 tirou a ficha do JSON e pôs no banco (`ficha_versoes`, append-only). **Isso
 cumpriu um terço da cláusula 1 e mais nada.** O que sobrou contra a lei, medido em 26/09:
 
-🔴 **A tabela abaixo é o retrato de 26/09 e a primeira linha dela JÁ MUDOU — não a copie, MEÇA.**
-`src/lib/editar-ficha.ts` foi **apagado** na Tarefa 1 da rodada do painel, e com ele a lista
-`CAMPOS_EDITAVEIS`. O registro de campos mora agora em **`src/lib/campos-da-ficha.ts`**
-(`aplicarCampo` na linha 397, com caminho aninhado, tipo, e o `"não sei"` que remove a chave). Se
-você citar `editar-ficha.ts` num relatório, você citou um arquivo que não existe.
+🔴 **A tabela abaixo é o retrato de 26/09, CONFERIDO de novo em 06/10 (branch `painel-completo`), e
+quase todas as linhas dela MUDARAM — não a copie, MEÇA.** `src/lib/editar-ficha.ts` foi **apagado**
+na Tarefa 1 da rodada do painel, e com ele a lista `CAMPOS_EDITAVEIS`. O registro de campos mora
+agora em **`src/lib/campos-da-ficha.ts`** (`aplicarCampo` na linha 404 em 06/10, com caminho
+aninhado, tipo, e o `"não sei"` que remove a chave). Se você citar `editar-ficha.ts` num relatório,
+você citou um arquivo que não existe.
 
-| o que a lei manda | o que o app faz hoje | onde |
+| o que a lei manda | o que o app fazia em 26/09 → o que mudou até 06/10 | onde (06/10) |
 |---|---|---|
-| dado mutável mora no banco | ⚠️ **medido em 26/09, antes da Tarefa 1:** era **1 de 17** campos editável, por causa de `CAMPOS_EDITAVEIS = ["voz"]`. Hoje o registro existe e sabe todos os campos; o que falta medir é quantos têm **porta de escrita e tela** | então: `src/lib/editar-ficha.ts:9` (APAGADO) · hoje: `src/lib/campos-da-ficha.ts` |
-| — | **1 de 17** é sequer **visível** no painel; os outros 16 não aparecem em tela nenhuma do `/admin` | — |
-| lugar novo entra pelo app | **0** caminhos de criar. O `+ lugar novo` foi tirado de propósito | `src/app/admin/ListaDeLugares.tsx:25-27` |
-| atualizar não passa por código | um lugar só nasce se **alguém escrever um JSON** em `content/fichas/` e rodar `npm run semear` | `src/lib/semente.ts` |
-| — | os **15 guardas de coerência do acervo auditam o DISCO**, não o banco — lugar criado pelo painel nasceria fora dos 15 | `tests/banco.ts:90`, `tests/lib/coerencia-acervo.test.ts` |
+| dado mutável mora no banco | ⚠️ **em 26/09:** era **1 de 17** campos editável, por causa de `CAMPOS_EDITAVEIS = ["voz"]`. **Em 06/10:** o registro sabe todos os campos e cada espécie tem editor; o que falta medir é, campo a campo, se a porta de escrita e a tela existem DE VERDADE | então: `src/lib/editar-ficha.ts:9` (APAGADO) · hoje: `src/lib/campos-da-ficha.ts`, `src/app/admin/campos/`, `PUT /api/admin/ficha` |
+| — | **em 26/09:** 1 de 17 era sequer **visível** no painel. **Em 06/10:** a `FichaInteira` mostra todo campo que o registro declara (itera `camposDaFicha`), inclusive os ausentes, que ela nomeia | `src/app/admin/FichaInteira.tsx` |
+| lugar novo entra pelo app | **em 26/09:** **0** caminhos de criar. **Em 06/10:** o `+ lugar novo` voltou e abre `/admin/novo` (nome + cidade → rascunho → perguntas → `/admin/novo/publicar`) — mas a branch ainda NÃO está no ar: confira no `docs/RESUME.md` se já foi publicada antes de contar como cumprido | `src/app/admin/ListaDeLugares.tsx` (`LUGAR_NOVO`), `src/app/admin/novo/`, `POST /api/admin/publicar` |
+| atualizar não passa por código | **em 26/09:** um lugar só nascia se **alguém escrevesse um JSON** em `content/fichas/` e rodasse `npm run semear`. **Em 06/10:** os três lugares de origem ainda vivem lá e `npm run semear` ainda roda antes de cada deploy, mas um lugar novo pode nascer pelo painel | `src/lib/semente.ts`, `content/fichas/` |
+| — | **em 26/09:** os guardas de coerência do acervo **auditavam o DISCO**. **Em 06/10:** o guarda de teste lê o BANCO (`bancoDeProducao` → `getAllFichas`), mas o banco do teste é semeado DO DISCO (`loadAll()` em `tests/banco.ts`), então um lugar criado pelo painel nunca passa por ele; quem o confere é a PORTA de coerência em produção, a cada edição e publicação (`violacaoIntroduzida`) | `tests/banco.ts` (`semearAcervo`), `tests/lib/coerencia-acervo.test.ts`, `src/lib/porta-de-coerencia.ts` |
 | — | testes com o acervo **cravado** (o número 3, os três slugs) fazem lugar novo **quebrar a suíte** — dado vazando pra dentro do código | procure-os e **conte** |
 
 🔴 **A frase "`content/fichas/*.json` é só a semente" é meia-verdade, e você tem que dizer isso.**

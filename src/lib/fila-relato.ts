@@ -45,8 +45,10 @@ export function diaRecife(agoraMs: number): number {
  *  relato que só diz `A` contaria pra Q o que quem foi a P viu. O servidor
  *  grava PELA IDENTIDADE, onde o lugar mora na hora de gravar.
  *
- *  Opcional SÓ pra ler o que já estava guardado antes desta tarefa (o relato
- *  LEGADO, sem identidade) — ver "O RELATO LEGADO É ACEITO COMO HOJE", abaixo. */
+ *  Opcional por dois caminhos, os dois o relato LEGADO (sem identidade): o que
+ *  já estava guardado antes desta tarefa, e o que a página SEM identidade grava
+ *  hoje — quando a leitura dela falhou, o `ConfirmarFui` guarda o relato sem
+ *  `lugar` (`lugar === null`). Ver "O RELATO LEGADO É ACEITO COMO HOJE", abaixo. */
 export type Relato = { slug: string; tipo: "seco" | "barro"; dia: number; lugar?: number };
 
 /** ✅ O RELATO LEGADO (sem `lugar`) É ACEITO COMO HOJE — decisão do João em

@@ -15,7 +15,9 @@ import {
 import { buscarFichas, esquecerMemoria } from "@/lib/ficha-fonte";
 import { salvarRascunho, semearAcervo } from "../banco";
 
-/** A TABELA DE RASCUNHO (Tarefa 11) — a ÚNICA deste projeto que sobrescreve.
+/** A TABELA DE RASCUNHO (Tarefa 11) — que sobrescreve, ao contrário de
+ *  `ficha_versoes` e `avisos` (as outras que não são append-only são
+ *  `freshness` e `enderecos_antigos`).
  *
  *  🔴 O que estes casos travam é a fronteira: o que está em `ficha_rascunhos`
  *  NUNCA está no ar, e o que está no ar NUNCA é sobrescrito por um rascunho.
@@ -79,9 +81,11 @@ describe("ficha_rascunhos", () => {
     expect((await lerRascunho(c, "lugar-marcador-dois"))!.doc).toBe('{"quem":"dois"}');
   });
 
-  // 🔴 CRIAR NÃO SOBRESCREVE. `salvarRascunho` sobrescreve (é o toque do
-  // formulário); `criarRascunho` é a porta de NASCER, e um segundo "lugar novo"
-  // com o mesmo nome não pode apagar o que o primeiro já respondeu.
+  // 🔴 CRIAR NÃO SOBRESCREVE. O toque do formulário sobrescreve, por
+  // `regravarRascunho` (um `UPDATE` no rascunho que já existe; o `salvarRascunho`
+  // daqui é o upsert de TESTE, de `tests/banco.ts`); `criarRascunho` é a porta
+  // de NASCER, e um segundo "lugar novo" com o mesmo nome não pode apagar o que
+  // o primeiro já respondeu.
   it("criarRascunho não sobrescreve um rascunho que já existe", async () => {
     expect(await criarRascunho(c, S, '{"quem":"primeiro"}', 1)).toBe(true);
     expect(await criarRascunho(c, S, '{"quem":"segundo"}', 2)).toBe(false);

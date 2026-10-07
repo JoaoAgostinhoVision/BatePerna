@@ -164,4 +164,31 @@ describe("oQueOAppCala", () => {
     expect(oQueOAppCala(null).length).toBeGreaterThan(0);
     expect(oQueOAppCala("texto").length).toBe(oQueOAppCala(null).length);
   });
+
+  /** A frase de UM opcional ausente, sozinho, num documento pago. */
+  const fraseDe = (caminho: string): string => oQueOAppCala(sem(caminho))[0];
+  const DE_CUSTO = new Set(["custo.valor", "custo.curto"]);
+
+  // 🔴 SEM `custo.tag`, O LUGAR NÃO É PAGO: a régua do custo pergunta "é pago?",
+  // nunca "não é grátis?". Um documento sem tag (ou que nem abre) não cala o
+  // valor nem o chip — dizer que calou seria falar de um lugar pago que ninguém
+  // disse que é.
+  it("documento que não é objeto: as frases de todo opcional que não é de custo, na ordem do registro", () => {
+    const semCusto = OPCIONAIS.filter((c) => !DE_CUSTO.has(c));
+    expect(semCusto.length, "a premissa: seis opcionais fora do custo").toBe(6);
+    expect(oQueOAppCala(null)).toEqual(semCusto.map(fraseDe));
+  });
+
+  it("documento completo SEM custo nenhum: nada do custo é calado", () => {
+    const doc = completo();
+    delete doc.custo;
+    expect(oQueOAppCala(doc)).toEqual([]);
+  });
+
+  // 🔴 A ORDEM É A DO REGISTRO, com mais de um ausente.
+  it("dois ausentes saem na ordem do registro", () => {
+    const [primeiro, segundo] = OPCIONAIS.filter((c) => c === "piso" || c === "horario");
+    expect([primeiro, segundo], "a premissa: os dois estão no registro").toHaveLength(2);
+    expect(oQueOAppCala(sem("horario", sem("piso")))).toEqual([fraseDe(primeiro), fraseDe(segundo)]);
+  });
 });

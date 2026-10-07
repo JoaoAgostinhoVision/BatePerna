@@ -18,9 +18,11 @@ export const dynamic = "force-dynamic";
  *  🔴 A EXISTÊNCIA DO LUGAR É CONFERIDA COM `versaoAtual`, NUNCA COM `getFicha`.
  *  A rota irmã de aviso usava `getFicha(slug)` pra isso (até a onda de conserto 1
  *  da Task 9, que a passou pra `versaoAtual` pelo mesmo motivo), e aqui seria uma
- *  PORTA DE MÃO ÚNICA: `getFicha` sai de `versoesAtuais`, que desde a Tarefa 4
- *  esconde os ocultos por padrão — então o lugar escondido "não existiria" pra
- *  esta rota, e `{ oculto: false }` levaria 400. O dono esconderia um lugar e
+ *  PORTA DE MÃO ÚNICA: `getFicha` é a leitura do PÚBLICO, e não devolve
+ *  escondido (até 06/10 porque `versoesAtuais` os escondia por padrão; desde
+ *  então ela lê com `incluirOcultos` e é `buscarFichas` que os tira antes de
+ *  servir) — então o lugar escondido "não existiria" pra esta rota, e
+ *  `{ oculto: false }` levaria 400. O dono esconderia um lugar e
  *  **nunca mais o devolveria ao ar sem um desenvolvedor**, que é exatamente o
  *  que a lei dele proíbe (e a mesma forma do defeito que a ruling C1 da Tarefa 1
  *  desta rodada já pagou uma vez, no "não sei" do horário).

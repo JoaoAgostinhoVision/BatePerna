@@ -3,8 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { createClient } from "@libsql/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { contarHoje, criarRascunho, insertConfirmacao, inserirAviso, listarRascunhos, trocarEndereco, versoesAtuais, avisoVigente } from "@/lib/db";
+import { contarHoje, criarRascunho, gravarVersao, insertConfirmacao, inserirAviso, listarRascunhos, trocarEndereco, upsertFreshness, versoesAtuais, avisoVigente } from "@/lib/db";
 import { bancoVazio, semearAcervo, base } from "./banco";
+import { lugarMarcador } from "./lugar-marcador";
 
 /** 🔴 O TESTE DO HELPER DESTRUTIVO.
  *
@@ -106,6 +107,60 @@ describe("semearAcervo limpa o que a troca de endereço suja", () => {
     expect(await avisoVigente(c, "lugar-marcador-x", AGORA), "aviso atravessou pro teste seguinte").toBeNull();
     expect(await contarHoje(c, "lugar-marcador-x", AGORA), "relato atravessou pro teste seguinte").toEqual({ foram: 0, barro: 0 });
     expect(await listarRascunhos(c)).toEqual([]);
+    c.close();
+  });
+});
+
+/** 🔴 A VARREDURA DO ISOLAMENTO: TODA tabela do banco, lida do `sqlite_master`
+ *  — não de uma lista à mão, que fica cega à tabela que nascer depois. O teste
+ *  suja cada uma, semeia de novo, e exige cada uma igual à de um banco recém-
+ *  semeado; a mensagem diz QUAL ficou suja. O `id` sai da comparação: o
+ *  `AUTOINCREMENT` não volta atrás com o `DELETE`, e o número não é conteúdo. */
+describe("semearAcervo deixa TODA tabela como a de um banco recém-semeado", () => {
+  type Retrato = Record<string, string[]>;
+  async function retrato(c: ReturnType<typeof bancoVazio>): Promise<Retrato> {
+    const tabelas = (await c.execute(`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name`)).rows.map((r) => String(r.name));
+    const saida: Retrato = {};
+    for (const t of tabelas) {
+      saida[t] = (await c.execute(`SELECT * FROM "${t}"`)).rows
+        .map((r) => {
+          const { id: _id, ...resto } = { ...r } as Record<string, unknown>;
+          return JSON.stringify(resto);
+        })
+        .sort();
+    }
+    return saida;
+  }
+
+  it("um teste suja cada tabela; depois da semente, nenhuma guarda o que ele deixou", async () => {
+    const limpo = bancoVazio();
+    await semearAcervo(limpo);
+    const esperado = await retrato(limpo);
+    limpo.close();
+    expect(Object.keys(esperado).length, "a premissa: o sqlite_master listou as tabelas").toBeGreaterThanOrEqual(6);
+
+    const c = bancoVazio();
+    await semearAcervo(c);
+    const AGORA = 1_759_000_000;
+    const X = "lugar-marcador-sujo";
+    await gravarVersao(c, X, JSON.stringify(lugarMarcador(X, "Lugar Marcador Sujo", "Cidade Marcador Suja")), "painel", AGORA);
+    await inserirAviso(c, X, "aviso marcador sujo", "fechado", AGORA - 1, AGORA + 3600, await base(c, X));
+    await insertConfirmacao(c, X, AGORA - 1, "seco");
+    await upsertFreshness(c, { slug: X, estado: "fresco", calculadoEm: AGORA, fonte: "marcador", previsaoBruta: "{}" });
+    await criarRascunho(c, "lugar-marcador-sujo-rascunho", "{}", AGORA);
+    await c.execute({ sql: `INSERT INTO enderecos_antigos (velho, novo, em) VALUES (?, ?, ?)`, args: ["lugar-marcador-velho-sujo", X, AGORA] });
+    const sujo = await retrato(c);
+    expect(Object.keys(sujo)).toEqual(Object.keys(esperado));
+    for (const t of Object.keys(esperado)) {
+      expect(sujo[t], `a premissa: o teste não sujou a tabela ${t} — suje-a aqui`).not.toEqual(esperado[t]);
+    }
+
+    await semearAcervo(c);
+
+    const depois = await retrato(c);
+    for (const t of Object.keys(esperado)) {
+      expect(depois[t], `a tabela ${t} ficou suja depois da semente`).toEqual(esperado[t]);
+    }
     c.close();
   });
 });

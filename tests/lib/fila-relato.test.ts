@@ -140,6 +140,10 @@ describe("corpo inválido é fila VAZIA, nunca relato inventado", () => {
     const bom = { slug: "rampa-do-pepe", tipo: "seco", dia: diaRecife(AGORA) };
     localStorage.setItem(CHAVE_FILA, JSON.stringify([{ slug: 42, tipo: "seco", dia: diaRecife(AGORA) }, bom]));
     expect(pendentes(AGORA)).toEqual([bom]);
+    // E ao lado de um item NULO: sem a conferência do `null`, ler o item
+    // estoura, e a fila INTEIRA vira vazia — o relato bom junto.
+    localStorage.setItem(CHAVE_FILA, JSON.stringify([null, bom]));
+    expect(pendentes(AGORA), "o item nulo levou o bom junto").toEqual([bom]);
   });
 });
 
@@ -344,6 +348,16 @@ describe("a fila nova mora numa chave que o código velho não lê", () => {
 
   // O mesmo relato nas duas chaves (a aba velha e a página sem identidade
   // guardaram o mesmo endereço no mesmo dia) subiria duas vezes.
+  // 🔴 A VELHA SÓ É REESCRITA SE PERDEU ALGO. Com um item podre nela, reescrever
+  // "sem perder nada" ainda a mudaria (o podre sairia) — e a chave velha é a do
+  // código de antes, que este código não tem por que tocar.
+  it("guardar um relato com lugar não reescreve a chave velha, nem pra tirar o podre", () => {
+    const cru = JSON.stringify([{ slug: 42, tipo: "seco", dia: HOJE }, { slug: B, tipo: "seco", dia: HOJE }]);
+    localStorage.setItem(CHAVE_FILA_VELHA, cru);
+    guardar({ slug: A, tipo: "barro", dia: HOJE, lugar: P });
+    expect(localStorage.getItem(CHAVE_FILA_VELHA), "a chave velha foi reescrita").toBe(cru);
+  });
+
   it("o mesmo relato nas duas chaves aparece UMA vez — o da chave nova", () => {
     localStorage.setItem(CHAVE_FILA_VELHA, JSON.stringify([{ slug: A, tipo: "seco", dia: HOJE }]));
     localStorage.setItem(CHAVE_FILA, JSON.stringify([{ slug: A, tipo: "barro", dia: HOJE }]));

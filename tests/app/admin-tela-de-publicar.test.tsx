@@ -9,9 +9,12 @@ import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
 import { historico, lerRascunho, versaoAtual } from "@/lib/db";
 import { oQueOAppCala } from "@/lib/o-que-o-app-cala";
 import { FALTA_OBRIGATORIO } from "@/lib/porta-de-publicar";
-import TelaDePublicar, { PUBLICAR, TITULO_CALA, TITULO_FALTA } from "@/app/admin/TelaDePublicar";
+import { PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
+import { nomeComCidade } from "@/lib/rascunho";
+import TelaDePublicar, { PUBLICANDO, PUBLICAR, TITULO_CALA, TITULO_FALTA } from "@/app/admin/TelaDePublicar";
+import { ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
 import { enderecoDaPergunta } from "@/app/admin/novo/enderecos";
-import { ORDEM, PERGUNTAS } from "@/app/admin/novo/perguntas";
+import { ORDEM, PERGUNTAS, montarPerguntas } from "@/app/admin/novo/perguntas";
 import { bancoVazio, salvarRascunho, semearAcervo } from "../banco";
 import { rascunhoCompleto } from "../rascunho-completo";
 
@@ -146,6 +149,51 @@ describe("TelaDePublicar — o componente", () => {
     expect(assign).not.toHaveBeenCalled();
     expect((screen.getByRole("button", { name: PUBLICAR }) as HTMLButtonElement).disabled).toBe(false);
   });
+
+  // A frase do componente quando a porta não dá a dela: sem rede, e a resposta
+  // de erro com corpo VAZIO. Nenhuma das duas pode virar silêncio.
+  it("sem rede: a frase de sem rede, e o botão volta", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new TypeError("Failed to fetch"))));
+    render(<TelaDePublicar slug={S} atualizadoEm={ATUALIZADO} frases={[]} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: PUBLICAR }));
+    });
+    expect(screen.getByRole("alert").textContent).toBe(ERRO_REDE);
+    expect((screen.getByRole("button", { name: PUBLICAR }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("erro com corpo vazio: a frase de não consegui salvar, nunca um alerta vazio", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 500 })));
+    render(<TelaDePublicar slug={S} atualizadoEm={ATUALIZADO} frases={[]} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: PUBLICAR }));
+    });
+    expect(screen.getByRole("alert").textContent).toBe(ERRO_GRAVAR);
+  });
+
+  // 🔴 O DUPLO TOQUE (M4) NÃO CHEGA A SAIR: com o pedido andando, o botão está
+  // desligado e diz que está publicando, e o segundo toque não manda nada.
+  it("com o pedido andando: o botão desliga, diz que publica, e o segundo toque não sai", async () => {
+    let soltar: (r: Response) => void = () => {};
+    const fetchFalso = vi.fn(() => new Promise<Response>((ok) => { soltar = ok; }));
+    vi.stubGlobal("fetch", fetchFalso);
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    render(<TelaDePublicar slug={S} atualizadoEm={ATUALIZADO} frases={[]} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: PUBLICAR }));
+    });
+    const botao = screen.getByRole("button", { name: PUBLICANDO }) as HTMLButtonElement;
+    expect(botao.disabled).toBe(true);
+    await act(async () => {
+      fireEvent.click(botao);
+    });
+    expect(fetchFalso).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      soltar(Response.json({ slug: S }));
+    });
+    expect(assign).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -159,6 +207,9 @@ describe("/admin/novo/publicar — a página, contra o banco", () => {
     const lista = screen.getByTestId("cala");
     for (const frase of frases) expect(within(lista).getByText(frase)).toBeTruthy();
     expect(screen.queryByTestId("falta"), "um rascunho completo não tem o que faltar").toBeNull();
+    // O lugar pelo NOME e pela cidade — nunca pelo endereço.
+    expect(screen.getByText(nomeComCidade(NOME, CIDADE))).toBeTruthy();
+    expect(screen.queryByText(S)).toBeNull();
     expect((screen.getByRole("button", { name: PUBLICAR }) as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -198,6 +249,53 @@ describe("/admin/novo/publicar — a página, contra o banco", () => {
 
   it("slug sem rascunho — inclusive o de um lugar no ar — é 404", async () => {
     await expect(paginaPublicar("rampa-do-pepe")).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  // 🔴 AS GUARDAS, cada uma com um rascunho GUARDADO que cala alguma coisa: sem
+  // a guarda, a página seguiria e mostraria o rascunho.
+  it("sem cookie: a caixa de senha, e nada do rascunho", async () => {
+    await salvarRascunho(cliente, S, JSON.stringify(semCampo(rascunhoCompleto(S, NOME, CIDADE), "piso")), ATUALIZADO);
+    cookiesFalso.mockResolvedValue({ get: () => undefined });
+    const { container } = await paginaPublicar(S);
+    expect(container.querySelector('input[type="password"]'), "a caixa de senha não está lá").not.toBeNull();
+    expect(screen.queryByTestId("cala")).toBeNull();
+    expect(screen.queryByRole("button", { name: PUBLICAR })).toBeNull();
+    expect(screen.queryByText(nomeComCidade(NOME, CIDADE))).toBeNull();
+  });
+
+  it("painel desligado: 404, mesmo com sessão e rascunho", async () => {
+    await salvarRascunho(cliente, S, JSON.stringify(semCampo(rascunhoCompleto(S, NOME, CIDADE), "piso")), ATUALIZADO);
+    vi.stubEnv("ADMIN_SENHA", "");
+    await expect(paginaPublicar(S)).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(notFoundFalso).toHaveBeenCalled();
+  });
+
+  // O documento guardado que não abre como JSON: a tela não estoura — toda
+  // obrigatória aparece no que falta, e a porta é quem recusa.
+  it("rascunho que não abre: a tela fica de pé, com cada obrigatória no que falta", async () => {
+    await salvarRascunho(cliente, S, "{{", ATUALIZADO);
+    await paginaPublicar(S);
+    const esperadas = montarPerguntas({}).filter((q) => q.campo.obrigatorio && q.valor === undefined).map((q) => q.texto);
+    expect(esperadas.length, "a premissa: o registro tem obrigatórias").toBeGreaterThan(3);
+    const links = within(screen.getByTestId("falta")).getAllByRole("link");
+    expect(links.map((l) => l.textContent)).toEqual(esperadas);
+    expect(screen.getByRole("button", { name: PUBLICAR })).toBeTruthy();
+  });
+
+  // O banco que não responde é ERRO, como em `/admin/novo` — nunca uma tela
+  // montada sobre nada.
+  it("banco pendurado na leitura do rascunho: a página dá erro, não monta tela", async () => {
+    await import("@/app/admin/novo/publicar/page");
+    cliente = { execute: () => new Promise(() => {}) } as unknown as Client;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const pagina = paginaPublicar(S);
+      const pegou = expect(pagina).rejects.toThrow("não respondeu a tempo");
+      for (let i = 0; i < 5; i++) await vi.advanceTimersByTimeAsync(PRAZO_FICHA_MS);
+      await pegou;
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

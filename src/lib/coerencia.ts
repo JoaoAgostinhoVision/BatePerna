@@ -30,7 +30,7 @@ import type { Ficha } from "@/types/ficha";
  *  |---|---|
  *  | "o acervo tem conteúdo pra varrer" | **fica lá**: é não-vacuidade DO TESTE — prova que há acervo pra varrer, não diz nada sobre uma ficha |
  *  | "alguma ficha exercita o campo [dias]" | **fica lá**, pela mesma razão |
- *  | "o regex de preço daqui é o mesmo que a página usa" | **fica lá**: compara DOIS ARQUIVOS DE CÓDIGO (este módulo e `[slug]/page.tsx`), lendo o disco. Não é fato de ficha nenhuma, e produção não lê o disco |
+ *  | "o regex de preço daqui é o mesmo que a página usa" | **ficou lá** (comparava DOIS ARQUIVOS DE CÓDIGO, lendo o disco — não é fato de ficha nenhuma) até 2026-09-27, e lá **foi apagado**: a `[slug]/page.tsx` passou a IMPORTAR o `PRECO` daqui, e o guarda que o substituiu conta que o texto do regex aparece UMA vez só no `src/` |
  *  | "colchete vazio é o MOLDE do registro de campos" | **fica lá**: varre o `src/`, não o acervo |
  *  | "o `src/` continua cego ao waypoint 2 em diante" | **ficou lá**: varre o `src/`, e MUDOU DE NATUREZA na Tarefa 10 (a cadeia de trajeto) — hoje prova que o bloco Trajeto lê a cadeia e que quem fala do lugar continua no `[0]` |
  *  | "nenhuma ficha do acervo tem 2º waypoint" | **ficou lá** até a Tarefa 10, e lá **caiu a mão**: a razão dela era a tela cega à cadeia |

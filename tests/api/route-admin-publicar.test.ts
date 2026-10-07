@@ -26,6 +26,7 @@ import {
   FALTA_OBRIGATORIO,
   FORMA_ERRADA,
   JA_PUBLICADO_OU_OCUPADO,
+  RASCUNHO_ILEGIVEL,
   RASCUNHO_MUDOU,
   RASCUNHO_SUMIU,
   SLUG_DE_DENTRO,
@@ -200,10 +201,48 @@ describe("POST /api/admin/publicar — as guardas", () => {
     expect(infinito.status).toBe(400);
     await nadaMudou();
   });
+
+  // 🔴 Cada uma destas tem o RASCUNHO GUARDADO em `S` com outro `atualizado_em`:
+  // sem a conferência do corpo, a rota seguia e respondia 409 (o rascunho que a
+  // tela leu não é este), nunca 400. O 400 é a prova de que foi o corpo.
+  it("corpo torto (atualizadoEm negativo, slug que não é texto): 400, nada gravado", async () => {
+    await guardar(completo());
+    for (const corpo of [{ slug: S, atualizadoEm: -1 }, { slug: 5, atualizadoEm: ATUALIZADO }]) {
+      expect((await publicar(corpo)).status, JSON.stringify(corpo)).toBe(400);
+    }
+    await nadaMudou();
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe("POST /api/admin/publicar — o documento", () => {
+  // 🔴 O rascunho guardado não abre como JSON: a frase é a do documento
+  // ilegível — nunca a de "falta pergunta", que mandaria o dono responder de
+  // novo o que já respondeu.
+  it("rascunho que não abre como JSON: 400 com a frase do ilegível, nada gravado", async () => {
+    await guardar("{{");
+    const res = await publicarS();
+    expect(res.status).toBe(400);
+    expect(await res.text()).toBe(RASCUNHO_ILEGIVEL);
+    await nadaMudou();
+  });
+
+  // 🔴 O MOLDE `[]` (12-I1): a lista de pontos existe e não está vazia, mas o
+  // ponto 0 não tem `lat`. Sem a conferência por ponto, o schema recusaria
+  // igual — com a frase de FORMA errada, que manda o dono "responder de novo a
+  // que estiver estranha" quando o que falta é uma resposta.
+  it("rascunho com o ponto do trajeto sem lat: 400 com a frase do obrigatório, não a da forma", async () => {
+    const doc = completo();
+    const ponto = (doc.trajeto as { waypoints: Record<string, unknown>[] }).waypoints[0];
+    delete ponto.lat;
+    expect(ponto.lng, "a premissa: só a lat saiu").toBeDefined();
+    await guardar(doc);
+    const res = await publicarS();
+    expect(res.status).toBe(400);
+    expect(await res.text()).toBe(FALTA_OBRIGATORIO);
+    await nadaMudou();
+  });
+
   it("rascunho sem os obrigatórios: 400, e NADA entra em ficha_versoes", async () => {
     await guardar({ slug: S });
     const res = await publicarS();

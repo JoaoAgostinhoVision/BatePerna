@@ -390,6 +390,9 @@ describe("o relato carrega a identidade do lugar", () => {
     await screen.findByText(/anotado/i);
     expect(posts).toEqual([{ slug: A, tipo: "barro", lugar: P }]);
     expect(naFila()).toEqual([]);
+    // O que subiu pela fila também acende o "já contei" DE P — sem isso, reabrir
+    // a página mostraria o "✓ Fui" de novo pra quem já contou.
+    expect(localStorage.getItem(`bp:contou:L${P}:${hoje()}`)).toBe("1");
   });
 
   // B11: o envio online leva a identidade.

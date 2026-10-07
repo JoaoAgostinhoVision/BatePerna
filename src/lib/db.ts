@@ -74,8 +74,9 @@ export async function ensureSchema(client: Client): Promise<void> {
     `CREATE INDEX IF NOT EXISTS ficha_versoes_por_lugar ON ficha_versoes (ficha_slug, id)`,
   );
   await migrarColunaOculto(client);
-  // 🔴 A ÚNICA TABELA DESTE PROJETO QUE SOBRESCREVE, e o motivo é de régua, não
-  // de preguiça (spec §7.2, Tarefa 11): **rascunho nunca afirmou nada sobre o
+  // 🔴 ESTA TABELA SOBRESCREVE — como `freshness` (cache recalculado) e
+  // `enderecos_antigos` (abaixo), as outras duas que não são append-only —, e o
+  // motivo é de régua, não de preguiça (spec §7.2, Tarefa 11): **rascunho nunca afirmou nada sobre o
   // lugar; o histórico existe pra guardar o que o app já disse.** `avisos` e
   // `ficha_versoes` são append-only porque o que está nelas FOI À TELA de
   // alguém; um rascunho nunca foi. Guardar cada toque do formulário seria
@@ -135,12 +136,17 @@ async function migrarColunaEnderecoAnterior(client: Client): Promise<void> {
  *  coluna nem tabela. Sem o guarda, a SEGUNDA semente estouraria com
  *  "duplicate column name: oculto". E sem a semente rodar ANTES do deploy, a
  *  coluna e as tabelas novas não existem no banco, e o código PÚBLICO que as
- *  consulta (o "✓ Fui" pergunta por `oculto`; o endereço velho, por
- *  `enderecos_antigos`) estoura com "no such column/table" — a ordem
- *  `semear` → deploy não protege só o painel. O guarda pergunta ao próprio banco
- *  (`PRAGMA table_info`) em vez de capturar a mensagem de erro do driver: a
- *  mensagem é do driver e muda com a versão dele, o pragma é a pergunta de
- *  verdade.
+ *  consulta estoura com "no such column/table" — a ordem `semear` → deploy não
+ *  protege só o painel. Medido por leitura na re-revisão de 06/10, sem a semente
+ *  caem: o "✓ Fui" inteiro (todo POST, e o GET por `?lugar=`, perguntam por
+ *  `oculto` em `LUGAR_NO_AR`); TODO 404 de ficha, que vira página de erro
+ *  (500), porque toda falta de `/[slug]` — link errado, robô, endereço velho —
+ *  consulta `enderecos_antigos` antes do `notFound`, e o mesmo vale pra
+ *  `/api/carimbo` e `/api/confirmar` com endereço desconhecido; e o painel. A
+ *  home, o `/trilhas` e as fichas que existem ficam de pé. O guarda pergunta ao
+ *  próprio banco (`PRAGMA table_info`) em vez de capturar a mensagem de erro do
+ *  driver: a mensagem é do driver e muda com a versão dele, o pragma é a
+ *  pergunta de verdade.
  *
  *  `DEFAULT 0` é o que faz toda linha JÁ GRAVADA nascer VISÍVEL — ninguém
  *  escondeu nada antes de hoje, e o dono não pode encontrar o acervo inteiro

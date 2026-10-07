@@ -71,11 +71,13 @@ const das = (...regras: string[]) =>
 
 describe("coerência do acervo — varre TODAS as fichas, nunca uma lista de slugs", () => {
   // 🔴 NÃO-VACUIDADE, e ela é load-bearing aqui mais que em qualquer outro
-  // arquivo: todo teste abaixo é um laço sobre `fichas`. Com o acervo vazio, ou
-  // com a semente não tendo entrado no banco, **todos passariam** — a espécie "prova que
+  // arquivo: todo guarda DE ACERVO abaixo lê `violacoes`, que é um laço sobre
+  // `fichas` (a costura com o módulo e os dois guardas do `src/` no fim do bloco
+  // não dependem dele). Com o acervo vazio, ou com a semente não tendo entrado
+  // no banco, **todos esses passariam** — a espécie "prova que
   // passa por não ter o que provar". O número é cravado e cresce a mão junto com
   // o acervo, de propósito: `fichas.length` contra si mesmo não prova nada.
-  it("o acervo tem conteúdo pra varrer — sem isto, todo laço abaixo passa vazio", () => {
+  it("o acervo tem conteúdo pra varrer — sem isto, todo guarda de acervo abaixo passa vazio", () => {
     expect(fichas.length, "o acervo sumiu: os guardas deste arquivo ficariam ocos").toBeGreaterThanOrEqual(3);
     expect(pagas.length, "sumiu a ficha paga: os guardas de custo ficariam ocos").toBeGreaterThanOrEqual(2);
   });
@@ -245,8 +247,8 @@ describe("coerência do acervo — varre TODAS as fichas, nunca uma lista de slu
 describe("os dias da semana, no acervo", () => {
   const comDias = fichas.filter((f) => f.dias?.length);
 
-  // 🔴 NÃO-VACUIDADE: os testes abaixo são laços sobre as fichas que TÊM o
-  // campo. Com zero fichas declarando dias, todos passariam vazios — a espécie
+  // 🔴 NÃO-VACUIDADE: as regras dos testes abaixo só disparam nas fichas que
+  // TÊM o campo. Com zero fichas declarando dias, todos passariam vazios — a espécie
   // "prova que passa por não ter o que provar". O número é cravado a mão, como
   // o do topo deste arquivo.
   it("alguma ficha exercita o campo — senão os guardas abaixo ficam ocos", () => {

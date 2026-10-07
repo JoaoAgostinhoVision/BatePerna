@@ -73,9 +73,10 @@ export const dynamic = "force-dynamic";
  *  dela — "não grava" por promessa não é prova.
  *
  *  🔴 A EXISTÊNCIA DO LUGAR SAI DE `versaoAtual`, NUNCA DE `getFicha`. É a lição
- *  que a rota de visibilidade já escreveu: `getFicha` sai de `versoesAtuais`, que
- *  esconde os ocultos — e um lugar escondido continua sendo um lugar que o dono
- *  edita. Prever pra ele não é publicá-lo.
+ *  que a rota de visibilidade já escreveu: `getFicha` é a leitura do PÚBLICO, e
+ *  não devolve escondido (desde 06/10 ela lê com `incluirOcultos`, e é
+ *  `buscarFichas` que tira os escondidos antes de servir) — e um lugar escondido
+ *  continua sendo um lugar que o dono edita. Prever pra ele não é publicá-lo.
  *
  *  A ordem das guardas é a das rotas irmãs do admin: config → sessão → corpo →
  *  domínio → responde. */
