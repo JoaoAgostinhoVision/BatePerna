@@ -32,9 +32,14 @@ mostra `restoCusto`) — levar a ele.
 ✅ **Auditoria da 12b FEITA** (`task-12b-auditoria.md`: **2 C · 8 I · 8 M**, aceitas e coladas no brief). C1: o
 servidor acha o lugar PELA IDENTIDADE no mesmo INSERT, não pelo endereço. Divergência → 400; a fila tira só em 400.
 
-→ 🔴 **A 12b ESTÁ DESPACHADA** (prompt = o da 12 trocando brief/relatório por `task-12b-*`). Se não houver commit
-de código depois de `7560c8d`, redespachar (árvore suja = parar e medir). Depois: medir eu mesmo → revisão da 12b →
-onda → **revisão final da branch COM build** → agentes do projeto → pacote de copy → deploy só com a resposta dele.
+✅ **Tarefa 12b FEITA: `159b828`.** Medido por mim: **2322/2322 em 112**, `tsc` 0, build 0, mutar 42/0 (N12
+reancorado em :125). 30 mutantes da tarefa morreram. `RELATO_LEGADO = "aceitar"` em `src/lib/fila-relato.ts` (troca
+de uma linha). Pendências declaradas: GET sem `lugar` (abas antigas) ainda resolve pelo endereço; M3/M4/M5 da
+auditoria só como nota; `rowsAffected` com `RETURNING` volta 0 no libsql local (não medido no Turso remoto).
+
+→ 🔴 **A revisão da 12b ESTÁ DESPACHADA** (`task-12b-review.md`). Se não existir, redespachar (revisor opus fresco,
+escopo `7560c8d..159b828`, COM build). Depois: onda → **revisão final da branch inteira COM build** → agentes do
+projeto → pacote de copy → deploy só com a resposta dele.
 ❓ **Pergunta ao João, pendente:** relatos "✓ Fui" que já estiverem na fila offline SEM identidade no dia do deploy:
 aceitar como hoje ou descartar. (A fila descarta relatos de outro dia, MAS abas velhas e páginas no cache do SW mandam POST sem identidade depois do deploy também — a janela é maior que um dia; I7 da auditoria da 12b.)
 
