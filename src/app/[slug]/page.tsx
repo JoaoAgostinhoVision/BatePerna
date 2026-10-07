@@ -168,7 +168,7 @@ export default async function Ficha({
   // inventada. Aqui não há o que derivar, e `.gate .k` é uppercase no CSS,
   // então o resultado na tela nem carrega maiúscula pra acertar.
   //
-  // `formato` é obrigatório no schema, mas string vazia passa: nesse caso a
+  // `formato` pode faltar (opcional desde 07/10) ou vir vazio: nesse caso a
   // linha não vira " — a checagem é sua" com travessão órfão. Cala a metade
   // que não sabe e mantém a que é do app.
   const formatoGate = (ficha.discriminador?.formato ?? "").trim();
@@ -232,7 +232,8 @@ export default async function Ficha({
         <Appbar chip={chipCusto} />
 
         <div className="hero">
-          <span className="scan">{ficha.rotulo_escaneio}</span>
+          {/* Calam (07/10): ausente é silêncio — nenhum "sem etiqueta". */}
+          {ficha.rotulo_escaneio && <span className="scan">{ficha.rotulo_escaneio}</span>}
           <h1>{wp.nome}</h1>
           {/* 🔴 A CIDADE junto do nome (Tarefa 11b): é ela que separa dois
               lugares de mesmo nome. Sem cidade, cala — nenhum traço. */}
@@ -254,10 +255,14 @@ export default async function Ficha({
           />
         </div>
 
-        <div className="caveat">
-          <span className="ic">⚠</span>
-          <span><b>{ressalvaLead.trim()}.</b> {ressalvaResto.join("—").trim()}</span>
-        </div>
+        {/* A ressalva cala quando o lugar não tem (07/10): o lugar mandado por
+            quem usa não respondeu o que a previsão não enxerga. */}
+        {ficha.condicao.ressalva_proxy && (
+          <div className="caveat">
+            <span className="ic">⚠</span>
+            <span><b>{ressalvaLead.trim()}.</b> {ressalvaResto.join("—").trim()}</span>
+          </div>
+        )}
 
         {/* 🔴 `data-nivel="b"` — A PROCEDÊNCIA POR CONTRASTE (decisão L3 /
             REQ-12, construída em 2026-09-09).
@@ -278,20 +283,24 @@ export default async function Ficha({
             prêmio brilha" viraria "existe em algum lugar da página", e nenhum
             teste separaria as duas versões. */}
         <div className="body">
-          <div className="sec premio" data-nivel="b">
-            <div className="k">O prêmio</div>
-            <p>{ficha.premio}</p>
-          </div>
+          {ficha.premio && (
+            <div className="sec premio" data-nivel="b">
+              <div className="k">O prêmio</div>
+              <p>{ficha.premio}</p>
+            </div>
+          )}
 
           {/* A voz já nasceu com o tratamento (serif itálico + régua de acento)
               — foi o app inventando esta linguagem por instinto, um ano antes
               de ela ter nome. O atributo aqui não muda um pixel: ele fecha a
               CLASSIFICAÇÃO, pra o guarda do acervo poder varrer "todo campo B
               está marcado" sem uma exceção escrita à mão. */}
-          <div className="voz" data-nivel="b">
-            “{ficha.voz}”
-            <span className="who">— a voz de quem conhece</span>
-          </div>
+          {ficha.voz && (
+            <div className="voz" data-nivel="b">
+              “{ficha.voz}”
+              <span className="who">— a voz de quem conhece</span>
+            </div>
+          )}
 
           {/* `data-bloco` não é enfeite: os três blocos abaixo são
               `<div className="sec">` idênticos, distinguidos só pelo texto do
@@ -386,10 +395,12 @@ export default async function Ficha({
             <div className="note"><span className="ic">🚗</span><p>{ficha.acesso}</p></div>
           </div>
 
-          <div className="sec" data-nivel="b">
-            <div className="k">⚠ Avisos</div>
-            <div className="note"><span className="ic">⚠</span><p>{ficha.avisos}</p></div>
-          </div>
+          {ficha.avisos && (
+            <div className="sec" data-nivel="b" data-bloco="avisos">
+              <div className="k">⚠ Avisos</div>
+              <div className="note"><span className="ic">⚠</span><p>{ficha.avisos}</p></div>
+            </div>
+          )}
         </div>
 
         {/* O bloco de checagem é a OUTRA linguagem que o app já tinha
@@ -399,11 +410,17 @@ export default async function Ficha({
             nenhuma e é decisão dele (2026-09-09): ela não é A nem B, é o app
             admitindo que o Nível A dele falha, e já tem o destaque azul só
             dela. */}
-        <div className="gate" data-nivel="b">
-          <div className="k">{tituloGate}</div>
-          <div className="read">{ficha.discriminador?.como_ler}</div>
-          <div className="perm">“{ficha.discriminador?.permissao_abortar}”</div>
-        </div>
+        {/* Existe se houver o que LER ou o que DIZER a quem desiste; o `formato`
+            sozinho seria só o título de um bloco vazio, e cala junto (07/10). */}
+        {(ficha.discriminador?.como_ler || ficha.discriminador?.permissao_abortar) && (
+          <div className="gate" data-nivel="b">
+            <div className="k">{tituloGate}</div>
+            {ficha.discriminador.como_ler && <div className="read">{ficha.discriminador.como_ler}</div>}
+            {ficha.discriminador.permissao_abortar && (
+              <div className="perm">“{ficha.discriminador.permissao_abortar}”</div>
+            )}
+          </div>
+        )}
 
         {/* 🔴 O TÍQUETE VIROU NÍVEL B, e não é óbvio por quê — decisão dele em
             2026-09-09: *"preço e horário brilham"*.

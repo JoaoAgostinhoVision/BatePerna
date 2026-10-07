@@ -48,7 +48,7 @@ export default function ListaDoAcervo({
         const fatos = fatosDaTrilha(f, { comAbertura: true });
         return (
           <a key={f.slug} className="lista-item" href={`/${f.slug}`}>
-            <span className="scan">{f.rotulo_escaneio}</span>
+            {f.rotulo_escaneio && <span className="scan">{f.rotulo_escaneio}</span>}
             <span className="lista-t">{f.trajeto.waypoints[0].nome}</span>
             {/* A cidade sob o nome (Tarefa 11b) — esta também é tela de
                 ESCOLHER pelo nome. Sem cidade, cala. */}
