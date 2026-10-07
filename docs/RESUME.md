@@ -50,7 +50,10 @@ do rascunho + desfazer edição) e *"como o usuário comum vai poder inserir os 
   (Google) + caminho A (mesmas tabelas + dono/conferido/regra-padrão) — **ele disse "sim"**, e aprovou as 4 partes
   do desenho uma a uma; regra padrão = 3h/6h/0,2mm/"cuidado" ("use a sua sugestão"); "seco" sem "carro comum" em
   lugar sem regra própria. **SPEC escrita: `docs/superpowers/specs/2026-10-07-lugar-de-quem-usa-design.md`
-  (`bbd5c12`) — esperando ELE revisar a spec escrita.** Depois: writing-plans → ele escolhe o modo de execução.
+  (`bbd5c12`) — ele: "pode seguir".** PLANO escrito: `docs/superpowers/plans/2026-10-07-lugar-de-quem-usa.md`
+  (`99a8e5d`, 16 tarefas; Task 9 PARA pro João instalar o Clerk; Task 16 PARA pro pacote de copy). Escolhas do
+  plano onde a spec era vaga: seção "As escolhas onde a spec era ambígua" no fim do plano. **Esperando ele revisar
+  o plano e escolher o modo de execução** (recomendei subagent-driven).
   1ª resposta dele: **"Vai ao ar direto, marcado"** (não passa
   pela fila dele; marca visível "enviado por alguém, não conferido"). ⚠️ Isso abre exceção à linha vermelha
   (o app só afirma o que veio dele) — por escolha dele; a marca é o que segura a honestidade.
