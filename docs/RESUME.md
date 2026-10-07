@@ -25,15 +25,18 @@ Regra: rodar de novo e relatar as duas; outro erro qualquer é achado.
 
 ✅ **Revisão da 12 FEITA** (`task-12-review.md`): **0 C · 0 I · 8 M**, aprovada; build 0 medido pelo revisor.
 
-→ 🔴 **EM VOO, DOIS AGENTES:**
-1. **Onda de fix da 12** (`task-12-fix-brief.md`, os 8 M; relatório `task-12-fix-report.md`). Se não houver commit de
-   código depois de `34d1b17`, redespachar com o mesmo brief (árvore suja = parar e medir).
-2. **Auditoria do brief da 12b** (`task-12b-brief.md` → `task-12b-auditoria.md`; só leitura). Se não existir, redespachar.
-Depois: medir a onda eu mesmo → colar a auditoria da 12b no brief → despachar a 12b (o "PENDENTE-JOÃO" do legado
-fica implementado como "aceitar", troca de uma linha) → revisão final da branch COM build → **deploy só com 12 E 12b
-e com a resposta dele**.
+✅ **Onda de fix da 12 FEITA: `7560c8d`.** Medido por mim: **2253/2253 em 111**, `tsc` 0, build 0, mutar 42/0,
+`salvarRascunho` fora de `src`. Pro pacote de copy: dois cortes por subtração (`custo.curto`, `horario`), e a frase
+de `custo.curto` que sobrou ("o app não diz onde se paga") PODE ser falsa quando `custo.valor` diz onde (a página
+mostra `restoCusto`) — levar a ele.
+✅ **Auditoria da 12b FEITA** (`task-12b-auditoria.md`: **2 C · 8 I · 8 M**, aceitas e coladas no brief). C1: o
+servidor acha o lugar PELA IDENTIDADE no mesmo INSERT, não pelo endereço. Divergência → 400; a fila tira só em 400.
+
+→ 🔴 **A 12b ESTÁ DESPACHADA** (prompt = o da 12 trocando brief/relatório por `task-12b-*`). Se não houver commit
+de código depois de `7560c8d`, redespachar (árvore suja = parar e medir). Depois: medir eu mesmo → revisão da 12b →
+onda → **revisão final da branch COM build** → agentes do projeto → pacote de copy → deploy só com a resposta dele.
 ❓ **Pergunta ao João, pendente:** relatos "✓ Fui" que já estiverem na fila offline SEM identidade no dia do deploy:
-aceitar como hoje ou descartar. (A fila já descarta relatos de outro dia: a janela é SÓ o dia do deploy.)
+aceitar como hoje ou descartar. (A fila descarta relatos de outro dia, MAS abas velhas e páginas no cache do SW mandam POST sem identidade depois do deploy também — a janela é maior que um dia; I7 da auditoria da 12b.)
 
 (histórico abaixo)
 
