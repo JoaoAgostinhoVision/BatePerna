@@ -60,11 +60,14 @@ M1 ("sem `semear` cai o público inteiro") foi trocada pelo implementador por "c
 sobreviveram; código certo em todos). Voz e procedência: só COPY (vai pro pacote). ⚠️ O `voz-do-lugar` consultou
 PRODUÇÃO só leitura sem ter sido proibido — despachos passam a dizer "nada de produção".
 
-→ 🔴 **A ÚLTIMA ONDA ESTÁ DESPACHADA** (`agentes-fix-brief.md`: as 14 provas + frases falsas de comentário; NENHUM
-texto visível). Se não houver commit de código depois de `c9c6bcb`, redespachar com o mesmo brief. Em paralelo: o
-**pacote de copy pro João** (todas as `PENDENTE` + as perguntas de `agente-voz.md`/`agente-procedencia.md`), num
-Artifact pro celular. Depois: ele lê → onda de copy → `npm run semear` → UM `vercel --prod --yes` → `conferir-no-ar`
-→ olhos dele no celular.
+✅ **Última onda FEITA: `6d11d68`.** Medido por mim: **2364/2364 em 113** (1ª rodada caiu no flake do worker; a 2ª
+limpa), `tsc` 0, build 0, mutar 42/0; em `src` só mudaram linhas de COMENTÁRIO (conferido por diff). As 19 mutações
+do `prova-que-trava` agora morrem.
+
+→ 🔴 **O CÓDIGO ESTÁ PRONTO. O DEPLOY ESPERA O JOÃO** ler o pacote de copy (link abaixo). Próximo passo quando ele
+responder: `ArtifactData list` da coleção `respostas` → onda de copy (só as frases que ele mudou/duvidou + as 3
+decisões; tirar `PENDENTE` só das que ele marcou "Serve") → medir → `npm run semear` → UM `vercel --prod --yes` →
+`conferir-no-ar` → olhos dele no celular.
 📄 **PACOTE DE COPY PUBLICADO (07/10): https://claude.ai/artifact/63z3vvcrNjWN2CgvMA8L53** — 231 frases (222
 `PENDENTE` + 9 sem marcação), 31 com alerta, e 3 decisões no topo (M4, "trilha"×"lugar", "BatePerna · PE"). As
 respostas dele ficam no banco do artifact, coleção `respostas` (doc por id de frase: `{v: serve|muda|duvida|escolha,
