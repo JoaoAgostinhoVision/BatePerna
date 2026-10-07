@@ -34,7 +34,12 @@ código `6d11d68`, 2364/2364, tsc 0, build 0, mutar 42/0), NADA NO AR. O deploy 
   deploy.** O rótulo de hoje fica PENDENTE e sobe como está.
 ✅ **14 (`f5f349c`) e 14b (`8750f6c`) FEITAS + `f779f8c` (marcador da ficha-18).** Medido por mim no `f779f8c`:
 2364/2364 em 113, tsc 0, build 0, mutar 42/0. Sobram 6 PENDENTE de verdade em `src` (ficha-14, -18, -40..43).
-🔴 **PRÓXIMO: o OK DELE pro deploy** (perguntado em 07/10) → `npm run semear` → UM `vercel --prod --yes` →
+🟢 **NO AR (07/10, 12:21): `dpl_J9RDAM5yDirHKJnBavpRu65y1h81`, código `f779f8c`.** Ele deu o ok ("pode fazer o
+deploy quando terminar"). `semear`: nada novo (3 já no banco). 1ª tentativa do `vercel --prod` = "fetch failed",
+a 2ª subiu. `conferir-no-ar`: rodapé "BatePerna" nas 3 fichas, `/admin/novo/publicar` 200 (controle 404), home com as
+3 — OK. **SEM PROVA:** frases do painel ("Ainda sem dados", "esse lugar") — server-only atrás da senha; só os olhos
+dele no celular. PRÓXIMO: olhos dele → depois brainstorm da próxima rodada (como se chega; cidade/endereço automáticos).
+(histórico) **o OK DELE pro deploy** (perguntado em 07/10) → `npm run semear` → UM `vercel --prod --yes` →
 `conferir-no-ar` → olhos dele no celular. Lembrar: sem memória, banco fora = erro público (decisão dele).
 ✅ **ELE LEU O PACOTE INTEIRO (07/10):** 223 "Serve", `ficha-02` "Mudar" → **"Ainda sem dados"**, e 5 "Dúvida"
 (`ficha-14`, `ficha-40..43`): quer **cidade e endereço AUTOMÁTICOS "pela seleção do lugar"** (revê o "endereço só
