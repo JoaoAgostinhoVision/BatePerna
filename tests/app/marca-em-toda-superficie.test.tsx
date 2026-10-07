@@ -158,7 +158,24 @@ describe("as palavras e o desenho de cada superfície", () => {
     // que fica na regra bastava, e arrancar o contorno passava verde (M11,
     // medido nesta tarefa). E `dashed`: é o tracejado que nenhum outro estado
     // do pin usa — um contorno liso seria só mais um pin.
-    expect(css).toMatch(/\.pin-home\[data-conferido="nao"\]\s*\{[^}]*\boutline\s*:[^;}]*dashed/);
+    // E no `::before`, que é a GOTA: o `<a>` é a caixa de toque de 44px,
+    // invisível, e o contorno nele era um quadrado em volta do ponto (onda de
+    // fix da Task 5).
+    expect(css).toMatch(/\.pin-home\[data-conferido="nao"\]::before\s*\{[^}]*\boutline\s*:[^;}]*dashed/);
+    // E o `<a>` sem `outline` de autor: um `outline` nele apaga o anel de foco
+    // do teclado do navegador justo no pin não conferido.
+    expect(css).not.toMatch(/\.pin-home\[data-conferido="nao"\]\s*\{[^}]*\boutline\s*:/);
+  });
+
+  // jsdom não faz layout: o que se prova aqui é que a regra que segura a
+  // etiqueta junto do nome (cartão) e do tamanho dela (lista) existe. O olho
+  // de tela continua sendo o juiz do desenho (onda de fix da Task 5).
+  it("a etiqueta fica junto do nome no cartão e do tamanho dela na lista", async () => {
+    const { readFileSync } = await import("node:fs");
+    const home = readFileSync(path.join(APP, "home.css"), "utf8");
+    const ficha = readFileSync(path.join(APP, "ficha.css"), "utf8");
+    expect(home).toMatch(/\.bp \.cartao-nome \+ \.etiqueta-nao-conferido\s*\{[^}]*\bmargin-right\s*:\s*auto/);
+    expect(ficha).toMatch(/\.bp \.lista-item \.etiqueta-nao-conferido\s*\{[^}]*\balign-self\s*:\s*flex-start/);
   });
 
   it("a ficha: a faixa abaixo do nome, e o nome de quem mandou NÃO aparece", async () => {

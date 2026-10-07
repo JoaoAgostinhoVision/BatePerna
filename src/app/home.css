@@ -117,7 +117,7 @@
 /* A MARCA DE LUGAR NÃO CONFERIDO (07/10). A etiqueta é texto (lê-se de
    relance, e o leitor de tela lê); o pin não tem texto, então a marca dele é
    o CONTORNO — tracejado, que nenhum outro estado do pin usa. */
-.etiqueta-nao-conferido {
+.bp .etiqueta-nao-conferido {
   font-size: 11px;
   letter-spacing: 0.02em;
   padding: 1px 6px;
@@ -126,8 +126,14 @@
   opacity: 0.8;
   white-space: nowrap;
 }
-.pin-home[data-conferido="nao"] {
-  outline: 2px dashed currentColor;
+/* 🔴 O CONTORNO MORA NA GOTA (`::before`), NÃO NO `<a>` (onda de fix da Task
+   5). O `<a>` é a caixa de toque de 44px, invisível: o contorno nele desenhava
+   um quadrado tracejado de ~48px em volta do ponto, com a gota atravessando a
+   borda de cima e por cima dos pins vizinhos. Na gota, o `outline` segue o
+   `border-radius` e o `rotate` dela. E com o `<a>` sem `outline` de autor, o
+   anel de foco do teclado do navegador volta a aparecer nesse pin. */
+.bp .pin-home[data-conferido="nao"]::before {
+  outline: 2px dashed var(--ink);
   outline-offset: 2px;
 }
 
@@ -265,6 +271,10 @@
 .bp .cartao:active { opacity: .7; }
 .bp .cartao-topo { display: flex; align-items: center; justify-content: space-between; gap: .55rem; }
 .bp .cartao-nome { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; line-height: 1.15; }
+/* A etiqueta de não conferido JUNTO do nome: no `space-between` do topo ela
+   ficaria solta no meio, entre o nome e o selo. A margem automática à direita
+   come a sobra, e o selo continua encostado na direita. */
+.bp .cartao-nome + .etiqueta-nao-conferido { margin-right: auto; }
 /* A cidade sob o nome (Tarefa 11b): dois lugares de mesmo nome só se
    distinguem por ela. Letra e cor da linha de metadados, um pouco maior. */
 .bp .cartao-cidade { font-family: var(--type); font-size: .72rem; font-weight: 600; color: var(--ink-faint); }

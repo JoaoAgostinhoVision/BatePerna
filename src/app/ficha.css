@@ -108,7 +108,7 @@ html, body { background: var(--ground); }
    rótulo de escaneio, sem a caixa alta: é o lugar, não um aviso. */
 .bp .ficha-cidade { font-family: var(--type); font-size: .8rem; font-weight: 600; color: var(--ink-faint); margin: 0 0 .35rem; }
 /* A faixa de lugar não conferido (07/10): logo abaixo do nome. */
-.faixa-nao-conferido {
+.bp .faixa-nao-conferido {
   margin: 6px 0 0;
   padding: 6px 10px;
   font-size: 13px;
@@ -412,6 +412,9 @@ html, body { background: var(--ground); }
   background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px;
   padding: .8rem .9rem .9rem; box-shadow: var(--shadow-card); }
 .bp .lista-t { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; line-height: 1.15; }
+/* A etiqueta de não conferido (home.css) do tamanho dela: no `column` do item,
+   o `stretch` padrão a esticaria numa pílula da largura toda. */
+.bp .lista-item .etiqueta-nao-conferido { align-self: flex-start; }
 /* A cidade sob o nome (Tarefa 11b) — a mesma do cartão da home. */
 .bp .lista-cidade { font-family: var(--type); font-size: .72rem; font-weight: 600; color: var(--ink-faint); }
 .bp .lista-p { color: var(--ink-soft); font-size: .88rem; font-style: italic; }
