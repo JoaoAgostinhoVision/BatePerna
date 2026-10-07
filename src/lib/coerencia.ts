@@ -176,11 +176,11 @@ const TABELA: readonly Regra[] = [
           // ele corrige o texto, no outro ele preenche um campo que não existe.
           // O que a tela faz nesse caso: `page.tsx` cai no literal "Pago".
           frase: f.custo.valor
-            // PENDENTE: redação minha, o João ainda não leu
+            // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             ? `Em ${nomeDe(f)}, o custo está escrito como "${f.custo.valor}" e o app não ` +
               "acha um preço aí dentro. Escreva o valor em reais (por exemplo, R$ 10), " +
               "senão o chip do topo da ficha não tem número pra mostrar."
-            // PENDENTE: redação minha, o João ainda não leu
+            // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha. ⚠️ MEDIDA COMO FALSA E MANTIDA POR DECISÃO DELE ("Manter como estão", 07/10, sabendo da medição): com chip e sem valor, o chip mostra o curto e a linha do custo nem aparece ([slug]/page.tsx); "Pago" nunca vai pra tela. Não "conserte" sem ele; e não a tome por verdade.
             : `Em ${nomeDe(f)}, o chip do topo está preenchido e o custo completo está ` +
               'vazio. O app não tem de onde tirar o preço, e a ficha vai dizer só "Pago" ' +
               "no lugar do valor.",
@@ -417,7 +417,7 @@ const TABELA: readonly Regra[] = [
             ? `${nomeDe(f)} abre e fecha no mesmo horário (${faixa.abre}) — assim o app ` +
               "entende que o lugar está aberto 24 horas e nunca fecha. Se for isso, diga no " +
               "texto da ficha; se não for, um dos dois horários está errado."
-            // PENDENTE: redação minha, o João ainda não leu
+            // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
             : `${nomeDe(f)} abre às ${faixa.abre} e fecha às ${faixa.fecha} — assim o ` +
               "app vai anunciá-la aberta a noite toda e fechada o dia todo. Se for de " +
               "propósito, diga isso no texto da ficha; se não for, os dois horários estão " +

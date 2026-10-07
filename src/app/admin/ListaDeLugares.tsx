@@ -5,9 +5,9 @@ import { marcaAgora } from "./marca-agora";
 import { ESCONDIDO } from "./campos/palavras";
 import { enderecoDePublicar } from "./novo/enderecos";
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 const RODAPE_LISTA = "Toque num lugar pra ver e mudar o que o app diz dele.";
-// PENDENTE: da maquete que ele aprovou (o "+ lugar novo"); primeira vez no código
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Da maquete que ele aprovou; primeira vez no código.
 export const LUGAR_NOVO = "+ lugar novo";
 // PENDENTE: redação minha, o João ainda não leu
 export const TITULO_RASCUNHOS = "Começados, ainda fora do ar";

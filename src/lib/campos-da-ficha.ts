@@ -243,7 +243,7 @@ function recusarVazio(caminho: string, valor: ValorDeCampo): void {
   // mandaria dizê-lo. A dela é a do POST.
   if (caminho === "cidade" && vazia(valor)) throw new Error(CIDADE_VAZIA);
   if (vazia(valor) || (Array.isArray(valor) && valor.some(vazia))) {
-    // PENDENTE: redação minha, o João ainda não leu
+    // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
     throw new Error(`caixa vazia em \`${caminho}\`: escreva algo, ou diga "não sei" (que tira o campo)`);
   }
 }
@@ -374,7 +374,7 @@ function validarFolha(caminho: string, valor: unknown): void {
   if (!tipo) throw new Error(`\`${caminho}\` não existe no fichaSchema`);
   if (desembrulhar(tipo).safeParse(valor).success) return;
   const especie = campoPorCaminho(caminho)?.especie ?? "campo";
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   throw new Error(`\`${caminho}\` não serve: este campo é do tipo \`${especie}\``);
 }
 
@@ -539,7 +539,7 @@ function recusarNaoSeiObrigatorio(caminho: string): void {
   // "a ficha não existe" — falso, as fichas de antes da 11b existem sem ela. A
   // dela é a do POST, que diz por que ela é pedida.
   if (caminho === "cidade") throw new Error(CIDADE_VAZIA);
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   throw new Error(`\`${caminho}\` é obrigatório: sem ele a ficha não existe, então não tem "não sei"`);
 }
 

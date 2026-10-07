@@ -102,6 +102,9 @@ export default function FolhaTrilhas({
     // `visiveis.length === 0 && contarLigados(filtros) > 0` e escrever a outra
     // frase pro caso sem filtro. **Deixado de propósito: é decisão de produto,
     // não conserto de implementação.**
+    //
+    // O João leu esta frase no pacote de copy, neste caso de tudo escondido, e
+    // marcou "Serve" (07/10). A frase do caso SEM filtro continua decisão dele.
     if (visiveis.length === 0) {
       return (
         <div className="folha-vazia">

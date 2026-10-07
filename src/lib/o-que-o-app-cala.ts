@@ -34,26 +34,45 @@ const SO_SE_PAGO = new Set(["custo.valor", "custo.curto"]);
  *  depois de responder", a lista dos opcionais), que ele já leu, adaptadas só
  *  por SUBTRAÇÃO (o nome do campo na frente e o negrito saíram; a primeira
  *  letra virou maiúscula). Duas o questionário NÃO cobre — a nota do ponto e o
- *  valor do custo — e são redação minha, a menor possível. Todas PENDENTE: é a
- *  primeira vez que vão pra uma tela. */
+ *  valor do custo — e são redação minha, a menor possível. Todas nasceram PENDENTE: é a
+ *  primeira vez que vão pra uma tela. O João leu as oito no pacote de copy e
+ *  marcou "Serve" (07/10) — cinco delas sabendo que foram medidas falsas. */
 const FRASES: Readonly<Record<string, string>> = {
-  // PENDENTE: redação minha, o João ainda não leu (o questionário não cobre a nota)
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha (o questionário não cobre a nota).
+  // ⚠️ MEDIDA COMO FALSA E MANTIDA POR DECISÃO DELE: perguntado, ele escolheu "Manter como estão"
+  // (07/10), sabendo que o agente a mediu falsa — o cartão do ponto mostra também mapa, piso, distância e "Abrir no mapa" ([slug]/page.tsx).
+  // Não "conserte" sem ele; e não a tome por verdade.
   "trajeto.waypoints.0.nota": "Sem a nota, o trajeto mostra o ponto só com o nome e a coordenada.",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
+  // ⚠️ MEDIDA COMO FALSA E MANTIDA POR DECISÃO DELE: perguntado, ele escolheu "Manter como estão"
+  // (07/10), sabendo que o agente a mediu falsa — meio falsa: com severidade "nao-va" e sem piso o carimbo ainda diz "barro · dá um
+  // tempo" (severidade.ts); e o "ele", sem o nome do campo, lê como "o lugar".
+  // Não "conserte" sem ele; e não a tome por verdade.
   piso: "Sem ele, a ficha não mostra a linha do chão da via, e o carimbo não diz o que a chuva faz ali.",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
+  // ⚠️ MEDIDA COMO FALSA E MANTIDA POR DECISÃO DELE: perguntado, ele escolheu "Manter como estão"
+  // (07/10), sabendo que o agente a mediu falsa — o carimbo seco diz "seco · carro comum" sempre (carimbo-fase.ts) e nenhuma tela
+  // pública lê `carroComum`.
+  // Não "conserte" sem ele; e não a tome por verdade.
   carroComum: "Sem ele, o app não afirma nada sobre que carro chega.",
-  // PENDENTE: redação minha, o João ainda não leu (o questionário não cobre o valor)
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha (o questionário não cobre o valor).
+  // ⚠️ MEDIDA COMO FALSA E MANTIDA POR DECISÃO DELE: perguntado, ele escolheu "Manter como estão"
+  // (07/10), sabendo que o agente a mediu falsa — com o chip curto preenchido ("R$ 10 · entrada") a ficha mostra o preço.
+  // Não "conserte" sem ele; e não a tome por verdade.
   "custo.valor": "Numa ficha paga sem o valor, o app não diz quanto custa nem como se paga.",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela. Cortada por SUBTRAÇÃO (M6 da
-  // revisão da Tarefa 12): a metade que saiu era falsa junto de outro campo ausente
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela. Cortada por SUBTRAÇÃO (M6 da
+  // revisão da Tarefa 12): a metade que saiu era falsa junto de outro campo ausente.
+  // ⚠️ MEDIDA COMO FALSA E MANTIDA POR DECISÃO DELE: perguntado, ele escolheu "Manter como estão"
+  // (07/10), sabendo que o agente a mediu falsa — falsa quando o valor diz onde se paga ("R$ 10 por pessoa · pago na entrada",
+  // [slug]/page.tsx).
+  // Não "conserte" sem ele; e não a tome por verdade.
   "custo.curto": "Numa ficha paga sem ele, o app não diz onde se paga.",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela. Cortada por SUBTRAÇÃO (M6 da
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela. Cortada por SUBTRAÇÃO (M6 da
   // revisão da Tarefa 12): a metade que saiu era falsa junto de outro campo ausente
   horario: "Sem ele, a ficha nunca fecha por hora.",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   dias: "Sem ele, a ficha nunca fecha por dia da semana: o app não sabe que aquele lugar folga, então não afirma que folgou.",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   secaRapido: "Sem ele, a linha verde do carimbo termina nas horas de chuva, sem a meia-frase que explica o terreno.",
 };
 

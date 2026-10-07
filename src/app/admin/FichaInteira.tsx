@@ -60,7 +60,7 @@ import type { CampoNaTela, Editor, VistaNaTela } from "./campos/tipos";
 // ─────────────────────────────────────────────────────────────────────────────
 // 🔴 TODA A COPY NOVA DESTA TELA MORA NESTE BLOCO, e é de propósito.
 //
-// Nenhuma delas o João leu. A regra do projeto é: eu escrevo, marco
+// Quase nenhuma o João leu (as que ele leu dizem `LIDA:`). A regra é: eu escrevo, marco
 // `PENDENTE`, mostro por extenso, ele lê, ele decide. Quantas são não está
 // escrito aqui de propósito — o número sai de contar os marcadores
 // `PENDENTE` deste arquivo, e prosa com número à mão já nasceu falsa neste
@@ -139,7 +139,7 @@ const TITULO_DO_GRUPO: Record<GrupoDaFicha, string> = {
   quando: "Quando dá pra ir",
   // PENDENTE: redação minha, o João ainda não leu
   condicao: "O que a chuva faz aqui",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   discriminador: "O que se olha na entrada pra decidir",
 };
 
@@ -210,7 +210,7 @@ export const ROTULOS: Record<string, string> = {
   "condicao.regra_texto": "O texto da regra",
   // PENDENTE: redação minha, o João ainda não leu
   "condicao.ressalva_proxy": "A ressalva do proxy",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   secaRapido: "Por que o chão firma rápido aqui",
 
   // — o que se olha na entrada pra decidir —
