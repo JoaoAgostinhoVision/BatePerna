@@ -178,7 +178,7 @@ export const ROTULOS: Record<string, string> = {
   avisos: "Os avisos",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   piso: "O piso da via",
-  // PENDENTE: redação minha, o João ainda não leu
+  // PENDENTE: redação minha; ele leu e marcou "Mudar" em 07/10 (quer "como se chega": carro, moto, ônibus, a pé) — campo novo, rodada própria
   carroComum: "Carro comum chega até lá?",
 
   // — o que custa —
