@@ -45,6 +45,13 @@ describe("falaMolhada: cada trilha fala com a força que a ficha DELA declara", 
       marcaDe("afirmando", "fresco", { severidade, horasPassado: 6, regraPropria: true }),
     );
     expect(new Set(secas)).toEqual(new Set(["Pode ir"]));
+    // A linha de baixo seca também é uma só por nível, e só depende da regra.
+    for (const [regraPropria, dita] of [[true, "seco · carro comum"], [false, "seco"]] as const) {
+      const linhas = SEVERIDADES.map((severidade) =>
+        subDe("afirmando", "fresco", { severidade, horasPassado: 6, regraPropria }),
+      );
+      expect(new Set(linhas), `regraPropria=${regraPropria}`).toEqual(new Set([dita]));
+    }
   });
 
   it("a linha de baixo obedece ao nível pela mesma régua", () => {

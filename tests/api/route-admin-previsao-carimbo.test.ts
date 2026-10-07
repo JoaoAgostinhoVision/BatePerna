@@ -174,6 +174,9 @@ describe("POST /api/admin/previsao-carimbo — a consequência do número", () =
     expect(seco.corpo.estado).toBe("fresco");
     expect(molhado.corpo.estado).toBe("frio");
     expect(seco.corpo.marca).toBe("Pode ir");
+    // A prévia é de uma regra que o dono ESCREVE: regra própria por definição,
+    // então a linha seca é a de sempre (e não o "seco" da regra padrão).
+    expect(seco.corpo.sub).toBe("seco · carro comum");
     expect(molhado.corpo.marca).toBe("Não vá");
   });
 
