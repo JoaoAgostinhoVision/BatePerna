@@ -45,7 +45,10 @@ do rascunho + desfazer edição) e *"como o usuário comum vai poder inserir os 
   (virou `useRef`). **Pronto pra subir quando ele quiser** (4 frases PENDENTE).
 - Usuário comum = brainstorm ARQUITETURAL em curso. Respostas dele: login simples; formulário CURTO com veredito
   de chuva PADRÃO; a pessoa EDITA o dela enquanto "não conferido", marca some quando ele confere. Proposto: Clerk
-  (Google) + caminho A (mesmas tabelas + dono/conferido/regra-padrão). Esperando o "concordo".
+  (Google) + caminho A (mesmas tabelas + dono/conferido/regra-padrão) — **ele disse "sim"**, e aprovou as 4 partes
+  do desenho uma a uma; regra padrão = 3h/6h/0,2mm/"cuidado" ("use a sua sugestão"); "seco" sem "carro comum" em
+  lugar sem regra própria. **SPEC escrita: `docs/superpowers/specs/2026-10-07-lugar-de-quem-usa-design.md`
+  (`bbd5c12`) — esperando ELE revisar a spec escrita.** Depois: writing-plans → ele escolhe o modo de execução.
   1ª resposta dele: **"Vai ao ar direto, marcado"** (não passa
   pela fila dele; marca visível "enviado por alguém, não conferido"). ⚠️ Isso abre exceção à linha vermelha
   (o app só afirma o que veio dele) — por escolha dele; a marca é o que segura a honestidade.
