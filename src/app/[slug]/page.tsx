@@ -37,6 +37,10 @@ export const dynamic = "force-dynamic";
  *  cartão da home. **Nada é redigido aqui.** Escrever uma frase nova de
  *  divulgação seria prosa minha sobre um lugar real, saindo do app pra fora
  *  sem ninguém ver — a superfície mais difícil de auditar que este projeto tem.
+ *  ⚠️ UMA EXCEÇÃO desde 07/10, e ela não fala do lugar: o ` · não conferido`
+ *  do lugar mandado por quem usa (`ETIQUETA_NAO_CONFERIDO`, redação minha,
+ *  PENDENTE) — afirma a ORIGEM, e um link sem ela chegaria na conversa sem
+ *  marca nenhuma. Ver o `const nome` abaixo.
  *
  *  ⚠️ NADA DE CARIMBO NO CARTÃO. A tentação é mandar "Pode ir" / "Fechado
  *  agora" junto, e seria mentira agendada: o cartão do WhatsApp é **congelado
