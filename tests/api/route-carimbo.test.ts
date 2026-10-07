@@ -85,9 +85,7 @@ describe("route /api/carimbo — endereço velho", () => {
 
   it("o novo ESCONDIDO: 404, como qualquer endereço que não existe", async () => {
     const { gravarVersao, getClient, versaoAtual } = await import("@/lib/db");
-    const { esquecerMemoria } = await import("@/lib/ficha-fonte");
     await gravarVersao(getClient(), B, (await versaoAtual(getClient(), B))!.doc, "painel", AGORA_S, true);
-    esquecerMemoria();
     const { GET } = await import("@/app/api/carimbo/route");
     expect((await GET(new Request(`http://x/api/carimbo?slug=${A}`))).status).toBe(404);
     expect(resolverEstado).not.toHaveBeenCalled();

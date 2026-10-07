@@ -612,9 +612,10 @@ export async function versaoPorId(client: Client, id: number): Promise<FichaVers
  *      é medido contra os escondidos também, porque escondido volta.
  *   5. **A leitura do PÚBLICO** (`getAllFichas`, em `src/lib/ficha.ts`; C1 da
  *      revisão final do painel completo, 2026-10-06): `buscarFichas` decide
- *      "banco sem semente" pelo acervo INTEIRO e só depois tira os escondidos,
- *      antes de memorizar. Com o padrão, esconder TODOS os lugares parecia
- *      banco vazio, e a memória do público servia os escondidos.
+ *      "banco sem semente" pelo acervo INTEIRO e só depois tira os escondidos.
+ *      Com o padrão, esconder TODOS os lugares parecia banco vazio, e o app
+ *      público caía (ou, até 07/10, quando ainda havia memória, ela servia os
+ *      escondidos).
  *   (E `parOcupado`, em `src/lib/par-de-lugar.ts`: o par nome+cidade de um
  *   lugar escondido continua ocupado, pela mesma razão do item 1.)
  *

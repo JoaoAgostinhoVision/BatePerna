@@ -189,8 +189,9 @@ export async function vistaDaCidade(doc: unknown, fontes: FontesDaVista): Promis
 
 /** As fontes de PRODUÇÃO. A busca tem o prazo da busca de cidade da tela
  *  pública (`PRAZO_BUSCA_MS`), e o acervo é a leitura PÚBLICA (`getAllFichas`:
- *  só os lugares no ar, com o prazo e a memória dela) — o mesmo conjunto que a
- *  home enquadra. O import é preguiçoso pra este módulo não puxar o banco
+ *  só os lugares no ar, com o prazo dela; sem memória desde 07/10, então
+ *  banco fora estoura, e o `catch` de `vistaDaCidade` devolve `null`) — o
+ *  mesmo conjunto que a home enquadra. O import é preguiçoso pra este módulo não puxar o banco
  *  quando só as funções puras são usadas. */
 export const FONTES_DE_PRODUCAO: FontesDaVista = {
   buscarCidade: async (cidade) => {

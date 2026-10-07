@@ -234,13 +234,14 @@ describe("/admin — a porta", () => {
     }
   });
 
-  // 🔴 E A HOME CONTINUA SEM ELE — inclusive pela memória. `getAllFichas` guarda
-  // a última leitura boa (`ultimaBoa`, em `ficha-fonte.ts`) e a serve quando o
-  // banco cai. Se o painel lesse o acervo COM ocultos por aquele caminho, a
-  // memória do PÚBLICO passaria a carregar o escondido, e no primeiro tropeço do
-  // Turso a home o mostraria de volta (M6). Por isso: home lê (memória boa),
-  // painel lê, banco cai, home lê de novo — da memória — e o lugar não está lá.
-  it("a home continua sem ele — nem pela memória, depois que o painel leu", async () => {
+  // 🔴 E A HOME CONTINUA SEM ELE, DEPOIS QUE O PAINEL LEU. Nasceu (M6) contra a
+  // memória do público: `getAllFichas` guardava a última leitura boa e a servia
+  // com o banco fora, e um painel que lesse COM ocultos por aquele caminho a
+  // carregaria com o escondido. A memória saiu em 07/10 (decisão do João, ver
+  // `buscarFichas`), e o caso agora prova as duas metades do que sobrou: com o
+  // banco de pé, a home lida DEPOIS do painel continua sem o lugar; com o banco
+  // fora, a home ESTOURA — não serve nada de antes, muito menos o escondido.
+  it("a home continua sem ele depois que o painel leu — e com o banco fora estoura", async () => {
     await esconder(SLUG_ESCONDIDO);
     await comSessao();
     const { getAllFichas } = await import("@/lib/ficha");
@@ -252,12 +253,12 @@ describe("/admin — a porta", () => {
     const { default: Admin } = await import("@/app/admin/page");
     render(await Admin());
 
-    // o banco cai: daqui pra frente a home só tem a memória
-    cliente = { execute: () => Promise.reject(new Error("banco fora")) } as unknown as Client;
-    const daMemoria = await getAllFichas();
-    expect(daMemoria.length, "a premissa: a home foi servida pela memória, não estourou").toBeGreaterThan(0);
-    expect(daMemoria.map((f) => f.slug), "o painel pôs o escondido na memória do público").not.toContain(
-      SLUG_ESCONDIDO,
-    );
+    const depois = await getAllFichas();
+    expect(depois.length, "a premissa: a home lida depois do painel tem lugares").toBeGreaterThan(0);
+    expect(depois.map((f) => f.slug), "o painel pôs o escondido na leitura do público").not.toContain(SLUG_ESCONDIDO);
+
+    // o banco cai: sem memória (07/10), a home estoura em vez de servir o de antes
+    cliente = { execute: () => Promise.reject(new Error("turso fora")) } as unknown as Client;
+    await expect(getAllFichas()).rejects.toThrow(/banco fora/);
   });
 });

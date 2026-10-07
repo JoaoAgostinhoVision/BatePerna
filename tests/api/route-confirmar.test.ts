@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ensureSchema, gravarVersao, trocarEndereco, versaoAtual } from "@/lib/db";
-import { esquecerMemoria } from "@/lib/ficha-fonte";
 import { lugarMarcador } from "../lugar-marcador";
 import { semearAcervo, base, clienteQueIntercala } from "../banco";
 
@@ -73,7 +72,6 @@ describe("route /api/confirmar — endereço velho", () => {
   beforeEach(async () => {
     await gravarVersao(client, A, JSON.stringify(lugarMarcador(A, "Lugar Marcador", "Outra Marcadora")), "painel", AGORA - 10);
     await trocarEndereco(client, A, B, AGORA - 5, await base(client, A));
-    esquecerMemoria();
   });
 
   const contar = async (slug: string) =>
@@ -98,7 +96,6 @@ describe("route /api/confirmar — endereço velho", () => {
 
   it("o novo ESCONDIDO: 400, e nada é gravado", async () => {
     await gravarVersao(client, B, (await versaoAtual(client, B))!.doc, "painel", AGORA, true);
-    esquecerMemoria();
     const { POST } = await import("@/app/api/confirmar/route");
     const res = await POST(new Request("http://x/api/confirmar", { method: "POST", body: JSON.stringify({ slug: A, tipo: "seco" }) }));
     expect(res.status).toBe(400);
@@ -142,7 +139,6 @@ describe("route /api/confirmar — a identidade do lugar", () => {
   const trocaERetomada = async () => {
     expect(await trocarEndereco(client, A, B, AGORA - 4, await base(client, A))).toBe(true);
     expect(await trocarEndereco(client, C, A, AGORA - 3, await base(client, C))).toBe(true);
-    esquecerMemoria();
   };
 
   beforeEach(async () => {
@@ -152,7 +148,6 @@ describe("route /api/confirmar — a identidade do lugar", () => {
     await gravarVersao(client, A, docP, "painel", AGORA - 20);
     await gravarVersao(client, A, docP, "painel", AGORA - 19);
     await gravarVersao(client, C, JSON.stringify(lugarMarcador(C, "Que Marcadora", "Outra Cidade Marcadora")), "painel", AGORA - 18);
-    esquecerMemoria();
     P = await minDe(A);
     Q = await minDe(C);
     // Premissa da fixture: P não é o mais velho do banco nem o mais novo.
@@ -174,7 +169,6 @@ describe("route /api/confirmar — a identidade do lugar", () => {
 
   it("endereço velho do MESMO lugar: P foi de A pra B, ninguém retomou A — conta pra P em B", async () => {
     expect(await trocarEndereco(client, A, B, AGORA - 4, await base(client, A))).toBe(true);
-    esquecerMemoria();
     const res = await post({ slug: A, tipo: "seco", lugar: P });
     expect(res.status).toBe(200);
     expect(await contar(B)).toBe(1);
@@ -185,7 +179,6 @@ describe("route /api/confirmar — a identidade do lugar", () => {
   // vírgula do dono não pode recusar o relato de quem foi.
   it("caso normal: o relato de P, o dono EDITA P, e o relato conta pra P", async () => {
     await gravarVersao(client, A, (await versaoAtual(client, A))!.doc, "painel", AGORA - 1);
-    esquecerMemoria();
     const res = await post({ slug: A, tipo: "seco", lugar: P });
     expect(res.status).toBe(200);
     expect(await contar(A)).toBe(1);
@@ -203,7 +196,6 @@ describe("route /api/confirmar — a identidade do lugar", () => {
   // M2: o "escondido não conta" mora no mesmo statement.
   it("lugar ESCONDIDO: 400, nada gravado — e o controle no ar grava", async () => {
     await gravarVersao(client, A, (await versaoAtual(client, A))!.doc, "painel", AGORA - 1, true);
-    esquecerMemoria();
     expect((await post({ slug: A, tipo: "seco", lugar: P })).status).toBe(400);
     expect(await total()).toBe(0);
     expect((await post({ slug: C, tipo: "seco", lugar: Q })).status).toBe(200);
@@ -274,14 +266,16 @@ describe("route /api/confirmar — a identidade do lugar", () => {
   });
 
   // 🔴 M4 da revisão da 12b: o ramo legado resolvia o endereço pelo `getFicha`,
-  // que responde da MEMÓRIA (`ultimaBoa`) quando o banco falha na leitura das
-  // fichas — e um lugar publicado depois da memória não está nela. Dava 400 (a
-  // recusa definitiva, que tira o relato da fila) por uma falha de passagem.
-  describe("o legado resolve o endereço no banco, nunca na memória", () => {
+  // que respondia da memória (a última leitura boa) quando o banco falhava na
+  // leitura das fichas — e um lugar publicado depois da memória não estava nela.
+  // Dava 400 (a recusa definitiva, que tira o relato da fila) por uma falha de
+  // passagem. A memória saiu em 07/10; o que este bloco prova agora é que o
+  // relato legado NÃO DEPENDE da leitura das fichas: com ela recusada, ele conta.
+  describe("o legado resolve o endereço no banco, nunca pelo getFicha", () => {
     const D = "lugar-marcador-recente-marcador";
     const D2 = "lugar-marcador-recente-novo-marcador";
     /** O cliente da rota com a leitura das FICHAS (a de `getFicha`) recusada:
-     *  é o banco que falha nela, e a rota serve a memória. O resto passa. */
+     *  é o banco que falha nela, e quem passa por ela estoura. O resto passa. */
     const fichasRecusadas = () =>
       new Proxy(client, {
         get(alvo, chave) {
@@ -299,15 +293,18 @@ describe("route /api/confirmar — a identidade do lugar", () => {
       });
 
     beforeEach(async () => {
-      // A memória nasce ANTES de D existir.
+      // Uma leitura boa ANTES de D existir: era o que plantava a memória até
+      // 07/10, e fica — se ela voltar, a premissa de baixo acusa.
       expect((await get(`slug=${A}`)).status).toBe(200);
       await gravarVersao(client, D, JSON.stringify(lugarMarcador(D, "Recente Marcador", "Cidade Marcadora")), "painel", AGORA - 2);
       daRota = fichasRecusadas();
     });
 
-    it("lugar publicado depois da memória: POST sem lugar conta (não 400)", async () => {
-      // A premissa: a memória não tem D — pela porta do GET, que ainda passa por ela.
-      expect((await get(`slug=${D}`)).status, "a memória já tinha D: o teste mediria o vazio").toBe(400);
+    it("lugar publicado há pouco, com a leitura das fichas recusada: POST sem lugar conta", async () => {
+      // A premissa: pela porta do GET, que passa pelo `getFicha`, a MESMA
+      // leitura recusada estoura — um POST que resolvesse por ali estouraria
+      // junto. (Com a memória de volta, aqui sairia 400, não o estouro.)
+      await expect(get(`slug=${D}`), "o GET não passou pela leitura recusada: o teste mediria o vazio").rejects.toThrow(/banco fora, ou sem/);
       const res = await post({ slug: D, tipo: "seco" });
       expect(res.status).toBe(200);
       expect(await contar(D)).toBe(1);
@@ -317,7 +314,7 @@ describe("route /api/confirmar — a identidade do lugar", () => {
       daRota = null;
       expect(await trocarEndereco(client, D, D2, AGORA - 1, await base(client, D))).toBe(true);
       daRota = fichasRecusadas();
-      expect((await get(`slug=${D}`)).status, "a memória já tinha D2: o teste mediria o vazio").toBe(400);
+      await expect(get(`slug=${D}`), "o GET não passou pela leitura recusada: o teste mediria o vazio").rejects.toThrow(/banco fora, ou sem/);
       const res = await post({ slug: D, tipo: "barro" });
       expect(res.status).toBe(200);
       expect(await contar(D2)).toBe(1);

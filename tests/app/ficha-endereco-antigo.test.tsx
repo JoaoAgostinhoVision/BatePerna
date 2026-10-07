@@ -38,7 +38,6 @@ vi.mock("@/lib/carimbo-estado", async (real) => ({
 
 const { resolverEstado } = await import("@/lib/carimbo-estado");
 const { gravarVersao, trocarEndereco, versaoAtual } = await import("@/lib/db");
-const { esquecerMemoria } = await import("@/lib/ficha-fonte");
 const pagina = await import("@/app/[slug]/page");
 const Ficha = pagina.default;
 const ConfirmarFui = (await import("@/app/ConfirmarFui")).default;
@@ -79,7 +78,6 @@ beforeEach(async () => {
   // Cada caso começa do zero: o acervo de novo, e o lugar marcador em A.
   await bancoDeProducao();
   await gravarVersao(banco, A, JSON.stringify(lugarMarcador(A, "Lugar Marcador", "Outra Marcadora")), "painel", quando++);
-  esquecerMemoria();
 });
 
 describe("a página pública num endereço velho", () => {
@@ -90,7 +88,6 @@ describe("a página pública num endereço velho", () => {
 
   it("depois da troca, /velho REDIRECIONA (307) pra /novo", async () => {
     await trocarEndereco(banco, A, B, quando++, await base(banco, A));
-    esquecerMemoria();
 
     await expect(abrir(A)).rejects.toThrow(`NEXT_REDIRECT /${B}`);
     expect(redirectFalso).toHaveBeenCalledWith(`/${B}`);
@@ -100,7 +97,6 @@ describe("a página pública num endereço velho", () => {
 
   it("o endereço novo abre, e passa os ANTIGOS ao ✓ Fui (a fila offline de lá)", async () => {
     await trocarEndereco(banco, A, B, quando++, await base(banco, A));
-    esquecerMemoria();
     const arvore = await abrir(B);
     const props = acharConfirmar(arvore as ReactNode);
     expect(props, "a página não tem mais o ✓ Fui").not.toBeNull();
@@ -116,7 +112,6 @@ describe("a página pública num endereço velho", () => {
   it("o novo ESCONDIDO: /velho dá o mesmo 404, e não revela pra onde iria", async () => {
     await trocarEndereco(banco, A, B, quando++, await base(banco, A));
     await gravarVersao(banco, B, (await versaoAtual(banco, B))!.doc, "painel", quando++, true);
-    esquecerMemoria();
 
     await expect(abrir(A)).rejects.toThrow("NEXT_NOT_FOUND");
     expect(redirectFalso).not.toHaveBeenCalled();
@@ -128,7 +123,6 @@ describe("a página pública num endereço velho", () => {
   it("lugar escondido que troca de endereço: /novo dá 404 e /velho dá 404", async () => {
     await gravarVersao(banco, A, (await versaoAtual(banco, A))!.doc, "painel", quando++, true);
     await trocarEndereco(banco, A, B, quando++, await base(banco, A));
-    esquecerMemoria();
 
     await expect(abrir(B)).rejects.toThrow("NEXT_NOT_FOUND");
     await expect(abrir(A)).rejects.toThrow("NEXT_NOT_FOUND");
@@ -139,7 +133,6 @@ describe("a página pública num endereço velho", () => {
   // metadata de um endereço velho é o do 404, e não decide nada.
   it("generateMetadata do endereço velho não redireciona", async () => {
     await trocarEndereco(banco, A, B, quando++, await base(banco, A));
-    esquecerMemoria();
     await expect(pagina.generateMetadata({ params: Promise.resolve({ slug: A }) })).resolves.toEqual({});
     expect(redirectFalso).not.toHaveBeenCalled();
   });
@@ -157,7 +150,6 @@ describe("a página passa a identidade do lugar ao ✓ Fui", () => {
 
   it("lugar = MIN das versões dele, e o mesmo depois da troca de endereço", async () => {
     await gravarVersao(banco, A, (await versaoAtual(banco, A))!.doc, "painel", quando++);
-    esquecerMemoria();
     const p = await minDe(A);
     const maisVelho = Number((await banco.execute("SELECT MIN(id) AS m FROM ficha_versoes")).rows[0].m);
     expect(maisVelho, "premissa: o acervo é mais velho que o lugar marcador").toBeLessThan(p);
@@ -165,7 +157,6 @@ describe("a página passa a identidade do lugar ao ✓ Fui", () => {
     expect(acharConfirmar((await abrir(A)) as ReactNode)!.lugar).toBe(p);
 
     await trocarEndereco(banco, A, B, quando++, await base(banco, A));
-    esquecerMemoria();
     expect(acharConfirmar((await abrir(B)) as ReactNode)!.lugar).toBe(p);
   });
 

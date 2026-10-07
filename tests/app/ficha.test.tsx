@@ -589,30 +589,21 @@ describe("o chrome da ficha parou de falar de UM lugar", () => {
       .toBe(formatos.size);
   });
 
-  // 🔴 A ASSERÇÃO É ESTRUTURAL, não a cópia da string: o rodapé tem DUAS
-  // metades separadas por "·", e a do meio — a região — é onde a afirmação
-  // morava. Assim o guarda mata "Agreste" de volta E qualquer outra região
-  // reinserida ("Brejo", "Sertão"), sem eu precisar listar regiões — listar
-  // seria eu afirmando que conheço as do estado dele.
-  //
-  // ⚠️ O QUE ESTE TESTE NÃO COBRE, e está declarado de propósito: o "PE" ainda
-  // é fixo. Todas as três fichas são de Pernambuco hoje, então a frase é
-  // verdadeira por CONTEÚDO, não por desenho — é a próxima mentira agendada,
-  // e ela dispara no dia em que entrar uma ficha de outro estado. Um teste que
-  // soubesse o estado de cada ficha seria geografia inventada com roupa de
-  // prova: não existe campo de estado, e inventar um é decisão dele.
-  it("o rodapé não afirma região nenhuma — em ficha nenhuma", async () => {
+  // 🔴 O RODAPÉ É SÓ "BatePerna", em toda ficha do acervo — decisão do João em
+  // 2026-10-07: *"O rodapé fica só 'BatePerna'"*. Até ali esta prova era
+  // ESTRUTURAL (duas metades separadas por "·", pra matar "Agreste" ou qualquer
+  // região de volta sem eu listar regiões) e declarava, de propósito, o que não
+  // cobria: o "PE" fixo, verdadeiro por CONTEÚDO (todo lugar do acervo é de
+  // Pernambuco) e não por desenho — a próxima mentira agendada pro dia em que
+  // entrasse um lugar de outro estado, que o painel aceita. Ele escolheu a
+  // subtração: o rodapé não afirma região NEM estado. A igualdade exata mata as
+  // duas voltas — "· PE" e qualquer região — sem lista de nada.
+  it("o rodapé é só 'BatePerna' — não afirma região nem estado, em ficha nenhuma", async () => {
     for (const f of acervo) {
       cleanup();
       const { container } = await abrir(f.slug);
       const r = rodape(container);
-      expect(r, `[${f.slug}] o rodapé sumiu — a ausência de texto não é a prova procurada`)
-        .toBeTruthy();
-      expect(
-        r.split("·").length,
-        `[${f.slug}] o rodapé ("${r}") voltou a ter três metades: a do meio é uma região ` +
-          `afirmada sobre TODAS as fichas`,
-      ).toBe(2);
+      expect(r, `[${f.slug}] o rodapé ("${r}") afirma mais que o nome do app`).toBe("BatePerna");
     }
   });
 });

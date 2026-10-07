@@ -12,7 +12,7 @@ import {
   versaoAtual,
   versoesAtuais,
 } from "@/lib/db";
-import { buscarFichas, esquecerMemoria } from "@/lib/ficha-fonte";
+import { buscarFichas } from "@/lib/ficha-fonte";
 import { salvarRascunho, semearAcervo } from "../banco";
 
 /** A TABELA DE RASCUNHO (Tarefa 11) — que sobrescreve, ao contrário de
@@ -34,7 +34,6 @@ beforeEach(async () => {
 });
 afterEach(() => {
   c.close();
-  esquecerMemoria();
 });
 
 describe("ficha_rascunhos", () => {

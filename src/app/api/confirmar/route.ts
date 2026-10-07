@@ -21,12 +21,16 @@ async function fichaDoPedido(slug: string): Promise<Ficha | null> {
 /** A identidade do lugar que mora no endereço do relato LEGADO — o de agora,
  *  ou o novo a que um endereço antigo leva —, lida NO BANCO.
  *
- *  🔴 NUNCA PELA MEMÓRIA (M4 da revisão da 12b). O `getFicha` responde da
- *  `ultimaBoa` quando o banco estoura o prazo, e um lugar publicado há pouco
- *  não está nela: dava `null`, e a rota respondia 400 — a recusa DEFINITIVA, que
- *  tira o relato da fila — por uma lentidão de passagem. Aqui o banco fora
- *  ESTOURA (5xx, o relato fica). Visibilidade não é conferida aqui: o INSERT
- *  confere (`gravarRelatoDoLugar`), e escondido é o mesmo 400 de sempre. */
+ *  🔴 DIRETO NO BANCO, NUNCA PELO `getFicha` (M4 da revisão da 12b). A razão de
+ *  12b era a memória: o `getFicha` respondia da última leitura boa quando o
+ *  banco estourava o prazo, um lugar publicado há pouco não estava nela, dava
+ *  `null`, e a rota respondia 400 — a recusa DEFINITIVA, que tira o relato da
+ *  fila — por uma lentidão de passagem. A memória saiu em 07/10 (ver
+ *  `buscarFichas`), e a leitura direta continua por outra razão: o que se
+ *  procura aqui é a IDENTIDADE (o menor `id` das versões, `identidadeDoLugar`),
+ *  que a `Ficha` não carrega. Aqui o banco fora ESTOURA (5xx, o relato fica).
+ *  Visibilidade não é conferida aqui: o INSERT confere (`gravarRelatoDoLugar`),
+ *  e escondido é o mesmo 400 de sempre. */
 async function identidadeDoPedido(slug: string): Promise<number | null> {
   const c = getClient();
   const aqui = await identidadeDoLugar(c, slug);

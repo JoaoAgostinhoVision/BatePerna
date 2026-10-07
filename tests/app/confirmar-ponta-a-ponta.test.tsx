@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import ConfirmarFui from "@/app/ConfirmarFui";
 import { ensureSchema, gravarVersao, trocarEndereco } from "@/lib/db";
-import { esquecerMemoria } from "@/lib/ficha-fonte";
 import { CHAVE_FILA, diaRecife } from "@/lib/fila-relato";
 import { lugarMarcador } from "../lugar-marcador";
 import { semearAcervo, base } from "../banco";
@@ -62,7 +61,6 @@ beforeEach(async () => {
   await semearAcervo(client);
   await gravarVersao(client, A, JSON.stringify(lugarMarcador(A, "Pe Marcador", "Cidade Marcadora")), "painel", AGORA - 20);
   await gravarVersao(client, C, JSON.stringify(lugarMarcador(C, "Que Marcadora", "Outra Cidade Marcadora")), "painel", AGORA - 18);
-  esquecerMemoria();
   P = await minDe(A);
   Q = await minDe(C);
 });
@@ -81,7 +79,6 @@ describe("N6 de ponta a ponta", () => {
     // P vai pra B; Q, que morava em C, retoma A.
     expect(await trocarEndereco(client, A, B, AGORA - 4, await base(client, A))).toBe(true);
     expect(await trocarEndereco(client, C, A, AGORA - 3, await base(client, C))).toBe(true);
-    esquecerMemoria();
     const posts = await ligarNaRota();
 
     // A página de Q em /A: o relato de P não sobe.

@@ -33,7 +33,6 @@ vi.mock("@/lib/carimbo-estado", async (real) => ({
 const { resolverEstado } = await import("@/lib/carimbo-estado");
 const { getAcervoDoDono, getAllFichas, getFicha } = await import("@/lib/ficha");
 const { gravarVersao } = await import("@/lib/db");
-const { esquecerMemoria } = await import("@/lib/ficha-fonte");
 const Ficha = (await import("@/app/[slug]/page")).default;
 const { bancoDeProducao, AGORA_SEMENTE } = await import("../banco");
 const { aberturaDaFicha, rotuloFaixa, rotuloFaixaCurta } = await import("@/lib/horario");
@@ -63,7 +62,6 @@ beforeEach(async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
   as(12);
   await gravarVersao(banco, VEU, VEU_DE_HOJE, "semente", AGORA_SEMENTE + 1);
-  esquecerMemoria();
 });
 
 afterEach(() => {
@@ -134,7 +132,6 @@ describe("a lista de faixas FORA DE ORDEM, lida do banco", () => {
 
   beforeEach(async () => {
     await gravarVersao(banco, MARCADOR, INVERTIDA, "painel", AGORA_SEMENTE + 2);
-    esquecerMemoria();
   });
 
   it("a premissa: o documento no banco tem as faixas na ordem INVERTIDA", async () => {

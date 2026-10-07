@@ -397,10 +397,12 @@ export async function PUT(req: Request): Promise<Response> {
   //
   // 🔴 LEITURA DIRETA — `versoesAtuais`, nunca `buscarFichas`/`getAllFichas`, e
   // SEM `comPrazo`. Dois motivos medidos:
-  //   1. `buscarFichas` tem MEMÓRIA de módulo (`ultimaBoa`): uma porta que
-  //      medisse contra acervo LEMBRADO mediria contra uma leitura que as telas
-  //      públicas deixaram ali, e que o dono já pode ter reescrito. Guarda mede
-  //      AGORA.
+  //   1. `buscarFichas` tira os ESCONDIDOS, e esta porta precisa deles (o
+  //      porquê está no `incluirOcultos` logo abaixo). (Até 07/10 havia outro
+  //      motivo: ela guardava a última leitura boa em memória de módulo, e uma
+  //      porta medida contra acervo LEMBRADO mediria contra o que as telas
+  //      públicas deixaram ali. A memória saiu em 07/10; a regra "guarda mede
+  //      AGORA" continua valendo.)
   //   2. `comPrazo` com fallback `new Map()` faria a porta falhar pro lado
   //      PERMISSIVO: acervo vazio DESLIGA as duas regras que comparam fichas
   //      entre si, e a frase emprestada passaria em silêncio sob lentidão do

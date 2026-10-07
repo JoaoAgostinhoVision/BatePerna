@@ -19,7 +19,6 @@ import {
   enderecoOcupadoPorLugar,
   enderecoOcupadoPorRascunho,
 } from "@/lib/endereco";
-import { esquecerMemoria } from "@/lib/ficha-fonte";
 import { enderecoDeLugar } from "@/lib/rascunho";
 import { semearAcervo, base, comBaseAtual } from "../banco";
 import { lugarMarcador } from "../lugar-marcador";
@@ -134,7 +133,6 @@ describe("POST /api/admin/endereco — o caso dele", () => {
     expect(volta.status, await volta.clone().text()).toBe(200);
 
     // A home lê o acervo inteiro; uma versão que dissesse A sob B derrubaria TODOS.
-    esquecerMemoria();
     const { getAllFichas } = await import("@/lib/ficha");
     const slugs = (await getAllFichas()).map((f) => f.slug);
     expect(slugs).toContain(B);

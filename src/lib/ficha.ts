@@ -81,8 +81,9 @@ export function loadAll(dir: string = FICHAS_DIR): Ficha[] {
  *  revisão final do painel completo, 2026-10-06): `buscarFichas` decide "banco
  *  sem semente" pelo acervo INTEIRO e só depois tira os escondidos — ver o
  *  porquê lá. Com o filtro padrão do SQL, esconder todos os lugares parecia
- *  banco vazio, e a memória servia os escondidos. O escondido continua fora de
- *  toda superfície pública: quem filtra é `buscarFichas`, antes de memorizar. */
+ *  banco vazio, e o app público caía (ou, até 07/10, a memória servia os
+ *  escondidos). O escondido continua fora de toda superfície pública: quem
+ *  filtra é `buscarFichas`, antes de devolver. */
 export const getAllFichas = cache(
   async (): Promise<Ficha[]> =>
     buscarFichas(() => versoesAtuais(getClient(), { incluirOcultos: true })),
@@ -111,18 +112,19 @@ async function lerNoPrazo<T>(leitura: Promise<T>): Promise<T> {
  *  escondidos (Task 9, 2026-10-01, B1 da auditoria).
  *
  *  🔴 POR QUE NÃO `getAllFichas`. Aquela é a leitura do PÚBLICO: filtra os
- *  ocultos (então o lugar escondido sumia da lista do próprio dono, sem caminho
- *  de volta pela tela) e MEMORIZA o que leu em `ultimaBoa`, que a home serve
- *  quando o banco cai. Fazer aquele caminho devolver os escondidos poria o
- *  escondido na memória do público — e no primeiro tropeço do Turso a home o
- *  mostraria de volta. (Desde 06/10 ela LÊ com `incluirOcultos`, mas tira os
- *  escondidos antes de memorizar; ver `buscarFichas`.) Por isso esta leitura é
- *  OUTRA porta: lê com `incluirOcultos`, usa a MESMA conta de documento
- *  (`fichaDaVersao`), devolve os escondidos marcados e não toca na memória.
+ *  ocultos, então o lugar escondido sumia da lista do próprio dono, sem caminho
+ *  de volta pela tela. Fazer aquele caminho devolver os escondidos os poria em
+ *  toda superfície pública que a usa — a home, o acervo, a ficha. (Desde 06/10
+ *  ela LÊ com `incluirOcultos`, mas tira os escondidos antes de devolver; ver
+ *  `buscarFichas`. Até 07/10 ela também memorizava o que lia, e esta porta
+ *  separada mantinha o escondido fora daquela memória — B1 da auditoria da
+ *  Task 9; a memória saiu em 07/10.) Por isso esta leitura é OUTRA porta: lê
+ *  com `incluirOcultos`, usa a MESMA conta de documento (`fichaDaVersao`) e
+ *  devolve os escondidos marcados.
  *
- *  🔴 SEM MEMÓRIA, ENTÃO BANCO FORA É ERRO, não lista velha. É a tela de quem
- *  edita: mostrar uma versão antiga pra quem vai mudá-la é pior que a página de
- *  erro. O prazo é o mesmo do público (`PRAZO_FICHA_MS`). */
+ *  🔴 BANCO FORA É ERRO, não lista velha — como o público, desde 07/10. É a
+ *  tela de quem edita: mostrar uma versão antiga pra quem vai mudá-la é pior que
+ *  a página de erro. O prazo é o mesmo do público (`PRAZO_FICHA_MS`). */
 export async function getAcervoDoDono(): Promise<{ fichas: Ficha[]; ocultos: Set<string> }> {
   const linhas = await lerNoPrazo(versoesAtuais(getClient(), { incluirOcultos: true }));
   const fichas = ordenarPorNome([...linhas.entries()].map(([slug, v]) => fichaDaVersao(slug, v.doc)));
@@ -189,9 +191,14 @@ export async function antigosDoEndereco(slug: string): Promise<string[]> {
  *  viu, e não pro endereço (Tarefa 12b).
  *
  *  ⚠️ FALHA VIRA `null`, no molde de `antigosDoEndereco` (I2 da auditoria da
- *  12b): a página sobrevive com o banco fora (serve `ultimaBoa`), e uma leitura
- *  acessória crua a derrubaria. Com `null`, o "✓ Fui" cai no ramo LEGADO (ver
- *  o relato legado em `fila-relato.ts`): conta pelo endereço, como antes. */
+ *  12b): quando esta leitura roda, a página JÁ TEM a ficha — `getFicha`
+ *  respondeu —, e esta é uma segunda ida ao banco, com prazo próprio, que pode
+ *  falhar sozinha (estourar o prazo, uma recusa de passagem). Crua, uma leitura
+ *  acessória derrubaria a página inteira de uma ficha que o banco acabou de
+ *  entregar. (A razão de 12b era outra — a página sobrevivia ao banco fora pela
+ *  memória de `buscarFichas`, que saiu em 07/10.) Com `null`, o "✓ Fui" cai no
+ *  ramo LEGADO (ver o relato legado em `fila-relato.ts`): conta pelo endereço,
+ *  como antes. */
 export async function identidadeDoEndereco(slug: string): Promise<number | null> {
   try {
     return await lerNoPrazo(identidadeDoLugar(getClient(), slug));

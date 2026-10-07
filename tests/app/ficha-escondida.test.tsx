@@ -16,9 +16,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  *  interceptadas antes do banco) e `next/navigation` não é mockado. Aqui a página
  *  roda contra o acervo de VERDADE no banco, sem dublê de `getFicha`.
  *
- *  ⚠️ E A CÓPIA EM MEMÓRIA (`ultimaBoa`, em `ficha-fonte.ts`) FARIA ISTO PASSAR
- *  POR ACIDENTE — pior: passar servindo a ficha escondida. Ela vive no módulo e
- *  atravessa o arquivo inteiro, então todo caso a esquece antes de medir. */
+ *  🔴 E O FURO DO M4 (revisão final de 06/10), FECHADO EM 07/10: até ali
+ *  `buscarFichas` guardava a última leitura boa e a servia com o banco fora — a
+ *  instância lia P no ar, o dono escondia P, o banco caía, e o link direto
+ *  mostrava P escondido. O João tirou a memória (*"nada escondido aparece
+ *  nunca, e com o banco fora o app sai do ar"*); o último caso daqui é a prova
+ *  pela página. */
 const notFoundFalso = vi.fn(() => {
   throw new Error("NEXT_NOT_FOUND");
 });
@@ -34,7 +37,6 @@ vi.mock("@/lib/carimbo-estado", async (real) => ({
 const { resolverEstado } = await import("@/lib/carimbo-estado");
 const { getFicha } = await import("@/lib/ficha");
 const { gravarVersao } = await import("@/lib/db");
-const { esquecerMemoria } = await import("@/lib/ficha-fonte");
 const Ficha = (await import("@/app/[slug]/page")).default;
 const { bancoDeProducao, AGORA_SEMENTE } = await import("../banco");
 
@@ -69,7 +71,6 @@ beforeEach(async () => {
     aviso: null,
   });
   await gravarVersao(banco, SLUG, docOriginal, "painel", AGORA_SEMENTE + 1, false);
-  esquecerMemoria();
 });
 
 afterEach(() => vi.mocked(resolverEstado).mockReset());
@@ -87,7 +88,6 @@ describe("a página pública de um lugar escondido", () => {
 
   it("escondido, o link direto dá 404 — a página CHAMA notFound()", async () => {
     await esconder(AGORA_SEMENTE + 60);
-    esquecerMemoria();
 
     expect(await getFicha(SLUG), "o getter público não acha mais o lugar").toBeNull();
     await expect(abrir()).rejects.toThrow("NEXT_NOT_FOUND");
@@ -99,11 +99,26 @@ describe("a página pública de um lugar escondido", () => {
 
   it("mostrado de novo, o mesmo link volta a abrir", async () => {
     await esconder(AGORA_SEMENTE + 60);
-    esquecerMemoria();
     await gravarVersao(banco, SLUG, docOriginal, "painel", AGORA_SEMENTE + 120, false);
-    esquecerMemoria();
 
     await expect(abrir()).resolves.toBeTruthy();
     expect(notFoundFalso).not.toHaveBeenCalled();
+  });
+
+  // 🔴 O FURO DO M4, PELA PÁGINA (decisão de 07/10). A ordem é a do furo: a
+  // página ABRE o lugar no ar (a leitura boa que a memória guardaria), o dono o
+  // esconde, e o banco cai. Sem a leitura boa antes, a prova seria vácua — passaria
+  // com a memória de volta. O banco cai pelo próprio cliente de produção: toda
+  // consulta recusa, como um Turso fora do ar.
+  it("lido no ar, escondido, e o banco cai: a página ESTOURA, nunca mostra o escondido", async () => {
+    await expect(abrir(), "a premissa: a página abriu com o lugar no ar").resolves.toBeTruthy();
+    await esconder(AGORA_SEMENTE + 60);
+    const queda = vi.spyOn(banco, "execute").mockRejectedValue(new Error("turso fora"));
+    try {
+      await expect(abrir()).rejects.toThrow(/banco fora/);
+      expect(notFoundFalso, "estourou pela leitura, não pelo 404").not.toHaveBeenCalled();
+    } finally {
+      queda.mockRestore();
+    }
   });
 });

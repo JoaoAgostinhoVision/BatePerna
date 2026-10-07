@@ -6,7 +6,7 @@ import ListaDoAcervo from "./ListaDoAcervo";
 import { getAllFichas } from "@/lib/ficha";
 
 // Sem isto, o `next build` prerenderiza `/_not-found` estaticamente — e nesse
-// momento não há request, não há instância quente, e o banco pode estar fora
+// momento não há request, e o banco pode estar fora
 // do alcance: o `getAllFichas` abaixo quebra o BUILD, não uma visita. As outras
 // páginas que leem o banco (`page.tsx`, `trilhas/page.tsx`, `[slug]/page.tsx`,
 // `admin/page.tsx`) já têm este mesmo `force-dynamic`; esta ficou de fora
@@ -42,13 +42,12 @@ export default async function NaoAchei() {
   // O acervo vem do BANCO e desce por prop — ver o comentário do
   // `ListaDoAcervo`.
   //
-  // ⚠️ E ESTA LEITURA VEM ANTES DO JSX: com o banco fora **e sem cópia em
-  // memória** (instância fria — a condição exata que o `buscarFichas` escreve),
-  // esta tela cai junto, e a saída passa a ser a barra do `error.tsx` (que tem a
-  // mesma `BarraNavegacao` e um "Tentar de novo"). Com a instância quente o
-  // `buscarFichas` serve a última leitura boa e esta tela continua de pé, com a
-  // lista de antes. A garantia da barra daqui, escrita acima, é pro caso de a
-  // lista vir VAZIA — não pro caso de a leitura falhar.
+  // ⚠️ E ESTA LEITURA VEM ANTES DO JSX: com o banco fora, o `buscarFichas`
+  // ESTOURA — sempre, desde 07/10, quando a memória que servia a última leitura
+  // boa saiu (ver o porquê lá) —, esta tela cai junto, e a saída passa a ser a
+  // barra do `error.tsx` (que tem a mesma `BarraNavegacao` e um "Tentar de
+  // novo"). A garantia da barra daqui, escrita acima, é pro caso de a lista vir
+  // VAZIA — não pro caso de a leitura falhar.
   const fichas = await getAllFichas();
   return (
     <main className="bp">

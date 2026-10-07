@@ -301,13 +301,28 @@ describe("/admin/novo — as perguntas", () => {
   // pergunta da tela é um trecho CONTÍNUO da "Pergunta:" do documento que o
   // João leu (só a primeira letra muda de caixa). Uma palavra minha enfiada
   // numa pergunta deixa este caso vermelho.
+  //
+  // 🔴 COM UMA EXCEÇÃO, DELE, E SÓ ELA: em 2026-10-07 ele decidiu *"Trocar
+  // 'essa trilha' por 'esse lugar'"* no formulário de lugar novo. O documento
+  // continua dizendo "trilha" (é doc dele, não se mexe), então a troca é
+  // aplicada ao DOCUMENTO antes de procurar — par a par, com a concordância, e
+  // nenhuma outra. Uma palavra minha continua deixando o caso vermelho.
+  const TROCA_DO_JOAO_0710: ReadonlyArray<readonly [string, string]> = [
+    ["a trilha está fechada ou aberta", "o lugar está fechado ou aberto"],
+    ["dessa trilha", "desse lugar"],
+    ["nessa trilha", "nesse lugar"],
+    ["essa trilha", "esse lugar"],
+  ];
   it("cada pergunta é um trecho do questionário, e a ordem da tela é a dele", () => {
     const plano = (s: string) =>
       s
         .replace(/\*\*|\*|`/g, "")
         .replace(/\s+/g, " ")
         .toLowerCase();
-    const doc = plano(readFileSync(path.join(process.cwd(), "docs", "questionario-ficha.md"), "utf8"));
+    const doc = TROCA_DO_JOAO_0710.reduce(
+      (d, [de, para]) => d.split(de).join(para),
+      plano(readFileSync(path.join(process.cwd(), "docs", "questionario-ficha.md"), "utf8")),
+    );
     const posicoes: number[] = [];
     for (const molde of ORDEM) {
       const texto = PERGUNTAS[molde];
@@ -318,6 +333,21 @@ describe("/admin/novo — as perguntas", () => {
     }
     expect(posicoes.length, "nenhuma pergunta do questionário foi medida").toBeGreaterThan(20);
     expect(posicoes, "a ordem da tela não é a do questionário").toEqual([...posicoes].sort((a, b) => a - b));
+  });
+
+  // 🔴 E A TROCA DE 07/10 VALE PRA PALAVRA, não só pras quatro formas da tabela.
+  // O caso de cima prende as quatro (com a troca aplicada ao documento, uma
+  // "essa trilha" de volta não é mais trecho dele — medido em 07/10); mas o
+  // documento ainda diz "trilha" em outras formas ("a trilha", "da trilha"), e
+  // uma pergunta futura copiada de lá passaria por ele. Esta varredura prende a
+  // palavra em qualquer forma. Varre os TEXTOS de `PERGUNTAS` — o que chega à
+  // tela —, não o arquivo: os comentários de lá citam "trilha" pra registrar a
+  // própria decisão.
+  it("nenhuma pergunta do lugar novo diz 'trilha' — decisão do João de 07/10", () => {
+    expect(Object.keys(PERGUNTAS).length, "a varredura não mediu pergunta nenhuma").toBeGreaterThan(20);
+    for (const [campo, texto] of Object.entries(PERGUNTAS)) {
+      expect(texto, `a pergunta de \`${campo}\` voltou a dizer "trilha"`).not.toMatch(/trilha/i);
+    }
   });
 
   // A lista à mão da ordem é vigiada pelo registro, nas duas direções.
@@ -589,9 +619,7 @@ describe("/admin/novo — rascunho com TODAS as perguntas respondidas", () => {
       "painel",
       Math.floor(Date.now() / 1000),
     );
-    const { esquecerMemoria } = await import("@/lib/ficha-fonte");
     const { getFicha } = await import("@/lib/ficha");
-    esquecerMemoria();
     const f = await getFicha(S);
     expect(f, "a ficha publicada não chegou à fonte pública").not.toBeNull();
     expect(f!.horario).toEqual(ALMOCO);

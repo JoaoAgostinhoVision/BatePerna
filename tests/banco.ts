@@ -1,7 +1,6 @@
 import { createClient, type Client } from "@libsql/client";
 import { ensureSchema, getClient, gravarVersao } from "@/lib/db";
 import { loadAll } from "@/lib/ficha";
-import { esquecerMemoria } from "@/lib/ficha-fonte";
 import { semear } from "@/lib/semente";
 import type { Ficha } from "@/types/ficha";
 
@@ -71,7 +70,7 @@ async function exigirBancoDescartavel(client: Client): Promise<void> {
  *  faria a mesma suíte contar histórias diferentes a cada hora. */
 export const AGORA_SEMENTE = 1_758_000_000;
 
-/** Põe o acervo do repositório neste banco e esquece a cópia em memória.
+/** Põe o acervo do repositório neste banco.
  *
  *  🔴 O `DELETE` é o que dá isolamento entre testes do MESMO arquivo: o cliente
  *  de produção é um singleton, então sem isto uma versão gravada por um teste
@@ -79,10 +78,9 @@ export const AGORA_SEMENTE = 1_758_000_000;
  *  tabela é append-only em PRODUÇÃO, que é onde a regra vale — aqui ela é o
  *  banco descartável de um processo de teste.
  *
- *  O `esquecerMemoria()` fecha uma porta estreita e real: a última leitura boa
- *  do `ficha-fonte` mora num módulo que vive o arquivo de teste inteiro, e só é
- *  servida quando o banco falha. Num arquivo que simule banco fora, ela
- *  entregaria o acervo do teste anterior — uma linha, e a porta fecha. */
+ *  (Até 07/10 este helper também esquecia a última leitura boa do
+ *  `ficha-fonte`, que vivia no módulo pelo arquivo de teste inteiro. A memória
+ *  saiu do app em 07/10 — ver `buscarFichas` —, e com ela o que esquecer.) */
 export async function semearAcervo(client: Client): Promise<Ficha[]> {
   await exigirBancoDescartavel(client);
   await ensureSchema(client);
@@ -98,7 +96,6 @@ export async function semearAcervo(client: Client): Promise<Ficha[]> {
   await client.execute("DELETE FROM ficha_rascunhos");
   const fichas = loadAll();
   await semear(client, fichas, AGORA_SEMENTE);
-  esquecerMemoria();
   return fichas;
 }
 

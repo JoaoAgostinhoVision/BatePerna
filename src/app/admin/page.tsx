@@ -51,10 +51,10 @@ export default async function Admin() {
   const agora = Math.floor(Date.now() / 1000);
   // 🔴 B1 DA AUDITORIA DA TASK 9 (2026-10-01): o acervo do DONO, com os
   // escondidos — NUNCA `getAllFichas`. Aquela filtra os ocultos (o lugar
-  // escondido sumia desta lista, sem caminho de volta pela tela) e memoriza o
-  // que lê pra home servir quando o banco cai; fazê-la DEVOLVER os ocultos os
-  // poria na memória do público (ela já os LÊ desde 06/10, e os tira antes de
-  // memorizar). Ver o docblock de `getAcervoDoDono`.
+  // escondido sumia desta lista, sem caminho de volta pela tela); fazê-la
+  // DEVOLVER os ocultos os poria em toda superfície pública que a usa (ela já
+  // os LÊ desde 06/10, e os tira antes de devolver). Ver o docblock de
+  // `getAcervoDoDono`.
   const { fichas, ocultos } = await getAcervoDoDono();
   const leituras = Object.fromEntries(await resolverEstados(fichas));
   // 🔴 OS RASCUNHOS (Tarefa 11) — a porta de volta pro lugar novo que ele

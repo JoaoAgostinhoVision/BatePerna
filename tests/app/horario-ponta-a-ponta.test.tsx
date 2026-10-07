@@ -32,7 +32,6 @@ vi.mock("@/lib/carimbo-estado", async (real) => ({
 const { resolverEstado } = await import("@/lib/carimbo-estado");
 const { getFicha } = await import("@/lib/ficha");
 const { gravarVersao, historico } = await import("@/lib/db");
-const { esquecerMemoria } = await import("@/lib/ficha-fonte");
 const { COOKIE_ADMIN } = await import("@/lib/admin-guarda");
 const { criarSessao, DURACAO_SESSAO_S } = await import("@/lib/admin-sessao");
 const { aberturaDaFicha, agoraRecife, fechadoAgora, rotuloAbertura } = await import("@/lib/horario");
@@ -63,7 +62,6 @@ beforeEach(async () => {
     "semente",
     AGORA_SEMENTE + 3,
   );
-  esquecerMemoria();
 });
 
 afterEach(() => {
@@ -132,7 +130,6 @@ describe("o almoço pelo editor da ficha no ar, lido pela fonte pública", () =>
     expect(await historico(banco, MARCADOR)).toHaveLength(antes + 1);
 
     // A FONTE PÚBLICA, relida do banco.
-    esquecerMemoria();
     const f = (await getFicha(MARCADOR))!;
     expect(f.horario).toEqual(ALMOCO);
     const agora = agoraRecife(Math.floor(Date.now() / 1000));

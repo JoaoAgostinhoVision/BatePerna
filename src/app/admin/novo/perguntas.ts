@@ -19,8 +19,14 @@ import type { CampoNaTela, PerguntaNaTela } from "../campos/tipos";
  *     `PERGUNTAS` é um TRECHO CONTÍNUO da "Pergunta:" daquele campo no
  *     documento — adaptado só por SUBTRAÇÃO (cortei os parênteses que mandavam
  *     pegar coordenada no Google Maps ou davam o caso de um lugar real) e com a
- *     primeira letra maiúscula. Há teste que confere cada um contra o
- *     documento, e que a ordem da tela é a ordem do documento.
+ *     primeira letra maiúscula. UMA troca que não é subtração, e é dele: em
+ *     2026-10-07 o João decidiu *"Trocar 'essa trilha' por 'esse lugar'"* neste
+ *     formulário, então "trilha" virou "lugar" com a concordância ("essa
+ *     trilha" → "esse lugar", "a trilha está fechada ou aberta" → "o lugar
+ *     está fechado ou aberto"). O documento dele
+ *     continua dizendo "trilha"; o comentário de cada pergunta trocada diz isso.
+ *     Há teste que confere cada um contra o documento (com essa troca, e só
+ *     ela), e que a ordem da tela é a ordem do documento.
  *   - Campo do registro que o questionário NÃO pergunta usa `rotuloDe`, o mesmo
  *     rótulo da ficha inteira — nenhuma pergunta inventada.
  *
@@ -51,14 +57,14 @@ export const PERGUNTAS: Readonly<Record<string, string>> = {
     "Tem alguma coisa que vale avisar sobre esse trecho específico — um detalhe de como é chegar ali, o que se vê no caminho?",
   // PENDENTE: do questionário, que ele leu; primeira vez numa tela
   promessa: "Em uma frase, por que alguém pegaria o carro pra ir até aí?",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // PENDENTE: do questionário, que ele leu; primeira vez numa tela; "trilha" → "lugar" por decisão dele (07/10)
   premio:
-    "O que essa trilha entrega, especificamente, quando dá certo? Pode ser mais detalhado que a promessa — é o parágrafo, não a frase de efeito.",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
-  voz: "Se você tivesse que avisar um amigo sobre essa trilha em uma frase direta, sem meias palavras, o que você diria?",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+    "O que esse lugar entrega, especificamente, quando dá certo? Pode ser mais detalhado que a promessa — é o parágrafo, não a frase de efeito.",
+  // PENDENTE: do questionário, que ele leu; primeira vez numa tela; "trilha" → "lugar" por decisão dele (07/10)
+  voz: "Se você tivesse que avisar um amigo sobre esse lugar em uma frase direta, sem meias palavras, o que você diria?",
+  // PENDENTE: do questionário, que ele leu; primeira vez numa tela; "trilha" → "lugar" por decisão dele (07/10)
   rotulo_escaneio:
-    "Se essa trilha tivesse uma etiqueta de três ou quatro palavras — o tipo de coisa que dá pra ler de relance, sem parar pra pensar — o que ela diria?",
+    "Se esse lugar tivesse uma etiqueta de três ou quatro palavras — o tipo de coisa que dá pra ler de relance, sem parar pra pensar — o que ela diria?",
   // PENDENTE: do questionário, que ele leu; primeira vez numa tela
   acesso: "Como alguém chega até lá — que tipo de carro serve, tem algum trecho que exige cuidado?",
   // PENDENTE: do questionário, que ele leu; primeira vez numa tela
@@ -69,17 +75,17 @@ export const PERGUNTAS: Readonly<Record<string, string>> = {
     "Quando faz umas horas que não chove, o que é que faz o chão desse lugar estar bom de novo? É o relevo, é o tipo de terra, é sol batendo? Responda em uma frase curta, do jeito que você diria pra um amigo no telefone.",
   // PENDENTE: do questionário, que ele leu; primeira vez numa tela
   avisos: "O que pode dar errado, e o que a pessoa devia saber antes de decidir ir?",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
-  "condicao.coords": "Qual é a latitude e a longitude do ponto certo pra medir a chuva dessa trilha?",
+  // PENDENTE: do questionário, que ele leu; primeira vez numa tela; "trilha" → "lugar" por decisão dele (07/10)
+  "condicao.coords": "Qual é a latitude e a longitude do ponto certo pra medir a chuva desse lugar?",
   // 🔴 UMA pergunta do questionário pros TRÊS números da regra. Ela abre o
   // trio, na primeira pergunta dele (a janela de trás, que é a ordem da frase);
   // as outras duas usam o rótulo, porque a pergunta já foi feita logo acima.
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+  // PENDENTE: do questionário, que ele leu; primeira vez numa tela; "trilha" → "lugar" por decisão dele (07/10)
   "condicao.regra.janela_passado_horas":
-    'Pra essa trilha virar "frio" (não suba), quanto tempo pra trás vale olhar se choveu, quanto tempo pra frente vale olhar se vai chover, e a partir de quantos milímetros de chuva isso conta?',
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
+    'Pra esse lugar virar "frio" (não suba), quanto tempo pra trás vale olhar se choveu, quanto tempo pra frente vale olhar se vai chover, e a partir de quantos milímetros de chuva isso conta?',
+  // PENDENTE: do questionário, que ele leu; primeira vez numa tela; "trilha" → "lugar" por decisão dele (07/10)
   "condicao.regra_texto":
-    "Escreva a mesma regra acima, mas como frase — do jeito que você explicaria pra alguém por que a trilha está fechada ou aberta hoje.",
+    "Escreva a mesma regra acima, mas como frase — do jeito que você explicaria pra alguém por que o lugar está fechado ou aberto hoje.",
   // PENDENTE: do questionário, que ele leu; primeira vez numa tela
   "condicao.ressalva_proxy": "O que a previsão do tempo não enxerga, que só quem está no lugar enxerga?",
   // PENDENTE: do questionário, que ele leu; primeira vez numa tela
@@ -91,8 +97,8 @@ export const PERGUNTAS: Readonly<Record<string, string>> = {
   "discriminador.permissao_abortar": "O que você diria pra alguém que chegou até ali e decidiu não seguir?",
   // 🔴 A pergunta do custo é UMA no questionário e cobre DOIS campos: a
   // primeira frase é a `tag` (custa ou não), a segunda é o `valor`.
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
-  "custo.tag": "Entrar nessa trilha custa alguma coisa?",
+  // PENDENTE: do questionário, que ele leu; primeira vez numa tela; "trilha" → "lugar" por decisão dele (07/10)
+  "custo.tag": "Entrar nesse lugar custa alguma coisa?",
   // PENDENTE: do questionário, que ele leu; primeira vez numa tela
   "custo.valor": "Se custar, quanto, e como é cobrado (no portão, antecipado, por pessoa, por carro)?",
   // PENDENTE: do questionário, que ele leu; primeira vez numa tela

@@ -27,7 +27,8 @@ import { type Ficha, fichaSchema } from "@/types/ficha";
  *  regra existe pra pegar.
  *
  *  🔴 QUEM CHAMA MEDE CONTRA `versoesAtuais(getClient(), { incluirOcultos: true })`
- *  — nunca `buscarFichas`/`getAllFichas` (memória de módulo: mediria contra uma
+ *  — nunca `buscarFichas`/`getAllFichas` (são a leitura do PÚBLICO e tiram os
+ *  escondidos; até 07/10 tinham também memória de módulo, e mediriam contra uma
  *  leitura que as telas públicas deixaram ali), e nunca sem os ESCONDIDOS
  *  (esconder o Véu → copiar a voz dele noutro lugar → mostrar o Véu de novo:
  *  duas fichas públicas dizendo a mesma coisa). O porquê inteiro (incluindo o

@@ -1,12 +1,18 @@
 import { createClient, type Client } from "@libsql/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ensureSchema, gravarVersao, versoesAtuais } from "@/lib/db";
-import { buscarFichas, esquecerMemoria, PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
+import { buscarFichas, PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
 import rampa from "../../content/fichas/rampa-do-pepe.json";
 
-beforeEach(() => esquecerMemoria());
-
 const umaLinha = (doc: unknown) => new Map([["rampa-do-pepe", { doc: JSON.stringify(doc), oculto: false }]]);
+
+/** Uma leitura BOA, medida — a premissa de toda prova "com leitura boa antes".
+ *  Sem ela, as provas de baixo seriam a de "banco fora numa instância que nunca
+ *  leu", e passariam igual com a memória de volta (ver o bloco da decisão). */
+async function leituraBoa(): Promise<void> {
+  const fichas = await buscarFichas(async () => umaLinha(rampa));
+  expect(fichas.map((f) => f.slug), "a premissa: houve uma leitura boa antes").toEqual(["rampa-do-pepe"]);
+}
 
 describe("buscarFichas", () => {
   it("lê do banco e valida pelo fichaSchema", async () => {
@@ -21,64 +27,33 @@ describe("buscarFichas", () => {
     await expect(buscarFichas(async () => umaLinha({ slug: "x" }))).rejects.toThrow();
   });
 
-  // 🔴 O caso da escolha 6 dele: banco pendurado, memória quente.
-  it("banco pendurado com cópia em memória: serve a última boa", async () => {
-    vi.useFakeTimers();
-    await buscarFichas(async () => umaLinha(rampa));
-    const pendurado = buscarFichas(() => new Promise(() => {}));
-    await vi.advanceTimersByTimeAsync(PRAZO_FICHA_MS + 1);
-    expect((await pendurado)[0].slug).toBe("rampa-do-pepe");
-    vi.useRealTimers();
-  });
-
-  // 🔴 E o outro lado da MESMA escolha, que é o que ele pediu de propósito:
-  // sem memória, a tela NÃO inventa e NÃO mostra semente — ela estoura, e o
-  // `error.tsx` do app aparece. Este teste é o que impede alguém de "melhorar"
-  // isso mais tarde caindo no JSON do repositório.
-  it("banco pendurado SEM cópia em memória: estoura, nunca conteúdo velho", async () => {
+  // 🔴 A tela NÃO inventa e NÃO mostra semente — ela estoura, e o `error.tsx`
+  // do app aparece. Este teste é o que impede alguém de "melhorar" isso mais
+  // tarde caindo no JSON do repositório.
+  it("banco pendurado: estoura, nunca conteúdo velho", async () => {
     vi.useFakeTimers();
     const pendurado = buscarFichas(() => new Promise(() => {}));
     // Achado ao rodar a suíte (não do brief): entre criar `pendurado` e o
     // `await expect(...)` mais abaixo, `advanceTimersByTimeAsync` já assenta a
-    // rejeição (o `throw` do banco-fora-sem-memória) sem que ninguém ainda
-    // esteja olhando essa promessa — o Node marca UNHANDLED nesse intervalo e,
-    // sob concorrência de workers, chegou a matar o worker (suíte caindo pra
+    // rejeição (o `throw` do banco fora) sem que ninguém ainda esteja olhando
+    // essa promessa — o Node marca UNHANDLED nesse intervalo e, sob
+    // concorrência de workers, chegou a matar o worker (suíte caindo pra
     // 1125/1130 numa corrida observada). Este `.catch` mudo só marca a
     // promessa como "alguém está de olho" a tempo; não muda o que é testado —
     // a asserção de verdade continua sendo o `rejects.toThrow()` abaixo, na
     // MESMA promessa.
     pendurado.catch(() => {});
     await vi.advanceTimersByTimeAsync(PRAZO_FICHA_MS + 1);
-    await expect(pendurado).rejects.toThrow();
+    await expect(pendurado).rejects.toThrow(/banco fora/);
     vi.useRealTimers();
-  });
-
-  it("banco que RECUSA sem memória: estoura igual", async () => {
-    await expect(buscarFichas(async () => { throw new Error("turso fora"); })).rejects.toThrow();
   });
 
   // 🔴 Ruling P7 (2026-09-25): o `comPrazo` é um `Promise.race` — uma recusa da
-  // promessa lida PROPAGA a recusa (não estoura o prazo). Quem serve a última
-  // boa quando o Turso RECUSA (em vez de pendurar) é só o `try/catch` em volta
-  // do `comPrazo`. Sem ele, este caso ficaria indistinguível do de cima nos 7
-  // testes do brief — os dois "rejects.toThrow()" passariam mesmo com o banco
-  // recusando e propagando, escondendo que a memória não foi consultada.
-  it("banco que RECUSA com cópia em memória: serve a última boa", async () => {
-    await buscarFichas(async () => umaLinha(rampa));
-    const fichas = await buscarFichas(async () => { throw new Error("turso fora"); });
-    expect(fichas[0].slug).toBe("rampa-do-pepe");
-  });
-
-  // 🔴 A memória guarda a ÚLTIMA boa, não a primeira: depois de o João salvar,
-  // a cópia velha não pode ressuscitar no próximo pendurado.
-  it("a memória é atualizada a cada leitura boa", async () => {
-    await buscarFichas(async () => umaLinha({ ...rampa, voz: "voz velha" }));
-    await buscarFichas(async () => umaLinha({ ...rampa, voz: "voz nova" }));
-    vi.useFakeTimers();
-    const pendurado = buscarFichas(() => new Promise(() => {}));
-    await vi.advanceTimersByTimeAsync(PRAZO_FICHA_MS + 1);
-    expect((await pendurado)[0].voz).toBe("voz nova");
-    vi.useRealTimers();
+  // promessa lida PROPAGA a recusa (não estoura o prazo). É o `try/catch` em
+  // volta dele que põe a recusa no MESMO ramo do pendurado; a mensagem é o que
+  // prova que passou por ali, e não que o erro cru do cliente vazou.
+  it("banco que RECUSA: estoura pelo mesmo ramo do pendurado", async () => {
+    await expect(buscarFichas(async () => { throw new Error("turso fora"); })).rejects.toThrow(/banco fora/);
   });
 
   it("ordena por nome do primeiro waypoint, como a home espera", async () => {
@@ -90,19 +65,11 @@ describe("buscarFichas", () => {
   });
 
   // 🔴 C1 DA REVISÃO FINAL (2026-09-26): um `Map` VAZIO é uma leitura BEM
-  // SUCEDIDA, não um banco fora — mas antes deste conserto ela caía no MESMO
-  // ramo de "tudo certo" que uma leitura com fichas, e `[]` virava "última
-  // boa" pra sempre. Os dois lados da mesma escolha 6 dele, agora cobrindo
-  // vazio: com memória quente, serve a última boa; sem memória, estoura —
-  // nunca lista vazia (que é a home dizendo "não existe trilha nenhuma").
-  it("banco de pé mas com a tabela VAZIA, e cópia em memória: serve a última boa", async () => {
-    await buscarFichas(async () => umaLinha(rampa));
-    const fichas = await buscarFichas(async () => new Map());
-    expect(fichas[0].slug).toBe("rampa-do-pepe");
-  });
-
-  it("banco de pé mas com a tabela VAZIA, SEM cópia em memória: estoura, nunca lista vazia", async () => {
-    await expect(buscarFichas(async () => new Map())).rejects.toThrow();
+  // SUCEDIDA, não um banco fora — mas só tem uma causa (tabela sem semente), e
+  // entra no ramo do banco fora: estoura, nunca lista vazia (que é a home
+  // dizendo "não existe trilha nenhuma").
+  it("banco de pé mas com a tabela VAZIA: estoura, nunca lista vazia", async () => {
+    await expect(buscarFichas(async () => new Map())).rejects.toThrow(/sem nenhuma linha/);
   });
 
   // 🔴 I5 DA REVISÃO FINAL: a chave do Map (o `ficha_slug` do banco) é a
@@ -121,24 +88,54 @@ describe("buscarFichas", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// 🔴 A DECISÃO DE 07/10: SEM MEMÓRIA. Até ali `buscarFichas` guardava a última
+// leitura boa e a servia com o banco fora. O João a tirou (M4 da revisão final
+// de 06/10): *"Não aceitar: nada escondido aparece nunca, e com o banco fora o
+// app sai do ar"*.
+//
+// 🔴 CADA CASO FAZ UMA LEITURA BOA ANTES, e é isso que os torna prova. Sem ela,
+// "banco fora estoura" passaria IGUAL com a memória de volta — memória vazia
+// também estoura. Só uma instância que JÁ LEU distingue "não há memória" de
+// "a memória estava vazia". Os três jeitos de o banco falhar, um por caso.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("buscarFichas sem memória: leitura boa antes, banco fora depois", () => {
+  it("banco PENDURADO depois de uma leitura boa: estoura", async () => {
+    await leituraBoa();
+    vi.useFakeTimers();
+    const pendurado = buscarFichas(() => new Promise(() => {}));
+    // O mesmo `.catch` mudo do caso pendurado de cima, pela mesma razão.
+    pendurado.catch(() => {});
+    await vi.advanceTimersByTimeAsync(PRAZO_FICHA_MS + 1);
+    await expect(pendurado).rejects.toThrow(/banco fora/);
+    vi.useRealTimers();
+  });
+
+  it("banco que RECUSA depois de uma leitura boa: estoura", async () => {
+    await leituraBoa();
+    await expect(buscarFichas(async () => { throw new Error("turso fora"); })).rejects.toThrow(/banco fora/);
+  });
+
+  it("tabela VAZIA depois de uma leitura boa: estoura", async () => {
+    await leituraBoa();
+    await expect(buscarFichas(async () => new Map())).rejects.toThrow(/sem nenhuma linha/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // 🔴 ESCONDER LUGARES, CONTRA O BANCO DE VERDADE (Tarefa 4 da rodada do painel
 // completo, 2026-09-27; refeito no C1 da revisão final da mesma rodada,
 // 2026-10-06).
 //
 // O C1 de 26/09 pôs a tabela VAZIA no ramo do banco fora. Até 06/10 a pergunta
 // do vazio era feita sobre o mapa JÁ FILTRADO pelo SQL, e esconder TODOS os
-// lugares caía nela: a instância quente servia os escondidos pela memória, a
-// fria derrubava o app público. Agora a leitura traz o acervo inteiro
+// lugares caía nela: o app público caía (ou, com a memória que existia até
+// 07/10, servia os escondidos). Agora a leitura traz o acervo inteiro
 // (`incluirOcultos: true`, como `getAllFichas`), o vazio se decide por ele, e
 // o filtro do público acontece depois — tudo escondido é `[]` honesto.
 //
 // 🔴 ESTE BLOCO USA `versoesAtuais` DE VERDADE, contra um banco de verdade, em
 // vez de um `Map` montado à mão: o que ele mede é a JUNÇÃO das peças — a coluna
 // `oculto` lida pelo SQL e o filtro em `buscarFichas`.
-//
-// ⚠️ A CÓPIA EM MEMÓRIA (`ultimaBoa`) pode fazer qualquer um destes passar por
-// ACIDENTE: ela vive no módulo e atravessa o arquivo. O `beforeEach` do topo a
-// esquece; quem a esquenta de propósito diz por quê.
 // ═══════════════════════════════════════════════════════════════════════════
 describe("buscarFichas contra o banco: lugar escondido", () => {
   const doc = (slug: string) => JSON.stringify({ ...rampa, slug });
@@ -161,7 +158,7 @@ describe("buscarFichas contra o banco: lugar escondido", () => {
     c.close();
   });
 
-  it("esconder o ÚNICO lugar, instância fria: lista vazia honesta, não estouro", async () => {
+  it("esconder o ÚNICO lugar: lista vazia honesta, não estouro", async () => {
     const c = await banco();
     await gravarVersao(c, "rampa-do-pepe", doc("rampa-do-pepe"), "semente", 1);
     await gravarVersao(c, "rampa-do-pepe", doc("rampa-do-pepe"), "painel", 2, true);
@@ -169,22 +166,19 @@ describe("buscarFichas contra o banco: lugar escondido", () => {
     c.close();
   });
 
-  // 🔴 O CAMINHO QUENTE — o C1 da revisão final de 06/10. Até ali este caso
-  // PINAVA o defeito: a memória esquentada com o lugar no ar servia o lugar
-  // escondido até a instância morrer, com o banco DE PÉ.
-  it("esconder o ÚNICO lugar, instância QUENTE: lista vazia, a memória não serve o escondido", async () => {
+  // 🔴 O FURO DO M4, FECHADO (07/10): leitura boa com o lugar no ar, o dono o
+  // esconde, e o banco cai. Com a memória, a queda servia o lugar escondido;
+  // sem ela, estoura — nunca o escondido.
+  it("lido no ar, escondido, e o banco cai: estoura, nunca serve o escondido", async () => {
     const c = await banco();
     await gravarVersao(c, "rampa-do-pepe", doc("rampa-do-pepe"), "semente", 1);
     const antes = await buscarFichas(() => lerTudo(c));
-    expect(antes.map((f) => f.slug), "a premissa: a memória esquentou com o lugar").toEqual(["rampa-do-pepe"]);
+    expect(antes.map((f) => f.slug), "a premissa: houve uma leitura boa com o lugar no ar").toEqual(["rampa-do-pepe"]);
 
     await gravarVersao(c, "rampa-do-pepe", doc("rampa-do-pepe"), "painel", 2, true);
     expect(await buscarFichas(() => lerTudo(c))).toEqual([]);
 
-    // E o que se memorizou foi o `[]`: com o banco recusando agora, a
-    // memória devolve o vazio, não o escondido.
-    const naQueda = await buscarFichas(async () => { throw new Error("turso fora"); });
-    expect(naQueda).toEqual([]);
+    await expect(buscarFichas(async () => { throw new Error("turso fora"); })).rejects.toThrow(/banco fora/);
     c.close();
   });
 
@@ -200,15 +194,15 @@ describe("buscarFichas contra o banco: lugar escondido", () => {
   });
 
   // 🔴 O CONTROLE do outro lado: a tabela REALMENTE vazia (schema sem semente)
-  // continua no ramo do banco fora — sem memória estoura, com memória serve a
-  // última boa. Contra o banco de verdade, não um `Map()` literal.
-  it("tabela realmente vazia: sem memória estoura; com memória serve a última boa", async () => {
+  // continua no ramo do banco fora — e estoura mesmo depois de uma leitura boa
+  // noutro banco. Contra o banco de verdade, não um `Map()` literal.
+  it("tabela realmente vazia: estoura, mesmo com uma leitura boa antes", async () => {
     const vazio = await banco();
-    await expect(buscarFichas(() => lerTudo(vazio))).rejects.toThrow();
+    await expect(buscarFichas(() => lerTudo(vazio))).rejects.toThrow(/sem nenhuma linha/);
     const cheio = await banco();
     await gravarVersao(cheio, "rampa-do-pepe", doc("rampa-do-pepe"), "semente", 1);
-    await buscarFichas(() => lerTudo(cheio));
-    expect((await buscarFichas(() => lerTudo(vazio))).map((f) => f.slug)).toEqual(["rampa-do-pepe"]);
+    expect((await buscarFichas(() => lerTudo(cheio))).map((f) => f.slug)).toEqual(["rampa-do-pepe"]);
+    await expect(buscarFichas(() => lerTudo(vazio))).rejects.toThrow(/sem nenhuma linha/);
     vazio.close();
     cheio.close();
   });

@@ -29,23 +29,23 @@ export function ordenarPorNome(fichas: Ficha[]): Ficha[] {
  *  o que mostrar. */
 export const PRAZO_FICHA_MS = 2_000;
 
-/** A última leitura boa. Vive por instância do servidor, não é compartilhada,
- *  e some quando a instância morre — é exatamente o que o João escolheu em
- *  2026-09-24 ("só memória"), sabendo que instância fria + banco fora = erro. */
-let ultimaBoa: Ficha[] | null = null;
-
-/** Só pra teste isolar uma leitura da outra. */
-export function esquecerMemoria(): void {
-  ultimaBoa = null;
-}
-
 /** As fichas de agora.
  *
- *  🔴 O QUE ESTA FUNÇÃO NUNCA FAZ: cair no `content/fichas/`. Se o banco não
- *  respondeu e não há cópia em memória, ela ESTOURA, e a página cai no
- *  `error.tsx`. Servir a semente mostraria a voz que o João já reescreveu —
- *  o app afirmando coisa falsa, que é a linha vermelha deste projeto. Foi
- *  escolha dele, com o custo à vista: "erro honesto, nunca conteúdo velho".
+ *  🔴 SEM MEMÓRIA NENHUMA, DESDE 2026-10-07. Até ali esta função guardava a
+ *  última leitura boa por instância do servidor (`ultimaBoa`, o "só memória"
+ *  que o João escolheu em 2026-09-24) e a servia quando o banco falhava. O furo
+ *  que aquilo deixava (M4 da revisão final de 06/10): a instância memorizou P
+ *  no ar, o dono esconde P, o banco cai antes da próxima leitura boa — e P
+ *  escondido voltava ao público enquanto durasse a queda. Diante dele, o João
+ *  reverteu a escolha de 24/09, com o custo à vista: *"Não aceitar: nada
+ *  escondido aparece nunca, e com o banco fora o app sai do ar"*. Então banco
+ *  fora — pendurado, recusando ou sem linha nenhuma — ESTOURA, sempre, e a
+ *  página cai no `error.tsx`. Não há o que servir de antes.
+ *
+ *  🔴 O QUE ESTA FUNÇÃO NUNCA FAZ: cair no `content/fichas/`. Servir a semente
+ *  mostraria a voz que o João já reescreveu — o app afirmando coisa falsa, que
+ *  é a linha vermelha deste projeto. Foi escolha dele, com o custo à vista:
+ *  "erro honesto, nunca conteúdo velho".
  *
  *  A leitura entra por parâmetro pelo molde do `resolverNavegacao` (11/09):
  *  sem isso não há como testar banco pendurado.
@@ -53,32 +53,24 @@ export function esquecerMemoria(): void {
  *  🔴 O `try/catch` em volta do `comPrazo` NÃO é redundância com o `null` de
  *  estouro: `comPrazo` é um `Promise.race` entre a leitura e um timer — uma
  *  RECUSA da leitura propaga a recusa (o `race` não a converte em `aoEstourar`;
- *  só o ESTOURO do prazo faz isso). Sem o `catch`, banco que recusa (em vez de
- *  pendurar) faria esta função rejeitar direto, pulando a memória — a última
- *  boa nunca seria servida. É o `catch` quem trata os dois jeitos de o banco
- *  falhar (pendurar e recusar) da mesma forma.
+ *  só o ESTOURO do prazo faz isso). É o `catch` quem põe os dois jeitos de o
+ *  banco falhar (pendurar e recusar) no MESMO ramo, com a MESMA mensagem —
+ *  sem ele, a recusa sairia como o erro cru do cliente do banco.
  *
  *  🔴 "BANCO SEM SEMENTE" SE DECIDE PELO ACERVO INTEIRO, ESCONDIDOS INCLUSIVE
  *  (C1 da revisão final de 26/09, refeito no C1 da revisão final do painel
  *  completo, 2026-10-06). Um `Map` VAZIO é uma leitura BEM-SUCEDIDA, mas só tem
  *  uma causa: a tabela `ficha_versoes` sem linha nenhuma (schema aplicado sem a
  *  semente rodar depois) — versão nunca é apagada. Esse vazio entra no MESMO
- *  ramo do banco fora: sem cópia em memória, estoura; com cópia, serve a última
- *  boa — nunca `[]` memorizado como se não existisse trilha em Pernambuco.
+ *  ramo do banco fora e estoura — nunca `[]` como se não existisse trilha em
+ *  Pernambuco.
  *
  *  Por isso `ler` tem de trazer os ESCONDIDOS também (`versoesAtuais` com
  *  `incluirOcultos: true`) e dizer, linha a linha, quem está escondido: o
  *  filtro do público acontece AQUI, DEPOIS da pergunta do vazio. Quando a
  *  pergunta era feita sobre o mapa JÁ FILTRADO, o dono escondendo TODOS os
- *  lugares (três toques no celular) caía no ramo do banco fora: a instância
- *  quente servia os escondidos pela memória, e a fria derrubava o app público
- *  inteiro. Agora, tudo escondido é `[]` honesto — e é `[]` que se memoriza.
- *
- *  🔴 A MEMÓRIA NUNCA VÊ UM ESCONDIDO: `ultimaBoa` recebe a lista JÁ FILTRADA
- *  (B1 da auditoria da Task 9). Um caso irmão continua aberto e é do dono
- *  decidir (M4 da revisão final de 06/10): a instância memorizou P no ar, o
- *  dono esconde P, e o banco cai antes da próxima leitura boa — ela serve P
- *  enquanto durar a queda. */
+ *  lugares (três toques no celular) caía no ramo do banco fora e derrubava o
+ *  app público inteiro. Tudo escondido é `[]` honesto, não erro. */
 export async function buscarFichas(
   ler: () => Promise<Map<string, { doc: string; oculto: boolean }>>,
 ): Promise<Ficha[]> {
@@ -89,10 +81,7 @@ export async function buscarFichas(
     linhas = null;
   }
   if (linhas === null || linhas.size === 0) {
-    if (ultimaBoa) return ultimaBoa;
-    throw new Error(
-      "Não consegui ler as fichas: banco fora, ou sem nenhuma linha, e sem cópia em memória.",
-    );
+    throw new Error("Não consegui ler as fichas: banco fora, ou sem nenhuma linha.");
   }
   // 🔴 I5 da revisão final (2026-09-26): a chave do Map é o `ficha_slug` do
   // BANCO — a identidade de verdade da linha —, e o `slug` de DENTRO do
@@ -105,20 +94,19 @@ export async function buscarFichas(
   // qual morro é qual — a mesma classe de defeito, agora no leitor que roda
   // em produção.
   const noAr = [...linhas.entries()].filter(([, l]) => !l.oculto);
-  const fichas = ordenarPorNome(noAr.map(([slug, l]) => fichaDaVersao(slug, l.doc)));
-  ultimaBoa = fichas;
-  return fichas;
+  return ordenarPorNome(noAr.map(([slug, l]) => fichaDaVersao(slug, l.doc)));
 }
 
 /** O documento de UMA versão virando `Ficha` — com a trava do I5 (o `slug` de
  *  dentro tem de ser o `ficha_slug` do banco).
  *
  *  🔴 SAIU DE DENTRO DE `buscarFichas` NA TASK 9 (2026-10-01), sem mudar uma
- *  linha da conta, porque o painel passou a precisar dela SEM a memória: o
- *  acervo do dono inclui os ESCONDIDOS, e passar por `buscarFichas` os poria em
- *  `ultimaBoa` — a memória do PÚBLICO, que a home serve quando o banco cai (B1
- *  da auditoria da Task 9). Uma conta, duas portas: a do público memoriza, a do
- *  dono não. */
+ *  linha da conta, porque o painel precisa dela com os ESCONDIDOS: o acervo do
+ *  dono inclui os escondidos, marcados, e `buscarFichas` é a porta do PÚBLICO —
+ *  ela os tira. (Em 01/10 a razão era também a memória do público, que guardaria
+ *  o escondido (B1 da auditoria da Task 9); a memória saiu em 07/10, ver
+ *  `buscarFichas`.) Uma conta, duas portas: a do público filtra, a do dono
+ *  marca. */
 export function fichaDaVersao(slug: string, docTexto: string): Ficha {
   const doc = fichaSchema.parse(JSON.parse(docTexto));
   if (doc.slug !== slug) {

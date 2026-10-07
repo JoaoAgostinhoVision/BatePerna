@@ -7,9 +7,9 @@ import { cleanup, render } from "@testing-library/react";
  *  O dono esconde os três lugares pelo celular (três toques; nenhuma porta
  *  recusa o "último visível"). Até 06/10 a leitura pública perguntava "banco
  *  vazio?" ao mapa JÁ FILTRADO pelo SQL, e o vazio caía no ramo do banco fora:
- *  numa instância QUENTE, a memória (`ultimaBoa`) servia os três ESCONDIDOS na
- *  home, no acervo e no link direto, com o banco de pé; numa FRIA, a home, o
- *  acervo e toda ficha caíam no `error.tsx`.
+ *  a home, o acervo e toda ficha caíam no `error.tsx` — e, enquanto houve
+ *  memória (até 07/10), uma instância que já tinha lido servia os três
+ *  ESCONDIDOS na home, no acervo e no link direto, com o banco de pé.
  *
  *  A cadeia medida é a de produção — `getAllFichas` → `buscarFichas` →
  *  `versoesAtuais` → SQL contra o `:memory:` que o `getClient` de verdade abre
@@ -17,8 +17,9 @@ import { cleanup, render } from "@testing-library/react";
  *  pelo mapa filtrado" morre AQUI, esteja ela no `getAllFichas` (tirar o
  *  `incluirOcultos`) ou no `buscarFichas` (filtrar antes de perguntar o vazio).
  *
- *  ⚠️ A MEMÓRIA É O ASSUNTO, então cada caso a ESQUENTA de propósito, com os
- *  três no ar, antes de esconder — é a instância quente, o pior dos dois lados. */
+ *  ⚠️ CADA CASO LÊ O ACERVO COM OS TRÊS NO AR ANTES DE ESCONDER. Era o pior dos
+ *  dois lados enquanto havia memória; sem ela (07/10), é o que mantém estas
+ *  provas valendo se a memória voltar. */
 const notFoundFalso = vi.fn(() => {
   throw new Error("NEXT_NOT_FOUND");
 });
@@ -38,7 +39,6 @@ vi.mock("@/lib/carimbo-estado", async (real) => ({
 const { resolverEstado, resolverEstados } = await import("@/lib/carimbo-estado");
 const { getAllFichas } = await import("@/lib/ficha");
 const { gravarVersao, versaoAtual } = await import("@/lib/db");
-const { esquecerMemoria } = await import("@/lib/ficha-fonte");
 const Ficha = (await import("@/app/[slug]/page")).default;
 const Home = (await import("@/app/page")).default;
 const Trilhas = (await import("@/app/trilhas/page")).default;
@@ -61,7 +61,7 @@ const abrir = (slug: string) =>
   Ficha({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({}) });
 
 beforeEach(async () => {
-  // Re-semeia o MESMO cliente (limpa as tabelas e esquece a memória).
+  // Re-semeia o MESMO cliente (limpa as tabelas).
   banco = await bancoDeProducao();
   notFoundFalso.mockClear();
   vi.mocked(resolverEstado).mockResolvedValue({
@@ -73,7 +73,7 @@ beforeEach(async () => {
   vi.mocked(resolverEstados).mockImplementation(async (fichas) =>
     new Map(fichas.map((f) => [f.slug, { estado: "fresco", erro: false, calculadoEm: AGORA_SEMENTE, aviso: null }])),
   );
-  // Esquenta a memória com os três NO AR — a instância quente.
+  // Uma leitura boa com os três NO AR, antes de qualquer esconder.
   slugs = (await getAllFichas()).map((f) => f.slug);
 });
 
@@ -83,7 +83,7 @@ afterEach(() => {
   vi.mocked(resolverEstados).mockReset();
 });
 
-describe("esconder TODOS os lugares, com a memória do público quente", () => {
+describe("esconder TODOS os lugares, depois de uma leitura com os três no ar", () => {
   // 🔴 A PREMISSA: o acervo tem mais de um lugar, e cada link abre. Sem ela os
   // casos de baixo passariam com o banco vazio ou o slug errado.
   it("antes de esconder, os lugares existem e cada página abre", async () => {
@@ -92,7 +92,7 @@ describe("esconder TODOS os lugares, com a memória do público quente", () => {
     expect(notFoundFalso).not.toHaveBeenCalled();
   });
 
-  it("a leitura pública devolve lista VAZIA — nem os escondidos pela memória, nem estouro", async () => {
+  it("a leitura pública devolve lista VAZIA — nem os escondidos, nem estouro", async () => {
     await esconderTodos();
     expect(await getAllFichas()).toEqual([]);
   });
@@ -104,14 +104,6 @@ describe("esconder TODOS os lugares, com a memória do público quente", () => {
       await expect(abrir(slug), slug).rejects.toThrow("NEXT_NOT_FOUND");
       expect(notFoundFalso, slug).toHaveBeenCalledTimes(1);
     }
-  });
-
-  // 🔴 E A INSTÂNCIA FRIA — o outro lado do C1: antes, aqui o app público
-  // inteiro caía no `error.tsx`.
-  it("instância FRIA: também lista vazia, sem estouro", async () => {
-    await esconderTodos();
-    esquecerMemoria();
-    expect(await getAllFichas()).toEqual([]);
   });
 
   // 🔴 AS TELAS DESENHAM O ACERVO VAZIO SEM ESTOURAR, e nenhuma nomeia um
@@ -148,14 +140,13 @@ describe("esconder TODOS os lugares, com a memória do público quente", () => {
 });
 
 // 🔴 O CONTROLE: a tabela REALMENTE vazia (schema sem semente) continua no ramo
-// do banco fora — sem memória estoura, com memória serve a última boa. É o C1
-// de 26/09, e o conserto de 06/10 não pode tê-lo levado junto.
+// do banco fora — e estoura, mesmo depois da leitura boa do `beforeEach` (a
+// decisão de 07/10: sem memória, nada de antes é servido). É o C1 de 26/09, e o
+// conserto de 06/10 não pode tê-lo levado junto.
 describe("tabela de versões realmente vazia, pelo getter de produção", () => {
-  it("sem memória estoura; com memória serve a última boa", async () => {
+  it("estoura, mesmo com uma leitura boa antes", async () => {
+    expect(slugs.length, "a premissa: houve uma leitura boa antes").toBeGreaterThan(1);
     await banco.execute("DELETE FROM ficha_versoes");
-    const servidos = await getAllFichas();
-    expect(servidos.map((f) => f.slug)).toEqual(slugs);
-    esquecerMemoria();
-    await expect(getAllFichas()).rejects.toThrow();
+    await expect(getAllFichas()).rejects.toThrow(/sem nenhuma linha/);
   });
 });

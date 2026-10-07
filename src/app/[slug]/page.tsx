@@ -453,8 +453,13 @@ export default async function Ficha({
             Das três saídas, esta é a única que é SUBTRAÇÃO: o app cala sobre a
             região em vez de afirmar uma que pode não ser a da ficha aberta. As
             outras duas (campo `regiao` por ficha; uma palavra que cubra as
-            três) acrescentam afirmação, e essa escolha é dele. */}
-        <div className="foot">BatePerna · PE</div>
+            três) acrescentam afirmação, e essa escolha é dele.
+            🔴 E O "PE" SAIU em 2026-10-07, pela mesma subtração: era verdade
+            por CONTEÚDO (todo lugar do acervo é de Pernambuco), não por
+            desenho — e o painel aceita lugar de qualquer cidade. Decisão
+            dele: *"O rodapé fica só 'BatePerna'"*. O painel NÃO passou a
+            recusar cidade de fora; é o rodapé que parou de afirmar estado. */}
+        <div className="foot">BatePerna</div>
       </div>
     </Moldura>
   );
