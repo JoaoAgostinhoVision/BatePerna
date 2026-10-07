@@ -40,7 +40,13 @@ do rascunho + desfazer edição) e *"como o usuário comum vai poder inserir os 
   116, tsc 0, build 0, mutar 42/0. 4 frases novas PENDENTE ("Desistir deste lugar", "Desistir mesmo? O que foi
   respondido some.", "Não consegui desistir deste lugar.", "Desfazer") — mostrar a ele antes de subir. Revisão
   despachada (`task-15-review.md`). NÃO está no ar.
-- Usuário comum = brainstorm ARQUITETURAL em curso. 1ª resposta dele: **"Vai ao ar direto, marcado"** (não passa
+- ✅ Revisão da 15: 0 C · 1 I · 5 M → **onda de fix `0b80a77`**, medida por mim: 2420/2420 em 116, tsc 0, build 0,
+  mutar 42/0. DELETE de rascunho sem linha → 404 (o Desistir mostra erro). Trava de duplo envio era defeito real
+  (virou `useRef`). **Pronto pra subir quando ele quiser** (4 frases PENDENTE).
+- Usuário comum = brainstorm ARQUITETURAL em curso. Respostas dele: login simples; formulário CURTO com veredito
+  de chuva PADRÃO; a pessoa EDITA o dela enquanto "não conferido", marca some quando ele confere. Proposto: Clerk
+  (Google) + caminho A (mesmas tabelas + dono/conferido/regra-padrão). Esperando o "concordo".
+  1ª resposta dele: **"Vai ao ar direto, marcado"** (não passa
   pela fila dele; marca visível "enviado por alguém, não conferido"). ⚠️ Isso abre exceção à linha vermelha
   (o app só afirma o que veio dele) — por escolha dele; a marca é o que segura a honestidade.
 🟢 **NO AR (07/10, 12:21): `dpl_J9RDAM5yDirHKJnBavpRu65y1h81`, código `f779f8c`.** Ele deu o ok ("pode fazer o
