@@ -14,6 +14,17 @@ código `6d11d68`, 2364/2364, tsc 0, build 0, mutar 42/0), NADA NO AR. O deploy 
      começar (as 31 com alerta + as 3 decisões do topo). Não faça nada de código.
    - **Com respostas:** monte a onda de copy (abaixo, "Próximo passo quando ele responder").
 
+✅ **07/10, mais tarde: ELE RESPONDEU AS 3 DECISÕES DO TOPO** (lidas do banco do artifact, docs `q-m4`, `q-pe`,
+`q-trilha`; as 228 frases seguem SEM resposta, as 31 com alerta inclusive):
+- **M4 → "Não aceitar: nada escondido aparece nunca, e com o banco fora o app sai do ar".** Ou seja: a memória
+  `ultimaBoa` (`src/lib/ficha-fonte.ts`) DEIXA DE SERVIR com o banco fora — banco caído = `error.tsx`. Reverte o "só
+  memória" de 24/09 COM o custo à vista (era a opção que dizia o custo por extenso). Mexe em comentários de
+  `ficha-fonte.ts`, `ficha.ts`, `api/confirmar/route.ts`, `api/admin/ficha/route.ts` e nos testes da memória.
+- **"BatePerna · PE" → o rodapé fica só "BatePerna"** (`src/app/[slug]/page.tsx:457`; o painel NÃO recusa cidade de fora).
+- **"trilha" → trocar por "esse lugar"** nas 8 perguntas de `src/app/admin/novo/perguntas.ts` (56, 58, 61, 73, 79, 82,
+  95; a 82 diz "a trilha"). Escopo da pergunta = SÓ o formulário; `not-found.tsx` ("Não achei essa trilha.") e a home
+  ("Nenhuma trilha…") NÃO foram perguntados — não mexer sem perguntar.
+
 (o histórico de 06/10 segue)
 
 ## ▶ 06/10 (histórico do dia)
