@@ -9,6 +9,7 @@ import { faseDe } from "@/lib/carimbo-fase";
 import { fechadoPeloDono } from "@/lib/aviso";
 import { aberturaDaFicha, rotuloFaixaCurta } from "@/lib/horario";
 import { rotuloDias } from "@/lib/semana";
+import { ETIQUETA_NAO_CONFERIDO, FAIXA_NAO_CONFERIDO } from "@/lib/origem";
 import { notFound, redirect } from "next/navigation";
 import ConfirmarFui from "../ConfirmarFui";
 import MapaEstatico from "../MapaEstatico";
@@ -58,7 +59,7 @@ export async function generateMetadata({
   // 🔴 A CIDADE NO TÍTULO (Tarefa 11b, 11b-I6): o link de duas Pedras do Navio
   // saía IDÊNTICO no WhatsApp. "Nome — Cidade" só quando há cidade; sem ela,
   // igual a antes — o app não escreve "sem cidade" em lugar nenhum.
-  const nome = ficha.trajeto.waypoints[0].nome + (ficha.cidade ? ` — ${ficha.cidade}` : ""); // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Formato meu (" — Cidade").
+  const nome = ficha.trajeto.waypoints[0].nome + (ficha.cidade ? ` — ${ficha.cidade}` : "") + (ficha.origem.conferido ? "" : ` · ${ETIQUETA_NAO_CONFERIDO}`); // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Formato meu (" — Cidade"). PENDENTE: o " · não conferido" é redação minha (07/10), o João ainda não leu.
   return {
     title: nome,
     description: ficha.promessa,
@@ -228,7 +229,7 @@ export default async function Ficha({
         fechadoPeloDono: fechadoPeloDono(aviso, null),
       })}
     >
-      <div className="screen">
+      <div className="screen" data-lugar={ficha.slug}>
         <Appbar chip={chipCusto} />
 
         <div className="hero">
@@ -238,6 +239,12 @@ export default async function Ficha({
           {/* 🔴 A CIDADE junto do nome (Tarefa 11b): é ela que separa dois
               lugares de mesmo nome. Sem cidade, cala — nenhum traço. */}
           {ficha.cidade && <p className="ficha-cidade">{ficha.cidade}</p>}
+          {/* 🔴 A FAIXA (spec de 07/10, Parte 2): logo abaixo do nome, antes de
+              qualquer coisa que a pessoa escreveu. O nome de quem mandou NÃO
+              aparece. Sai quando o João confere. */}
+          {!ficha.origem.conferido && (
+            <p className="faixa-nao-conferido" data-marca="nao-conferido">{FAIXA_NAO_CONFERIDO}</p>
+          )}
           <p className="promessa">{ficha.promessa}</p>
 
           <Carimbo

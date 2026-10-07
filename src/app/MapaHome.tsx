@@ -254,6 +254,7 @@ export default function MapaHome({
                   inicial={leitura}
                   abertura={aberturaDaFicha(f)}
                   severidade={f.condicao.severidade}
+                  conferido={f.origem.conferido}
                   agora={agora}
                 />
               );

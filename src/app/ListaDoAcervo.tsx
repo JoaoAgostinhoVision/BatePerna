@@ -1,4 +1,5 @@
 import { fatosDaTrilha } from "@/lib/fatos-da-trilha";
+import { ETIQUETA_NAO_CONFERIDO } from "@/lib/origem";
 import type { FichaNoAr } from "@/types/ficha";
 
 /** A LISTA DO QUE EXISTE — o acervo inteiro, sem carimbo, com os fatos
@@ -47,9 +48,14 @@ export default function ListaDoAcervo({
         // mesma tela — a coisa exata que `fatosDaTrilha` desfez.
         const fatos = fatosDaTrilha(f, { comAbertura: true });
         return (
-          <a key={f.slug} className="lista-item" href={`/${f.slug}`}>
+          <a key={f.slug} className="lista-item" href={`/${f.slug}`} data-lugar={f.slug}>
             {f.rotulo_escaneio && <span className="scan">{f.rotulo_escaneio}</span>}
             <span className="lista-t">{f.trajeto.waypoints[0].nome}</span>
+            {/* A MARCA (spec de 07/10, Parte 2), junto do nome — a mesma do
+                cartão da home. Sai quando o João confere. */}
+            {!f.origem.conferido && (
+              <span className="etiqueta-nao-conferido" data-marca="nao-conferido">{ETIQUETA_NAO_CONFERIDO}</span>
+            )}
             {/* A cidade sob o nome (Tarefa 11b) — esta também é tela de
                 ESCOLHER pelo nome. Sem cidade, cala. */}
             {f.cidade && <span className="lista-cidade">{f.cidade}</span>}

@@ -5,6 +5,7 @@ import { fatosDaTrilha } from "@/lib/fatos-da-trilha";
 import { aberturaDaFicha, type Agora } from "@/lib/horario";
 import { tomDe, vozDaFicha } from "@/lib/severidade";
 import { coordDe } from "@/lib/local";
+import { ETIQUETA_NAO_CONFERIDO } from "@/lib/origem";
 import SeloTrilha from "./SeloTrilha";
 import { useLeitura } from "./leituras";
 import { useLocal } from "./local";
@@ -59,11 +60,17 @@ export default function CartaoTrilha({
     <a
       id={ficha.slug}
       className="cartao"
+      data-lugar={ficha.slug}
       data-state={tomDe(leitura.estado, ficha.condicao.severidade)}
       href={`/${ficha.slug}`}
     >
       <span className="cartao-topo">
         <span className="cartao-nome">{ficha.trajeto.waypoints[0].nome}</span>
+        {/* 🔴 A MARCA (spec de 07/10, Parte 2): junto do nome, porque é pelo
+            nome que se escolhe. Sai quando o João confere. */}
+        {!ficha.origem.conferido && (
+          <span className="etiqueta-nao-conferido" data-marca="nao-conferido">{ETIQUETA_NAO_CONFERIDO}</span>
+        )}
         <SeloTrilha
           leitura={leitura}
           abertura={aberturaDaFicha(ficha)}

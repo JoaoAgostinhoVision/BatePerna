@@ -3,6 +3,7 @@ import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { fechadoPeloDono } from "@/lib/aviso";
 import { faseDe } from "@/lib/carimbo-fase";
 import { fechadoAgora, type Abertura, type Agora } from "@/lib/horario";
+import { ETIQUETA_NAO_CONFERIDO } from "@/lib/origem";
 import { tomDe, type Severidade } from "@/lib/severidade";
 import { useLeitura } from "./leituras";
 import { useVenceu } from "./useVenceu";
@@ -26,6 +27,7 @@ export default function PinTrilha({
   inicial,
   abertura,
   severidade,
+  conferido,
   agora = null,
 }: {
   slug: string;
@@ -39,6 +41,10 @@ export default function PinTrilha({
   /** O nível desta trilha: o pin é pintado pelo TOM, igual ao cartão e ao selo.
    *  Sem ele o mapa seria a quarta boca a discordar das outras três. */
   severidade: Severidade;
+  /** O lugar foi conferido pelo João? Obrigatório pela razão do
+   *  `fechadoPeloDono` de `Situacao`: opcional, um mapa novo esqueceria e o
+   *  pin de um lugar não conferido sairia igual aos outros. */
+  conferido: boolean;
   /** O relógio de Recife (`Agora`), ou `null` no primeiro render. Chega por prop
    *  pela mesma razão que a leitura chega: são N pins, e a fonte tem que ser
    *  UMA — quem lê o relógio é o `MapaHome`, uma vez só. */
@@ -61,10 +67,15 @@ export default function PinTrilha({
     <a
       className="pin-home"
       href={`#${slug}`}
+      data-lugar={slug}
       data-state={tomDe(leitura.estado, severidade)}
       data-fase={fase}
+      // 🔴 A MARCA (spec de 07/10, Parte 2): o pin não tem texto, então ela é o
+      // CONTORNO (`data-conferido`, no `home.css`) e o nome que o leitor de
+      // tela lê. Sai quando o João confere.
+      {...(conferido ? {} : { "data-conferido": "nao", "data-marca": "nao-conferido" })}
       style={{ left, top }}
-      aria-label={`Ver ${nome}`}
+      aria-label={conferido ? `Ver ${nome}` : `Ver ${nome}, ${ETIQUETA_NAO_CONFERIDO}`}
     />
   );
 }

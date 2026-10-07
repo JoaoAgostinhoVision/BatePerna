@@ -107,6 +107,14 @@ html, body { background: var(--ground); }
 /* A cidade, entre o nome e a promessa (Tarefa 11b). Mesma letra e mesma cor do
    rótulo de escaneio, sem a caixa alta: é o lugar, não um aviso. */
 .bp .ficha-cidade { font-family: var(--type); font-size: .8rem; font-weight: 600; color: var(--ink-faint); margin: 0 0 .35rem; }
+/* A faixa de lugar não conferido (07/10): logo abaixo do nome. */
+.faixa-nao-conferido {
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px dashed currentColor;
+  border-radius: 8px;
+}
 
 /* the decision — A's warm card hosting C's stamp */
 .bp .decision {

@@ -114,6 +114,23 @@
 .bp .pin-home[data-state][data-fase="fechado"]::before { background: var(--stop); }
 .bp .pin-home:active { opacity: .6; }
 
+/* A MARCA DE LUGAR NÃO CONFERIDO (07/10). A etiqueta é texto (lê-se de
+   relance, e o leitor de tela lê); o pin não tem texto, então a marca dele é
+   o CONTORNO — tracejado, que nenhum outro estado do pin usa. */
+.etiqueta-nao-conferido {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 1px 6px;
+  border: 1px dashed currentColor;
+  border-radius: 999px;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+.pin-home[data-conferido="nao"] {
+  outline: 2px dashed currentColor;
+  outline-offset: 2px;
+}
+
 /* ---- a linha de filtro e o painel sanfona ----
    A `min-height` tem que bater com ALTURA_LINHA_FILTRO_PX (src/lib/home-layout.ts):
    esta linha entra entre o mapa e a folha e come da mesma folga que garante o
