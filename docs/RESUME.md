@@ -43,11 +43,18 @@ auditoria só como nota; `rowsAffected` com `RETURNING` volta 0 no libsql local 
 ✅ **Onda de fix da 12b FEITA: `e1c63be`.** Medido por mim: **2341/2341 em 112**, `tsc` 0, build 0, mutar 42/0;
 nenhum resto de `PENDENTE-JOÃO`/"descartar" em `src`/`tests`. Fila nova em `bp:fila-relato:v2`.
 
-→ 🔴 **A REVISÃO FINAL DA BRANCH ESTÁ DESPACHADA** (`final-review.md`; escopo `main..e1c63be`, COM build; a
-re-revisão curta da onda da 12b foi embutida nela). Se não existir, redespachar. Depois: onda de fix se houver →
-agentes do projeto (`contracao-honesta`, `prova-que-trava`, `voz-do-lugar`, `procedencia`) → **pacote de copy pro
-João** (todas as `PENDENTE`: `grep -rn PENDENTE src`) → `npm run semear` → UM `vercel --prod --yes` → `conferir-no-ar`
-(marcador: `GET /api/admin/publicar` 404 no velho, 405 no novo) → olhos dele no celular.
+✅ **Revisão final FEITA** (`final-review.md`): **NÃO pronto — 1 C · 0 I · 5 M.** C1 (linha vermelha, entre tarefas):
+esconder TODOS os lugares → a leitura pública volta vazia → cai no ramo "banco fora" → a `ultimaBoa` serve os
+escondidos (instância quente) ou o app público inteiro cai (fria). Medido por sonda. M1: `ensureSchema` NÃO roda no
+boot — **sem `npm run semear` antes do deploy cai o PÚBLICO inteiro**, não só o `/admin`.
+
+→ 🔴 **A onda de fix da revisão final ESTÁ DESPACHADA** (`final-fix-brief.md`: C1 + M1/M2/M3; M5 nota). Se não houver
+commit de código depois de `e1c63be`, redespachar com o mesmo brief. Depois: medir → re-revisão curta do C1 →
+agentes do projeto → pacote de copy → `npm run semear` → UM `vercel --prod --yes` → `conferir-no-ar` → olhos dele.
+❓ **Pergunta ao João (M4 da revisão final):** com o banco FORA DO AR, uma instância que ainda lembra de um lugar que
+ele acabou de esconder continua mostrando esse lugar até o banco voltar. Aceitar (é a família "conteúdo velho na
+queda" que ele aceitou em 24/09) ou não (a memória passa a não servir nada que possa estar escondido — custo: queda
+do banco = app fora).
 
 ✅ **DECISÃO DO JOÃO (06/10): relato legado sem identidade → "aceitar como hoje".** O código já está assim
 (`RELATO_LEGADO = "aceitar"`); na onda de fix da 12b, trocar o comentário `PENDENTE-JOÃO` pelo registro da decisão
