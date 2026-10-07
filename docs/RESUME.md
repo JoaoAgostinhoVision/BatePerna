@@ -24,7 +24,25 @@ código `6d11d68`, 2364/2364, tsc 0, build 0, mutar 42/0), NADA NO AR. O deploy 
 - **"trilha" → trocar por "esse lugar"** nas 8 perguntas de `src/app/admin/novo/perguntas.ts` (56, 58, 61, 73, 79, 82,
   95; a 82 diz "a trilha"). Escopo da pergunta = SÓ o formulário; `not-found.tsx` ("Não achei essa trilha.") e a home
   ("Nenhuma trilha…") NÃO foram perguntados — não mexer sem perguntar.
-🟡 **Tarefa 13 (as três decisões) DESPACHADA** — brief `.superpowers/sdd/2026-09-26-painel-completo/task-13-brief.md`,
+✅ **Tarefa 13 FEITA: `26e0a17`.** Medido por mim: 2364/2364 em 113, tsc 0, build 0, mutar 42/0. Memória
+`ultimaBoa` apagada (13 testes morrem com ela de volta), rodapé "BatePerna", "esse lugar" nas 7 perguntas.
+✅ **ELE RESPONDEU AS 31 COM ALERTA (07/10):** 29 "Serve", `sem-09` "Mudar"→"BatePerna" (= q-pe, feito na 13), e
+`ficha-18` "Mudar": *"Carro comum chega até lá? moto chega? onibus ou somente a pé?"*. Perguntei e ele decidiu:
+- **As 6 medidas FALSAS (publicar-07..11, recusa-11): "Manter como estão"** — com o custo dito. Não reabrir.
+- **ficha-18 → "Campo novo: como se chega"** (carro comum / moto / ônibus / só a pé, no lugar do sim/não de
+  `carroComum`): mexe em schema, formulário, ficha e carimbo ("seco · carro comum"). **Rodada PRÓPRIA, DEPOIS deste
+  deploy.** O rótulo de hoje fica PENDENTE e sobe como está.
+✅ **ELE LEU O PACOTE INTEIRO (07/10):** 223 "Serve", `ficha-02` "Mudar" → **"Ainda sem dados"**, e 5 "Dúvida"
+(`ficha-14`, `ficha-40..43`): quer **cidade e endereço AUTOMÁTICOS "pela seleção do lugar"** (revê o "endereço só
+muda quando ele manda" de 04/10). Perguntei: **rodada própria DEPOIS do deploy** (junto do "como se chega"). As 192
+"Serve" restantes + a troca da `ficha-02` = Tarefa 14b (`task-14b-brief.md`, lista `copy-serve-0710-b.json`),
+despachar DEPOIS que a 14 voltar (mesmos arquivos).
+**PRÓXIMA RODADA (pós-deploy), duas ideias dele:** (1) "como se chega" (carro/moto/ônibus/a pé) no lugar de
+`carroComum`; (2) cidade e endereço automáticos pela seleção do lugar. Começar por brainstorm COM ele.
+🟡 **Tarefa 14 (tirar PENDENTE das 31 "Serve") DESPACHADA** — brief `task-14-brief.md`, lista `copy-serve-0710.json`.
+As outras ~197 frases sem alerta seguem sem resposta e sobem PENDENTE (publicar não é aprovar copy). Depois da 14:
+medir → pedir a ele o ok do deploy → `npm run semear` → UM `vercel --prod --yes` → `conferir-no-ar`.
+✅ (antes) **Tarefa 13 (as três decisões) DESPACHADA** — brief `.superpowers/sdd/2026-09-26-painel-completo/task-13-brief.md`,
 relatório esperado em `task-13-report.md`. Se a sessão cair: conferir `git log` por `fix(painel): as três decisões`;
 se não houver, redespachar o brief. Depois: medir eu mesmo, revisão, e esperar as 31 frases com alerta.
 
