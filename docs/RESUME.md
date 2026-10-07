@@ -14,11 +14,20 @@ não cabe em batch e o dublê não dispara em batch — publicar vira `publicarR
 `trocarEndereco`. Rulings R1–R6 coladas no fim do brief (R2: o PUT do rascunho deixa de ser upsert NESTA tarefa;
 R3: a tela mora em `/admin/novo/publicar?slug=S`; R4: **12-N6 SAI e vira Tarefa 12b**; R5: Step 4 do MapaHome sai).
 
-→ 🔴 **PRÓXIMO PASSO:** a **Tarefa 12 está despachada** (`task-12-PROMPT.md`, relatório em `task-12-report.md`). Se
-não houver commit de código depois de `a7f0eaf`, redespachar COMO ESTÁ (árvore suja = parar e medir, não apagar).
-Depois: medir eu mesmo → revisão da 12 → **escrever o brief da 12b** (seção "Recorte" da auditoria: id estável =
-`MIN(id)` do lugar; servidor responde 200 `{ignorado:true}`, nunca 4xx que trave a fila; envio online, placar e
-"já contei" pela mesma identidade; reancorar o N12 do `mutar.mjs`) → **o deploy único só sai com 12 E 12b**.
+✅ **Tarefa 12 FEITA: `34d1b17`.** Medido por mim: **2245/2245 em 111**, `tsc` 0, build 0 (`/admin/novo/publicar`
+865 B / 112 kB), `mutar.mjs` 42/0, árvore limpa. 43 mutações da tarefa morreram (relatório `task-12-report.md`; M6
+sobreviveu na 1ª forma e ganhou fixture de lugar com ÚNICA versão oculta). Desvios aceitos: frase `enderecoDeLugar`
+na colisão, prop `faltam` na tela, dois testes de navegação ajustados. 26 frases `PENDENTE` novas (pacote de copy).
+⚠️ **FLAKE MEDIDO (pré-existente, já no `88cab2e`):** ~1 em 3–4 suítes inteiras sai com `Error: Worker exited
+unexpectedly` (tinypool) — um processo morre, ~20 testes não rodam, nenhuma asserção falha. Pego em
+`route-admin-previsao-carimbo.test.ts`, que isolado passou 10/10. Carga/paralelismo, causa-raiz NÃO achada.
+Regra: rodar de novo e relatar as duas; outro erro qualquer é achado.
+
+→ 🔴 **PRÓXIMO PASSO:** a **revisão da 12 está despachada** (`task-12-review.md`). Se não existir, redespachar
+(revisor opus fresco, escopo `a7f0eaf..34d1b17`, COM `npm run build`). Depois: onda de fix → **brief da 12b**
+(seção "Recorte" da auditoria: id estável = `MIN(id)` do lugar; servidor 200 `{ignorado:true}`, nunca 4xx que trave
+a fila; envio online, placar e "já contei" pela mesma identidade; reancorar o N12 do `mutar.mjs`) → **o deploy
+único só sai com 12 E 12b**.
 ❓ **Pergunta ao João, pendente:** relatos "✓ Fui" que já estiverem na fila offline SEM identidade no dia do deploy:
 aceitar como hoje ou descartar.
 
