@@ -154,7 +154,11 @@ describe("as palavras e o desenho de cada superfície", () => {
   it("o contorno do pin existe no CSS", async () => {
     const { readFileSync } = await import("node:fs");
     const css = readFileSync(path.join(APP, "home.css"), "utf8");
-    expect(css).toMatch(/\.pin-home\[data-conferido="nao"\]\s*\{[^}]*outline/);
+    // `outline\s*:` e não só `outline`: com a palavra solta, o `outline-offset`
+    // que fica na regra bastava, e arrancar o contorno passava verde (M11,
+    // medido nesta tarefa). E `dashed`: é o tracejado que nenhum outro estado
+    // do pin usa — um contorno liso seria só mais um pin.
+    expect(css).toMatch(/\.pin-home\[data-conferido="nao"\]\s*\{[^}]*\boutline\s*:[^;}]*dashed/);
   });
 
   it("a ficha: a faixa abaixo do nome, e o nome de quem mandou NÃO aparece", async () => {
