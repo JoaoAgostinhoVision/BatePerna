@@ -14,6 +14,7 @@ import {
   lerRascunho,
   listarRascunhos,
   moverRascunho,
+  rascunhoDeQualquerUm,
   regravarRascunho,
   versaoAtual,
 } from "@/lib/db";
@@ -29,6 +30,7 @@ import {
   docNoEndereco,
   enderecoDeLugar,
   enderecoDeRascunho,
+  enderecoDeRascunhoDeQuemUsa,
   nomeComCidade,
   nomeDoRascunho,
   slugDoNome,
@@ -110,15 +112,18 @@ function recusar400(erro: unknown): Response {
 }
 
 /** QUEM OCUPA um endereço que `criarRascunho` recusou — a frase nomeia o lugar
- *  (ou o rascunho) que JÁ ESTÁ lá, com o nome e a cidade DELE, lidos do dado.
+ *  (ou o rascunho, do João ou de quem usa o app) que JÁ ESTÁ lá, com o nome e a cidade DELE, lidos do dado.
  *  `versaoAtual`, NUNCA a leitura pública (`versoesAtuais` sem
  *  `incluirOcultos`): com ela, um lugar escondido levaria a frase do rascunho. */
 async function quemOcupa(slug: string): Promise<string> {
   const lugar = await versaoAtual(getClient(), slug);
   if (lugar !== null) return enderecoDeLugar(nomeComCidade(nomeDoRascunho(lugar.doc, slug), cidadeDoDoc(lugar.doc)));
-  const r = await lerRascunho(getClient(), slug);
+  // `rascunhoDeQualquerUm`, NUNCA `lerRascunho` (só do João desde 07/10): o
+  // rascunho de quem usa ocupa o endereço do mesmo jeito, e a frase é outra.
+  const r = await rascunhoDeQualquerUm(getClient(), slug);
   const doc = r?.doc ?? "";
-  return enderecoDeRascunho(nomeComCidade(nomeDoRascunho(doc, slug), cidadeDoDoc(doc)));
+  const quem = nomeComCidade(nomeDoRascunho(doc, slug), cidadeDoDoc(doc));
+  return r !== null && r.contribuidor !== null ? enderecoDeRascunhoDeQuemUsa(quem) : enderecoDeRascunho(quem);
 }
 
 export async function POST(req: Request): Promise<Response> {

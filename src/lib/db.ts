@@ -1,4 +1,6 @@
 import { createClient, type Client } from "@libsql/client";
+import { REGRA_PADRAO_INICIAL, type RegraPadrao } from "@/lib/regra-padrao";
+import { SEVERIDADES, type Severidade } from "@/lib/severidade";
 
 export type TipoRelato = "seco" | "barro";
 
@@ -103,6 +105,39 @@ export async function ensureSchema(client: Client): Promise<void> {
   await client.execute(`CREATE TABLE IF NOT EXISTS enderecos_antigos (
     velho TEXT PRIMARY KEY, novo TEXT NOT NULL, em INTEGER NOT NULL)`);
   await migrarColunaEnderecoAnterior(client);
+  // 🔴 A ORIGEM DO LUGAR (spec de 07/10): quem mandou e se o João conferiu.
+  // Chave = a IDENTIDADE do lugar (menor `id` das versões, `identidadeSql`),
+  // que anda com ele na troca de endereço. SÓ lugar mandado por quem usa tem
+  // linha: ausente = lugar do João, conferido por definição. A única porta que
+  // faz nascer linha é `publicarRascunho` com contribuidor, no MESMO batch da
+  // versão 1. Sobrescreve (o "Conferi" é UPDATE): não afirma nada que já foi
+  // à tela — o que foi à tela está em `ficha_versoes`.
+  await client.execute(`CREATE TABLE IF NOT EXISTS origem_do_lugar (
+    lugar INTEGER PRIMARY KEY, contribuidor TEXT NOT NULL,
+    conferido INTEGER NOT NULL DEFAULT 0, conferido_em INTEGER)`);
+  // Quem contribui. Nome e e-mail SÓ pro painel dele — nunca pra tela pública.
+  await client.execute(`CREATE TABLE IF NOT EXISTS contribuidores (
+    id TEXT PRIMARY KEY, nome TEXT, email TEXT,
+    bloqueado INTEGER NOT NULL DEFAULT 0, criado_em INTEGER NOT NULL)`);
+  // Uma linha só (`CHECK (id = 1)`). `INSERT OR IGNORE`: a semente desta linha
+  // NUNCA desfaz o que o João mudou pelo painel — `ensureSchema` roda a cada
+  // `npm run semear`.
+  await client.execute(`CREATE TABLE IF NOT EXISTS regra_padrao (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    janela_previsao_horas REAL NOT NULL, janela_passado_horas REAL NOT NULL,
+    limiar_mm REAL NOT NULL, severidade TEXT NOT NULL, atualizado_em INTEGER NOT NULL)`);
+  await client.execute({
+    sql: `INSERT OR IGNORE INTO regra_padrao
+            (id, janela_previsao_horas, janela_passado_horas, limiar_mm, severidade, atualizado_em)
+          VALUES (1, ?, ?, ?, ?, 0)`,
+    args: [
+      REGRA_PADRAO_INICIAL.janela_previsao_horas,
+      REGRA_PADRAO_INICIAL.janela_passado_horas,
+      REGRA_PADRAO_INICIAL.limiar_mm,
+      REGRA_PADRAO_INICIAL.severidade,
+    ],
+  });
+  await migrarColunaContribuidorDoRascunho(client);
 }
 
 /** A coluna `endereco_anterior` de `ficha_versoes` (Tarefa 11e, I4 da
@@ -157,6 +192,16 @@ async function migrarColunaOculto(client: Client): Promise<void> {
   const colunas = await client.execute(`PRAGMA table_info(ficha_versoes)`);
   if (colunas.rows.some((c) => String(c.name) === "oculto")) return;
   await client.execute(`ALTER TABLE ficha_versoes ADD COLUMN oculto INTEGER NOT NULL DEFAULT 0`);
+}
+
+/** A coluna `contribuidor` de `ficha_rascunhos` (spec de 07/10): de quem é o
+ *  rascunho. NULL = do João — toda linha que já existe, e é a verdade. Mesmo
+ *  molde de `migrarColunaOculto`: a tabela já está em produção e `ADD COLUMN`
+ *  não tem `IF NOT EXISTS`. */
+async function migrarColunaContribuidorDoRascunho(client: Client): Promise<void> {
+  const colunas = await client.execute(`PRAGMA table_info(ficha_rascunhos)`);
+  if (colunas.rows.some((c) => String(c.name) === "contribuidor")) return;
+  await client.execute(`ALTER TABLE ficha_rascunhos ADD COLUMN contribuidor TEXT`);
 }
 
 export function inicioDoDiaRecife(agora: number): number {
@@ -391,7 +436,7 @@ export async function retirarAviso(client: Client, id: number): Promise<void> {
   await client.execute({ sql: `UPDATE avisos SET retirado = 1 WHERE id = ?`, args: [id] });
 }
 
-export type AutorVersao = "painel" | "semente";
+export type AutorVersao = "painel" | "semente" | "contribuidor";
 
 export type FichaVersao = {
   id: number;
@@ -685,10 +730,13 @@ function rascunhoDaLinha(r: Record<string, unknown>): Rascunho {
  *  ele é a IDENTIDADE do rascunho que a tela de publicar leu, e `agora` é em
  *  segundos. Com `= agora`, duas gravações no MESMO segundo deixavam a
  *  identidade igual com o documento diferente, e o publicar levaria ao ar o que
- *  a tela não mostrou. `MAX(agora, atual + 1)`: toda gravação muda a identidade. */
+ *  a tela não mostrou. `MAX(agora, atual + 1)`: toda gravação muda a identidade.
+ *
+ *  SÓ os do João (07/10): o rascunho de quem usa o app é dela até publicar, e
+ *  o painel não age sobre ele. */
 export async function regravarRascunho(client: Client, slug: string, doc: string, agora: number): Promise<boolean> {
   const r = await client.execute({
-    sql: `UPDATE ficha_rascunhos SET doc = ?, atualizado_em = MAX(?, atualizado_em + 1) WHERE slug = ?`,
+    sql: `UPDATE ficha_rascunhos SET doc = ?, atualizado_em = MAX(?, atualizado_em + 1) WHERE slug = ? AND contribuidor IS NULL`,
     args: [doc, agora, slug],
   });
   return r.rowsAffected === 1;
@@ -733,11 +781,15 @@ export async function criarRascunho(client: Client, slug: string, doc: string, a
  *  `para` diferente de `de` é de quem chama — com os dois iguais, o próprio
  *  rascunho ocuparia o destino e a resposta seria `false`.
  *
- *  O `atualizado_em` cresce ESTRITAMENTE, pela régua de `regravarRascunho`. */
+ *  O `atualizado_em` cresce ESTRITAMENTE, pela régua de `regravarRascunho`.
+ *
+ *  SÓ os do João (07/10): o rascunho de quem usa o app é dela até publicar, e
+ *  o painel não age sobre ele. Os dois `NOT EXISTS` do destino continuam sem filtro de dono: o
+ *  destino tem de estar livre de rascunho de QUALQUER um. */
 export async function moverRascunho(client: Client, de: string, para: string, doc: string, agora: number): Promise<boolean> {
   const r = await client.execute({
     sql: `UPDATE ficha_rascunhos SET slug = ?, doc = ?, atualizado_em = MAX(?, atualizado_em + 1)
-          WHERE slug = ?
+          WHERE slug = ? AND contribuidor IS NULL
             AND NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
             AND NOT EXISTS (SELECT 1 FROM ficha_rascunhos WHERE slug = ?)`,
     args: [para, doc, agora, de, para, para],
@@ -745,20 +797,27 @@ export async function moverRascunho(client: Client, de: string, para: string, do
   return r.rowsAffected === 1;
 }
 
-/** O rascunho de `slug`, ou `null` se não há. */
+/** O rascunho de `slug`, ou `null` se não há.
+ *
+ *  SÓ os do João (07/10): o rascunho de quem usa o app é dela até publicar, e
+ *  o painel não age sobre ele. */
 export async function lerRascunho(client: Client, slug: string): Promise<Rascunho | null> {
   const r = await client.execute({
-    sql: `SELECT slug, doc, atualizado_em FROM ficha_rascunhos WHERE slug = ?`,
+    sql: `SELECT slug, doc, atualizado_em FROM ficha_rascunhos WHERE slug = ? AND contribuidor IS NULL`,
     args: [slug],
   });
   return r.rows.length ? rascunhoDaLinha(r.rows[0] as unknown as Record<string, unknown>) : null;
 }
 
 /** Todos os rascunhos, o mexido por último primeiro — é a ordem da lista do
- *  painel, onde o dono volta pro que estava preenchendo. */
+ *  painel, onde o dono volta pro que estava preenchendo.
+ *
+ *  SÓ os do João (desde 07/10): o rascunho de quem usa o app é dela até
+ *  publicar, e não entra na lista do painel. */
 export async function listarRascunhos(client: Client): Promise<Rascunho[]> {
   const r = await client.execute(
-    `SELECT slug, doc, atualizado_em FROM ficha_rascunhos ORDER BY atualizado_em DESC, slug ASC`,
+    `SELECT slug, doc, atualizado_em FROM ficha_rascunhos WHERE contribuidor IS NULL
+     ORDER BY atualizado_em DESC, slug ASC`,
   );
   return r.rows.map((l) => rascunhoDaLinha(l as unknown as Record<string, unknown>));
 }
@@ -772,9 +831,12 @@ export async function listarRascunhos(client: Client): Promise<Rascunho[]> {
  *  rascunho naquele endereço — movido noutra aba, publicado, ou já apagado. É o
  *  `rowsAffected` de um DELETE simples, sem `RETURNING` (medido no libsql local:
  *  1 com a linha, 0 sem ela). A rota responde 404 nesse caso, pra a tela não
- *  dizer "desisti" de um rascunho que continua lá. */
+ *  dizer "desisti" de um rascunho que continua lá.
+ *
+ *  SÓ os do João (07/10): o rascunho de quem usa o app é dela até publicar, e
+ *  o painel não age sobre ele. */
 export async function apagarRascunho(client: Client, slug: string): Promise<boolean> {
-  const r = await client.execute({ sql: `DELETE FROM ficha_rascunhos WHERE slug = ?`, args: [slug] });
+  const r = await client.execute({ sql: `DELETE FROM ficha_rascunhos WHERE slug = ? AND contribuidor IS NULL`, args: [slug] });
   return r.rowsAffected === 1;
 }
 
@@ -915,8 +977,8 @@ export async function trocarEndereco(
  *  havia uma terceira, `slug` com UMA versão só, que nenhum caso decidia — se a
  *  versão do 1º passo existe, ela é a única, porque o 1º passo exigiu `slug`
  *  sem versão nenhuma — e ela saiu):
- *   - a versão que o 1º passo gravou (este `doc`, este `criado_em`, `painel`,
- *     no ar) está em `slug`. É ela que segura um publicar recusado pelo
+ *   - a versão que o 1º passo gravou (este `doc`, este `criado_em`, este
+ *     `autor` — `painel`, ou `contribuidor` desde 07/10 —, no ar) está em `slug`. É ela que segura um publicar recusado pelo
  *     ENDEREÇO: o rascunho continua lá com o mesmo `atualizado_em`, e só esta
  *     cláusula cai;
  *   - o rascunho ainda está lá com aquele `atualizado_em`. É ela que segura o
@@ -953,22 +1015,41 @@ export async function trocarEndereco(
  *   5. a linha `velho = slug` some — o endereço é RETOMADO pelo lugar novo, e o
  *      link antigo passa a levar a ele (decisão do João de 04/10, a mesma da
  *      retomada pela troca);
- *   6. o rascunho, por último (ver a porta). */
+ *   6. o rascunho, por último (ver a porta) — o 7º quando quem publica é
+ *      quem usa o app (ver abaixo).
+ *
+ *  🔴 E DESDE 07/10 ELA PUBLICA TAMBÉM O LUGAR DE QUEM USA (`contribuidor` não
+ *  nulo): a versão nasce com `autor = 'contribuidor'`, e um passo a mais — o
+ *  penúltimo, ANTES de o rascunho sair, porque a porta depende dele — faz
+ *  nascer a linha de `origem_do_lugar` com `conferido = 0`. Os dois na mesma
+ *  transação: lugar da pessoa no ar sem origem seria lido como do João, SEM
+ *  MARCA. O 1º passo confere também que o rascunho é de quem publica
+ *  (`contribuidor IS ?`: o painel não publica rascunho dela, ela não publica o
+ *  dele), que ela não está bloqueada (`id = NULL` nunca casa: o João passa) e
+ *  — ruling de produto da pré-auditoria de 07/10 — que o endereço NÃO é
+ *  endereço antigo de outro lugar quando quem publica é ela (`? IS NULL OR …`:
+ *  o João continua retomando, com a régua de hoje). O link velho do João
+ *  continua levando ao lugar dele. */
 export async function publicarRascunho(
   client: Client, slug: string, doc: string, agora: number, atualizadoEm: number,
+  contribuidor: string | null = null,
 ): Promise<boolean> {
+  const autor: AutorVersao = contribuidor === null ? "painel" : "contribuidor";
   const porta = `EXISTS (SELECT 1 FROM ficha_rascunhos WHERE slug = ? AND atualizado_em = ?)
               AND EXISTS (SELECT 1 FROM ficha_versoes
-                          WHERE ficha_slug = ? AND doc = ? AND criado_em = ? AND autor = 'painel' AND oculto = 0)`;
-  const p = [slug, atualizadoEm, slug, doc, agora];
+                          WHERE ficha_slug = ? AND doc = ? AND criado_em = ? AND autor = ? AND oculto = 0)`;
+  const p = [slug, atualizadoEm, slug, doc, agora, autor];
   const rs = await client.batch(
     [
       {
         sql: `INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em, oculto)
-              SELECT ?, ?, 'painel', ?, 0
+              SELECT ?, ?, ?, ?, 0
               WHERE NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
-                AND EXISTS (SELECT 1 FROM ficha_rascunhos WHERE slug = ? AND atualizado_em = ?)`,
-        args: [slug, doc, agora, slug, slug, atualizadoEm],
+                AND EXISTS (SELECT 1 FROM ficha_rascunhos
+                            WHERE slug = ? AND atualizado_em = ? AND contribuidor IS ?)
+                AND NOT EXISTS (SELECT 1 FROM contribuidores WHERE id = ? AND bloqueado = 1)
+                AND (? IS NULL OR NOT EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ?))`,
+        args: [slug, doc, autor, agora, slug, slug, atualizadoEm, contribuidor, contribuidor, contribuidor, slug],
       },
       {
         sql: `UPDATE avisos SET ficha_slug = (SELECT e.novo FROM enderecos_antigos e WHERE e.velho = ?)
@@ -982,6 +1063,17 @@ export async function publicarRascunho(
       },
       { sql: `DELETE FROM freshness WHERE ficha_slug = ? AND ${porta}`, args: [slug, ...p] },
       { sql: `DELETE FROM enderecos_antigos WHERE velho = ? AND ${porta}`, args: [slug, ...p] },
+      // 🔴 `ORDER BY id LIMIT 1`, NUNCA `SELECT MIN(id)`: com a porta fechada o
+      // agregado devolve UMA linha com NULL, e NULL numa `INTEGER PRIMARY KEY`
+      // vira rowid novo — uma origem órfã. Sem linha, sem INSERT.
+      ...(contribuidor === null
+        ? []
+        : [{
+            sql: `INSERT INTO origem_do_lugar (lugar, contribuidor, conferido)
+                  SELECT id, ?, 0 FROM ficha_versoes WHERE ficha_slug = ? AND ${porta}
+                  ORDER BY id LIMIT 1`,
+            args: [contribuidor, slug, ...p],
+          }]),
       {
         sql: `DELETE FROM ficha_rascunhos WHERE slug = ? AND atualizado_em = ? AND ${porta}`,
         args: [slug, atualizadoEm, ...p],
@@ -1023,4 +1115,146 @@ export async function enderecosVelhos(client: Client): Promise<Set<string>> {
 export async function enderecosComRascunho(client: Client): Promise<Set<string>> {
   const r = await client.execute(`SELECT slug FROM ficha_rascunhos`);
   return new Set(r.rows.map((l) => String(l.slug)));
+}
+
+/** De onde veio o lugar. `contribuidor: null` = do João, e aí `conferido` é
+ *  sempre `true`. */
+export type OrigemDoLugar = { contribuidor: string | null; conferido: boolean };
+
+/** 🔴 `Number(...) === 1` pela régua de `versaoDaLinha`, e o lado escolhido é
+ *  o que MOSTRA a marca: valor torto numa linha de origem sai NÃO conferido.
+ *  Sem linha (`o_contribuidor` nulo) é lugar do João. */
+function origemDaLinha(r: Record<string, unknown>): OrigemDoLugar {
+  if (r.o_contribuidor == null) return { contribuidor: null, conferido: true };
+  return { contribuidor: String(r.o_contribuidor), conferido: Number(r.o_conferido) === 1 };
+}
+
+const SQL_REGRA_PADRAO = `SELECT janela_previsao_horas, janela_passado_horas, limiar_mm, severidade
+                          FROM regra_padrao WHERE id = 1`;
+
+/** 🔴 Sem linha, ou com severidade fora de `SEVERIDADES`, ESTOURA — nunca cai
+ *  num padrão escrito aqui. Um carimbo com número que ninguém escolheu é a
+ *  linha vermelha do projeto; a página cai no `error.tsx`, como banco fora. */
+function regraDaLinha(r: Record<string, unknown> | undefined): RegraPadrao {
+  if (!r) throw new Error("A regra padrão da chuva não está no banco: rode o schema (npm run semear).");
+  const severidade = String(r.severidade);
+  if (!(SEVERIDADES as readonly string[]).includes(severidade)) {
+    throw new Error(`A regra padrão da chuva tem uma severidade que o app não conhece: "${severidade}".`);
+  }
+  return {
+    janela_previsao_horas: Number(r.janela_previsao_horas),
+    janela_passado_horas: Number(r.janela_passado_horas),
+    limiar_mm: Number(r.limiar_mm),
+    severidade: severidade as Severidade,
+  };
+}
+
+export async function lerRegraPadrao(client: Client): Promise<RegraPadrao> {
+  const r = await client.execute(SQL_REGRA_PADRAO);
+  return regraDaLinha(r.rows[0] as unknown as Record<string, unknown> | undefined);
+}
+
+/** Grava SEM conferir: quem confere os números é a rota, por `lerRegraDoCorpo`
+ *  — que a Task 7 deste plano escreve (`porta-da-regra-padrao.ts`, que ainda
+ *  NÃO existe em 07/10; até lá, nenhuma rota chama esta função). */
+export async function gravarRegraPadrao(client: Client, r: RegraPadrao, agora: number): Promise<void> {
+  await client.execute({
+    sql: `UPDATE regra_padrao SET janela_previsao_horas = ?, janela_passado_horas = ?,
+            limiar_mm = ?, severidade = ?, atualizado_em = ? WHERE id = 1`,
+    args: [r.janela_previsao_horas, r.janela_passado_horas, r.limiar_mm, r.severidade, agora],
+  });
+}
+
+export type LinhaDoAcervo = { doc: string; oculto: boolean } & OrigemDoLugar;
+export type AcervoComOrigem = { linhas: Map<string, LinhaDoAcervo>; padrao: RegraPadrao };
+
+/** O JOIN da origem: a linha de `origem_do_lugar` cuja chave é a identidade do
+ *  lugar onde a versão `v` mora — a mesma conta de `identidadeSql`. */
+const JOIN_ORIGEM = `LEFT JOIN origem_do_lugar o
+  ON o.lugar = (SELECT MIN(i.id) FROM ficha_versoes i WHERE i.ficha_slug = v.ficha_slug)`;
+
+/** A versão atual de TODO lugar (escondidos inclusive, marcados), a ORIGEM de
+ *  cada um e a regra padrão — numa transação de leitura só.
+ *
+ *  🔴 POR QUE NUM BATCH: em duas leituras, um lugar da pessoa publicado entre
+ *  a primeira e a segunda sairia com versão e SEM origem — lido como do João,
+ *  sem marca, na tela pública. O batch `read` é um retrato só do banco.
+ *  (`client.transaction()` continua proibido: ver `trocarEndereco`.)
+ *
+ *  Os escondidos vêm junto pela razão de `buscarFichas` ("banco sem semente"
+ *  se decide pelo acervo inteiro); quem filtra é quem devolve ao público. */
+export async function lerAcervoComOrigem(client: Client): Promise<AcervoComOrigem> {
+  const [acervo, regra] = await client.batch(
+    [
+      `SELECT v.ficha_slug, v.doc, v.oculto, o.contribuidor AS o_contribuidor, o.conferido AS o_conferido
+         FROM ficha_versoes v ${JOIN_ORIGEM}
+        WHERE v.id IN (SELECT MAX(id) FROM ficha_versoes GROUP BY ficha_slug)`,
+      SQL_REGRA_PADRAO,
+    ],
+    "read",
+  );
+  const linhas = new Map<string, LinhaDoAcervo>();
+  for (const l of acervo.rows) {
+    const r = l as unknown as Record<string, unknown>;
+    linhas.set(String(r.ficha_slug), { doc: String(r.doc), oculto: Number(r.oculto) === 1, ...origemDaLinha(r) });
+  }
+  return { linhas, padrao: regraDaLinha(regra.rows[0] as unknown as Record<string, unknown> | undefined) };
+}
+
+/** UM lugar, pro painel: a versão atual (escondida ou não), a origem e a regra
+ *  padrão — no mesmo retrato. `null` = ninguém mora em `slug`. */
+export async function lugarDoDono(
+  client: Client, slug: string,
+): Promise<{ versao: FichaVersao; origem: OrigemDoLugar; padrao: RegraPadrao } | null> {
+  const [atual, regra] = await client.batch(
+    [
+      {
+        sql: `SELECT v.*, o.contribuidor AS o_contribuidor, o.conferido AS o_conferido
+                FROM ficha_versoes v ${JOIN_ORIGEM}
+               WHERE v.ficha_slug = ? ORDER BY v.id DESC LIMIT 1`,
+        args: [slug],
+      },
+      SQL_REGRA_PADRAO,
+    ],
+    "read",
+  );
+  if (!atual.rows.length) return null;
+  const r = atual.rows[0] as unknown as Record<string, unknown>;
+  return {
+    versao: versaoDaLinha(r),
+    origem: origemDaLinha(r),
+    padrao: regraDaLinha(regra.rows[0] as unknown as Record<string, unknown> | undefined),
+  };
+}
+
+/** O rascunho e DE QUEM ele é (`contribuidor`: null = do João). */
+export type RascunhoComDono = Rascunho & { contribuidor: string | null };
+
+const comDono = (r: Record<string, unknown>): RascunhoComDono => ({
+  slug: String(r.slug),
+  doc: String(r.doc),
+  atualizado_em: Number(r.atualizado_em),
+  contribuidor: r.contribuidor == null ? null : String(r.contribuidor),
+});
+
+/** 🔴 TODO RASCUNHO, de quem for — e SÓ pra colisão (I4 da pré-auditoria de
+ *  07/10). A lista do painel (`listarRascunhos`) é só do João; a colisão por
+ *  par não pode ser: um rascunho do João e um de quem usa com o mesmo par,
+ *  publicados, seriam dois lugares no mesmo par. */
+export async function todosOsRascunhos(client: Client): Promise<RascunhoComDono[]> {
+  const r = await client.execute(
+    `SELECT slug, doc, atualizado_em, contribuidor FROM ficha_rascunhos ORDER BY atualizado_em DESC, slug ASC`,
+  );
+  return r.rows.map((l) => comDono(l as unknown as Record<string, unknown>));
+}
+
+/** O rascunho que mora em `slug`, de quem for — SÓ pra escolher a FRASE de uma
+ *  colisão de endereço (quem ocupa). Nunca pra editar: as portas que editam são
+ *  as do João (`lerRascunho` & cia.) e as dela (`*RascunhoDaPessoa`, Task 10). */
+export async function rascunhoDeQualquerUm(client: Client, slug: string): Promise<RascunhoComDono | null> {
+  const r = await client.execute({
+    sql: `SELECT slug, doc, atualizado_em, contribuidor FROM ficha_rascunhos WHERE slug = ?`,
+    args: [slug],
+  });
+  return r.rows.length ? comDono(r.rows[0] as unknown as Record<string, unknown>) : null;
 }

@@ -1,6 +1,8 @@
 import { createClient, type Client } from "@libsql/client";
-import { ensureSchema, getClient, gravarVersao } from "@/lib/db";
+import { ensureSchema, getClient, gravarVersao, publicarRascunho } from "@/lib/db";
 import { loadAll } from "@/lib/ficha";
+import { slugDoNome } from "@/lib/rascunho";
+import { REGRA_PADRAO_INICIAL } from "@/lib/regra-padrao";
 import { semear } from "@/lib/semente";
 import type { Ficha } from "@/types/ficha";
 
@@ -94,6 +96,18 @@ export async function semearAcervo(client: Client): Promise<Ficha[]> {
   await client.execute("DELETE FROM confirmacoes");
   await client.execute("DELETE FROM freshness");
   await client.execute("DELETE FROM ficha_rascunhos");
+  // E as três da rodada de 07/10: a origem, quem contribui, e a regra padrão
+  // de volta ao valor inicial — teste que mexeu na regra não atravessa.
+  await client.execute("DELETE FROM origem_do_lugar");
+  await client.execute("DELETE FROM contribuidores");
+  await client.execute({
+    sql: `UPDATE regra_padrao SET janela_previsao_horas = ?, janela_passado_horas = ?,
+            limiar_mm = ?, severidade = ?, atualizado_em = 0 WHERE id = 1`,
+    args: [
+      REGRA_PADRAO_INICIAL.janela_previsao_horas, REGRA_PADRAO_INICIAL.janela_passado_horas,
+      REGRA_PADRAO_INICIAL.limiar_mm, REGRA_PADRAO_INICIAL.severidade,
+    ],
+  });
   const fichas = loadAll();
   await semear(client, fichas, AGORA_SEMENTE);
   return fichas;
@@ -265,4 +279,40 @@ export function clienteQueIntercala(
     },
   });
   return { cliente, disparos: () => disparos };
+}
+
+/** O id do Clerk que os testes usam pra "quem usa o app". Não é de ninguém. */
+export const PESSOA_DE_TESTE = "user_pessoa_de_teste";
+
+/** Põe no ar um lugar MANDADO POR QUEM USA, pela porta de verdade
+ *  (`publicarRascunho` com contribuidor) — o lugar de usuário "semeado só em
+ *  teste" da spec. O documento tem SÓ o que a pessoa responde (as perguntas
+ *  obrigatórias dela), nada da voz do app: é o caso que a página tem de calar.
+ *  Estoura se não publicou — teste que não semeou mede o vazio. */
+export async function semearLugarDaPessoa(
+  client: Client,
+  o: { nome: string; cidade: string; contribuidor?: string; agora?: number },
+): Promise<string> {
+  const contribuidor = o.contribuidor ?? PESSOA_DE_TESTE;
+  const agora = o.agora ?? AGORA_SEMENTE + 30;
+  const slug = slugDoNome(`${o.nome} ${o.cidade}`);
+  const ponto = { lat: -8.31, lng: -35.97 };
+  const doc = JSON.stringify({
+    slug,
+    modos: [],
+    cidade: o.cidade,
+    promessa: `O que é ${o.nome}, na palavra de quem mandou.`,
+    trajeto: { waypoints: [{ nome: o.nome, ...ponto }] },
+    acesso: `Como se chega a ${o.nome}, na palavra de quem mandou.`,
+    condicao: { coords: ponto },
+    custo: { tag: "gratis" },
+  });
+  await client.execute({
+    sql: "INSERT INTO ficha_rascunhos (slug, doc, atualizado_em, contribuidor) VALUES (?, ?, ?, ?)",
+    args: [slug, doc, agora, contribuidor],
+  });
+  if (!(await publicarRascunho(client, slug, doc, agora, agora, contribuidor))) {
+    throw new Error(`semearLugarDaPessoa: "${slug}" não publicou — confira a porta de publicarRascunho.`);
+  }
+  return slug;
 }

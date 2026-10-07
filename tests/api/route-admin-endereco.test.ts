@@ -20,7 +20,7 @@ import {
   enderecoOcupadoPorRascunho,
 } from "@/lib/endereco";
 import { enderecoDeLugar } from "@/lib/rascunho";
-import { semearAcervo, base, comBaseAtual } from "../banco";
+import { PESSOA_DE_TESTE, semearAcervo, base, comBaseAtual } from "../banco";
 import { lugarMarcador } from "../lugar-marcador";
 
 // Molde: `tests/api/route-admin-visibilidade.test.ts` — `Request` à mão, sessão
@@ -37,7 +37,8 @@ let cookieBom: string;
 let POST: typeof import("@/app/api/admin/endereco/route").POST;
 
 // A CORRIDA de duas abas (M1 da revisão): o que roda logo depois da ÚLTIMA
-// leitura da rota (`lerRascunho`) e antes do batch dela.
+// leitura da rota (`rascunhoDeQualquerUm` desde 07/10 — era `lerRascunho`, que
+// passou a ver só os rascunhos do João) e antes do batch dela.
 const corrida = vi.hoisted(() => ({ antesDoBatch: null as null | (() => Promise<void>) }));
 
 vi.mock("@/lib/db", async (io) => {
@@ -45,8 +46,8 @@ vi.mock("@/lib/db", async (io) => {
   return {
     ...mod,
     getClient: () => c,
-    lerRascunho: async (cliente: Client, slug: string) => {
-      const lido = await mod.lerRascunho(cliente, slug);
+    rascunhoDeQualquerUm: async (cliente: Client, slug: string) => {
+      const lido = await mod.rascunhoDeQualquerUm(cliente, slug);
       const meio = corrida.antesDoBatch;
       corrida.antesDoBatch = null;
       if (meio !== null) await meio();
@@ -261,6 +262,21 @@ describe("POST /api/admin/endereco — recusas, e nada muda", () => {
 
   it("novo ocupado por um rascunho: 409 dizendo quem, e nada muda", async () => {
     await criarRascunho(c, B, JSON.stringify({ slug: B, cidade: "Outra Marcadora", trajeto: { waypoints: [{ nome: "Lugar Marcador" }] } }), AGORA - 5);
+    const antes = await retrato();
+    const res = await POST(pedido({ slug: A }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(enderecoOcupadoPorRascunho(B, "Lugar Marcador (Outra Marcadora)"));
+    expect(await retrato()).toEqual(antes);
+  });
+
+  // M11 da pré-auditoria: a `lerRascunho` do painel não vê rascunho de quem usa;
+  // a frase de quem ocupa lê `rascunhoDeQualquerUm`. Sem isso, a troca seria
+  // recusada pelo batch e a resposta seria "nada mudou", sem dizer por quê.
+  it("novo ocupado por um rascunho de QUEM USA: 409 dizendo quem, e nada muda", async () => {
+    await c.execute({
+      sql: "INSERT INTO ficha_rascunhos (slug, doc, atualizado_em, contribuidor) VALUES (?, ?, ?, ?)",
+      args: [B, JSON.stringify({ slug: B, cidade: "Outra Marcadora", trajeto: { waypoints: [{ nome: "Lugar Marcador" }] } }), AGORA - 5, PESSOA_DE_TESTE],
+    });
     const antes = await retrato();
     const res = await POST(pedido({ slug: A }));
     expect(res.status).toBe(409);

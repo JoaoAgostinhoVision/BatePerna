@@ -12,6 +12,7 @@ import {
   historico,
   lerRascunho,
   listarRascunhos,
+  rascunhoDeQualquerUm,
   versaoAtual,
   versoesAtuais,
 } from "@/lib/db";
@@ -23,13 +24,15 @@ import {
   SLUGS_RESERVADOS,
   enderecoDeLugar,
   enderecoDeRascunho,
+  enderecoDeRascunhoDeQuemUsa,
   gemeoSemCidade,
   parDeLugar,
   parDeRascunho,
+  parDeRascunhoDeQuemUsa,
   slugDoNome,
 } from "@/lib/rascunho";
 import type { Ficha } from "@/types/ficha";
-import { salvarRascunho, semearAcervo } from "../banco";
+import { PESSOA_DE_TESTE, salvarRascunho, semearAcervo } from "../banco";
 
 /** A PORTA DO RASCUNHO (Tarefa 11): `/api/admin/rascunho`.
  *
@@ -974,5 +977,39 @@ describe("GET e DELETE", () => {
     expect((await rota.GET(pedido("GET", undefined))).status).toBe(401);
     expect((await rota.DELETE(pedido("DELETE", { slug: S }))).status).toBe(401);
     expect(await lerRascunho(c, S)).not.toBeNull();
+  });
+});
+
+// 🔴 I4 DA PRÉ-AUDITORIA (07/10): o rascunho de quem usa o app não está na lista
+// do painel — então a frase "continue por ele, na lista do painel" seria
+// MENTIRA quando é ele que colide. E a colisão tem de VÊ-LO (`todosOsRascunhos`),
+// senão dois rascunhos de mesmo par virariam dois lugares no mesmo par.
+describe("o rascunho de quem usa o app, visto do painel", () => {
+  async function rascunhoDela(slug: string, nome: string, cidade: string): Promise<void> {
+    await c.execute({
+      sql: "INSERT INTO ficha_rascunhos (slug, doc, atualizado_em, contribuidor) VALUES (?, ?, ?, ?)",
+      args: [slug, JSON.stringify({ slug, modos: [], cidade, trajeto: { waypoints: [{ nome }] } }), AGORA - 5, PESSOA_DE_TESTE],
+    });
+  }
+
+  it("o PAR de um rascunho dela: 409 com a frase de quem usa — nunca 'na lista do painel' —, e nada nasce", async () => {
+    await rascunhoDela(S, NOME, CIDADE);
+    const res = await criar("lugar   marcador UM", " cidade marcador UM ");
+    expect(res.status).toBe(409);
+    const frase = await res.text();
+    expect(frase).toBe(parDeRascunhoDeQuemUsa(`${NOME} (${CIDADE})`));
+    expect(frase).not.toMatch(/lista do painel/);
+    expect(await listarRascunhos(c)).toEqual([]);
+    expect((await rascunhoDeQualquerUm(c, S))?.contribuidor).toBe(PESSOA_DE_TESTE);
+  });
+
+  // A fronteira entre o nome e a cidade que anda (o molde do caso "endereço
+  // ocupado por um RASCUNHO de nome diferente", lá em cima).
+  it("o ENDEREÇO de um rascunho dela, de nome diferente: 409 com a frase de quem usa, e ele não muda", async () => {
+    await rascunhoDela("lugar-marcador-cidade-marcador", "Lugar Marcador", "Cidade Marcador");
+    const res = await criar("Lugar Marcador Cidade", "Marcador");
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(enderecoDeRascunhoDeQuemUsa("Lugar Marcador (Cidade Marcador)"));
+    expect(await rascunhoDeQualquerUm(c, "lugar-marcador-cidade-marcador")).toMatchObject({ contribuidor: PESSOA_DE_TESTE });
   });
 });

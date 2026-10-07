@@ -1,14 +1,21 @@
 "use client";
 import { useContext, useState } from "react";
 import { VersaoDaTela, comBase } from "./campos/gravar";
-import type { FichaVersao } from "@/lib/db";
+import type { AutorVersao, FichaVersao } from "@/lib/db";
 import { DE_VOLTA_AO_AR, ESCONDIDO } from "./campos/palavras";
 import { enderecoTrocado } from "@/lib/endereco";
 
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 const TITULO = "Histórico da ficha";
-// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
-const AUTOR = { painel: "você, pelo painel", semente: "acervo original" } as const;
+// O `satisfies` é o guarda: autor novo sem rótulo não compila.
+const AUTOR = {
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
+  painel: "você, pelo painel",
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
+  semente: "acervo original",
+  // PENDENTE: redação minha, o João ainda não leu (as duas palavras vêm da spec de 07/10, Parte 3)
+  contribuidor: "quem mandou",
+} as const satisfies Record<AutorVersao, string>;
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 const VOLTAR = "voltar a esta";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.

@@ -1,5 +1,16 @@
-import { getClient, listarRascunhos, versoesAtuais } from "@/lib/db";
-import { cidadeDoDoc, gemeoSemCidade, nomeComCidade, nomeDoRascunho, parDeLugar, parDeRascunho, slugDoNome } from "@/lib/rascunho";
+import { getClient, todosOsRascunhos, versoesAtuais } from "@/lib/db";
+import {
+  cidadeDoDoc, gemeoSemCidade, nomeComCidade, nomeDoRascunho, parDeLugar, parDeRascunho, parDeRascunhoDeQuemUsa,
+  slugDoNome,
+} from "@/lib/rascunho";
+
+/** O QUE COLIDIU — sem frase. `quem` é o nome (e a cidade, se houver) de quem
+ *  JÁ EXISTE, lido do dado. */
+export type Colisao = {
+  de: "lugar" | "rascunho-do-joao" | "rascunho-de-quem-usa";
+  semCidade: boolean;
+  quem: string;
+};
 
 /** 🔴 A COLISÃO POR PAR (NOME, CIDADE) — Tarefa 11b, 2026-10-04, e UMA função só
  *  para as três portas que mudam o nome ou a cidade de um lugar: o POST do lugar
@@ -17,7 +28,7 @@ import { cidadeDoDoc, gemeoSemCidade, nomeComCidade, nomeDoRascunho, parDeLugar,
  *  Contra:
  *   - a versão ATUAL de todo lugar, SEM filtro de `oculto` — um lugar escondido
  *     é um lugar, e volta ao ar;
- *   - todo rascunho;
+ *   - todo rascunho, de QUALQUER dono — `todosOsRascunhos`, I4 de 07/10;
  *  menos `exceto` (o próprio lugar ou rascunho, quando ele muda nome ou cidade).
  *
  *  🔴 O GÊMEO DE UM LUGAR SEM CIDADE (X2 da onda de fix): o par só separa dois
@@ -42,19 +53,23 @@ import { cidadeDoDoc, gemeoSemCidade, nomeComCidade, nomeDoRascunho, parDeLugar,
  *  Reescrever o MESMO nome noutra grafia não é nome
  *  novo (`parDaTroca` compara pela normalização).
  *
- *  Devolve a frase da recusa — com o nome (e a cidade, se houver) de QUEM JÁ
+ *  Devolve o que colidiu — com o nome (e a cidade, se houver) de QUEM JÁ
  *  EXISTE —, ou `null` se está livre. Sem nome, nada a conferir. Sem CIDADE
  *  (só a ficha no ar chega assim: as 3 de antes da 11b), o par não é conferido —
  *  não há par a comparar —, e só a espera do gêmeo vale (quando o nome muda).
  *
  *  ⚠️ Esta conferência LÊ e depois a rota GRAVA — há janela entre as duas, ao
  *  contrário da porta do endereço (`criarRascunho`, uma consulta só). Aceita
- *  porque o painel tem um dono só; a normalização não cabe numa consulta SQL. */
-export async function parOcupado(
+ *  porque o painel tem um dono só; a normalização não cabe numa consulta SQL.
+ *
+ *  🔴 DESDE 07/10 DEVOLVE O QUE COLIDIU, NÃO A FRASE (I3 da pré-auditoria): o
+ *  painel fala por `fraseDoPainel`; a rota de quem usa responde uma frase só
+ *  dela, que não nomeia ninguém (`NOME_JA_EM_USO`, Task 10). */
+export async function colisaoDoPar(
   nome: string,
   cidade: string,
   { exceto, nomeNovo }: { exceto: string | null; nomeNovo: boolean },
-): Promise<string | null> {
+): Promise<Colisao | null> {
   const n = slugDoNome(nome);
   const c = slugDoNome(cidade);
   if (n === "") return null;
@@ -67,13 +82,38 @@ export async function parOcupado(
   };
   for (const v of (await versoesAtuais(getClient(), { incluirOcultos: true })).values()) {
     const achou = bate(v.doc, v.ficha_slug);
-    if (achou !== null) return achou.semCidade ? gemeoSemCidade(achou.quem) : parDeLugar(achou.quem);
+    if (achou !== null) return { de: "lugar", ...achou };
   }
-  for (const r of await listarRascunhos(getClient())) {
+  for (const r of await todosOsRascunhos(getClient())) {
     const achou = bate(r.doc, r.slug);
-    if (achou !== null) return achou.semCidade ? gemeoSemCidade(achou.quem) : parDeRascunho(achou.quem);
+    if (achou !== null) return { de: r.contribuidor === null ? "rascunho-do-joao" : "rascunho-de-quem-usa", ...achou };
   }
   return null;
+}
+
+/** A FRASE DO PAINEL pra uma colisão — as de hoje, e a de quem usa quando o
+ *  rascunho que colide é DELA (ele não está na lista do painel). */
+export function fraseDoPainel(c: Colisao): string {
+  if (c.de === "rascunho-de-quem-usa") return parDeRascunhoDeQuemUsa(c.quem);
+  if (c.semCidade) return gemeoSemCidade(c.quem);
+  return c.de === "lugar" ? parDeLugar(c.quem) : parDeRascunho(c.quem);
+}
+
+/** A porta do PAINEL: a colisão, na frase do painel. Mesma assinatura de hoje. */
+export async function parOcupado(
+  nome: string,
+  cidade: string,
+  o: { exceto: string | null; nomeNovo: boolean },
+): Promise<string | null> {
+  const c = await colisaoDoPar(nome, cidade, o);
+  return c === null ? null : fraseDoPainel(c);
+}
+
+/** O dado da colisão de uma troca; a frase é de quem responde (`parDaTroca`
+ *  é a porta do painel, logo abaixo). */
+export async function colisaoDaTroca(atual: string, slug: string, nome: string, cidade: string): Promise<Colisao | null> {
+  const nomeNovo = slugDoNome(nome) !== slugDoNome(nomeDoRascunho(atual, ""));
+  return colisaoDoPar(nome, cidade, { exceto: slug, nomeNovo });
 }
 
 /** O PAR DE UMA TROCA — o lugar `slug`, cujo documento é `atual`, passa a ter
@@ -83,14 +123,23 @@ export async function parOcupado(
  *  próprio `slug` fica de fora da comparação, e o nome só é NOVO quando muda
  *  pela normalização. */
 export async function parDaTroca(atual: string, slug: string, nome: string, cidade: string): Promise<string | null> {
-  const nomeNovo = slugDoNome(nome) !== slugDoNome(nomeDoRascunho(atual, ""));
-  return parOcupado(nome, cidade, { exceto: slug, nomeNovo });
+  const c = await colisaoDaTroca(atual, slug, nome, cidade);
+  return c === null ? null : fraseDoPainel(c);
 }
 
 /** O campo que é o NOME do lugar (o ponto `0`) e o da cidade: as duas metades
  *  do par. */
 export const CAMPO_DO_NOME = "trajeto.waypoints.0.nome";
 export const CAMPO_DA_CIDADE = "cidade";
+
+/** O dado da colisão de uma mudança; a frase é de quem responde
+ *  (`parDaMudanca` é a porta do painel, logo abaixo). */
+export async function colisaoDaMudanca(atual: string, slug: string, campo: unknown, valor: unknown): Promise<Colisao | null> {
+  if ((campo !== CAMPO_DO_NOME && campo !== CAMPO_DA_CIDADE) || typeof valor !== "string") return null;
+  const nome = campo === CAMPO_DO_NOME ? valor : nomeDoRascunho(atual, "");
+  const cidade = campo === CAMPO_DA_CIDADE ? valor : (cidadeDoDoc(atual) ?? "");
+  return colisaoDaTroca(atual, slug, nome, cidade);
+}
 
 /** O PAR DE UMA MUDANÇA — o que os dois PUTs (rascunho e ficha no ar) chamam
  *  antes de gravar. Renomear, ou mudar a cidade, é a segunda porta do mesmo
@@ -100,8 +149,6 @@ export const CAMPO_DA_CIDADE = "cidade";
  *  fora da comparação. Qualquer outro campo, ou valor que não é texto (a folha
  *  o recusa depois): `null`. */
 export async function parDaMudanca(atual: string, slug: string, campo: unknown, valor: unknown): Promise<string | null> {
-  if ((campo !== CAMPO_DO_NOME && campo !== CAMPO_DA_CIDADE) || typeof valor !== "string") return null;
-  const nome = campo === CAMPO_DO_NOME ? valor : nomeDoRascunho(atual, "");
-  const cidade = campo === CAMPO_DA_CIDADE ? valor : (cidadeDoDoc(atual) ?? "");
-  return parDaTroca(atual, slug, nome, cidade);
+  const c = await colisaoDaMudanca(atual, slug, campo, valor);
+  return c === null ? null : fraseDoPainel(c);
 }

@@ -213,4 +213,16 @@ describe("HistoricoDaFicha", () => {
     render(<HistoricoDaFicha versoes={[vSemente]} />);
     expect(screen.getByRole("heading", { name: /histórico da ficha/i })).toBeTruthy();
   });
+
+  it("a versão gravada por quem usa o app diz 'quem mandou', e nenhuma outra diz", () => {
+    const { container } = render(
+      <HistoricoDaFicha versoes={[{ id: 9, ficha_slug: "x", doc: "{}", autor: "contribuidor", criado_em: 1_758_000_000, oculto: false, mudou: [], ato: null }]} />,
+    );
+    expect(container.textContent).toContain("quem mandou");
+    cleanup();
+    // A metade "nenhuma outra diz": as versões do painel e da semente não
+    // ganham o rótulo de quem usa.
+    const outras = render(<HistoricoDaFicha versoes={VERSOES} />);
+    expect(outras.container.textContent).not.toContain("quem mandou");
+  });
 });

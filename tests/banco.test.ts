@@ -3,8 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { createClient } from "@libsql/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { contarHoje, criarRascunho, gravarVersao, insertConfirmacao, inserirAviso, listarRascunhos, trocarEndereco, upsertFreshness, versoesAtuais, avisoVigente } from "@/lib/db";
-import { bancoVazio, semearAcervo, base } from "./banco";
+import { contarHoje, criarRascunho, gravarRegraPadrao, gravarVersao, insertConfirmacao, inserirAviso, listarRascunhos, trocarEndereco, upsertFreshness, versoesAtuais, avisoVigente } from "@/lib/db";
+import { PESSOA_DE_TESTE, bancoVazio, semearAcervo, semearLugarDaPessoa, base } from "./banco";
 import { lugarMarcador } from "./lugar-marcador";
 
 /** 🔴 O TESTE DO HELPER DESTRUTIVO.
@@ -149,6 +149,14 @@ describe("semearAcervo deixa TODA tabela como a de um banco recém-semeado", () 
     await upsertFreshness(c, { slug: X, estado: "fresco", calculadoEm: AGORA, fonte: "marcador", previsaoBruta: "{}" });
     await criarRascunho(c, "lugar-marcador-sujo-rascunho", "{}", AGORA);
     await c.execute({ sql: `INSERT INTO enderecos_antigos (velho, novo, em) VALUES (?, ?, ?)`, args: ["lugar-marcador-velho-sujo", X, AGORA] });
+    // As três da rodada de 07/10: a origem (pela porta de verdade), quem
+    // contribui, e a regra padrão fora do valor inicial.
+    await semearLugarDaPessoa(c, { nome: "Lugar Marcador Da Pessoa", cidade: "Cidade Marcador Suja" });
+    await c.execute({
+      sql: `INSERT INTO contribuidores (id, nome, email, bloqueado, criado_em) VALUES (?, NULL, NULL, 0, ?)`,
+      args: [PESSOA_DE_TESTE, AGORA],
+    });
+    await gravarRegraPadrao(c, { janela_previsao_horas: 5, janela_passado_horas: 9, limiar_mm: 1, severidade: "espera" }, AGORA);
     const sujo = await retrato(c);
     expect(Object.keys(sujo)).toEqual(Object.keys(esperado));
     for (const t of Object.keys(esperado)) {
