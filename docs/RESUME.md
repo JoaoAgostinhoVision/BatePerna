@@ -54,12 +54,18 @@ M1 ("sem `semear` cai o público inteiro") foi trocada pelo implementador por "c
 **NÃO medido**; a ordem do deploy não muda: `semear` ANTES de `vercel --prod`. ⚠️ Home com tudo escondido diz
 "Nenhuma trilha com esses filtros · limpar filtros" sem filtro — frase pro pacote de copy.
 
-→ 🔴 **EM VOO, CINCO AGENTES** (todos sem suíte inteira): re-revisão curta (`final-rereview.md`, SEM mutação — o
-`prova-que-trava` sabota a mesma árvore), `contracao-honesta` (`agente-contracao.md`), `prova-que-trava`
-(`agente-prova.md`), `voz-do-lugar` (`agente-voz.md`), `procedencia` (`agente-procedencia.md`). Se algum arquivo
-faltar, redespachar só aquele. ANTES de qualquer coisa: `git status --short` limpo (sabotagem viva = restaurar).
-Depois: onda de fix se houver → pacote de copy pro João → `npm run semear` → UM `vercel --prod --yes` →
-`conferir-no-ar` → olhos dele.
+✅ **Os cinco voltaram** (arquivos `final-rereview.md`, `agente-contracao.md`, `agente-prova.md`, `agente-voz.md`,
+`agente-procedencia.md`; os quatro últimos gravados POR MIM — os agentes do projeto não têm escrita). Re-revisão do C1:
+0 C · 0 I · 3 M (C1 fechado). Contração: nada bloqueia, 7 frases falsas. Prova: 14 provas faltando (19 mutantes
+sobreviveram; código certo em todos). Voz e procedência: só COPY (vai pro pacote). ⚠️ O `voz-do-lugar` consultou
+PRODUÇÃO só leitura sem ter sido proibido — despachos passam a dizer "nada de produção".
+
+→ 🔴 **A ÚLTIMA ONDA ESTÁ DESPACHADA** (`agentes-fix-brief.md`: as 14 provas + frases falsas de comentário; NENHUM
+texto visível). Se não houver commit de código depois de `c9c6bcb`, redespachar com o mesmo brief. Em paralelo: o
+**pacote de copy pro João** (todas as `PENDENTE` + as perguntas de `agente-voz.md`/`agente-procedencia.md`), num
+Artifact pro celular. Depois: ele lê → onda de copy → `npm run semear` → UM `vercel --prod --yes` → `conferir-no-ar`
+→ olhos dele no celular.
+(O comando `RELATO_LEGADO`/PENDENTE-JOÃO citado no histórico abaixo JÁ foi feito em `e1c63be`; a constante não existe mais.)
 ❓ **Pergunta ao João (M4 da revisão final):** com o banco FORA DO AR, uma instância que ainda lembra de um lugar que
 ele acabou de esconder continua mostrando esse lugar até o banco voltar. Aceitar (é a família "conteúdo velho na
 queda" que ele aceitou em 24/09) ou não (a memória passa a não servir nada que possa estar escondido — custo: queda
