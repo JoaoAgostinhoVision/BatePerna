@@ -2,6 +2,21 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 06/10 (vence TUDO abaixo)
+
+**Branch `painel-completo`, NADA NO AR.** Último código: **`a7f0eaf`** (onda 4 da 11e, SÓ TESTE). Medido por mim:
+**2198/2198 em 108**, `tsc` 0, build 0, `mutar.mjs` 42/0. As 4 mutações da onda (`GE-OCULTO-SEM-SLUG`,
+`VS-DOC-SEM-SLUG` nas duas formas, `ESTADO-SEM-SLUG`) MORRERAM, cada uma pelo seu teste, uma por vez com `sha1sum -c`.
+✅ **11e FECHADA.**
+
+→ 🔴 **PRÓXIMO PASSO:** a **auditoria do brief da Tarefa 12** foi despachada (`task-12-auditoria.md`). Se o arquivo
+não existir, redespachar (auditor fresco, opus: referências podres, contradições entre as 5 camadas de emenda, a
+TABELA DE MUTAÇÃO, recorte do 12-N6, copy, fechamento). Depois: colar as correções aceitas no fim do brief →
+despachar a 12 → a ordem de sempre (revisão final COM build → agentes → copy → `semear` → UM `vercel --prod` →
+`conferir-no-ar` → olhos dele).
+
+(histórico abaixo)
+
 ## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — PARADA DE 05/10 (vence TUDO abaixo)
 
 **Branch `painel-completo`, NADA NO AR.** Último código **`88cab2e`** (onda 3 da 11e), medido por mim: **2195/2195
