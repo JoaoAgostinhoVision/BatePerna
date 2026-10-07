@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { diaRecife, guardar, pendentes, remover, type Relato } from "@/lib/fila-relato";
+import { diaRecife, guardar, pendentes, relatosDaPagina, remover, type Relato } from "@/lib/fila-relato";
 
 /** O "✓ Fui": ele volta do passeio e conta como estava. É a alça de confiança do
  *  app — o único dado que não vem de satélite.
@@ -31,17 +31,64 @@ import { diaRecife, guardar, pendentes, remover, type Relato } from "@/lib/fila-
 type Placar = { foram: number; barro: number };
 type Fase = "idle" | "perguntando" | "enviando" | "contado" | "erro";
 
-/** `antigos`: os endereços de ANTES deste lugar (Tarefa 11e, I1 da auditoria).
- *  O dono pode trocar o endereço; quem contou "✓ Fui" sem sinal no endereço
- *  velho tem o relato guardado com o slug de lá, e quem abre o velho online é
- *  levado pro novo — onde esta tela monta com o slug NOVO. Sem a lista, aquele
- *  relato nunca subiria. E o "já contei hoje" de lá vale aqui: a mesma ida não
- *  conta duas vezes no mesmo dia. O relato sobe com o slug com que foi contado;
- *  o servidor resolve o endereço velho e grava no novo. */
-export default function ConfirmarFui({ slug, antigos = [] }: { slug: string; antigos?: readonly string[] }) {
+/** Só um placar de verdade vira placar (I1 da auditoria da 12b): o GET de um
+ *  lugar que não está no ar devolve `null`, e qualquer corpo que não tenha os
+ *  dois números pintaria "Hoje: undefined foram". */
+function ehPlacar(x: unknown): x is Placar {
+  if (typeof x !== "object" || x === null) return false;
+  const { foram, barro } = x as Record<string, unknown>;
+  return typeof foram === "number" && Number.isFinite(foram) && typeof barro === "number" && Number.isFinite(barro);
+}
+
+/** O corpo do POST: a identidade vai quando há; sem ela é o relato LEGADO. */
+function corpo(slug: string, tipo: Relato["tipo"], lugar: number | undefined): string {
+  return JSON.stringify(lugar === undefined ? { slug, tipo } : { slug, tipo, lugar });
+}
+
+/** `lugar`: a IDENTIDADE do lugar que esta página mostra (Tarefa 12b, 12-N6) —
+ *  o menor `id` das versões dele, lido pela página (`identidadeDoEndereco`).
+ *  O endereço NÃO é identidade: P sai de `A`, Q passa a morar em `A`, e um
+ *  relato que só dissesse `A` contaria pra Q o que quem foi a P viu. Com a
+ *  identidade:
+ *   - o relato guardado leva `lugar`, e só a página DESTE lugar o sobe — em
+ *     qualquer endereço; o servidor grava onde o lugar mora na hora;
+ *   - o "já contei hoje" é por lugar (`bp:contou:L<lugar>:<dia>`): a página de
+ *     Q não acende por um relato de P. A leitura das chaves velhas, por
+ *     endereço, SAIU — era exatamente a porta que mostrava Q como contado. O
+ *     custo: quem contou hoje antes do deploy pode contar de novo no dia dele;
+ *   - o placar é pedido por lugar.
+ *
+ *  `lugar` nulo (a leitura falhou, ou um teste que não o passa) é o ramo
+ *  LEGADO: tudo como antes desta tarefa, pelo endereço — e só sobe se o
+ *  PENDENTE-JOÃO (`RELATO_LEGADO` em `fila-relato.ts`) aceitar o legado.
+ *
+ *  `antigos`: os endereços de ANTES deste lugar (Tarefa 11e, I1 da auditoria).
+ *  Desde a 12b servem SÓ o relato LEGADO, sem identidade, guardado num
+ *  endereço velho: ele sobe com o endereço com que foi contado, e o servidor o
+ *  resolve. Com "descartar", a lista sai inteira.
+ *
+ *  🔴 A RESPOSTA QUE TIRA DA FILA É O 400, e só ele (I6 da auditoria da 12b):
+ *  é a recusa definitiva da própria rota (lugar que não está mais no ar, corpo
+ *  torto). 408, 429, 401/403 de proteção, 404 de um deploy no meio, 5xx e
+ *  falha de rede FICAM — são de passagem, e perder o relato por eles é o
+ *  defeito que a fila existe pra impedir. Recusado, o relato sai e a fila
+ *  SEGUE pro próximo. Custo aceito (M4): um lugar escondido e mostrado de novo
+ *  no mesmo dia perde o relato recusado enquanto estava escondido. E dois
+ *  gatilhos de `escoar` ao mesmo tempo (montagem, `pageshow`) podem mandar o
+ *  mesmo relato duas vezes (M3, de antes desta tarefa). */
+export default function ConfirmarFui({
+  slug,
+  lugar = null,
+  antigos = [],
+}: {
+  slug: string;
+  lugar?: number | null;
+  antigos?: readonly string[];
+}) {
   const [placar, setPlacar] = useState<Placar | null>(null);
   const [fase, setFase] = useState<Fase>("idle");
-  const jaContouKey = `bp:contou:${slug}:${diaRecife(Date.now())}`;
+  const jaContouKey =
+    lugar === null ? `bp:contou:${slug}:${diaRecife(Date.now())}` : `bp:contou:L${lugar}:${diaRecife(Date.now())}`;
   // Texto, e não a lista: a dependência dos efeitos abaixo tem de ser estável
   // (e `|` nunca aparece num endereço, que é só letra, número e hífen)
   // entre renders, e uma lista nova a cada render os re-dispararia.
@@ -50,47 +97,63 @@ export default function ConfirmarFui({ slug, antigos = [] }: { slug: string; ant
   // um valor congelado. Mesmo motivo do `vivo` no `Carimbo.tsx`.
   const vivo = useRef(true);
 
-  /** Sobe o que estiver guardado desta trilha. Falhou, fica na fila — a próxima
-   *  volta tenta de novo. */
+  /** Sobe o que estiver guardado DESTE lugar. Falha de passagem: fica na fila,
+   *  e a próxima volta tenta de novo. Recusa (400): sai, e a fila segue. */
   const escoar = useCallback(async () => {
-    const deste = meusSlugs.split("|");
-    const meus = pendentes(Date.now()).filter((r) => deste.includes(r.slug));
+    const [eu, ...velhos] = meusSlugs.split("|");
+    const meus = relatosDaPagina(pendentes(Date.now()), { slug: eu, antigos: velhos, lugar });
     for (const r of meus) {
+      let res: Response;
       try {
-        const res = await fetch("/api/confirmar", {
+        res = await fetch("/api/confirmar", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: r.slug, tipo: r.tipo }),
+          body: corpo(r.slug, r.tipo, r.lugar),
         });
-        if (!res.ok) throw new Error();
-        const novo: Placar = await res.json();
-        // Só sai da fila depois que o servidor aceitou. Remover antes seria
-        // perder o relato num 500 — o defeito que esta fila existe pra impedir,
-        // de volta com outra roupa.
-        remover(r);
-        if (!vivo.current) return;
-        setPlacar(novo);
-        localStorage.setItem(jaContouKey, "1");
-        setFase("contado");
       } catch {
         return; // sem sinal ainda: o resto da fila espera junto
       }
+      if (res.status === 400) {
+        // A rota recusou DE VEZ: mandar de novo daria o mesmo 400, e ele
+        // seguraria a fila inteira até a virada do dia.
+        remover(r);
+        continue;
+      }
+      if (!res.ok) return; // de passagem: fica, e o resto espera junto
+      let novo: unknown = null;
+      try {
+        novo = await res.json();
+      } catch {
+        novo = null;
+      }
+      // Só sai da fila depois que o servidor aceitou. Remover antes seria
+      // perder o relato num 500 — o defeito que esta fila existe pra impedir,
+      // de volta com outra roupa.
+      remover(r);
+      if (!vivo.current) return;
+      if (ehPlacar(novo)) setPlacar(novo);
+      localStorage.setItem(jaContouKey, "1");
+      setFase("contado");
     }
-  }, [meusSlugs, jaContouKey]);
+  }, [meusSlugs, jaContouKey, lugar]);
 
   useEffect(() => {
     vivo.current = true;
     const dia = diaRecife(Date.now());
-    if (typeof window !== "undefined" && meusSlugs.split("|").some((s) => localStorage.getItem(`bp:contou:${s}:${dia}`))) {
-      setFase("contado");
-    }
-    fetch(`/api/confirmar?slug=${encodeURIComponent(slug)}`)
+    const contou =
+      typeof window !== "undefined" &&
+      (lugar === null
+        ? meusSlugs.split("|").some((s) => localStorage.getItem(`bp:contou:${s}:${dia}`))
+        : localStorage.getItem(`bp:contou:L${lugar}:${dia}`) !== null);
+    if (contou) setFase("contado");
+    const busca = lugar === null ? `slug=${encodeURIComponent(slug)}` : `slug=${encodeURIComponent(slug)}&lugar=${lugar}`;
+    fetch(`/api/confirmar?${busca}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((p) => p && vivo.current && setPlacar(p))
+      .then((p: unknown) => { if (ehPlacar(p) && vivo.current) setPlacar(p); })
       .catch(() => {});
     void escoar();
     return () => { vivo.current = false; };
-  }, [slug, meusSlugs, escoar]);
+  }, [slug, lugar, meusSlugs, escoar]);
 
   // A volta do bolso e a volta do cache do navegador — os dois mesmos gatilhos
   // que o carimbo usa pra reler a chuva. É quando o sinal costuma ter voltado.
@@ -107,24 +170,42 @@ export default function ConfirmarFui({ slug, antigos = [] }: { slug: string; ant
 
   async function enviar(tipo: "seco" | "barro") {
     setFase("enviando");
-    const relato: Relato = { slug, tipo, dia: diaRecife(Date.now()) };
+    const dia = diaRecife(Date.now());
+    const relato: Relato = lugar === null ? { slug, tipo, dia } : { slug, tipo, dia, lugar };
+    let r: Response | null;
     try {
-      const r = await fetch("/api/confirmar", {
+      r = await fetch("/api/confirmar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, tipo }),
+        body: corpo(slug, tipo, relato.lugar),
       });
-      if (!r.ok) throw new Error();
-      setPlacar(await r.json());
-      localStorage.setItem(jaContouKey, "1");
-      setFase("contado");
     } catch {
+      r = null; // sem sinal
+    }
+    if (r !== null && r.status === 400) {
+      // Recusa definitiva: guardar seria mandar de novo o que nunca passa. A
+      // tela de erro que já existe continua verdadeira ("não deu pra
+      // registrar") — nenhuma frase nova.
+      setFase("erro");
+      return;
+    }
+    if (r === null || !r.ok) {
       // 🔴 GUARDA ANTES DE MOSTRAR O ERRO. A ordem importa: se a tela de erro
       // fosse pintada primeiro e a gravação falhasse, a pessoa veria "tenta de
       // novo" com o relato perdido de verdade.
       guardar(relato);
       setFase("erro");
+      return;
     }
+    let novo: unknown = null;
+    try {
+      novo = await r.json();
+    } catch {
+      novo = null;
+    }
+    if (ehPlacar(novo)) setPlacar(novo);
+    localStorage.setItem(jaContouKey, "1");
+    setFase("contado");
   }
 
   return (

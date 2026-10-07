@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "../ficha.css";
-import { antigosDoEndereco, fichaDoEnderecoAntigo, getFicha } from "@/lib/ficha";
+import { antigosDoEndereco, fichaDoEnderecoAntigo, getFicha, identidadeDoEndereco } from "@/lib/ficha";
 import { resolverEstado } from "@/lib/carimbo-estado";
 import { PRECO } from "@/lib/coerencia";
 import { rotuloPiso } from "@/lib/piso";
@@ -96,8 +96,10 @@ export default async function Ficha({
     if (destino) redirect(`/${destino.slug}`);
     notFound();
   }
-  // Os endereços de antes deste lugar, pro ✓ Fui (I1 da auditoria da 11e).
-  const antigos = await antigosDoEndereco(slug);
+  // A IDENTIDADE do lugar, pro ✓ Fui contar pro LUGAR e não pro endereço
+  // (Tarefa 12b); e os endereços de antes, só pro relato LEGADO, sem ela
+  // (I1 da auditoria da 11e; ver `RELATO_LEGADO` em `fila-relato.ts`).
+  const [lugar, antigos] = await Promise.all([identidadeDoEndereco(slug), antigosDoEndereco(slug)]);
 
   const { debug } = await searchParams;
   const { estado, erro, calculadoEm, aviso } = await resolverEstado(ficha, debug);
@@ -432,7 +434,7 @@ export default async function Ficha({
           </div>
         )}
 
-        <ConfirmarFui slug={slug} antigos={antigos} />
+        <ConfirmarFui slug={slug} lugar={lugar} antigos={antigos} />
 
         {/* 🔴 "Agreste" SAIU em 2026-09-09. As duas primeiras fichas são do
             Agreste; Bonito é BREJO — palavra dele: "bonito é brejo", e o

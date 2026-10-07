@@ -2,8 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   CHAVE_FILA,
   diaRecife,
+  RELATO_LEGADO,
   guardar,
+  lugarDoCorpo,
   pendentes,
+  relatosDaPagina,
   remover,
   type Relato,
 } from "@/lib/fila-relato";
@@ -150,5 +153,152 @@ describe("a chave não fica pra trás", () => {
     expect(localStorage.getItem(CHAVE_FILA)).not.toBeNull(); // controle
     remover(r);
     expect(localStorage.getItem(CHAVE_FILA)).toBeNull();
+  });
+});
+
+// 🔴 A IDENTIDADE DO LUGAR NA FILA (Tarefa 12b, 12-N6). O endereço não é
+// identidade: P sai de `A`, Q passa a morar em `A` no mesmo dia. O relato
+// carrega o `lugar` (o menor `id` das versões de P), e é por ele que a fila
+// deduplica, remove e escolhe o que cada página sobe.
+describe("o relato carrega o lugar", () => {
+  const A = "lugar-marcador-a";
+  const B = "lugar-marcador-b";
+  const P = 17;
+  const Q = 23;
+  const comLugar = (slug: string, lugar: number, tipo: "seco" | "barro" = "seco"): Relato => ({
+    ...relato(slug, tipo),
+    lugar,
+  });
+
+  it("o lugar volta inteiro em pendentes", () => {
+    guardar(comLugar(A, P, "barro"));
+    expect(pendentes(AGORA)).toEqual([{ slug: A, tipo: "barro", dia: diaRecife(AGORA), lugar: P }]);
+  });
+
+  // B8 — uma classe por caso (48ª espécie: regra que confere várias coisas,
+  // provada por uma só). Todos com o dia de HOJE, senão quem recusa é o
+  // descarte por dia (a lição do M30, acima).
+  const HOJE = diaRecife(AGORA);
+  it.each([
+    ["texto", '"17"'],
+    ["fração", "1.5"],
+    ["zero", "0"],
+    ["negativo", "-1"],
+    ["nulo", "null"],
+    ["infinito (1e999 vira Infinity no JSON.parse)", "1e999"],
+    ["lista", "[17]"],
+  ])("lugar %s não vira relato", (_nome, lugar) => {
+    localStorage.setItem(CHAVE_FILA, `[{"slug":"${A}","tipo":"seco","dia":${HOJE},"lugar":${lugar}}]`);
+    expect(pendentes(AGORA)).toEqual([]);
+  });
+
+  // O CONTROLE das classes acima: o inteiro positivo passa, e o relato sem
+  // lugar (o legado) também — senão as recusas de cima seriam vácuas.
+  it("lugar inteiro positivo passa, e o relato sem lugar (legado) também", () => {
+    localStorage.setItem(
+      CHAVE_FILA,
+      `[{"slug":"${A}","tipo":"seco","dia":${HOJE},"lugar":17},{"slug":"${B}","tipo":"seco","dia":${HOJE}}]`,
+    );
+    expect(pendentes(AGORA)).toEqual([
+      { slug: A, tipo: "seco", dia: HOJE, lugar: 17 },
+      { slug: B, tipo: "seco", dia: HOJE },
+    ]);
+  });
+
+  // I3 — a dedup era por (slug, dia): o relato de Q em A sobrescrevia o de P
+  // em A, e remover um apagava o outro.
+  it("dois lugares contados no MESMO endereço no mesmo dia convivem", () => {
+    guardar(comLugar(A, P, "seco"));
+    guardar(comLugar(A, Q, "barro"));
+    expect(pendentes(AGORA)).toHaveLength(2);
+  });
+
+  it("e remover o de Q não leva o de P junto", () => {
+    guardar(comLugar(A, P));
+    guardar(comLugar(A, Q));
+    remover(comLugar(A, Q));
+    expect(pendentes(AGORA)).toEqual([comLugar(A, P)]);
+  });
+
+  it("o MESMO lugar contado em dois endereços no mesmo dia é um relato só — o último", () => {
+    guardar(comLugar(A, P, "seco"));
+    guardar(comLugar(B, P, "barro"));
+    expect(pendentes(AGORA)).toEqual([comLugar(B, P, "barro")]);
+  });
+
+  it("o relato legado e o com lugar no mesmo endereço não se confundem", () => {
+    guardar(relato(A));
+    guardar(comLugar(A, P));
+    expect(pendentes(AGORA)).toHaveLength(2);
+  });
+});
+
+describe("relatosDaPagina: o que cada página sobe", () => {
+  const A = "lugar-marcador-a";
+  const B = "lugar-marcador-b";
+  const P = 17;
+  const Q = 23;
+  const dia = diaRecife(AGORA);
+
+  // 🔴 C2 da auditoria da 12b: a página de Q, que mora hoje no endereço onde P
+  // foi contado, NÃO sobe o relato de P — ele fica esperando a página de P.
+  it("a página de Q em A não sobe o relato de P contado em A", () => {
+    const fila: Relato[] = [{ slug: A, tipo: "seco", dia, lugar: P }];
+    expect(relatosDaPagina(fila, { slug: A, antigos: [], lugar: Q })).toEqual([]);
+  });
+
+  it("a página de P sobe o relato de P em QUALQUER endereço", () => {
+    const fila: Relato[] = [{ slug: A, tipo: "seco", dia, lugar: P }];
+    expect(relatosDaPagina(fila, { slug: B, antigos: [], lugar: P })).toEqual(fila);
+  });
+
+  it("página sem identidade (a leitura falhou) não sobe relato COM lugar", () => {
+    const fila: Relato[] = [{ slug: A, tipo: "seco", dia, lugar: P }];
+    expect(relatosDaPagina(fila, { slug: A, antigos: [], lugar: null })).toEqual([]);
+  });
+
+  // PENDENTE-JOÃO: um teste por lado, com o destino por PARÂMETRO.
+  const legado: Relato = { slug: A, tipo: "seco", dia };
+  it("PENDENTE-JOÃO, aceitar: o legado sobe pela página do endereço dele (ou de um antigo)", () => {
+    expect(relatosDaPagina([legado], { slug: A, antigos: [], lugar: P }, "aceitar")).toEqual([legado]);
+    expect(relatosDaPagina([legado], { slug: B, antigos: [A], lugar: P }, "aceitar")).toEqual([legado]);
+    expect(relatosDaPagina([legado], { slug: B, antigos: [], lugar: P }, "aceitar")).toEqual([]);
+  });
+
+  it("PENDENTE-JOÃO, descartar: o legado não sobe por página nenhuma", () => {
+    expect(relatosDaPagina([legado], { slug: A, antigos: [], lugar: P }, "descartar")).toEqual([]);
+    expect(relatosDaPagina([legado], { slug: A, antigos: [], lugar: null }, "descartar")).toEqual([]);
+  });
+
+  // O padrão vem da constante — e a constante é "aceitar" até o João decidir.
+  it("sem o parâmetro, vale RELATO_LEGADO — que hoje é 'aceitar'", () => {
+    expect(RELATO_LEGADO).toBe("aceitar");
+    expect(relatosDaPagina([legado], { slug: A, antigos: [], lugar: P })).toEqual([legado]);
+  });
+});
+
+describe("lugarDoCorpo: o que o servidor faz com a identidade do POST", () => {
+  it("lugar inteiro positivo: grava por ele", () => {
+    expect(lugarDoCorpo({ lugar: 17 }, "aceitar")).toEqual({ lugar: 17 });
+    expect(lugarDoCorpo({ lugar: 17 }, "descartar")).toEqual({ lugar: 17 });
+  });
+
+  it.each([["texto", "17"], ["fração", 1.5], ["zero", 0], ["negativo", -1], ["nulo", null], ["NaN", Number.NaN]])(
+    "lugar %s: recusa",
+    (_nome, lugar) => {
+      expect(lugarDoCorpo({ lugar }, "aceitar")).toBe("recusa");
+    },
+  );
+
+  it("PENDENTE-JOÃO, aceitar: sem lugar é o legado", () => {
+    expect(lugarDoCorpo({}, "aceitar")).toBe("legado");
+  });
+
+  it("PENDENTE-JOÃO, descartar: sem lugar é recusa (400, nunca 2xx)", () => {
+    expect(lugarDoCorpo({}, "descartar")).toBe("recusa");
+  });
+
+  it("sem o parâmetro, vale RELATO_LEGADO", () => {
+    expect(lugarDoCorpo({})).toBe("legado");
   });
 });

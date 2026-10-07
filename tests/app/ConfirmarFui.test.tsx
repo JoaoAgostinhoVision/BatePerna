@@ -236,7 +236,11 @@ describe("o relato não se perde sem sinal", () => {
 });
 
 // 🔴 O ENDEREÇO TROCOU, E A FILA OFFLINE GUARDA O DE ANTES (Tarefa 11e, I1 da
-// auditoria). Quem contou "✓ Fui" sem sinal em /A tem `{slug: A}` na fila; se o
+// auditoria). ⚠️ DESDE A TAREFA 12b, ESTE BLOCO É O RAMO LEGADO: a tela monta
+// SEM `lugar` (a página que não leu a identidade) e o relato não tem `lugar`
+// (o guardado antes do deploy) — o PENDENTE-JOÃO "aceitar". Com identidade, o
+// relato sobe pela página do LUGAR, em qualquer endereço, e os `antigos` não
+// entram (ver "o relato carrega a identidade do lugar", abaixo). Quem contou "✓ Fui" sem sinal em /A tem `{slug: A}` na fila; se o
 // dono trocar o endereço pra /B, a pessoa abre /A online, é levada pra /B, e o
 // ✓ Fui monta com `slug = B`. Sem os ANTIGOS, o relato de A nunca subiria — e
 // morreria na meia-noite. E o "já contei hoje" de A vale em B: sem isso a mesma
@@ -318,5 +322,227 @@ describe("sem placar, o app CALA", () => {
     mockFetch([{ foram: 0, barro: 0 }]);
     render(<ConfirmarFui slug="rampa-do-pepe" />);
     await screen.findByText(/Ninguém contou/);
+  });
+});
+
+// 🔴 O ✓ FUI CONTA PRO LUGAR QUE A PESSOA VIU (Tarefa 12b, 12-N6). P morava em
+// A; quem foi a P contou sem sinal e o relato ficou na fila com a identidade de
+// P. P foi pra B e Q passou a morar em A. A página de Q, em /A, NÃO sobe o
+// relato de P — ele espera a página de P. Fetch dublado com STATUS explícito:
+// sem ele, `{ ok: false }` não diz se é recusa (400) ou passagem (503).
+describe("o relato carrega a identidade do lugar", () => {
+  const A = "lugar-marcador-pe-marcador";
+  const B = "lugar-marcador-pe-novo-marcador";
+  const P = 17;
+  const Q = 23;
+  const hoje = () => diaRecife(Date.now());
+  const naFila = () => JSON.parse(localStorage.getItem(CHAVE_FILA) ?? "[]");
+  const PLACAR = { foram: 1, barro: 0 };
+
+  type Resposta = { status: number; corpo?: unknown } | "sem-rede";
+  /** Rede dublada: `post(corpo)` decide a resposta de cada POST; o GET devolve
+   *  `get`. Guarda os POSTs e as URLs dos GETs. */
+  function rede(post: (corpo: Record<string, unknown>) => Resposta, get: unknown = PLACAR) {
+    const posts: Array<Record<string, unknown>> = [];
+    const gets: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          const corpo = JSON.parse(String(init.body)) as Record<string, unknown>;
+          posts.push(corpo);
+          const r = post(corpo);
+          if (r === "sem-rede") return Promise.reject(new TypeError("Failed to fetch"));
+          return Promise.resolve({ ok: r.status >= 200 && r.status < 300, status: r.status, json: () => Promise.resolve(r.corpo ?? null) });
+        }
+        gets.push(url);
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(get) });
+      }),
+    );
+    return { posts, gets };
+  }
+  const sempre = (r: Resposta) => () => r;
+  const assentar = () => new Promise((r) => setTimeout(r, 0));
+
+  // N6-cliente (C2): a porta do cliente sozinha. Mata o filtro por endereço.
+  it("N6-cliente: na página de Q em /A, o relato de P contado em A NÃO sobe — e continua na fila", async () => {
+    localStorage.setItem(CHAVE_FILA, JSON.stringify([{ slug: A, tipo: "barro", dia: hoje(), lugar: P }]));
+    const { posts } = rede(sempre({ status: 200, corpo: PLACAR }));
+    render(<ConfirmarFui slug={A} lugar={Q} />);
+    await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
+    await assentar();
+    expect(posts.filter((c) => c.lugar === P), "o relato de P subiu pela página de Q").toEqual([]);
+    expect(posts).toEqual([]);
+    expect(naFila()).toEqual([{ slug: A, tipo: "barro", dia: hoje(), lugar: P }]);
+    expect(localStorage.getItem(`bp:contou:L${Q}:${hoje()}`)).toBeNull();
+  });
+
+  // E depois, a página de P em /B o sobe — com a identidade de P.
+  it("N6, continuação: a página de P em /B sobe o relato de P (com o lugar), e a fila esvazia", async () => {
+    localStorage.setItem(CHAVE_FILA, JSON.stringify([{ slug: A, tipo: "barro", dia: hoje(), lugar: P }]));
+    const { posts } = rede(sempre({ status: 200, corpo: { foram: 1, barro: 1 } }));
+    render(<ConfirmarFui slug={B} lugar={P} />);
+    await screen.findByText(/anotado/i);
+    expect(posts).toEqual([{ slug: A, tipo: "barro", lugar: P }]);
+    expect(naFila()).toEqual([]);
+  });
+
+  // B11: o envio online leva a identidade.
+  it("o envio online manda a identidade do lugar", async () => {
+    const { posts } = rede(sempre({ status: 200, corpo: { foram: 1, barro: 1 } }));
+    render(<ConfirmarFui slug={A} lugar={P} />);
+    await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Fui/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Tava ruim/ }));
+    await screen.findByText(/anotado/i);
+    expect(posts).toEqual([{ slug: A, tipo: "barro", lugar: P }]);
+  });
+
+  // B12: o relato guardado leva a identidade — sem ela cairia no ramo legado.
+  it("sem sinal, o relato guardado leva a identidade do lugar", async () => {
+    rede(sempre({ status: 503 }));
+    render(<ConfirmarFui slug={A} lugar={P} />);
+    await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Fui/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Deu pra ir/ }));
+    await screen.findByText(/tenta de novo/i);
+    expect(naFila()).toEqual([{ slug: A, tipo: "seco", dia: hoje(), lugar: P }]);
+  });
+
+  // B10 (lado do cliente): o placar é pedido por lugar.
+  it("o GET do placar leva a identidade do lugar", async () => {
+    const { gets } = rede(sempre({ status: 200, corpo: PLACAR }));
+    render(<ConfirmarFui slug={A} lugar={P} />);
+    await screen.findByText(/1 foi/);
+    expect(gets).toHaveLength(1);
+    expect(new URL(gets[0], "http://x").searchParams.get("lugar")).toBe(String(P));
+  });
+
+  // B7: a chave "já contei" é por LUGAR — produzida PELO componente, não
+  // escrita à mão (uma chave escrita à mão nem seria lida pelo mutante).
+  it("'já contei' por lugar: contar P em /A não acende Q em /A — e P reaberto em /B acende", async () => {
+    rede(sempre({ status: 200, corpo: { foram: 1, barro: 0 } }));
+    render(<ConfirmarFui slug={A} lugar={P} />);
+    await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Fui/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Deu pra ir/ }));
+    await screen.findByText(/anotado/i);
+    cleanup();
+
+    render(<ConfirmarFui slug={A} lugar={Q} />);
+    await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
+    await assentar();
+    expect(screen.queryByText(/anotado/i), "Q acendeu 'contado' por um relato de P").toBeNull();
+    cleanup();
+
+    // O controle: a página de P, noutro endereço, acende.
+    render(<ConfirmarFui slug={B} lugar={P} />);
+    await screen.findByText(/anotado/i);
+    expect(screen.queryByRole("button", { name: /Fui/ })).toBeNull();
+  });
+
+  // B5 + B6: a fila não trava num relato recusado. São DOIS relatos da mesma
+  // página: com a dedup por lugar, o único jeito de a página de P ter dois é um
+  // LEGADO (sem lugar, mesmo endereço) e um com lugar — montados à mão no
+  // `localStorage`, que é onde o legado mora no dia do deploy.
+  it("fila não trava: o relato recusado (400) sai, e o próximo sobe", async () => {
+    localStorage.setItem(
+      CHAVE_FILA,
+      JSON.stringify([
+        { slug: A, tipo: "barro", dia: hoje(), lugar: P },
+        { slug: A, tipo: "seco", dia: hoje() },
+      ]),
+    );
+    const { posts } = rede((c) => (c.lugar === P ? { status: 400 } : { status: 200, corpo: { foram: 1, barro: 0 } }));
+    render(<ConfirmarFui slug={A} lugar={P} />);
+    await screen.findByText(/anotado/i);
+    expect(posts).toEqual([
+      { slug: A, tipo: "barro", lugar: P },
+      { slug: A, tipo: "seco" },
+    ]);
+    expect(naFila(), "o recusado ficou na fila — e seguraria tudo até a virada do dia").toEqual([]);
+  });
+
+  // B13: a recusa não pinta placar nem acende "contado".
+  it("o 400 no escoar não pinta placar nem acende 'contado'", async () => {
+    localStorage.setItem(CHAVE_FILA, JSON.stringify([{ slug: A, tipo: "barro", dia: hoje(), lugar: P }]));
+    rede(sempre({ status: 400, corpo: { foram: 9, barro: 9 } }), null);
+    render(<ConfirmarFui slug={A} lugar={P} />);
+    await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
+    await waitFor(() => expect(naFila()).toEqual([]));
+    expect(screen.queryByText(/9 foram/)).toBeNull();
+    expect(screen.queryByText(/anotado/i)).toBeNull();
+    expect(localStorage.getItem(`bp:contou:L${P}:${hoje()}`)).toBeNull();
+  });
+
+  // I6: o envio online recusado (400) NÃO guarda — guardar seria mandar de
+  // novo o que nunca passa. E também não pinta placar nem acende.
+  it("o envio online com 400: tela de erro, nada guardado, nada aceso", async () => {
+    rede(sempre({ status: 400, corpo: { foram: 9, barro: 9 } }), null);
+    render(<ConfirmarFui slug={A} lugar={P} />);
+    await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Fui/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Deu pra ir/ }));
+    await screen.findByText(/tenta de novo/i);
+    expect(naFila()).toEqual([]);
+    expect(screen.queryByText(/9 foram/)).toBeNull();
+    expect(localStorage.getItem(`bp:contou:L${P}:${hoje()}`)).toBeNull();
+  });
+
+  // B17: o lado oposto do B5 — o que é de PASSAGEM fica. Uma classe por caso.
+  it.each([
+    ["503", { status: 503 }],
+    ["429 (firewall)", { status: 429 }],
+    ["404 (deploy no meio)", { status: 404 }],
+    ["403 (proteção de deploy)", { status: 403 }],
+    ["sem rede", "sem-rede"],
+  ] as Array<[string, Resposta]>)("%s no escoar: o relato FICA na fila", async (_nome, resposta) => {
+    localStorage.setItem(CHAVE_FILA, JSON.stringify([{ slug: A, tipo: "barro", dia: hoje(), lugar: P }]));
+    const { posts } = rede(sempre(resposta));
+    render(<ConfirmarFui slug={A} lugar={P} />);
+    await waitFor(() => expect(posts).toHaveLength(1));
+    await assentar();
+    expect(naFila()).toEqual([{ slug: A, tipo: "barro", dia: hoje(), lugar: P }]);
+  });
+
+  it.each([
+    ["503", { status: 503 }],
+    ["429 (firewall)", { status: 429 }],
+    ["sem rede", "sem-rede"],
+  ] as Array<[string, Resposta]>)("%s no envio online: o relato é GUARDADO", async (_nome, resposta) => {
+    rede(sempre(resposta));
+    render(<ConfirmarFui slug={A} lugar={P} />);
+    await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Fui/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Deu pra ir/ }));
+    await screen.findByText(/tenta de novo/i);
+    expect(naFila()).toEqual([{ slug: A, tipo: "seco", dia: hoje(), lugar: P }]);
+  });
+
+  // I1: só placar de verdade vira placar. O GET de lugar fora do ar é `null`, e
+  // um corpo sem os dois números pintaria "Hoje: undefined foram".
+  it.each([
+    ["null", null],
+    ["{ignorado: true}", { ignorado: true }],
+    ["números em texto", { foram: "3", barro: "1" }],
+  ])("GET que devolve %s: nenhuma linha de placar", async (_nome, corpo) => {
+    rede(sempre({ status: 200, corpo: PLACAR }), corpo);
+    render(<ConfirmarFui slug={A} lugar={P} />);
+    await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
+    await assentar();
+    expect(document.querySelector(".placar")).toBeNull();
+  });
+
+  // PENDENTE-JOÃO, o lado do cliente que a tela exerce (o padrão, "aceitar"):
+  // o relato LEGADO (sem lugar) do endereço desta página sobe — sem lugar,
+  // pro servidor resolver o endereço. O lado "descartar" é provado em
+  // `relatosDaPagina` (`tests/lib/fila-relato.test.ts`).
+  it("PENDENTE-JOÃO (aceitar): o relato legado do endereço sobe pela página com identidade", async () => {
+    localStorage.setItem(CHAVE_FILA, JSON.stringify([{ slug: A, tipo: "seco", dia: hoje() }]));
+    const { posts } = rede(sempre({ status: 200, corpo: PLACAR }));
+    render(<ConfirmarFui slug={A} lugar={P} />);
+    await screen.findByText(/anotado/i);
+    expect(posts).toEqual([{ slug: A, tipo: "seco" }]);
+    expect(naFila()).toEqual([]);
   });
 });

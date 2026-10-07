@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { cache } from "react";
-import { enderecoNovoDe, enderecosAntigosDe, getClient, versaoAtual, versoesAtuais } from "@/lib/db";
+import { enderecoNovoDe, enderecosAntigosDe, getClient, identidadeDoLugar, versaoAtual, versoesAtuais } from "@/lib/db";
 import { comPrazo } from "@/lib/cache-rotas";
 import { PRAZO_FICHA_MS, buscarFichas, fichaDaVersao } from "@/lib/ficha-fonte";
 import { fichaSchema, type Ficha } from "@/types/ficha";
@@ -171,5 +171,21 @@ export async function antigosDoEndereco(slug: string): Promise<string[]> {
     return await lerNoPrazo(enderecosAntigosDe(getClient(), slug));
   } catch {
     return [];
+  }
+}
+
+/** A IDENTIDADE do lugar que mora em `slug` (o menor `id` das versões dele) —
+ *  o que a página passa ao "✓ Fui" pra o relato contar pro LUGAR que a pessoa
+ *  viu, e não pro endereço (Tarefa 12b).
+ *
+ *  ⚠️ FALHA VIRA `null`, no molde de `antigosDoEndereco` (I2 da auditoria da
+ *  12b): a página sobrevive com o banco fora (serve `ultimaBoa`), e uma leitura
+ *  acessória crua a derrubaria. Com `null`, o "✓ Fui" cai no ramo LEGADO (ver
+ *  `RELATO_LEGADO` em `fila-relato.ts`): conta pelo endereço, como antes. */
+export async function identidadeDoEndereco(slug: string): Promise<number | null> {
+  try {
+    return await lerNoPrazo(identidadeDoLugar(getClient(), slug));
+  } catch {
+    return null;
   }
 }

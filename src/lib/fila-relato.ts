@@ -36,8 +36,92 @@ export function diaRecife(agoraMs: number): number {
 }
 
 /** Um relato esperando para subir. O `dia` é o de ORIGEM — o dia em que a
- *  pessoa esteve lá —, e é ele que o descarte compara. */
-export type Relato = { slug: string; tipo: "seco" | "barro"; dia: number };
+ *  pessoa esteve lá —, e é ele que o descarte compara.
+ *
+ *  🔴 `lugar` É A IDENTIDADE DO LUGAR QUE A PESSOA VIU (Tarefa 12b, 12-N6): o
+ *  menor `id` de `ficha_versoes` do lugar (`identidadeDoLugar` em `db.ts`). O
+ *  `slug` é só o ENDEREÇO em que ela contou, e endereço não é identidade: o
+ *  lugar P sai de `A` e o lugar Q passa a morar em `A` no mesmo dia, e um
+ *  relato que só diz `A` contaria pra Q o que quem foi a P viu. O servidor
+ *  grava PELA IDENTIDADE, onde o lugar mora na hora de gravar.
+ *
+ *  Opcional SÓ pra ler o que já estava guardado antes desta tarefa (o relato
+ *  LEGADO, sem identidade) — ver `RELATO_LEGADO`. */
+export type Relato = { slug: string; tipo: "seco" | "barro"; dia: number; lugar?: number };
+
+/** 🔴 PENDENTE-JOÃO: relato legado sem lugar — aceitar × descartar.
+ *
+ *  O relato SEM `lugar` vem de três lugares: a fila de quem guardou antes do
+ *  deploy (só o dia do deploy: a fila descarta todo dia que passou), as ABAS
+ *  abertas antes do deploy e as páginas e chunks que o service worker guardou
+ *  (`bp-paginas` e `bp-ultima-ficha` por até 30 dias), que seguem rodando o
+ *  código velho e mandando POST sem `lugar` até recarregar. E a página cuja
+ *  identidade não pôde ser lida (banco fora no instante da leitura).
+ *
+ *  - `"aceitar"`: conta pro lugar que mora no ENDEREÇO na hora — o comportamento
+ *    de antes desta tarefa, com o risco de antes (se outro lugar retomou o
+ *    endereço, o relato conta pra ele). A lista `antigos` da página existe SÓ
+ *    por este ramo.
+ *  - `"descartar"`: o cliente não sobe relato legado (ele vence na virada do
+ *    dia) e o servidor responde 400 ao POST sem `lugar` — NUNCA 2xx: o código
+ *    velho faz `setPlacar` de qualquer 2xx. O código velho guarda e mostra
+ *    "tenta de novo"; o novo tira da fila.
+ *
+ *  Implementado "aceitar" porque é o de hoje e não muda nada pra ninguém. É UMA
+ *  constante, lida pelo cliente (`relatosDaPagina`) e pelo servidor
+ *  (`lugarDoCorpo`), as duas com o comportamento como PARÂMETRO e o padrão
+ *  vindo daqui: trocar é mudar esta linha. */
+export type DestinoDoLegado = "aceitar" | "descartar";
+// PENDENTE-JOÃO: relato legado sem lugar — aceitar × descartar
+export const RELATO_LEGADO: DestinoDoLegado = "aceitar";
+
+/** A identidade de um lugar na forma: inteiro positivo, e NADA mais.
+ *
+ *  🔴 `"17"` NÃO É `17` (M1 da auditoria da 12b, medido no SQLite): o `MIN(id)`
+ *  de um agregado não tem afinidade, e `(SELECT MIN(id) …) = '17'` dá falso em
+ *  silêncio. Quem lê a identidade de fora (localStorage, corpo do POST, `?lugar=`
+ *  do GET) passa por aqui antes de qualquer conta. */
+export function ehLugar(x: unknown): x is number {
+  return typeof x === "number" && Number.isSafeInteger(x) && x > 0;
+}
+
+/** O que o servidor faz com o corpo de um POST, quanto à identidade:
+ *  - `{ lugar }`: grava pela identidade;
+ *  - `"legado"`: sem `lugar` E `legado === "aceitar"` — resolve pelo endereço;
+ *  - `"recusa"`: `lugar` presente e fora da forma, ou ausente com
+ *    `legado === "descartar"` (400).
+ *  Puro, e com o destino do legado por parâmetro, pra os dois lados do
+ *  PENDENTE-JOÃO serem provados sem `vi.mock`. */
+export function lugarDoCorpo(
+  corpo: { lugar?: unknown },
+  legado: DestinoDoLegado = RELATO_LEGADO,
+): { lugar: number } | "legado" | "recusa" {
+  if (corpo.lugar === undefined) return legado === "aceitar" ? "legado" : "recusa";
+  return ehLugar(corpo.lugar) ? { lugar: corpo.lugar } : "recusa";
+}
+
+/** Os relatos da fila que ESTA página sobe.
+ *
+ *  🔴 COM IDENTIDADE (`pagina.lugar` não nulo): só os relatos daquele lugar,
+ *  qualquer que seja o endereço em que foram contados. O relato de P NUNCA sobe
+ *  pela página de Q, mesmo que Q more hoje no endereço onde P foi contado — ele
+ *  FICA na fila, esperando a página de P (C2 da auditoria da 12b).
+ *
+ *  O relato LEGADO (sem `lugar`) sobe pela página cujo endereço, ou um dos
+ *  antigos, é o dele — só com `legado === "aceitar"`. Uma página SEM identidade
+ *  (a leitura falhou) é toda ela o ramo legado: só sobe relato legado. */
+export function relatosDaPagina(
+  fila: readonly Relato[],
+  pagina: { slug: string; antigos: readonly string[]; lugar: number | null },
+  legado: DestinoDoLegado = RELATO_LEGADO,
+): Relato[] {
+  const enderecos = [pagina.slug, ...pagina.antigos];
+  return fila.filter((r) =>
+    r.lugar === undefined
+      ? legado === "aceitar" && enderecos.includes(r.slug)
+      : pagina.lugar !== null && r.lugar === pagina.lugar,
+  );
+}
 
 export const CHAVE_FILA = "bp:fila-relato";
 
@@ -60,14 +144,27 @@ function ler(): Relato[] {
 
 function ehRelato(x: unknown): x is Relato {
   if (typeof x !== "object" || x === null) return false;
-  const { slug, tipo, dia } = x as Record<string, unknown>;
+  const { slug, tipo, dia, lugar } = x as Record<string, unknown>;
   return (
     typeof slug === "string" &&
     slug.length > 0 &&
     (tipo === "seco" || tipo === "barro") &&
     typeof dia === "number" &&
-    Number.isFinite(dia)
+    Number.isFinite(dia) &&
+    // Ausente (o relato legado) ou a identidade na forma. `null`, texto,
+    // fração, zero e negativo não são lugar — e um relato com `lugar` torto
+    // não pode virar legado e subir pelo endereço.
+    (lugar === undefined || ehLugar(lugar))
   );
+}
+
+/** A chave de "o mesmo relato" (I3 da auditoria da 12b): o LUGAR e o dia; o
+ *  endereço só pro relato legado, que não tem lugar. Dois lugares que contaram
+ *  no mesmo endereço no mesmo dia são dois relatos; o mesmo lugar contado em
+ *  dois endereços no mesmo dia é um. */
+function mesmo(a: Relato, b: Relato): boolean {
+  const chave = (r: Relato) => (r.lugar !== undefined ? `L${r.lugar}` : `s:${r.slug}`);
+  return chave(a) === chave(b) && a.dia === b.dia;
 }
 
 function escrever(fila: Relato[]): void {
@@ -80,11 +177,11 @@ function escrever(fila: Relato[]): void {
 
 /** Guarda um relato para subir depois.
  *
- *  **Um relato por trilha por dia, e o último ganha.** A pessoa que erra o botão
+ *  **Um relato por lugar por dia, e o último ganha.** A pessoa que erra o botão
  *  e responde de novo não vira dois relatos — e nenhum contador de `foram` do
  *  app aguenta contar a mesma ida duas vezes sem mentir. */
 export function guardar(relato: Relato): void {
-  const resto = ler().filter((r) => !(r.slug === relato.slug && r.dia === relato.dia));
+  const resto = ler().filter((r) => !mesmo(r, relato));
   escrever([...resto, relato]);
 }
 
@@ -101,5 +198,5 @@ export function pendentes(agoraMs: number): Relato[] {
 
 /** Tira um relato da fila — chamado quando ele subiu de verdade, nunca antes. */
 export function remover(relato: Relato): void {
-  escrever(ler().filter((r) => !(r.slug === relato.slug && r.dia === relato.dia)));
+  escrever(ler().filter((r) => !mesmo(r, relato)));
 }

@@ -429,10 +429,12 @@ describe("o endereço velho é RETOMÁVEL (E5)", () => {
   });
 
   it("trocar PARA o endereço velho de outro lugar o retoma: a linha some, e o órfão de lá não vem junto", async () => {
-    // A foi pra B. Depois, um aviso e um relato ÓRFÃOS ficaram em A. O relato
-    // ainda chega assim (o "✓ Fui" público resolve o endereço e grava depois);
-    // o aviso, desde a onda de fix (I1), `inserirAviso` recusa — então ele entra
-    // pela tabela, como dado de antes do conserto.
+    // A foi pra B. Depois, um aviso e um relato ÓRFÃOS ficaram em A. Nenhum
+    // dos dois chega mais assim: o relato, desde a Tarefa 12b, grava pela
+    // identidade do lugar onde ele mora no instante do INSERT
+    // (`gravarRelatoDoLugar`); o aviso, desde a onda de fix (I1), `inserirAviso`
+    // recusa. Os dois entram pela tabela (`insertConfirmacao` é helper de
+    // fixture), como dado de antes dos consertos.
     await trocarEndereco(c, A, B, AGORA, await base(c, A));
     await c.execute({
       sql: `INSERT INTO avisos (ficha_slug, texto, efeito, criado_em, vence_em) VALUES (?, ?, 'fechado', ?, ?)`,

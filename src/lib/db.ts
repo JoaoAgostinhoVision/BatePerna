@@ -186,6 +186,14 @@ export async function getFreshness(client: Client, slug: string): Promise<Freshn
   };
 }
 
+/** Grava um relato em `slug`, SEM CONDIÇÃO NENHUMA — HELPER DE FIXTURE.
+ *
+ *  🔴 NENHUMA ROTA A CHAMA desde a Tarefa 12b (I4 da auditoria): a porta do
+ *  "✓ Fui" é `gravarRelatoDoLugar`, que grava pela IDENTIDADE do lugar. Esta
+ *  fica, incondicional, porque os testes de troca e de publicar precisam montar
+ *  relatos ÓRFÃOS (num endereço sem lugar), que nenhuma porta de hoje produz.
+ *  Um guarda por nome (`tests/api/route-confirmar.test.ts`) trava a volta dela
+ *  pra rota. */
 export async function insertConfirmacao(
   client: Client,
   slug: string,
@@ -196,6 +204,80 @@ export async function insertConfirmacao(
     sql: `INSERT INTO confirmacoes (ficha_slug, criado_em, tipo) VALUES (?, ?, ?)`,
     args: [slug, criadoEm, tipo],
   });
+}
+
+/** A IDENTIDADE DE UM ENDEREÇO na forma de SQL: o menor `id` de
+ *  `ficha_versoes` em `endereco` (uma expressão SQL — `?` ou uma coluna).
+ *
+ *  🔴 UMA FONTE SÓ (I5/B3 da auditoria da 12b): a página lê a identidade por
+ *  `identidadeDoLugar` e a rota grava com `gravarRelatoDoLugar`; se cada uma
+ *  escrevesse a sua, mudar uma (a versão mais NOVA em vez da primeira, ou o
+ *  banco inteiro em vez do endereço) deixaria a outra provando o velho. As duas
+ *  — e `enderecoDoLugar` — usam esta.
+ *
+ *  POR QUE O MENOR `id` (Tarefa 12b): é estável. As versões andam com o lugar
+ *  na troca de endereço (`trocarEndereco`, passo 9), nunca são apagadas, editar,
+ *  voltar e esconder só ACRESCENTAM versão, e o publicar só grava onde não há
+ *  versão nenhuma. A versão mais NOVA não serve: mudaria a cada correção de
+ *  vírgula do dono, e o relato de quem foi seria recusado por ela. */
+function identidadeSql(endereco: string): string {
+  return `(SELECT MIN(i.id) FROM ficha_versoes i WHERE i.ficha_slug = ${endereco})`;
+}
+
+/** A identidade do lugar que mora em `slug` agora, ou `null` se ninguém mora.
+ *  NÃO filtra `oculto`: quem decide visibilidade é quem já decide hoje (a
+ *  página só renderiza lugar no ar; a gravação confere no próprio INSERT). */
+export async function identidadeDoLugar(client: Client, slug: string): Promise<number | null> {
+  const r = await client.execute({ sql: `SELECT ${identidadeSql("?")} AS lugar`, args: [slug] });
+  const v = r.rows[0]?.lugar;
+  return v == null ? null : Number(v);
+}
+
+/** O que diz que a versão `v` é a PRIMEIRA do lugar onde mora, e que ele está
+ *  NO AR (a versão atual não é `oculto = 1` — mesma régua de `versoesAtuais`). */
+const LUGAR_NO_AR = `v.id = ${identidadeSql("v.ficha_slug")}
+   AND (SELECT a.oculto FROM ficha_versoes a WHERE a.ficha_slug = v.ficha_slug ORDER BY a.id DESC LIMIT 1) <> 1`;
+
+/** GRAVA O RELATO DO "✓ FUI" NO LUGAR `lugar`, onde ele mora AGORA, e devolve
+ *  esse endereço — ou `null` sem gravar nada, quando `lugar` não é a identidade
+ *  de lugar nenhum, ou o lugar está escondido (Tarefa 12b, C1 da auditoria).
+ *
+ *  🔴 QUEM ESCOLHE O ENDEREÇO É A IDENTIDADE, NO MESMO STATEMENT QUE GRAVA. O
+ *  relato de P contado em `A` conta pra P em `B` (P trocou de endereço), mesmo
+ *  que Q tenha retomado `A` no meio — e Q nunca recebe. Uma leitura antes
+ *  ("onde P mora?") e um INSERT depois deixariam exatamente a janela em que a
+ *  troca cabe; e conferir pelo endereço do PEDIDO jogaria fora o relato bom de
+ *  P quando Q retoma `A`. O "escondido não conta" também mora aqui, e não numa
+ *  leitura separada (M2).
+ *
+ *  `rowsAffected` NÃO serve de resposta: com `RETURNING`, o libsql devolve `0`
+ *  mesmo gravando (medido em 06/10). Quem diz se gravou são as linhas. */
+export async function gravarRelatoDoLugar(
+  client: Client,
+  lugar: number,
+  tipo: TipoRelato,
+  agora: number,
+): Promise<string | null> {
+  const r = await client.execute({
+    sql: `INSERT INTO confirmacoes (ficha_slug, criado_em, tipo)
+          SELECT v.ficha_slug, ?, ? FROM ficha_versoes v
+           WHERE v.id = ?
+             AND ${LUGAR_NO_AR}
+          RETURNING ficha_slug`,
+    args: [agora, tipo, lugar],
+  });
+  return r.rows.length ? String(r.rows[0].ficha_slug) : null;
+}
+
+/** Onde o lugar `lugar` mora AGORA, se ele está no ar — o placar que a página
+ *  dele lê (`GET /api/confirmar?lugar=`). `null` pra identidade de ninguém ou
+ *  de lugar escondido. Mesma condição de `gravarRelatoDoLugar`. */
+export async function enderecoDoLugar(client: Client, lugar: number): Promise<string | null> {
+  const r = await client.execute({
+    sql: `SELECT v.ficha_slug FROM ficha_versoes v WHERE v.id = ? AND ${LUGAR_NO_AR}`,
+    args: [lugar],
+  });
+  return r.rows.length ? String(r.rows[0].ficha_slug) : null;
 }
 
 export async function countConfirmacoes(client: Client, slug: string): Promise<number> {
@@ -703,7 +785,9 @@ export async function apagarRascunho(client: Client, slug: string): Promise<void
  *      lugar. Ver `gravarEdicao`. É só aqui: todo passo seguinte depende da
  *      linha que este grava;
  *   2. os ÓRFÃOS de `novo` (relato gravado lá por uma corrida do "✓ Fui"
- *      depois que o lugar de antes saiu dali; aviso, desde a onda de fix,
+ *      ANTES da Tarefa 12b, depois que o lugar de antes saiu dali — desde ela,
+ *      `gravarRelatoDoLugar` grava onde o lugar mora no instante do INSERT, e
+ *      relato órfão novo não nasce; aviso, desde a onda de fix,
  *      `inserirAviso` já não grava em endereço sem lugar — o passo fica pelos
  *      dois) voltam pro lugar a que `novo` levava —
  *      quem retoma um endereço não herda o "N foram hoje" de outro lugar;
@@ -819,15 +903,17 @@ export async function trocarEndereco(
  *
  *  Os passos, em ordem, e por que cada um (12-E5, com o I13 da auditoria):
  *   1. a versão 1 — o portão;
- *   2. e 3. os ÓRFÃOS de `slug` (aviso e relato gravados lá quando o endereço
- *      ainda era de um lugar que depois SAIU dele) voltam pro lugar a que
+ *   2. e 3. os ÓRFÃOS de `slug` (aviso e relato que chegaram lá DEPOIS de o
+ *      lugar de antes sair — a corrida do "✓ Fui" anterior à Tarefa 12b; o que
+ *      chegou enquanto ele morava ali foi junto na troca) voltam pro lugar a que
  *      `slug` levava (`velho = slug`) — o SQL é o dos passos 2 e 3 de
  *      `trocarEndereco`. Quem nasce num endereço não herda o "N foram hoje" nem
  *      o aviso de outro lugar. Têm de vir ANTES do passo 5, que apaga a linha
  *      que eles leem.
  *      ⚠️ SEM linha `velho = slug`, os órfãos FICAM (M7 da auditoria). É estado
- *      que nenhuma porta de hoje produz: relato só entra pra lugar que existe
- *      (`/api/confirmar`) e aviso só pra versão que mora no endereço
+ *      que nenhuma porta de hoje produz: relato só entra no endereço onde o
+ *      lugar mora no instante do INSERT (`gravarRelatoDoLugar`, por construção
+ *      desde a Tarefa 12b) e aviso só pra versão que mora no endereço
  *      (`inserirAviso`); o único jeito de um endereço ficar sem lugar com
  *      aviso/relato dentro é o lugar SAIR dele, e sair grava a linha. Quando a
  *      linha some por retomada, a retomada já levou os órfãos (`trocarEndereco`

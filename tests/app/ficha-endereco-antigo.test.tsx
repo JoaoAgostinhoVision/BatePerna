@@ -54,7 +54,8 @@ const abrir = (slug: string) =>
 
 /** O elemento `ConfirmarFui` dentro da árvore que a página devolve — sem
  *  renderizar nada: a página é servidor, e o que se prova é a PROP que ela passa. */
-function acharConfirmar(no: ReactNode): { slug: string; antigos?: string[] } | null {
+type PropsConfirmar = { slug: string; lugar?: number | null; antigos?: string[] };
+function acharConfirmar(no: ReactNode): PropsConfirmar | null {
   if (Array.isArray(no)) {
     for (const filho of no) {
       const achou = acharConfirmar(filho);
@@ -64,7 +65,7 @@ function acharConfirmar(no: ReactNode): { slug: string; antigos?: string[] } | n
   }
   if (!isValidElement(no)) return null;
   const props = no.props as { children?: ReactNode };
-  if (no.type === ConfirmarFui) return props as unknown as { slug: string; antigos?: string[] };
+  if (no.type === ConfirmarFui) return props as unknown as PropsConfirmar;
   return acharConfirmar(props.children);
 }
 
@@ -141,5 +142,37 @@ describe("a página pública num endereço velho", () => {
     esquecerMemoria();
     await expect(pagina.generateMetadata({ params: Promise.resolve({ slug: A }) })).resolves.toEqual({});
     expect(redirectFalso).not.toHaveBeenCalled();
+  });
+});
+
+// 🔴 A IDENTIDADE DO LUGAR CHEGA AO ✓ FUI (Tarefa 12b, B16 da auditoria): a
+// página passa `lugar` = o menor `id` das versões do lugar — lido por SQL CRU
+// aqui, pra um defeito na leitura não produzir a resposta do próprio teste — e
+// o MESMO número depois da troca A→B: a estabilidade, provada no ponto de uso.
+// O lugar marcador nasce DEPOIS do acervo (não é o mais velho do banco) e ganha
+// uma segunda versão (a identidade não é a versão mais nova).
+describe("a página passa a identidade do lugar ao ✓ Fui", () => {
+  const minDe = async (slug: string) =>
+    Number((await banco.execute({ sql: "SELECT MIN(id) AS m FROM ficha_versoes WHERE ficha_slug = ?", args: [slug] })).rows[0].m);
+
+  it("lugar = MIN das versões dele, e o mesmo depois da troca de endereço", async () => {
+    await gravarVersao(banco, A, (await versaoAtual(banco, A))!.doc, "painel", quando++);
+    esquecerMemoria();
+    const p = await minDe(A);
+    const maisVelho = Number((await banco.execute("SELECT MIN(id) AS m FROM ficha_versoes")).rows[0].m);
+    expect(maisVelho, "premissa: o acervo é mais velho que o lugar marcador").toBeLessThan(p);
+
+    expect(acharConfirmar((await abrir(A)) as ReactNode)!.lugar).toBe(p);
+
+    await trocarEndereco(banco, A, B, quando++, await base(banco, A));
+    esquecerMemoria();
+    expect(acharConfirmar((await abrir(B)) as ReactNode)!.lugar).toBe(p);
+  });
+
+  it("um lugar do acervo recebe a identidade DELE, não a do marcador", async () => {
+    const outro = String((await banco.execute("SELECT ficha_slug FROM ficha_versoes ORDER BY id LIMIT 1")).rows[0].ficha_slug);
+    const props = acharConfirmar((await abrir(outro)) as ReactNode);
+    expect(props!.lugar).toBe(await minDe(outro));
+    expect(props!.lugar).not.toBe(await minDe(A));
   });
 });
