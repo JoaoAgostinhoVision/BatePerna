@@ -269,3 +269,13 @@
 .adm-pergunta-pular { padding: .6rem; font-size: .95rem; border-radius: 8px; }
 /* Texto de apoio, como `.adm-editor-ajuda`. */
 .adm-pergunta-pulada { margin: 0; font-size: .85rem; color: #777; }
+/* Tarefa 12 — o "publicar" do rascunho na lista: alvo de dedo ao lado do nome,
+   com a borda de `.adm-novo-passo`. */
+.adm-item-publicar { display: inline-block; margin-top: .4rem; padding: .6rem 1rem; border: 1px solid #999; border-radius: 10px; text-decoration: none; color: inherit; }
+/* A tela de publicar: o grid de `.adm-novo`; as listas e o aviso são texto de
+   apoio, como `.adm-novo-aviso`; o nome do lugar, como `.adm-item-nome`. */
+.adm-publicar { display: grid; gap: 1.2rem; }
+.adm-publicar-nome { margin: 0; font-weight: bold; }
+.adm-publicar-titulo { margin: 0 0 .4rem; font-weight: bold; }
+.adm-publicar-falta ul, .adm-publicar-cala ul { margin: 0; padding-left: 1.2rem; display: grid; gap: .4rem; }
+.adm-publicar-aviso { margin: 0; font-size: .85rem; color: #777; }

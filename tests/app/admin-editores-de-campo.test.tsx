@@ -34,7 +34,8 @@ import {
   RESPONDIDA,
   SEM_RESPOSTA,
 } from "@/app/admin/FormularioDeLugar";
-import { LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
+import { IR_PUBLICAR, LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
+import { AVISO_PUBLICAR, PUBLICANDO, PUBLICAR, TITULO_CALA, TITULO_FALTA } from "@/app/admin/TelaDePublicar";
 import {
   ALEM_DO_PROVEDOR,
   CAIXA_VAZIA,
@@ -1488,6 +1489,14 @@ describe("Os editores servem os três lugares", () => {
     SEM_VISTA,
     APROXIMAR,
     AFASTAR,
+    // Tarefa 12: a tela de publicar e a porta dela na lista. Nenhuma aparece no
+    // render das três fichas — moram noutra tela.
+    IR_PUBLICAR,
+    PUBLICAR,
+    PUBLICANDO,
+    AVISO_PUBLICAR,
+    TITULO_FALTA,
+    TITULO_CALA,
   ];
 
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem

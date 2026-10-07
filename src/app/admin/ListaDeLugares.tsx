@@ -3,6 +3,7 @@ import type { Ficha } from "@/types/ficha";
 import type { LeituraCarimbo } from "@/lib/carimbo-estado";
 import { marcaAgora } from "./marca-agora";
 import { ESCONDIDO } from "./campos/palavras";
+import { enderecoDePublicar } from "./novo/enderecos";
 
 // PENDENTE: redação minha, o João ainda não leu
 const RODAPE_LISTA = "Toque num lugar pra ver e mudar o que o app diz dele.";
@@ -10,6 +11,8 @@ const RODAPE_LISTA = "Toque num lugar pra ver e mudar o que o app diz dele.";
 export const LUGAR_NOVO = "+ lugar novo";
 // PENDENTE: redação minha, o João ainda não leu
 export const TITULO_RASCUNHOS = "Começados, ainda fora do ar";
+// PENDENTE: redação minha, o João ainda não leu
+export const IR_PUBLICAR = "publicar";
 
 /** Um rascunho na lista: o slug (pro link), o nome e a cidade que ele digitou
  *  ao criar. `cidade` ausente: rascunho nascido antes da Tarefa 11b — cala. */
@@ -49,6 +52,10 @@ type Props = {
  *  lugares faria o dono achar que o app já fala dele. A seção é a porta de
  *  volta: sem ela, sair do formulário perdia o rascunho de vista. Sem rascunho,
  *  a seção não aparece.
+ *  Cada rascunho tem DOIS links (Tarefa 12, R3 da auditoria de 06/10): o nome
+ *  continua as perguntas; o "publicar" abre a tela de publicar, que mostra o que
+ *  falta e o que o app vai calar ANTES de pôr no ar — nada vai ao ar pelo toque
+ *  na lista.
  *
  *  🔴 O LUGAR ESCONDIDO ESTÁ NA LISTA, MARCADO (Task 9, 2026-10-01). Esconder
  *  tira do PÚBLICO, não do dono: sem ele aqui, não haveria caminho pela tela
@@ -93,6 +100,9 @@ export default function ListaDeLugares({ fichas, leituras, ocultos, rascunhos, a
                     {r.cidade && <span className="adm-item-cidade">{r.cidade}</span>}
                   </span>
                 </Link>
+                <a href={enderecoDePublicar(r.slug)} className="adm-item-publicar">
+                  {IR_PUBLICAR}
+                </a>
               </li>
             ))}
           </ul>

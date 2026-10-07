@@ -25,6 +25,7 @@ import {
   enderecoDaPergunta,
   posicaoNaTela,
 } from "@/app/admin/FormularioDeLugar";
+import { enderecoDePublicar } from "@/app/admin/novo/enderecos";
 import EditorProsa from "@/app/admin/campos/EditorProsa";
 import { ERRO_REDE } from "@/app/admin/campos/gravar";
 import { HORA_VAZIA } from "@/app/admin/campos/palavras";
@@ -39,7 +40,7 @@ import {
   coordDaPosicao,
   zoomDeTiles,
 } from "@/lib/mapa";
-import { LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
+import { IR_PUBLICAR, LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
 import { regraDe, semComentarios } from "../css";
 import { bancoVazio, semearAcervo } from "../banco";
 
@@ -669,7 +670,9 @@ describe("/admin/novo — a posição mora na URL", () => {
 // a uma resposta ou deixar uma obrigatória pra depois (rascunho é incompleto
 // por natureza). E a lista de saltos diz quais já têm resposta.
 describe("/admin/novo — andar entre as perguntas", () => {
-  it("primeira: só 'Próxima'; do meio: as duas; última: só 'Anterior' — e são links", async () => {
+  // 🔴 TAREFA 12 (R3 da auditoria de 06/10): na ÚLTIMA, o "Próxima" leva à tela
+  // de PUBLICAR — é o fim do questionário. Até a 12, a última não tinha "Próxima".
+  it("primeira: só 'Próxima'; do meio: as duas; última: 'Anterior' e o 'Próxima' que leva a publicar — e são links", async () => {
     await lugarNovo();
     const total = esperadas().length;
     await paginaNovo(S, "1");
@@ -683,7 +686,7 @@ describe("/admin/novo — andar entre as perguntas", () => {
     cleanup();
     await paginaNovo(S, String(total));
     expect(screen.getByRole("link", { name: ANTERIOR }).getAttribute("href")).toBe(enderecoDaPergunta(S, total - 1));
-    expect(screen.queryByRole("link", { name: PROXIMA })).toBeNull();
+    expect(screen.getByRole("link", { name: PROXIMA }).getAttribute("href")).toBe(enderecoDePublicar(S));
   });
 
   it("andar não grava nada", async () => {
@@ -1176,7 +1179,21 @@ describe("/admin — a lista ganha a porta do lugar novo e a dos rascunhos", () 
     expect(await criarRascunho(cliente, S, JSON.stringify({ slug: S, modos: [], trajeto: { waypoints: [{ nome: NOME }] } }), 1)).toBe(true);
     await paginaAdmin();
     const item = screen.getByTestId("rascunhos").querySelector<HTMLElement>(`[data-rascunho="${S}"]`)!;
-    expect(item.textContent).toBe(NOME);
+    // O link de CONTINUAR é o do nome; o outro do item é o "publicar" (Tarefa 12).
+    const continuar = within(item).getByRole("link", { name: new RegExp(NOME) });
+    expect(continuar.textContent).toBe(NOME);
+    expect(item.textContent).toBe(NOME + IR_PUBLICAR);
+  });
+
+  // 🔴 TAREFA 12 (R3): a segunda porta pra tela de publicar — e é um LINK, que
+  // leva à tela (o que falta, o que o app vai calar); nada vai ao ar pelo toque
+  // na lista.
+  it("o rascunho tem o link de publicar, que leva à tela de publicar DELE", async () => {
+    await lugarNovo();
+    await paginaAdmin();
+    const item = screen.getByTestId("rascunhos").querySelector<HTMLElement>(`[data-rascunho="${S}"]`)!;
+    const link = within(item).getByRole("link", { name: IR_PUBLICAR });
+    expect(link.getAttribute("href")).toBe(enderecoDePublicar(S));
   });
 
   it("sem rascunho, a seção não aparece", async () => {

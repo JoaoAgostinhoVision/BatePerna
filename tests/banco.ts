@@ -200,10 +200,17 @@ export function comBaseAtual(
  *  Uma gravação que confira (ou leia) numa consulta e grave noutra passa a ver
  *  o mundo velho, e o teste acusa.
  *
+ *  🔴 E `batch` TAMBÉM DISPARA (Tarefa 12, C1 da auditoria de 06/10): antes de
+ *  um `batch` cujo 1º statement casa o `gatilho`, `antes()` roda — o outro
+ *  pedido entra entre tudo o que a função leu e a transação dela. Sem isto, uma
+ *  gravação feita em batch (`publicarRascunho`) deixava `disparos() === 0`, e o
+ *  teste de corrida mediria o vazio. Os statements de DENTRO do batch não são
+ *  olhados um a um: a transação é indivisível, e intercalar no meio dela não é
+ *  uma corrida que o banco deixe acontecer.
+ *
  *  🔴 E CONTA QUANTAS VEZES DISPAROU. O gatilho é TEXTO de SQL: se a gravação
- *  mudar de forma (outro começo de statement, `batch` em vez de `execute`), o
- *  dublê nunca dispara e o teste mediria o vazio. Quem usa afirma
- *  `disparos > 0`. `batch` e o resto passam direto, sem gatilho. */
+ *  mudar de forma (outro começo de statement), o dublê nunca dispara e o teste
+ *  mediria o vazio. Quem usa afirma `disparos > 0`. O resto passa direto. */
 export function clienteQueIntercala(
   real: Client,
   gatilho: RegExp,
@@ -223,6 +230,18 @@ export function clienteQueIntercala(
             await antes();
           }
           return (alvo.execute as (...a: unknown[]) => ReturnType<Client["execute"]>)(...args);
+        };
+      }
+      if (chave === "batch") {
+        return async (...args: Parameters<Client["batch"]>) => {
+          const primeiro = args[0][0] as unknown;
+          const sql = typeof primeiro === "string" ? primeiro : ((primeiro as { sql?: string } | undefined)?.sql ?? "");
+          if (armado && gatilho.test(sql.trimStart())) {
+            armado = false;
+            disparos++;
+            await antes();
+          }
+          return (alvo.batch as (...a: unknown[]) => ReturnType<Client["batch"]>)(...args);
         };
       }
       const v = Reflect.get(alvo, chave, alvo) as unknown;

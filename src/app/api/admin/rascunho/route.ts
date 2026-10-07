@@ -14,7 +14,7 @@ import {
   lerRascunho,
   listarRascunhos,
   moverRascunho,
-  salvarRascunho,
+  regravarRascunho,
   versaoAtual,
 } from "@/lib/db";
 import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, parDaMudanca, parOcupado } from "@/lib/par-de-lugar";
@@ -23,6 +23,7 @@ import {
   CIDADE_VAZIA,
   NOME_SEM_LETRA,
   NOME_VAZIO,
+  RASCUNHO_NAO_EXISTE_MAIS,
   cidadeDoDoc,
   docDoLugarNovo,
   docNoEndereco,
@@ -255,7 +256,14 @@ export async function PUT(req: Request): Promise<Response> {
       return new Response(await quemOcupa(destino), { status: 409, headers: TEXTO });
     }
   }
-  await salvarRascunho(getClient(), slug, novoDoc, agora);
+  // 🔴 `UPDATE`, NUNCA UPSERT (Tarefa 12, I1 da auditoria de 06/10): entre a
+  // leitura lá em cima e esta gravação, o rascunho pode ter sido PUBLICADO (ou
+  // apagado, ou movido noutra aba). O upsert o recriava em `slug` — ao lado do
+  // lugar que acabou de ir ao ar no mesmo endereço — e a resposta dele ficava
+  // fora do lugar no ar, em silêncio. Sem linha, 409 com a frase, nada gravado.
+  if (!(await regravarRascunho(getClient(), slug, novoDoc, agora))) {
+    return new Response(RASCUNHO_NAO_EXISTE_MAIS, { status: 409, headers: TEXTO });
+  }
   return Response.json({ slug }, { headers: SEM_CACHE });
 }
 

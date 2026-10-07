@@ -8,6 +8,7 @@ import EditorNumeroDeMotor from "./campos/EditorNumeroDeMotor";
 import EditorProsa from "./campos/EditorProsa";
 import { ERRO_GRAVAR, ERRO_REDE, PortaDoEditor } from "./campos/gravar";
 import type { Editor, EspecieNaTela, PerguntaNaTela } from "./campos/tipos";
+import { enderecoDaPergunta, enderecoDePublicar } from "./novo/enderecos";
 
 /** O FORMULÁRIO DE LUGAR NOVO (Tarefa 11) — o questionário na tela, gravando
  *  num RASCUNHO que não vai ao ar.
@@ -58,6 +59,9 @@ import type { Editor, EspecieNaTela, PerguntaNaTela } from "./campos/tipos";
  *   - Pular também avança, sem gravar nada.
  *   - "Anterior" e "Próxima" são LINKS, não gravam: voltar a uma resposta, ou
  *     deixar uma obrigatória pra depois — rascunho é incompleto por natureza.
+ *     Na ÚLTIMA pergunta, o "Próxima" leva à tela de PUBLICAR (Tarefa 12, R3 da
+ *     auditoria de 06/10): é o fim do questionário, e é por ali que o dono
+ *     chega lá — a outra porta é o item do rascunho na lista do painel.
  *   - A lista de saltos tem um número por pergunta, marcado respondida ou sem
  *     resposta (no `aria-label`, e no desenho pela folha de estilo).
  *   ⚠️ "Pulada" não fica guardada: no documento, pular e nunca responder são a
@@ -88,9 +92,9 @@ export const SEM_RESPOSTA = "sem resposta";
 // PENDENTE: redação minha, o João ainda não leu
 export const posicaoNaTela = (n: number, total: number): string => `Pergunta ${n} de ${total}`;
 
-/** O endereço da pergunta N do rascunho — a posição mora na URL. */
-export const enderecoDaPergunta = (slug: string, n: number): string =>
-  `/admin/novo?slug=${encodeURIComponent(slug)}&p=${n}`;
+/** O endereço da pergunta N mora em `./novo/enderecos` desde a Tarefa 12 (a
+ *  página de publicar, de servidor, também o usa); continua saindo daqui. */
+export { enderecoDaPergunta };
 
 /** 🔴 `Record` POR ESPÉCIE: uma espécie nova no registro deixa este arquivo sem
  *  compilar até alguém decidir o instrumento dela — mesmo guarda da
@@ -189,11 +193,9 @@ export default function FormularioDeLugar({
               {ANTERIOR}
             </a>
           )}
-          {proxima !== null && (
-            <a className="adm-novo-passo adm-novo-passo-proxima" href={proxima}>
-              {PROXIMA}
-            </a>
-          )}
+          <a className="adm-novo-passo adm-novo-passo-proxima" href={proxima ?? enderecoDePublicar(slug)}>
+            {PROXIMA}
+          </a>
         </nav>
         <ol className="adm-novo-saltos" data-testid="saltos">
           {respondidas.map((r, i) => (

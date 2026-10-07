@@ -569,16 +569,34 @@ function rascunhoDaLinha(r: Record<string, unknown>): Rascunho {
  *  o comentário de `ficha_rascunhos` em `ensureSchema`. NÃO valida o documento
  *  (nem `fichaSchema`, nem coerência): rascunho incompleto é o estado normal.
  *
- *  ⚠️ Quem chama do painel NUNCA usa esta função pra fazer um rascunho NASCER:
- *  a porta de nascer é `criarRascunho`, que recusa slug que já existe. Esta aqui
- *  só é chamada depois de conferir que o rascunho existe (ver
- *  `src/app/api/admin/rascunho/route.ts`). */
+ *  ⚠️ NENHUMA ROTA DO PAINEL A CHAMA DESDE A TAREFA 12: o PUT do rascunho grava
+ *  por `regravarRascunho` (`UPDATE`, que não ressuscita um rascunho publicado no
+ *  meio do pedido — ver lá), e a porta de nascer é `criarRascunho`. Ela fica
+ *  como a forma que os testes usam pra pôr um rascunho no banco. */
 export async function salvarRascunho(client: Client, slug: string, doc: string, agora: number): Promise<void> {
   await client.execute({
     sql: `INSERT INTO ficha_rascunhos (slug, doc, atualizado_em) VALUES (?, ?, ?)
           ON CONFLICT(slug) DO UPDATE SET doc = excluded.doc, atualizado_em = excluded.atualizado_em`,
     args: [slug, doc, agora],
   });
+}
+
+/** Regrava o rascunho de `slug` — SÓ SE ELE AINDA EXISTE ali. Devolve `false`
+ *  sem gravar nada quando não há rascunho em `slug` (Tarefa 12, I1 da auditoria
+ *  de 06/10).
+ *
+ *  🔴 É A FORMA DO PUT DO RASCUNHO, e é `UPDATE`, nunca upsert: o PUT lê o
+ *  rascunho e grava depois; se a PUBLICAÇÃO (`publicarRascunho`) roda no meio,
+ *  o upsert de `salvarRascunho` RECRIAVA o rascunho em `slug` — ao lado do lugar
+ *  que acabou de ir ao ar no mesmo endereço, que é o estado que `criarRascunho`
+ *  declara impossível — e a última resposta do dono ficava fora do lugar no ar,
+ *  em silêncio. Com o `UPDATE`, o rascunho só nasce por `criarRascunho`. */
+export async function regravarRascunho(client: Client, slug: string, doc: string, agora: number): Promise<boolean> {
+  const r = await client.execute({
+    sql: `UPDATE ficha_rascunhos SET doc = ?, atualizado_em = ? WHERE slug = ?`,
+    args: [doc, agora, slug],
+  });
+  return r.rowsAffected === 1;
 }
 
 /** Faz um rascunho NASCER, e só se o `slug` estiver livre nas DUAS tabelas.
@@ -648,10 +666,10 @@ export async function listarRascunhos(client: Client): Promise<Rascunho[]> {
   return r.rows.map((l) => rascunhoDaLinha(l as unknown as Record<string, unknown>));
 }
 
-/** Tira o rascunho. É o fim de publicar (Tarefa 12) — o lugar passa a ter
- *  histórico em `ficha_versoes` e o rascunho deixa de existir. Pode apagar sem
- *  culpa pela mesma razão de `salvarRascunho` sobrescrever: rascunho nunca
- *  afirmou nada. */
+/** Tira o rascunho — o `DELETE` do painel. Pode apagar sem culpa pela mesma
+ *  razão de `salvarRascunho` sobrescrever: rascunho nunca afirmou nada.
+ *  (Publicar NÃO passa por aqui: o rascunho sai DENTRO do batch de
+ *  `publicarRascunho`, como o último passo dele.) */
 export async function apagarRascunho(client: Client, slug: string): Promise<void> {
   await client.execute({ sql: `DELETE FROM ficha_rascunhos WHERE slug = ?`, args: [slug] });
 }
@@ -761,6 +779,94 @@ export async function trocarEndereco(
         args: [novo, velho, ...p],
       },
       { sql: `UPDATE ficha_versoes SET ficha_slug = ? WHERE ficha_slug = ? AND ${porta}`, args: [novo, velho, ...p] },
+    ],
+    "write",
+  );
+  return rs[0].rowsAffected === 1;
+}
+
+/** PUBLICA O RASCUNHO DE `slug`: o lugar novo vai ao ar como a versão 1, e o
+ *  rascunho deixa de existir (Tarefa 12). Devolve `false` SEM MUDAR NADA quando
+ *  `slug` já é de um lugar (no ar ou ESCONDIDO) ou quando o rascunho de `slug`
+ *  não é mais o que a tela leu (`atualizadoEm` — outro "Salvar", um rename, ou
+ *  já publicado por um toque anterior).
+ *
+ *  `doc` é o documento JÁ NORMALIZADO e conferido pela rota
+ *  (`src/app/api/admin/publicar/route.ts`): schema, obrigatórios, horário, par,
+ *  coerência. Esta função só decide o que é de BANCO, no instante da gravação.
+ *
+ *  🔴 UM BATCH `write`, UMA TRANSAÇÃO, no molde de `trocarEndereco` (C1 da
+ *  auditoria de 06/10) — e NUNCA `gravarVersao`, que é um `execute` próprio e
+ *  incondicional: "confere antes e grava depois" deixa a janela onde um lugar
+ *  nasce em `slug` (e o publicar viraria versão nova DELE, com `oculto = 0`,
+ *  desescondendo-o), e quatro chamadas separadas deixam meio-termos.
+ *
+ *  🔴 E UM BATCH NÃO RAMIFICA: o portão é o 1º passo (o INSERT da versão, só se
+ *  `slug` não tem versão NENHUMA — sem filtro de `oculto`: lugar escondido é
+ *  lugar, e volta — E o rascunho de `slug` ainda tem o `atualizado_em` que a
+ *  tela leu). TODO passo seguinte é condicionado à `porta`: o rascunho ainda lá
+ *  com aquele `atualizado_em`, `slug` com UMA versão só, e ela a que o 1º passo
+ *  gravou. O rascunho sai no ÚLTIMO passo, então a porta vale do 2º ao último —
+ *  e um publicar recusado (o rascunho mudou, o endereço já tem lugar) não toca
+ *  em nada: nem órfão, nem a linha `velho = slug`, nem o rascunho.
+ *
+ *  O `oculto` é o literal `0`: o lugar novo nasce no ar, e nunca herda a
+ *  visibilidade de outro lugar.
+ *
+ *  Os passos, em ordem, e por que cada um (12-E5, com o I13 da auditoria):
+ *   1. a versão 1 — o portão;
+ *   2. e 3. os ÓRFÃOS de `slug` (aviso e relato gravados lá quando o endereço
+ *      ainda era de um lugar que depois SAIU dele) voltam pro lugar a que
+ *      `slug` levava (`velho = slug`) — o SQL é o dos passos 2 e 3 de
+ *      `trocarEndereco`. Quem nasce num endereço não herda o "N foram hoje" nem
+ *      o aviso de outro lugar. Têm de vir ANTES do passo 5, que apaga a linha
+ *      que eles leem.
+ *      ⚠️ SEM linha `velho = slug`, os órfãos FICAM (M7 da auditoria). É estado
+ *      que nenhuma porta de hoje produz: relato só entra pra lugar que existe
+ *      (`/api/confirmar`) e aviso só pra versão que mora no endereço
+ *      (`inserirAviso`); o único jeito de um endereço ficar sem lugar com
+ *      aviso/relato dentro é o lugar SAIR dele, e sair grava a linha. Quando a
+ *      linha some por retomada, a retomada já levou os órfãos (`trocarEndereco`
+ *      passo 2) — e aqui, o passo 2;
+ *   4. a `freshness` de `slug` sai: é cache recalculável (a do lugar que saiu
+ *      foi junto com ele na troca), e o UPDATE pra outro endereço violaria a PK;
+ *   5. a linha `velho = slug` some — o endereço é RETOMADO pelo lugar novo, e o
+ *      link antigo passa a levar a ele (decisão do João de 04/10, a mesma da
+ *      retomada pela troca);
+ *   6. o rascunho, por último (ver a porta). */
+export async function publicarRascunho(
+  client: Client, slug: string, doc: string, agora: number, atualizadoEm: number,
+): Promise<boolean> {
+  const porta = `EXISTS (SELECT 1 FROM ficha_rascunhos WHERE slug = ? AND atualizado_em = ?)
+              AND (SELECT COUNT(*) FROM ficha_versoes WHERE ficha_slug = ?) = 1
+              AND EXISTS (SELECT 1 FROM ficha_versoes
+                          WHERE ficha_slug = ? AND doc = ? AND criado_em = ? AND autor = 'painel' AND oculto = 0)`;
+  const p = [slug, atualizadoEm, slug, slug, doc, agora];
+  const rs = await client.batch(
+    [
+      {
+        sql: `INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em, oculto)
+              SELECT ?, ?, 'painel', ?, 0
+              WHERE NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
+                AND EXISTS (SELECT 1 FROM ficha_rascunhos WHERE slug = ? AND atualizado_em = ?)`,
+        args: [slug, doc, agora, slug, slug, atualizadoEm],
+      },
+      {
+        sql: `UPDATE avisos SET ficha_slug = (SELECT e.novo FROM enderecos_antigos e WHERE e.velho = ?)
+              WHERE ficha_slug = ? AND EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ?) AND ${porta}`,
+        args: [slug, slug, slug, ...p],
+      },
+      {
+        sql: `UPDATE confirmacoes SET ficha_slug = (SELECT e.novo FROM enderecos_antigos e WHERE e.velho = ?)
+              WHERE ficha_slug = ? AND EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ?) AND ${porta}`,
+        args: [slug, slug, slug, ...p],
+      },
+      { sql: `DELETE FROM freshness WHERE ficha_slug = ? AND ${porta}`, args: [slug, ...p] },
+      { sql: `DELETE FROM enderecos_antigos WHERE velho = ? AND ${porta}`, args: [slug, ...p] },
+      {
+        sql: `DELETE FROM ficha_rascunhos WHERE slug = ? AND atualizado_em = ? AND ${porta}`,
+        args: [slug, atualizadoEm, ...p],
+      },
     ],
     "write",
   );

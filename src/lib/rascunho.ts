@@ -100,6 +100,13 @@ export const enderecoDeLugar = (quem: string): string =>
 export const enderecoDeRascunho = (quem: string): string =>
   `O endereço que sairia desse nome e dessa cidade já é de um lugar novo começado: ${quem}. Se for o mesmo lugar, continue por ele na lista do painel; se não for, o painel ainda não sabe dar outro endereço a este.`;
 
+/** A recusa do PUT do rascunho quando ele já não mora no endereço pedido
+ *  (Tarefa 12, I1 da auditoria de 06/10): publicado, apagado ou movido entre a
+ *  leitura e a gravação. Nada foi gravado — e nenhum rascunho renasceu ali. */
+// PENDENTE: redação minha, o João ainda não leu
+export const RASCUNHO_NAO_EXISTE_MAIS =
+  "Nada foi gravado: este rascunho não está mais neste endereço. Ele foi publicado, apagado, ou mudou de nome ou de cidade: volte pela lista do painel.";
+
 /** O DOCUMENTO COM QUE UM RASCUNHO NASCE — e é tudo o que ele tem.
  *
  *  🔴 NADA É PRÉ-PREENCHIDO (spec §4.4): nenhum campo vem de outro lugar, de

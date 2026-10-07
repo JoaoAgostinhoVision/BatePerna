@@ -1,7 +1,7 @@
 import { ZodError } from "zod";
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
-import { type FichaVersao, getClient, gravarEdicao, versaoAtual, versaoPorId, versoesAtuais } from "@/lib/db";
+import { getClient, gravarEdicao, versaoAtual, versaoPorId, versoesAtuais } from "@/lib/db";
 import { LUGAR_MUDOU_DE_ENDERECO, baseIdValido } from "@/lib/endereco";
 import {
   RecusaDoTrajeto,
@@ -13,10 +13,10 @@ import {
   tirarEtapa,
   type ValorDeCampo,
 } from "@/lib/campos-da-ficha";
-import { type Violacao, violacoesDoAcervo } from "@/lib/coerencia";
 import { parDaMudanca, parDaTroca } from "@/lib/par-de-lugar";
+import { violacaoIntroduzida } from "@/lib/porta-de-coerencia";
 import { cidadeDoDoc, nomeDoRascunho } from "@/lib/rascunho";
-import { type Ficha, fichaSchema } from "@/types/ficha";
+import { fichaSchema } from "@/types/ficha";
 
 export const dynamic = "force-dynamic";
 
@@ -50,91 +50,11 @@ function recusar400(erro: unknown): Response {
   return new Response(nossa ? erro.message : "", { status: 400, headers: TEXTO });
 }
 
-/** O PAR (`regra`, `slug`) de uma violação — e o portão compara a CONTAGEM de
- *  cada par, não o conteúdo das frases.
- *
- *  🔴 A REDAÇÃO ANTERIOR USAVA A `frase`, E ISSO TRANCAVA O DONO DE RENOMEAR O
- *  LUGAR. Medido por um re-revisor em 2026-09-27, com requisições de verdade: o
- *  nome do lugar (`trajeto.waypoints[0].nome`) aparece na frase de **todas as
- *  regras** (é o `nomeDe(f)` de `coerencia.ts`). Então, numa ficha que já tinha
- *  qualquer violação preexistente, renomear o lugar mudava a frase daquela
- *  violação, a identidade deixava de casar, e o diff classificava como
- *  **introduzida** uma violação que **já estava no acervo** — exatamente o que o
- *  ruling T3-R1 proíbe. Três medições dele:
- *
- *    - chip velho preexistente na própria ficha + renomear → **409**, e a frase
- *      falava de PREÇO;
- *    - `limiar_mm` zerado preexistente + renomear → **409**, e a frase falava de
- *      CHUVA;
- *    - a voz duplicada acusada no OUTRO lugar + renomear este → **409**, por
- *      violação de um lugar que ele não estava editando.
- *
- *  E `trajeto.waypoints[].nome` é obrigatório: **não tem "não sei", não tem
- *  saída pelo campo.** Um typo no nome do lugar é das coisas mais prováveis de
- *  se querer consertar do celular, e a porta respondia sobre outro assunto.
- *
- *  🔴 POR QUE A CONTAGEM, E NÃO O CONJUNTO DE PARES. Três regras podem acusar o
- *  MESMO par mais de uma vez: `janela-nao-zerada` empurra um achado por cada um
- *  dos três números zerados, `texto-emprestado` um por campo de prosa copiado, e
- *  `dia-repetido-ou-inventado` **um por ESPÉCIE de malformação** — no máximo
- *  dois, um de dia repetido e um de dia inventado, e não um por dia. (A redação
- *  anterior desta linha dizia "um por dia malformado" e era FALSA: medido,
- *  `["sab","sab","dom","dom"]` dá UM achado. E por esta porta aquele par nunca
- *  passa de 1, porque `dias` é `z.array(z.enum(DIAS))` e a grafia inventada é
- *  barrada com 400 antes de chegar aqui.) Comparando conjuntos, uma
- *  ficha que já tinha UMA dessas passaria a ter DUAS em silêncio — o dono
- *  quebraria o segundo campo e a porta calaria, porque o par já existia. A
- *  contagem é a leitura humana de *"a minha gravação piorou esta ficha?"*.
- *
- *  🔴 E O QUE ISTO DEIXA PASSAR, DE PROPÓSITO — está escrito porque é escolha, e
- *  não descuido. Uma gravação que MANTÉM a contagem de um par mas troca o valor
- *  errado por outro valor errado passa: se o chip já dizia R$ 1 numa ficha que
- *  cobra R$ 5, escrever R$ 12 no valor sai com 200, e o documento continua
- *  incoerente **como já estava**. É a leitura deliberada de T3-R1: numa porta, o
- *  falso positivo é pior que o falso negativo, porque **trava o dono de gravar
- *  uma verdade** — e ele não introduziu problema nenhum, herdou um. Quem cobra
- *  essa dívida são os 15 guardas de coerência do acervo, não esta porta. */
-function par(v: Violacao): string {
-  return JSON.stringify([v.regra, v.slug]);
-}
-
-function contarPares(violacoes: Violacao[]): Map<string, number> {
-  const conta = new Map<string, number>();
-  for (const v of violacoes) conta.set(par(v), (conta.get(par(v)) ?? 0) + 1);
-  return conta;
-}
-
-/** O acervo INTEIRO como fichas, com o documento de `slug` trocado por `doc`.
- *
- *  🔴 O ACERVO INTEIRO É EXIGÊNCIA DO MÓDULO DE COERÊNCIA (P3 da rodada): duas
- *  das regras comparam uma ficha com as outras, e lugar escondido volta.
- *
- *  ⚠️ SE `slug` NÃO ESTIVER NO MAPA, ELE ENTRA — e isto é estado impossível
- *  aqui (o `versaoAtual` lá embaixo já garantiu que existe versão deste lugar,
- *  e ela vem da mesma tabela). Escrito em vez de implícito porque o dia em que
- *  deixar de ser impossível — criar lugar, T11/T12 — é o dia em que a ficha
- *  nova precisa ser conferida CONTRA o acervo, não ignorada por ele.
- *
- *  🔴 DOCUMENTO QUE NÃO ABRE FICA DE FORA, E ISSO É DELIBERADO. Um `doc` de
- *  OUTRO lugar que não passe no `fichaSchema` de hoje derrubaria a gravação
- *  inteira com exceção — e trancaria o dono de editar o lugar A por causa de
- *  um defeito no lugar B, que ele não pode consertar sem... editar. A porta
- *  mede contra o que ela consegue ler. O documento DESTE slug nunca cai aqui:
- *  ele acabou de sair de `aplicarCampo`/`removerCampo`, que o parseiam. */
-function acervoComo(versoes: Map<string, FichaVersao>, slug: string, doc: string): Ficha[] {
-  const docs = new Map([...versoes].map(([s, v]) => [s, v.doc] as const));
-  docs.set(slug, doc);
-
-  const fichas: Ficha[] = [];
-  for (const texto of docs.values()) {
-    try {
-      fichas.push(fichaSchema.parse(JSON.parse(texto)));
-    } catch {
-      // ver o docblock: ilegível fica de fora, nunca tranca a gravação.
-    }
-  }
-  return fichas;
-}
+/* O PAR, a CONTAGEM e o ACERVO-COMO da coerência moravam aqui até a Tarefa 12
+   e foram pra `src/lib/porta-de-coerencia.ts`, SEM MUDAR A CONTA: a porta de
+   publicar passou a precisar da mesma régua, e um arquivo de rota do Next não
+   exporta nada além dos métodos. O porquê de cada escolha (o par e não a
+   frase, a contagem e não o conjunto, o ilegível que fica de fora) foi junto. */
 
 /** Grava um campo novo sobre a ficha de `slug`, como uma versão NOVA em
  *  `ficha_versoes` — nunca um UPDATE (a tabela é append-only, ver `db.ts`).
@@ -500,30 +420,12 @@ export async function PUT(req: Request): Promise<Response> {
   // regra que de fato acusa impressa na saída). Esconder não apaga, e lugar
   // escondido VOLTA — então a coerência nunca pode deixar de vê-lo. Medir contra
   // acervo parcial seria a porta ficando permissiva EM SILÊNCIO.
-  const versoes = await versoesAtuais(getClient(), { incluirOcultos: true });
-  const violacoesAntes = violacoesDoAcervo(acervoComo(versoes, slug, versao.doc));
-  const antes = contarPares(violacoesAntes);
-  const todasDepois = violacoesDoAcervo(acervoComo(versoes, slug, novoDoc));
-  const depois = contarPares(todasDepois);
-  // Introduzida = par cuja CONTAGEM cresceu.
-  const introduzidas = todasDepois.filter((v) => (depois.get(par(v)) ?? 0) > (antes.get(par(v)) ?? 0));
-  // 🔴 E A FRASE QUE VOLTA É A DO ACHADO QUE NÃO EXISTIA ANTES, não a primeira
-  // em ordem de tabela. Medido por um re-revisor em 27/09: com a janela do
-  // passado já zerada no acervo, zerar o LIMIAR devolvia a frase que fala da
-  // janela — *"o dono pede pra consertar X e a porta responde sobre Y"*, que é o
-  // defeito que gerou esta onda, na forma de mensagem.
   //
-  // ⚠️ Comparar frases AQUI é seguro, e o porquê tem de ficar escrito: esta
-  // comparação só escolhe QUAL frase mostrar, DENTRO de um par cuja contagem já
-  // cresceu — ela nunca decide recusar. Renomear o lugar não cresce contagem
-  // nenhuma, então não chega aqui, que era exatamente o C1 desta tarefa.
-  // A primeira em ORDEM DE TABELA, que é a ordem da tela do dono: as regras de
-  // custo vêm na frente porque é onde o defeito mais caro já entrou.
-  if (introduzidas.length > 0) {
-    const frasesAntes = new Set(violacoesAntes.map((v) => v.frase));
-    const aDizer = introduzidas.find((v) => !frasesAntes.has(v.frase)) ?? introduzidas[0];
-    return new Response(aDizer.frase, { status: 409, headers: TEXTO });
-  }
+  // A conta (o par, a contagem, a frase do achado novo) mora em
+  // `violacaoIntroduzida` desde a Tarefa 12 — a mesma da porta de publicar.
+  const versoes = await versoesAtuais(getClient(), { incluirOcultos: true });
+  const aDizer = violacaoIntroduzida(versoes, slug, versao.doc, novoDoc);
+  if (aDizer !== null) return new Response(aDizer, { status: 409, headers: TEXTO });
 
   // 🔴 A VERSÃO NOVA HERDA A VISIBILIDADE DA ATUAL, e sem isso a rota
   // DESESCONDERIA o lugar a cada edição de campo (a forma de nascer,
