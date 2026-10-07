@@ -42,7 +42,9 @@ do rascunho + desfazer edição) e *"como o usuário comum vai poder inserir os 
   despachada (`task-15-review.md`). NÃO está no ar.
 - ✅ Revisão da 15: 0 C · 1 I · 5 M → **onda de fix `0b80a77`**, medida por mim: 2420/2420 em 116, tsc 0, build 0,
   mutar 42/0. DELETE de rascunho sem linha → 404 (o Desistir mostra erro). Trava de duplo envio era defeito real
-  (virou `useRef`). **Pronto pra subir quando ele quiser** (4 frases PENDENTE).
+  (virou `useRef`). 🟢 **NO AR (07/10): `dpl_36nNGhh7xkrsZEeD7PNeBCBfiZKK`** ("pode subir o cancelar"; semear nada
+  novo; 1ª tentativa "fetch failed" de novo, 2ª subiu). Conferido por mim: "Desistir deste lugar" e "Desfazer" nos
+  chunks JS de /admin e /admin/novo no domínio (controle "Senha do painel" achado). 4 frases ainda PENDENTE.
 - Usuário comum = brainstorm ARQUITETURAL em curso. Respostas dele: login simples; formulário CURTO com veredito
   de chuva PADRÃO; a pessoa EDITA o dela enquanto "não conferido", marca some quando ele confere. Proposto: Clerk
   (Google) + caminho A (mesmas tabelas + dono/conferido/regra-padrão) — **ele disse "sim"**, e aprovou as 4 partes
