@@ -24,6 +24,9 @@ código `6d11d68`, 2364/2364, tsc 0, build 0, mutar 42/0), NADA NO AR. O deploy 
 - **"trilha" → trocar por "esse lugar"** nas 8 perguntas de `src/app/admin/novo/perguntas.ts` (56, 58, 61, 73, 79, 82,
   95; a 82 diz "a trilha"). Escopo da pergunta = SÓ o formulário; `not-found.tsx` ("Não achei essa trilha.") e a home
   ("Nenhuma trilha…") NÃO foram perguntados — não mexer sem perguntar.
+🟡 **Tarefa 13 (as três decisões) DESPACHADA** — brief `.superpowers/sdd/2026-09-26-painel-completo/task-13-brief.md`,
+relatório esperado em `task-13-report.md`. Se a sessão cair: conferir `git log` por `fix(painel): as três decisões`;
+se não houver, redespachar o brief. Depois: medir eu mesmo, revisão, e esperar as 31 frases com alerta.
 
 (o histórico de 06/10 segue)
 
