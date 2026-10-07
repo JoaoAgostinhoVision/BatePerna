@@ -40,8 +40,9 @@ auditoria só como nota; `rowsAffected` com `RETURNING` volta 0 no libsql local 
 → 🔴 **A revisão da 12b ESTÁ DESPACHADA** (`task-12b-review.md`). Se não existir, redespachar (revisor opus fresco,
 escopo `7560c8d..159b828`, COM build). Depois: onda → **revisão final da branch inteira COM build** → agentes do
 projeto → pacote de copy → deploy só com a resposta dele.
-❓ **Pergunta ao João, pendente:** relatos "✓ Fui" que já estiverem na fila offline SEM identidade no dia do deploy:
-aceitar como hoje ou descartar. (A fila descarta relatos de outro dia, MAS abas velhas e páginas no cache do SW mandam POST sem identidade depois do deploy também — a janela é maior que um dia; I7 da auditoria da 12b.)
+✅ **DECISÃO DO JOÃO (06/10): relato legado sem identidade → "aceitar como hoje".** O código já está assim
+(`RELATO_LEGADO = "aceitar"`); na onda de fix da 12b, trocar o comentário `PENDENTE-JOÃO` pelo registro da decisão
+(e o ramo "descartar" + a frase dele podem sair ou ficar mortos — decidir na onda).
 
 (histórico abaixo)
 
