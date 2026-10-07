@@ -7,6 +7,7 @@ import {
   enderecoNovoDe,
   enderecosAntigosDe,
   ensureSchema,
+  estadoDaTela,
   gravarEdicao,
   gravarVersao,
   gravarVisibilidade,
@@ -269,6 +270,45 @@ describe("gravarEdicao: só grava onde o lugar mora (I1 da revisão)", () => {
     await gravarVersao(c, A, docNovo, "painel", AGORA + 1);
     const id = await gravarVisibilidade(c, A, true, AGORA + 2, lida.id);
     expect(await versaoAtual(c, A)).toMatchObject({ id, autor: "painel", oculto: true, criado_em: AGORA + 2, doc: docNovo });
+  });
+});
+
+describe("a versão ATUAL é a DESTE lugar, não a mais nova do banco (onda 4 da 11e, I1/M1 da re-revisão 2)", () => {
+  /** 🔴 Nos controles de cima, o lugar gravado é também a versão de maior `id`
+   *  do banco INTEIRO — e aí tirar o `ficha_slug = ?` das subconsultas passava
+   *  verde (`GE-OCULTO-SEM-SLUG`, `VS-DOC-SEM-SLUG`, `ESTADO-SEM-SLUG`). Aqui
+   *  outro lugar, C, grava DEPOIS de A, com o `oculto` oposto e outro documento. */
+  async function cGravaDepois(oculto: boolean): Promise<string> {
+    const docC = JSON.stringify(lugarMarcador(C, "Terceiro Marcador", "Terceira Marcadora"));
+    await gravarVersao(c, C, docC, "painel", AGORA + 5, oculto);
+    const maisNova = (await c.execute("SELECT ficha_slug FROM ficha_versoes ORDER BY id DESC LIMIT 1")).rows[0];
+    expect(maisNova.ficha_slug, "a fixture não prova nada se C não for a versão mais nova do banco").toBe(C);
+    return docC;
+  }
+
+  it("gravarEdicao de A escondido, com C no ar gravado depois: A continua escondido", async () => {
+    const lida = (await versaoAtual(c, A))!;
+    await gravarVersao(c, A, lida.doc, "painel", AGORA + 1, true);
+    await cGravaDepois(false);
+    const id = await gravarEdicao(c, A, lida.doc, AGORA + 6, lida.id);
+    expect(await versaoAtual(c, A)).toMatchObject({ id, oculto: true });
+  });
+
+  it("gravarVisibilidade de A, com C gravado depois: o documento é o de A, e C fica intacto", async () => {
+    const lida = (await versaoAtual(c, A))!;
+    const docC = await cGravaDepois(true);
+    expect(docC).not.toBe(lida.doc);
+    const historicoDeC = await historico(c, C);
+    const id = await gravarVisibilidade(c, A, true, AGORA + 6, lida.id);
+    expect(await versaoAtual(c, A)).toMatchObject({ id, oculto: true, doc: lida.doc });
+    expect(await historico(c, C)).toEqual(historicoDeC);
+  });
+
+  it("estadoDaTela de A escondido, com C no ar gravado depois: o estado é o de A", async () => {
+    const lida = (await versaoAtual(c, A))!;
+    const idEscondida = await gravarVersao(c, A, lida.doc, "painel", AGORA + 1, true);
+    await cGravaDepois(false);
+    expect(await estadoDaTela(c, A, lida.id)).toEqual({ id: idEscondida, oculto: true, daTela: true });
   });
 });
 
