@@ -2,7 +2,21 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 06/10 (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — PARADA DE 07/10 (vence TUDO abaixo)
+
+**Ele parou em 07/10 dizendo que continua na próxima sessão.** Código PRONTO na branch `painel-completo` (último
+código `6d11d68`, 2364/2364, tsc 0, build 0, mutar 42/0), NADA NO AR. O deploy espera ELE.
+
+→ 🔴 **O PRIMEIRO PASSO, SEM PENSAR:** lembrá-lo do pacote de copy e conferir se ele já respondeu:
+1. `git status --short` limpo.
+2. `ArtifactData list` em `https://claude.ai/artifact/63z3vvcrNjWN2CgvMA8L53`, coleção `respostas` (limit 1000).
+   - **Vazio ou poucas respostas:** diga a ele, curto, que o deploy espera a leitura dele, mande o link e diga por onde
+     começar (as 31 com alerta + as 3 decisões do topo). Não faça nada de código.
+   - **Com respostas:** monte a onda de copy (abaixo, "Próximo passo quando ele responder").
+
+(o histórico de 06/10 segue)
+
+## ▶ 06/10 (histórico do dia)
 
 **Branch `painel-completo`, NADA NO AR.** Último código: **`a7f0eaf`** (onda 4 da 11e, SÓ TESTE). Medido por mim:
 **2198/2198 em 108**, `tsc` 0, build 0, `mutar.mjs` 42/0. As 4 mutações da onda (`GE-OCULTO-SEM-SLUG`,
