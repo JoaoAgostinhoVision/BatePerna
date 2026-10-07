@@ -48,9 +48,18 @@ esconder TODOS os lugares → a leitura pública volta vazia → cai no ramo "ba
 escondidos (instância quente) ou o app público inteiro cai (fria). Medido por sonda. M1: `ensureSchema` NÃO roda no
 boot — **sem `npm run semear` antes do deploy cai o PÚBLICO inteiro**, não só o `/admin`.
 
-→ 🔴 **A onda de fix da revisão final ESTÁ DESPACHADA** (`final-fix-brief.md`: C1 + M1/M2/M3; M5 nota). Se não houver
-commit de código depois de `e1c63be`, redespachar com o mesmo brief. Depois: medir → re-revisão curta do C1 →
-agentes do projeto → pacote de copy → `npm run semear` → UM `vercel --prod --yes` → `conferir-no-ar` → olhos dele.
+✅ **Onda de fix da revisão final FEITA: `c9c6bcb`.** Medido por mim: **2349/2349 em 113**, `tsc` 0, build 0,
+mutar 42/0. Com tudo escondido o público mostra acervo vazio honesto; a memória nunca vê escondido. ⚠️ A frase do
+M1 ("sem `semear` cai o público inteiro") foi trocada pelo implementador por "caem só o ✓ Fui e o endereço velho" —
+**NÃO medido**; a ordem do deploy não muda: `semear` ANTES de `vercel --prod`. ⚠️ Home com tudo escondido diz
+"Nenhuma trilha com esses filtros · limpar filtros" sem filtro — frase pro pacote de copy.
+
+→ 🔴 **EM VOO, CINCO AGENTES** (todos sem suíte inteira): re-revisão curta (`final-rereview.md`, SEM mutação — o
+`prova-que-trava` sabota a mesma árvore), `contracao-honesta` (`agente-contracao.md`), `prova-que-trava`
+(`agente-prova.md`), `voz-do-lugar` (`agente-voz.md`), `procedencia` (`agente-procedencia.md`). Se algum arquivo
+faltar, redespachar só aquele. ANTES de qualquer coisa: `git status --short` limpo (sabotagem viva = restaurar).
+Depois: onda de fix se houver → pacote de copy pro João → `npm run semear` → UM `vercel --prod --yes` →
+`conferir-no-ar` → olhos dele.
 ❓ **Pergunta ao João (M4 da revisão final):** com o banco FORA DO AR, uma instância que ainda lembra de um lugar que
 ele acabou de esconder continua mostrando esse lugar até o banco voltar. Aceitar (é a família "conteúdo velho na
 queda" que ele aceitou em 24/09) ou não (a memória passa a não servir nada que possa estar escondido — custo: queda
