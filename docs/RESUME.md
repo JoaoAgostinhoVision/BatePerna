@@ -34,6 +34,15 @@ código `6d11d68`, 2364/2364, tsc 0, build 0, mutar 42/0), NADA NO AR. O deploy 
   deploy.** O rótulo de hoje fica PENDENTE e sobe como está.
 ✅ **14 (`f5f349c`) e 14b (`8750f6c`) FEITAS + `f779f8c` (marcador da ficha-18).** Medido por mim no `f779f8c`:
 2364/2364 em 113, tsc 0, build 0, mutar 42/0. Sobram 6 PENDENTE de verdade em `src` (ficha-14, -18, -40..43).
+🟡 **DEPOIS DO DEPLOY (07/10), ele pediu duas coisas:** *"ficou faltando o botão de cancelar"* ("Os dois": desistir
+do rascunho + desfazer edição) e *"como o usuário comum vai poder inserir os locais"*.
+- Cancelar = **Tarefa 15 FEITA: `b3cd4b2`** (desenho aprovado: *"pode fazer assim"*). Medido por mim: 2414/2414 em
+  116, tsc 0, build 0, mutar 42/0. 4 frases novas PENDENTE ("Desistir deste lugar", "Desistir mesmo? O que foi
+  respondido some.", "Não consegui desistir deste lugar.", "Desfazer") — mostrar a ele antes de subir. Revisão
+  despachada (`task-15-review.md`). NÃO está no ar.
+- Usuário comum = brainstorm ARQUITETURAL em curso. 1ª resposta dele: **"Vai ao ar direto, marcado"** (não passa
+  pela fila dele; marca visível "enviado por alguém, não conferido"). ⚠️ Isso abre exceção à linha vermelha
+  (o app só afirma o que veio dele) — por escolha dele; a marca é o que segura a honestidade.
 🟢 **NO AR (07/10, 12:21): `dpl_J9RDAM5yDirHKJnBavpRu65y1h81`, código `f779f8c`.** Ele deu o ok ("pode fazer o
 deploy quando terminar"). `semear`: nada novo (3 já no banco). 1ª tentativa do `vercel --prod` = "fetch failed",
 a 2ª subiu. `conferir-no-ar`: rodapé "BatePerna" nas 3 fichas, `/admin/novo/publicar` 200 (controle 404), home com as
