@@ -12,7 +12,6 @@ import {
   historico,
   lerRascunho,
   listarRascunhos,
-  salvarRascunho,
   versaoAtual,
   versoesAtuais,
 } from "@/lib/db";
@@ -30,7 +29,7 @@ import {
   slugDoNome,
 } from "@/lib/rascunho";
 import type { Ficha } from "@/types/ficha";
-import { semearAcervo } from "../banco";
+import { salvarRascunho, semearAcervo } from "../banco";
 
 /** A PORTA DO RASCUNHO (Tarefa 11): `/api/admin/rascunho`.
  *

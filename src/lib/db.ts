@@ -563,37 +563,27 @@ function rascunhoDaLinha(r: Record<string, unknown>): Rascunho {
   return { slug: String(r.slug), doc: String(r.doc), atualizado_em: Number(r.atualizado_em) };
 }
 
-/** Grava o rascunho de `slug` POR CIMA do que havia — é o toque do formulário.
- *
- *  🔴 SOBRESCREVE, e é a única função de escrita deste arquivo que faz isso: ver
- *  o comentário de `ficha_rascunhos` em `ensureSchema`. NÃO valida o documento
- *  (nem `fichaSchema`, nem coerência): rascunho incompleto é o estado normal.
- *
- *  ⚠️ NENHUMA ROTA DO PAINEL A CHAMA DESDE A TAREFA 12: o PUT do rascunho grava
- *  por `regravarRascunho` (`UPDATE`, que não ressuscita um rascunho publicado no
- *  meio do pedido — ver lá), e a porta de nascer é `criarRascunho`. Ela fica
- *  como a forma que os testes usam pra pôr um rascunho no banco. */
-export async function salvarRascunho(client: Client, slug: string, doc: string, agora: number): Promise<void> {
-  await client.execute({
-    sql: `INSERT INTO ficha_rascunhos (slug, doc, atualizado_em) VALUES (?, ?, ?)
-          ON CONFLICT(slug) DO UPDATE SET doc = excluded.doc, atualizado_em = excluded.atualizado_em`,
-    args: [slug, doc, agora],
-  });
-}
-
 /** Regrava o rascunho de `slug` — SÓ SE ELE AINDA EXISTE ali. Devolve `false`
  *  sem gravar nada quando não há rascunho em `slug` (Tarefa 12, I1 da auditoria
  *  de 06/10).
  *
  *  🔴 É A FORMA DO PUT DO RASCUNHO, e é `UPDATE`, nunca upsert: o PUT lê o
  *  rascunho e grava depois; se a PUBLICAÇÃO (`publicarRascunho`) roda no meio,
- *  o upsert de `salvarRascunho` RECRIAVA o rascunho em `slug` — ao lado do lugar
- *  que acabou de ir ao ar no mesmo endereço, que é o estado que `criarRascunho`
- *  declara impossível — e a última resposta do dono ficava fora do lugar no ar,
- *  em silêncio. Com o `UPDATE`, o rascunho só nasce por `criarRascunho`. */
+ *  o upsert que o PUT usava até a Tarefa 12 RECRIAVA o rascunho em `slug` — ao
+ *  lado do lugar que acabou de ir ao ar no mesmo endereço, que é o estado que
+ *  `criarRascunho` declara impossível — e a última resposta do dono ficava fora
+ *  do lugar no ar, em silêncio. Com o `UPDATE`, o rascunho só nasce por
+ *  `criarRascunho`. (Aquele upsert não mora mais em `src`: virou helper de
+ *  teste, em `tests/banco.ts`.)
+ *
+ *  🔴 O `atualizado_em` SÓ CRESCE, e ESTRITAMENTE (M1 da revisão da Tarefa 12):
+ *  ele é a IDENTIDADE do rascunho que a tela de publicar leu, e `agora` é em
+ *  segundos. Com `= agora`, duas gravações no MESMO segundo deixavam a
+ *  identidade igual com o documento diferente, e o publicar levaria ao ar o que
+ *  a tela não mostrou. `MAX(agora, atual + 1)`: toda gravação muda a identidade. */
 export async function regravarRascunho(client: Client, slug: string, doc: string, agora: number): Promise<boolean> {
   const r = await client.execute({
-    sql: `UPDATE ficha_rascunhos SET doc = ?, atualizado_em = ? WHERE slug = ?`,
+    sql: `UPDATE ficha_rascunhos SET doc = ?, atualizado_em = MAX(?, atualizado_em + 1) WHERE slug = ?`,
     args: [doc, agora, slug],
   });
   return r.rowsAffected === 1;
@@ -636,10 +626,12 @@ export async function criarRascunho(client: Client, slug: string, doc: string, a
  *  DOIS rascunhos do mesmo lugar) nem "apagar e criar" (uma janela com nenhum):
  *  a conferência do destino e a troca de chave acontecem juntas no banco.
  *  `para` diferente de `de` é de quem chama — com os dois iguais, o próprio
- *  rascunho ocuparia o destino e a resposta seria `false`. */
+ *  rascunho ocuparia o destino e a resposta seria `false`.
+ *
+ *  O `atualizado_em` cresce ESTRITAMENTE, pela régua de `regravarRascunho`. */
 export async function moverRascunho(client: Client, de: string, para: string, doc: string, agora: number): Promise<boolean> {
   const r = await client.execute({
-    sql: `UPDATE ficha_rascunhos SET slug = ?, doc = ?, atualizado_em = ?
+    sql: `UPDATE ficha_rascunhos SET slug = ?, doc = ?, atualizado_em = MAX(?, atualizado_em + 1)
           WHERE slug = ?
             AND NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
             AND NOT EXISTS (SELECT 1 FROM ficha_rascunhos WHERE slug = ?)`,
@@ -667,7 +659,7 @@ export async function listarRascunhos(client: Client): Promise<Rascunho[]> {
 }
 
 /** Tira o rascunho — o `DELETE` do painel. Pode apagar sem culpa pela mesma
- *  razão de `salvarRascunho` sobrescrever: rascunho nunca afirmou nada.
+ *  razão de `ficha_rascunhos` sobrescrever: rascunho nunca afirmou nada.
  *  (Publicar NÃO passa por aqui: o rascunho sai DENTRO do batch de
  *  `publicarRascunho`, como o último passo dele.) */
 export async function apagarRascunho(client: Client, slug: string): Promise<void> {
@@ -804,11 +796,23 @@ export async function trocarEndereco(
  *  🔴 E UM BATCH NÃO RAMIFICA: o portão é o 1º passo (o INSERT da versão, só se
  *  `slug` não tem versão NENHUMA — sem filtro de `oculto`: lugar escondido é
  *  lugar, e volta — E o rascunho de `slug` ainda tem o `atualizado_em` que a
- *  tela leu). TODO passo seguinte é condicionado à `porta`: o rascunho ainda lá
- *  com aquele `atualizado_em`, `slug` com UMA versão só, e ela a que o 1º passo
- *  gravou. O rascunho sai no ÚLTIMO passo, então a porta vale do 2º ao último —
- *  e um publicar recusado (o rascunho mudou, o endereço já tem lugar) não toca
- *  em nada: nem órfão, nem a linha `velho = slug`, nem o rascunho.
+ *  tela leu). TODO passo seguinte é condicionado à `porta`, que tem DUAS
+ *  cláusulas, e cada uma decide sozinha num caso (M2 da revisão da Tarefa 12:
+ *  havia uma terceira, `slug` com UMA versão só, que nenhum caso decidia — se a
+ *  versão do 1º passo existe, ela é a única, porque o 1º passo exigiu `slug`
+ *  sem versão nenhuma — e ela saiu):
+ *   - a versão que o 1º passo gravou (este `doc`, este `criado_em`, `painel`,
+ *     no ar) está em `slug`. É ela que segura um publicar recusado pelo
+ *     ENDEREÇO: o rascunho continua lá com o mesmo `atualizado_em`, e só esta
+ *     cláusula cai;
+ *   - o rascunho ainda está lá com aquele `atualizado_em`. É ela que segura o
+ *     DUPLO TOQUE concorrente no mesmo segundo: o 2º batch acha a versão do 1º
+ *     (a mesma, byte a byte) e só esta cláusula cai — sem ela, ele refazia os
+ *     passos 2 a 6 e apagava a `freshness` que `slug` ganhou no meio.
+ *  O rascunho sai no ÚLTIMO passo, então a porta vale do 2º ao último — e um
+ *  publicar recusado (o rascunho mudou, o endereço já tem lugar, já foi
+ *  publicado) não toca em nada: nem órfão, nem a linha `velho = slug`, nem a
+ *  `freshness`, nem o rascunho.
  *
  *  O `oculto` é o literal `0`: o lugar novo nasce no ar, e nunca herda a
  *  visibilidade de outro lugar.
@@ -838,10 +842,9 @@ export async function publicarRascunho(
   client: Client, slug: string, doc: string, agora: number, atualizadoEm: number,
 ): Promise<boolean> {
   const porta = `EXISTS (SELECT 1 FROM ficha_rascunhos WHERE slug = ? AND atualizado_em = ?)
-              AND (SELECT COUNT(*) FROM ficha_versoes WHERE ficha_slug = ?) = 1
               AND EXISTS (SELECT 1 FROM ficha_versoes
                           WHERE ficha_slug = ? AND doc = ? AND criado_em = ? AND autor = 'painel' AND oculto = 0)`;
-  const p = [slug, atualizadoEm, slug, slug, doc, agora];
+  const p = [slug, atualizadoEm, slug, doc, agora];
   const rs = await client.batch(
     [
       {

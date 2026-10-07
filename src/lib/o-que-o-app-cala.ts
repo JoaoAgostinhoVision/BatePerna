@@ -45,10 +45,12 @@ const FRASES: Readonly<Record<string, string>> = {
   carroComum: "Sem ele, o app não afirma nada sobre que carro chega.",
   // PENDENTE: redação minha, o João ainda não leu (o questionário não cobre o valor)
   "custo.valor": "Numa ficha paga sem o valor, o app não diz quanto custa nem como se paga.",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
-  "custo.curto": "Numa ficha paga sem ele, o chip do topo mostra só o preço, e o app não diz onde se paga.",
-  // PENDENTE: do questionário, que ele leu; primeira vez numa tela
-  horario: "Sem ele, a ficha nunca fecha por hora, e o carimbo decide só pela chuva.",
+  // PENDENTE: do questionário, que ele leu; primeira vez numa tela. Cortada por SUBTRAÇÃO (M6 da
+  // revisão da Tarefa 12): a metade que saiu era falsa junto de outro campo ausente
+  "custo.curto": "Numa ficha paga sem ele, o app não diz onde se paga.",
+  // PENDENTE: do questionário, que ele leu; primeira vez numa tela. Cortada por SUBTRAÇÃO (M6 da
+  // revisão da Tarefa 12): a metade que saiu era falsa junto de outro campo ausente
+  horario: "Sem ele, a ficha nunca fecha por hora.",
   // PENDENTE: do questionário, que ele leu; primeira vez numa tela
   dias: "Sem ele, a ficha nunca fecha por dia da semana: o app não sabe que aquele lugar folga, então não afirma que folgou.",
   // PENDENTE: do questionário, que ele leu; primeira vez numa tela

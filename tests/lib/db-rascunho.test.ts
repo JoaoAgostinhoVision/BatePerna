@@ -8,12 +8,12 @@ import {
   lerRascunho,
   listarRascunhos,
   moverRascunho,
-  salvarRascunho,
+  regravarRascunho,
   versaoAtual,
   versoesAtuais,
 } from "@/lib/db";
 import { buscarFichas, esquecerMemoria } from "@/lib/ficha-fonte";
-import { semearAcervo } from "../banco";
+import { salvarRascunho, semearAcervo } from "../banco";
 
 /** A TABELA DE RASCUNHO (Tarefa 11) — a ÚNICA deste projeto que sobrescreve.
  *
@@ -111,6 +111,19 @@ describe("ficha_rascunhos", () => {
       doc: '{"quem":"depois"}',
       atualizado_em: 5,
     });
+  });
+
+  // 🔴 M1 DA REVISÃO DA TAREFA 12: o `atualizado_em` é a IDENTIDADE que a tela
+  // de publicar leu, e `agora` é em segundos. Toda gravação a muda — inclusive
+  // duas no MESMO segundo, e com o relógio atrás do que está gravado.
+  it("regravar e mover no MESMO segundo mudam o atualizado_em, sempre pra frente", async () => {
+    await salvarRascunho(c, S, '{"quem":"um"}', 5);
+    expect(await regravarRascunho(c, S, '{"quem":"dois"}', 5)).toBe(true);
+    expect((await lerRascunho(c, S))?.atualizado_em, "regravar no mesmo segundo").toBe(6);
+    expect(await moverRascunho(c, S, "lugar-marcador-dois", '{"quem":"tres"}', 5)).toBe(true);
+    expect((await lerRascunho(c, "lugar-marcador-dois"))?.atualizado_em, "mover com o relógio atrás").toBe(7);
+    expect(await regravarRascunho(c, "lugar-marcador-dois", '{"quem":"quatro"}', 20)).toBe(true);
+    expect((await lerRascunho(c, "lugar-marcador-dois"))?.atualizado_em, "o relógio na frente vence").toBe(20);
   });
 
   // E recusa o endereço que já é de outro: de um rascunho, ou de um lugar —

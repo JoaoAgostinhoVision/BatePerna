@@ -18,7 +18,6 @@ import {
   lerRascunho,
   moverRascunho,
   publicarRascunho,
-  salvarRascunho,
   trocarEndereco,
   upsertFreshness,
   versaoAtual,
@@ -30,10 +29,11 @@ import {
   RASCUNHO_MUDOU,
   RASCUNHO_SUMIU,
   SLUG_DE_DENTRO,
+  prepararPublicacao,
 } from "@/lib/porta-de-publicar";
-import { RASCUNHO_NAO_EXISTE_MAIS, enderecoDeLugar, nomeComCidade, parDeLugar } from "@/lib/rascunho";
+import { RASCUNHO_NAO_EXISTE_MAIS, enderecoDeLugar, gemeoSemCidade, nomeComCidade, parDeLugar } from "@/lib/rascunho";
 import { type Ficha, fichaSchema } from "@/types/ficha";
-import { base, clienteQueIntercala, semearAcervo } from "../banco";
+import { base, clienteQueIntercala, salvarRascunho, semearAcervo } from "../banco";
 import { lugarMarcador } from "../lugar-marcador";
 import { rascunhoCompleto } from "../rascunho-completo";
 
@@ -318,6 +318,22 @@ describe("POST /api/admin/publicar — o par e a coerência", () => {
     await nadaMudou();
   });
 
+  // 🔴 M3 da revisão da Tarefa 12: o `nomeNovo: true` do par. Um lugar SEM
+  // cidade (as fichas de antes da 11b) com o MESMO nome, gravado cru depois da
+  // semente — chega assim quando um deles é renomeado pro nome do rascunho, o que
+  // o par do rename deixa passar (o rascunho tem cidade). Com `nomeNovo: false`,
+  // o gêmeo sem cidade não conta e o rascunho publicava.
+  it("um lugar SEM cidade com o mesmo nome: 409 pedindo a cidade dele, nada gravado", async () => {
+    const gemeo = "lugar-marcador-gemeo-sem-cidade";
+    await gravarVersao(c, gemeo, JSON.stringify(lugarMarcador(gemeo, NOME)), "painel", AGORA - 300);
+    expect(JSON.parse((await versaoAtual(c, gemeo))!.doc).cidade, "a premissa: o gêmeo não tem cidade").toBeUndefined();
+    await guardar(completo());
+    const res = await publicarS();
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(gemeoSemCidade(NOME));
+    await nadaMudou();
+  });
+
   it("mesmo nome em OUTRA cidade publica (decisão do João de 04/10)", async () => {
     const outraCidade = "lugar-marcador-gemeo";
     await gravarVersao(c, outraCidade, JSON.stringify(lugarMarcador(outraCidade, NOME, "Cidade Marcador Outra")), "painel", AGORA - 300);
@@ -358,6 +374,33 @@ describe("POST /api/admin/publicar — publicar de verdade", () => {
     expect(segundo.status).toBe(409);
     expect(await segundo.text()).toBe(JA_PUBLICADO_OU_OCUPADO);
     expect(await historico(c, S)).toHaveLength(1);
+  });
+
+  // 🔴 M2 da revisão da Tarefa 12: a cláusula do RASCUNHO na `porta`. No duplo
+  // toque CONCORRENTE no mesmo segundo, o 1º batch inteiro roda entre a leitura
+  // do 2º e o batch dele, com o MESMO documento — a versão do 1º é igual, byte a
+  // byte, à que o 2º gravaria, e só o rascunho (que o 1º apagou) segura a porta.
+  // Sem a cláusula, o 2º refazia os passos 2 a 6 e apagava a `freshness` que o
+  // lugar ganhou no meio.
+  it("duplo toque CONCORRENTE no mesmo segundo: o 2º não grava nem apaga nada", async () => {
+    await guardar(completo());
+    const preparo = prepararPublicacao(JSON.stringify(completo()), S);
+    if (!("doc" in preparo)) throw new Error("a premissa: o rascunho completo se prepara");
+    const g = clienteQueIntercala(c, /^INSERT INTO ficha_versoes\b/, async () => {
+      expect(await publicarRascunho(c, S, preparo.doc, AGORA, ATUALIZADO), "o 1º toque").toBe(true);
+      await upsertFreshness(c, { slug: S, estado: "fresco", calculadoEm: AGORA, fonte: "marcador", previsaoBruta: "{}" });
+    });
+    daRota = g.cliente;
+    const antes = await outros();
+    const res = await publicarS();
+    expect(g.disparos(), "o dublê nunca disparou: nada foi intercalado").toBe(1);
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(JA_PUBLICADO_OU_OCUPADO);
+    const h = await historico(c, S);
+    expect(h).toHaveLength(1);
+    expect(h[0].doc, "a premissa: o 1º gravou o MESMO documento que o 2º gravaria").toBe(preparo.doc);
+    expect((await getFreshness(c, S))?.estado, "a freshness que o lugar ganhou no meio sumiu").toBe("fresco");
+    expect(await outros()).toEqual(antes);
   });
 
   it("controle: o dublê de batch dispara UMA vez e, sem intercalar nada, publica", async () => {
@@ -472,6 +515,58 @@ describe("POST /api/admin/publicar — a identidade do rascunho", () => {
     expect(await historico(c, S)).toEqual([]);
     expect(await lerRascunho(c, S)).toBeNull();
     expect((await lerRascunho(c, outroEndereco))?.atualizado_em).toBe(ATUALIZADO + 9);
+  });
+
+  // 🔴 M1 da revisão da Tarefa 12: a identidade tem resolução de 1 segundo, e
+  // duas gravações no MESMO segundo (o PUT em voo que chega depois de a página
+  // de publicar ler) deixavam o `atualizado_em` igual com o documento diferente.
+  it("dois Salvar no MESMO segundo: a tela que leu o primeiro leva 409, nada no ar", async () => {
+    await guardar(completo());
+    const salvar = (valor: string) =>
+      rotaRascunho.PUT(
+        new Request("http://x/api/admin/rascunho", {
+          method: "PUT",
+          headers: { cookie: `${COOKIE_ADMIN}=${cookieBom}` },
+          body: JSON.stringify({ slug: S, campo: "voz", valor }),
+        }),
+      );
+    expect((await salvar("Uma voz marcadora, a primeira.")).status).toBe(200);
+    const daTela = (await lerRascunho(c, S))!.atualizado_em;
+    expect((await salvar("Uma voz marcadora, a segunda.")).status).toBe(200);
+    expect(Math.floor(Date.now() / 1000), "a premissa: o relógio não andou entre os dois").toBe(AGORA);
+    const agora = (await lerRascunho(c, S))!;
+    expect(JSON.parse(agora.doc).voz, "a premissa: o segundo Salvar gravou").toBe("Uma voz marcadora, a segunda.");
+    const res = await publicar({ slug: S, atualizadoEm: daTela });
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(RASCUNHO_MUDOU);
+    await nadaMudou(agora.atualizado_em);
+  });
+
+  // 🔴 M4 da revisão da Tarefa 12: o mesmo atraso, num PUT que muda a CIDADE (e
+  // por isso o endereço): `moverRascunho` recusa porque o ORIGEM sumiu, e a
+  // frase de "quem ocupa" o destino — livre — seria falsa.
+  it("um PUT de cidade atrasado, depois de publicar: 409 com a frase do rascunho que não existe mais", async () => {
+    await guardar(completo());
+    const noAr = JSON.stringify(fichaSchema.parse(completo()));
+    const g = clienteQueIntercala(c, /^(UPDATE|INSERT INTO) ficha_rascunhos\b/, async () => {
+      expect(await publicarRascunho(c, S, noAr, AGORA, ATUALIZADO)).toBe(true);
+    });
+    daRota = g.cliente;
+    const destino = "lugar-marcador-publicar-cidade-marcador-mudada";
+    const res = await rotaRascunho.PUT(
+      new Request("http://x/api/admin/rascunho", {
+        method: "PUT",
+        headers: { cookie: `${COOKIE_ADMIN}=${cookieBom}` },
+        body: JSON.stringify({ slug: S, campo: "cidade", valor: "Cidade Marcador Mudada" }),
+      }),
+    );
+    expect(g.disparos(), "o dublê nunca disparou: nada foi intercalado").toBe(1);
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(RASCUNHO_NAO_EXISTE_MAIS);
+    expect(await lerRascunho(c, S), "o rascunho renasceu ao lado do lugar no ar").toBeNull();
+    expect(await lerRascunho(c, destino), "o rascunho renasceu no endereço novo").toBeNull();
+    expect(await historico(c, destino)).toEqual([]);
+    expect(await historico(c, S)).toHaveLength(1);
   });
 
   // 🔴 R2 (I1b): o PUT do rascunho que leu ANTES da publicação e grava DEPOIS.

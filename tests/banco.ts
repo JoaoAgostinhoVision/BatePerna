@@ -122,6 +122,25 @@ export async function bancoDeProducao(): Promise<Client> {
   return client;
 }
 
+/** Põe um rascunho em `slug` POR CIMA do que havia — o upsert, HELPER DE TESTE.
+ *
+ *  🔴 MORA AQUI, e não em `src/lib/db.ts`, de propósito (M8 da revisão da
+ *  Tarefa 12): nenhuma rota o chama desde a Tarefa 12. O PUT do rascunho grava
+ *  por `regravarRascunho` (`UPDATE`) e a porta de nascer é `criarRascunho`
+ *  (com portão); um upsert exportado de `src` seria a forma mais fácil de
+ *  "gravar um rascunho" pra quem escrever a próxima rota, e recriaria o defeito
+ *  do I1b — um rascunho renascendo ao lado do lugar que acabou de ir ao ar.
+ *
+ *  NÃO valida o documento e NÃO confere colisão: é pra montar estado de teste
+ *  (inclusive o que nenhuma porta produz), nunca pra provar uma porta. */
+export async function salvarRascunho(client: Client, slug: string, doc: string, agora: number): Promise<void> {
+  await client.execute({
+    sql: `INSERT INTO ficha_rascunhos (slug, doc, atualizado_em) VALUES (?, ?, ?)
+          ON CONFLICT(slug) DO UPDATE SET doc = excluded.doc, atualizado_em = excluded.atualizado_em`,
+    args: [slug, doc, agora],
+  });
+}
+
 /** Um banco `:memory:` VAZIO e avulso, pra quem precisa de um cliente só seu. */
 export function bancoVazio(): Client {
   return createClient({ url: ":memory:" });

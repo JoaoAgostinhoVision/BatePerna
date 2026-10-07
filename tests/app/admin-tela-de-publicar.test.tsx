@@ -6,13 +6,13 @@ import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
-import { historico, lerRascunho, salvarRascunho, versaoAtual } from "@/lib/db";
+import { historico, lerRascunho, versaoAtual } from "@/lib/db";
 import { oQueOAppCala } from "@/lib/o-que-o-app-cala";
 import { FALTA_OBRIGATORIO } from "@/lib/porta-de-publicar";
 import TelaDePublicar, { PUBLICAR, TITULO_CALA, TITULO_FALTA } from "@/app/admin/TelaDePublicar";
 import { enderecoDaPergunta } from "@/app/admin/novo/enderecos";
 import { ORDEM, PERGUNTAS } from "@/app/admin/novo/perguntas";
-import { bancoVazio, semearAcervo } from "../banco";
+import { bancoVazio, salvarRascunho, semearAcervo } from "../banco";
 import { rascunhoCompleto } from "../rascunho-completo";
 
 /** A TELA DE PUBLICAR (Tarefa 12) — o componente, com frases montadas à mão (I7
@@ -210,26 +210,46 @@ describe("o bundle do celular", () => {
   const RAIZ = path.join(process.cwd(), "src");
   const PROIBIDOS = ["@/lib/campos-da-ficha", "@/types/ficha", "zod", "@/lib/o-que-o-app-cala", "@/lib/porta-de-publicar"];
 
-  function especificadores(inicio: string): { arquivos: string[]; especificadores: string[] } {
+  /** O especificador `esp`, importado de `de`, como ARQUIVO no disco — `@/` e
+   *  relativo pela mesma régua —, ou `null` (pacote, ou nada achado). */
+  const resolver = (de: string, esp: string): string | null => {
+    const base = esp.startsWith("@/") ? path.join(RAIZ, esp.slice(2)) : esp.startsWith(".") ? path.resolve(path.dirname(de), esp) : null;
+    if (base === null) return null;
+    for (const ext of [".ts", ".tsx", "/index.ts", "/index.tsx"]) {
+      try {
+        readFileSync(base + ext);
+        return base + ext;
+      } catch {
+        /* tenta a próxima */
+      }
+    }
+    return null;
+  };
+
+  /** 🔴 M7 da revisão da Tarefa 12: o guarda comparava ESPECIFICADORES como
+   *  texto, e `import … from "../../lib/campos-da-ficha"` passava pela lista.
+   *  Agora o proibido de `src` é um ARQUIVO resolvido, e o que se compara são os
+   *  arquivos que o caminhante alcançou; só o pacote (`zod`) é comparado pelo
+   *  nome, que é o único jeito de importá-lo. */
+  const PROIBIDOS_ARQUIVO = PROIBIDOS.filter((p) => p.startsWith("@/")).map((p) => {
+    const arq = resolver(path.join(RAIZ, "x.ts"), p);
+    if (arq === null) throw new Error(`o proibido ${p} não resolve pra arquivo nenhum`);
+    return arq;
+  });
+  const PROIBIDOS_PACOTE = PROIBIDOS.filter((p) => !p.startsWith("@/") && !p.startsWith("."));
+
+  /** O grafo de imports de VALOR a partir de `inicio`. `ler` existe pro controle
+   *  pôr um arquivo SABOTADO no lugar de um de verdade, sem tocar em `src`. */
+  function grafo(
+    inicio: string,
+    ler: (arquivo: string) => string = (a) => readFileSync(a, "utf8"),
+  ): { arquivos: string[]; especificadores: string[] } {
     const vistos = new Set<string>();
     const vistosEsp: string[] = [];
-    const resolver = (de: string, esp: string): string | null => {
-      const base = esp.startsWith("@/") ? path.join(RAIZ, esp.slice(2)) : esp.startsWith(".") ? path.resolve(path.dirname(de), esp) : null;
-      if (base === null) return null;
-      for (const ext of [".ts", ".tsx", "/index.ts", "/index.tsx"]) {
-        try {
-          readFileSync(base + ext);
-          return base + ext;
-        } catch {
-          /* tenta a próxima */
-        }
-      }
-      return null;
-    };
     const andar = (arquivo: string): void => {
       if (vistos.has(arquivo)) return;
       vistos.add(arquivo);
-      const fonte = ts.createSourceFile(arquivo, readFileSync(arquivo, "utf8"), ts.ScriptTarget.Latest, true);
+      const fonte = ts.createSourceFile(arquivo, ler(arquivo), ts.ScriptTarget.Latest, true);
       for (const n of fonte.statements) {
         if (!ts.isImportDeclaration(n) && !ts.isExportDeclaration(n)) continue;
         if (ts.isImportDeclaration(n) && n.importClause?.isTypeOnly) continue;
@@ -245,15 +265,47 @@ describe("o bundle do celular", () => {
     return { arquivos: [...vistos], especificadores: vistosEsp };
   }
 
+  /** O que o grafo de `inicio` alcança da lista proibida: arquivos e pacotes. */
+  function proibidosAlcancados(inicio: string, ler?: (arquivo: string) => string): string[] {
+    const { arquivos, especificadores } = grafo(inicio, ler);
+    const pacote = (e: string, p: string) => e === p || e.startsWith(`${p}/`);
+    return [
+      ...PROIBIDOS_ARQUIVO.filter((p) => arquivos.includes(p)),
+      ...PROIBIDOS_PACOTE.filter((p) => especificadores.some((e) => pacote(e, p))),
+    ];
+  }
+
+  const TELA = path.join(RAIZ, "app", "admin", "TelaDePublicar.tsx");
+
   it("a TelaDePublicar não alcança o registro, o schema, o zod, nem as funções que os leem", () => {
-    const { arquivos, especificadores: esps } = especificadores(path.join(RAIZ, "app", "admin", "TelaDePublicar.tsx"));
+    const { arquivos } = grafo(TELA);
     expect(arquivos.some((a) => a.endsWith("gravar.ts")), "o caminhante não seguiu os imports").toBe(true);
-    for (const p of PROIBIDOS) expect(esps, `a tela de cliente alcança ${p}`).not.toContain(p);
+    expect(PROIBIDOS_ARQUIVO, "a premissa: os quatro proibidos de src resolvem").toHaveLength(4);
+    expect(proibidosAlcancados(TELA), "a tela de cliente alcança o proibido").toEqual([]);
   });
 
   it("controle: o caminhante enxerga o proibido quando ele está lá (a página de servidor)", () => {
-    const { especificadores: esps } = especificadores(path.join(RAIZ, "app", "admin", "novo", "publicar", "page.tsx"));
-    expect(esps).toContain("@/lib/o-que-o-app-cala");
-    expect(esps).toContain("@/lib/campos-da-ficha");
+    const pagina = path.join(RAIZ, "app", "admin", "novo", "publicar", "page.tsx");
+    const alcancados = proibidosAlcancados(pagina);
+    expect(alcancados).toContain(resolver(pagina, "@/lib/o-que-o-app-cala"));
+    expect(alcancados).toContain(resolver(pagina, "@/lib/campos-da-ficha"));
+  });
+
+  // 🔴 A prova do M7: a MESMA tela, com um import RELATIVO de valor de um
+  // proibido acrescentado (lida por `ler`, sem tocar no disco). O proibido é
+  // lido como uma FOLHA (sem imports): o de verdade importa `@/types/ficha`, e
+  // a comparação por texto o pegaria de tabela, pelo especificador de DENTRO
+  // dele — o controle ficaria verde pelo motivo errado. Com a folha, só a
+  // comparação por ARQUIVO o vê.
+  it("controle: um import RELATIVO de um proibido-folha, sabotado na tela, é pego", () => {
+    const real = readFileSync(TELA, "utf8");
+    const proibido = resolver(TELA, "@/lib/campos-da-ficha");
+    const sabotada = 'import { CAMPOS_DA_FICHA } from "../../lib/campos-da-ficha";\nvoid CAMPOS_DA_FICHA;\n' + real;
+    const ler = (a: string) =>
+      a === TELA ? sabotada : a === proibido ? "export const CAMPOS_DA_FICHA = [];\n" : readFileSync(a, "utf8");
+    const { especificadores } = grafo(TELA, ler);
+    expect(especificadores, "a premissa: o import sabotado foi lido").toContain("../../lib/campos-da-ficha");
+    for (const p of PROIBIDOS) expect(especificadores, `a premissa: só o texto relativo, nunca ${p}`).not.toContain(p);
+    expect(proibidosAlcancados(TELA, ler)).toEqual([proibido]);
   });
 });

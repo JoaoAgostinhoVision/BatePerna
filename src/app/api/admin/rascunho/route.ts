@@ -253,6 +253,13 @@ export async function PUT(req: Request): Promise<Response> {
       if (await moverRascunho(getClient(), slug, destino, docNoEndereco(novoDoc, destino), agora)) {
         return Response.json({ slug: destino }, { headers: SEM_CACHE });
       }
+      // A recusa pode ser do ORIGEM, não do destino (M4 da revisão da Tarefa
+      // 12): entre a leitura lá em cima e o `moverRascunho`, o rascunho foi
+      // publicado, apagado ou movido noutra aba. Nomear "quem ocupa" o destino
+      // seria falso — ele pode estar livre.
+      if ((await lerRascunho(getClient(), slug)) === null) {
+        return new Response(RASCUNHO_NAO_EXISTE_MAIS, { status: 409, headers: TEXTO });
+      }
       return new Response(await quemOcupa(destino), { status: 409, headers: TEXTO });
     }
   }

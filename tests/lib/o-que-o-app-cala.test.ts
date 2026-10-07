@@ -24,6 +24,37 @@ function sem(caminho: string, doc: Record<string, unknown> = completo()): Record
 
 const OPCIONAIS = CAMPOS_DA_FICHA.filter((c) => !c.obrigatorio).map((c) => c.caminho.replace("[]", ".0"));
 
+/** Tem cara de caminho de campo, não de português: só letras sem acento,
+ *  dígitos, `_`, ponto e colchetes (`custo.valor`, `trajeto.waypoints[0].nota`). */
+const CARA_DE_CAMINHO = /^[\w.[\]]+$/;
+
+/** As frases que o M6 da revisão da Tarefa 12 CORTOU do item do questionário. */
+const CORTADAS = new Set(["custo.curto", "horario"]);
+
+/** O item do questionário de `caminho`, do travessão ao próximo item — com a
+ *  primeira letra como está lá (minúscula). */
+function itemDoQuestionario(corrido: string, caminho: string): string {
+  const inicio = corrido.indexOf(`\`${caminho}\` — `);
+  if (inicio < 0) return "";
+  const resto = corrido.slice(inicio + caminho.length + 5);
+  const fim = resto.indexOf(" - `");
+  return fim < 0 ? resto : resto.slice(0, fim);
+}
+
+/** `frase` é `item` com trechos TIRADOS e nada posto: as palavras dela, sem a
+ *  pontuação de fim, aparecem em ordem nas dele. */
+function subtracaoDe(frase: string, item: string): boolean {
+  const palavras = (t: string) => t.split(/\s+/).map((p) => p.replace(/[.,:;]+$/, "")).filter((p) => p !== "");
+  const dele = palavras(item);
+  let i = 0;
+  for (const p of palavras(frase)) {
+    while (i < dele.length && dele[i] !== p) i++;
+    if (i === dele.length) return false;
+    i++;
+  }
+  return true;
+}
+
 describe("oQueOAppCala", () => {
   it("nomeia, em português, o que o app deixa de dizer por cada campo ausente", () => {
     const frases = oQueOAppCala(sem("horario", sem("piso")));
@@ -48,7 +79,7 @@ describe("oQueOAppCala", () => {
       expect(frases, `${caminho} ausente`).toHaveLength(1);
       const [frase] = frases;
       expect(frase, `${caminho}: a frase é o caminho cru`).not.toBe(caminho);
-      expect(frase, `${caminho}: a frase tem cara de caminho, não de português`).not.toMatch(/^[w.[]]+$/);
+      expect(frase, `${caminho}: a frase tem cara de caminho, não de português`).not.toMatch(CARA_DE_CAMINHO);
       expect(vistas.has(frase), `${caminho} repete a frase de ${vistas.get(frase)}`).toBe(false);
       vistas.set(frase, caminho);
     }
@@ -62,6 +93,15 @@ describe("oQueOAppCala", () => {
     expect(oQueOAppCala(gratis)).toEqual([]);
     const pago = { ...completo(), custo: { tag: "pago" } };
     expect(oQueOAppCala(pago), "a premissa: pago sem os dois cala duas").toHaveLength(2);
+  });
+
+  // 🔴 M5 da revisão da Tarefa 12: o regex era `/^[w.[]]+$/` (sem as barras), e
+  // não casava caminho cru nenhum. O controle prova que este casa.
+  it("controle: a régua de 'cara de caminho' casa o caminho cru e não casa português", () => {
+    for (const cru of ["custo.valor", "trajeto.waypoints.0.nota", "trajeto.waypoints[0].nota", "secaRapido"]) {
+      expect(cru, cru).toMatch(CARA_DE_CAMINHO);
+    }
+    expect("Sem ele, a ficha nunca fecha por hora.").not.toMatch(CARA_DE_CAMINHO);
   });
 
   it("nenhuma frase é o nome do campo cru", () => {
@@ -96,8 +136,28 @@ describe("oQueOAppCala", () => {
       const [frase] = oQueOAppCala(sem(caminho));
       if (naoCobertos.has(caminho)) continue;
       const comMinuscula = frase[0].toLowerCase() + frase.slice(1);
+      if (CORTADAS.has(caminho)) {
+        const item = itemDoQuestionario(corrido, caminho);
+        expect(item.length, `${caminho}: a premissa: o item foi achado no questionário`).toBeGreaterThan(20);
+        expect(subtracaoDe(comMinuscula, item), `${caminho}: "${frase}" não é o item do questionário com trechos tirados`).toBe(true);
+        expect(corrido, `${caminho}: a frase cortada voltou inteira — tire-a de CORTADAS`).not.toContain(comMinuscula);
+        continue;
+      }
       expect(corrido, `${caminho}: "${frase}" não é trecho do questionário`).toContain(comMinuscula);
     }
+  });
+
+  // 🔴 M6 da revisão da Tarefa 12: duas frases do questionário eram FALSAS
+  // juntas de outro campo ausente ("o chip do topo mostra só o preço" — numa
+  // ficha paga sem valor, ele mostra "Pago"; "o carimbo decide só pela chuva" —
+  // com `dias` respondido, o lugar também fecha por dia). O conserto foi só por
+  // SUBTRAÇÃO, e isto é o que a régua aceita: as palavras da frase, em ordem,
+  // tiradas do item do questionário, nenhuma acrescentada.
+  it("controle da subtração: palavra acrescentada ou fora de ordem não passa", () => {
+    const item = "sem ele, a ficha nunca fecha por hora, e o carimbo decide só pela chuva.";
+    expect(subtracaoDe("sem ele, a ficha nunca fecha por hora.", item)).toBe(true);
+    expect(subtracaoDe("sem ele, a ficha nunca fecha por dia.", item)).toBe(false);
+    expect(subtracaoDe("sem ele, a ficha fecha nunca por hora.", item)).toBe(false);
   });
 
   it("documento que não é objeto: tudo ausente, nada estoura", () => {

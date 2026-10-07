@@ -7,7 +7,7 @@ import type { Client } from "@libsql/client";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
 import { CAMPOS_DA_FICHA, lerCaminho, type CampoDaFicha } from "@/lib/campos-da-ficha";
-import { criarRascunho, gravarVersao, historico, lerRascunho, salvarRascunho, versaoAtual } from "@/lib/db";
+import { criarRascunho, gravarVersao, historico, lerRascunho, versaoAtual } from "@/lib/db";
 import { aberturaDaFicha, fechadoAgora, rotuloAbertura } from "@/lib/horario";
 import { fichaSchema } from "@/types/ficha";
 import { docDoLugarNovo } from "@/lib/rascunho";
@@ -42,7 +42,7 @@ import {
 } from "@/lib/mapa";
 import { IR_PUBLICAR, LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
 import { regraDe, semComentarios } from "../css";
-import { bancoVazio, semearAcervo } from "../banco";
+import { bancoVazio, salvarRascunho, semearAcervo } from "../banco";
 
 /** O FORMULÁRIO DE LUGAR NOVO (Tarefa 11) — medido NA PÁGINA, contra o banco.
  *
