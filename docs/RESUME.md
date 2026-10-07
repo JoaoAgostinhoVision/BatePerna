@@ -37,9 +37,14 @@ reancorado em :125). 30 mutantes da tarefa morreram. `RELATO_LEGADO = "aceitar"`
 de uma linha). Pendências declaradas: GET sem `lugar` (abas antigas) ainda resolve pelo endereço; M3/M4/M5 da
 auditoria só como nota; `rowsAffected` com `RETURNING` volta 0 no libsql local (não medido no Turso remoto).
 
-→ 🔴 **A revisão da 12b ESTÁ DESPACHADA** (`task-12b-review.md`). Se não existir, redespachar (revisor opus fresco,
-escopo `7560c8d..159b828`, COM build). Depois: onda → **revisão final da branch inteira COM build** → agentes do
-projeto → pacote de copy → deploy só com a resposta dele.
+✅ **Revisão da 12b FEITA** (`task-12b-review.md`): **0 C · 1 I · 5 M**. I1 (regressão): 2xx que não é placar
+(portal de Wi-Fi) apagava o relato e dizia "anotado".
+
+→ 🔴 **A onda de fix da 12b ESTÁ DESPACHADA** (`task-12b-fix-brief.md`: I1, fila em chave nova `v2`, provas, legado
+pelo SQL, e a decisão do João substituindo o PENDENTE com o ramo "descartar" removido). Se não houver commit de
+código depois de `159b828`, redespachar com o mesmo brief. Depois: medir eu mesmo → re-revisão curta →
+**revisão final da branch inteira COM build** → agentes do projeto → pacote de copy → deploy.
+
 ✅ **DECISÃO DO JOÃO (06/10): relato legado sem identidade → "aceitar como hoje".** O código já está assim
 (`RELATO_LEGADO = "aceitar"`); na onda de fix da 12b, trocar o comentário `PENDENTE-JOÃO` pelo registro da decisão
 (e o ramo "descartar" + a frase dele podem sair ou ficar mortos — decidir na onda).
