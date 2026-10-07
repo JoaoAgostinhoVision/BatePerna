@@ -46,34 +46,27 @@ export function diaRecife(agoraMs: number): number {
  *  grava PELA IDENTIDADE, onde o lugar mora na hora de gravar.
  *
  *  Opcional SÓ pra ler o que já estava guardado antes desta tarefa (o relato
- *  LEGADO, sem identidade) — ver `RELATO_LEGADO`. */
+ *  LEGADO, sem identidade) — ver "O RELATO LEGADO É ACEITO COMO HOJE", abaixo. */
 export type Relato = { slug: string; tipo: "seco" | "barro"; dia: number; lugar?: number };
 
-/** 🔴 PENDENTE-JOÃO: relato legado sem lugar — aceitar × descartar.
+/** ✅ O RELATO LEGADO (sem `lugar`) É ACEITO COMO HOJE — decisão do João em
+ *  06/10, palavras dele: *"aceitar como hoje"*.
  *
- *  O relato SEM `lugar` vem de três lugares: a fila de quem guardou antes do
- *  deploy (só o dia do deploy: a fila descarta todo dia que passou), as ABAS
- *  abertas antes do deploy e as páginas e chunks que o service worker guardou
- *  (`bp-paginas` e `bp-ultima-ficha` por até 30 dias), que seguem rodando o
- *  código velho e mandando POST sem `lugar` até recarregar. E a página cuja
- *  identidade não pôde ser lida (banco fora no instante da leitura).
+ *  O relato SEM `lugar` vem de: a fila de quem guardou antes do deploy (só o
+ *  dia do deploy: a fila descarta todo dia que passou), as ABAS abertas antes
+ *  do deploy e as páginas e chunks que o service worker guardou (`bp-paginas` e
+ *  `bp-ultima-ficha` por até 30 dias), que seguem rodando o código velho e
+ *  mandando POST sem `lugar` até recarregar; e a página cuja identidade não
+ *  pôde ser lida (banco fora no instante da leitura).
  *
- *  - `"aceitar"`: conta pro lugar que mora no ENDEREÇO na hora — o comportamento
- *    de antes desta tarefa, com o risco de antes (se outro lugar retomou o
- *    endereço, o relato conta pra ele). A lista `antigos` da página existe SÓ
- *    por este ramo.
- *  - `"descartar"`: o cliente não sobe relato legado (ele vence na virada do
- *    dia) e o servidor responde 400 ao POST sem `lugar` — NUNCA 2xx: o código
- *    velho faz `setPlacar` de qualquer 2xx. O código velho guarda e mostra
- *    "tenta de novo"; o novo tira da fila.
+ *  Ele conta pro lugar que mora no ENDEREÇO na hora — o comportamento de antes
+ *  da Tarefa 12b, com o risco de antes: se outro lugar retomou o endereço, o
+ *  relato conta pra ele. A lista `antigos` da página existe SÓ por este ramo.
  *
- *  Implementado "aceitar" porque é o de hoje e não muda nada pra ninguém. É UMA
- *  constante, lida pelo cliente (`relatosDaPagina`) e pelo servidor
- *  (`lugarDoCorpo`), as duas com o comportamento como PARÂMETRO e o padrão
- *  vindo daqui: trocar é mudar esta linha. */
-export type DestinoDoLegado = "aceitar" | "descartar";
-// PENDENTE-JOÃO: relato legado sem lugar — aceitar × descartar
-export const RELATO_LEGADO: DestinoDoLegado = "aceitar";
+ *  ⚠️ O QUE AS ABAS VELHAS NÃO PODEM MAIS FAZER (M1 da revisão da 12b):
+ *  consumir um relato NOVO. A fila nova mora em `CHAVE_FILA`, que o código
+ *  velho não lê; sem isso, uma aba de antes do deploy subiria `{A, lugar: P}`
+ *  como `{A}` — e o relato de P contaria pra quem retomou `A`. */
 
 /** A identidade de um lugar na forma: inteiro positivo, e NADA mais.
  *
@@ -87,16 +80,10 @@ export function ehLugar(x: unknown): x is number {
 
 /** O que o servidor faz com o corpo de um POST, quanto à identidade:
  *  - `{ lugar }`: grava pela identidade;
- *  - `"legado"`: sem `lugar` E `legado === "aceitar"` — resolve pelo endereço;
- *  - `"recusa"`: `lugar` presente e fora da forma, ou ausente com
- *    `legado === "descartar"` (400).
- *  Puro, e com o destino do legado por parâmetro, pra os dois lados do
- *  PENDENTE-JOÃO serem provados sem `vi.mock`. */
-export function lugarDoCorpo(
-  corpo: { lugar?: unknown },
-  legado: DestinoDoLegado = RELATO_LEGADO,
-): { lugar: number } | "legado" | "recusa" {
-  if (corpo.lugar === undefined) return legado === "aceitar" ? "legado" : "recusa";
+ *  - `"legado"`: sem `lugar` — resolve pelo endereço (aceito como hoje);
+ *  - `"recusa"`: `lugar` presente e fora da forma (400). */
+export function lugarDoCorpo(corpo: { lugar?: unknown }): { lugar: number } | "legado" | "recusa" {
+  if (corpo.lugar === undefined) return "legado";
   return ehLugar(corpo.lugar) ? { lugar: corpo.lugar } : "recusa";
 }
 
@@ -108,22 +95,28 @@ export function lugarDoCorpo(
  *  FICA na fila, esperando a página de P (C2 da auditoria da 12b).
  *
  *  O relato LEGADO (sem `lugar`) sobe pela página cujo endereço, ou um dos
- *  antigos, é o dele — só com `legado === "aceitar"`. Uma página SEM identidade
- *  (a leitura falhou) é toda ela o ramo legado: só sobe relato legado. */
+ *  antigos, é o dele. Uma página SEM identidade (a leitura falhou) é toda ela o
+ *  ramo legado: só sobe relato legado. */
 export function relatosDaPagina(
   fila: readonly Relato[],
   pagina: { slug: string; antigos: readonly string[]; lugar: number | null },
-  legado: DestinoDoLegado = RELATO_LEGADO,
 ): Relato[] {
   const enderecos = [pagina.slug, ...pagina.antigos];
   return fila.filter((r) =>
-    r.lugar === undefined
-      ? legado === "aceitar" && enderecos.includes(r.slug)
-      : pagina.lugar !== null && r.lugar === pagina.lugar,
+    r.lugar === undefined ? enderecos.includes(r.slug) : pagina.lugar !== null && r.lugar === pagina.lugar,
   );
 }
 
-export const CHAVE_FILA = "bp:fila-relato";
+/** Onde a fila mora (M1 da revisão da 12b): numa chave que o código de antes
+ *  da Tarefa 12b NÃO lê. Uma aba aberta antes do deploy lê e escreve só
+ *  `CHAVE_FILA_VELHA`; se lesse esta, subiria o relato novo sem o `lugar` (o
+ *  `escoar` velho só manda `slug` e `tipo`) e o apagaria da fila. */
+export const CHAVE_FILA = "bp:fila-relato:v2";
+
+/** A chave de antes da Tarefa 12b. O código novo a LÊ (o que estiver lá é o
+ *  relato legado, guardado pelo código velho) e tira dela o que subiu ou
+ *  venceu; nunca grava relato novo nela. Vazia, ela é APAGADA. */
+export const CHAVE_FILA_VELHA = "bp:fila-relato";
 
 /** Tudo que está na fila, ou `[]` quando não há nada legível.
  *
@@ -132,14 +125,23 @@ export const CHAVE_FILA = "bp:fila-relato";
  *  outra época viraria `undefined` nos três campos, e um relato com `slug`
  *  `undefined` subiria pra uma ficha que não existe. Mesma régua do `ehLeitura`
  *  no `Carimbo.tsx` — o corpo é conferido, não assumido. */
-function ler(): Relato[] {
+function lerChave(chave: string): Relato[] {
   if (typeof localStorage === "undefined") return [];
   try {
-    const cru: unknown = JSON.parse(localStorage.getItem(CHAVE_FILA) ?? "[]");
+    const cru: unknown = JSON.parse(localStorage.getItem(chave) ?? "[]");
     return Array.isArray(cru) ? cru.filter(ehRelato) : [];
   } catch {
     return [];
   }
+}
+
+/** As duas chaves juntas: a nova e a velha (a do relato legado). O mesmo
+ *  relato nas duas (uma aba velha e uma página sem identidade guardaram o mesmo
+ *  endereço no mesmo dia) aparece UMA vez, a da chave nova: duas cópias
+ *  subiriam duas vezes. */
+function ler(): Relato[] {
+  const nova = lerChave(CHAVE_FILA);
+  return [...nova, ...lerChave(CHAVE_FILA_VELHA).filter((v) => !nova.some((n) => mesmo(n, v)))];
 }
 
 function ehRelato(x: unknown): x is Relato {
@@ -167,22 +169,35 @@ function mesmo(a: Relato, b: Relato): boolean {
   return chave(a) === chave(b) && a.dia === b.dia;
 }
 
-function escrever(fila: Relato[]): void {
+function escreverChave(chave: string, fila: Relato[]): void {
   if (typeof localStorage === "undefined") return;
   // Fila vazia APAGA a chave em vez de guardar "[]": sem isto, todo aparelho
   // que uma vez ficou sem sinal carregaria a chave pra sempre.
-  if (fila.length === 0) localStorage.removeItem(CHAVE_FILA);
-  else localStorage.setItem(CHAVE_FILA, JSON.stringify(fila));
+  if (fila.length === 0) localStorage.removeItem(chave);
+  else localStorage.setItem(chave, JSON.stringify(fila));
 }
 
-/** Guarda um relato para subir depois.
+/** Aplica `manter` às duas chaves. A VELHA só é reescrita se perdeu algo —
+ *  nunca é criada, nunca recebe relato —, e some quando esvazia. */
+function filtrar(manter: (r: Relato) => boolean): void {
+  if (typeof localStorage === "undefined") return;
+  const nova = lerChave(CHAVE_FILA);
+  const novaFica = nova.filter(manter);
+  if (novaFica.length !== nova.length) escreverChave(CHAVE_FILA, novaFica);
+  const velha = lerChave(CHAVE_FILA_VELHA);
+  const velhaFica = velha.filter(manter);
+  if (velhaFica.length !== velha.length) escreverChave(CHAVE_FILA_VELHA, velhaFica);
+}
+
+/** Guarda um relato para subir depois — SEMPRE na chave nova.
  *
  *  **Um relato por lugar por dia, e o último ganha.** A pessoa que erra o botão
  *  e responde de novo não vira dois relatos — e nenhum contador de `foram` do
- *  app aguenta contar a mesma ida duas vezes sem mentir. */
+ *  app aguenta contar a mesma ida duas vezes sem mentir. O "mesmo" de antes
+ *  sai das DUAS chaves. */
 export function guardar(relato: Relato): void {
-  const resto = ler().filter((r) => !mesmo(r, relato));
-  escrever([...resto, relato]);
+  filtrar((r) => !mesmo(r, relato));
+  escreverChave(CHAVE_FILA, [...lerChave(CHAVE_FILA), relato]);
 }
 
 /** Os relatos que ainda podem subir — e, de quebra, LIMPA os vencidos do
@@ -190,13 +205,11 @@ export function guardar(relato: Relato): void {
  *  e uma fila que só cresce é lixo que a pessoa carrega no aparelho. */
 export function pendentes(agoraMs: number): Relato[] {
   const hoje = diaRecife(agoraMs);
-  const vivos = ler().filter((r) => r.dia === hoje);
-  const todos = ler();
-  if (vivos.length !== todos.length) escrever(vivos);
-  return vivos;
+  filtrar((r) => r.dia === hoje);
+  return ler();
 }
 
 /** Tira um relato da fila — chamado quando ele subiu de verdade, nunca antes. */
 export function remover(relato: Relato): void {
-  escrever(ler().filter((r) => !mesmo(r, relato)));
+  filtrar((r) => !mesmo(r, relato));
 }

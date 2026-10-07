@@ -59,13 +59,13 @@ function corpo(slug: string, tipo: Relato["tipo"], lugar: number | undefined): s
  *   - o placar é pedido por lugar.
  *
  *  `lugar` nulo (a leitura falhou, ou um teste que não o passa) é o ramo
- *  LEGADO: tudo como antes desta tarefa, pelo endereço — e só sobe se o
- *  PENDENTE-JOÃO (`RELATO_LEGADO` em `fila-relato.ts`) aceitar o legado.
+ *  LEGADO: tudo como antes desta tarefa, pelo endereço — aceito como hoje,
+ *  decisão do João em 06/10 (ver o relato legado em `fila-relato.ts`).
  *
  *  `antigos`: os endereços de ANTES deste lugar (Tarefa 11e, I1 da auditoria).
  *  Desde a 12b servem SÓ o relato LEGADO, sem identidade, guardado num
  *  endereço velho: ele sobe com o endereço com que foi contado, e o servidor o
- *  resolve. Com "descartar", a lista sai inteira.
+ *  resolve.
  *
  *  🔴 A RESPOSTA QUE TIRA DA FILA É O 400, e só ele (I6 da auditoria da 12b):
  *  é a recusa definitiva da própria rota (lugar que não está mais no ar, corpo
@@ -75,7 +75,16 @@ function corpo(slug: string, tipo: Relato["tipo"], lugar: number | undefined): s
  *  SEGUE pro próximo. Custo aceito (M4): um lugar escondido e mostrado de novo
  *  no mesmo dia perde o relato recusado enquanto estava escondido. E dois
  *  gatilhos de `escoar` ao mesmo tempo (montagem, `pageshow`) podem mandar o
- *  mesmo relato duas vezes (M3, de antes desta tarefa). */
+ *  mesmo relato duas vezes (M3, de antes desta tarefa).
+ *
+ *  🔴 E UM 2xx SÓ VALE COM PLACAR NO CORPO (I1 da revisão da 12b). O portal
+ *  cativo do Wi-Fi da pousada responde 200 com uma página HTML: o servidor
+ *  NUNCA viu o relato. Corpo que não é JSON, ou JSON que não é placar, é "não
+ *  sei se gravou" — segue a regra da passagem: no `escoar` fica na fila; no
+ *  envio online é guardado e a tela é a de erro. O risco do outro lado (o
+ *  servidor gravou e só a resposta se perdeu, e o relato sobe de novo) é o
+ *  mesmo de um 503 depois do INSERT, e é menor que perder o relato e mentir
+ *  "anotado" na tela. */
 export default function ConfirmarFui({
   slug,
   lugar = null,
@@ -124,14 +133,16 @@ export default function ConfirmarFui({
       try {
         novo = await res.json();
       } catch {
-        novo = null;
+        novo = null; // 2xx que não é JSON (portal cativo)
       }
+      // 2xx sem placar no corpo: "não sei se gravou" — fica, como a passagem.
+      if (!ehPlacar(novo)) return;
       // Só sai da fila depois que o servidor aceitou. Remover antes seria
       // perder o relato num 500 — o defeito que esta fila existe pra impedir,
       // de volta com outra roupa.
       remover(r);
       if (!vivo.current) return;
-      if (ehPlacar(novo)) setPlacar(novo);
+      setPlacar(novo);
       localStorage.setItem(jaContouKey, "1");
       setFase("contado");
     }
@@ -189,7 +200,16 @@ export default function ConfirmarFui({
       setFase("erro");
       return;
     }
-    if (r === null || !r.ok) {
+    let novo: unknown = null;
+    if (r !== null && r.ok) {
+      try {
+        novo = await r.json();
+      } catch {
+        novo = null; // 2xx que não é JSON (portal cativo): não é aceite
+      }
+    }
+    if (!ehPlacar(novo)) {
+      // Sem rede, falha de passagem, ou 2xx sem placar no corpo.
       // 🔴 GUARDA ANTES DE MOSTRAR O ERRO. A ordem importa: se a tela de erro
       // fosse pintada primeiro e a gravação falhasse, a pessoa veria "tenta de
       // novo" com o relato perdido de verdade.
@@ -197,13 +217,7 @@ export default function ConfirmarFui({
       setFase("erro");
       return;
     }
-    let novo: unknown = null;
-    try {
-      novo = await r.json();
-    } catch {
-      novo = null;
-    }
-    if (ehPlacar(novo)) setPlacar(novo);
+    setPlacar(novo);
     localStorage.setItem(jaContouKey, "1");
     setFase("contado");
   }

@@ -1,4 +1,4 @@
-import { getClient, contarHoje, enderecoDoLugar, identidadeDoLugar, type TipoRelato } from "@/lib/db";
+import { getClient, contarHoje, enderecoDoLugar, enderecoNovoDe, identidadeDoLugar, type TipoRelato } from "@/lib/db";
 import { fichaDoEnderecoAntigo, getFicha } from "@/lib/ficha";
 import type { Ficha } from "@/types/ficha";
 import { registrarConfirmacao } from "@/lib/confirmar";
@@ -11,12 +11,28 @@ function tiposValidos(t: unknown): t is TipoRelato {
 }
 
 /** A ficha NO AR deste endereço — o de agora, ou um antigo que leva a ela
- *  (Tarefa 11e, I2 da auditoria). Desde a Tarefa 12b serve SÓ o ramo LEGADO
- *  (pedido sem `lugar`): o pedido com `lugar` é resolvido pela identidade, no
- *  próprio INSERT, e o endereço dele não decide nada. Escondido não resolve: é
- *  o mesmo 400 de um endereço que nunca existiu. */
+ *  (Tarefa 11e, I2 da auditoria). Desde a Tarefa 12b serve SÓ o GET sem
+ *  `lugar`. Escondido não resolve: é o mesmo 400 de um endereço que nunca
+ *  existiu. */
 async function fichaDoPedido(slug: string): Promise<Ficha | null> {
   return (await getFicha(slug)) ?? (await fichaDoEnderecoAntigo(slug));
+}
+
+/** A identidade do lugar que mora no endereço do relato LEGADO — o de agora,
+ *  ou o novo a que um endereço antigo leva —, lida NO BANCO.
+ *
+ *  🔴 NUNCA PELA MEMÓRIA (M4 da revisão da 12b). O `getFicha` responde da
+ *  `ultimaBoa` quando o banco estoura o prazo, e um lugar publicado há pouco
+ *  não está nela: dava `null`, e a rota respondia 400 — a recusa DEFINITIVA, que
+ *  tira o relato da fila — por uma lentidão de passagem. Aqui o banco fora
+ *  ESTOURA (5xx, o relato fica). Visibilidade não é conferida aqui: o INSERT
+ *  confere (`gravarRelatoDoLugar`), e escondido é o mesmo 400 de sempre. */
+async function identidadeDoPedido(slug: string): Promise<number | null> {
+  const c = getClient();
+  const aqui = await identidadeDoLugar(c, slug);
+  if (aqui !== null) return aqui;
+  const novo = await enderecoNovoDe(c, slug);
+  return novo === null ? null : identidadeDoLugar(c, novo);
 }
 
 /** `?lugar=` é TEXTO, e `"17"` não é `17` pro SQLite (M1 da auditoria da 12b):
@@ -34,8 +50,12 @@ function lugarDaBusca(cru: string): number | null {
  *  aberta antes de Q retomar o endereço, nunca pinta o "N foram hoje" de Q.
  *  Nunca um 2xx que não seja placar ou `null`: o cliente pinta o que vier.
  *
- *  Sem `lugar`: o de antes (resolve o endereço). Não é relato, então o
- *  PENDENTE-JOÃO do legado não o alcança. */
+ *  Sem `lugar`: o de antes (resolve o endereço). Quem o manda (M5 da revisão
+ *  da 12b): as abas abertas antes do deploy, até recarregar, e a página nova
+ *  cuja identidade não pôde ser lida. Numa aba velha, depois de outro lugar
+ *  retomar o endereço, ele mostra o placar do outro — o menor dos males dela,
+ *  cujo POST sem `lugar` já conta pro outro (o relato legado, aceito como hoje
+ *  por decisão do João em 06/10). */
 export async function GET(req: Request): Promise<Response> {
   const busca = new URL(req.url).searchParams;
   const agora = Math.floor(Date.now() / 1000);
@@ -62,9 +82,9 @@ export async function GET(req: Request): Promise<Response> {
  *  SÓ o 400 (a recusa definitiva), e o código velho em abas e no cache do
  *  service worker pinta como placar qualquer 2xx.
  *
- *  Sem `lugar` é o relato LEGADO — `lugarDoCorpo` decide pelo PENDENTE-JOÃO
- *  (`RELATO_LEGADO`): aceitar resolve o endereço AGORA e grava pela identidade
- *  de quem mora nele (o risco de antes desta tarefa); descartar é 400. */
+ *  Sem `lugar` é o relato LEGADO, aceito como hoje (decisão do João em 06/10,
+ *  *"aceitar como hoje"*): resolve o endereço AGORA, no banco, e grava pela
+ *  identidade de quem mora nele — o risco de antes desta tarefa. */
 export async function POST(req: Request): Promise<Response> {
   let body: { slug?: unknown; tipo?: unknown; lugar?: unknown };
   try {
@@ -82,8 +102,7 @@ export async function POST(req: Request): Promise<Response> {
   }
   let lugar: number | null;
   if (decisao === "legado") {
-    const ficha = typeof slug === "string" ? await fichaDoPedido(slug) : null;
-    lugar = ficha == null ? null : await identidadeDoLugar(getClient(), ficha.slug);
+    lugar = typeof slug === "string" && slug.length > 0 ? await identidadeDoPedido(slug) : null;
     if (lugar === null) return new Response("ficha inválida", { status: 400 });
   } else {
     lugar = decisao.lugar;

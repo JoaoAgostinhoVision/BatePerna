@@ -98,7 +98,7 @@ export default async function Ficha({
   }
   // A IDENTIDADE do lugar, pro ✓ Fui contar pro LUGAR e não pro endereço
   // (Tarefa 12b); e os endereços de antes, só pro relato LEGADO, sem ela
-  // (I1 da auditoria da 11e; ver `RELATO_LEGADO` em `fila-relato.ts`).
+  // (I1 da auditoria da 11e; ver o relato legado em `fila-relato.ts`).
   const [lugar, antigos] = await Promise.all([identidadeDoEndereco(slug), antigosDoEndereco(slug)]);
 
   const { debug } = await searchParams;

@@ -175,4 +175,41 @@ describe("a página passa a identidade do lugar ao ✓ Fui", () => {
     expect(props!.lugar).toBe(await minDe(outro));
     expect(props!.lugar).not.toBe(await minDe(A));
   });
+  // 🔴 R2 da revisão da 12b: a leitura da identidade é ACESSÓRIA. Banco que
+  // PENDURA nela (aceita a consulta e nunca responde) não pode pendurar a
+  // página: no prazo (`PRAZO_FICHA_MS`), ela monta com `lugar: null` — o ✓ Fui
+  // cai no ramo legado. Sem o prazo, a página esperaria até o timeout da
+  // plataforma. Só a consulta da identidade pendura; o resto passa.
+  it("banco que pendura na leitura da identidade: a página monta no prazo, com lugar null", async () => {
+    const { PRAZO_FICHA_MS } = await import("@/lib/ficha-fonte");
+    const proprio = Object.getOwnPropertyDescriptor(banco, "execute");
+    const real = banco.execute.bind(banco);
+    let penduradas = 0;
+    (banco as { execute: unknown }).execute = (...args: Parameters<typeof banco.execute>) => {
+      const primeiro = args[0] as unknown;
+      const sql = typeof primeiro === "string" ? primeiro : (primeiro as { sql: string }).sql;
+      if (/^SELECT \(SELECT MIN\(i\.id\) FROM ficha_versoes i WHERE i\.ficha_slug = \?\) AS lugar/.test(sql.trimStart())) {
+        penduradas++;
+        return new Promise<never>(() => {});
+      }
+      return real(...args);
+    };
+    vi.useFakeTimers();
+    try {
+      let fim: { ok: unknown } | { erro: unknown } | null = null;
+      abrir(A).then((ok) => { fim = { ok }; }, (erro) => { fim = { erro }; });
+      await vi.advanceTimersByTimeAsync(PRAZO_FICHA_MS + 1);
+      expect(penduradas, "o dublê não pegou a leitura da identidade: o teste mediria o vazio").toBeGreaterThan(0);
+      expect(fim, "a página ficou pendurada além do prazo").not.toBeNull();
+      expect(fim).toHaveProperty("ok");
+      const props = acharConfirmar((fim as unknown as { ok: ReactNode }).ok);
+      expect(props, "a página não tem mais o ✓ Fui").not.toBeNull();
+      expect(props!.lugar).toBeNull();
+      expect(props!.slug).toBe(A);
+    } finally {
+      vi.useRealTimers();
+      if (proprio) Object.defineProperty(banco, "execute", proprio);
+      else delete (banco as { execute?: unknown }).execute;
+    }
+  });
 });

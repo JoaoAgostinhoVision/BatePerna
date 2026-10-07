@@ -264,14 +264,71 @@ describe("route /api/confirmar — a identidade do lugar", () => {
     expect(await contar(B)).toBe(1);
   });
 
-  // PENDENTE-JOÃO, o lado do servidor que a rota exerce (o padrão, "aceitar"):
-  // o POST sem lugar das abas velhas resolve o endereço e conta pra quem mora
-  // nele. O lado "descartar" é provado em `lugarDoCorpo`
-  // (`tests/lib/fila-relato.test.ts`), sem `vi.mock`.
-  it("PENDENTE-JOÃO (aceitar): POST sem lugar conta pra quem mora no endereço", async () => {
+  // O relato LEGADO, aceito como hoje (decisão do João, 06/10, "aceitar como
+  // hoje"): o POST sem lugar das abas velhas resolve o endereço e conta pra
+  // quem mora nele.
+  it("relato legado: POST sem lugar conta pra quem mora no endereço", async () => {
     const res = await post({ slug: A, tipo: "seco" });
     expect(res.status).toBe(200);
     expect(await contar(A)).toBe(1);
+  });
+
+  // 🔴 M4 da revisão da 12b: o ramo legado resolvia o endereço pelo `getFicha`,
+  // que responde da MEMÓRIA (`ultimaBoa`) quando o banco falha na leitura das
+  // fichas — e um lugar publicado depois da memória não está nela. Dava 400 (a
+  // recusa definitiva, que tira o relato da fila) por uma falha de passagem.
+  describe("o legado resolve o endereço no banco, nunca na memória", () => {
+    const D = "lugar-marcador-recente-marcador";
+    const D2 = "lugar-marcador-recente-novo-marcador";
+    /** O cliente da rota com a leitura das FICHAS (a de `getFicha`) recusada:
+     *  é o banco que falha nela, e a rota serve a memória. O resto passa. */
+    const fichasRecusadas = () =>
+      new Proxy(client, {
+        get(alvo, chave) {
+          if (chave === "execute") {
+            return async (...args: Parameters<Client["execute"]>) => {
+              const primeiro = args[0] as unknown;
+              const sql = typeof primeiro === "string" ? primeiro : (primeiro as { sql: string }).sql;
+              if (/^SELECT \* FROM ficha_versoes WHERE id IN/.test(sql.trimStart())) throw new Error("banco fora (dublê)");
+              return alvo.execute(...args);
+            };
+          }
+          const v = Reflect.get(alvo, chave, alvo) as unknown;
+          return typeof v === "function" ? (v as (...a: unknown[]) => unknown).bind(alvo) : v;
+        },
+      });
+
+    beforeEach(async () => {
+      // A memória nasce ANTES de D existir.
+      expect((await get(`slug=${A}`)).status).toBe(200);
+      await gravarVersao(client, D, JSON.stringify(lugarMarcador(D, "Recente Marcador", "Cidade Marcadora")), "painel", AGORA - 2);
+      daRota = fichasRecusadas();
+    });
+
+    it("lugar publicado depois da memória: POST sem lugar conta (não 400)", async () => {
+      // A premissa: a memória não tem D — pela porta do GET, que ainda passa por ela.
+      expect((await get(`slug=${D}`)).status, "a memória já tinha D: o teste mediria o vazio").toBe(400);
+      const res = await post({ slug: D, tipo: "seco" });
+      expect(res.status).toBe(200);
+      expect(await contar(D)).toBe(1);
+    });
+
+    it("e pelo endereço antigo dele: conta onde ele mora agora", async () => {
+      daRota = null;
+      expect(await trocarEndereco(client, D, D2, AGORA - 1, await base(client, D))).toBe(true);
+      daRota = fichasRecusadas();
+      expect((await get(`slug=${D}`)).status, "a memória já tinha D2: o teste mediria o vazio").toBe(400);
+      const res = await post({ slug: D, tipo: "barro" });
+      expect(res.status).toBe(200);
+      expect(await contar(D2)).toBe(1);
+      expect(await contar(D)).toBe(0);
+    });
+
+    it("endereço de ninguém continua 400, nada gravado", async () => {
+      const res = await post({ slug: "lugar-marcador-de-ninguem-marcador", tipo: "seco" });
+      expect(res.status).toBe(400);
+      expect(await total()).toBe(0);
+    });
   });
 });
 

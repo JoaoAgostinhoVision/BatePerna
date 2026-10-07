@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   CHAVE_FILA,
+  CHAVE_FILA_VELHA,
   diaRecife,
-  RELATO_LEGADO,
   guardar,
   lugarDoCorpo,
   pendentes,
@@ -257,48 +257,103 @@ describe("relatosDaPagina: o que cada página sobe", () => {
     expect(relatosDaPagina(fila, { slug: A, antigos: [], lugar: null })).toEqual([]);
   });
 
-  // PENDENTE-JOÃO: um teste por lado, com o destino por PARÂMETRO.
+  // O relato LEGADO é aceito como hoje (decisão do João, 06/10: "aceitar
+  // como hoje"): sobe pela página do endereço dele, ou de um antigo — e só.
   const legado: Relato = { slug: A, tipo: "seco", dia };
-  it("PENDENTE-JOÃO, aceitar: o legado sobe pela página do endereço dele (ou de um antigo)", () => {
-    expect(relatosDaPagina([legado], { slug: A, antigos: [], lugar: P }, "aceitar")).toEqual([legado]);
-    expect(relatosDaPagina([legado], { slug: B, antigos: [A], lugar: P }, "aceitar")).toEqual([legado]);
-    expect(relatosDaPagina([legado], { slug: B, antigos: [], lugar: P }, "aceitar")).toEqual([]);
-  });
-
-  it("PENDENTE-JOÃO, descartar: o legado não sobe por página nenhuma", () => {
-    expect(relatosDaPagina([legado], { slug: A, antigos: [], lugar: P }, "descartar")).toEqual([]);
-    expect(relatosDaPagina([legado], { slug: A, antigos: [], lugar: null }, "descartar")).toEqual([]);
-  });
-
-  // O padrão vem da constante — e a constante é "aceitar" até o João decidir.
-  it("sem o parâmetro, vale RELATO_LEGADO — que hoje é 'aceitar'", () => {
-    expect(RELATO_LEGADO).toBe("aceitar");
+  it("o legado sobe pela página do endereço dele (ou de um antigo), e não por outra", () => {
     expect(relatosDaPagina([legado], { slug: A, antigos: [], lugar: P })).toEqual([legado]);
+    expect(relatosDaPagina([legado], { slug: A, antigos: [], lugar: null })).toEqual([legado]);
+    expect(relatosDaPagina([legado], { slug: B, antigos: [A], lugar: P })).toEqual([legado]);
+    expect(relatosDaPagina([legado], { slug: B, antigos: [], lugar: P })).toEqual([]);
   });
 });
 
 describe("lugarDoCorpo: o que o servidor faz com a identidade do POST", () => {
   it("lugar inteiro positivo: grava por ele", () => {
-    expect(lugarDoCorpo({ lugar: 17 }, "aceitar")).toEqual({ lugar: 17 });
-    expect(lugarDoCorpo({ lugar: 17 }, "descartar")).toEqual({ lugar: 17 });
+    expect(lugarDoCorpo({ lugar: 17 })).toEqual({ lugar: 17 });
   });
 
   it.each([["texto", "17"], ["fração", 1.5], ["zero", 0], ["negativo", -1], ["nulo", null], ["NaN", Number.NaN]])(
     "lugar %s: recusa",
     (_nome, lugar) => {
-      expect(lugarDoCorpo({ lugar }, "aceitar")).toBe("recusa");
+      expect(lugarDoCorpo({ lugar })).toBe("recusa");
     },
   );
 
-  it("PENDENTE-JOÃO, aceitar: sem lugar é o legado", () => {
-    expect(lugarDoCorpo({}, "aceitar")).toBe("legado");
-  });
-
-  it("PENDENTE-JOÃO, descartar: sem lugar é recusa (400, nunca 2xx)", () => {
-    expect(lugarDoCorpo({}, "descartar")).toBe("recusa");
-  });
-
-  it("sem o parâmetro, vale RELATO_LEGADO", () => {
+  it("sem lugar é o legado (aceito como hoje)", () => {
     expect(lugarDoCorpo({})).toBe("legado");
+  });
+});
+
+// 🔴 A CHAVE NOVA (M1 da revisão da 12b). Uma aba aberta antes do deploy roda
+// o código velho, que lê e escreve SÓ `bp:fila-relato` e sobe `{slug, tipo}`
+// sem o `lugar`: se o relato novo morasse ali, ela o subiria sem identidade
+// (contaria pra quem retomou o endereço) e o apagaria da fila.
+describe("a fila nova mora numa chave que o código velho não lê", () => {
+  const A = "lugar-marcador-a";
+  const B = "lugar-marcador-b";
+  const P = 17;
+  const HOJE = diaRecife(AGORA);
+  const velha = () => JSON.parse(localStorage.getItem(CHAVE_FILA_VELHA) ?? "null");
+
+  it("as duas chaves são diferentes, e a velha é a de antes", () => {
+    expect(CHAVE_FILA_VELHA).toBe("bp:fila-relato");
+    expect(CHAVE_FILA).not.toBe(CHAVE_FILA_VELHA);
+  });
+
+  it("relato novo gravado: a chave velha não o contém (nem nasce)", () => {
+    guardar({ slug: A, tipo: "barro", dia: HOJE, lugar: P });
+    expect(localStorage.getItem(CHAVE_FILA_VELHA)).toBeNull();
+    expect(JSON.parse(localStorage.getItem(CHAVE_FILA) ?? "[]")).toEqual([
+      { slug: A, tipo: "barro", dia: HOJE, lugar: P },
+    ]);
+  });
+
+  it("com um legado na chave velha, o relato novo vai pra nova e a velha fica como estava", () => {
+    localStorage.setItem(CHAVE_FILA_VELHA, JSON.stringify([{ slug: B, tipo: "seco", dia: HOJE }]));
+    guardar({ slug: A, tipo: "barro", dia: HOJE, lugar: P });
+    expect(velha()).toEqual([{ slug: B, tipo: "seco", dia: HOJE }]);
+  });
+
+  it("o legado da chave velha é lido, e sobe pela página do endereço dele", () => {
+    localStorage.setItem(CHAVE_FILA_VELHA, JSON.stringify([{ slug: A, tipo: "seco", dia: HOJE }]));
+    const fila = pendentes(AGORA);
+    expect(fila).toEqual([{ slug: A, tipo: "seco", dia: HOJE }]);
+    expect(relatosDaPagina(fila, { slug: A, antigos: [], lugar: P })).toEqual(fila);
+  });
+
+  it("removido o último legado, a chave velha é APAGADA", () => {
+    localStorage.setItem(
+      CHAVE_FILA_VELHA,
+      JSON.stringify([
+        { slug: A, tipo: "seco", dia: HOJE },
+        { slug: B, tipo: "barro", dia: HOJE },
+      ]),
+    );
+    remover({ slug: A, tipo: "seco", dia: HOJE });
+    expect(velha(), "removeu o relato errado, ou nenhum").toEqual([{ slug: B, tipo: "barro", dia: HOJE }]);
+    remover({ slug: B, tipo: "barro", dia: HOJE });
+    expect(localStorage.getItem(CHAVE_FILA_VELHA)).toBeNull();
+  });
+
+  it("o legado vencido da chave velha some, e a chave junto", () => {
+    localStorage.setItem(CHAVE_FILA_VELHA, JSON.stringify([{ slug: A, tipo: "seco", dia: HOJE - 1 }]));
+    expect(pendentes(AGORA)).toEqual([]);
+    expect(localStorage.getItem(CHAVE_FILA_VELHA)).toBeNull();
+  });
+
+  // O mesmo relato nas duas chaves (a aba velha e a página sem identidade
+  // guardaram o mesmo endereço no mesmo dia) subiria duas vezes.
+  it("o mesmo relato nas duas chaves aparece UMA vez — o da chave nova", () => {
+    localStorage.setItem(CHAVE_FILA_VELHA, JSON.stringify([{ slug: A, tipo: "seco", dia: HOJE }]));
+    localStorage.setItem(CHAVE_FILA, JSON.stringify([{ slug: A, tipo: "barro", dia: HOJE }]));
+    expect(pendentes(AGORA)).toEqual([{ slug: A, tipo: "barro", dia: HOJE }]);
+  });
+
+  it("guardar o mesmo relato tira a cópia da chave velha", () => {
+    localStorage.setItem(CHAVE_FILA_VELHA, JSON.stringify([{ slug: A, tipo: "seco", dia: HOJE }]));
+    guardar({ slug: A, tipo: "barro", dia: HOJE });
+    expect(localStorage.getItem(CHAVE_FILA_VELHA)).toBeNull();
+    expect(pendentes(AGORA)).toEqual([{ slug: A, tipo: "barro", dia: HOJE }]);
   });
 });

@@ -181,7 +181,7 @@ export async function antigosDoEndereco(slug: string): Promise<string[]> {
  *  ⚠️ FALHA VIRA `null`, no molde de `antigosDoEndereco` (I2 da auditoria da
  *  12b): a página sobrevive com o banco fora (serve `ultimaBoa`), e uma leitura
  *  acessória crua a derrubaria. Com `null`, o "✓ Fui" cai no ramo LEGADO (ver
- *  `RELATO_LEGADO` em `fila-relato.ts`): conta pelo endereço, como antes. */
+ *  o relato legado em `fila-relato.ts`): conta pelo endereço, como antes. */
 export async function identidadeDoEndereco(slug: string): Promise<number | null> {
   try {
     return await lerNoPrazo(identidadeDoLugar(getClient(), slug));
