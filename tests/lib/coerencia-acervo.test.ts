@@ -387,10 +387,18 @@ describe("a cadeia de waypoints — o bloco Trajeto a lê, e o que fala do LUGAR
    *  `data-bloco="trajeto"`, só `[0]`; dentro dele, a cadeia TEM de ser lida. */
   const MISTO = "src/app/[slug]/page.tsx";
 
-  /** Os que existem PRA EDITAR a cadeia: o registro de campos (acrescentar e
-   *  tirar ponto) e a tela do painel que conta os pontos. Nenhuma regra de
+  /** Os que existem PRA EDITAR (ou conferir) a cadeia: o registro de campos
+   *  (acrescentar e tirar ponto), a tela do painel que conta os pontos, e a
+   *  porta de quem usa que recusa ponto além do `[0]`. Nenhuma regra de
    *  leitura — mas a lista é fechada como as outras. */
-  const ENXERGAM = ["src/app/admin/FichaInteira.tsx", "src/lib/campos-da-ficha.ts"];
+  const ENXERGAM = [
+    "src/app/admin/FichaInteira.tsx",
+    "src/lib/campos-da-ficha.ts",
+    // Task 10 (07/10): a porta de quem usa o app olha a cadeia INTEIRA pra
+    // RECUSAR o que passa do `[0]` (`chavesForaDaPessoa`: etapa do trajeto não
+    // é pergunta dela). Não fala do lugar nem do caminho: confere a lista.
+    "src/lib/campos-da-pessoa.ts",
+  ];
 
   type Acesso = { indice: "0" | "cadeia"; noTrajeto: boolean; linha: number };
 

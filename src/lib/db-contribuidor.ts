@@ -1,4 +1,6 @@
 import type { Client } from "@libsql/client";
+import type { Rascunho } from "@/lib/db";
+import type { QuemContribui } from "@/lib/contribuidor-sessao";
 
 /** O BANCO DE QUEM USA O APP, e dos atos do João sobre o que essa pessoa mandou
  *  (spec de 07/10). Mora fora de `db.ts` por tamanho, não por regra: as mesmas
@@ -62,5 +64,97 @@ export async function conferirLugar(client: Client, slug: string, baseId: number
              AND EXISTS (SELECT 1 FROM ficha_versoes WHERE id = ? AND ficha_slug = ?)`,
     args: [agora, slug, baseId, slug],
   });
+  return r.rowsAffected === 1;
+}
+
+/** Ela não está bloqueada — em SQL, pra morar NO statement que grava (o João
+ *  pode bloquear entre a porta da rota e a gravação). */
+const LIVRE = `NOT EXISTS (SELECT 1 FROM contribuidores WHERE id = ? AND bloqueado = 1)`;
+
+/** 🔴 O endereço não é endereço ANTIGO de outro lugar (ruling de produto da
+ *  pré-auditoria de 07/10): o link velho que circula continua levando ao lugar
+ *  de onde veio, e o rascunho dela não nasce nem se muda pra lá. Em SQL, pra
+ *  morar NO statement que grava; o `publicarRascunho` (Task 1) confere de novo,
+ *  no batch, pra corrida. Um `?`: o endereço. */
+const SEM_ENDERECO_ANTIGO = `NOT EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ?)`;
+
+const rascunho = (r: Record<string, unknown>): Rascunho => ({
+  slug: String(r.slug), doc: String(r.doc), atualizado_em: Number(r.atualizado_em),
+});
+
+/** Quem contribui, a cada porta aberta. Perfil novo atualiza; perfil que não
+ *  veio (`null`) NÃO apaga o de antes. 🔴 NUNCA mexe em `bloqueado`: só o João
+ *  bloqueia e desbloqueia (Task 15). */
+export async function registrarContribuidor(client: Client, p: QuemContribui, agora: number): Promise<void> {
+  await client.execute({
+    sql: `INSERT INTO contribuidores (id, nome, email, bloqueado, criado_em) VALUES (?, ?, ?, 0, ?)
+          ON CONFLICT(id) DO UPDATE SET nome = COALESCE(excluded.nome, contribuidores.nome),
+                                        email = COALESCE(excluded.email, contribuidores.email)`,
+    args: [p.id, p.nome, p.email, agora],
+  });
+}
+
+export async function estaBloqueado(client: Client, id: string): Promise<boolean> {
+  const r = await client.execute({ sql: `SELECT bloqueado FROM contribuidores WHERE id = ?`, args: [id] });
+  return r.rows.length > 0 && Number(r.rows[0].bloqueado) === 1;
+}
+
+/** O rascunho DELA nasce — com a régua de `criarRascunho` (endereço livre nas
+ *  duas tabelas, numa consulta só) e mais duas: é dela, e ela não está
+ *  bloqueada. */
+export async function criarRascunhoDaPessoa(client: Client, slug: string, doc: string, agora: number, id: string): Promise<boolean> {
+  const r = await client.execute({
+    sql: `INSERT INTO ficha_rascunhos (slug, doc, atualizado_em, contribuidor)
+          SELECT ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
+                             AND ${SEM_ENDERECO_ANTIGO} AND ${LIVRE}
+          ON CONFLICT(slug) DO NOTHING`,
+    args: [slug, doc, agora, id, slug, slug, id],
+  });
+  return r.rowsAffected === 1;
+}
+
+export async function lerRascunhoDaPessoa(client: Client, slug: string, id: string): Promise<Rascunho | null> {
+  const r = await client.execute({
+    sql: `SELECT slug, doc, atualizado_em FROM ficha_rascunhos WHERE slug = ? AND contribuidor = ?`,
+    args: [slug, id],
+  });
+  return r.rows.length ? rascunho(r.rows[0] as unknown as Record<string, unknown>) : null;
+}
+
+export async function rascunhosDaPessoa(client: Client, id: string): Promise<Rascunho[]> {
+  const r = await client.execute({
+    sql: `SELECT slug, doc, atualizado_em FROM ficha_rascunhos WHERE contribuidor = ? ORDER BY atualizado_em DESC, slug ASC`,
+    args: [id],
+  });
+  return r.rows.map((l) => rascunho(l as unknown as Record<string, unknown>));
+}
+
+/** A régua de `regravarRascunho` (UPDATE, nunca upsert; `atualizado_em` cresce
+ *  estritamente), e só no rascunho DELA, livre. */
+export async function regravarRascunhoDaPessoa(client: Client, slug: string, doc: string, agora: number, id: string): Promise<boolean> {
+  const r = await client.execute({
+    sql: `UPDATE ficha_rascunhos SET doc = ?, atualizado_em = MAX(?, atualizado_em + 1)
+           WHERE slug = ? AND contribuidor = ? AND ${LIVRE}`,
+    args: [doc, agora, slug, id, id],
+  });
+  return r.rowsAffected === 1;
+}
+
+/** A régua de `moverRascunho` (o destino livre nas duas tabelas, num UPDATE
+ *  só), e só no rascunho DELA, livre — e o destino não é endereço antigo. */
+export async function moverRascunhoDaPessoa(client: Client, de: string, para: string, doc: string, agora: number, id: string): Promise<boolean> {
+  const r = await client.execute({
+    sql: `UPDATE ficha_rascunhos SET slug = ?, doc = ?, atualizado_em = MAX(?, atualizado_em + 1)
+           WHERE slug = ? AND contribuidor = ? AND ${LIVRE}
+             AND NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
+             AND NOT EXISTS (SELECT 1 FROM ficha_rascunhos WHERE slug = ?)
+             AND ${SEM_ENDERECO_ANTIGO}`,
+    args: [para, doc, agora, de, id, id, para, para, para],
+  });
+  return r.rowsAffected === 1;
+}
+
+export async function apagarRascunhoDaPessoa(client: Client, slug: string, id: string): Promise<boolean> {
+  const r = await client.execute({ sql: `DELETE FROM ficha_rascunhos WHERE slug = ? AND contribuidor = ?`, args: [slug, id] });
   return r.rowsAffected === 1;
 }
