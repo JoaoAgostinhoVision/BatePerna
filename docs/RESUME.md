@@ -54,7 +54,7 @@ do rascunho + desfazer edição) e *"como o usuário comum vai poder inserir os 
   (`99a8e5d`, 16 tarefas; Task 9 PARA pro João instalar o Clerk; Task 16 PARA pro pacote de copy). Escolhas do
   plano onde a spec era vaga: seção "As escolhas onde a spec era ambígua" no fim do plano. **Esperando ele revisar
   o plano e escolher o modo de execução** (recomendei subagent-driven). → Ele: **"pode ir"** (subagent-driven).
-  🟡 **EXECUÇÃO EM CURSO.** Ledger: `.superpowers/sdd/2026-10-07-lugar-de-quem-usa/progress.md` (a fonte da verdade
+  🟡 **EXECUÇÃO EM CURSO (Tasks 1–10 feitas em 07/10; Task 11 em voo; Step 1 do Clerk com o João).** Ledger: `.superpowers/sdd/2026-10-07-lugar-de-quem-usa/progress.md` (a fonte da verdade
   de que tarefa está feita — confiar nele + `git log`, nunca na memória). Pré-auditoria do plano despachada
   (`preflight.md` na mesma pasta). Task 9 PARA (ele instala o Clerk) e Task 16 PARA (pacote de copy).
   1ª resposta dele: **"Vai ao ar direto, marcado"** (não passa
