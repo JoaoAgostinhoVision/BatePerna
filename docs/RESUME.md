@@ -2,7 +2,37 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — PARADA DE 07/10 (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — PARADA DE 07/10, NOITE (vence TUDO abaixo)
+
+**Ele parou em 07/10 à noite: *"gostaria de continuar na próxima sessão deixe tudo pronto"*.** Branch `painel-completo`,
+último commit de código `79eafd6`. NO AR: `f779f8c` (painel completo) + o cancelar (`dpl_36nNGhh7xkrsZEeD7PNeBCBfiZKK`).
+Nada do "lugar de quem usa" está no ar.
+
+**Em curso: execução SDD do plano `docs/superpowers/plans/2026-10-07-lugar-de-quem-usa.md`** (spec
+`docs/superpowers/specs/2026-10-07-lugar-de-quem-usa-design.md`, aprovada por partes). Modo subagent-driven
+(skill `superpowers:subagent-driven-development`). **FONTE DA VERDADE: o ledger
+`.superpowers/sdd/2026-10-07-lugar-de-quem-usa/progress.md`** (+ `git log`). Tudo da execução mora nessa pasta
+(git-ignorada, mas no disco): briefs `task-N-brief.md`, relatórios, revisões, `regras-do-implementador.md`,
+`global-constraints.md` (corrigida pelo controlador na Task 10 — usar ESTA, não a do plano).
+
+→ **O PRIMEIRO PASSO, SEM PENSAR:**
+1. `git status --short` limpo; `git log --oneline -3` mostra `79eafd6`.
+2. Ler o fim do ledger. Tasks 1–10 = complete. **Task 11: implementada (`b1a4520..79eafd6`), REVISÃO NÃO FEITA.**
+   Despachar o revisor da Task 11 (molde `task-reviewer-prompt.md` do skill; diff JÁ GERADO em
+   `review-64159b6..79eafd6.diff`; BASE `64159b6`). Ponto pra ruling depois da revisão: o 409
+   `JA_NO_AR_DA_PESSOA` revela que existe lugar (até escondido) num endereço — o brief mandou; decidir.
+3. Seguir: Task 12 → 13 → 14 → 15 → 16 (🛑 PARA pro pacote de copy) → revisão final da branch → onda única →
+   pacote de copy pra ele (artifact, como o "Frases do painel") → deploy SÓ com o ok dele.
+4. **Lembrar o João do 🛑 Step 1 da Task 9 (passo DELE, ainda não feito):** `! vercel integration add clerk` (aceitar
+   termos, ligar ao projeto bateperna) → ligar "Google" no painel do Clerk → `! vercel env pull .env.development.local`
+   (NUNCA `.env.local`, que tem o Turso). Só exigido antes do deploy.
+5. Antes do deploy: olho de tela no celular — tracejado do pin na gota sobre os tiles, etiqueta "não conferido" ao
+   lado de nome longo no cartão.
+
+Frases PENDENTE novas desta rodada (pacote de copy): ver as linhas "PENDENTE" nos relatórios das tasks (1, 3, 6, 7,
+8, 10, 11) — inclui `NOME_JA_EM_USO` (com os dois casos sem saída) e `SEM_NAO_SEI`.
+
+## ▶ (histórico) PARADA DE 07/10, TARDE
 
 **Ele parou em 07/10 dizendo que continua na próxima sessão.** Código PRONTO na branch `painel-completo` (último
 código `6d11d68`, 2364/2364, tsc 0, build 0, mutar 42/0), NADA NO AR. O deploy espera ELE.
