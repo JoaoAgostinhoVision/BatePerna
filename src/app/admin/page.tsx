@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { lerConfigAdmin } from "@/lib/admin-config";
@@ -13,6 +14,7 @@ import { cidadeDoDoc, nomeDoRascunho } from "@/lib/rascunho";
 import CaixaDeSenha from "./CaixaDeSenha";
 import ListaDeLugares from "./ListaDeLugares";
 import SecaoNaoConferidos from "./SecaoNaoConferidos";
+import { TITULO_REGRA_PADRAO } from "./campos/palavras";
 import "./admin.css";
 
 export const dynamic = "force-dynamic";
@@ -95,6 +97,7 @@ export default async function Admin() {
       <h1>Painel</h1>
       <SecaoNaoConferidos itens={itens} />
       <ListaDeLugares fichas={daLista}leituras={leituras} ocultos={ocultos} rascunhos={rascunhos} agora={agora} />
+      <Link href="/admin/chuva" className="adm-novo-link">{TITULO_REGRA_PADRAO}</Link>
     </main>
   );
 }

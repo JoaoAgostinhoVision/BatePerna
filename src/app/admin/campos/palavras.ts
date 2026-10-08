@@ -30,6 +30,9 @@ export const SALVAR = "Salvar";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Estava no ar sem marcador, vindo do `EditorDeVoz`.
 export const SALVANDO = "Salvando…";
 
+// PENDENTE: redação minha, o João ainda não leu (o nome é o da spec de 07/10, Parte 4)
+export const TITULO_REGRA_PADRAO = "Regra padrão da chuva";
+
 /** A recusa de "nada escolhido" — vale pra lista fechada (nenhuma opção) e pro
  *  interruptor (nem sim nem não). Uma frase só porque a pergunta é a mesma; e
  *  ela NÃO promete o "não sei", porque campo obrigatório não tem esse botão e a

@@ -38,6 +38,7 @@ import {
 import { IR_PUBLICAR, LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
 import { TITULO_NAO_CONFERIDOS } from "@/app/admin/SecaoNaoConferidos";
 import { CONFERI, CONFERI_MESMO, MANDADO_POR } from "@/app/admin/CaixaDaOrigem";
+import { SALVAR_REGRA, VALE_PARA } from "@/app/admin/TelaDaRegraPadrao";
 import { AVISO_PUBLICAR, PUBLICANDO, PUBLICAR, TITULO_CALA, TITULO_FALTA } from "@/app/admin/TelaDePublicar";
 import {
   ALEM_DO_PROVEDOR,
@@ -63,6 +64,7 @@ import {
   SALVANDO,
   SALVAR,
   SIM,
+  TITULO_REGRA_PADRAO,
 } from "@/app/admin/campos/palavras";
 import {
   CAMPOS_DA_FICHA,
@@ -1421,6 +1423,11 @@ describe("Os editores servem os três lugares", () => {
    *  enumerador encolher e NÃO pega uma frase nova que ninguém pôs aqui. O
    *  portão de completude dele próprio é o caso logo abaixo. */
   const CUNHADAS_AQUI = [
+    // Task 7 (07/10): a tela da regra padrão. Moram em /admin/chuva, fora do
+    // render das três fichas.
+    SALVAR_REGRA,
+    VALE_PARA,
+    TITULO_REGRA_PADRAO,
     SIM,
     NAO,
     SALVAR,
