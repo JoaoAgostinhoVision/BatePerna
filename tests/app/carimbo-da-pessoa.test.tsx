@@ -54,4 +54,14 @@ describe("o carimbo de um lugar sem regra própria", () => {
     expect(cartao, "a premissa: o cartão da pessoa está na home").not.toBeNull();
     expect(cartao!.querySelector(".selo .s")?.textContent).toBe("seco");
   });
+
+  it("depois de calibrado, a ficha da pessoa volta a 'seco · carro comum' e a meia-linha sai", async () => {
+    const { gravarEdicao, versaoAtual } = await import("@/lib/db");
+    const { calibrarDoc } = await import("@/lib/calibrar");
+    const atual = (await versaoAtual(banco, SLUG))!;
+    await gravarEdicao(banco, SLUG, calibrarDoc(atual.doc, { janela_previsao_horas: 2, janela_passado_horas: 5, limiar_mm: 1, severidade: "espera" }), AGORA_S, atual.id);
+    const { container } = await abrir(SLUG);
+    expect(container.querySelector('[data-marca="regra-padrao"]')).toBeNull();
+    expect(container.querySelector(".stamp .sub")?.textContent).toBe("seco · carro comum");
+  });
 });

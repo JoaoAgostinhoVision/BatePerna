@@ -39,6 +39,7 @@ import { IR_PUBLICAR, LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLu
 import { TITULO_NAO_CONFERIDOS } from "@/app/admin/SecaoNaoConferidos";
 import { CONFERI, CONFERI_MESMO, MANDADO_POR } from "@/app/admin/CaixaDaOrigem";
 import { SALVAR_REGRA, VALE_PARA } from "@/app/admin/TelaDaRegraPadrao";
+import { CALIBRAR, CALIBRAR_AJUDA, FALTA_UM_DOS_QUATRO } from "@/app/admin/campos/EditorCalibrar";
 import { AVISO_PUBLICAR, PUBLICANDO, PUBLICAR, TITULO_CALA, TITULO_FALTA } from "@/app/admin/TelaDePublicar";
 import {
   ALEM_DO_PROVEDOR,
@@ -1529,6 +1530,12 @@ describe("Os editores servem os três lugares", () => {
     MANDADO_POR,
     CONFERI,
     CONFERI_MESMO,
+    // Task 8 (07/10): o "Calibrar" de um lugar sem regra própria. Só aparece na
+    // ficha de lugar SEM regra — nenhuma das três fichas do acervo —, e a recusa
+    // só depois de um toque.
+    CALIBRAR,
+    CALIBRAR_AJUDA,
+    FALTA_UM_DOS_QUATRO,
   ];
 
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem

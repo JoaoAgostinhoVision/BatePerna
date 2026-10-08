@@ -381,6 +381,27 @@ describe("/admin/[slug] — a porta e o conteúdo", () => {
     expect(doJoao.container.querySelector("[data-origem]")).toBeNull();
   });
 
+  // 🔴 O "Calibrar" (Task 8) PELA PÁGINA, e não só pelo componente: ele depende
+  // de a página dar à `FichaInteira` o DOCUMENTO (`ficha`, sem regra no lugar
+  // de quem usa) e não a ficha pública (`noAr`, que sempre traz uma regra — a
+  // padrão, quando falta). Trocar uma pela outra escondia o Calibrar no ar com
+  // `admin-calibrar.test.tsx` verde, porque lá a fixture é montada à mão.
+  it("lugar de quem usa sem regra: a ficha inteira oferece o Calibrar — e a do João não", async () => {
+    const slug = await semearLugarDaPessoa(cliente, { nome: "Pedra Mandada", cidade: "Cidade Teste", agora: AGORA_SEMENTE + 30 });
+    await comSessaoValida();
+    const { default: Lugar } = await import("@/app/admin/[slug]/page");
+    const { CALIBRAR } = await import("@/app/admin/campos/EditorCalibrar");
+    const { container } = render(await Lugar({ params: Promise.resolve({ slug }) }));
+    const inteira = container.querySelector(`[data-ficha-inteira="${slug}"]`) as HTMLElement | null;
+    expect(inteira, "a premissa: a ficha inteira abriu").not.toBeNull();
+    expect(within(inteira!).getByRole("button", { name: CALIBRAR })).toBeTruthy();
+    cleanup();
+
+    const doJoao = render(await Lugar({ params: Promise.resolve({ slug: SLUG_ESCONDIDO }) }));
+    expect(doJoao.container.querySelector("[data-ficha-inteira]"), "a premissa: a ficha do João abriu").not.toBeNull();
+    expect(doJoao.queryByRole("button", { name: CALIBRAR })).toBeNull();
+  });
+
   it("lugar no ar: o botão é o de esconder, e nada diz escondido", async () => {
     await comSessaoValida();
     const { default: Lugar } = await import("@/app/admin/[slug]/page");

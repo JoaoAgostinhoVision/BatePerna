@@ -8,6 +8,7 @@ import {
 import { Fragment } from "react";
 import { vistaNoPonto0 } from "@/lib/vista-do-mapa";
 import type { Ficha } from "@/types/ficha";
+import EditorCalibrar from "./campos/EditorCalibrar";
 import EditorFaixas from "./campos/EditorFaixas";
 import EditorBooleano from "./campos/EditorBooleano";
 import EditorCoordenada from "./campos/EditorCoordenada";
@@ -514,6 +515,11 @@ export default function FichaInteira({
   // ponto novo: ele só vira dado se o dono confirmar o pin ali.
   const ultimoPonto = ficha.trajeto.waypoints[pontos - 1];
   const ultimoDoTrajeto = campos.filter((c) => c.caminho.startsWith("trajeto.waypoints.")).at(-1)?.caminho;
+  // 🔴 SEM REGRA PRÓPRIA (07/10), a regra entra INTEIRA pelo "Calibrar": os
+  // quatro editores de folha sairiam com 400 (meia regra não passa no schema).
+  const semRegra = ficha.condicao.regra === undefined;
+  const daRegra = (c: CampoDaFicha) => c.caminho.startsWith("condicao.regra.") || c.caminho === "condicao.severidade";
+  const visiveis = semRegra ? campos.filter((c) => !daRegra(c)) : campos;
   return (
     <section className="adm-ficha-inteira" data-ficha-inteira={ficha.slug}>
       <h2>{TITULO}</h2>
@@ -534,7 +540,18 @@ export default function FichaInteira({
       {grupos.map((g) => (
         <section key={g} className="adm-grupo" data-testid={`grupo-${g}`}>
           <h3>{TITULO_DO_GRUPO[g]}</h3>
-          {campos
+          {g === "condicao" && semRegra && (
+            <EditorCalibrar
+              slug={ficha.slug}
+              rotulos={{
+                previsao: rotuloDe("condicao.regra.janela_previsao_horas"),
+                passado: rotuloDe("condicao.regra.janela_passado_horas"),
+                limiar: rotuloDe("condicao.regra.limiar_mm"),
+                severidade: rotuloDe("condicao.severidade"),
+              }}
+            />
+          )}
+          {visiveis
             .filter((c) => c.grupo === g)
             .map((c) => (
               <Fragment key={c.caminho}>

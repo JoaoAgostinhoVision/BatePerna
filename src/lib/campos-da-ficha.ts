@@ -268,10 +268,12 @@ const itemInexistente = (i: number, tem: number): string => `não existe o item 
 /** Escreve (ou apaga) a folha de `degraus` devolvendo uma cópia — NUNCA muta o
  *  que recebeu. Só os objetos do caminho tocado são copiados; os irmãos saem
  *  pela mesma referência, que é o que faz "só o campo pedido muda". */
-/*  `criar` (Tarefa 11) só é `true` no RASCUNHO: lá o documento é incompleto por
+/*  `criar` (Tarefa 11) é `true` no RASCUNHO: lá o documento é incompleto por
     natureza, e responder `custo.curto` antes de `custo.tag` tem de criar o
-    `custo`. Na ficha que está no ar ele é sempre `false`, e o degrau ausente
-    continua recusado como sempre foi (ver o comentário do `filho === undefined`). */
+    `custo`. Na ficha que está no ar ele é `false`, e o degrau ausente continua
+    recusado como sempre foi (ver o comentário do `filho === undefined`) — salvo
+    nos `BLOCOS_QUE_NASCEM` (07/10: o `discriminador`), que `aplicarCampo` passa
+    com `criar` ligado e cujo resultado o `fichaSchema.parse` ainda julga. */
 function escrever(
   no: unknown,
   degraus: readonly string[],
@@ -318,6 +320,11 @@ function escrever(
     // conferida contra o tipo dela antes de chegar aqui. Item de LISTA nunca
     // nasce, nem no rascunho: um `{}` no lugar de um índice viraria um objeto
     // com chave `"0"`, não um waypoint.
+    //
+    // 🔴 DESDE 07/10 o `criar` também chega da FICHA NO AR, mas só pros
+    // `BLOCOS_QUE_NASCEM` (hoje, o `discriminador`, cujas folhas são todas
+    // opcionais): lá o `fichaSchema.parse` de `aplicarCampo` continua sendo
+    // quem decide, e um bloco de folha obrigatória não está na lista.
     if (criar && !/^\d+$/.test(resto[0])) {
       copia[degrau] = escrever({}, resto, valor, remover, criar);
       return copia;
@@ -394,6 +401,15 @@ function conferirFaixas(valor: unknown): Faixa[] {
   return (valor as Faixa[]).map(({ abre, fecha }) => ({ abre, fecha }));
 }
 
+/** 🔴 OS BLOCOS QUE NASCEM NA FICHA NO AR (07/10). O `escrever` recusa degrau
+ *  ausente (o comentário de lá conta por quê: um objeto de UMA folha nunca
+ *  passava no schema). O `discriminador` mudou isso: desde 07/10 ele e as três
+ *  folhas são opcionais, então `{ como_ler }` sozinho É um documento válido — e
+ *  é assim que o João completa, folha a folha, o lugar mandado por quem usa,
+ *  que chega sem checagem nenhuma. SÓ ele: a `condicao.regra` entra inteira,
+ *  pelo "Calibrar" (`src/lib/calibrar.ts`), e meia regra continua recusada. */
+const BLOCOS_QUE_NASCEM: ReadonlySet<string> = new Set(["discriminador"]);
+
 /** Grava UM campo sobre o documento atual e devolve o JSON novo.
  *
  *  🔴 REVALIDA O DOCUMENTO INTEIRO, não só o campo: esta é a porta que impede
@@ -413,7 +429,9 @@ export function aplicarCampo(docAtual: string, caminho: string, valor: ValorDeCa
   recusarVazio(caminho, valor);
   recusarCidadeSemLetra(caminho, valor);
   const atual = fichaSchema.parse(JSON.parse(docAtual));
-  return JSON.stringify(fichaSchema.parse(escrever(atual, caminho.split("."), valor, false)));
+  return JSON.stringify(
+    fichaSchema.parse(escrever(atual, caminho.split("."), valor, false, BLOCOS_QUE_NASCEM.has(caminho.split(".")[0]))),
+  );
 }
 
 /** Grava a COORDENADA INTEIRA de um ponto do trajeto — `lat` e `lng` juntas,

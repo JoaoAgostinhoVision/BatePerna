@@ -1155,9 +1155,9 @@ export async function lerRegraPadrao(client: Client): Promise<RegraPadrao> {
   return regraDaLinha(r.rows[0] as unknown as Record<string, unknown> | undefined);
 }
 
-/** Grava SEM conferir: quem confere os números é a rota, por `lerRegraDoCorpo`
- *  — que a Task 7 deste plano escreve (`porta-da-regra-padrao.ts`, que ainda
- *  NÃO existe em 07/10; até lá, nenhuma rota chama esta função). */
+/** Grava SEM conferir: quem confere os números é a rota que chama esta função
+ *  (`PUT /api/admin/regra-padrao`, Task 7), por `lerRegraDoCorpo`, em
+ *  `porta-da-regra-padrao.ts`. Chamar daqui sem passar por lá grava sem juízo. */
 export async function gravarRegraPadrao(client: Client, r: RegraPadrao, agora: number): Promise<void> {
   await client.execute({
     sql: `UPDATE regra_padrao SET janela_previsao_horas = ?, janela_passado_horas = ?,

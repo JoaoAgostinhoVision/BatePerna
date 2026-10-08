@@ -33,6 +33,14 @@ if (!comHora) {
 }
 const DOC_HORA = JSON.stringify(comHora);
 
+// O DOCUMENTO de um lugar mandado por quem usa: sem `discriminador` e sem
+// `condicao.regra` — o que a Task 8 completa pelo painel.
+const PESSOA = JSON.stringify({
+  slug: "pedra-mandada-cidade-teste", modos: [], cidade: "Cidade Teste", promessa: "p",
+  trajeto: { waypoints: [{ nome: "Pedra Mandada", lat: -8.31, lng: -35.97 }] }, acesso: "a",
+  condicao: { coords: { lat: -8.31, lng: -35.97 } }, custo: { tag: "gratis" },
+});
+
 describe("aplicarCampo", () => {
   it("alcança chave de 1º nível", () => {
     expect(JSON.parse(aplicarCampo(DOC, "voz", "a serra firmou")).voz).toBe("a serra firmou");
@@ -168,6 +176,18 @@ describe("aplicarCampo", () => {
     const original = JSON.parse(DOC);
     aplicarCampo(DOC, "trajeto.waypoints.0.nome", "mexido");
     expect(JSON.parse(DOC)).toEqual(original);
+  });
+
+  // 🔴 O discriminador do lugar mandado por quem usa não existe, e o João o
+  // preenche folha a folha: o objeto NASCE na primeira (Task 8).
+  it("preencher uma folha do discriminador ausente faz o objeto nascer só com ela", () => {
+    const depois = JSON.parse(aplicarCampo(PESSOA, "discriminador.como_ler", "Olhe o chão."));
+    expect(depois.discriminador).toEqual({ como_ler: "Olhe o chão." });
+  });
+
+  // …e SÓ ele: meia regra continua sem nascer.
+  it("uma folha da regra ausente continua recusada", () => {
+    expect(() => aplicarCampo(PESSOA, "condicao.regra.limiar_mm", 1)).toThrow();
   });
 });
 
