@@ -160,4 +160,24 @@ describe("POST /api/contribuir/publicar", () => {
     expect(await versaoAtual(c, SLUG)).toBeNull();
     expect((await rascunhoDeQualquerUm(c, SLUG))?.atualizado_em).toBe(em);
   });
+
+  // A ORDEM das duas recusas do batch: bloqueada E o endereço virou antigo, no
+  // mesmo instante. Sem este caso, conferir o bloqueio só DEPOIS do
+  // `porQueRecusou` (só quando ele não acha outra razão) sobrevivia — o caso de
+  // cima não distingue as duas ordens, porque lá o `porQueRecusou` cairia no
+  // "recarregue". A conta bloqueada é a razão que vale: a frase de "em uso"
+  // mandaria ela trocar o nome de um lugar que ela não pode mais mandar.
+  it("o bloqueio e o endereço antigo chegam juntos: 403 com a frase de bloqueada, não a de em uso", async () => {
+    const em = await rascunho();
+    const corrida = clienteQueIntercala(c, /^INSERT INTO ficha_versoes/, async () => {
+      await c.execute({ sql: "UPDATE contribuidores SET bloqueado = 1 WHERE id = ?", args: [PESSOA.id] });
+      await c.execute({ sql: "INSERT INTO enderecos_antigos (velho, novo, em) VALUES (?, 'rampa-do-pepe', ?)", args: [SLUG, AGORA] });
+    });
+    cli = corrida.cliente;
+    const res = await POST(pedido({ slug: SLUG, atualizadoEm: em }));
+    expect(corrida.disparos(), "o dublê não disparou: o teste mediu o vazio").toBe(1);
+    expect(res.status).toBe(403);
+    expect(await res.text()).toBe(BLOQUEADA);
+    expect(await versaoAtual(c, SLUG)).toBeNull();
+  });
 });
