@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, cleanup, screen, within } from "@testing-library/react";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import type { Client } from "@libsql/client";
-import { bancoVazio, semearAcervo } from "../banco";
+import { AGORA_SEMENTE, PESSOA_DE_TESTE, bancoVazio, semearAcervo, semearLugarDaPessoa } from "../banco";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
@@ -349,6 +349,36 @@ describe("/admin/[slug] — a porta e o conteúdo", () => {
     expect(vis, "o botão de visibilidade sumiu da página do lugar").not.toBeNull();
     expect(within(vis!).getByRole("button", { name: /mostrar de novo/i })).toBeTruthy();
     expect(within(vis!).getByText(/escondid/i)).toBeTruthy();
+  });
+
+  // 🔴 A CAIXA DA ORIGEM (Task 6 da rodada de 07/10). O componente é provado
+  // puro em `admin-nao-conferidos.test.tsx`; sem este caso, apagar a caixa da
+  // página — ou mostrá-la em lugar do João, ou datar pela versão mais NOVA —
+  // passava a suíte inteira verde (medido). O lugar ganha uma 2ª versão depois
+  // de publicado, pra a data da 1ª e a da última serem diferentes.
+  it("lugar de quem usa: a caixa diz quem mandou, a data da versão 1, e o Conferi — e lugar do João não a tem", async () => {
+    await cliente.execute({
+      sql: "INSERT INTO contribuidores (id, nome, email, bloqueado, criado_em) VALUES (?, ?, ?, 0, ?)",
+      args: [PESSOA_DE_TESTE, "Maria Teste", "maria@teste.invalid", AGORA_SEMENTE],
+    });
+    const slug = await semearLugarDaPessoa(cliente, { nome: "Pedra Mandada", cidade: "Cidade Teste", agora: AGORA_SEMENTE + 30 });
+    const { gravarVersao, versaoAtual } = await import("@/lib/db");
+    await gravarVersao(cliente, slug, (await versaoAtual(cliente, slug))!.doc, "painel", AGORA_SEMENTE + 5000);
+    await comSessaoValida();
+    const { default: Lugar } = await import("@/app/admin/[slug]/page");
+    const { CONFERI } = await import("@/app/admin/CaixaDaOrigem");
+    const { container } = render(await Lugar({ params: Promise.resolve({ slug }) }));
+    const caixa = container.querySelector(`[data-origem="${slug}"]`) as HTMLElement | null;
+    expect(caixa, "a caixa da origem sumiu da página do lugar de quem usa").not.toBeNull();
+    expect(caixa!.textContent).toContain("Maria Teste");
+    expect(caixa!.textContent).toContain("maria@teste.invalid");
+    expect(caixa!.querySelector("time")?.getAttribute("datetime")).toBe(new Date((AGORA_SEMENTE + 30) * 1000).toISOString());
+    expect(within(caixa!).getByRole("button", { name: CONFERI })).toBeTruthy();
+    cleanup();
+
+    const doJoao = render(await Lugar({ params: Promise.resolve({ slug: SLUG_ESCONDIDO }) }));
+    expect(doJoao.container.querySelector(".adm-painel"), "a premissa: a página do João abriu").not.toBeNull();
+    expect(doJoao.container.querySelector("[data-origem]")).toBeNull();
   });
 
   it("lugar no ar: o botão é o de esconder, e nada diz escondido", async () => {
