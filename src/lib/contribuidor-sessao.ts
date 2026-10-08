@@ -8,9 +8,12 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 
 export type QuemContribui = { id: string; nome: string | null; email: string | null };
 
-/** O Clerk não respondeu, ou não está configurado (sem chave, sem o
- *  middleware). A rota responde 503 com frase; nada do app público depende
- *  disto. */
+/** O Clerk não respondeu, ou não está configurado. Sem as duas chaves, o
+ *  `src/middleware.ts` deixa o pedido passar sem chamar o Clerk (de propósito:
+ *  o `clerkMiddleware` estouraria 500 antes da rota), e é o `auth()` daqui que
+ *  estoura — vira isto, e a rota responde 503 com frase. Nada do app público
+ *  depende disto. (O Clerk fora do ar COM chave falha dentro do
+ *  `clerkMiddleware`, antes da rota: esse caso não é coberto por teste.) */
 export class ClerkFora extends Error {}
 
 /** Quem está logado AGORA, ou `null`. O perfil (nome, e-mail) é só pro painel

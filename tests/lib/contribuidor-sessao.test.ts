@@ -6,7 +6,7 @@ const clerk = vi.hoisted(() => ({
 }));
 vi.mock("@clerk/nextjs/server", () => clerk);
 
-const { ClerkFora, lerContribuidor } = await import("@/lib/contribuidor-sessao");
+const { ClerkFora, irPraEntrar, lerContribuidor } = await import("@/lib/contribuidor-sessao");
 
 beforeEach(() => { clerk.auth.mockReset(); clerk.currentUser.mockReset(); });
 
@@ -39,5 +39,18 @@ describe("lerContribuidor", () => {
   it("o Clerk não responde (ou sem middleware/chave): estoura ClerkFora", async () => {
     clerk.auth.mockRejectedValue(new Error("clerkMiddleware não rodou"));
     await expect(lerContribuidor()).rejects.toBeInstanceOf(ClerkFora);
+  });
+});
+
+describe("irPraEntrar", () => {
+  // O `redirectToSignIn()` do Next estoura (NEXT_REDIRECT) em vez de voltar;
+  // o dublê imita isso. SEM argumento: o Clerk volta pro endereço do pedido —
+  // um endereço fixo aqui perderia o `?p=N` da pergunta.
+  it("manda pra tela de entrar do Clerk, sem endereço de volta fixo", async () => {
+    const redirectToSignIn = vi.fn(() => { throw new Error("NEXT_REDIRECT"); });
+    clerk.auth.mockResolvedValue({ userId: null, redirectToSignIn });
+    await expect(irPraEntrar()).rejects.toThrow("NEXT_REDIRECT");
+    expect(redirectToSignIn).toHaveBeenCalledTimes(1);
+    expect(redirectToSignIn).toHaveBeenCalledWith();
   });
 });
