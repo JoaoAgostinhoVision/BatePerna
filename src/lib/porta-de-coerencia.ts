@@ -3,9 +3,12 @@ import { type Violacao, violacoesDoAcervo } from "@/lib/coerencia";
 import { type Ficha, fichaSchema } from "@/types/ficha";
 
 /** 🔴 O PORTÃO DA COERÊNCIA NUMA GRAVAÇÃO, e ele recusa SÓ A VIOLAÇÃO QUE A
- *  GRAVAÇÃO INTRODUZ — de duas portas: a da ficha no ar
+ *  GRAVAÇÃO INTRODUZ — nasceu de duas portas: a da ficha no ar
  *  (`src/app/api/admin/ficha/route.ts`, Tarefa 3) e a de publicar
- *  (`src/app/api/admin/publicar/route.ts`, Tarefa 12, 12-I2).
+ *  (`src/app/api/admin/publicar/route.ts`, Tarefa 12, 12-I2). Depois vieram a
+ *  de calibrar (`src/app/api/admin/calibrar/route.ts`) e a de publicar de quem
+ *  usa (`src/app/api/contribuir/publicar/route.ts`, Task 11 de 07/10), esta
+ *  pela `violacaoIntroduzidaInteira`.
  *
  *  Saiu da rota da ficha na Tarefa 12 (I8 da auditoria de 06/10) SEM MUDAR A
  *  CONTA: um arquivo de rota do Next não exporta nada além dos métodos, e a
@@ -113,23 +116,26 @@ function acervoComo(versoes: Map<string, FichaVersao>, slug: string, doc: string
   return fichas;
 }
 
-/** A frase da violação que gravar `depois` em `slug` INTRODUZ no acervo
- *  `versoes` — ou `null`, se não introduz nenhuma. `antes` é o documento de
- *  agora daquele lugar, ou `null` se ele ainda não existe.
+/** A violação que gravar `depois` em `slug` INTRODUZ no acervo `versoes` —
+ *  inteira (`regra`, `slug`, `frase`) — ou `null`, se não introduz nenhuma.
+ *  `antes` é o documento de agora daquele lugar, ou `null` se ele ainda não
+ *  existe. Inteira porque a porta de quem usa (`/api/contribuir/publicar`,
+ *  Task 11 de 07/10) responde pela REGRA, numa frase dela (`fraseDaPessoa`):
+ *  a `frase` daqui nomeia outro lugar e fala a língua do painel.
  *
- *  Introduzida = par cuja CONTAGEM cresceu. E a frase que volta é a do achado
+ *  Introduzida = par cuja CONTAGEM cresceu. E a violação que volta é a do achado
  *  que não existia antes, não a primeira em ordem de tabela (medido em 27/09:
  *  com a janela do passado já zerada, zerar o LIMIAR devolvia a frase da
  *  janela — "o dono pede pra consertar X e a porta responde sobre Y"). Comparar
  *  frases AQUI é seguro: só escolhe QUAL mostrar, dentro de um par cuja contagem
  *  já cresceu — nunca decide recusar. Sem achado novo, a primeira em ORDEM DE
  *  TABELA, que é a ordem da tela do dono. */
-export function violacaoIntroduzida(
+export function violacaoIntroduzidaInteira(
   versoes: Map<string, FichaVersao>,
   slug: string,
   antes: string | null,
   depois: string,
-): string | null {
+): Violacao | null {
   const violacoesAntes = violacoesDoAcervo(acervoComo(versoes, slug, antes));
   const contaAntes = contarPares(violacoesAntes);
   const todasDepois = violacoesDoAcervo(acervoComo(versoes, slug, depois));
@@ -137,5 +143,15 @@ export function violacaoIntroduzida(
   const introduzidas = todasDepois.filter((v) => (contaDepois.get(par(v)) ?? 0) > (contaAntes.get(par(v)) ?? 0));
   if (introduzidas.length === 0) return null;
   const frasesAntes = new Set(violacoesAntes.map((v) => v.frase));
-  return (introduzidas.find((v) => !frasesAntes.has(v.frase)) ?? introduzidas[0]).frase;
+  return introduzidas.find((v) => !frasesAntes.has(v.frase)) ?? introduzidas[0];
+}
+
+/** A frase da `violacaoIntroduzidaInteira` — o painel só precisa dela. */
+export function violacaoIntroduzida(
+  versoes: Map<string, FichaVersao>,
+  slug: string,
+  antes: string | null,
+  depois: string,
+): string | null {
+  return violacaoIntroduzidaInteira(versoes, slug, antes, depois)?.frase ?? null;
 }
