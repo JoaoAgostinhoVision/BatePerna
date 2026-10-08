@@ -7,10 +7,12 @@ import { getAcervoDoDono } from "@/lib/ficha";
 import { resolverEstados } from "@/lib/carimbo-estado";
 import { comPrazo } from "@/lib/cache-rotas";
 import { getClient, listarRascunhos, type Rascunho } from "@/lib/db";
+import { naoConferidos, type NaoConferido } from "@/lib/db-contribuidor";
 import { PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
 import { cidadeDoDoc, nomeDoRascunho } from "@/lib/rascunho";
 import CaixaDeSenha from "./CaixaDeSenha";
 import ListaDeLugares from "./ListaDeLugares";
+import SecaoNaoConferidos from "./SecaoNaoConferidos";
 import "./admin.css";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +27,9 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
  *  que é quem monta o `PainelAdmin` de UM lugar. Por isso esta página não lê
  *  mais os avisos vigentes (aquilo virou responsabilidade da página do
  *  lugar): ela só precisa do acervo e do estado do motor de cada um, pra
- *  `ListaDeLugares` derivar a marca do selo público. */
+ *  `ListaDeLugares` derivar a marca do selo público — e, desde a Tarefa 11, dos
+ *  rascunhos; desde a Task 6 da rodada de 07/10, dos lugares mandados por quem
+ *  usa ainda não conferidos, que moram na seção do topo e não na lista. */
 export default async function Admin() {
   // 🔴 Painel desligado NÃO EXISTE — 404, nunca uma tela dizendo "configure-me".
   // O motivo (senha curta, sem segredo) vai pro LOG, nunca pra tela: ver
@@ -68,11 +72,29 @@ export default async function Admin() {
   );
   if (linhas === ESTOUROU) throw new Error("O banco não respondeu a tempo à leitura dos rascunhos.");
   const rascunhos = linhas.map((r) => ({ slug: r.slug, nome: nomeDoRascunho(r.doc, r.slug), cidade: cidadeDoDoc(r.doc) }));
+  // 🔴 OS MANDADOS POR QUEM USA, AINDA NÃO CONFERIDOS (Task 6 da rodada de
+  // 07/10) — a fila dele, no topo. Mesma sentinela e mesmo prazo dos rascunhos,
+  // pela mesma razão: banco pendurado é erro, nunca uma fila vazia que diria
+  // "nada pra conferir".
+  const fila = await comPrazo<NaoConferido[] | typeof ESTOUROU>(naoConferidos(getClient()), PRAZO_FICHA_MS, ESTOUROU);
+  if (fila === ESTOUROU) throw new Error("O banco não respondeu a tempo à leitura dos lugares não conferidos.");
+  const itens = fila.map((l) => ({
+    slug: l.slug,
+    nome: nomeDoRascunho(l.doc, l.slug),
+    cidade: cidadeDoDoc(l.doc),
+    mandadoEm: l.mandadoEm,
+    quem: l.contribuidor.nome,
+    email: l.contribuidor.email,
+  }));
+  // Conferidos voltam pra lista normal (spec, Parte 3); os não conferidos moram
+  // só na seção do topo.
+  const daLista = fichas.filter((f) => f.origem.conferido);
 
   return (
     <main className="adm">
       <h1>Painel</h1>
-      <ListaDeLugares fichas={fichas} leituras={leituras} ocultos={ocultos} rascunhos={rascunhos} agora={agora} />
+      <SecaoNaoConferidos itens={itens} />
+      <ListaDeLugares fichas={daLista}leituras={leituras} ocultos={ocultos} rascunhos={rascunhos} agora={agora} />
     </main>
   );
 }

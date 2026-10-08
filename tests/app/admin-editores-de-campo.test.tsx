@@ -36,6 +36,8 @@ import {
   SEM_RESPOSTA,
 } from "@/app/admin/FormularioDeLugar";
 import { IR_PUBLICAR, LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
+import { TITULO_NAO_CONFERIDOS } from "@/app/admin/SecaoNaoConferidos";
+import { CONFERI, CONFERI_MESMO, MANDADO_POR } from "@/app/admin/CaixaDaOrigem";
 import { AVISO_PUBLICAR, PUBLICANDO, PUBLICAR, TITULO_CALA, TITULO_FALTA } from "@/app/admin/TelaDePublicar";
 import {
   ALEM_DO_PROVEDOR,
@@ -55,6 +57,7 @@ import {
   NADA_ESCOLHIDO,
   NAO,
   PREVENDO,
+  NAO_CONFERIU,
   PREVISAO_FALHOU,
   REGRA_QUE_MENTE,
   SALVANDO,
@@ -1510,6 +1513,15 @@ describe("Os editores servem os três lugares", () => {
     DESISTIR,
     DESISTIR_MESMO,
     ERRO_DESISTIR,
+    // Rodada do lugar de quem usa (07/10), Task 6: a seção do topo do painel e
+    // a caixa da origem no lugar. Nenhuma aparece no render das três fichas —
+    // são de lugar mandado por quem usa, e o 409 só existe em recusa —, e é por
+    // isso que é esta lista que as cerca.
+    NAO_CONFERIU,
+    TITULO_NAO_CONFERIDOS,
+    MANDADO_POR,
+    CONFERI,
+    CONFERI_MESMO,
   ];
 
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem

@@ -105,7 +105,8 @@ export const ENDERECO_NAO_TROCOU = "Não consegui trocar o endereço: nada mudou
 /** O `baseId` de uma gravação do painel (onda de fix 2 da 11e, M6): a versão que
  *  a tela abriu, a IDENTIDADE do lugar — o endereço não é. Inteiro positivo e
  *  nada mais: ausente, texto, `1.5`, `0`, `null` ou `1e999` (que o `JSON.parse`
- *  vira `Infinity`, e o driver estoura) são 400 nas cinco portas. */
+ *  vira `Infinity`, e o driver estoura) são 400 nas seis portas (a sexta, o
+ *  `conferir`, desde a Task 6 da rodada de 07/10). */
 export function baseIdValido(v: unknown): v is number {
   return typeof v === "number" && Number.isSafeInteger(v) && v > 0;
 }

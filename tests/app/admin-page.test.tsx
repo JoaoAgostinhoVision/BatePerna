@@ -3,7 +3,7 @@ import { render, cleanup, screen, within } from "@testing-library/react";
 import CaixaDeSenha from "@/app/admin/CaixaDeSenha";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import type { Client } from "@libsql/client";
-import { bancoVazio, semearAcervo } from "../banco";
+import { bancoVazio, semearAcervo, semearLugarDaPessoa } from "../banco";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
@@ -232,6 +232,24 @@ describe("/admin — a porta", () => {
     for (const el of outros) {
       expect(within(el).queryByText(/escondid/i), `${el.dataset.testid} veio marcado sem estar escondido`).toBeNull();
     }
+  });
+
+  // 🔴 O LUGAR MANDADO POR QUEM USA, AINDA NÃO CONFERIDO, MORA SÓ NA SEÇÃO DO
+  // TOPO (Task 6 da rodada de 07/10): na lista normal ele apareceria duas vezes,
+  // e o que pede conferência se perderia entre os lugares do João. Roda a
+  // página inteira contra o banco — o componente sozinho recebe `fichas`
+  // pronto e passaria verde com a página entregando todas.
+  it("o lugar não conferido sai da lista normal e entra na seção do topo", async () => {
+    const slug = await semearLugarDaPessoa(cliente, { nome: "Pedra Mandada", cidade: "Cidade Teste" });
+    await comSessao();
+    const { default: Admin } = await import("@/app/admin/page");
+    const { container } = render(await Admin());
+    expect(container.querySelector('[data-testid="nao-conferidos"]')?.textContent).toContain("Pedra Mandada");
+    expect(
+      container.querySelectorAll('[data-testid="lugares"] [data-lugar]').length,
+      "a premissa: os lugares do João continuam na lista normal",
+    ).toBeGreaterThan(0);
+    expect(container.querySelector(`[data-testid="lugares"] [data-lugar="${slug}"]`)).toBeNull();
   });
 
   // 🔴 E A HOME CONTINUA SEM ELE, DEPOIS QUE O PAINEL LEU. Nasceu (M6) contra a

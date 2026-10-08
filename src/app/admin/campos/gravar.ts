@@ -48,7 +48,8 @@ export const PortaDoEditor = createContext<{
  *
  *  Quem a põe aqui é a página do painel de UM lugar (`/admin/[slug]`), em volta
  *  de TUDO que grava: os editores da ficha inteira (por `usarGravacao`), o botão
- *  de esconder, o aviso, o "voltar" do histórico e a troca de endereço.
+ *  de esconder, o aviso, o "voltar" do histórico, a troca de endereço e, desde
+ *  a Task 6 da rodada de 07/10, o "Conferi" do lugar mandado por quem usa.
  *  `null` (o padrão) = tela sem lugar publicado — o formulário de lugar NOVO, que
  *  grava num rascunho e não manda `baseId` nenhum. Um editor da ficha no ar fora
  *  deste provedor manda o corpo SEM `baseId`, e a porta recusa (400): falha
@@ -62,7 +63,8 @@ export function ComVersaoDaTela({ id, children }: { id: number; children: ReactN
 }
 
 /** O corpo com o `baseId` da tela, quando a tela tem um. A única forma de juntar
- *  os dois — as cinco portas do painel o usam. */
+ *  os dois — as seis portas do painel o usam (a sexta, o "Conferi" da
+ *  `CaixaDaOrigem`, desde a Task 6 da rodada de 07/10). */
 export function comBase(corpo: Record<string, unknown>, baseId: number | null): Record<string, unknown> {
   return baseId === null ? corpo : { ...corpo, baseId };
 }

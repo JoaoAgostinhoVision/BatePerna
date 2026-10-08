@@ -17,6 +17,8 @@ import FichaInteira, { precisaDeVista, rotuloDe } from "../FichaInteira";
 import HistoricoDaFicha, { type VersaoNaTela } from "../HistoricoDaFicha";
 import PainelAdmin from "../PainelAdmin";
 import { ComVersaoDaTela } from "../campos/gravar";
+import CaixaDaOrigem from "../CaixaDaOrigem";
+import { contribuidorPorId } from "@/lib/db-contribuidor";
 import "../admin.css";
 
 export const dynamic = "force-dynamic";
@@ -167,14 +169,31 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
     ato: atoDeVisibilidade(linhas[i + 1]?.oculto ?? null, v.oculto),
   }));
 
+  // QUEM MANDOU (Task 6 da rodada de 07/10): só pra lugar de quem usa. Sem
+  // linha em `contribuidores`, `null` — a caixa mostra só o que há.
+  const quemMandou = doDono.origem.contribuidor === null ? null : await contribuidorPorId(getClient(), doDono.origem.contribuidor);
+
   return (
     <main className="adm">
       <h1>Painel</h1>
       {/* 🔴 TUDO QUE GRAVA NESTA TELA FICA AQUI DENTRO (onda de fix 2 da 11e, M6):
           a versão que esta página leu é a identidade do lugar em cada gravação
-          — editores, esconder, aviso, voltar, trocar o endereço. Ver
+          — editores, esconder, aviso, voltar, trocar o endereço, conferir. Ver
           `VersaoDaTela`, em `../campos/gravar`. */}
       <ComVersaoDaTela id={versaoId}>
+        {/* QUEM MANDOU, e o "Conferi" (Task 6 da rodada de 07/10). A data é o
+            `criado_em` da versão 1 — a ÚLTIMA do histórico, que vem do mais novo
+            pro mais velho. Histórico ilegível chega vazio: sem data honesta,
+            `null`, e a caixa cala o <time>. */}
+        {doDono.origem.contribuidor !== null && (
+          <CaixaDaOrigem
+            slug={slug}
+            quem={quemMandou?.nome ?? null}
+            email={quemMandou?.email ?? null}
+            mandadoEm={historicoErro ? null : (linhas.at(-1)?.criado_em ?? null)}
+            conferido={doDono.origem.conferido}
+          />
+        )}
         <PainelAdmin ficha={noAr} leitura={leitura} aviso={aviso} avisoErro={avisoErro} agora={agora} />
         <BotaoVisibilidade slug={slug} oculto={oculto} />
         {/* 🔴 A Task 6 (2026-09-30) FECHOU A ESCADA: `EditorDeVoz` foi apagado e a

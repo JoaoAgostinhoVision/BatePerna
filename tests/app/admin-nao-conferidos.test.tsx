@@ -1,0 +1,77 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import SecaoNaoConferidos, { TITULO_NAO_CONFERIDOS } from "@/app/admin/SecaoNaoConferidos";
+import CaixaDaOrigem, { CONFERI, CONFERI_MESMO } from "@/app/admin/CaixaDaOrigem";
+import { ComVersaoDaTela } from "@/app/admin/campos/gravar";
+
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+
+const UM = { slug: "pedra-mandada-cidade-teste", nome: "Pedra Mandada", cidade: "Cidade Teste", mandadoEm: 1_759_800_000, quem: "Maria Teste", email: "maria@teste.invalid" };
+
+describe("a seção dos não conferidos", () => {
+  it("sem nenhum, a seção não existe — nem o título", () => {
+    const { container } = render(<SecaoNaoConferidos itens={[]} />);
+    expect(container.textContent).toBe("");
+  });
+
+  it("com um: título, link pro lugar no painel, nome, e-mail e data", () => {
+    const { container } = render(<SecaoNaoConferidos itens={[UM]} />);
+    expect(container.querySelector("h2")?.textContent).toBe(TITULO_NAO_CONFERIDOS);
+    const link = container.querySelector(`a[href="/admin/${UM.slug}"]`);
+    expect(link?.textContent).toContain("Pedra Mandada");
+    expect(container.textContent).toContain("Maria Teste");
+    expect(container.textContent).toContain("maria@teste.invalid");
+    expect(container.querySelector("time")?.getAttribute("datetime")).toBe(new Date(UM.mandadoEm * 1000).toISOString());
+  });
+
+  it("quem mandou sem nome nem e-mail: a linha da pessoa cala", () => {
+    const { container } = render(<SecaoNaoConferidos itens={[{ ...UM, quem: null, email: null }]} />);
+    expect(container.querySelector(".adm-quem")).toBeNull();
+  });
+});
+
+describe("a caixa da origem, no lugar", () => {
+  it("o 'Conferi' pede o segundo toque, e só então grava, com o baseId da tela", async () => {
+    const fetchFalso = vi.fn().mockResolvedValue(new Response(JSON.stringify({ slug: UM.slug }), { status: 200 }));
+    const recarregar = vi.fn();
+    vi.stubGlobal("fetch", fetchFalso);
+    vi.stubGlobal("location", { ...window.location, reload: recarregar });
+    const { getByRole } = render(
+      <ComVersaoDaTela id={77}>
+        <CaixaDaOrigem slug={UM.slug} quem="Maria Teste" email={null} mandadoEm={UM.mandadoEm} conferido={false} />
+      </ComVersaoDaTela>,
+    );
+    fireEvent.click(getByRole("button", { name: CONFERI }));
+    expect(fetchFalso).not.toHaveBeenCalled();
+    fireEvent.click(getByRole("button", { name: CONFERI_MESMO }));
+    await waitFor(() => expect(recarregar).toHaveBeenCalled());
+    const [url, init] = fetchFalso.mock.calls[0];
+    expect(url).toBe("/api/admin/conferir");
+    expect(JSON.parse(init.body)).toEqual({ slug: UM.slug, baseId: 77 });
+  });
+
+  it("lugar já conferido: a caixa diz quem mandou, e não tem botão", () => {
+    const { container } = render(
+      <CaixaDaOrigem slug={UM.slug} quem="Maria Teste" email={null} mandadoEm={UM.mandadoEm} conferido={true} />,
+    );
+    expect(container.textContent).toContain("Maria Teste");
+    expect(container.querySelector("button")).toBeNull();
+  });
+
+  it("sem data (histórico ilegível), o <time> cala", () => {
+    const { container } = render(
+      <CaixaDaOrigem slug={UM.slug} quem="Maria Teste" email={null} mandadoEm={null} conferido={true} />,
+    );
+    expect(container.querySelector("time")).toBeNull();
+  });
+
+  it("409 mostra a frase da porta", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Frase da porta.", { status: 409 })));
+    const { getByRole, findByRole } = render(
+      <CaixaDaOrigem slug={UM.slug} quem={null} email={null} mandadoEm={UM.mandadoEm} conferido={false} />,
+    );
+    fireEvent.click(getByRole("button", { name: CONFERI }));
+    fireEvent.click(getByRole("button", { name: CONFERI_MESMO }));
+    expect((await findByRole("alert")).textContent).toBe("Frase da porta.");
+  });
+});

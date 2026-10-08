@@ -289,3 +289,12 @@
 /* Tarefa 15 — o "Desfazer" dos editores: o mesmo botão de `.adm-editor-nao-sei`,
    sem valor novo; ele não grava nada. */
 .adm-editor-desfazer { padding: .6rem; font-size: .95rem; border-radius: 8px; }
+/* Task 6 da rodada de 07/10 — os mandados por quem usa, no topo do painel, e a
+   caixa da origem no lugar. Nenhum valor novo: a seção é a mesma grade das
+   outras, a caixa é o molde de `.adm-visibilidade`, e quem mandou tem o tamanho
+   e a cor da cidade do item. */
+.adm-nao-conferidos { display: grid; gap: .3rem; margin-bottom: 1rem; }
+.adm-origem { display: grid; gap: .3rem; }
+.adm-origem p { margin: 0; }
+.adm-origem button { padding: .6rem; font-size: .95rem; border-radius: 8px; }
+.adm-quem { display: block; font-size: .85rem; color: #555; }
