@@ -154,7 +154,13 @@ export async function moverRascunhoDaPessoa(client: Client, de: string, para: st
   return r.rowsAffected === 1;
 }
 
+/** DESISTIR: só o rascunho DELA, e só livre (onda de fix da Task 10) — conta
+ *  bloqueada não apaga nem desiste: o que ela mandou fica pro João ver. O
+ *  `${LIVRE}` mora no statement, como nas outras gravações, pela corrida. */
 export async function apagarRascunhoDaPessoa(client: Client, slug: string, id: string): Promise<boolean> {
-  const r = await client.execute({ sql: `DELETE FROM ficha_rascunhos WHERE slug = ? AND contribuidor = ?`, args: [slug, id] });
+  const r = await client.execute({
+    sql: `DELETE FROM ficha_rascunhos WHERE slug = ? AND contribuidor = ? AND ${LIVRE}`,
+    args: [slug, id, id],
+  });
   return r.rowsAffected === 1;
 }

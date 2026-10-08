@@ -2,6 +2,7 @@ import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { rascunhoDeQualquerUm } from "@/lib/db";
 import { contribuidorPorId, criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
+import { SEM_NAO_SEI } from "@/lib/campos-da-pessoa";
 import { BLOQUEADA, CLERK_FORA, NOME_JA_EM_USO, RASCUNHO_DELA_SUMIU } from "@/lib/porta-da-pessoa";
 import { CIDADE_SEM_LETRA, CIDADE_VAZIA, NOME_SEM_LETRA, NOME_VAZIO } from "@/lib/rascunho";
 import { clienteQueIntercala, semearAcervo } from "../banco";
@@ -186,7 +187,9 @@ describe("PUT — responder", () => {
     expect((await rota.PUT(pedido("PUT", { slug: SLUG, campo: "avisos", naoSei: true }))).status).toBe(200);
     expect("avisos" in (await docDe())).toBe(false);
     await rota.PUT(pedido("PUT", { slug: SLUG, campo: "promessa", valor: "Uma pedra." }));
-    expect((await rota.PUT(pedido("PUT", { slug: SLUG, campo: "promessa", naoSei: true }))).status).toBe(400);
+    const recusa = await rota.PUT(pedido("PUT", { slug: SLUG, campo: "promessa", naoSei: true }));
+    expect(recusa.status).toBe(400);
+    expect(await recusa.text()).toBe(SEM_NAO_SEI);
     expect((await docDe()).promessa).toBe("Uma pedra.");
   });
 
@@ -313,7 +316,9 @@ describe("o texto dela entra aparado, e cidade vazia não chega ao rascunho dela
         expect(res.status, JSON.stringify(corpo)).toBe(400);
         expect(await res.text(), JSON.stringify(corpo)).toBe(frase);
       }
-      expect((await rota.PUT(pedido("PUT", { slug: SLUG, campo: "cidade", naoSei: true }))).status).toBe(400);
+      const naoSei = await rota.PUT(pedido("PUT", { slug: SLUG, campo: "cidade", naoSei: true }));
+      expect(naoSei.status).toBe(400);
+      expect(await naoSei.text()).toBe(SEM_NAO_SEI);
       expect((await docDe()).cidade).toBe("Cidade Teste");
     });
   });
@@ -346,4 +351,61 @@ describe("PUT — o par contra o rascunho de outra pessoa", () => {
     expect(await res.text()).toBe(NOME_JA_EM_USO);
     expect((await docDe("pedra-dela-cidade-teste")).cidade).toBe("Cidade Teste");
   });
+});
+
+// 🔴 O BLOQUEIO NO MEIO (onda de fix da Task 10): a porta deixou passar, e o
+// João bloqueou entre ela e a gravação. Quem derruba é o `LIVRE` no statement;
+// a resposta tem de ser a de BLOQUEADA — não "sumiu", não "em uso", não 404.
+describe("o bloqueio que chega entre a porta e a gravação", () => {
+  beforeEach(comecar);
+  const bloquear = async () => {
+    await c.execute({ sql: "UPDATE contribuidores SET bloqueado = 1 WHERE id = ?", args: [PESSOA.id] });
+  };
+
+  it("PUT que regrava: 403 com a frase de bloqueada, e o rascunho não muda", async () => {
+    const antes = await docDe();
+    const corrida = clienteQueIntercala(c, /^UPDATE ficha_rascunhos/, bloquear);
+    cli = corrida.cliente;
+    const res = await rota.PUT(pedido("PUT", { slug: SLUG, campo: "promessa", valor: "Uma pedra." }));
+    expect(corrida.disparos(), "o dublê não disparou: o teste mediu o vazio").toBe(1);
+    expect(res.status).toBe(403);
+    expect(await res.text()).toBe(BLOQUEADA);
+    expect(await docDe()).toEqual(antes);
+  });
+
+  it("PUT que muda o endereço (renomear): 403 com a frase de bloqueada, e o rascunho fica onde estava", async () => {
+    const antes = await docDe();
+    const corrida = clienteQueIntercala(c, /^UPDATE ficha_rascunhos/, bloquear);
+    cli = corrida.cliente;
+    const res = await rota.PUT(pedido("PUT", { slug: SLUG, campo: "trajeto.waypoints.0.nome", valor: "Pedra Nova" }));
+    expect(corrida.disparos(), "o dublê não disparou: o teste mediu o vazio").toBe(1);
+    expect(res.status).toBe(403);
+    expect(await res.text()).toBe(BLOQUEADA);
+    expect(await docDe()).toEqual(antes);
+    expect(await rascunhoDeQualquerUm(c, "pedra-nova-cidade-teste")).toBeNull();
+  });
+
+  it("DELETE: 403 com a frase de bloqueada, e o rascunho fica", async () => {
+    const corrida = clienteQueIntercala(c, /^DELETE FROM ficha_rascunhos/, bloquear);
+    cli = corrida.cliente;
+    const res = await rota.DELETE(pedido("DELETE", { slug: SLUG }));
+    expect(corrida.disparos(), "o dublê não disparou: o teste mediu o vazio").toBe(1);
+    expect(res.status).toBe(403);
+    expect(await res.text()).toBe(BLOQUEADA);
+    expect(await rascunhoDeQualquerUm(c, SLUG)).not.toBeNull();
+  });
+
+  it("DELETE de quem já está bloqueada: 403 na porta, e o rascunho fica", async () => {
+    await bloquear();
+    const res = await rota.DELETE(pedido("DELETE", { slug: SLUG }));
+    expect(res.status).toBe(403);
+    expect(await rascunhoDeQualquerUm(c, SLUG)).not.toBeNull();
+  });
+});
+
+// Onda de fix da Task 10: a frase de toda colisão dela não diz "no ar" (falso
+// pro lugar escondido) nem que o lugar "logo estará" no app (falso pro
+// endereço antigo e pro rascunho que nunca sai), e não nomeia ninguém.
+it("NOME_JA_EM_USO não promete onde o outro lugar está", () => {
+  expect(NOME_JA_EM_USO).not.toMatch(/no ar|logo estar|mandando|painel/i);
 });

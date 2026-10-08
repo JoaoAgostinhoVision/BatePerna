@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  CAMPOS_DA_PESSOA, OPCIONAIS_DA_PESSOA, PONTO, chavesForaDaPessoa, ehCampoDaPessoa, obrigatoriosDaPessoaFaltando,
+  CAMPOS_DA_PESSOA, OPCIONAIS_DA_PESSOA, PONTO, SEM_NAO_SEI, chavesForaDaPessoa, ehCampoDaPessoa, obrigatoriosDaPessoaFaltando,
   pontoNoRascunhoDaPessoa, tirarDoRascunhoDaPessoa,
 } from "@/lib/campos-da-pessoa";
 import { campoPorCaminho } from "@/lib/campos-da-ficha";
@@ -53,8 +53,13 @@ describe("o 'não sei' dela", () => {
   });
 
   it("recusa obrigatório dela, e campo fora da lista", () => {
-    expect(() => tirarDoRascunhoDaPessoa(JSON.stringify(COMPLETO), "promessa")).toThrow();
-    expect(() => tirarDoRascunhoDaPessoa(JSON.stringify(COMPLETO), "voz")).toThrow();
+    // O TEXTO, e não só o estouro: ele chega a ela no corpo do 400.
+    expect(() => tirarDoRascunhoDaPessoa(JSON.stringify(COMPLETO), "promessa")).toThrow(new Error(SEM_NAO_SEI));
+    expect(() => tirarDoRascunhoDaPessoa(JSON.stringify(COMPLETO), "voz")).toThrow(new Error(SEM_NAO_SEI));
+  });
+
+  it("a frase do 'não sei' recusado não fala caminho interno", () => {
+    expect(SEM_NAO_SEI).not.toMatch(/`|promessa|custo|trajeto|waypoints/);
   });
 });
 

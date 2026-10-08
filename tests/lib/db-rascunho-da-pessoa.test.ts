@@ -76,6 +76,14 @@ describe("o rascunho dela é dela", () => {
     expect((await rascunhoDeQualquerUm(c, "pedra-cidade"))?.contribuidor).toBe(PESSOA.id);
   });
 
+  // Onda de fix da Task 10: conta bloqueada não desiste (o que ela mandou fica pro João).
+  it("bloqueada: não apaga", async () => {
+    await criarRascunhoDaPessoa(c, "pedra-cidade", doc("pedra-cidade"), A, PESSOA.id);
+    await c.execute({ sql: "INSERT INTO contribuidores (id, bloqueado, criado_em) VALUES (?, 1, ?)", args: [PESSOA.id, A] });
+    expect(await apagarRascunhoDaPessoa(c, "pedra-cidade", PESSOA.id)).toBe(false);
+    expect((await rascunhoDeQualquerUm(c, "pedra-cidade"))?.contribuidor).toBe(PESSOA.id);
+  });
+
   it("bloqueada: não cria, não regrava, não move", async () => {
     await criarRascunhoDaPessoa(c, "pedra-cidade", doc("pedra-cidade"), A, PESSOA.id);
     await c.execute({ sql: "INSERT INTO contribuidores (id, bloqueado, criado_em) VALUES (?, 1, ?)", args: [PESSOA.id, A] });

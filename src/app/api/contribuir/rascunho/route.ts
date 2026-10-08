@@ -2,11 +2,11 @@ import { aplicarNoRascunho, type ValorDeCampo } from "@/lib/campos-da-ficha";
 import { ehCampoDaPessoa, pontoNoRascunhoDaPessoa, tirarDoRascunhoDaPessoa } from "@/lib/campos-da-pessoa";
 import { getClient } from "@/lib/db";
 import {
-  apagarRascunhoDaPessoa, criarRascunhoDaPessoa, lerRascunhoDaPessoa, moverRascunhoDaPessoa, rascunhosDaPessoa,
+  apagarRascunhoDaPessoa, criarRascunhoDaPessoa, estaBloqueado, lerRascunhoDaPessoa, moverRascunhoDaPessoa, rascunhosDaPessoa,
   regravarRascunhoDaPessoa,
 } from "@/lib/db-contribuidor";
 import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, colisaoDaMudanca, colisaoDoPar } from "@/lib/par-de-lugar";
-import { NOME_JA_EM_USO, RASCUNHO_DELA_SUMIU, portaDaPessoa } from "@/lib/porta-da-pessoa";
+import { BLOQUEADA, NOME_JA_EM_USO, RASCUNHO_DELA_SUMIU, portaDaPessoa } from "@/lib/porta-da-pessoa";
 import {
   CIDADE_SEM_LETRA, CIDADE_VAZIA, NOME_SEM_LETRA, NOME_VAZIO, cidadeDoDoc, docDoLugarNovo,
   docNoEndereco, nomeDoRascunho, slugDoNome,
@@ -35,6 +35,13 @@ function recusar400(erro: unknown): Response {
 }
 
 const emUso = (): Response => new Response(NOME_JA_EM_USO, { status: 409, headers: TEXTO });
+
+/** 🔴 A GRAVAÇÃO RECUSADA POR BLOQUEIO NO MEIO (onda de fix da Task 10): a
+ *  porta deixou passar, e o João bloqueou antes do statement — o `LIVRE` de
+ *  `db-contribuidor.ts` derrubou a gravação. A recusa é a MESMA da porta, e
+ *  vem antes de "sumiu" e de "em uso": o rascunho está lá, e o destino pode
+ *  estar livre; quem recusou foi o bloqueio. */
+const bloqueada = (): Response => new Response(BLOQUEADA, { status: 403, headers: TEXTO });
 
 /** COMEÇAR: o nome e a cidade, como no painel (mesmas frases de campo, mesma
  *  colisão pelo par, mesmo endereço). O rascunho nasce DELA.
@@ -128,6 +135,7 @@ export async function PUT(req: Request): Promise<Response> {
       if (await moverRascunhoDaPessoa(getClient(), slug, destino, docNoEndereco(novoDoc, destino), agora, id)) {
         return Response.json({ slug: destino }, { headers: SEM_CACHE });
       }
+      if (await estaBloqueado(getClient(), id)) return bloqueada();
       if ((await lerRascunhoDaPessoa(getClient(), slug, id)) === null) {
         return new Response(RASCUNHO_DELA_SUMIU, { status: 409, headers: TEXTO });
       }
@@ -136,6 +144,7 @@ export async function PUT(req: Request): Promise<Response> {
     }
   }
   if (!(await regravarRascunhoDaPessoa(getClient(), slug, novoDoc, agora, id))) {
+    if (await estaBloqueado(getClient(), id)) return bloqueada();
     return new Response(RASCUNHO_DELA_SUMIU, { status: 409, headers: TEXTO });
   }
   return Response.json({ slug }, { headers: SEM_CACHE });
@@ -163,6 +172,7 @@ export async function DELETE(req: Request): Promise<Response> {
   const corpo = await corpoDe(req);
   if (corpo === null || typeof corpo.slug !== "string") return new Response("", { status: 400, headers: TEXTO });
   if (!(await apagarRascunhoDaPessoa(getClient(), corpo.slug, porta.pessoa.id))) {
+    if (await estaBloqueado(getClient(), porta.pessoa.id)) return bloqueada();
     return new Response("", { status: 404, headers: TEXTO });
   }
   return Response.json({ slug: corpo.slug }, { headers: SEM_CACHE });

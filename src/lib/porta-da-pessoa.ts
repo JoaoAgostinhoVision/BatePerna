@@ -18,7 +18,13 @@ export const RASCUNHO_DELA_SUMIU =
  *  endereço antigo de outro lugar. UMA frase, e de propósito: as do painel
  *  falam do painel ("pela lista do painel", "responda a cidade dele") e
  *  NOMEIAM quem ocupa — um rascunho de outra pessoa, ou um lugar escondido do
- *  João. Esta diz o que é verdade nos quatro casos e não nomeia ninguém.
+ *  João. Esta não nomeia ninguém, e foi escrita POR SUBTRAÇÃO (onda de fix da
+ *  Task 10): a anterior dizia "um lugar no ar ou um que alguém está mandando"
+ *  e "ele já está (ou logo estará) no app" — falso pro lugar ESCONDIDO (não
+ *  está no ar) e pro ENDEREÇO ANTIGO (o nome dela não está em uso: é o
+ *  endereço que sairia dele que leva a outro lugar). Sobrou só o que vale nos
+ *  quatro: o nome, ou o endereço que sairia dele, já é de outro lugar — sem
+ *  dizer onde ele está nem se vai ao ar.
  *
  *  📝 DECISÃO DO JOÃO, pro pacote de copy: em dois casos ela fica SEM saída —
  *  o gêmeo sem cidade (só o João responde a cidade do lugar dele) e um lugar
@@ -26,7 +32,7 @@ export const RASCUNHO_DELA_SUMIU =
  *  saída; o que fazer nesses dois é dele. */
 // PENDENTE: redação minha, o João ainda não leu
 export const NOME_JA_EM_USO =
-  "Nada foi gravado: este nome já está em uso no BatePerna, por um lugar no ar ou por um que alguém está mandando. Se for o mesmo lugar, ele já está (ou logo estará) no app.";
+  "Nada foi gravado: este nome, ou o endereço que sairia dele, já é de outro lugar no BatePerna.";
 
 /** A PORTA DE TODA ROTA DE QUEM CONTRIBUI, nesta ordem: o Clerk respondeu
  *  (senão 503 com frase), há sessão (senão 401 — e a tela recarrega e pede

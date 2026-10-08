@@ -37,10 +37,18 @@ export function pontoNoRascunhoDaPessoa(doc: string, lat: number, lng: number): 
   return aplicarNoRascunho(gravarPontoNoRascunho(doc, 0, lat, lng), "condicao.coords", { lat, lng });
 }
 
+/** A recusa do "não sei" numa pergunta que ela tem de responder (onda de fix
+ *  da Task 10): chega a ela no corpo do 400, então é frase de tela — sem
+ *  caminho interno (`promessa`, `custo.tag`), que ela nunca viu. Uma só pra
+ *  obrigatório e pra campo fora da lista: este segundo a rota já recusa antes,
+ *  mudo, por `ehCampoDaPessoa`. */
+// PENDENTE: redação minha, o João ainda não leu
+export const SEM_NAO_SEI = "Nada foi gravado: esta pergunta precisa de resposta, então aqui não dá pra dizer \"não sei\".";
+
 /** O "não sei" DELA: só nos opcionais da lista dela (`avisos` inclusive, que
  *  é obrigatório no registro do João). Rascunho não passa pelo schema. */
 export function tirarDoRascunhoDaPessoa(doc: string, caminho: string): string {
-  if (!OPCIONAIS_DA_PESSOA.has(caminho)) throw new Error(`\`${caminho}\` não tem "não sei" aqui`);
+  if (!OPCIONAIS_DA_PESSOA.has(caminho)) throw new Error(SEM_NAO_SEI);
   const atual = JSON.parse(doc) as Record<string, unknown>;
   if (caminho === "custo.valor") {
     const custo = atual.custo as Record<string, unknown> | undefined;
