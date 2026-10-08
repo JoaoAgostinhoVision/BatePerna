@@ -84,12 +84,46 @@ describe("POST /api/admin/calibrar", () => {
     expect(await versoes()).toBe(1);
   });
 
+  // 🔴 CADA CORPO TORTO POR UM MOTIVO SÓ, sobre o lugar SEMEADO e a versão
+  // REAL dele (onda de fix da Task 8): com `slug: "x"` a rota dava 400 no
+  // `versaoAtual === null` de qualquer jeito, e as três checagens de forma
+  // ficavam sem prova. Cada caso abaixo foi medido apagando a SUA checagem:
+  // - chave a mais no corpo: sem o `Object.keys(...).length === 3`, 200;
+  // - chave a mais DENTRO da regra: sem `formaDaRegra`, o `calibrarDoc` pega
+  //   só as quatro folhas e grava (200) — `severidade: "talvez"` NÃO servia de
+  //   prova, porque o schema recusa sozinho e o 400 sairia igual;
+  // - `baseId: 0`: sem `baseIdValido`, a gravação condicional não acha a
+  //   versão e responde 409, não 400.
   it.each([
-    [{ slug: "x", baseId: 1 }],
-    [{ slug: "x", baseId: 1, regra: { ...R, severidade: "talvez" } }],
-    [{ slug: "x", baseId: 1, regra: R, extra: 1 }],
-  ])("corpo torto %j: 400", async (corpo) => {
-    expect((await POST(pedido(corpo, cookieBom))).status).toBe(400);
+    ["chave a mais no corpo", (b: number) => ({ slug: SLUG, baseId: b, regra: R, extra: 1 })],
+    ["chave a mais dentro da regra", (b: number) => ({ slug: SLUG, baseId: b, regra: { ...R, outra: 1 } })],
+    ["baseId que não é id de versão", () => ({ slug: SLUG, baseId: 0, regra: R })],
+    ["número que não é número", (b: number) => ({ slug: SLUG, baseId: b, regra: { ...R, limiar_mm: "1.2" } })],
+  ])("corpo torto (%s): 400, nada gravado", async (_, corpo) => {
+    const res = await POST(pedido(corpo(await base(c, SLUG)), cookieBom));
+    expect(res.status, await res.clone().text()).toBe(400);
+    expect(await versoes()).toBe(1);
+  });
+
+  // ⚠️ Este caso NÃO prova o `if (atual === null)` da rota, e não tem como:
+  // medido, apagá-lo deixa tudo verde — o `atual.doc` estoura TypeError DENTRO
+  // do `try` do `calibrarDoc`, que responde o mesmo 400 (mutação equivalente).
+  // O caso crava o contrato (slug desconhecido = 400, nada gravado), não a linha.
+  it("slug que não existe: 400, nada gravado", async () => {
+    const res = await POST(pedido({ slug: "lugar-que-nao-existe", baseId: await base(c, SLUG), regra: R }, cookieBom));
+    expect(res.status).toBe(400);
+    expect(await versoes()).toBe(1);
+  });
+
+  // `limiar_mm: 0` tem FORMA boa: quem julga o número é a coerência (a mesma
+  // régua do acervo), e a resposta é 409 com a frase dela — não 400 mudo.
+  it("limite de chuva 0: 409 com a frase da coerência, nada gravado", async () => {
+    const res = await POST(pedido({ slug: SLUG, baseId: await base(c, SLUG), regra: { ...R, limiar_mm: 0 } }, cookieBom));
+    expect(res.status).toBe(409);
+    const frase = await res.text();
+    expect(frase).toContain("Pedra Mandada");
+    expect(frase).toContain("0 mm");
+    expect(await versoes()).toBe(1);
   });
 
   it("sem sessão 401; painel desligado 404", async () => {
