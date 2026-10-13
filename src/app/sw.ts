@@ -49,7 +49,8 @@ const tilesGuardados = new CacheFirst({
 
 /** 🔴 Os tiles do PAINEL só pela rede (Tarefa 11f, I7): o mapa de pôr o pin anda
  *  e aproxima, e os tiles dele despejariam do cache acima os das fichas que o
- *  dono guardou pra estrada. Ver `tilePodeIrProCache`. */
+ *  dono guardou pra estrada. Desde 07/10, também os das telas de quem manda um
+ *  lugar (`/contribuir`, o mesmo mapa na pergunta 3). Ver `tilePodeIrProCache`. */
 const tilesDoPainel = new NetworkOnly();
 
 const serwist = new Serwist({
@@ -94,7 +95,8 @@ const serwist = new Serwist({
       handler: new NetworkOnly(),
     },
     {
-      // Tiles do mapa. A janela que pediu decide: a do painel vai só pela rede,
+      // Tiles do mapa. A janela que pediu decide: a do painel (e a de
+      // /contribuir) vai só pela rede,
       // as outras pelo cache de sempre. O `Referer` não serve pra isso — pra
       // outra origem o navegador manda só a origem, sem o caminho —, e por isso
       // a pergunta é à JANELA (`clientId`).

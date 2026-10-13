@@ -109,8 +109,15 @@ export function nuncaCachear(url: string): boolean {
  *  escrita no servidor, então guardado ele só existe pra enganar. E tela de
  *  admin parada no cache de um celular é superfície de risco sem contrapartida.
  *  `RESERVADOS` já o tirou do listener das fichas; isto o tira da estratégia
- *  genérica de navegação do serwist, que é o outro caminho. */
+ *  genérica de navegação do serwist, que é o outro caminho.
+ *
+ *  🔴 NEM AS TELAS DE QUEM MANDA UM LUGAR (`/contribuir`, 07/10), pelo mesmo
+ *  motivo: logadas pelo Clerk, e toda ação delas é escrita no servidor. E é por
+ *  aqui que `tilePodeIrProCache` decide — a pergunta 3 dela é o mesmo mapa do
+ *  painel, e reabria o I7 da 11f (I1 da revisão da Task 14). Pelo SEGMENTO,
+ *  não pelo prefixo de texto: `/contribuir-de-pedra-cidade` é ficha. */
 export function podeGuardarPagina(pathname: string): boolean {
+  if (pathname === "/contribuir" || pathname.startsWith("/contribuir/")) return false;
   return !pathname.startsWith("/admin");
 }
 
@@ -121,7 +128,8 @@ export function podeGuardarPagina(pathname: string): boolean {
  *  pin passou a andar e a aproximar, e cada vista pede ~8–15 tiles: uns dez
  *  gestos do dono no painel despejariam, do cache de 120 entradas, os tiles das
  *  fichas que ele (no mesmo celular) viu pra usar na estrada. O painel não é
- *  parte do app offline (`podeGuardarPagina`). O cache HTTP do navegador
+ *  parte do app offline (`podeGuardarPagina`) — nem, desde 07/10, as telas de
+ *  quem manda um lugar, cuja pergunta 3 é o mesmo mapa. O cache HTTP do navegador
  *  continua honrando os cabeçalhos do OSM, como a política pede.
  *
  *  `paginaUrl` é a URL da janela que pediu o tile (o `clientId` do evento);

@@ -105,6 +105,14 @@ describe("podeGuardarPagina", () => {
     expect(podeGuardarPagina("/admin/qualquer-coisa")).toBe(false);
   });
 
+  // 07/10: as telas de quem manda um lugar também não (logadas, e toda ação é
+  // escrita no servidor) — o mesmo motivo do painel.
+  it("as telas de quem manda um lugar nunca sao guardadas", () => {
+    expect(podeGuardarPagina("/contribuir")).toBe(false);
+    expect(podeGuardarPagina("/contribuir/novo")).toBe(false);
+    expect(podeGuardarPagina("/contribuir/pedra-mandada-cidade-teste")).toBe(false);
+  });
+
   it("e as paginas de verdade continuam sendo", () => {
     expect(podeGuardarPagina("/trilhas")).toBe(true);
     expect(podeGuardarPagina("/")).toBe(true);
@@ -117,6 +125,20 @@ describe("tilePodeIrProCache", () => {
   it("tile pedido pelo painel não vai pro cache dos tiles", () => {
     expect(tilePodeIrProCache("https://bateperna.vercel.app/admin/novo?slug=x&p=3")).toBe(false);
     expect(tilePodeIrProCache("https://bateperna.vercel.app/admin/lugar-marcador")).toBe(false);
+  });
+
+  // 🔴 I1 da revisão da Task 14: a pergunta 3 de quem manda um lugar é o MESMO
+  // mapa que anda e aproxima — reabria o I7 pela porta de /contribuir.
+  it("tile pedido pelas telas de quem manda um lugar não vai pro cache dos tiles", () => {
+    expect(tilePodeIrProCache("https://bateperna.vercel.app/contribuir/novo?slug=x&p=3")).toBe(false);
+    expect(tilePodeIrProCache("https://bateperna.vercel.app/contribuir/pedra-mandada-cidade-teste")).toBe(false);
+    expect(tilePodeIrProCache("https://bateperna.vercel.app/contribuir")).toBe(false);
+  });
+
+  // E é o SEGMENTO, não o prefixo de texto: uma ficha cujo endereço começa com
+  // "contribuir-" (nome + cidade, sempre com hífen) é ficha, e os tiles dela vão.
+  it("a ficha cujo endereço só COMEÇA com 'contribuir' continua indo", () => {
+    expect(tilePodeIrProCache("https://bateperna.vercel.app/contribuir-de-pedra-cidade")).toBe(true);
   });
 
   it("tile pedido pela ficha, pela home ou sem janela conhecida continua indo", () => {

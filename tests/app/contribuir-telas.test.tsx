@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { ORDEM_DA_PESSOA, montarPerguntasDaPessoa } from "@/app/contribuir/perguntas";
 import { CAMPOS_DA_PESSOA, OPCIONAIS_DA_PESSOA } from "@/lib/campos-da-pessoa";
 import { PERGUNTAS } from "@/app/admin/novo/perguntas";
@@ -35,7 +35,17 @@ beforeEach(async () => {
   sessao.atual = PESSOA;
   sessao.fora = false;
 });
-afterEach(() => cleanup());
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+
+/** O `fetch` e a navegação dublados, pra conferir PRA ONDE as telas dela
+ *  gravam e levam (I2 da revisão da Task 14): sem isto, apagar o
+ *  `onde="contribuir"` deixava a tela dela gravando no /api/admin, verde. */
+function portasFalsas() {
+  const fetch = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ slug: "x" }), { status: 200 }));
+  vi.stubGlobal("fetch", fetch);
+  vi.stubGlobal("location", { ...window.location, assign: vi.fn(), reload: vi.fn() });
+  return fetch;
+}
 
 describe("as perguntas dela", () => {
   it("são a lista dela, na ordem da spec, e o mapa no 3º lugar", () => {
@@ -122,8 +132,34 @@ describe("Meus lugares", () => {
 
 describe("as perguntas na tela", () => {
   it("sem slug: começar (nome e cidade), pela rota dela", async () => {
+    const fetch = portasFalsas();
     const { container } = render(await Novo({ searchParams: Promise.resolve({}) }));
     expect(container.querySelectorAll("input")).toHaveLength(2);
+    // 🔴 I2(b): o rascunho nasce pela porta DELA, nunca pela do painel.
+    fireEvent.change(container.querySelectorAll("input")[0], { target: { value: "Pedra" } });
+    fireEvent.change(container.querySelectorAll("input")[1], { target: { value: "Cidade" } });
+    fireEvent.submit(container.querySelector("form")!);
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    expect(fetch.mock.calls[0][0]).toBe("/api/contribuir/rascunho");
+    expect(fetch.mock.calls[0][1]?.method).toBe("POST");
+  });
+
+  // 🔴 I2(a) da revisão: a pergunta do rascunho dela grava pela rota DELA e
+  // leva às telas DELA — Próxima, Anterior, os saltos e o Desistir.
+  it("com slug: grava em /api/contribuir/rascunho, e todo link fica em /contribuir", async () => {
+    const S = "comecado-cidade";
+    await criarRascunhoDaPessoa(banco, S, JSON.stringify({ slug: S }), 1, PESSOA.id);
+    const fetch = portasFalsas();
+    const n = ORDEM_DA_PESSOA.indexOf("promessa") + 1;
+    const { container } = render(await Novo({ searchParams: Promise.resolve({ slug: S, p: String(n) }) }));
+    const hrefs = [...container.querySelectorAll("main a")].map((a) => a.getAttribute("href") ?? "");
+    expect(hrefs, "a premissa: há links na tela").toContain(`/contribuir/novo?slug=${S}&p=${n + 1}`);
+    expect(hrefs).toContain(`/contribuir/novo?slug=${S}&p=${n - 1}`);
+    for (const h of hrefs) expect(h, h).toMatch(/^\/contribuir\/novo\?slug=/);
+    fireEvent.change(container.querySelector('[data-caixa="promessa"]')!, { target: { value: "Porque sim." } });
+    fireEvent.click(container.querySelector('[data-salvar="promessa"]')!);
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    expect(fetch.mock.calls[0][0]).toBe("/api/contribuir/rascunho");
   });
 
   it("o rascunho de OUTRA pessoa é 404", async () => {
@@ -173,9 +209,21 @@ describe("publicar o dela", () => {
 
 describe("editar o dela no ar", () => {
   it("o dela, não conferido: as perguntas dela, gravando com a versão da tela", async () => {
+    const fetch = portasFalsas();
     const { container } = render(await Editar({ params: Promise.resolve({ slug: SLUG }) }));
     expect(container.querySelector('[data-testid="pergunta-promessa"]')).not.toBeNull();
     expect(container.querySelector('[data-testid="pergunta-voz"]')).toBeNull();
+    // 🔴 I2(c) da revisão: o "gravando com a versão da tela" do título, medido —
+    // PUT na rota DELA, com o `baseId` da versão que a página leu.
+    fireEvent.change(container.querySelector('[data-caixa="promessa"]')!, { target: { value: "Outra frase dela." } });
+    fireEvent.click(container.querySelector('[data-salvar="promessa"]')!);
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe("/api/contribuir/lugar");
+    expect(init?.method).toBe("PUT");
+    expect(JSON.parse(String(init?.body))).toMatchObject({
+      campo: "promessa", valor: "Outra frase dela.", baseId: (await versaoAtual(banco, SLUG))!.id,
+    });
   });
 
   it("conferido: a frase, e nenhum editor", async () => {
