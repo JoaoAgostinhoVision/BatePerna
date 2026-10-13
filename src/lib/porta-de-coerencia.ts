@@ -7,8 +7,9 @@ import { type Ficha, fichaSchema } from "@/types/ficha";
  *  (`src/app/api/admin/ficha/route.ts`, Tarefa 3) e a de publicar
  *  (`src/app/api/admin/publicar/route.ts`, Tarefa 12, 12-I2). Depois vieram a
  *  de calibrar (`src/app/api/admin/calibrar/route.ts`) e a de publicar de quem
- *  usa (`src/app/api/contribuir/publicar/route.ts`, Task 11 de 07/10), esta
- *  pela `violacaoIntroduzidaInteira`.
+ *  usa (`src/app/api/contribuir/publicar/route.ts`, Task 11 de 07/10) e a da
+ *  edição dela no ar (`src/app/api/contribuir/lugar/route.ts`, Task 12), estas
+ *  duas pela `violacaoIntroduzidaInteira`.
  *
  *  Saiu da rota da ficha na Tarefa 12 (I8 da auditoria de 06/10) SEM MUDAR A
  *  CONTA: um arquivo de rota do Next não exporta nada além dos métodos, e a
@@ -119,8 +120,9 @@ function acervoComo(versoes: Map<string, FichaVersao>, slug: string, doc: string
 /** A violação que gravar `depois` em `slug` INTRODUZ no acervo `versoes` —
  *  inteira (`regra`, `slug`, `frase`) — ou `null`, se não introduz nenhuma.
  *  `antes` é o documento de agora daquele lugar, ou `null` se ele ainda não
- *  existe. Inteira porque a porta de quem usa (`/api/contribuir/publicar`,
- *  Task 11 de 07/10) responde pela REGRA, numa frase dela (`fraseDaPessoa`):
+ *  existe. Inteira porque as portas de quem usa (`/api/contribuir/publicar`,
+ *  Task 11 de 07/10, e `/api/contribuir/lugar`, Task 12) respondem pela
+ *  REGRA, numa frase dela (`fraseDaPessoa`):
  *  a `frase` daqui nomeia outro lugar e fala a língua do painel.
  *
  *  Introduzida = par cuja CONTAGEM cresceu. E a violação que volta é a do achado
