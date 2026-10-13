@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { ERRO_GRAVAR, ERRO_REDE } from "./campos/gravar";
+import { ROTAS, type Onde } from "./novo/enderecos";
 
 /** A TELA DE PUBLICAR (Tarefa 12) — o último passo do lugar novo: o que falta, o
  *  que o app vai calar, e o botão que põe o lugar no ar.
@@ -13,7 +14,8 @@ import { ERRO_GRAVAR, ERRO_REDE } from "./campos/gravar";
  *  🔴 CALAR É PERMITIDO: a lista do que o app vai calar existe pra o dono VER o
  *  preço da honestidade, e o botão NUNCA some nem trava por causa dela. Quem
  *  recusa (obrigatório faltando, par, coerência, endereço) é a porta
- *  (`POST /api/admin/publicar`), e a frase dela aparece aqui como chegou.
+ *  (`POST /api/admin/publicar`, ou `/api/contribuir/publicar` com
+ *  `onde="contribuir"`), e a frase dela aparece aqui como chegou.
  *
  *  O pedido leva `atualizadoEm`, o `atualizado_em` do rascunho que a página leu:
  *  o que vai ao ar é o que esta tela mostrou, ou nada (I1 da auditoria). O botão
@@ -28,6 +30,12 @@ export const PUBLICAR = "Publicar";
 export const PUBLICANDO = "Publicando…";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const AVISO_PUBLICAR = "Publicar põe este lugar no ar, pra quem abrir o app.";
+/** O aviso da tela de publicar DE QUEM USA (Task 13, 07/10) — só com
+ *  `onde="contribuir"`. A afirmação é sobre a ORIGEM (o lugar dela vai ao ar
+ *  marcado), verdade em todo lugar que ela publica. */
+// PENDENTE: redação minha, o João ainda não leu
+export const AVISO_PUBLICAR_PESSOA =
+  "Publicar põe este lugar no ar na hora, pra quem abrir o app — marcado como não conferido até o BatePerna conferir.";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const TITULO_FALTA = "Antes de publicar, falta responder:";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
@@ -42,6 +50,7 @@ export default function TelaDePublicar({
   atualizadoEm,
   frases,
   faltam = [],
+  onde = "painel",
 }: {
   slug: string;
   atualizadoEm: number;
@@ -49,6 +58,8 @@ export default function TelaDePublicar({
   frases: readonly string[];
   /** As obrigatórias sem resposta, se houver — a porta recusaria publicar. */
   faltam?: readonly Falta[];
+  /** Quem publica: o João (o padrão) ou quem usa — ver `ROTAS`. */
+  onde?: Onde;
 }) {
   const [indo, setIndo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -58,10 +69,15 @@ export default function TelaDePublicar({
     setErro(null);
     setIndo(true);
     try {
-      const r = await fetch("/api/admin/publicar", { method: "POST", body: JSON.stringify({ slug, atualizadoEm }) });
+      const r = await fetch(ROTAS[onde].publicarApi, { method: "POST", body: JSON.stringify({ slug, atualizadoEm }) });
       if (r.ok) {
-        // O lugar já está no ar: o painel DELE, onde se edita lugar publicado.
-        location.assign(`/admin/${encodeURIComponent(slug)}`);
+        // O lugar já está no ar. O João vai ao painel DELE, onde se edita lugar
+        // publicado; quem usa vai à página pública, e vê o lugar com a marca.
+        location.assign(ROTAS[onde].publicou(slug));
+        return;
+      }
+      if (r.status === 401 && ROTAS[onde].recarregarSe401) {
+        location.reload();
         return;
       }
       const frase = (await r.text()).trim();
@@ -97,7 +113,7 @@ export default function TelaDePublicar({
           </ul>
         </div>
       )}
-      <p className="adm-publicar-aviso">{AVISO_PUBLICAR}</p>
+      <p className="adm-publicar-aviso">{onde === "contribuir" ? AVISO_PUBLICAR_PESSOA : AVISO_PUBLICAR}</p>
       <button type="button" onClick={publicar} disabled={indo}>
         {indo ? PUBLICANDO : PUBLICAR}
       </button>

@@ -9,7 +9,7 @@ import EditorNumeroDeMotor from "./campos/EditorNumeroDeMotor";
 import EditorProsa from "./campos/EditorProsa";
 import { ERRO_GRAVAR, ERRO_REDE, PortaDoEditor } from "./campos/gravar";
 import type { Editor, EspecieNaTela, PerguntaNaTela } from "./campos/tipos";
-import { enderecoDaPergunta, enderecoDePublicar } from "./novo/enderecos";
+import { ROTAS, enderecoDaPergunta, type Onde } from "./novo/enderecos";
 
 /** O FORMULÁRIO DE LUGAR NOVO (Tarefa 11) — o questionário na tela, gravando
  *  num RASCUNHO que não vai ao ar.
@@ -68,6 +68,14 @@ import { enderecoDaPergunta, enderecoDePublicar } from "./novo/enderecos";
  *   ⚠️ "Pulada" não fica guardada: no documento, pular e nunca responder são a
  *   mesma ausência, e na volta a pergunta aparece sem resposta de novo.
  *
+ *  🔴 O MESMO FORMULÁRIO SERVE QUEM USA (Task 13 da rodada de 07/10). A prop
+ *  `onde` (`"painel"`, o padrão, ou `"contribuir"`) escolhe a linha de `ROTAS`
+ *  (`./novo/enderecos`): as portas `/api/contribuir/*` em vez de
+ *  `/api/admin/*`, e as telas `/contribuir/novo…` em vez de `/admin/novo…`. Os
+ *  endereços `/admin/…` citados neste comentário são os da linha do painel. É
+ *  uma STRING e não uma função de endereço porque a página que monta este
+ *  componente é de servidor, e função não atravessa essa fronteira como prop.
+ *
  *  ⚠️ NENHUM TEXTO SOBRE UM LUGAR ESPECÍFICO mora aqui: as perguntas e os
  *  rótulos chegam por prop, e as palavras fixas abaixo servem a todo lugar. */
 
@@ -100,7 +108,7 @@ export { enderecoDaPergunta };
 /** 🔴 `Record` POR ESPÉCIE: uma espécie nova no registro deixa este arquivo sem
  *  compilar até alguém decidir o instrumento dela — mesmo guarda da
  *  `FichaInteira`. */
-const INSTRUMENTO: Record<EspecieNaTela, Editor> = {
+export const INSTRUMENTO: Record<EspecieNaTela, Editor> = {
   prosa: EditorProsa,
   lista: EditorLista,
   booleano: EditorBooleano,
@@ -109,7 +117,7 @@ const INSTRUMENTO: Record<EspecieNaTela, Editor> = {
   coord: EditorCoordenada,
 };
 
-function Pergunta({
+export function Pergunta({
   pergunta,
   slug,
   proxima,
@@ -156,6 +164,7 @@ export default function FormularioDeLugar({
   pergunta,
   posicao,
   respondidas,
+  onde = "painel",
 }: {
   slug: string;
   /** A pergunta da posição `posicao` — e só ela. */
@@ -165,9 +174,13 @@ export default function FormularioDeLugar({
   /** Uma por pergunta, na ordem da tela: se ela já tem resposta no rascunho.
    *  O tamanho é o total M. */
   respondidas: readonly boolean[];
+  /** Quem responde: o João no painel (o padrão) ou quem usa (`"contribuir"`).
+   *  Muda só pra onde grava e pra onde leva — ver `ROTAS`. */
+  onde?: Onde;
 }) {
+  const rotas = ROTAS[onde];
   const total = respondidas.length;
-  const ir = (n: number): string => enderecoDaPergunta(slug, n);
+  const ir = (n: number): string => rotas.pergunta(slug, n);
   const proxima = posicao < total ? ir(posicao + 1) : null;
   // Gravar AVANÇA; na última, fica na última (relida do banco).
   // ⚠️ Os links são `<a>` simples, não o `Link` do Next, de propósito: medido no
@@ -178,9 +191,10 @@ export default function FormularioDeLugar({
   // nome ou a cidade muda o endereço do rascunho.
   const destino = proxima === null ? posicao : posicao + 1;
   const porta = {
-    gravarEm: "/api/admin/rascunho",
+    gravarEm: rotas.rascunhoApi,
     previa: false,
-    depoisDeGravar: (novo: string) => enderecoDaPergunta(novo, destino),
+    depoisDeGravar: (novo: string) => rotas.pergunta(novo, destino),
+    recarregarSe401: rotas.recarregarSe401,
   };
   return (
     <PortaDoEditor.Provider value={porta}>
@@ -188,8 +202,9 @@ export default function FormularioDeLugar({
         <p className="adm-novo-aviso">{AVISO_RASCUNHO}</p>
         {/* Desistir (Tarefa 15): em TODA pergunta, porque este componente só
             existe com o rascunho já nascido — a tela do nome e da cidade é o
-            `ComecarLugarNovo`, sem ele. Apagado, volta ao painel. */}
-        <BotaoDesistir slug={slug} voltarAoPainel />
+            `ComecarLugarNovo`, sem ele. Apagado, volta à lista (a do painel, ou
+            a de quem usa — `ROTAS[onde].desistiu`). */}
+        <BotaoDesistir slug={slug} voltarAoPainel onde={onde} />
         <p className="adm-novo-posicao">{posicaoNaTela(posicao, total)}</p>
         <Pergunta key={pergunta.campo.caminho} pergunta={pergunta} slug={slug} proxima={proxima} />
         <nav className="adm-novo-passos">
@@ -198,7 +213,7 @@ export default function FormularioDeLugar({
               {ANTERIOR}
             </a>
           )}
-          <a className="adm-novo-passo adm-novo-passo-proxima" href={proxima ?? enderecoDePublicar(slug)}>
+          <a className="adm-novo-passo adm-novo-passo-proxima" href={proxima ?? rotas.publicar(slug)}>
             {PROXIMA}
           </a>
         </nav>
@@ -230,8 +245,15 @@ export default function FormularioDeLugar({
  *  /api/admin/rascunho`) faz o rascunho nascer e recusa com frase a caixa vazia,
  *  o nome e a cidade de um lugar (inclusive escondido) ou de um rascunho que já
  *  existe, e o endereço ocupado; a frase dela aparece aqui como chegou, e o que
- *  ele digitou fica nas caixas. */
-export function ComecarLugarNovo({ perguntas }: { perguntas: { nome: string; cidade: string } }) {
+ *  ele digitou fica nas caixas. Com `onde="contribuir"` a porta é
+ *  `POST /api/contribuir/rascunho`, e o 401 (a sessão do Clerk venceu) recarrega. */
+export function ComecarLugarNovo({
+  perguntas,
+  onde = "painel",
+}: {
+  perguntas: { nome: string; cidade: string };
+  onde?: Onde;
+}) {
   const [nome, setNome] = useState("");
   const [cidade, setCidade] = useState("");
   const [erro, setErro] = useState<string | null>(null);
@@ -243,10 +265,14 @@ export function ComecarLugarNovo({ perguntas }: { perguntas: { nome: string; cid
     setErro(null);
     setIndo(true);
     try {
-      const r = await fetch("/api/admin/rascunho", { method: "POST", body: JSON.stringify({ nome, cidade }) });
+      const r = await fetch(ROTAS[onde].rascunhoApi, { method: "POST", body: JSON.stringify({ nome, cidade }) });
       if (r.ok) {
         const { slug } = (await r.json()) as { slug: string };
-        location.assign(`/admin/novo?slug=${encodeURIComponent(slug)}`);
+        location.assign(ROTAS[onde].comecou(slug));
+        return;
+      }
+      if (r.status === 401 && ROTAS[onde].recarregarSe401) {
+        location.reload();
         return;
       }
       const frase = (await r.text()).trim();

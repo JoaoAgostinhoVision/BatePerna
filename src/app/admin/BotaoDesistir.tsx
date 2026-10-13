@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { ERRO_REDE } from "./campos/gravar";
+import { ROTAS, type Onde } from "./novo/enderecos";
 
 /** DESISTIR DE UM LUGAR NOVO — apagar o RASCUNHO (Tarefa 15, 07/10: o João,
  *  olhando o painel no ar, *"ficou faltando o botão de cancelar"*; escolheu os
@@ -39,7 +40,11 @@ import { ERRO_REDE } from "./campos/gravar";
  *  quando o nome ou a cidade mudou) — "desisti" seria mentira, e o rascunho
  *  continua na lista com o endereço novo (M1 da revisão da Tarefa 15).
  *  `voltarAoPainel` é um booleano, e não uma função, porque a lista é
- *  componente de SERVIDOR e função não atravessa pra cá. */
+ *  componente de SERVIDOR e função não atravessa pra cá — pelo mesmo motivo,
+ *  `onde` (Task 13, 07/10) é uma CHAVE de `ROTAS`: com `"contribuir"` o DELETE
+ *  vai a `/api/contribuir/rascunho`, "voltar" é a lista de quem usa
+ *  (`/contribuir`), e o 401 (a sessão do Clerk venceu) recarrega. Os endereços
+ *  `/admin…` acima são os da linha do painel. */
 
 // PENDENTE: redação minha (Tarefa 15, 07/10). Ele aprovou o DESENHO no chat ("pode fazer assim"), não leu a frase.
 export const DESISTIR = "Desistir deste lugar";
@@ -54,7 +59,16 @@ export const DESISTIR_MESMO = "Desistir mesmo? O que foi respondido some.";
 // PENDENTE: redação minha (Tarefa 15, 07/10). Ainda não lida por ele.
 export const ERRO_DESISTIR = "Não consegui desistir deste lugar.";
 
-export default function BotaoDesistir({ slug, voltarAoPainel = false }: { slug: string; voltarAoPainel?: boolean }) {
+export default function BotaoDesistir({
+  slug,
+  voltarAoPainel = false,
+  onde = "painel",
+}: {
+  slug: string;
+  voltarAoPainel?: boolean;
+  /** Quem desiste: o João (o padrão) ou quem usa — ver `ROTAS`. */
+  onde?: Onde;
+}) {
   const [confirmando, setConfirmando] = useState(false);
   const [indo, setIndo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -74,10 +88,14 @@ export default function BotaoDesistir({ slug, voltarAoPainel = false }: { slug: 
     setErro(null);
     setIndo(true);
     try {
-      const r = await fetch("/api/admin/rascunho", { method: "DELETE", body: JSON.stringify({ slug }) });
+      const r = await fetch(ROTAS[onde].rascunhoApi, { method: "DELETE", body: JSON.stringify({ slug }) });
       if (r.ok) {
-        if (voltarAoPainel) location.assign("/admin");
+        if (voltarAoPainel) location.assign(ROTAS[onde].desistiu);
         else location.reload();
+        return;
+      }
+      if (r.status === 401 && ROTAS[onde].recarregarSe401) {
+        location.reload();
         return;
       }
       setErro(ERRO_DESISTIR);

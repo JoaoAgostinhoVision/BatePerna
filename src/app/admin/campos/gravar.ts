@@ -30,10 +30,15 @@ export const PortaDoEditor = createContext<{
   gravarEm: string;
   previa: boolean;
   depoisDeGravar: ((slug: string) => string) | null;
+  /** 07/10: na tela de QUEM USA, 401 é a sessão do Clerk que venceu — a tela
+   *  recarrega, a página pede login e volta ao mesmo endereço. No painel do
+   *  João fica `false`, e o 401 continua sendo "Não consegui salvar.". */
+  recarregarSe401: boolean;
 }>({
   gravarEm: "/api/admin/ficha",
   previa: true,
   depoisDeGravar: null,
+  recarregarSe401: false,
 });
 
 /** A VERSÃO QUE A TELA ABRIU — a identidade do lugar que esta tela mostra
@@ -93,7 +98,11 @@ export function comBase(corpo: Record<string, unknown>, baseId: number | null): 
  *  caixa continua na caixa. Perder no celular, por um sinal ruim, o texto que
  *  acabou de escrever é o defeito que faz alguém parar de usar o painel. Quem
  *  troca a tela é só o SUCESSO — `location.reload()`, ou `location.assign` pra
- *  próxima pergunta no formulário de lugar novo (ver `depoisDeGravar`). */
+ *  próxima pergunta no formulário de lugar novo (ver `depoisDeGravar`).
+ *  ⚠️ A ÚNICA EXCEÇÃO (07/10) é o 401 na tela de QUEM USA (`recarregarSe401`):
+ *  a sessão do Clerk venceu, nada foi gravado, e a tela recarrega pra a página
+ *  pedir login — o que estava na caixa se perde ali. No painel do João a
+ *  exceção não existe. */
 
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Vinha do `EditorDeVoz` já marcado.
 export const ERRO_GRAVAR = "Não consegui salvar.";
@@ -126,7 +135,7 @@ export type Gravacao = {
 export function usarGravacao(): Gravacao {
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
-  const { gravarEm, depoisDeGravar } = useContext(PortaDoEditor);
+  const { gravarEm, depoisDeGravar, recarregarSe401 } = useContext(PortaDoEditor);
   const baseId = useContext(VersaoDaTela);
 
   async function gravar(corpo: Record<string, unknown>): Promise<void> {
@@ -135,6 +144,7 @@ export function usarGravacao(): Gravacao {
     setSalvando(true);
     try {
       const r = await fetch(gravarEm, { method: "PUT", body: JSON.stringify(comBase(corpo, baseId)) });
+      if (r.status === 401 && recarregarSe401) { location.reload(); return; }
       if (r.ok) {
         if (depoisDeGravar === null) location.reload();
         else location.assign(depoisDeGravar(((await r.json()) as { slug: string }).slug));

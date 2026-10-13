@@ -40,7 +40,7 @@ import { TITULO_NAO_CONFERIDOS } from "@/app/admin/SecaoNaoConferidos";
 import { CONFERI, CONFERI_MESMO, MANDADO_POR } from "@/app/admin/CaixaDaOrigem";
 import { SALVAR_REGRA, VALE_PARA } from "@/app/admin/TelaDaRegraPadrao";
 import { CALIBRAR, CALIBRAR_AJUDA, FALTA_UM_DOS_QUATRO } from "@/app/admin/campos/EditorCalibrar";
-import { AVISO_PUBLICAR, PUBLICANDO, PUBLICAR, TITULO_CALA, TITULO_FALTA } from "@/app/admin/TelaDePublicar";
+import { AVISO_PUBLICAR, AVISO_PUBLICAR_PESSOA, PUBLICANDO, PUBLICAR, TITULO_CALA, TITULO_FALTA } from "@/app/admin/TelaDePublicar";
 import {
   ALEM_DO_PROVEDOR,
   CAIXA_VAZIA,
@@ -1536,6 +1536,9 @@ describe("Os editores servem os três lugares", () => {
     CALIBRAR,
     CALIBRAR_AJUDA,
     FALTA_UM_DOS_QUATRO,
+    // Task 13 (07/10): o aviso da tela de publicar DE QUEM USA. Só aparece com
+    // `onde="contribuir"` — nunca no painel do João, nunca nas três fichas.
+    AVISO_PUBLICAR_PESSOA,
   ];
 
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem
