@@ -2,7 +2,7 @@ import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { historico, versaoAtual } from "@/lib/db";
 import { conferirLugar } from "@/lib/db-contribuidor";
-import { BLOQUEADA, CLERK_FORA, JA_CONFERIDO, NOME_JA_EM_USO } from "@/lib/porta-da-pessoa";
+import { BLOQUEADA, CLERK_FORA, FRASE_DA_PESSOA, JA_CONFERIDO, NOME_JA_EM_USO } from "@/lib/porta-da-pessoa";
 import { clienteQueIntercala, semearAcervo, semearLugarDaPessoa } from "../banco";
 import { OUTRA, PESSOA, sessao } from "../sessao-da-pessoa";
 
@@ -68,6 +68,21 @@ describe("PUT /api/contribuir/lugar", () => {
     const d = JSON.parse((await versaoAtual(c, SLUG))!.doc);
     expect(d.condicao.coords).toEqual({ lat: -8.4, lng: -36.0 });
     expect(d.trajeto.waypoints[0]).toMatchObject({ lat: -8.4, lng: -36.0 });
+  });
+
+  // I1 da revisão da Task 12: o portão da coerência na edição dela. A
+  // promessa IGUAL à de um lugar do João introduz `texto-emprestado`: 409 com
+  // a frase DELA pela regra (nunca a do painel, que nomeia a Rampa), e a
+  // versão no banco não muda.
+  it("a promessa igual à de um lugar do João: 409 com a frase dela, nada gravado", async () => {
+    const antes = (await versaoAtual(c, SLUG))!;
+    const rampa = JSON.parse((await versaoAtual(c, "rampa-do-pepe"))!.doc);
+    const res = await PUT(pedido({ slug: SLUG, baseId: antes.id, campo: "promessa", valor: rampa.promessa }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(FRASE_DA_PESSOA["texto-emprestado"]);
+    expect(await versoes()).toBe(1);
+    const depois = (await versaoAtual(c, SLUG))!;
+    expect([depois.id, depois.doc]).toEqual([antes.id, antes.doc]);
   });
 
   it("trocar o nome muda o documento e NÃO o endereço", async () => {
