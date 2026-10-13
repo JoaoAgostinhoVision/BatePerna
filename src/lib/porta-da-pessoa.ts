@@ -39,6 +39,11 @@ export const RASCUNHO_DELA_SUMIU =
 export const NOME_JA_EM_USO =
   "Nada foi gravado: este nome, ou o endereço que sairia dele, já é de outro lugar no BatePerna.";
 
+/** O 409 da edição DELA depois do "Conferi" do João (Task 12): conferido, o
+ *  lugar passa a ser do BatePerna — ela não edita mais. */
+// PENDENTE: redação minha, o João ainda não leu
+export const JA_CONFERIDO = "Nada foi gravado: o BatePerna já conferiu este lugar, e agora só ele muda o que o app diz daqui.";
+
 /** A PORTA DE TODA ROTA DE QUEM CONTRIBUI, nesta ordem: o Clerk respondeu
  *  (senão 503 com frase), há sessão (senão 401 — e a tela recarrega e pede
  *  login, Review Focus 4), quem é fica registrado (nome e e-mail SÓ pro painel

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CAMPOS_DA_PESSOA, OPCIONAIS_DA_PESSOA, PONTO, SEM_NAO_SEI, chavesForaDaPessoa, ehCampoDaPessoa, obrigatoriosDaPessoaFaltando,
-  pontoNoRascunhoDaPessoa, tirarDoRascunhoDaPessoa,
+  pontoDaPessoa, pontoNoRascunhoDaPessoa, tirarCampoDaPessoa, tirarDoRascunhoDaPessoa,
 } from "@/lib/campos-da-pessoa";
 import { campoPorCaminho } from "@/lib/campos-da-ficha";
 
@@ -89,5 +89,20 @@ describe("o que falta, e o que sobra", () => {
     ["trajeto.waypoints.0.nota", { trajeto: { waypoints: [{ ...COMPLETO.trajeto.waypoints[0], nota: "n" }] } }],
   ])("`%s` sobra", (caminho, mais) => {
     expect(chavesForaDaPessoa({ ...COMPLETO, ...mais })).toContain(caminho);
+  });
+});
+
+const NO_AR = JSON.stringify({ ...COMPLETO, avisos: "Leve água." });
+
+describe("no lugar NO AR (passa pelo schema)", () => {
+  it("pontoDaPessoa troca o ponto 0 E a coordenada da chuva", () => {
+    const d = JSON.parse(pontoDaPessoa(NO_AR, -8.4, -36.0));
+    expect(d.trajeto.waypoints[0]).toMatchObject({ lat: -8.4, lng: -36.0 });
+    expect(d.condicao.coords).toEqual({ lat: -8.4, lng: -36.0 });
+  });
+
+  it("tirarCampoDaPessoa tira `avisos`, e recusa obrigatório dela", () => {
+    expect("avisos" in JSON.parse(tirarCampoDaPessoa(NO_AR, "avisos"))).toBe(false);
+    expect(() => tirarCampoDaPessoa(NO_AR, "acesso")).toThrow(SEM_NAO_SEI);
   });
 });

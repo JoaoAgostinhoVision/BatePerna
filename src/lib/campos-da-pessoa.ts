@@ -1,4 +1,5 @@
-import { aplicarNoRascunho, gravarPontoNoRascunho, lerCaminho } from "@/lib/campos-da-ficha";
+import { aplicarCampo, aplicarNoRascunho, gravarPonto, gravarPontoNoRascunho, lerCaminho } from "@/lib/campos-da-ficha";
+import { fichaSchema } from "@/types/ficha";
 
 /** AS PERGUNTAS DE QUEM USA O APP (spec de 07/10, Parte 1) — a lista FECHADA
  *  do que ela escreve. Os INSTRUMENTOS são os do painel (cada caminho daqui
@@ -60,6 +61,21 @@ export function tirarDoRascunhoDaPessoa(doc: string, caminho: string): string {
   }
   const { [caminho]: _fora, ...resto } = atual;
   return JSON.stringify(resto);
+}
+
+/** O ponto DELA no lugar NO AR (Task 12): o ponto 0 e a coordenada da chuva
+ *  juntos, e o documento inteiro passa pelo schema (as duas funções do
+ *  registro já fazem — `gravarPonto` e `aplicarCampo` revalidam tudo). */
+export function pontoDaPessoa(doc: string, lat: number, lng: number): string {
+  return aplicarCampo(gravarPonto(doc, 0, lat, lng), "condicao.coords", { lat, lng });
+}
+
+/** O "não sei" DELA no lugar NO AR — os opcionais da lista DELA (o
+ *  `removerCampo` do registro recusaria `avisos`, obrigatório pro João), e o
+ *  resultado passa pelo schema, como toda gravação de lugar no ar. Obrigatório
+ *  dela estoura com `SEM_NAO_SEI`, a frase do 400. */
+export function tirarCampoDaPessoa(doc: string, caminho: string): string {
+  return JSON.stringify(fichaSchema.parse(JSON.parse(tirarDoRascunhoDaPessoa(doc, caminho))));
 }
 
 const OBRIGATORIOS = CAMPOS_DA_PESSOA.filter((c) => !OPCIONAIS_DA_PESSOA.has(c));

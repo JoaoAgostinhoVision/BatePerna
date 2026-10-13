@@ -164,3 +164,49 @@ export async function apagarRascunhoDaPessoa(client: Client, slug: string, id: s
   });
   return r.rowsAffected === 1;
 }
+
+/** A EDIÇÃO DELA, no lugar dela no ar (Task 12) — a régua de `gravarEdicao`
+ *  (identidade pela versão da tela; `oculto` lido no próprio INSERT: esconder
+ *  é do João, e editar não devolve ao ar) e mais três condições, TODAS no
+ *  mesmo statement (Review Focus 2): o lugar é dela, ainda não conferido, e
+ *  ela não está bloqueada. Uma checagem antes e um INSERT depois deixariam a
+ *  janela em que o "Conferi" do João cabe — e a aba velha dela regravaria um
+ *  lugar que ele já conferiu. Lugar do João não tem linha em
+ *  `origem_do_lugar`, então o `EXISTS` o recusa. `null` = nada gravado. */
+export async function gravarEdicaoDaPessoa(
+  client: Client, slug: string, doc: string, agora: number, baseId: number, id: string,
+): Promise<number | null> {
+  const r = await client.execute({
+    sql: `INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em, oculto)
+          SELECT ?, ?, 'contribuidor', ?,
+                 (SELECT oculto FROM ficha_versoes WHERE ficha_slug = ? ORDER BY id DESC LIMIT 1)
+          WHERE EXISTS (SELECT 1 FROM ficha_versoes WHERE id = ? AND ficha_slug = ?)
+            AND EXISTS (SELECT 1 FROM origem_do_lugar
+                         WHERE lugar = ${IDENTIDADE("?")} AND contribuidor = ? AND conferido <> 1)
+            AND ${LIVRE}
+          RETURNING id`,
+    args: [slug, doc, agora, slug, baseId, slug, slug, id, id],
+  });
+  return r.rows.length ? Number(r.rows[0].id) : null;
+}
+
+export type LugarDaPessoa = { slug: string; doc: string; oculto: boolean; conferido: boolean };
+
+/** Os lugares que ELA publicou, onde moram agora (a versão mais nova do
+ *  endereço da identidade), o mais novo primeiro — escondidos inclusive: ela
+ *  vê que estão fora do ar; quem os escondeu foi o João. */
+export async function lugaresDaPessoa(client: Client, id: string): Promise<LugarDaPessoa[]> {
+  const r = await client.execute({
+    sql: `SELECT v.ficha_slug AS slug, v.doc, v.oculto, o.conferido
+            FROM origem_do_lugar o
+            JOIN ficha_versoes v
+              ON v.id = (SELECT MAX(j.id) FROM ficha_versoes j
+                          WHERE j.ficha_slug = (SELECT f.ficha_slug FROM ficha_versoes f WHERE f.id = o.lugar))
+           WHERE o.contribuidor = ?
+           ORDER BY o.lugar DESC`,
+    args: [id],
+  });
+  return r.rows.map((l) => ({
+    slug: String(l.slug), doc: String(l.doc), oculto: Number(l.oculto) === 1, conferido: Number(l.conferido) === 1,
+  }));
+}
