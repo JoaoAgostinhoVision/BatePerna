@@ -2,7 +2,39 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — PARADA DE 07/10, NOITE (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — PARADA DE 12/10 (vence TUDO abaixo)
+
+**Ele parou em 12/10: *"quero continuar na próxima sessão"*.** Branch `painel-completo`. Nada do "lugar de quem usa"
+está no ar. **As 16 tarefas do plano estão FEITAS e revisadas** (ledger: `Task 16: complete`, último código `570e455`).
+**A revisão final da branch rodou** (`.superpowers/sdd/2026-10-07-lugar-de-quem-usa/final-review.md`: 1 C · 5 I · 10 M)
+e **a onda única de fix foi despachada e estava RODANDO quando ele parou** (relatório esperado em `final-fix-report.md`
+na mesma pasta; escopo e rulings no fim do ledger, linhas `FINAL:`).
+
+→ **O PRIMEIRO PASSO, SEM PENSAR:**
+1. `git status --short` e `git log --oneline 570e455..HEAD`. Ler as linhas `FINAL:` no fim do ledger.
+2. **Se `final-fix-report.md` existe e os commits estão lá:** conferir que o relatório tem os 4 portões com saída
+   (vitest, tsc, build sem chave, mutar). Gerar o pacote `review-package … 570e455 HEAD` e despachar UMA re-revisão
+   escopada (molde `re-review-prompt.md`) com os itens do ruling: C1, I1, I2, I4, M2, M6, M7, M8, M9, teste vácuo #4.
+   Resíduos → adjudicar e ledger (não há segunda onda).
+   **Se não existe ou o `git status` está sujo:** a onda morreu no meio. Ver o que já foi comitado, descartar NADA
+   sem olhar, e despachar um implementador NOVO com o mesmo escopo (está no ledger), dizendo o que já está feito.
+3. Depois: montar o **pacote pro João** (artifact, como "Frases do painel"): as ~51 frases PENDENTE da rodada
+   (tabela no `task-16-report.md`) + as reescritas da onda + M1/M3/M4/M5 (propostas no final-review) + estas
+   **decisões DELE**: (a) **I3** — rascunho de quem usa ocupa nome+cidade/endereço pra sempre: Bloquear apaga
+   rascunhos / botão "liberar este nome" / prazo de N dias; (b) o 401 dela recarrega e PERDE o texto (Task 13);
+   (c) M10 + "409×201 revela nome+cidade" (lugar escondido detectável por quem tem login); (d) o teto de 2000
+   caracteres por campo (ruling meu, M6). 🔴 O guarda `frases-da-rodada-marcadas` recusa frase que virar `LIDA:` —
+   a onda de copy avança a base ou mantém lista datada; nunca afrouxar.
+4. **Runbook do deploy (I5, em VERMELHO):** chaves do Clerk no ambiente ANTES do build (`NEXT_PUBLIC_*` entra no
+   build) → `npm run semear` ANTES de `vercel --prod` (sem as tabelas novas a home e TODA ficha caem) → UM
+   `vercel --prod --yes` → `conferir-no-ar` (inclui: Salvar dela >60 s depois de abrir NÃO dá 401 — prova do
+   `<ClerkProvider>` escopado em `src/app/contribuir/layout.tsx`, ruling da Task 13).
+5. **Passo DELE, ainda não feito:** `! vercel integration add clerk` → ligar "Google" no Clerk →
+   `! vercel env pull .env.development.local` (NUNCA `.env.local`).
+6. Antes do deploy: olho de tela no celular — barra com 3 itens a 375 px (item novo sem ícone), etiqueta "não
+   conferido" ao lado de nome longo, tracejado do pin.
+
+## ▶ (histórico) PARADA DE 07/10, NOITE
 
 **Ele parou em 07/10 à noite: *"gostaria de continuar na próxima sessão deixe tudo pronto"*.** Branch `painel-completo`,
 último commit de código `79eafd6`. NO AR: `f779f8c` (painel completo) + o cancelar (`dpl_36nNGhh7xkrsZEeD7PNeBCBfiZKK`).
