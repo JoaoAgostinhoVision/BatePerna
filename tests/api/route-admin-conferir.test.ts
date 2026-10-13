@@ -4,7 +4,9 @@ import { MIN_SENHA } from "@/lib/admin-config";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
 import { lerAcervoComOrigem, versaoAtual } from "@/lib/db";
-import { base, semearAcervo, semearLugarDaPessoa } from "../banco";
+import { gravarEdicaoDaPessoa } from "@/lib/db-contribuidor";
+import { NAO_CONFERIU } from "@/app/admin/campos/palavras";
+import { PESSOA_DE_TESTE, base, semearAcervo, semearLugarDaPessoa } from "../banco";
 
 // Molde: `tests/api/route-admin-visibilidade.test.ts` — `Request` à mão,
 // `vi.stubEnv`, `criarSessao` de verdade, `getClient` dublado. ASSERÇÃO DUPLA
@@ -84,6 +86,20 @@ describe("POST /api/admin/conferir", () => {
     expect(res.status).toBe(409);
     expect((await res.text()).length).toBeGreaterThan(20);
     expect((await lerAcervoComOrigem(c)).linhas.get("rampa-do-pepe")?.contribuidor).toBeNull();
+  });
+
+  // C1 da revisão final: ela grava depois que a tela dele abriu. O 409 diz a
+  // ele que o lugar mudou desde que abriu — e o lugar segue com a marca.
+  it("ela editou depois que a tela abriu: 409 com a frase que diz que ela editou, e nada muda", async () => {
+    const daTela = await base(c, SLUG);
+    const doc = (await versaoAtual(c, SLUG))!.doc;
+    expect(await gravarEdicaoDaPessoa(c, SLUG, doc, AGORA + 1, daTela, PESSOA_DE_TESTE)).not.toBeNull();
+    const res = await POST(pedido({ slug: SLUG, baseId: daTela }, cookieBom));
+    expect(res.status).toBe(409);
+    const frase = await res.text();
+    expect(frase).toBe(NAO_CONFERIU);
+    expect(frase).toContain("quem mandou editou");
+    expect(await conferido()).toBe(false);
   });
 
   it("a versão da tela que não mora mais aqui: 409", async () => {

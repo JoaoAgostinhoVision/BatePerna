@@ -1,7 +1,7 @@
 import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { lerAcervoComOrigem, versaoAtual } from "@/lib/db";
-import { conferirLugar, contribuidorPorId, naoConferidos } from "@/lib/db-contribuidor";
+import { conferirLugar, contribuidorPorId, gravarEdicaoDaPessoa, naoConferidos } from "@/lib/db-contribuidor";
 import { AGORA_SEMENTE, PESSOA_DE_TESTE, semearAcervo, semearLugarDaPessoa } from "../banco";
 
 let c: Client;
@@ -56,7 +56,23 @@ describe("conferirLugar", () => {
     expect(await conferirLugar(c, slug, await base(slug), AGORA_SEMENTE + 100)).toBe(false);
   });
 
-  // 🔴 A aba velha: a versão que a tela abriu não mora mais neste endereço.
+  // 🔴 A ABA VELHA DO MESMO LUGAR (C1 da revisão final): o João abriu a versão
+  // N; ela grava a N+1 (o lugar ainda não conferido é editável por ela); o
+  // "Conferi" com o baseId da tela dele NÃO pode tirar a marca de um texto que
+  // ele nunca viu. A versão N continua morando no endereço — só deixou de ser
+  // a atual — por isso o caso de "outro lugar" (abaixo) não prova isto.
+  it("ela edita entre a leitura dele e o Conferi: false, e o lugar continua não conferido", async () => {
+    const slug = await semearLugarDaPessoa(c, { nome: "Pedra Mandada", cidade: "Cidade Teste" });
+    const daTela = await base(slug);
+    const nova = await gravarEdicaoDaPessoa(c, slug, (await versaoAtual(c, slug))!.doc, AGORA_SEMENTE + 50, daTela, PESSOA_DE_TESTE);
+    expect(nova, "a premissa: a edição dela gravou").not.toBeNull();
+    expect(await conferirLugar(c, slug, daTela, AGORA_SEMENTE + 99)).toBe(false);
+    expect((await lerAcervoComOrigem(c)).linhas.get(slug)?.conferido).toBe(false);
+    // e com a versão que ele relê, confere
+    expect(await conferirLugar(c, slug, nova!, AGORA_SEMENTE + 100)).toBe(true);
+  });
+
+  // A aba velha de OUTRO lugar: a versão que a tela abriu nunca morou aqui.
   it("baseId de outro lugar não confere este", async () => {
     const slug = await semearLugarDaPessoa(c, { nome: "Pedra Mandada", cidade: "Cidade Teste" });
     expect(await conferirLugar(c, slug, await base("rampa-do-pepe"), AGORA_SEMENTE + 99)).toBe(false);

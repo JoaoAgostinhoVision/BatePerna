@@ -52,7 +52,15 @@ export async function contribuidorPorId(client: Client, id: string): Promise<Con
 
 /** "CONFERI": o lugar de `slug` passa a conferido — só se ele é de quem usa,
  *  ainda não foi conferido, e a versão `baseId` (a que a tela do painel abriu)
- *  mora em `slug`. Tudo no MESMO `UPDATE`. `false` = nada mudou.
+ *  é a versão ATUAL de `slug` (a de maior `id`, escondida ou não — a conta de
+ *  `versaoAtual`). Tudo no MESMO `UPDATE`. `false` = nada mudou.
+ *
+ *  🔴 ATUAL, e não só "mora em `slug`" (C1 da revisão final da rodada): o
+ *  lugar não conferido é editável por quem mandou. Se ela grava entre a
+ *  leitura dele e o toque, a versão da tela continua morando no endereço, e
+ *  bastar morar conferiria um texto que o João nunca viu — a marca sairia do
+ *  ar sobre ele. Toda gravação dele recarrega a tela, então o `baseId` dele só
+ *  fica velho por gravação de OUTRA pessoa.
  *
  *  🔴 Lugar do João não tem linha, então não há o que atualizar — e esta
  *  função NUNCA cria linha: conferir não é dizer de onde o lugar veio. */
@@ -61,7 +69,7 @@ export async function conferirLugar(client: Client, slug: string, baseId: number
     sql: `UPDATE origem_do_lugar SET conferido = 1, conferido_em = ?
            WHERE conferido <> 1
              AND lugar = ${IDENTIDADE("?")}
-             AND EXISTS (SELECT 1 FROM ficha_versoes WHERE id = ? AND ficha_slug = ?)`,
+             AND ? = (SELECT MAX(id) FROM ficha_versoes WHERE ficha_slug = ?)`,
     args: [agora, slug, baseId, slug],
   });
   return r.rowsAffected === 1;

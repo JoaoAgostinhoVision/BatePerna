@@ -237,12 +237,14 @@ export const DESFAZER = "Desfazer";
 
 /** O 409 do "Conferi" (`POST /api/admin/conferir`, Task 6 da rodada de 07/10).
  *  Mora aqui, e não na rota, porque arquivo de rota do Next não exporta nada
- *  além dos métodos (`tests/deploy/exports-de-rota.test.ts`). As três causas
- *  que o `UPDATE` único de `conferirLugar` não distingue, ditas juntas: ele
- *  não sabe qual das condições falhou, e escolher uma seria inventar. */
+ *  além dos métodos (`tests/deploy/exports-de-rota.test.ts`). As causas que o
+ *  `UPDATE` único de `conferirLugar` não distingue, ditas juntas: ele não sabe
+ *  qual das condições falhou, e escolher uma seria inventar. Desde a revisão
+ *  final (C1), "mudou desde que você abriu" inclui a EDIÇÃO de quem mandou —
+ *  a mais provável das causas, e a que pede ler de novo antes de conferir. */
 // PENDENTE: redação minha, o João ainda não leu
 export const NAO_CONFERIU =
-  "Nada mudou: este lugar já foi conferido, não foi mandado por quem usa o app, ou mudou de endereço enquanto você olhava. Recarregue a página.";
+  "Nada mudou: este lugar já foi conferido, não foi mandado por quem usa o app, ou mudou desde que você abriu esta página (quem mandou editou, ou ele mudou de endereço). Recarregue a página e leia de novo antes de conferir.";
 
 /** BLOQUEAR QUEM MANDOU (Task 15 da rodada de 07/10, spec Parte 3), no
  *  `BotaoBloquear` da caixa da origem: dois toques pra bloquear (o 2º diz o
