@@ -103,6 +103,18 @@ describe("PUT /api/contribuir/lugar", () => {
     expect(await versoes()).toBe(1);
   });
 
+  // Conferido E pedindo um nome em uso: a resposta é "já conferido" (ela não
+  // edita mais nada aqui), não a colisão — a leitura de antes escolhe a frase
+  // ANTES do par. Sem ela, só a recusa do INSERT diria "já conferido", e o par
+  // falaria primeiro.
+  it("depois do Conferi, pedindo um nome em uso: 409 JA_CONFERIDO, não a frase da colisão", async () => {
+    await conferirLugar(c, SLUG, await base(), AGORA - 1);
+    const res = await PUT(pedido({ slug: SLUG, baseId: await base(), campo: "trajeto.waypoints.0.nome", valor: "Rampa do Pepê" }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(JA_CONFERIDO);
+    expect(await versoes()).toBe(1);
+  });
+
   // 🔴 Review Focus 2: o João toca "Conferi" DEPOIS que a rota leu o lugar e
   // ANTES de gravar. A condição mora no INSERT, então nada grava.
   it("a corrida com o Conferi: 409, nada gravado", async () => {
