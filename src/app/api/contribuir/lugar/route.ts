@@ -28,7 +28,8 @@ function recusar400(erro: unknown): Response {
  *  DELA (404 se não é dela, nunca revelando que existe; 409 `JA_CONFERIDO`) →
  *  o par (409 `NOME_JA_EM_USO`, pela colisão ESTRUTURADA — I3) → o documento
  *  novo pelas formas de escrita (400) → a coerência por diferença (409, na
- *  frase DELA) → o banco.
+ *  frase DELA, aberta por "Nada foi gravado" — o lugar está publicado, I2 da
+ *  revisão final) → o banco.
  *
  *  A leitura de antes só ESCOLHE a frase; quem DECIDE é o INSERT de
  *  `gravarEdicaoDaPessoa` (dela, não conferido, livre, versão da tela — tudo
@@ -93,7 +94,7 @@ export async function PUT(req: Request): Promise<Response> {
     return recusar400(erro);
   }
   const violacao = violacaoIntroduzidaInteira(await versoesAtuais(getClient(), { incluirOcultos: true }), slug, lugar.versao.doc, novo);
-  if (violacao !== null) return new Response(fraseDaPessoa(violacao), { status: 409, headers: TEXTO });
+  if (violacao !== null) return new Response(fraseDaPessoa(violacao, "editar"), { status: 409, headers: TEXTO });
 
   if ((await gravarEdicaoDaPessoa(getClient(), slug, novo, agora, baseId, id)) !== null) {
     return Response.json({ slug }, { headers: { "cache-control": "no-store" } });

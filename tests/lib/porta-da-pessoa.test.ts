@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { REGRAS } from "@/lib/coerencia";
 import {
-  FALTA_DA_PESSOA, FORA_DA_LISTA_DELA, FRASE_DA_PESSOA, RECUSA_DA_PESSOA, fraseDaPessoa, prepararPublicacaoDaPessoa,
+  ABERTURA_DA_EDICAO, FALTA_DA_PESSOA, FORA_DA_LISTA_DELA, FRASE_DA_PESSOA, RECUSA_DA_PESSOA, fraseDaPessoa, prepararPublicacaoDaPessoa,
 } from "@/lib/porta-da-pessoa";
 import { FORMA_ERRADA, RASCUNHO_ILEGIVEL, SLUG_DE_DENTRO } from "@/lib/porta-de-publicar";
 
@@ -61,10 +61,27 @@ describe("fraseDaPessoa", () => {
   });
 
   it("regra com frase dela: a dela, nunca a do painel", () => {
-    expect(fraseDaPessoa({ regra: "texto-emprestado", slug: SLUG, frase: "frase do painel" })).toBe(FRASE_DA_PESSOA["texto-emprestado"]);
+    expect(fraseDaPessoa({ regra: "texto-emprestado", slug: SLUG, frase: "frase do painel" }, "publicar")).toBe(FRASE_DA_PESSOA["texto-emprestado"]);
   });
 
   it("regra sem frase dela: a de reserva, nunca a do painel", () => {
-    expect(fraseDaPessoa({ regra: "janela-nao-zerada", slug: SLUG, frase: "frase do painel" })).toBe(RECUSA_DA_PESSOA);
+    expect(fraseDaPessoa({ regra: "janela-nao-zerada", slug: SLUG, frase: "frase do painel" }, "publicar")).toBe(RECUSA_DA_PESSOA);
   });
+
+  // 🔴 I2 DA REVISÃO FINAL: na EDIÇÃO do lugar dela no ar, "Nada foi
+  // publicado" é falso (o lugar ESTÁ publicado). A variante sai da MESMA
+  // tabela — só a abertura muda —, então toda frase da tabela tem de abrir com
+  // a abertura do publicar, senão a troca não acontece e a falsa passa calada.
+  it.each([...Object.keys(FRASE_DA_PESSOA), "janela-nao-zerada"])(
+    "`%s` na edição: abre com ABERTURA_DA_EDICAO, não diz 'publicado', e o resto é o do publicar",
+    (regra) => {
+      const v = { regra, slug: SLUG, frase: "frase do painel" };
+      const doPublicar = fraseDaPessoa(v, "publicar");
+      const daEdicao = fraseDaPessoa(v, "editar");
+      expect(doPublicar.startsWith("Nada foi publicado: "), doPublicar).toBe(true);
+      expect(daEdicao.startsWith(`${ABERTURA_DA_EDICAO} `), daEdicao).toBe(true);
+      expect(daEdicao).not.toMatch(/publicad/i);
+      expect(daEdicao.slice(ABERTURA_DA_EDICAO.length)).toBe(doPublicar.slice("Nada foi publicado:".length));
+    },
+  );
 });

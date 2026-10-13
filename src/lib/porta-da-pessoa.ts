@@ -131,10 +131,24 @@ export const FRASE_DA_PESSOA: Readonly<Record<string, string>> = {
     "Nada foi publicado: marcar os sete dias é o mesmo que não marcar nenhum. Se o lugar abre todo dia, deixe a pergunta dos dias sem resposta.",
 };
 
+/** A abertura de toda frase de `FRASE_DA_PESSOA` e de `RECUSA_DA_PESSOA` — a
+ *  do PUBLICAR. Não é frase de tela sozinha: é o pedaço que a edição troca. */
+const ABERTURA_DO_PUBLICAR = "Nada foi publicado:";
+/** 🔴 A abertura da EDIÇÃO do lugar dela no ar (I2 da revisão final): ali o
+ *  lugar ESTÁ publicado, e "Nada foi publicado" a faria achar que ele saiu do
+ *  ar. Só a mudança foi recusada. O resto da frase é o mesmo da tabela — sete
+ *  frases à mão em dobro seriam sete chances de uma divergir da outra. */
+// PENDENTE: redação minha, o João ainda não leu
+export const ABERTURA_DA_EDICAO = "Nada foi gravado:";
+
 /** A frase DELA pra uma violação da coerência: pela REGRA, nunca a `frase` da
- *  violação (a do painel). */
-export function fraseDaPessoa(v: Violacao): string {
-  return FRASE_DA_PESSOA[v.regra] ?? RECUSA_DA_PESSOA;
+ *  violação (a do painel). `ato` diz de onde ela veio: o publicar (a frase da
+ *  tabela) ou a edição do lugar no ar (a mesma, aberta por
+ *  `ABERTURA_DA_EDICAO`). Sem padrão: quem chama escolhe, de propósito. */
+export function fraseDaPessoa(v: Violacao, ato: "publicar" | "editar"): string {
+  const frase = FRASE_DA_PESSOA[v.regra] ?? RECUSA_DA_PESSOA;
+  if (ato === "publicar" || !frase.startsWith(ABERTURA_DO_PUBLICAR)) return frase;
+  return ABERTURA_DA_EDICAO + frase.slice(ABERTURA_DO_PUBLICAR.length);
 }
 
 /** A PORTA DE PUBLICAR DELA — irmã de `prepararPublicacao` (a do João), com a

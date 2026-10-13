@@ -92,7 +92,7 @@ export async function POST(req: Request): Promise<Response> {
   if (colisao !== null) return recusa(409, NOME_JA_EM_USO);
 
   const violacao = violacaoIntroduzidaInteira(await versoesAtuais(getClient(), { incluirOcultos: true }), slug, null, doc);
-  if (violacao !== null) return recusa(409, fraseDaPessoa(violacao));
+  if (violacao !== null) return recusa(409, fraseDaPessoa(violacao, "publicar"));
 
   if (await publicarRascunho(getClient(), slug, doc, agora, atualizadoEm, id)) {
     return Response.json({ slug }, { headers: { "cache-control": "no-store" } });
