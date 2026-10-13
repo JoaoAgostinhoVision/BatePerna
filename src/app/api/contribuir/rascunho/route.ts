@@ -5,8 +5,8 @@ import {
   apagarRascunhoDaPessoa, criarRascunhoDaPessoa, estaBloqueado, lerRascunhoDaPessoa, moverRascunhoDaPessoa, rascunhosDaPessoa,
   regravarRascunhoDaPessoa,
 } from "@/lib/db-contribuidor";
-import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, colisaoDaMudanca, colisaoDoPar } from "@/lib/par-de-lugar";
-import { BLOQUEADA, NOME_JA_EM_USO, RASCUNHO_DELA_SUMIU, portaDaPessoa } from "@/lib/porta-da-pessoa";
+import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, colisaoDaMudanca, colisaoDoPar, type Colisao } from "@/lib/par-de-lugar";
+import { BLOQUEADA, NOME_JA_EM_USO, RASCUNHO_DELA_JA_EXISTE, RASCUNHO_DELA_SUMIU, portaDaPessoa } from "@/lib/porta-da-pessoa";
 import {
   CIDADE_SEM_LETRA, CIDADE_VAZIA, NOME_SEM_LETRA, NOME_VAZIO, cidadeDoDoc, docDoLugarNovo,
   docNoEndereco, nomeDoRascunho, slugDoNome,
@@ -36,6 +36,19 @@ function recusar400(erro: unknown): Response {
 
 const emUso = (): Response => new Response(NOME_JA_EM_USO, { status: 409, headers: TEXTO });
 
+/** 🔴 I1 DA REVISÃO FINAL: quando o que ocupa o par ou o endereço é um rascunho
+ *  DELA, a frase é a que aponta a lista dela — `NOME_JA_EM_USO` diria "de
+ *  outro lugar". A leitura só escolhe a frase; quem recusou foi a colisão ou o
+ *  statement. `lerRascunhoDaPessoa` filtra por `contribuidor`: rascunho de
+ *  outro nunca vira "você já começou". */
+async function ocupadoPor(slug: string, id: string): Promise<Response> {
+  return (await lerRascunhoDaPessoa(getClient(), slug, id)) !== null
+    ? new Response(RASCUNHO_DELA_JA_EXISTE, { status: 409, headers: TEXTO })
+    : emUso();
+}
+const colidiu = (colisao: Colisao, id: string): Promise<Response> =>
+  colisao.de === "rascunho-de-quem-usa" ? ocupadoPor(colisao.slug, id) : Promise.resolve(emUso());
+
 /** 🔴 A GRAVAÇÃO RECUSADA POR BLOQUEIO NO MEIO (onda de fix da Task 10): a
  *  porta deixou passar, e o João bloqueou antes do statement — o `LIVRE` de
  *  `db-contribuidor.ts` derrubou a gravação. A recusa é a MESMA da porta, e
@@ -47,8 +60,9 @@ const bloqueada = (): Response => new Response(BLOQUEADA, { status: 403, headers
  *  colisão pelo par, mesmo endereço). O rascunho nasce DELA.
  *
  *  🔴 I3 da pré-auditoria: TODA colisão — o par, o gêmeo sem cidade, o
- *  endereço ocupado, o endereço antigo — responde `NOME_JA_EM_USO`. A rota lê a
- *  colisão ESTRUTURADA (`colisaoDoPar`) e nunca pergunta QUEM ocupa: nada do
+ *  endereço ocupado, o endereço antigo — responde `NOME_JA_EM_USO`, menos a com
+ *  um rascunho DELA (`RASCUNHO_DELA_JA_EXISTE`, I1 da revisão final). A rota lê
+ *  a colisão ESTRUTURADA (`colisaoDoPar`) e nunca diz QUEM ocupa: nada do
  *  painel ("pela lista do painel") e nenhum nome de outro chega a ela. */
 export async function POST(req: Request): Promise<Response> {
   const agora = agoraS();
@@ -66,7 +80,8 @@ export async function POST(req: Request): Promise<Response> {
   if (slugDoNome(nome) === "") return new Response(NOME_SEM_LETRA, { status: 400, headers: TEXTO });
   if (slugDoNome(cidade) === "") return new Response(CIDADE_SEM_LETRA, { status: 400, headers: TEXTO });
 
-  if ((await colisaoDoPar(nome, cidade, { exceto: null, nomeNovo: true })) !== null) return emUso();
+  const colisao = await colisaoDoPar(nome, cidade, { exceto: null, nomeNovo: true });
+  if (colisao !== null) return colidiu(colisao, porta.pessoa.id);
 
   const slug = slugDoNome(`${nome} ${cidade}`);
   if (await criarRascunhoDaPessoa(getClient(), slug, docDoLugarNovo(slug, nome, cidade), agora, porta.pessoa.id)) {
@@ -74,10 +89,10 @@ export async function POST(req: Request): Promise<Response> {
   }
   // O banco recusou. 🔴 O bloqueio PRIMEIRO (Task 15): o João bloqueou entre
   // a porta e o INSERT, e o `LIVRE` derrubou — o endereço pode estar livre.
-  // Senão, endereço de um lugar, de um rascunho de outro, ou endereço antigo:
-  // a frase é a dela.
+  // Senão, endereço de um lugar, de um rascunho (dela ou de outro), ou
+  // endereço antigo: a frase é a dela.
   if (await estaBloqueado(getClient(), porta.pessoa.id)) return bloqueada();
-  return emUso();
+  return ocupadoPor(slug, porta.pessoa.id);
 }
 
 /** RESPONDER uma pergunta dela. Três corpos, mutuamente exclusivos:
@@ -120,7 +135,8 @@ export async function PUT(req: Request): Promise<Response> {
   const atual = await lerRascunhoDaPessoa(getClient(), slug, id);
   if (atual === null) return new Response("", { status: 404, headers: TEXTO });
 
-  if ((await colisaoDaMudanca(atual.doc, slug, campo, valor)) !== null) return emUso();
+  const colisao = await colisaoDaMudanca(atual.doc, slug, campo, valor);
+  if (colisao !== null) return colidiu(colisao, id);
 
   let novoDoc: string;
   try {
@@ -141,8 +157,8 @@ export async function PUT(req: Request): Promise<Response> {
       if ((await lerRascunhoDaPessoa(getClient(), slug, id)) === null) {
         return new Response(RASCUNHO_DELA_SUMIU, { status: 409, headers: TEXTO });
       }
-      // O destino está ocupado (lugar, rascunho de outro, endereço antigo): a frase dela.
-      return emUso();
+      // O destino está ocupado (lugar, rascunho dela ou de outro, endereço antigo): a frase dela.
+      return ocupadoPor(destino, id);
     }
   }
   if (!(await regravarRascunhoDaPessoa(getClient(), slug, novoDoc, agora, id))) {

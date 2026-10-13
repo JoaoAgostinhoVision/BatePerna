@@ -5,9 +5,12 @@ import {
 } from "@/lib/rascunho";
 
 /** O QUE COLIDIU — sem frase. `quem` é o nome (e a cidade, se houver) de quem
- *  JÁ EXISTE, lido do dado. */
+ *  JÁ EXISTE, lido do dado; `slug`, o endereço dele (a rota de quem usa o lê
+ *  pra saber se o rascunho que colide é DELA — I1 da revisão final — e nunca
+ *  o devolve a ela). */
 export type Colisao = {
   de: "lugar" | "rascunho-do-joao" | "rascunho-de-quem-usa";
+  slug: string;
   semCidade: boolean;
   quem: string;
 };
@@ -63,8 +66,10 @@ export type Colisao = {
  *  porque o painel tem um dono só; a normalização não cabe numa consulta SQL.
  *
  *  🔴 DESDE 07/10 DEVOLVE O QUE COLIDIU, NÃO A FRASE (I3 da pré-auditoria): o
- *  painel fala por `fraseDoPainel`; a rota de quem usa responde uma frase só
- *  dela, que não nomeia ninguém (`NOME_JA_EM_USO`, Task 10). */
+ *  painel fala por `fraseDoPainel`; a rota de quem usa responde frases só
+ *  dela, que não nomeiam ninguém além dela (`NOME_JA_EM_USO`, Task 10; e, no
+ *  rascunho, `RASCUNHO_DELA_JA_EXISTE` quando quem ocupa é um rascunho DELA —
+ *  I1 da revisão final). */
 export async function colisaoDoPar(
   nome: string,
   cidade: string,
@@ -82,11 +87,11 @@ export async function colisaoDoPar(
   };
   for (const v of (await versoesAtuais(getClient(), { incluirOcultos: true })).values()) {
     const achou = bate(v.doc, v.ficha_slug);
-    if (achou !== null) return { de: "lugar", ...achou };
+    if (achou !== null) return { de: "lugar", slug: v.ficha_slug, ...achou };
   }
   for (const r of await todosOsRascunhos(getClient())) {
     const achou = bate(r.doc, r.slug);
-    if (achou !== null) return { de: r.contribuidor === null ? "rascunho-do-joao" : "rascunho-de-quem-usa", ...achou };
+    if (achou !== null) return { de: r.contribuidor === null ? "rascunho-do-joao" : "rascunho-de-quem-usa", slug: r.slug, ...achou };
   }
   return null;
 }

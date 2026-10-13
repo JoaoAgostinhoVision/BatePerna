@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { rascunhoDeQualquerUm } from "@/lib/db";
 import { contribuidorPorId, criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
 import { SEM_NAO_SEI } from "@/lib/campos-da-pessoa";
-import { BLOQUEADA, CLERK_FORA, NOME_JA_EM_USO, RASCUNHO_DELA_SUMIU } from "@/lib/porta-da-pessoa";
+import { BLOQUEADA, CLERK_FORA, NOME_JA_EM_USO, RASCUNHO_DELA_JA_EXISTE, RASCUNHO_DELA_SUMIU } from "@/lib/porta-da-pessoa";
 import { CIDADE_SEM_LETRA, CIDADE_VAZIA, NOME_SEM_LETRA, NOME_VAZIO } from "@/lib/rascunho";
 import { clienteQueIntercala, semearAcervo } from "../banco";
 import { OUTRA, PESSOA, sessao } from "../sessao-da-pessoa";
@@ -434,9 +434,71 @@ describe("o bloqueio que chega entre a porta e a gravação", () => {
   });
 });
 
+// 🔴 I1 DA REVISÃO FINAL: o que colide é o rascunho DELA mesma. `NOME_JA_EM_USO`
+// ("já é de outro lugar") seria falsa: é dela, está na lista dela. A frase
+// aponta pra lista. Um caso por ramo da rota: a colisão pelo PAR (POST e PUT) e
+// a recusa do BANCO pelo ENDEREÇO (par diferente, mesmo endereço — POST e PUT
+// que muda o endereço). O rascunho de OUTRA pessoa continua `NOME_JA_EM_USO`
+// (casos acima).
+describe("o que colide é o rascunho DELA mesma", () => {
+  const total = async () => Number((await c.execute("SELECT COUNT(*) AS n FROM ficha_rascunhos")).rows[0].n);
+  const MARCADOR = "lugar-marcador-cidade-marcador";
+  const comecarMarcador = async () => {
+    const r = await rota.POST(pedido("POST", { nome: "Lugar Marcador", cidade: "Cidade Marcador" }));
+    expect(r.status, await r.clone().text()).toBe(201);
+  };
+
+  it("POST com o par de um rascunho dela: 409 com a frase que aponta a lista dela, e nada nasce", async () => {
+    await comecar();
+    const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(RASCUNHO_DELA_JA_EXISTE);
+    expect(await total()).toBe(1);
+  });
+
+  it("POST com o ENDEREÇO de um rascunho dela, de par diferente (a recusa do banco): a mesma frase", async () => {
+    await comecarMarcador();
+    const res = await rota.POST(pedido("POST", { nome: "Lugar Marcador Cidade", cidade: "Marcador" }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(RASCUNHO_DELA_JA_EXISTE);
+    expect(await total()).toBe(1);
+  });
+
+  it("PUT que renomeia pro par de outro rascunho dela: a mesma frase, e o rascunho não muda", async () => {
+    await comecar();
+    expect((await rota.POST(pedido("POST", { nome: "Pedra Segunda", cidade: "Cidade Teste" }))).status).toBe(201);
+    const antes = await docDe();
+    const res = await rota.PUT(pedido("PUT", { slug: SLUG, campo: "trajeto.waypoints.0.nome", valor: "Pedra Segunda" }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(RASCUNHO_DELA_JA_EXISTE);
+    expect(await docDe()).toEqual(antes);
+  });
+
+  it("PUT que muda pro ENDEREÇO de outro rascunho dela, de par diferente (a recusa do banco): a mesma frase", async () => {
+    await comecarMarcador();
+    const x = await rota.POST(pedido("POST", { nome: "Pedra X", cidade: "Marcador" }));
+    expect(x.status).toBe(201);
+    const res = await rota.PUT(pedido("PUT", { slug: "pedra-x-marcador", campo: "trajeto.waypoints.0.nome", valor: "Lugar Marcador Cidade" }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(RASCUNHO_DELA_JA_EXISTE);
+    expect((await docDe("pedra-x-marcador")).trajeto.waypoints[0].nome).toBe("Pedra X");
+  });
+
+  it("a frase dela não fala de outro lugar nem do painel, e aponta a lista dela", () => {
+    expect(RASCUNHO_DELA_JA_EXISTE).not.toMatch(/outro lugar|painel/i);
+    expect(RASCUNHO_DELA_JA_EXISTE).toMatch(/sua lista/);
+  });
+});
+
 // Onda de fix da Task 10: a frase de toda colisão dela não diz "no ar" (falso
 // pro lugar escondido) nem que o lugar "logo estará" no app (falso pro
 // endereço antigo e pro rascunho que nunca sai), e não nomeia ninguém.
 it("NOME_JA_EM_USO não promete onde o outro lugar está", () => {
   expect(NOME_JA_EM_USO).not.toMatch(/no ar|logo estar|mandando|painel/i);
+});
+
+// I1 da revisão final: o rascunho de OUTRA pessoa (ou do João) não é lugar
+// "no BatePerna" — a frase diz a categoria dele também, sem dizer de quem.
+it("NOME_JA_EM_USO é verdade também quando o que ocupa é um rascunho de outro", () => {
+  expect(NOME_JA_EM_USO).toMatch(/alguém começou e ainda não publicou/);
 });

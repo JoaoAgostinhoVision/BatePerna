@@ -37,7 +37,17 @@ export const RASCUNHO_DELA_SUMIU =
  *  saída; o que fazer nesses dois é dele. */
 // PENDENTE: redação minha, o João ainda não leu
 export const NOME_JA_EM_USO =
-  "Nada foi gravado: este nome, ou o endereço que sairia dele, já é de outro lugar no BatePerna.";
+  "Nada foi gravado: este nome, ou o endereço que sairia dele, já é de outro lugar no BatePerna, ou de um que alguém começou e ainda não publicou.";
+/** O 409 quando o que colide é o rascunho DELA mesma (I1 da revisão final):
+ *  `NOME_JA_EM_USO` diria "de outro lugar", e é o lugar que ELA começou — está
+ *  na lista dela (`/contribuir`), que é onde ela continua. Só nomeia o que é
+ *  dela, então o I3 da pré-auditoria continua valendo. Desde a mesma revisão,
+ *  `NOME_JA_EM_USO` ganhou "ou de um que alguém começou": rascunho de outra
+ *  pessoa (ou do João) não está "no BatePerna", e a frase não dizia isso — o
+ *  acréscimo diz a categoria, nunca quem. */
+// PENDENTE: redação minha, o João ainda não leu
+export const RASCUNHO_DELA_JA_EXISTE =
+  "Nada foi gravado: você já começou um lugar com este nome, ou com o endereço que sairia dele. Continue por ele, na sua lista de lugares.";
 
 /** O 409 da edição DELA depois do "Conferi" do João (Task 12): conferido, o
  *  lugar passa a ser do BatePerna — ela não edita mais. */

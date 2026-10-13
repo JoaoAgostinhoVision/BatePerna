@@ -47,14 +47,14 @@ describe("o ramo de quem usa", () => {
 
   it("renomear pro par de um rascunho de OUTRA pessoa: de quem usa, COM cidade", async () => {
     expect(await colisaoDaMudanca(MEU_DOC, MEU, CAMPO_DO_NOME, "Pedra Dela")).toEqual({
-      de: "rascunho-de-quem-usa", semCidade: false, quem: "Pedra Dela (Cidade Teste)",
+      de: "rascunho-de-quem-usa", slug: "pedra-dela-cidade-teste", semCidade: false, quem: "Pedra Dela (Cidade Teste)",
     });
   });
 
   it("mudar a cidade pro par dele: o mesmo dado", async () => {
     const meuComONome = docDe(MEU, "Pedra Dela", "Outra Cidade");
     expect(await colisaoDaMudanca(meuComONome, MEU, CAMPO_DA_CIDADE, "Cidade Teste")).toEqual({
-      de: "rascunho-de-quem-usa", semCidade: false, quem: "Pedra Dela (Cidade Teste)",
+      de: "rascunho-de-quem-usa", slug: "pedra-dela-cidade-teste", semCidade: false, quem: "Pedra Dela (Cidade Teste)",
     });
   });
 
@@ -68,7 +68,7 @@ describe("o ramo de quem usa", () => {
       args: ["sem-cidade-x", docDe("sem-cidade-x", "Pedra Sem Cidade"), A, OUTRA.id],
     });
     expect(await colisaoDaMudanca(MEU_DOC, MEU, CAMPO_DO_NOME, "Pedra Sem Cidade")).toEqual({
-      de: "rascunho-de-quem-usa", semCidade: true, quem: "Pedra Sem Cidade",
+      de: "rascunho-de-quem-usa", slug: "sem-cidade-x", semCidade: true, quem: "Pedra Sem Cidade",
     });
     // E responder a cidade nunca esbarra no gêmeo (Y1): só no par.
     const meuComONome = docDe(MEU, "Pedra Sem Cidade", "Outra Cidade");
@@ -79,14 +79,14 @@ describe("o ramo de quem usa", () => {
 describe("os outros dois ramos, pelo mesmo dado", () => {
   it("lugar do João sem cidade: de lugar, semCidade, só o nome", async () => {
     expect(await colisaoDaMudanca(MEU_DOC, MEU, CAMPO_DO_NOME, "Rampa do Pepê")).toEqual({
-      de: "lugar", semCidade: true, quem: "Rampa do Pepê",
+      de: "lugar", slug: "rampa-do-pepe", semCidade: true, quem: "Rampa do Pepê",
     });
   });
 
   it("rascunho do João com cidade: de rascunho-do-joao", async () => {
     await criarRascunho(c, "pedra-do-joao-cidade-teste", docDe("pedra-do-joao-cidade-teste", "Pedra do João", "Cidade Teste"), A);
     expect(await colisaoDaMudanca(MEU_DOC, MEU, CAMPO_DO_NOME, "Pedra do João")).toEqual({
-      de: "rascunho-do-joao", semCidade: false, quem: "Pedra do João (Cidade Teste)",
+      de: "rascunho-do-joao", slug: "pedra-do-joao-cidade-teste", semCidade: false, quem: "Pedra do João (Cidade Teste)",
     });
   });
 });
@@ -96,7 +96,7 @@ describe("a troca e a mudança", () => {
     expect(await colisaoDaTroca(MEU_DOC, MEU, "Pedra Minha", "Cidade Teste")).toBeNull();
     // Sem o `exceto`, o par é o dele mesmo: a prova acima não é vácua.
     expect(await colisaoDoPar("Pedra Minha", "Cidade Teste", { exceto: null, nomeNovo: true })).toEqual({
-      de: "rascunho-de-quem-usa", semCidade: false, quem: "Pedra Minha (Cidade Teste)",
+      de: "rascunho-de-quem-usa", slug: MEU, semCidade: false, quem: "Pedra Minha (Cidade Teste)",
     });
   });
 
@@ -104,7 +104,7 @@ describe("a troca e a mudança", () => {
     const meuRampa = docDe(MEU, "Rampa do Pepê", "Cidade Teste");
     expect(await colisaoDaTroca(meuRampa, MEU, "RAMPA DO PEPE", "Cidade Teste")).toBeNull();
     expect(await colisaoDaTroca(MEU_DOC, MEU, "RAMPA DO PEPE", "Cidade Teste")).toEqual({
-      de: "lugar", semCidade: true, quem: "Rampa do Pepê",
+      de: "lugar", slug: "rampa-do-pepe", semCidade: true, quem: "Rampa do Pepê",
     });
   });
 
