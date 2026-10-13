@@ -1,4 +1,6 @@
-import { chavesForaDaPessoa, obrigatoriosDaPessoaFaltando } from "@/lib/campos-da-pessoa";
+import {
+  TEXTO_LONGO_DEMAIS_NO_PUBLICAR, campoDelaAcimaDoTeto, chavesForaDaPessoa, obrigatoriosDaPessoaFaltando,
+} from "@/lib/campos-da-pessoa";
 import type { Violacao } from "@/lib/coerencia";
 import { getClient } from "@/lib/db";
 import { estaBloqueado, registrarContribuidor } from "@/lib/db-contribuidor";
@@ -154,7 +156,8 @@ export function fraseDaPessoa(v: Violacao, ato: "publicar" | "editar"): string {
 /** A PORTA DE PUBLICAR DELA — irmã de `prepararPublicacao` (a do João), com a
  *  lista dela no lugar do registro. A ordem: abrir → 🔴 nada fora da lista
  *  dela (Review Focus 1: voz, regra, discriminador — venha a sobra de onde
- *  vier) → os obrigatórios DELA → o horário pela regra de escrita → o
+ *  vier) → nenhum campo dela acima do teto (M6 da revisão final) → os
+ *  obrigatórios DELA → o horário pela regra de escrita → o
  *  `fichaSchema` → o `slug` de dentro. Vai ao ar o documento NORMALIZADO, como
  *  no do João (o porquê de cada passo está no docblock de `prepararPublicacao`,
  *  em `porta-de-publicar.ts`). Todas as recusas são 400 na rota. */
@@ -167,6 +170,7 @@ export function prepararPublicacaoDaPessoa(texto: string, slug: string): { doc: 
   }
   if (typeof doc !== "object" || doc === null || Array.isArray(doc)) return { frase: RASCUNHO_ILEGIVEL };
   if (chavesForaDaPessoa(doc).length > 0) return { frase: FORA_DA_LISTA_DELA };
+  if (campoDelaAcimaDoTeto(doc)) return { frase: TEXTO_LONGO_DEMAIS_NO_PUBLICAR };
   if (obrigatoriosDaPessoaFaltando(doc).length > 0) return { frase: FALTA_DA_PESSOA };
   if ("horario" in doc) {
     const problema = problemaDasFaixas(faixasDe((doc as { horario: unknown }).horario));

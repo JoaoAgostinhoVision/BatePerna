@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { historico, versaoAtual } from "@/lib/db";
 import { conferirLugar } from "@/lib/db-contribuidor";
 import { BLOQUEADA, CLERK_FORA, JA_CONFERIDO, NOME_JA_EM_USO, fraseDaPessoa } from "@/lib/porta-da-pessoa";
+import { TEXTO_LONGO_DEMAIS } from "@/lib/campos-da-pessoa";
 import { clienteQueIntercala, semearAcervo, semearLugarDaPessoa } from "../banco";
 import { OUTRA, PESSOA, sessao } from "../sessao-da-pessoa";
 
@@ -88,6 +89,20 @@ describe("PUT /api/contribuir/lugar", () => {
     const depois = (await versaoAtual(c, SLUG))!;
     expect([depois.id, depois.doc]).toEqual([antes.id, antes.doc]);
   });
+
+  // M6 da revisão final: o teto na edição do lugar no ar.
+  it.each(["promessa", "acesso", "avisos", "trajeto.waypoints.0.nome"])(
+    "`%s`: 2001 caracteres é 400 com a frase, nada gravado; 2000 grava",
+    async (campo) => {
+      const recusa = await PUT(pedido({ slug: SLUG, baseId: await base(), campo, valor: "a".repeat(2001) }));
+      expect(recusa.status).toBe(400);
+      expect(await recusa.text()).toBe(TEXTO_LONGO_DEMAIS);
+      expect(await versoes()).toBe(1);
+      const ok = await PUT(pedido({ slug: SLUG, baseId: await base(), campo, valor: "a".repeat(2000) }));
+      expect(ok.status, await ok.clone().text()).toBe(200);
+      expect(await versoes()).toBe(2);
+    },
+  );
 
   it("trocar o nome muda o documento e NÃO o endereço", async () => {
     await PUT(pedido({ slug: SLUG, baseId: await base(), campo: "trajeto.waypoints.0.nome", valor: "Pedra Renomeada" }));

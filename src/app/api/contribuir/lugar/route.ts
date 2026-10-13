@@ -1,5 +1,5 @@
 import { aplicarCampo, type ValorDeCampo } from "@/lib/campos-da-ficha";
-import { ehCampoDaPessoa, pontoDaPessoa, tirarCampoDaPessoa } from "@/lib/campos-da-pessoa";
+import { TEXTO_LONGO_DEMAIS, ehCampoDaPessoa, pontoDaPessoa, textoAcimaDoTeto, tirarCampoDaPessoa } from "@/lib/campos-da-pessoa";
 import { getClient, lugarDoDono, versoesAtuais } from "@/lib/db";
 import { estaBloqueado, gravarEdicaoDaPessoa } from "@/lib/db-contribuidor";
 import { LUGAR_MUDOU_DE_ENDERECO, baseIdValido } from "@/lib/endereco";
@@ -73,6 +73,8 @@ export async function PUT(req: Request): Promise<Response> {
     if (trazValor === trazNaoSei || (trazNaoSei && naoSei !== true)) return new Response("", { status: 400, headers: TEXTO });
     // 🔴 A lista DELA, mudo: voz, regra, discriminador, chip — nada fora dela.
     if (!ehCampoDaPessoa(campo)) return new Response("", { status: 400, headers: TEXTO });
+    // M6 da revisão final: o teto, ANTES de ler o banco, como a lista.
+    if (textoAcimaDoTeto(valor)) return new Response(TEXTO_LONGO_DEMAIS, { status: 400, headers: TEXTO });
     const caminho = campo;
     mudar = (doc) => (trazNaoSei ? tirarCampoDaPessoa(doc, caminho) : aplicarCampo(doc, caminho, valor as ValorDeCampo));
   }

@@ -4,6 +4,7 @@ import {
   ABERTURA_DA_EDICAO, FALTA_DA_PESSOA, FORA_DA_LISTA_DELA, FRASE_DA_PESSOA, RECUSA_DA_PESSOA, fraseDaPessoa, prepararPublicacaoDaPessoa,
 } from "@/lib/porta-da-pessoa";
 import { FORMA_ERRADA, RASCUNHO_ILEGIVEL, SLUG_DE_DENTRO } from "@/lib/porta-de-publicar";
+import { TEXTO_LONGO_DEMAIS_NO_PUBLICAR } from "@/lib/campos-da-pessoa";
 
 const SLUG = "pedra-mandada-cidade-teste";
 const COMPLETO = {
@@ -43,6 +44,19 @@ describe("prepararPublicacaoDaPessoa", () => {
     ["discriminador", { discriminador: { como_ler: "x" } }],
   ])("documento com chave fora da lista (`%s`): recusado", (_c, mais) => {
     expect(preparar({ ...COMPLETO, ...mais })).toEqual({ frase: FORA_DA_LISTA_DELA });
+  });
+
+  // M6 da revisão final: o teto vale também no publicar — o rascunho pode ter
+  // chegado ao banco por outro caminho que não as rotas dela.
+  it.each([
+    ["promessa", (t: string) => ({ promessa: t })],
+    ["acesso", (t: string) => ({ acesso: t })],
+    ["avisos", (t: string) => ({ avisos: t })],
+    ["custo.valor", (t: string) => ({ custo: { tag: "pago", valor: t } })],
+    ["o nome", (t: string) => ({ trajeto: { waypoints: [{ ...COMPLETO.trajeto.waypoints[0], nome: t }] } })],
+  ])("%s com 2000 caracteres vai; com 2001, a frase do teto", (_c, mais) => {
+    expect("doc" in preparar({ ...COMPLETO, ...mais("a".repeat(2000)) })).toBe(true);
+    expect(preparar({ ...COMPLETO, ...mais("a".repeat(2001)) })).toEqual({ frase: TEXTO_LONGO_DEMAIS_NO_PUBLICAR });
   });
 
   it("forma errada: a frase de sempre", () => {

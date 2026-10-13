@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   CAMPOS_DA_PESSOA, OPCIONAIS_DA_PESSOA, PONTO, SEM_NAO_SEI, chavesForaDaPessoa, ehCampoDaPessoa, obrigatoriosDaPessoaFaltando,
-  pontoDaPessoa, pontoNoRascunhoDaPessoa, tirarCampoDaPessoa, tirarDoRascunhoDaPessoa,
+  TETO_DO_TEXTO, TEXTO_LONGO_DEMAIS, TEXTO_LONGO_DEMAIS_NO_PUBLICAR, pontoDaPessoa, pontoNoRascunhoDaPessoa,
+  textoAcimaDoTeto, tirarCampoDaPessoa, tirarDoRascunhoDaPessoa,
 } from "@/lib/campos-da-pessoa";
 import { campoPorCaminho } from "@/lib/campos-da-ficha";
 
@@ -11,6 +12,31 @@ const COMPLETO = {
   trajeto: { waypoints: [{ nome: "Pedra", lat: -8.3, lng: -35.9 }] }, condicao: { coords: { lat: -8.3, lng: -35.9 } },
   custo: { tag: "gratis" },
 };
+
+// 🔴 M6 DA REVISÃO FINAL: um teto por campo que ela escreve. Sem ele, uma
+// pessoa logada punha ~4 MB numa promessa, e a home e /trilhas renderizam
+// todos os lugares pra todo visitante, até o João bloquear.
+describe("o teto do texto dela", () => {
+  it("é 2000, e as duas frases dizem o número que a porta usa", () => {
+    expect(TETO_DO_TEXTO).toBe(2000);
+    for (const f of [TEXTO_LONGO_DEMAIS, TEXTO_LONGO_DEMAIS_NO_PUBLICAR]) expect(f).toContain(TETO_DO_TEXTO.toLocaleString("pt-BR"));
+  });
+
+  it("2000 passa, 2001 não — e conta CARACTERE, não unidade de UTF-16", () => {
+    expect(textoAcimaDoTeto("a".repeat(2000))).toBe(false);
+    expect(textoAcimaDoTeto("a".repeat(2001))).toBe(true);
+    expect(textoAcimaDoTeto("😀".repeat(2000)), "2000 emojis são 2000 caracteres").toBe(false);
+    expect(textoAcimaDoTeto("😀".repeat(2001))).toBe(true);
+  });
+
+  it("acha o texto longo DENTRO de lista e objeto; número e booleano não contam", () => {
+    expect(textoAcimaDoTeto(["x", "a".repeat(2001)])).toBe(true);
+    expect(textoAcimaDoTeto({ abre: "a".repeat(2001) })).toBe(true);
+    expect(textoAcimaDoTeto([{ abre: "06:00", fecha: "18:00" }])).toBe(false);
+    expect(textoAcimaDoTeto(42)).toBe(false);
+    expect(textoAcimaDoTeto(null)).toBe(false);
+  });
+});
 
 describe("a lista dela", () => {
   it("são exatamente os campos das oito perguntas da spec (o ponto mora à parte)", () => {

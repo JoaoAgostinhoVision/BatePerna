@@ -46,6 +46,35 @@ export function pontoNoRascunhoDaPessoa(doc: string, lat: number, lng: number): 
 // PENDENTE: redação minha, o João ainda não leu
 export const SEM_NAO_SEI = "Nada foi gravado: esta pergunta precisa de resposta, então aqui não dá pra dizer \"não sei\".";
 
+/** 🔴 O TETO DO QUE ELA ESCREVE (M6 da revisão final): 2000 caracteres por
+ *  campo. Sem teto, uma pessoa logada punha ~4 MB (o teto do corpo na Vercel)
+ *  numa promessa — e a home e `/trilhas` renderizam todos os lugares pra todo
+ *  visitante, até o João bloquear. Conta CARACTERE (ponto de código), não
+ *  unidade de UTF-16: um emoji é um, como ela conta. Vale nas três portas
+ *  dela: começar e responder o rascunho, editar o lugar no ar, e publicar. */
+export const TETO_DO_TEXTO = 2000;
+// PENDENTE: redação minha, o João ainda não leu
+export const TEXTO_LONGO_DEMAIS = "Nada foi gravado: esta resposta passa de 2.000 caracteres. Encurte e tente de novo.";
+/** A do publicar: o rascunho só chega ao banco acima do teto por fora das
+ *  rotas dela, mas a porta de publicar não confia em quem gravou. */
+// PENDENTE: redação minha, o João ainda não leu
+export const TEXTO_LONGO_DEMAIS_NO_PUBLICAR = "Nada foi publicado: uma resposta passa de 2.000 caracteres. Encurte e tente de novo.";
+
+/** Algum texto em `v` — ele mesmo, ou dentro de lista ou objeto (o horário é
+ *  lista de faixas) — passa do teto? */
+export function textoAcimaDoTeto(v: unknown): boolean {
+  if (typeof v === "string") return Array.from(v).length > TETO_DO_TEXTO;
+  if (typeof v === "object" && v !== null) return Object.values(v).some(textoAcimaDoTeto);
+  return false;
+}
+
+/** Algum campo DA LISTA DELA, no documento, passa do teto? Só os campos dela:
+ *  o `slug` sai do nome E da cidade juntos e pode passar sem que nenhuma
+ *  resposta passe. */
+export function campoDelaAcimaDoTeto(doc: unknown): boolean {
+  return CAMPOS_DA_PESSOA.some((c) => textoAcimaDoTeto(lerCaminho(doc, c.split("."))));
+}
+
 /** O "não sei" DELA: só nos opcionais da lista dela (`avisos` inclusive, que
  *  é obrigatório no registro do João). Rascunho não passa pelo schema. */
 export function tirarDoRascunhoDaPessoa(doc: string, caminho: string): string {

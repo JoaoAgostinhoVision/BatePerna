@@ -1,5 +1,7 @@
 import { aplicarNoRascunho, type ValorDeCampo } from "@/lib/campos-da-ficha";
-import { ehCampoDaPessoa, pontoNoRascunhoDaPessoa, tirarDoRascunhoDaPessoa } from "@/lib/campos-da-pessoa";
+import {
+  TEXTO_LONGO_DEMAIS, ehCampoDaPessoa, pontoNoRascunhoDaPessoa, textoAcimaDoTeto, tirarDoRascunhoDaPessoa,
+} from "@/lib/campos-da-pessoa";
 import { getClient } from "@/lib/db";
 import {
   apagarRascunhoDaPessoa, criarRascunhoDaPessoa, estaBloqueado, lerRascunhoDaPessoa, moverRascunhoDaPessoa, rascunhosDaPessoa,
@@ -75,6 +77,7 @@ export async function POST(req: Request): Promise<Response> {
   }
   const nome = corpo.nome.trim();
   const cidade = corpo.cidade.trim();
+  if (textoAcimaDoTeto([nome, cidade])) return new Response(TEXTO_LONGO_DEMAIS, { status: 400, headers: TEXTO });
   if (nome === "") return new Response(NOME_VAZIO, { status: 400, headers: TEXTO });
   if (cidade === "") return new Response(CIDADE_VAZIA, { status: 400, headers: TEXTO });
   if (slugDoNome(nome) === "") return new Response(NOME_SEM_LETRA, { status: 400, headers: TEXTO });
@@ -129,6 +132,8 @@ export async function PUT(req: Request): Promise<Response> {
     const trazNaoSei = "naoSei" in corpo;
     if (trazValor === trazNaoSei || (trazNaoSei && naoSei !== true)) return new Response("", { status: 400, headers: TEXTO });
     if (!ehCampoDaPessoa(campo)) return new Response("", { status: 400, headers: TEXTO });
+    // M6 da revisão final: o teto, ANTES de ler o banco, como a lista.
+    if (textoAcimaDoTeto(valor)) return new Response(TEXTO_LONGO_DEMAIS, { status: 400, headers: TEXTO });
     mudar = (doc) => (trazNaoSei ? tirarDoRascunhoDaPessoa(doc, campo) : aplicarNoRascunho(doc, campo, valor as ValorDeCampo));
   }
 

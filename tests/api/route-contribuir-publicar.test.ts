@@ -4,6 +4,7 @@ import { enderecoNovoDe, lerAcervoComOrigem, rascunhoDeQualquerUm, versaoAtual }
 import { criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
 import { BLOQUEADA, FALTA_DA_PESSOA, FRASE_DA_PESSOA, JA_NO_AR_DA_PESSOA, NOME_JA_EM_USO } from "@/lib/porta-da-pessoa";
 import { RASCUNHO_MUDOU } from "@/lib/porta-de-publicar";
+import { TEXTO_LONGO_DEMAIS_NO_PUBLICAR } from "@/lib/campos-da-pessoa";
 import { clienteQueIntercala, semearAcervo } from "../banco";
 import { OUTRA, PESSOA, sessao } from "../sessao-da-pessoa";
 
@@ -60,6 +61,18 @@ describe("POST /api/contribuir/publicar", () => {
     expect(res.status, await res.clone().text()).toBe(200);
     expect((await lerAcervoComOrigem(c)).linhas.get(SLUG)).toMatchObject({ oculto: false, conferido: false, contribuidor: PESSOA.id });
     expect(await rascunhoDeQualquerUm(c, SLUG)).toBeNull();
+  });
+
+  // M6 da revisão final: o rascunho com texto acima do teto (só chega por
+  // fora das rotas dela) não vai ao ar; no teto, vai.
+  it("promessa com 2001 caracteres: 400 com a frase do teto, nada vai ao ar; com 2000, vai", async () => {
+    const recusa = await POST(pedido({ slug: SLUG, atualizadoEm: await rascunho({ ...COMPLETO, promessa: "a".repeat(2001) }) }));
+    expect(recusa.status).toBe(400);
+    expect(await recusa.text()).toBe(TEXTO_LONGO_DEMAIS_NO_PUBLICAR);
+    expect(await versaoAtual(c, SLUG)).toBeNull();
+    await c.execute({ sql: "DELETE FROM ficha_rascunhos WHERE slug = ?", args: [SLUG] });
+    const ok = await POST(pedido({ slug: SLUG, atualizadoEm: await rascunho({ ...COMPLETO, promessa: "a".repeat(2000) }) }));
+    expect(ok.status, await ok.clone().text()).toBe(200);
   });
 
   it("rascunho de OUTRA pessoa: 404, e nada vai ao ar", async () => {

@@ -2,7 +2,7 @@ import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { rascunhoDeQualquerUm } from "@/lib/db";
 import { contribuidorPorId, criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
-import { SEM_NAO_SEI } from "@/lib/campos-da-pessoa";
+import { SEM_NAO_SEI, TEXTO_LONGO_DEMAIS } from "@/lib/campos-da-pessoa";
 import { BLOQUEADA, CLERK_FORA, NOME_JA_EM_USO, RASCUNHO_DELA_JA_EXISTE, RASCUNHO_DELA_SUMIU } from "@/lib/porta-da-pessoa";
 import { CIDADE_SEM_LETRA, CIDADE_VAZIA, NOME_SEM_LETRA, NOME_VAZIO } from "@/lib/rascunho";
 import { clienteQueIntercala, semearAcervo } from "../banco";
@@ -432,6 +432,35 @@ describe("o bloqueio que chega entre a porta e a gravação", () => {
     expect(res.status).toBe(403);
     expect(await rascunhoDeQualquerUm(c, SLUG)).not.toBeNull();
   });
+});
+
+// 🔴 M6 DA REVISÃO FINAL: o teto de 2000 caracteres por campo que ela escreve,
+// na porta — no começar (nome e cidade) e no responder (todo campo de texto).
+describe("o teto do texto dela", () => {
+  const total = async () => Number((await c.execute("SELECT COUNT(*) AS n FROM ficha_rascunhos")).rows[0].n);
+  const longo = (n: number) => "a".repeat(n);
+
+  it.each(["nome", "cidade"])("POST: %s com 2000 nasce; com 2001, 400 com a frase, e nada nasce", async (qual) => {
+    const corpo = (n: number) => ({ nome: "Pedra", cidade: "Cidade", [qual]: longo(n) });
+    const recusa = await rota.POST(pedido("POST", corpo(2001)));
+    expect(recusa.status).toBe(400);
+    expect(await recusa.text()).toBe(TEXTO_LONGO_DEMAIS);
+    expect(await total()).toBe(0);
+    expect((await rota.POST(pedido("POST", corpo(2000)))).status).toBe(201);
+  });
+
+  it.each(["promessa", "acesso", "avisos", "custo.valor", "trajeto.waypoints.0.nome", "cidade"])(
+    "PUT `%s`: 2000 grava; 2001 é 400 com a frase, e o rascunho não muda",
+    async (campo) => {
+      await comecar();
+      const antes = await docDe();
+      const recusa = await rota.PUT(pedido("PUT", { slug: SLUG, campo, valor: longo(2001) }));
+      expect(recusa.status).toBe(400);
+      expect(await recusa.text()).toBe(TEXTO_LONGO_DEMAIS);
+      expect(await docDe()).toEqual(antes);
+      expect((await rota.PUT(pedido("PUT", { slug: SLUG, campo, valor: longo(2000) }))).status).toBe(200);
+    },
+  );
 });
 
 // 🔴 I1 DA REVISÃO FINAL: o que colide é o rascunho DELA mesma. `NOME_JA_EM_USO`
