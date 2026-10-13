@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
-import TelaDaRegraPadrao, { SALVAR_REGRA } from "@/app/admin/TelaDaRegraPadrao";
+import TelaDaRegraPadrao, { SALVAR_REGRA, VALE_PARA } from "@/app/admin/TelaDaRegraPadrao";
 import { FALTA_UM_DOS_QUATRO } from "@/app/admin/campos/EditorCalibrar";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -43,6 +43,13 @@ describe("a tela da regra padrão", () => {
     fireEvent.click(getByRole("button", { name: SALVAR_REGRA }));
     expect((await findByRole("alert")).textContent).toBe(FALTA_UM_DOS_QUATRO);
     expect(fetchFalso).not.toHaveBeenCalled();
+  });
+
+  // M2 da revisão final: "hoje, os mandados por quem usa o app" ficava falso no
+  // primeiro Calibrar (um mandado com regra própria não usa a padrão). Saiu
+  // por subtração; nenhum estado de agora volta pra esta frase.
+  it("VALE_PARA não afirma quem usa a regra hoje", () => {
+    expect(VALE_PARA).not.toMatch(/hoje|mandados/i);
   });
 
   it("a recusa com frase aparece na tela", async () => {
