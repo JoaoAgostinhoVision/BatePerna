@@ -7,7 +7,7 @@
 **Ele parou em 12/10: *"quero continuar na próxima sessão"*.** Branch `painel-completo`. Nada do "lugar de quem usa"
 está no ar. **As 16 tarefas do plano estão FEITAS e revisadas** (ledger: `Task 16: complete`, último código `570e455`).
 **A revisão final da branch rodou** (`.superpowers/sdd/2026-10-07-lugar-de-quem-usa/final-review.md`: 1 C · 5 I · 10 M)
-e **a onda única de fix foi despachada e estava RODANDO quando ele parou** (relatório esperado em `final-fix-report.md`
+e **a onda única de fix TERMINOU (`7214d4c..22fc7d4`, 10 commits, 2938/2938, tsc 0, build 0, mutar 42/0/0); a re-revisão escopada foi despachada — se `final-rereview.md` existe, só adjudicar os resíduos; senão, despachá-la (passo 2)** (relatório esperado em `final-fix-report.md`
 na mesma pasta; escopo e rulings no fim do ledger, linhas `FINAL:`).
 
 → **O PRIMEIRO PASSO, SEM PENSAR:**
