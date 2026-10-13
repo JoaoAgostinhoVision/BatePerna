@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import TelaDaRegraPadrao, { SALVAR_REGRA } from "@/app/admin/TelaDaRegraPadrao";
+import { FALTA_UM_DOS_QUATRO } from "@/app/admin/campos/EditorCalibrar";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
@@ -29,6 +30,19 @@ describe("a tela da regra padrão", () => {
     expect(url).toBe("/api/admin/regra-padrao");
     expect(init.method).toBe("PUT");
     expect(JSON.parse(init.body)).toEqual({ ...ATUAL, janela_passado_horas: 12 });
+  });
+
+  // 🔴 I4 da revisão final: `Number("") === 0`, e 0 é uma regra VÁLIDA (cada
+  // janela pode ser 0 sozinha) — a caixa apagada pra redigitar gravaria uma
+  // regra que ninguém escolheu, sem frase nenhuma. A guarda do Calibrar.
+  it.each(["R1", "R2", "R3"])("com a caixa %s vazia, não chama a rota e diz o que falta", async (rotulo) => {
+    const fetchFalso = vi.fn();
+    vi.stubGlobal("fetch", fetchFalso);
+    const { getByLabelText, getByRole, findByRole } = render(<TelaDaRegraPadrao atual={ATUAL} rotulos={ROTULOS} />);
+    fireEvent.change(getByLabelText(rotulo), { target: { value: "" } });
+    fireEvent.click(getByRole("button", { name: SALVAR_REGRA }));
+    expect((await findByRole("alert")).textContent).toBe(FALTA_UM_DOS_QUATRO);
+    expect(fetchFalso).not.toHaveBeenCalled();
   });
 
   it("a recusa com frase aparece na tela", async () => {

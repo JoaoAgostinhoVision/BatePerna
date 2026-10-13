@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from "react";
 import { SEVERIDADES, type Severidade } from "@/lib/severidade";
 import type { RegraPadrao } from "@/lib/regra-padrao";
+import { FALTA_UM_DOS_QUATRO } from "./campos/EditorCalibrar";
 import { ERRO_GRAVAR, ERRO_REDE } from "./campos/gravar";
 import { SALVANDO } from "./campos/palavras";
 
@@ -29,6 +30,14 @@ export default function TelaDaRegraPadrao({ atual, rotulos }: { atual: RegraPadr
   async function salvar(e: FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
     if (indo) return;
+    // 🔴 Caixa vazia vira `Number("") === 0`, e aqui zero é regra VÁLIDA (cada
+    // janela pode ser 0 sozinha): a caixa apagada pra redigitar gravaria, sem
+    // frase, uma regra que ninguém escolheu (I4 da revisão final). A guarda e a
+    // frase são as do `EditorCalibrar`: vazio para aqui, sem chamar a rota.
+    if ([prev, pass, limiar].some((v) => v.trim() === "")) {
+      setErro(FALTA_UM_DOS_QUATRO);
+      return;
+    }
     setErro(null);
     setIndo(true);
     try {
