@@ -9,6 +9,7 @@ import { conferirLugar, criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
 import { versaoAtual } from "@/lib/db";
 import { ETIQUETA_NAO_CONFERIDO } from "@/lib/origem";
 import { MANDAR_UM_LUGAR_NOVO } from "@/app/contribuir/palavras";
+import { PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
 import { bancoDeProducao, semearAcervo, semearLugarDaPessoa } from "../banco";
 import { OUTRA, PESSOA, sessao } from "../sessao-da-pessoa";
 
@@ -231,6 +232,24 @@ describe("editar o dela no ar", () => {
     const { container } = render(await Editar({ params: Promise.resolve({ slug: SLUG }) }));
     expect(container.textContent).toContain(JA_CONFERIDO);
     expect(container.querySelector("[data-testid^='pergunta-']")).toBeNull();
+  });
+
+  // M9 da revisão final: banco pendurado não segura a página — o prazo das
+  // irmãs (`/contribuir/novo`, `/admin/novo/publicar`), e o estouro é ERRO,
+  // não "não existe". `lugarDoDono` lê num `batch`; a porta (`estaBloqueado`)
+  // lê por `execute`, que fica livre.
+  it("banco pendurado na leitura do lugar: a página dá erro, não monta tela", async () => {
+    const pendura = vi.spyOn(banco, "batch").mockReturnValue(new Promise(() => {}) as never);
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const pagina = Editar({ params: Promise.resolve({ slug: SLUG }) });
+      const pegou = expect(pagina).rejects.toThrow("não respondeu a tempo");
+      for (let i = 0; i < 5; i++) await vi.advanceTimersByTimeAsync(PRAZO_FICHA_MS);
+      await pegou;
+    } finally {
+      vi.useRealTimers();
+      pendura.mockRestore();
+    }
   });
 
   it("de OUTRA pessoa, ou do João: 404", async () => {
