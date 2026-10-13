@@ -69,15 +69,17 @@ const SEM_LUGAR: Record<string, string> = {
 };
 
 /** Como cada página pública é aberta com o lugar da pessoa no acervo. Página
- *  pública NOVA sem linha aqui deixa o primeiro caso vermelho. */
-const RENDERIZAR: Record<string, () => Promise<HTMLElement>> = {
+ *  pública NOVA sem linha aqui deixa o primeiro caso vermelho. `slug` só pesa
+ *  na página de UM lugar (`[slug]`): o padrão é o dela; o caso "nenhum lugar
+ *  do João leva a marca" a abre num lugar do João. */
+const RENDERIZAR: Record<string, (slug?: string) => Promise<HTMLElement>> = {
   "page.tsx": async () => render(await (await import("@/app/page")).default()).container,
   "trilhas/page.tsx": async () => render(await (await import("@/app/trilhas/page")).default()).container,
   "not-found.tsx": async () => render(await (await import("@/app/not-found")).default()).container,
-  "[slug]/page.tsx": async () =>
+  "[slug]/page.tsx": async (slug = SLUG) =>
     render(
       await (await import("@/app/[slug]/page")).default({
-        params: Promise.resolve({ slug: SLUG }),
+        params: Promise.resolve({ slug }),
         searchParams: Promise.resolve({}),
       }),
     ).container,
@@ -126,9 +128,17 @@ describe("a invariante: lugar não conferido nunca aparece sem a marca", () => {
     expect(achadas.map(semMarca).filter((x) => x !== null)).toEqual([]);
   });
 
-  // O outro lado: a marca não vaza pros lugares do João.
+  // O outro lado: a marca não vaza pros lugares do João. 🔴 Teste #4 da
+  // revisão final: aberta no lugar DELA, a página de um lugar só não mostra
+  // lugar do João nenhum, e este caso era vácuo ali — uma faixa
+  // incondicional passava. Agora toda página é aberta num lugar do João (o
+  // `[slug]` na Rampa), e a não-vacuidade exige um lugar do João NA TELA.
   it.each(Object.keys(RENDERIZAR))("em %s, nenhum lugar do João leva a marca", async (pagina) => {
-    const tela = await RENDERIZAR[pagina]();
+    const tela = await RENDERIZAR[pagina]("rampa-do-pepe");
+    expect(
+      [...tela.querySelectorAll("[data-lugar]")].some((l) => l.getAttribute("data-lugar") !== SLUG),
+      `${pagina}: nenhum lugar do João apareceu — o caso não mediria nada`,
+    ).toBe(true);
     for (const m of tela.querySelectorAll('[data-marca="nao-conferido"]')) {
       expect(m.closest("[data-lugar]")?.getAttribute("data-lugar")).toBe(SLUG);
     }
