@@ -62,8 +62,16 @@ export type Colisao = {
  *  não há par a comparar —, e só a espera do gêmeo vale (quando o nome muda).
  *
  *  ⚠️ Esta conferência LÊ e depois a rota GRAVA — há janela entre as duas, ao
- *  contrário da porta do endereço (`criarRascunho`, uma consulta só). Aceita
- *  porque o painel tem um dono só; a normalização não cabe numa consulta SQL.
+ *  contrário da porta do endereço (`criarRascunho`, uma consulta só): a
+ *  normalização não cabe numa consulta SQL. Desde 07/10 MUITAS pessoas chamam
+ *  esta função (as rotas de quem usa), não só o dono do painel — a premissa
+ *  "um dono só" que a sustentava ficou falsa (M7 da revisão final). O risco
+ *  real segue pequeno: o par igual quase sempre vira o MESMO endereço, e o
+ *  `ON CONFLICT`/`NOT EXISTS` do statement que grava recusa o segundo. O que
+ *  a janela ainda deixa passar: o gêmeo de um lugar SEM cidade (a espera
+ *  dele é só desta leitura — o endereço difere, e o statement não o vê) e a
+ *  corrida com uma renomeação do João no meio (o par muda sem o endereço
+ *  mudar). Aceito por isso, não por haver um dono só.
  *
  *  🔴 DESDE 07/10 DEVOLVE O QUE COLIDIU, NÃO A FRASE (I3 da pré-auditoria): o
  *  painel fala por `fraseDoPainel`; a rota de quem usa responde frases só
