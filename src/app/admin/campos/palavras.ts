@@ -243,3 +243,13 @@ export const DESFAZER = "Desfazer";
 // PENDENTE: redação minha, o João ainda não leu
 export const NAO_CONFERIU =
   "Nada mudou: este lugar já foi conferido, não foi mandado por quem usa o app, ou mudou de endereço enquanto você olhava. Recarregue a página.";
+
+/** BLOQUEAR QUEM MANDOU (Task 15 da rodada de 07/10, spec Parte 3), no
+ *  `BotaoBloquear` da caixa da origem: dois toques pra bloquear (o 2º diz o
+ *  que acontece), um pra desbloquear. */
+// PENDENTE: redação minha, o João ainda não leu (o texto é o da spec de 07/10, Parte 3)
+export const BLOQUEAR = "Bloquear quem mandou";
+// PENDENTE: redação minha, o João ainda não leu
+export const BLOQUEAR_MESMO = "Bloquear mesmo? Todos os lugares dessa pessoa saem do ar, e ela não manda nem muda mais nada.";
+// PENDENTE: redação minha, o João ainda não leu (o texto é o da spec de 07/10, Parte 3)
+export const DESBLOQUEAR = "Desbloquear";

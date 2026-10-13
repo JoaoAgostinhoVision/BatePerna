@@ -99,6 +99,50 @@ export async function estaBloqueado(client: Client, id: string): Promise<boolean
   return r.rows.length > 0 && Number(r.rows[0].bloqueado) === 1;
 }
 
+/** BLOQUEAR QUEM MANDOU (spec de 07/10, Parte 3): numa transação, a pessoa
+ *  passa a bloqueada E cada lugar DELA que está no ar ganha uma versão nova
+ *  `oculto = 1` com o documento atual (append-only; conferidos inclusive — e
+ *  os que ela ainda edita, que a partir daqui o `LIVRE` recusa). Devolve
+ *  quantos lugares saíram do ar; os já escondidos não ganham versão repetida.
+ *  Quem nunca passou pela porta (sem linha) nasce bloqueado; quem já passou
+ *  TEM linha (`bloqueado = 0`), e é o `DO UPDATE` que a bloqueia — nome e
+ *  e-mail ficam.
+ *
+ *  O `rowsAffected` do `INSERT … SELECT` SEM `RETURNING` conta as linhas certas
+ *  no libsql 0.14 (medido na pré-auditoria de 07/10; o comentário de
+ *  `gravarRelatoDoLugar` mediu que é COM `RETURNING` que ele mente). Não ponha
+ *  `RETURNING` aqui. */
+export async function bloquearContribuidor(client: Client, id: string, agora: number): Promise<number> {
+  const rs = await client.batch(
+    [
+      {
+        sql: `INSERT INTO contribuidores (id, nome, email, bloqueado, criado_em) VALUES (?, NULL, NULL, 1, ?)
+              ON CONFLICT(id) DO UPDATE SET bloqueado = 1`,
+        args: [id, agora],
+      },
+      {
+        sql: `INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em, oculto)
+              SELECT v.ficha_slug, v.doc, 'painel', ?, 1
+                FROM ficha_versoes v
+               WHERE v.id IN (SELECT MAX(id) FROM ficha_versoes GROUP BY ficha_slug)
+                 AND v.oculto <> 1
+                 AND ${IDENTIDADE("v.ficha_slug")} IN (SELECT lugar FROM origem_do_lugar WHERE contribuidor = ?)`,
+        args: [agora, id],
+      },
+    ],
+    "write",
+  );
+  return rs[1].rowsAffected;
+}
+
+/** DESBLOQUEAR: só o bloqueio. Os lugares continuam escondidos até o João
+ *  mostrar cada um, pelo botão de visibilidade de sempre (spec, Parte 3).
+ *  `false` = não havia linha (nunca foi bloqueada nem passou pela porta). */
+export async function desbloquearContribuidor(client: Client, id: string): Promise<boolean> {
+  const r = await client.execute({ sql: `UPDATE contribuidores SET bloqueado = 0 WHERE id = ?`, args: [id] });
+  return r.rowsAffected === 1;
+}
+
 /** O rascunho DELA nasce — com a régua de `criarRascunho` (endereço livre nas
  *  duas tabelas, numa consulta só) e mais duas: é dela, e ela não está
  *  bloqueada. */

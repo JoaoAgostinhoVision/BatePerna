@@ -234,6 +234,24 @@ describe("PUT — responder", () => {
     expect((await rota.PUT(pedido("PUT", { slug: SLUG, campo: "promessa", valor: "Outra." }))).status).toBe(401);
     expect((await docDe()).promessa).toBe("Uma pedra.");
   });
+
+  // Review Focus 2 da Task 15: o bloqueio PELO ATO DO JOÃO (`bloquearContribuidor`,
+  // e não um UPDATE à mão como nos casos do fim do arquivo). A porta já
+  // registrou a pessoa (linha com `bloqueado = 0`): sem o `DO UPDATE SET
+  // bloqueado = 1` do bloquear, ela continuava livre e a gravação passava.
+  it("bloqueada no meio do formulário: 403 com a frase, e o rascunho não muda", async () => {
+    await rota.PUT(pedido("PUT", { slug: SLUG, campo: "promessa", valor: "Uma pedra." }));
+    const corrida = clienteQueIntercala(c, /^UPDATE ficha_rascunhos/, async () => {
+      const { bloquearContribuidor } = await import("@/lib/db-contribuidor");
+      await bloquearContribuidor(c, PESSOA.id, AGORA);
+    });
+    cli = corrida.cliente;
+    const res = await rota.PUT(pedido("PUT", { slug: SLUG, campo: "promessa", valor: "Outra." }));
+    expect(corrida.disparos()).toBe(1);
+    expect(res.status).toBe(403);
+    expect(await res.text()).toBe(BLOQUEADA);
+    expect((await docDe()).promessa).toBe("Uma pedra.");
+  });
 });
 
 describe("GET e DELETE", () => {
@@ -393,6 +411,19 @@ describe("o bloqueio que chega entre a porta e a gravação", () => {
     expect(res.status).toBe(403);
     expect(await res.text()).toBe(BLOQUEADA);
     expect(await rascunhoDeQualquerUm(c, SLUG)).not.toBeNull();
+  });
+
+  // O POST (Task 15, Step 5): o único ponto em que a rota ainda caía em "em
+  // uso" quando quem recusou foi o bloqueio. O `beforeEach` já começou um
+  // rascunho, então o pedido aqui é de OUTRO lugar, num endereço livre.
+  it("POST que começa: 403 com a frase de bloqueada, não a de em uso, e nada nasce", async () => {
+    const corrida = clienteQueIntercala(c, /^INSERT INTO ficha_rascunhos/, bloquear);
+    cli = corrida.cliente;
+    const res = await rota.POST(pedido("POST", { nome: "Pedra Segunda", cidade: "Cidade Teste" }));
+    expect(corrida.disparos(), "o dublê não disparou: o teste mediu o vazio").toBe(1);
+    expect(res.status).toBe(403);
+    expect(await res.text()).toBe(BLOQUEADA);
+    expect(await rascunhoDeQualquerUm(c, "pedra-segunda-cidade-teste")).toBeNull();
   });
 
   it("DELETE de quem já está bloqueada: 403 na porta, e o rascunho fica", async () => {

@@ -374,6 +374,27 @@ describe("/admin/[slug] — a porta e o conteúdo", () => {
     expect(caixa!.textContent).toContain("maria@teste.invalid");
     expect(caixa!.querySelector("time")?.getAttribute("datetime")).toBe(new Date((AGORA_SEMENTE + 30) * 1000).toISOString());
     expect(within(caixa!).getByRole("button", { name: CONFERI })).toBeTruthy();
+    // Task 15: a pessoa tem linha, livre — o botão é o de bloquear.
+    const { BLOQUEAR, DESBLOQUEAR } = await import("@/app/admin/campos/palavras");
+    expect(within(caixa!).getByRole("button", { name: BLOQUEAR })).toBeTruthy();
+    cleanup();
+
+    // 🔴 A PÁGINA passa `bloqueado` e `contribuidor` (Task 15). Sem este trecho,
+    // `bloqueado={false}` cravado na página, ou o id errado, passavam a suíte
+    // verde: o componente é provado puro em `admin-bloquear.test.tsx`.
+    await cliente.execute({ sql: "UPDATE contribuidores SET bloqueado = 1 WHERE id = ?", args: [PESSOA_DE_TESTE] });
+    const fetchFalso = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchFalso);
+    vi.stubGlobal("location", { ...window.location, reload: vi.fn() });
+    try {
+      const bloqueada = render(await Lugar({ params: Promise.resolve({ slug }) }));
+      const caixaB = bloqueada.container.querySelector(`[data-origem="${slug}"]`) as HTMLElement;
+      within(caixaB).getByRole("button", { name: DESBLOQUEAR }).click();
+      await vi.waitFor(() => expect(fetchFalso).toHaveBeenCalled());
+      expect(JSON.parse(fetchFalso.mock.calls[0][1].body)).toEqual({ id: PESSOA_DE_TESTE, bloquear: false });
+    } finally {
+      vi.unstubAllGlobals();
+    }
     cleanup();
 
     const doJoao = render(await Lugar({ params: Promise.resolve({ slug: SLUG_ESCONDIDO }) }));

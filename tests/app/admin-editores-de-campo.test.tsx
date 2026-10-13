@@ -43,9 +43,12 @@ import { CALIBRAR, CALIBRAR_AJUDA, FALTA_UM_DOS_QUATRO } from "@/app/admin/campo
 import { AVISO_PUBLICAR, AVISO_PUBLICAR_PESSOA, PUBLICANDO, PUBLICAR, TITULO_CALA, TITULO_FALTA } from "@/app/admin/TelaDePublicar";
 import {
   ALEM_DO_PROVEDOR,
+  BLOQUEAR,
+  BLOQUEAR_MESMO,
   CAIXA_VAZIA,
   COM_ESTE_NUMERO,
   DE_VOLTA_AO_AR,
+  DESBLOQUEAR,
   DESFAZER,
   ESCONDER,
   ESCONDIDO,
@@ -1424,6 +1427,12 @@ describe("Os editores servem os três lugares", () => {
    *  enumerador encolher e NÃO pega uma frase nova que ninguém pôs aqui. O
    *  portão de completude dele próprio é o caso logo abaixo. */
   const CUNHADAS_AQUI = [
+    // Task 15 (07/10): bloquear quem mandou. Só na caixa da origem de um lugar
+    // mandado por quem usa — nenhuma das três fichas —, e o "mesmo?" só depois
+    // do 1º toque.
+    BLOQUEAR,
+    BLOQUEAR_MESMO,
+    DESBLOQUEAR,
     // Task 7 (07/10): a tela da regra padrão. Moram em /admin/chuva, fora do
     // render das três fichas.
     SALVAR_REGRA,

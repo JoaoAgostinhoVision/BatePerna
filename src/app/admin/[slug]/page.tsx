@@ -181,7 +181,9 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
           — editores, esconder, aviso, voltar, trocar o endereço, conferir. Ver
           `VersaoDaTela`, em `../campos/gravar`. */}
       <ComVersaoDaTela id={versaoId}>
-        {/* QUEM MANDOU, e o "Conferi" (Task 6 da rodada de 07/10). A data é o
+        {/* QUEM MANDOU, o "Conferi" (Task 6 da rodada de 07/10) e o "Bloquear
+            quem mandou" (Task 15 — `bloqueado` da linha dela em `contribuidores`;
+            sem linha, ela não está bloqueada). A data é o
             `criado_em` da versão 1 — a ÚLTIMA do histórico, que vem do mais novo
             pro mais velho. Histórico ilegível chega vazio: sem data honesta,
             `null`, e a caixa cala o <time>. */}
@@ -192,6 +194,8 @@ export default async function Lugar({ params }: { params: Promise<{ slug: string
             email={quemMandou?.email ?? null}
             mandadoEm={historicoErro ? null : (linhas.at(-1)?.criado_em ?? null)}
             conferido={doDono.origem.conferido}
+            contribuidor={doDono.origem.contribuidor}
+            bloqueado={quemMandou?.bloqueado ?? false}
           />
         )}
         <PainelAdmin ficha={noAr} leitura={leitura} aviso={aviso} avisoErro={avisoErro} agora={agora} />

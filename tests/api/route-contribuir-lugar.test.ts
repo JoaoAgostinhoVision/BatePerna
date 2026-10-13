@@ -203,3 +203,29 @@ describe("PUT /api/contribuir/lugar", () => {
     expect((await PUT(pedido({ slug: SLUG, baseId: await base(), campo: "acesso", naoSei: true }))).status).toBe(400);
   });
 });
+
+// 🔴 O BLOQUEAR DO JOÃO (Task 15) sobre o lugar que ela ainda EDITA (não
+// conferido): ele sai do ar, ela não o muda mais, e o desbloquear não o traz
+// de volta — nem a edição dela depois de desbloqueada (a versão dela herda o
+// `oculto` da anterior: esconder é do João, e editar não devolve ao ar).
+describe("o lugar dela depois do bloquear e do desbloquear", () => {
+  it("bloqueada: o lugar sai do ar e a edição é 403; desbloqueada: ela edita, e o lugar continua escondido", async () => {
+    const { bloquearContribuidor, desbloquearContribuidor } = await import("@/lib/db-contribuidor");
+    // A porta registra a pessoa: a linha existe, livre — o caso que só o `DO UPDATE` bloqueia.
+    expect((await PUT(pedido({ slug: SLUG, baseId: await base(), campo: "acesso", valor: "De moto." }))).status).toBe(200);
+    expect(await bloquearContribuidor(c, PESSOA.id, AGORA + 1)).toBe(1);
+    expect((await versaoAtual(c, SLUG))!.oculto).toBe(true);
+
+    const res = await PUT(pedido({ slug: SLUG, baseId: await base(), campo: "acesso", valor: "De bicicleta." }));
+    expect(res.status).toBe(403);
+    expect(await res.text()).toBe(BLOQUEADA);
+    expect(await versoes()).toBe(3);
+
+    expect(await desbloquearContribuidor(c, PESSOA.id)).toBe(true);
+    expect((await versaoAtual(c, SLUG))!.oculto, "desbloquear trouxe o lugar de volta").toBe(true);
+    expect((await PUT(pedido({ slug: SLUG, baseId: await base(), campo: "acesso", valor: "De bicicleta." }))).status).toBe(200);
+    const agora = (await versaoAtual(c, SLUG))!;
+    expect(JSON.parse(agora.doc).acesso).toBe("De bicicleta.");
+    expect(agora.oculto, "a edição dela depois do desbloquear devolveu o lugar ao ar").toBe(true);
+  });
+});

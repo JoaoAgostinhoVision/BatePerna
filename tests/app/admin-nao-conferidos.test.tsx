@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import SecaoNaoConferidos, { TITULO_NAO_CONFERIDOS } from "@/app/admin/SecaoNaoConferidos";
 import CaixaDaOrigem, { CONFERI, CONFERI_MESMO } from "@/app/admin/CaixaDaOrigem";
 import { ComVersaoDaTela } from "@/app/admin/campos/gravar";
+import { BLOQUEAR, DESBLOQUEAR } from "@/app/admin/campos/palavras";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
@@ -38,7 +39,7 @@ describe("a caixa da origem, no lugar", () => {
     vi.stubGlobal("location", { ...window.location, reload: recarregar });
     const { getByRole } = render(
       <ComVersaoDaTela id={77}>
-        <CaixaDaOrigem slug={UM.slug} quem="Maria Teste" email={null} mandadoEm={UM.mandadoEm} conferido={false} />
+        <CaixaDaOrigem slug={UM.slug} quem="Maria Teste" email={null} mandadoEm={UM.mandadoEm} conferido={false} contribuidor="user_x" bloqueado={false} />
       </ComVersaoDaTela>,
     );
     fireEvent.click(getByRole("button", { name: CONFERI }));
@@ -50,17 +51,27 @@ describe("a caixa da origem, no lugar", () => {
     expect(JSON.parse(init.body)).toEqual({ slug: UM.slug, baseId: 77 });
   });
 
-  it("lugar já conferido: a caixa diz quem mandou, e não tem botão", () => {
-    const { container } = render(
-      <CaixaDaOrigem slug={UM.slug} quem="Maria Teste" email={null} mandadoEm={UM.mandadoEm} conferido={true} />,
+  // Desde a Task 15 a caixa tem o "Bloquear quem mandou" em TODO estado
+  // (bloquear esconde os conferidos também): o que some com o lugar conferido
+  // é só o "Conferi".
+  it("lugar já conferido: a caixa diz quem mandou, sem o Conferi — e o Bloquear fica", () => {
+    const { container, getAllByRole } = render(
+      <CaixaDaOrigem slug={UM.slug} quem="Maria Teste" email={null} mandadoEm={UM.mandadoEm} conferido={true} contribuidor="user_x" bloqueado={false} />,
     );
     expect(container.textContent).toContain("Maria Teste");
-    expect(container.querySelector("button")).toBeNull();
+    expect(getAllByRole("button").map((b) => b.textContent)).toEqual([BLOQUEAR]);
+  });
+
+  it("quem mandou já bloqueada: a caixa oferece o Desbloquear", () => {
+    const { getAllByRole } = render(
+      <CaixaDaOrigem slug={UM.slug} quem="Maria Teste" email={null} mandadoEm={UM.mandadoEm} conferido={false} contribuidor="user_x" bloqueado={true} />,
+    );
+    expect(getAllByRole("button").map((b) => b.textContent)).toEqual([CONFERI, DESBLOQUEAR]);
   });
 
   it("sem data (histórico ilegível), o <time> cala", () => {
     const { container } = render(
-      <CaixaDaOrigem slug={UM.slug} quem="Maria Teste" email={null} mandadoEm={null} conferido={true} />,
+      <CaixaDaOrigem slug={UM.slug} quem="Maria Teste" email={null} mandadoEm={null} conferido={true} contribuidor="user_x" bloqueado={false} />,
     );
     expect(container.querySelector("time")).toBeNull();
   });
@@ -68,7 +79,7 @@ describe("a caixa da origem, no lugar", () => {
   it("409 mostra a frase da porta", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Frase da porta.", { status: 409 })));
     const { getByRole, findByRole } = render(
-      <CaixaDaOrigem slug={UM.slug} quem={null} email={null} mandadoEm={UM.mandadoEm} conferido={false} />,
+      <CaixaDaOrigem slug={UM.slug} quem={null} email={null} mandadoEm={UM.mandadoEm} conferido={false} contribuidor="user_x" bloqueado={false} />,
     );
     fireEvent.click(getByRole("button", { name: CONFERI }));
     fireEvent.click(getByRole("button", { name: CONFERI_MESMO }));

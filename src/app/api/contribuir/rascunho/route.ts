@@ -72,9 +72,11 @@ export async function POST(req: Request): Promise<Response> {
   if (await criarRascunhoDaPessoa(getClient(), slug, docDoLugarNovo(slug, nome, cidade), agora, porta.pessoa.id)) {
     return Response.json({ slug }, { status: 201, headers: SEM_CACHE });
   }
-  // Endereço de um lugar, de um rascunho de outro, ou endereço antigo: o
-  // banco recusou, e a frase é a dela. (A Task 15 põe antes daqui a
-  // conferência do bloqueio.)
+  // O banco recusou. 🔴 O bloqueio PRIMEIRO (Task 15): o João bloqueou entre
+  // a porta e o INSERT, e o `LIVRE` derrubou — o endereço pode estar livre.
+  // Senão, endereço de um lugar, de um rascunho de outro, ou endereço antigo:
+  // a frase é a dela.
+  if (await estaBloqueado(getClient(), porta.pessoa.id)) return bloqueada();
   return emUso();
 }
 

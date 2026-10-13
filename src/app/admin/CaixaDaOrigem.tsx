@@ -1,5 +1,6 @@
 "use client";
 import { useContext, useRef, useState } from "react";
+import BotaoBloquear from "./BotaoBloquear";
 import { ERRO_GRAVAR, ERRO_REDE, VersaoDaTela, comBase } from "./campos/gravar";
 import { quandoRecife } from "./SecaoNaoConferidos";
 
@@ -20,10 +21,18 @@ export const CONFERI_MESMO = "Conferi mesmo? A marca sai do ar, e quem mandou n�
  *  ainda vê o `indo` velho. Aqui um 2º POST seria só um 409 inofensivo (o
  *  `UPDATE` exige `conferido <> 1`), mas a frase do 409 apareceria por cima de
  *  um sucesso. Na recusa, a frase é a da PORTA (`NAO_CONFERIU`); corpo vazio
- *  (sessão vencida, corpo torto) cai no `ERRO_GRAVAR` do painel. */
+ *  (sessão vencida, corpo torto) cai no `ERRO_GRAVAR` do painel.
+ *
+ *  O "Bloquear quem mandou" (Task 15) mora aqui também, depois do "Conferi", e
+ *  aparece com o lugar conferido ou não: bloquear esconde TODOS os lugares
+ *  dela, conferidos inclusive. `contribuidor` é o id de quem mandou (de
+ *  `origem_do_lugar`); `bloqueado`, a linha dela em `contribuidores`. */
 export default function CaixaDaOrigem({
-  slug, quem, email, mandadoEm, conferido,
-}: { slug: string; quem: string | null; email: string | null; mandadoEm: number | null; conferido: boolean }) {
+  slug, quem, email, mandadoEm, conferido, contribuidor, bloqueado,
+}: {
+  slug: string; quem: string | null; email: string | null; mandadoEm: number | null; conferido: boolean;
+  contribuidor: string; bloqueado: boolean;
+}) {
   const baseId = useContext(VersaoDaTela);
   const [confirmando, setConfirmando] = useState(false);
   const [indo, setIndo] = useState(false);
@@ -61,6 +70,7 @@ export default function CaixaDaOrigem({
         </button>
       )}
       {erro && <p className="adm-erro" role="alert">{erro}</p>}
+      <BotaoBloquear contribuidor={contribuidor} bloqueado={bloqueado} />
     </section>
   );
 }
