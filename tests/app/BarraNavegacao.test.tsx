@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { render, cleanup } from "@testing-library/react";
-import BarraNavegacao from "@/app/BarraNavegacao";
+import BarraNavegacao, { MANDAR_UM_LUGAR } from "@/app/BarraNavegacao";
 import { paddingLado, regraDe, semComentarios, valorDe } from "../css";
 
 afterEach(() => { cleanup(); });
@@ -30,10 +30,29 @@ const ficha = () => semComentarios("ficha.css");
 
 
 describe("BarraNavegacao", () => {
-  it("leva pra home e pro acervo, com âncora pura", () => {
+  it("leva pra home, pro acervo e pra lista de quem manda um lugar, com âncora pura", () => {
     const { container } = render(<BarraNavegacao aqui="hoje" />);
     const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
-    expect(hrefs).toEqual(["/", "/trilhas"]);
+    expect(hrefs).toEqual(["/", "/trilhas", "/contribuir"]);
+  });
+
+  // I5 da pré-auditoria: a barra leva à LISTA dela ("Meus lugares", que tem o
+  // "+ mandar um lugar novo" no topo) — e é por ela que as frases "volte pela sua
+  // lista de lugares" têm destino.
+  it("a entrada de quem quer mandar um lugar leva à lista dela, /contribuir", () => {
+    const { container } = render(<BarraNavegacao aqui="hoje" />);
+    const a = container.querySelector('a[href="/contribuir"]');
+    expect(a?.textContent).toContain(MANDAR_UM_LUGAR);
+    expect(container.querySelector('a[href="/contribuir/novo"]')).toBeNull();
+  });
+
+  // Não é uma "seção" do app: nunca é marcada como o lugar onde se está.
+  it("o item de mandar um lugar nunca leva aria-current", () => {
+    for (const aqui of ["hoje", "trilhas"] as const) {
+      const { container } = render(<BarraNavegacao aqui={aqui} />);
+      expect(container.querySelector('a[href="/contribuir"]')?.hasAttribute("aria-current")).toBe(false);
+      cleanup();
+    }
   });
 
   it("marca onde você está, e só pra quem lê a tela também", () => {
@@ -42,9 +61,9 @@ describe("BarraNavegacao", () => {
     expect(atual?.getAttribute("href")).toBe("/trilhas");
   });
 
-  it("não tem aba morta: só Hoje e Trilhas até a memória existir", () => {
+  it("não tem aba morta: só Hoje, Trilhas e o mandar um lugar até a memória existir", () => {
     const { container } = render(<BarraNavegacao aqui="hoje" />);
-    expect(container.querySelectorAll("a")).toHaveLength(2);
+    expect(container.querySelectorAll("a")).toHaveLength(3);
     expect(container.textContent).not.toContain("Minhas");
   });
 

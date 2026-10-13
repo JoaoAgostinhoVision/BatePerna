@@ -138,7 +138,8 @@ describe("o slug sai do NOME", () => {
   });
 
   // 🔴 LISTA À MÃO, VIGIADA PELO DISCO: todo segmento estático de rota que um
-  // slug alcançaria (`/<slug>` e `/admin/<slug>`) tem de estar reservado. Um
+  // slug alcançaria (`/<slug>`, `/admin/<slug>` e, desde 07/10, o editar dela
+  // em `/contribuir/<slug>`) tem de estar reservado. Um
   // lugar chamado "Trilhas" teria a ficha pública atrás da página do acervo, e um
   // chamado "Novo" teria o painel atrás do formulário — os dois inalcançáveis.
   //
@@ -156,7 +157,7 @@ describe("o slug sai do NOME", () => {
         .filter((e) => e.isDirectory() && !/^[[(@_]/.test(e.name))
         .filter((e) => abreUrl(path.join(process.cwd(), "src", "app", dir, e.name)))
         .map((e) => e.name);
-    const rotas = [...new Set([...estaticos(""), ...estaticos("admin")])];
+    const rotas = [...new Set([...estaticos(""), ...estaticos("admin"), ...estaticos("contribuir")])];
     expect(rotas, "a premissa: o disco foi lido").toContain("admin");
     expect([...SLUGS_RESERVADOS].sort()).toEqual(rotas.sort());
   });

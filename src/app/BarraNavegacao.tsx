@@ -6,7 +6,14 @@
  *  disputaria espaço com o carimbo e com o "Fui". A saída da ficha continua
  *  sendo a marca no canto.
  *
- *  Âncora pura, como todo link deste app: não existe navegação soft aqui. */
+ *  Âncora pura, como todo link deste app: não existe navegação soft aqui.
+ *
+ *  E desde 07/10 um terceiro item, que não é seção: a lista de quem manda um
+ *  lugar (`/contribuir`), de onde ela manda um novo. */
+
+// PENDENTE: redação minha, o João ainda não leu (o texto é o da spec de 07/10, Parte 1)
+export const MANDAR_UM_LUGAR = "+ mandar um lugar";
+
 export default function BarraNavegacao({ aqui }: { aqui: "hoje" | "trilhas" }) {
   const destinos = [
     { chave: "hoje", href: "/", ic: "🧭", rotulo: "Hoje" },
@@ -26,6 +33,10 @@ export default function BarraNavegacao({ aqui }: { aqui: "hoje" | "trilhas" }) {
           {d.rotulo}
         </a>
       ))}
+      {/* Link comum, sem `aria-current`: não é uma "seção" do app (sem sessão,
+          o Clerk pede login — spec, Parte 1). Leva à LISTA dela, que tem o
+          "+ mandar um lugar novo" no topo (I5 da pré-auditoria). */}
+      <a className="barra-item barra-mandar" href="/contribuir">{MANDAR_UM_LUGAR}</a>
     </nav>
   );
 }

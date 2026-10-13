@@ -143,3 +143,17 @@ describe("service worker: os tiles do painel não vão pro cache offline", () =>
     expect(SW.match(/cacheName: "bp-tiles/g)).toHaveLength(1);
   });
 });
+
+/** 🔴 /contribuir (07/10): a tela de quem manda um lugar, logada pelo Clerk.
+ *  Mesma razão e mesmo molde do /admin acima — a ordem E o handler. */
+describe("service worker: /contribuir nunca vira cache", () => {
+  it("a rota do /contribuir vem antes de ...defaultCache, e responde com NetworkOnly", () => {
+    const bloco = SW.slice(SW.indexOf("runtimeCaching:"));
+    expect(bloco.indexOf('"/contribuir"')).toBeGreaterThan(-1);
+    expect(bloco.indexOf('"/contribuir"')).toBeLessThan(bloco.indexOf("...defaultCache"));
+    expect(bloco).toMatch(
+      /matcher: \(\{ url \}\) => url\.pathname\.startsWith\("\/contribuir"\),\s*handler: new NetworkOnly\(\),/,
+    );
+    expect(bloco.match(/startsWith\("\/contribuir"\)/g)).toHaveLength(1);
+  });
+});

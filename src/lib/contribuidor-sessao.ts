@@ -1,10 +1,12 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 
-/** 🔴 A ÚNICA PORTA DO APP PRO CLERK (spec de 07/10, "Login"). O Clerk cuida SÓ
+/** 🔴 A ÚNICA PORTA DO APP PRA SABER QUEM ESTÁ LOGADO (spec de 07/10, "Login"). O Clerk cuida SÓ
  *  de quem contribui; o painel do João continua com a senha dele, e as telas
- *  públicas não têm login. Nenhum outro arquivo de `src/` importa `@clerk/*` —
- *  `tests/lib/clerk-so-numa-porta.test.ts` trava isso —, e os testes dublam
- *  ESTE módulo: nenhuma chave real roda na suíte. */
+ *  públicas não têm login. Além daqui, só dois arquivos de `src/` importam
+ *  `@clerk/*`: o `src/middleware.ts` (que deixa a sessão legível) e o layout
+ *  de `/contribuir` (o `<ClerkProvider>` que renova a sessão no navegador
+ *  dela — ruling da Task 14). Nenhum outro: `tests/lib/clerk-so-numa-porta.test.ts`
+ *  trava isso. Os testes dublam ESTE módulo: nenhuma chave real roda na suíte. */
 
 export type QuemContribui = { id: string; nome: string | null; email: string | null };
 

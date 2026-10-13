@@ -1,5 +1,5 @@
 /** Rotas de um segmento que NÃO são ficha. Se nascer outra, entra aqui. */
-const RESERVADOS = new Set(["trilhas", "icones", "admin"]);
+const RESERVADOS = new Set(["trilhas", "icones", "admin", "contribuir"]);
 
 /** O caminho parece uma ficha? Puro string, sem fs: é tudo o que o service
  *  worker consegue saber pra decidir se a navegação é dele. "Parece" é o

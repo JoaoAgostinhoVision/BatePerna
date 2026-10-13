@@ -36,11 +36,12 @@ export function slugDoNome(nome: string): string {
  *  uma delas POR CONSTRUÇÃO: o endereço é sempre nome + cidade, os dois com
  *  letra, então tem sempre um hífen no meio — e nenhuma tela tem. A lista fica
  *  como a prova disso, e por isso é VIGIADA PELO DISCO: o teste
- *  `route-admin-rascunho.test.ts` lê as pastas de `src/app` e de
- *  `src/app/admin` e exige esta lista igual, nas duas direções, e um outro caso
+ *  `route-admin-rascunho.test.ts` lê as pastas de `src/app`, de `src/app/admin`
+ *  e de `src/app/contribuir` (o editar dela mora em `/contribuir/<slug>`) e
+ *  exige esta lista igual, nas duas direções, e um outro caso
  *  exige que nenhuma tenha hífen. Pasta de rota nova sem reserva, ou com hífen,
  *  fica vermelha. */
-export const SLUGS_RESERVADOS: readonly string[] = ["admin", "api", "chuva", "icones", "trilhas", "novo"];
+export const SLUGS_RESERVADOS: readonly string[] = ["admin", "api", "chuva", "contribuir", "icones", "trilhas", "novo"];
 
 /** O nome com a cidade entre parênteses, quando há cidade — é como uma frase do
  *  painel distingue dois lugares de mesmo nome. Sem cidade, só o nome: nunca

@@ -85,6 +85,15 @@ const serwist = new Serwist({
       handler: new NetworkOnly(),
     },
     {
+      // 🔴 /contribuir também nunca vira cache (07/10): é a tela de quem
+      // manda um lugar, logada pelo Clerk — uma cópia guardada mostraria a
+      // lista de uma pessoa a quem abrir o celular dela depois de sair, e
+      // perguntas de um rascunho que já foi publicado. Mesma razão e mesmo
+      // lugar do /admin, logo acima.
+      matcher: ({ url }) => url.pathname.startsWith("/contribuir"),
+      handler: new NetworkOnly(),
+    },
+    {
       // Tiles do mapa. A janela que pediu decide: a do painel vai só pela rede,
       // as outras pelo cache de sempre. O `Referer` não serve pra isso — pra
       // outra origem o navegador manda só a origem, sem o caminho —, e por isso

@@ -50,4 +50,9 @@ describe("ehCaminhoDeFicha", () => {
     expect(ehCaminhoDeFicha("/admin")).toBe(false);
     expect(ehNavegacaoNossa("/admin")).toBe(false);
   });
+
+  // 07/10: a lista de quem manda um lugar também não é ficha.
+  it("/contribuir NAO e ficha", () => {
+    expect(ehCaminhoDeFicha("/contribuir")).toBe(false);
+  });
 });
