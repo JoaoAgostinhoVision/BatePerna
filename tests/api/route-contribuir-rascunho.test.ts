@@ -104,6 +104,24 @@ describe("a porta: sessão, Clerk, bloqueio", () => {
     expect(await apagar.text()).toBe(CLERK_FORA);
   });
 
+  // 🔴 I1 DA REVISÃO DA TASK 18: a outra direção da irmã. O caso de cima prova
+  // que o GET (que só abre) não diz a de gravar; este prova que NENHUM handler
+  // que grava diz a de abrir ("tente de novo daqui a pouco" sem "Nada foi
+  // gravado" mentiria por omissão a quem acabou de escrever). Antes dele, o
+  // `"gravar"` → `"abrir"` no PUT sobrevivia à suíte inteira (medido pelo
+  // revisor). Um corpo que a rota aceitaria, pra que só a porta responda.
+  it.each([
+    ["POST", () => rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }))],
+    ["PUT", () => rota.PUT(pedido("PUT", { slug: "qualquer", campo: "promessa", valor: "Uma pedra." }))],
+    ["DELETE", () => rota.DELETE(pedido("DELETE", { slug: "qualquer" }))],
+  ] as const)("Clerk fora no %s (que grava): 503 com CLERK_FORA, nunca a frase de abrir", async (_metodo, chamar) => {
+    sessao.fora = true;
+    const res = await chamar();
+    expect(res.status).toBe(503);
+    expect(await res.text()).toBe(CLERK_FORA);
+    expect(await total()).toBe(0);
+  });
+
   it("bloqueada: 403 com a frase, e nada nasce", async () => {
     await c.execute({ sql: "INSERT INTO contribuidores (id, bloqueado, criado_em) VALUES (?, 1, ?)", args: [PESSOA.id, AGORA] });
     const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }));

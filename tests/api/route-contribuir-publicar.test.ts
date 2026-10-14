@@ -2,7 +2,7 @@ import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { enderecoNovoDe, lerAcervoComOrigem, publicarRascunho, versaoAtual } from "@/lib/db";
 import { criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
-import { BLOQUEADA, FALTA_DA_PESSOA, FRASE_DA_PESSOA, JA_NO_AR_DA_PESSOA, NOME_JA_EM_USO } from "@/lib/porta-da-pessoa";
+import { BLOQUEADA, CLERK_FORA, FALTA_DA_PESSOA, FRASE_DA_PESSOA, JA_NO_AR_DA_PESSOA, NOME_JA_EM_USO } from "@/lib/porta-da-pessoa";
 import { RASCUNHO_MUDOU, SLUG_DE_DENTRO } from "@/lib/porta-de-publicar";
 import { TEXTO_LONGO_DEMAIS_NO_PUBLICAR } from "@/lib/campos-da-pessoa";
 import { clienteQueIntercala, rascunhoNoBanco, semearAcervo } from "../banco";
@@ -91,6 +91,19 @@ describe("POST /api/contribuir/publicar", () => {
     expect(await versaoAtual(c, SLUG)).toBeNull();
     const ok = await POST(pedido(await rascunho({ ...COMPLETO, promessa: "a".repeat(2000) })));
     expect(ok.status, await ok.clone().text()).toBe(200);
+  });
+
+  // 🔴 I1 DA REVISÃO DA TASK 18: publicar GRAVA, então o Clerk fora diz
+  // `CLERK_FORA` ("Nada foi gravado"), nunca a irmã de abrir. Antes deste
+  // caso, o `"gravar"` → `"abrir"` desta rota sobrevivia à suíte inteira.
+  it("Clerk fora: 503 com CLERK_FORA (a de gravar, não a de abrir), e nada vai ao ar", async () => {
+    const corpo = await rascunho();
+    sessao.fora = true;
+    const res = await POST(pedido(corpo));
+    expect(res.status).toBe(503);
+    expect(await res.text()).toBe(CLERK_FORA);
+    expect(await versaoAtual(c, SLUG)).toBeNull();
+    expect(await rascunhoNoBanco(c, CHAVE), "o rascunho fica").not.toBeNull();
   });
 
   it("rascunho de OUTRA pessoa: 404, e nada vai ao ar", async () => {
