@@ -8,6 +8,12 @@
 0 C · 0 I novos, 1 M de copy. Resíduos de comentário consertados por mim em `0e80697` (2938/2938, tsc 0, build 0 sem
 chave, mutar 42/0/0). Branch `painel-completo`, NADA no ar.
 
+🟢 **13/10, mais tarde: decisão 1 (I3) RESPONDIDA E FEITA** — *"rascunho não deve bloquear"* + "Nenhum ocupa": só lugar
+existente e endereço antigo ocupam nome. Task 17 `33f3778` + onda `38578d3` (revisão 0 C · 2 I · 2 M, todos tratados;
+2974/2974, tsc 0, build 0, mutar 42/0/0). Pacote republicado (52 frases, 7 alertas, decisões 2–5 abertas). Resíduo:
+2º publicar de OUTRA aba mostra "Não consegui salvar." (só fecha com frase dele). No deploy: conferir que o Turso devolve
+`SQLITE_CONSTRAINT*` na corrida (regex em `src/app/api/contribuir/publicar/route.ts:48`).
+
 **O pacote pro João está publicado: "Frases de quem manda" — https://claude.ai/artifact/3AhYyqJ1C62UpaN7HKcwm1**
 (fonte `_bmad-output/planning-artifacts/bateperna-frases-de-quem-manda.html`, gerada por script a partir do texto
 ATUAL do código; banco do artifact, coleção `respostas`). 55 frases (as 51 da Task 16 + 4 nascidas na onda), 8 com
