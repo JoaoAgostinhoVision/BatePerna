@@ -2,7 +2,27 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 13/10 (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — PARADA DE 13/10, NOITE (vence TUDO abaixo)
+
+**Ele parou: *"chega por hoje, vou continuar em próximas sessões"*.** Branch `painel-completo`, último commit de código
+`f5c14de`, árvore limpa. **A RODADA "lugar de quem usa" ESTÁ PRONTA PRO DEPLOY. Nada está no ar.**
+- Ele respondeu TODO o pacote "Frases de quem manda" (5 decisões + 52 frases) e duas dúvidas no chat. Feito:
+  Task 17 (nenhum rascunho ocupa nome, `33f3778`+`38578d3`) e Task 18 (onda de copy, `67d1e07`+`f5c14de`). Ambas
+  revisadas, ondas de fix feitas. Medido por mim no `f5c14de`: 2997/2997, tsc 0, build 0, mutar 42/0/0.
+- Clerk INSTALADO; chaves no Vercel (Prod/Preview/Dev) e no `.env.local` (Turso intacto). `pk_test_` = modo dev.
+- **Rodada própria, DEPOIS do deploy:** `d-401` — guardar no aparelho o texto dela antes de o 401 recarregar.
+
+→ **O PRIMEIRO PASSO:** `git status --short` limpo; `git log -1` = `f5c14de` (ou um docs depois dele). Então:
+1. Perguntar a ele: **o Google está ligado no painel do Clerk?** e **posso subir?** (deploy só com o ok dele).
+2. Com o ok — runbook (🔴 nesta ordem): `npm run semear` (cria as tabelas novas no Turso; sem elas a home e TODA ficha
+   caem) → UM `vercel --prod --yes` (1ª tentativa às vezes dá "fetch failed"; tentar de novo) → agente
+   `conferir-no-ar`: rota nova `/contribuir` responde; etiqueta/faixa num lugar mandado; Salvar dela >60 s depois de
+   abrir NÃO dá 401; a corrida dos dois rascunhos iguais dá 409 e não 500 (o regex `SQLITE_CONSTRAINT*` em
+   `src/app/api/contribuir/publicar/route.ts` contra o Turso real).
+3. Olho de tela no celular (barra com 3 itens a 375 px; etiqueta ao lado de nome longo; tracejado do pin).
+4. Depois: merge da branch no `main` (perguntar) e a rodada do `d-401`.
+
+## ▶ (histórico) 13/10, TARDE
 
 **O CÓDIGO DA RODADA "lugar de quem usa" ESTÁ FECHADO.** Re-revisão da onda (`final-rereview.md`): tudo endereçado,
 0 C · 0 I novos, 1 M de copy. Resíduos de comentário consertados por mim em `0e80697` (2938/2938, tsc 0, build 0 sem
