@@ -14,6 +14,12 @@ existente e endereço antigo ocupam nome. Task 17 `33f3778` + onda `38578d3` (re
 2º publicar de OUTRA aba mostra "Não consegui salvar." (só fecha com frase dele). No deploy: conferir que o Turso devolve
 `SQLITE_CONSTRAINT*` na corrida (regex em `src/app/api/contribuir/publicar/route.ts:48`).
 
+🟢 **13/10: CLERK INSTALADO** (ele aceitou os termos; eu rodei `vercel integration add clerk`). As duas chaves estão no projeto
+Vercel em Production/Preview/Development, e a CLI as escreveu em `.env.local` (MESCLOU: `TURSO_*` intactos, conferido por nome).
+Chave `pk_test_` = instância de DESENVOLVIMENTO do Clerk (faixa "development mode"; produção exige domínio próprio). A CLI
+trouxe também `SUPABASE_*`/`POSTGRES_*` de uma integração que já existia no projeto — não é do app. Falta DELE: conferir/ligar
+o Google no painel do Clerk. `.env.development.local` não é mais preciso.
+
 **O pacote pro João está publicado: "Frases de quem manda" — https://claude.ai/artifact/3AhYyqJ1C62UpaN7HKcwm1**
 (fonte `_bmad-output/planning-artifacts/bateperna-frases-de-quem-manda.html`, gerada por script a partir do texto
 ATUAL do código; banco do artifact, coleção `respostas`). 55 frases (as 51 da Task 16 + 4 nascidas na onda), 8 com
