@@ -59,8 +59,10 @@ export async function contribuidorPorId(client: Client, id: string): Promise<Con
  *  lugar não conferido é editável por quem mandou. Se ela grava entre a
  *  leitura dele e o toque, a versão da tela continua morando no endereço, e
  *  bastar morar conferiria um texto que o João nunca viu — a marca sairia do
- *  ar sobre ele. Toda gravação dele recarrega a tela, então o `baseId` dele só
- *  fica velho por gravação de OUTRA pessoa.
+ *  ar sobre ele. Toda gravação dele recarrega a própria tela, então com uma aba
+ *  só o `baseId` fica velho por gravação de OUTRA pessoa — mas um Salvar,
+ *  Calibrar, Esconder ou Bloquear dele em OUTRA aba também o envelhece, e
+ *  aí o 409 é dele, não de quem mandou (re-revisão da onda final).
  *
  *  🔴 Lugar do João não tem linha, então não há o que atualizar — e esta
  *  função NUNCA cria linha: conferir não é dizer de onde o lugar veio. */

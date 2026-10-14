@@ -3,7 +3,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { clerkConfigurado } from "@/lib/clerk-configurado";
 
 /** O CLERK NO NAVEGADOR, SÓ NAS TELAS DE QUEM MANDA UM LUGAR (ruling do
- *  controlador na Task 14, por cima da decisão "Clerk sem `<ClerkProvider>`"
+ *  controlador na revisão da Task 13, feito na Task 14, por cima da decisão "Clerk sem `<ClerkProvider>`"
  *  do plano, e SÓ aqui).
  *
  *  🔴 POR QUÊ: a sessão do Clerk vive ~60 s. O `clerkMiddleware` só a renova
