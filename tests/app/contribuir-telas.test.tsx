@@ -4,7 +4,7 @@ import { ORDEM_DA_PESSOA, montarPerguntasDaPessoa } from "@/app/contribuir/pergu
 import { CAMPOS_DA_PESSOA, OPCIONAIS_DA_PESSOA } from "@/lib/campos-da-pessoa";
 import { PERGUNTAS } from "@/app/admin/novo/perguntas";
 import { NAO_TEM } from "@/app/admin/campos/BotaoNaoSei";
-import { BLOQUEADA, CLERK_FORA, JA_CONFERIDO } from "@/lib/porta-da-pessoa";
+import { BLOQUEADA, CLERK_FORA_AO_ABRIR, JA_CONFERIDO_AO_ABRIR } from "@/lib/porta-da-pessoa";
 import { conferirLugar, criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
 import { versaoAtual } from "@/lib/db";
 import { ETIQUETA_NAO_CONFERIDO } from "@/lib/origem";
@@ -85,8 +85,24 @@ describe("a porta das páginas", () => {
   it("Clerk fora: a frase, e nada mais", async () => {
     sessao.fora = true;
     const { container } = render(await Meus());
-    expect(container.textContent).toContain(CLERK_FORA);
+    expect(container.textContent).toContain(CLERK_FORA_AO_ABRIR);
     expect(container.querySelector("a[href='/contribuir/novo']")).toBeNull();
+  });
+
+  // 🔴 A ONDA DE COPY DE 13/10: ao só ABRIR uma tela dela, ninguém tentou
+  // gravar — "Nada foi gravado" sobrava. As QUATRO páginas passam pela mesma
+  // porta (`quemNaTela`), e cada uma é aberta aqui: a irmã de abrir
+  // (`CLERK_FORA_AO_ABRIR`), nunca a de gravar (`CLERK_FORA`, das rotas).
+  it.each([
+    ["/contribuir", () => Meus()],
+    ["/contribuir/novo", () => Novo({ searchParams: Promise.resolve({}) })],
+    ["/contribuir/novo/publicar", () => Publicar({ searchParams: Promise.resolve({ slug: "qualquer" }) })],
+    ["/contribuir/[slug]", () => Editar({ params: Promise.resolve({ slug: "qualquer" }) })],
+  ] as const)("Clerk fora, só abrindo %s: a frase de abrir, sem 'Nada foi gravado'", async (_, abrir) => {
+    sessao.fora = true;
+    const { container } = render(await abrir());
+    expect(container.textContent).toBe(CLERK_FORA_AO_ABRIR);
+    expect(container.textContent).not.toContain("Nada foi gravado");
   });
 
   it("bloqueada: a frase, e nenhum caminho pra mandar nem editar", async () => {
@@ -274,10 +290,13 @@ describe("editar o dela no ar", () => {
     });
   });
 
-  it("conferido: a frase, e nenhum editor", async () => {
+  // Onda de copy de 13/10: só ABRIR a tela não é tentar gravar — a irmã de
+  // abrir (`JA_CONFERIDO_AO_ABRIR`), sem o "Nada foi gravado" do PUT.
+  it("conferido: a frase de abrir, e nenhum editor", async () => {
     await conferirLugar(banco, SLUG, (await versaoAtual(banco, SLUG))!.id, 1);
     const { container } = render(await Editar({ params: Promise.resolve({ slug: SLUG }) }));
-    expect(container.textContent).toContain(JA_CONFERIDO);
+    expect(container.textContent).toContain(JA_CONFERIDO_AO_ABRIR);
+    expect(container.textContent).not.toContain("Nada foi gravado");
     expect(container.querySelector("[data-testid^='pergunta-']")).toBeNull();
   });
 

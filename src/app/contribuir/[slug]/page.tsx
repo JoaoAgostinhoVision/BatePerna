@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { comPrazo } from "@/lib/cache-rotas";
 import { getClient, lugarDoDono } from "@/lib/db";
 import { PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
-import { JA_CONFERIDO } from "@/lib/porta-da-pessoa";
+import { JA_CONFERIDO_AO_ABRIR } from "@/lib/porta-da-pessoa";
 import EdicaoDaPessoa from "../EdicaoDaPessoa";
 import { montarPerguntasDaPessoa } from "../perguntas";
 import { quemNaTela } from "../sessao";
@@ -33,7 +33,7 @@ export default async function EditarDaPessoa({ params }: { params: Promise<{ slu
   if (lugar.origem.conferido) {
     return (
       <main className="adm">
-        <p className="adm-erro">{JA_CONFERIDO}</p>
+        <p className="adm-erro">{JA_CONFERIDO_AO_ABRIR}</p>
         <Link href={`/${slug}`}>{slug}</Link>
       </main>
     );

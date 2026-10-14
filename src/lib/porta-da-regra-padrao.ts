@@ -3,17 +3,19 @@ import type { RegraPadrao } from "@/lib/regra-padrao";
 import { TETO_PASSADO_HORAS, TETO_PREVISAO_HORAS } from "@/lib/weather";
 
 // (`_PADRAO` no nome: `JANELA_NEGATIVA` já existe em `src/app/admin/campos/palavras.ts`, com outro texto — M10 da pré-auditoria)
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const JANELA_NEGATIVA_PADRAO = "Nada foi gravado: uma janela de chuva não pode ser negativa. Escreva 0 ou mais horas.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const JANELAS_ZERADAS =
   "Nada foi gravado: com as duas janelas em 0 a regra nunca olha chuva nenhuma, e todo lugar sem regra própria ficaria 'seco' pra sempre.";
-// PENDENTE: redação minha, o João ainda não leu
+// (Onda de copy de 13/10: dizia "fecharia todo lugar" — e "Fechado" no app é outro estado, o do horário. Com
+// limite 0 o carimbo diz que CHOVEU; a proposta da revisão diz isso, e ele aprovou.)
+// LIDA: proposta aprovada pelo João no pacote de copy em 2026-10-13.
 export const LIMIAR_SEM_CHUVA =
-  "Nada foi gravado: o limite de chuva tem de ser maior que 0 mm. Com 0, qualquer orvalho fecharia todo lugar sem regra própria.";
-// PENDENTE: redação minha, o João ainda não leu
+  "Nada foi gravado: o limite de chuva tem de ser maior que 0 mm. Com 0, qualquer orvalho faria o carimbo dizer que choveu em todo lugar sem regra própria.";
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const JANELA_ALEM_DA_PREVISAO = `Nada foi gravado: a previsão do tempo só vai até ${TETO_PREVISAO_HORAS} horas pra frente.`;
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const JANELA_ALEM_DO_PASSADO = `Nada foi gravado: o histórico de chuva só volta ${TETO_PASSADO_HORAS} horas.`;
 
 const CHAVES = ["janela_previsao_horas", "janela_passado_horas", "limiar_mm", "severidade"] as const;

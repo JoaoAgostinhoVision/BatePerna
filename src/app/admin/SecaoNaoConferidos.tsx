@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-// PENDENTE: redação minha, o João ainda não leu (o título é o da spec de 07/10, Parte 3)
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13. (O título é o da spec de 07/10, Parte 3.)
 export const TITULO_NAO_CONFERIDOS = "Mandados por quem usa o app, ainda não conferidos";
 
 /** A data e a hora de Recife, em números — nenhuma palavra. Usada aqui e na

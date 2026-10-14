@@ -39,7 +39,7 @@ export const dynamic = "force-dynamic";
  *  sem ninguém ver — a superfície mais difícil de auditar que este projeto tem.
  *  ⚠️ UMA EXCEÇÃO desde 07/10, e ela não fala do lugar: o ` · não conferido`
  *  do lugar mandado por quem usa (`ETIQUETA_NAO_CONFERIDO`, redação minha,
- *  PENDENTE) — afirma a ORIGEM, e um link sem ela chegaria na conversa sem
+ *  LIDA em 13/10) — afirma a ORIGEM, e um link sem ela chegaria na conversa sem
  *  marca nenhuma. Ver o `const nome` abaixo.
  *
  *  ⚠️ NADA DE CARIMBO NO CARTÃO. A tentação é mandar "Pode ir" / "Fechado
@@ -63,7 +63,7 @@ export async function generateMetadata({
   // 🔴 A CIDADE NO TÍTULO (Tarefa 11b, 11b-I6): o link de duas Pedras do Navio
   // saía IDÊNTICO no WhatsApp. "Nome — Cidade" só quando há cidade; sem ela,
   // igual a antes — o app não escreve "sem cidade" em lugar nenhum.
-  const nome = ficha.trajeto.waypoints[0].nome + (ficha.cidade ? ` — ${ficha.cidade}` : "") + (ficha.origem.conferido ? "" : ` · ${ETIQUETA_NAO_CONFERIDO}`); // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Formato meu (" — Cidade"). PENDENTE: o " · não conferido" é redação minha (07/10), o João ainda não leu.
+  const nome = ficha.trajeto.waypoints[0].nome + (ficha.cidade ? ` — ${ficha.cidade}` : "") + (ficha.origem.conferido ? "" : ` · ${ETIQUETA_NAO_CONFERIDO}`); // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Formato meu (" — Cidade"). LIDA: o " · não conferido" o João marcou "Serve" no pacote de copy em 2026-10-13.
   return {
     title: nome,
     description: ficha.promessa,

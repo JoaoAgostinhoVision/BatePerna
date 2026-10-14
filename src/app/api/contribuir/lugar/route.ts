@@ -40,7 +40,7 @@ function recusar400(erro: unknown): Response {
  *  dele mostra o aviso de sempre. */
 export async function PUT(req: Request): Promise<Response> {
   const agora = Math.floor(Date.now() / 1000);
-  const porta = await portaDaPessoa(agora);
+  const porta = await portaDaPessoa(agora, "gravar");
   if ("resposta" in porta) return porta.resposta;
   const id = porta.pessoa.id;
 

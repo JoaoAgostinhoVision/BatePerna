@@ -4,11 +4,11 @@ import { SEVERIDADES } from "@/lib/severidade";
 import { ERRO_GRAVAR, ERRO_REDE, VersaoDaTela, comBase } from "./gravar";
 import { SALVANDO } from "./palavras";
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const CALIBRAR = "Calibrar a chuva deste lugar";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const CALIBRAR_AJUDA = "Este lugar usa a regra padrão. Responda os quatro pra ele ter a regra dele.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const FALTA_UM_DOS_QUATRO = "Faltou responder um dos quatro: nada foi gravado.";
 
 type Rotulos = { previsao: string; passado: string; limiar: string; severidade: string };

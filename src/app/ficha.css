@@ -134,13 +134,6 @@ html, body { background: var(--ground); }
 .bp .stamp .sub { font-family: var(--type); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; margin-top: .32rem; opacity: .85; }
 .bp .reason { font-size: .98rem; color: var(--ink-soft); max-width: 32ch; margin: .85rem auto 0; }
 .bp .reason b { color: var(--ink); font-weight: 650; }
-/* A meia-linha da regra padrão (07/10): menor e mais apagada que o motivo —
-   é procedência, não veredito. */
-.bp .regra-padrao {
-  margin: 4px 0 0;
-  font-size: 12px;
-  opacity: 0.75;
-}
 .bp .live { margin-top: .75rem; display: inline-flex; align-items: center; gap: .45rem; font-family: var(--type); font-size: .66rem; color: var(--ink-faint); }
 .bp .live .pulse { width: .5rem; height: .5rem; border-radius: 50%; background: var(--rain); }
 @media (prefers-reduced-motion: no-preference) { .bp .live .pulse { animation: bp-pulse 2.4s ease-out infinite; } }

@@ -7,7 +7,7 @@ export class JaTemRegra extends Error {}
 
 /** A frase do 409. Mora aqui, e não na rota: arquivo de rota do Next não
  *  exporta nada além dos métodos (`tests/deploy/exports-de-rota.test.ts`). */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const JA_TEM_REGRA = "Nada foi gravado: este lugar já tem regra de chuva própria. Mude os números dela um a um, nos campos da regra.";
 
 /** "CALIBRAR A CHUVA" DE UM LUGAR (spec de 07/10, Parte 4): o documento ganha a

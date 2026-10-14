@@ -8,7 +8,6 @@ import { regraDe, semComentarios, valorDe } from "../css";
 import type { Piso } from "@/lib/piso";
 import { rotuloFaixa } from "@/lib/horario";
 import { SEVERIDADES } from "@/lib/severidade";
-import { MEIA_LINHA_REGRA_PADRAO } from "@/lib/origem";
 import Carimbo from "@/app/Carimbo";
 import Moldura from "@/app/Moldura";
 import SeloTrilha from "@/app/SeloTrilha";
@@ -1191,31 +1190,30 @@ describe("Carimbo — janela zerada corta o pedaço dela", () => {
   });
 });
 
-describe("a meia-linha da regra padrão", () => {
-  it("aparece no carimbo de lugar SEM regra própria", () => {
-    const { container } = render(
-      <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="x"
+/** 🔴 A MEIA-LINHA DA REGRA PADRÃO SAIU (onda de copy de 13/10): o João leu
+ *  "regra padrão — ninguém calibrou a chuva aqui" no pacote e mandou TIRAR. O
+ *  carimbo de lugar sem regra própria fica só com o que todo carimbo tem — a
+ *  diferença dele é o "seco" sem "carro comum" (`subDe`, `carimbo-fase.ts`).
+ *  A prova é pela FORMA, não pelo texto (que não existe mais pra comparar): a
+ *  decisão tem os mesmos três filhos com e sem regra própria, em toda fase. */
+describe("sem meia-linha da regra padrão", () => {
+  const filhos = (c: HTMLElement) => [...c.querySelector(".decision")!.children].map((e) => e.className);
+  it.each([
+    ["afirmando seco", { estado: "fresco", erro: false }],
+    ["afirmando molhado", { estado: "frio", erro: false }],
+    ["sem informações", { estado: "frio", erro: true }],
+  ] as const)("%s: o carimbo de lugar SEM regra própria tem só selo, motivo e linha viva — como o de regra própria", (_, l) => {
+    const sem = render(
+      <Carimbo {...l} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="x"
         voz={{ severidade: "cuidado", horasPassado: 6, regraPropria: false }} />,
     );
-    const linha = container.querySelector('[data-marca="regra-padrao"]');
-    expect(linha?.textContent).toBe(MEIA_LINHA_REGRA_PADRAO);
-  });
-
-  it("NÃO aparece no carimbo de lugar com regra própria", () => {
-    const { container } = render(
-      <Carimbo estado="fresco" erro={false} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="x" voz={VOZ_RAMPA} />,
+    expect(filhos(sem.container)).toEqual(["stamp", "reason", "live"]);
+    expect(sem.container.querySelector('[data-marca="regra-padrao"], .regra-padrao')).toBeNull();
+    expect(sem.container.textContent).not.toMatch(/regra padrão|calibrou/);
+    cleanup();
+    const com = render(
+      <Carimbo {...l} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="x" voz={VOZ_RAMPA} />,
     );
-    expect(container.querySelector('[data-marca="regra-padrao"]')).toBeNull();
-    expect(container.textContent).not.toContain(MEIA_LINHA_REGRA_PADRAO);
-  });
-
-  // Ela é sobre a REGRA, não sobre o tempo: continua com o lugar fechado,
-  // sem informação, ou conferindo.
-  it("continua na fase 'sem informações'", () => {
-    const { container } = render(
-      <Carimbo estado="frio" erro={true} calculadoEm={AGORA_S} aviso={null} pass={6} fut={3} slug="x"
-        voz={{ severidade: "cuidado", horasPassado: 6, regraPropria: false }} />,
-    );
-    expect(container.querySelector('[data-marca="regra-padrao"]')).not.toBeNull();
+    expect(filhos(com.container)).toEqual(["stamp", "reason", "live"]);
   });
 });

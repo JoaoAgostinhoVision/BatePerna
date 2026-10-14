@@ -98,7 +98,12 @@ describe("POST /api/admin/conferir", () => {
     expect(res.status).toBe(409);
     const frase = await res.text();
     expect(frase).toBe(NAO_CONFERIU);
-    expect(frase).toContain("quem mandou editou");
+    // Onda de copy de 13/10: o parêntese "(quem mandou editou, ou ele mudou de
+    // endereço)" saiu — não listava todas as causas (o João salvando em outra
+    // aba também cai aqui). "mudou desde que você abriu" vale em todas, a
+    // edição dela inclusive.
+    expect(frase).toContain("mudou desde que você abriu esta página");
+    expect(frase).not.toContain("quem mandou editou");
     expect(await conferido()).toBe(false);
   });
 

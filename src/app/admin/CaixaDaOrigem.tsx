@@ -4,12 +4,16 @@ import BotaoBloquear from "./BotaoBloquear";
 import { ERRO_GRAVAR, ERRO_REDE, VersaoDaTela, comBase } from "./campos/gravar";
 import { quandoRecife } from "./SecaoNaoConferidos";
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const MANDADO_POR = "Mandado por quem usa o app";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const CONFERI = "Conferi";
-// PENDENTE: redação minha, o João ainda não leu
-export const CONFERI_MESMO = "Conferi mesmo? A marca sai do ar, e quem mandou não edita mais.";
+/** O 2º toque do "Conferi". Dizia "A marca sai do ar" — meio falsa enquanto a
+ *  meia-linha da regra padrão ficava no carimbo depois do Conferi; a proposta
+ *  da revisão nomeia o que sai (a etiqueta e a faixa), e ele aprovou em 13/10,
+ *  na mesma onda em que mandou tirar a meia-linha. */
+// LIDA: proposta aprovada pelo João no pacote de copy em 2026-10-13.
+export const CONFERI_MESMO = "Conferi mesmo? A etiqueta e a faixa saem do ar, e quem mandou não edita mais.";
 
 /** QUEM MANDOU ESTE LUGAR, e o "Conferi" em dois toques (spec de 07/10, Parte
  *  3). Mesmo molde do `BotaoDesistir`: o 1º toque pede confirmação, o 2º grava;

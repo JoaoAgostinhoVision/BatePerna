@@ -11,7 +11,7 @@
  *  E desde 07/10 um terceiro item, que não é seção: a lista de quem manda um
  *  lugar (`/contribuir`), de onde ela manda um novo. */
 
-// PENDENTE: redação minha, o João ainda não leu (o texto é o da spec de 07/10, Parte 1)
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13. (O texto é o da spec de 07/10, Parte 1.)
 export const MANDAR_UM_LUGAR = "+ mandar um lugar";
 
 export default function BarraNavegacao({ aqui }: { aqui: "hoje" | "trilhas" }) {

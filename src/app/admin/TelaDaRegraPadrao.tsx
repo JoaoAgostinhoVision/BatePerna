@@ -6,9 +6,9 @@ import { FALTA_UM_DOS_QUATRO } from "./campos/EditorCalibrar";
 import { ERRO_GRAVAR, ERRO_REDE } from "./campos/gravar";
 import { SALVANDO } from "./campos/palavras";
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const SALVAR_REGRA = "Salvar a regra padrão";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const VALE_PARA = "Vale pra todo lugar que ainda não tem regra de chuva própria.";
 
 type Rotulos = { previsao: string; passado: string; limiar: string; severidade: string };

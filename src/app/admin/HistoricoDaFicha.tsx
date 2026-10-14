@@ -13,7 +13,7 @@ const AUTOR = {
   painel: "você, pelo painel",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   semente: "acervo original",
-  // PENDENTE: redação minha, o João ainda não leu (as duas palavras vêm da spec de 07/10, Parte 3)
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13. (As duas palavras vêm da spec de 07/10, Parte 3.)
   contribuidor: "quem mandou",
 } as const satisfies Record<AutorVersao, string>;
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.

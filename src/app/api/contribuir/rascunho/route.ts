@@ -62,7 +62,7 @@ const bloqueada = (): Response => new Response(BLOQUEADA, { status: 403, headers
  *  ("pela lista do painel") e nenhum nome de outro chega a ela. */
 export async function POST(req: Request): Promise<Response> {
   const agora = agoraS();
-  const porta = await portaDaPessoa(agora);
+  const porta = await portaDaPessoa(agora, "gravar");
   if ("resposta" in porta) return porta.resposta;
 
   const corpo = await corpoDe(req);
@@ -96,7 +96,7 @@ export async function POST(req: Request): Promise<Response> {
  *  🔴 Campo fora da lista dela é 400 ANTES de ler o banco (Review Focus 1). */
 export async function PUT(req: Request): Promise<Response> {
   const agora = agoraS();
-  const porta = await portaDaPessoa(agora);
+  const porta = await portaDaPessoa(agora, "gravar");
   if ("resposta" in porta) return porta.resposta;
   const id = porta.pessoa.id;
 
@@ -165,8 +165,10 @@ export async function PUT(req: Request): Promise<Response> {
   return Response.json({ slug }, { headers: SEM_CACHE });
 }
 
+/** LER: o rascunho dela (`?slug=`) ou a lista. Só lê — o 503 é a frase de
+ *  ABRIR (`CLERK_FORA_AO_ABRIR`, onda de copy de 13/10). */
 export async function GET(req: Request): Promise<Response> {
-  const porta = await portaDaPessoa(agoraS());
+  const porta = await portaDaPessoa(agoraS(), "abrir");
   if ("resposta" in porta) return porta.resposta;
   const slug = new URL(req.url).searchParams.get("slug");
   if (slug !== null) {
@@ -182,7 +184,7 @@ export async function GET(req: Request): Promise<Response> {
 
 /** DESISTIR (o "Desistir deste lugar" da Tarefa 15 vale aqui também). */
 export async function DELETE(req: Request): Promise<Response> {
-  const porta = await portaDaPessoa(agoraS());
+  const porta = await portaDaPessoa(agoraS(), "gravar");
   if ("resposta" in porta) return porta.resposta;
   const corpo = await corpoDe(req);
   if (corpo === null || typeof corpo.slug !== "string") return new Response("", { status: 400, headers: TEXTO });

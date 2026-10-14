@@ -43,7 +43,7 @@ export function pontoNoRascunhoDaPessoa(doc: string, lat: number, lng: number): 
  *  caminho interno (`promessa`, `custo.tag`), que ela nunca viu. Uma só pra
  *  obrigatório e pra campo fora da lista: este segundo a rota já recusa antes,
  *  mudo, por `ehCampoDaPessoa`. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const SEM_NAO_SEI = "Nada foi gravado: esta pergunta precisa de resposta, então aqui não dá pra dizer \"não sei\".";
 
 /** 🔴 O TETO DO QUE ELA ESCREVE (M6 da revisão final): 2000 caracteres por
@@ -51,13 +51,16 @@ export const SEM_NAO_SEI = "Nada foi gravado: esta pergunta precisa de resposta,
  *  numa promessa — e a home e `/trilhas` renderizam todos os lugares pra todo
  *  visitante, até o João bloquear. Conta CARACTERE (ponto de código), não
  *  unidade de UTF-16: um emoji é um, como ela conta. Vale nas três portas
- *  dela: começar e responder o rascunho, editar o lugar no ar, e publicar. */
+ *  dela: começar e responder o rascunho, editar o lugar no ar, e publicar.
+ *
+ *  ✅ O NÚMERO É APROVADO PELO JOÃO EM 13/10 (decisão 4 do pacote de copy,
+ *  "d-teto": "2.000 serve"). Nasceu escolha da revisão final; deixou de ser. */
 export const TETO_DO_TEXTO = 2000;
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const TEXTO_LONGO_DEMAIS = "Nada foi gravado: esta resposta passa de 2.000 caracteres. Encurte e tente de novo.";
 /** A do publicar: o rascunho só chega ao banco acima do teto por fora das
  *  rotas dela, mas a porta de publicar não confia em quem gravou. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const TEXTO_LONGO_DEMAIS_NO_PUBLICAR = "Nada foi publicado: uma resposta passa de 2.000 caracteres. Encurte e tente de novo.";
 
 /** Algum texto em `v` — ele mesmo, ou dentro de lista ou objeto (o horário é

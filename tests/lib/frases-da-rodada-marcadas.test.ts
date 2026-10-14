@@ -46,12 +46,76 @@ function frasesExportadas(fonte: string): { nome: string; linha: number }[] {
  *  marca do `MUDAR` ou do `BLOQUEAR_MESMO` SOBREVIVIA, medido. O bloco para na
  *  primeira linha que não é comentário (código, ou linha em branco). */
 function marcaDe(linhas: string[], i: number): "PENDENTE" | "LIDA" | null {
-  let topo = i;
-  while (topo > 0 && /^\s*(\/\/|\/\*|\*)/.test(linhas[topo - 1])) topo--;
-  const acima = linhas.slice(topo, i).filter((l) => /^\s*\/\//.test(l));
+  const acima = comentariosDeCima(linhas, i);
   if (acima.some((l) => /PENDENTE/.test(l))) return "PENDENTE";
   if (acima.some((l) => /LIDA:/.test(l))) return "LIDA";
   return null;
+}
+
+/** Os comentários `//` do bloco colado em cima da linha `i` (a régua de
+ *  `marcaDe`, separada pra a lista datada ler a DATA da marca). */
+function comentariosDeCima(linhas: string[], i: number): string[] {
+  let topo = i;
+  while (topo > 0 && /^\s*(\/\/|\/\*|\*)/.test(linhas[topo - 1])) topo--;
+  return linhas.slice(topo, i).filter((l) => /^\s*\/\//.test(l));
+}
+
+/** 🔴 A LISTA DATADA (Task 18, onda de copy de 13/10). O João leu o pacote
+ *  "Frases de quem manda" (o banco do artifact, coleção `respostas`) e marcou
+ *  "Serve" em toda frase desta rodada, menos as que ele MUDOU (essas entram
+ *  com o texto dele, e as duas irmãs "ao abrir" são a proposta que ele
+ *  aprovou) e a meia-linha da regra padrão, que ele mandou TIRAR.
+ *
+ *  O I6 continua de pé: `LIDA:` numa frase nova é recusada — SALVO nas
+ *  nomeadas aqui, por arquivo, e só com a data da leitura dele na própria
+ *  marca. Frase nova FORA desta lista nasce `PENDENTE`, como sempre. E a lista
+ *  não apodrece calada: cada nome tem de existir no arquivo dito, ser NOVO
+ *  desde a base, e estar `LIDA:` com essa data (caso abaixo).
+ *
+ *  ⚠️ As frases desta rodada que não são `export const` (as entradas de
+ *  `FRASE_DA_PESSOA`, o `contribuidor` do histórico, o ` · não conferido` do
+ *  título do link) são conferidas POR NOME nos casos do fim do arquivo, com a
+ *  mesma data. */
+const LIDAS_EM = "2026-10-13";
+const MARCA_DA_LEITURA = new RegExp(`LIDA:.*${LIDAS_EM}`);
+const LIDAS_EM_13_10: Readonly<Record<string, readonly string[]>> = {
+  "src/lib/origem.ts": ["ETIQUETA_NAO_CONFERIDO", "FAIXA_NAO_CONFERIDO", "SECO_SEM_CARRO"],
+  "src/lib/porta-da-pessoa.ts": [
+    "CLERK_FORA", "CLERK_FORA_AO_ABRIR", "BLOQUEADA", "RASCUNHO_DELA_SUMIU", "NOME_JA_EM_USO", "JA_CONFERIDO",
+    "JA_CONFERIDO_AO_ABRIR", "FALTA_DA_PESSOA", "FORA_DA_LISTA_DELA", "JA_NO_AR_DA_PESSOA", "RECUSA_DA_PESSOA",
+    "ABERTURA_DA_EDICAO",
+  ],
+  "src/lib/porta-da-regra-padrao.ts": [
+    "JANELA_NEGATIVA_PADRAO", "JANELAS_ZERADAS", "LIMIAR_SEM_CHUVA", "JANELA_ALEM_DA_PREVISAO", "JANELA_ALEM_DO_PASSADO",
+  ],
+  "src/lib/calibrar.ts": ["JA_TEM_REGRA"],
+  "src/lib/campos-da-pessoa.ts": ["SEM_NAO_SEI", "TEXTO_LONGO_DEMAIS", "TEXTO_LONGO_DEMAIS_NO_PUBLICAR"],
+  "src/app/contribuir/palavras.ts": ["TITULO_MEUS", "MANDAR_UM_LUGAR_NOVO", "CONFERIDO", "MUDAR", "TITULO_MANDAR"],
+  "src/app/admin/SecaoNaoConferidos.tsx": ["TITULO_NAO_CONFERIDOS"],
+  "src/app/admin/CaixaDaOrigem.tsx": ["MANDADO_POR", "CONFERI", "CONFERI_MESMO"],
+  "src/app/admin/TelaDaRegraPadrao.tsx": ["SALVAR_REGRA", "VALE_PARA"],
+  "src/app/admin/campos/EditorCalibrar.tsx": ["CALIBRAR", "CALIBRAR_AJUDA", "FALTA_UM_DOS_QUATRO"],
+  "src/app/admin/campos/palavras.ts": ["TITULO_REGRA_PADRAO", "NAO_CONFERIU", "BLOQUEAR", "BLOQUEAR_MESMO", "DESBLOQUEAR"],
+  "src/app/admin/TelaDePublicar.tsx": ["AVISO_PUBLICAR_PESSOA"],
+  "src/app/BarraNavegacao.tsx": ["MANDAR_UM_LUGAR"],
+};
+
+/** O que está errado na lista datada de UM arquivo: nome que não é constante
+ *  de texto exportada dele, que já existia na base (então não precisava da
+ *  lista), ou que não está `LIDA:` com a data da leitura. */
+function problemasDaLista(fonte: string, base: Set<string>, lidas: readonly string[]): string[] {
+  const linhas = fonte.split(/\r?\n/);
+  const frases = frasesExportadas(fonte);
+  return lidas.flatMap((nome) => {
+    const f = frases.find((x) => x.nome === nome);
+    if (f === undefined) return [`${nome}: está na lista de ${LIDAS_EM} e não é constante de texto exportada do arquivo`];
+    if (base.has(nome)) return [`${nome}: já existia em ${BASE} — não é frase desta rodada`];
+    const marca = marcaDe(linhas, f.linha);
+    if (marca !== "LIDA" || !comentariosDeCima(linhas, f.linha).some((l) => MARCA_DA_LEITURA.test(l))) {
+      return [`${nome}: está na lista de ${LIDAS_EM} e não está marcada LIDA com essa data`];
+    }
+    return [];
+  });
 }
 
 /** Os nomes das constantes de texto que o arquivo exportava na BASE. Arquivo
@@ -71,12 +135,16 @@ function nomesNaBase(arquivo: string): Set<string> {
  *  "pode seguir" (aprovar o DESENHO) nunca é "li e aprovei" a frase (memória
  *  "trava removida por quem escreveu"). Foi o `SECO_SEM_CARRO` do plano
  *  original, e o guarda de antes o aceitava. */
-function problemasDaMarca(fonte: string, base: Set<string>): string[] {
+function problemasDaMarca(fonte: string, base: Set<string>, lidas: readonly string[] = []): string[] {
   const linhas = fonte.split(/\r?\n/);
   return frasesExportadas(fonte).flatMap((f) => {
     const marca = marcaDe(linhas, f.linha);
     if (marca === null) return [`${f.nome}: sem marca`];
-    if (marca === "LIDA" && !base.has(f.nome)) return [`${f.nome}: LIDA numa frase que não existia em ${BASE} — nasce PENDENTE`];
+    // A exceção da lista datada: só o nome dito, e só com a data na marca.
+    const lidaPorEle = lidas.includes(f.nome) && comentariosDeCima(linhas, f.linha).some((l) => MARCA_DA_LEITURA.test(l));
+    if (marca === "LIDA" && !base.has(f.nome) && !lidaPorEle) {
+      return [`${f.nome}: LIDA numa frase que não existia em ${BASE} — nasce PENDENTE`];
+    }
     return [];
   });
 }
@@ -99,9 +167,12 @@ function arquivosDaRodada(): string[] {
 
 /** Nos arquivos que JÁ existiam, frase antiga pode não ter marca nenhuma (é de
  *  antes da regra); o que a varredura cobra é a frase NOVA: nome que a base não
- *  exportava. Nova = `PENDENTE`, e `LIDA` nova é recusada como no I6. */
-function problemasDasNovas(fonte: string, base: Set<string>, naoSaoFrase: readonly string[] = []): string[] {
-  return problemasDaMarca(fonte, base).filter((p) => {
+ *  exportava. Nova = `PENDENTE`, e `LIDA` nova é recusada como no I6 — fora
+ *  da lista datada (`LIDAS_EM_13_10`), que é a única exceção. */
+function problemasDasNovas(
+  fonte: string, base: Set<string>, naoSaoFrase: readonly string[] = [], lidas: readonly string[] = [],
+): string[] {
+  return problemasDaMarca(fonte, base, lidas).filter((p) => {
     const nome = p.slice(0, p.indexOf(":"));
     return !base.has(nome) && !naoSaoFrase.includes(nome);
   });
@@ -146,17 +217,35 @@ describe("toda frase nova desta rodada nasce marcada", () => {
     expect(nomesNaBase("src/lib/origem.ts").size, "origem.ts nasce nesta rodada").toBe(0);
   });
 
-  it.each(ARQUIVOS)("%s: toda constante de texto exportada tem marca, e LIDA só em frase que já existia", (arquivo) => {
+  it.each(ARQUIVOS)("%s: toda constante de texto exportada tem marca, e LIDA só em frase que já existia ou que ele leu em 13/10", (arquivo) => {
     const fonte = readFileSync(path.join(process.cwd(), arquivo), "utf8");
-    expect(problemasDaMarca(fonte, nomesNaBase(arquivo))).toEqual([]);
+    expect(problemasDaMarca(fonte, nomesNaBase(arquivo), LIDAS_EM_13_10[arquivo])).toEqual([]);
+  });
+
+  // 🔴 A LISTA DATADA NÃO APODRECE CALADA (Task 18): cada nome existe no
+  // arquivo dito, é novo desde a base, e está `LIDA:` com a data da leitura.
+  // Uma frase da lista que volte a `PENDENTE`, ou um nome que suma do código
+  // (apagado, renomeado), deixa este caso vermelho.
+  it("a lista do que ele leu em 13/10: cada nome existe, é desta rodada, e está LIDA com a data", () => {
+    const problemas = Object.entries(LIDAS_EM_13_10).flatMap(([arquivo, nomes]) =>
+      problemasDaLista(readFileSync(path.join(process.cwd(), arquivo), "utf8"), nomesNaBase(arquivo), nomes).map(
+        (p) => `${arquivo}: ${p}`,
+      ),
+    );
+    expect(problemas).toEqual([]);
+    // Não-vacuidade: a lista é a rodada inteira, menos as frases que não são
+    // `export const` (conferidas por nome no fim do arquivo).
+    expect(Object.values(LIDAS_EM_13_10).flat().length).toBe(45);
   });
 
   // A não-vacuidade da VARREDURA: ela tem de enumerar os arquivos que a lista
   // à mão não tem, e achar neles as frases que só ela vê. Se o `git diff`
   // voltasse vazio (base errada, git ausente), a varredura passaria calada —
-  // por isso o piso de 41 (as constantes de texto novas da rodada em 12/10: 42
-  // contadas, menos o `PONTO`, que não é frase) e os nomes que moram FORA de
-  // `ARQUIVOS`.
+  // por isso o piso de 41 (as constantes de texto novas da rodada: 42 contadas
+  // em 12/10, menos o `PONTO`, que não é frase; em 13/10 saiu
+  // `MEIA_LINHA_REGRA_PADRAO` e entraram `CLERK_FORA_AO_ABRIR` e
+  // `JA_CONFERIDO_AO_ABRIR` — 43 contadas, o piso fica) e os nomes que moram
+  // FORA de `ARQUIVOS`.
   it("a varredura enumera do git: os arquivos fora da lista à mão, e as frases novas deles", () => {
     const arquivos = arquivosDaRodada();
     for (const a of ["src/app/admin/TelaDePublicar.tsx", "src/app/admin/campos/palavras.ts", "src/lib/campos-da-pessoa.ts"]) {
@@ -171,9 +260,9 @@ describe("toda frase nova desta rodada nasce marcada", () => {
     }
   });
 
-  it("todo arquivo de src/ que mudou desde a base: toda constante de texto exportada NOVA nasce PENDENTE", () => {
+  it("todo arquivo de src/ que mudou desde a base: toda constante de texto exportada NOVA nasce PENDENTE (fora da lista de 13/10)", () => {
     const problemas = arquivosDaRodada().flatMap((a) =>
-      problemasDasNovas(readFileSync(path.join(process.cwd(), a), "utf8"), nomesNaBase(a), NAO_SAO_FRASE[a]).map(
+      problemasDasNovas(readFileSync(path.join(process.cwd(), a), "utf8"), nomesNaBase(a), NAO_SAO_FRASE[a], LIDAS_EM_13_10[a]).map(
         (p) => `${a}: ${p}`,
       ),
     );
@@ -223,19 +312,51 @@ describe("toda frase nova desta rodada nasce marcada", () => {
     expect(problemasDasNovas(fonte, new Set(["VELHA"]), ["OUTRA"])).toEqual(["NOVA: sem marca"]);
   });
 
+  // Os controles da lista datada (Task 18): ela abre a porta do I6 SÓ pro nome
+  // dito e SÓ com a data na marca; e acusa nome da lista que voltou a
+  // PENDENTE, que perdeu a data, ou que não existe mais.
+  it("controle da lista datada: LIDA com a data passa só no nome da lista; sem a data, ou fora da lista, é achada", () => {
+    const fonte =
+      `// LIDA: o João marcou "Serve" no pacote de copy em ${LIDAS_EM}.\nexport const DA_LISTA = "x";\n` +
+      `// LIDA: o João marcou "Serve" no pacote de copy em ${LIDAS_EM}.\nexport const FORA_DA_LISTA = "y";\n` +
+      `// LIDA: aprovada\nexport const SEM_DATA = "z";\n`;
+    expect(problemasDaMarca(fonte, new Set(), ["DA_LISTA", "SEM_DATA"])).toEqual([
+      `FORA_DA_LISTA: LIDA numa frase que não existia em ${BASE} — nasce PENDENTE`,
+      `SEM_DATA: LIDA numa frase que não existia em ${BASE} — nasce PENDENTE`,
+    ]);
+  });
+
+  it("controle da lista datada: nome que voltou a PENDENTE, sem a data, que não existe, ou que é da base — achados", () => {
+    const fonte =
+      `// LIDA: proposta aprovada pelo João no pacote de copy em ${LIDAS_EM}.\nexport const BOA = "x";\n` +
+      `// PENDENTE: redação minha, o João ainda não leu\nexport const VOLTOU = "y";\n` +
+      `// LIDA: aprovada\nexport const SEM_DATA = "z";\n` +
+      `// LIDA: o João marcou "Serve" no pacote de copy em ${LIDAS_EM}.\nexport const VELHA = "w";\n`;
+    expect(problemasDaLista(fonte, new Set(["VELHA"]), ["BOA", "VOLTOU", "SEM_DATA", "SUMIU", "VELHA"])).toEqual([
+      `VOLTOU: está na lista de ${LIDAS_EM} e não está marcada LIDA com essa data`,
+      `SEM_DATA: está na lista de ${LIDAS_EM} e não está marcada LIDA com essa data`,
+      `SUMIU: está na lista de ${LIDAS_EM} e não é constante de texto exportada do arquivo`,
+      `VELHA: já existia em ${BASE} — não é frase desta rodada`,
+    ]);
+  });
+
   // ⚠️ O brief media as entradas com `/^\s+"[a-z-]+": "/`, e duas das seis
   // quebram a linha depois dos dois-pontos (`"horario-invertido-sem-aviso":` e
   // `"semana-inteira-nao-declara":`): o caso contava 4 e ficava vermelho. A
   // entrada é a CHAVE, com ou sem o texto na mesma linha — e só dentro do
   // bloco do `FRASE_DA_PESSOA`.
-  it("cada frase de FRASE_DA_PESSOA tem PENDENTE na linha de cima", () => {
+  // Task 18: as seis ele leu em 13/10 ("Serve") — a marca é a LIDA datada.
+  it(`cada frase de FRASE_DA_PESSOA tem LIDA de ${LIDAS_EM} na linha de cima`, () => {
     const linhas = ler("src/lib/porta-da-pessoa.ts");
     const abre = linhas.findIndex((l) => /^export const FRASE_DA_PESSOA\b/.test(l));
     const fecha = linhas.findIndex((l, i) => i > abre && /^};/.test(l));
     expect(abre, "o bloco existe").toBeGreaterThan(-1);
     const entradas = linhas.flatMap((l, i) => (i > abre && i < fecha && /^\s+"[a-z-]+":(\s|$)/.test(l) ? [i] : []));
     expect(entradas.length).toBe(6);
-    for (const i of entradas) expect(linhas[i - 1], linhas[i]).toMatch(/PENDENTE/);
+    for (const i of entradas) {
+      expect(linhas[i - 1], linhas[i]).toMatch(/^\s*\/\/ LIDA:/);
+      expect(linhas[i - 1], linhas[i]).toMatch(MARCA_DA_LEITURA);
+    }
   });
 
   // As frases desta rodada que o regex de `export const NOME = "…"` não lê
@@ -247,17 +368,21 @@ describe("toda frase nova desta rodada nasce marcada", () => {
   // nome. Não há outra função-frase nova na rodada.)
   it.each([
     ["src/app/admin/HistoricoDaFicha.tsx", /^\s+contribuidor: "quem mandou",/],
-  ] as const)("%s: %s tem PENDENTE na linha de cima", (arquivo, alvo) => {
+  ] as const)(`%s: %s tem LIDA de ${LIDAS_EM} na linha de cima`, (arquivo, alvo) => {
     const linhas = ler(arquivo);
     const i = linhas.findIndex((l) => alvo.test(l));
     expect(i, "a frase existe").toBeGreaterThan(0);
-    expect(linhas[i - 1]).toMatch(/^\s*\/\/ PENDENTE/);
+    expect(linhas[i - 1]).toMatch(/^\s*\/\/ LIDA:/);
+    expect(linhas[i - 1]).toMatch(MARCA_DA_LEITURA);
   });
 
-  it("o título do link (generateMetadata): o ` · não conferido` tem PENDENTE na própria linha, depois do LIDA antigo", () => {
+  // Task 18: só a parte que era PENDENTE trocou — o LIDA de 07/10 do formato
+  // fica, e o ` · não conferido` ganha o LIDA datado de 13/10, na mesma linha.
+  it(`o título do link (generateMetadata): o \` · não conferido\` tem LIDA de ${LIDAS_EM} na própria linha, depois do LIDA antigo`, () => {
     const linhas = ler("src/app/[slug]/page.tsx");
     const nome = linhas.filter((l) => /^\s+const nome = .*ETIQUETA_NAO_CONFERIDO/.test(l));
     expect(nome).toHaveLength(1);
-    expect(nome[0]).toMatch(/\/\/ LIDA:.*PENDENTE: o " · não conferido"/);
+    expect(nome[0]).toMatch(new RegExp(`// LIDA:.*2026-10-07.*LIDA: o " · não conferido".*${LIDAS_EM}`));
+    expect(nome[0]).not.toMatch(/PENDENTE/);
   });
 });

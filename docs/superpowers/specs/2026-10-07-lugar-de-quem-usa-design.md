@@ -76,6 +76,10 @@ as mesmas funções de banco e as mesmas portas (`porta-de-publicar`, `porta-de-
 - O nome de quem mandou **não aparece** pro público.
 - "Conferi" tira etiqueta + faixa. A meia-linha do carimbo só sai quando o lugar tem regra própria
   (`regra_propria = true`) — conferir sem calibrar deixa a meia-linha, porque continua verdade.
+- 🔴 **13/10 (onda de copy, Task 18): a meia-linha SAIU.** O João leu "regra padrão — ninguém calibrou a chuva
+  aqui" no pacote "Frases de quem manda" e mandou TIRAR. A marca é a etiqueta e a faixa (e o contorno do pin);
+  o carimbo de um lugar sem regra própria não ganha linha nenhuma — o que muda nele é só o "seco" sem "carro
+  comum" (Parte 4). Onde esta Parte fala da meia-linha acima, é o desenho de 07/10, superado.
 - 🔴 **Prova central:** varredura de toda tela pública que renderiza lugar; um lugar `conferido = false` sem a
   marca → vermelho. Mutação obrigatória: tirar a marca de UMA superfície → vermelho.
 

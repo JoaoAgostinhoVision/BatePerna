@@ -71,7 +71,7 @@ function eRestricaoDoBanco(e: unknown): boolean {
  *  banco. */
 export async function POST(req: Request): Promise<Response> {
   const agora = Math.floor(Date.now() / 1000);
-  const porta = await portaDaPessoa(agora);
+  const porta = await portaDaPessoa(agora, "gravar");
   if ("resposta" in porta) return porta.resposta;
   const id = porta.pessoa.id;
 

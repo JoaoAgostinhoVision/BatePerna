@@ -17,7 +17,6 @@ import {
 } from "@/lib/carimbo-fase";
 import { fechadoAgora, rotuloAbertura, rotuloFaixa, type Abertura } from "@/lib/horario";
 import type { Voz } from "@/lib/severidade";
-import { MEIA_LINHA_REGRA_PADRAO } from "@/lib/origem";
 import { chuvaNoPiso, type Piso } from "@/lib/piso";
 import { carimboVenceu, horaCurtaRecife } from "@/lib/validade";
 import { useAvisarMoldura } from "./Moldura";
@@ -298,15 +297,11 @@ export default function Carimbo({
           calendarioFechou ? abertura : undefined,
         )}
       </p>
-      {/* 🔴 A MEIA-LINHA DA REGRA PADRÃO (spec de 07/10, Parte 2): o lugar não
-          tem regra própria, e o carimbo está usando os números que o João
-          escolheu pra todo lugar assim. Fica em TODA fase — é sobre a regra,
-          não sobre a leitura. Só sai quando o lugar for calibrado (Task 8);
-          "conferir" sem calibrar a deixa, porque continua verdade. */}
-      {/* PENDENTE: redação minha, o João ainda não leu (texto em `origem.ts`) */}
-      {!voz.regraPropria && (
-        <p className="regra-padrao" data-marca="regra-padrao">{MEIA_LINHA_REGRA_PADRAO}</p>
-      )}
+      {/* 🔴 SEM MEIA-LINHA DA REGRA PADRÃO (onda de copy de 13/10): havia uma
+          aqui, em lugar sem regra própria — "regra padrão — ninguém calibrou a
+          chuva aqui" —, e o João a leu no pacote e mandou TIRAR. O que o
+          carimbo de um lugar assim diz de diferente é só o "seco" sem "carro
+          comum" (`subDe`, em `carimbo-fase.ts`). */}
       <div className="live">
         <span className="pulse"></span>
         <span>{linhaViva}</span>

@@ -1,17 +1,22 @@
 import { getClient } from "@/lib/db";
 import { estaBloqueado } from "@/lib/db-contribuidor";
 import { irPraEntrar, lerContribuidor, type QuemContribui } from "@/lib/contribuidor-sessao";
-import { BLOQUEADA, CLERK_FORA } from "@/lib/porta-da-pessoa";
+import { BLOQUEADA, CLERK_FORA_AO_ABRIR } from "@/lib/porta-da-pessoa";
 
 /** A PORTA DAS PÁGINAS DELA — irmã de `portaDaPessoa` (rotas): Clerk fora →
  *  a frase; sem sessão → a tela de entrar do Clerk (que volta pro mesmo
- *  endereço); bloqueada → a frase. A página que recebe `frase` mostra só ela. */
+ *  endereço); bloqueada → a frase. A página que recebe `frase` mostra só ela.
+ *
+ *  🔴 A frase do Clerk fora é a de ABRIR (`CLERK_FORA_AO_ABRIR`, onda de copy
+ *  de 13/10), nunca a das rotas que gravam: abrir uma página não é tentar
+ *  gravar, e o "Nada foi gravado" sobrava. Vale pras quatro páginas, que
+ *  passam todas por aqui. */
 export async function quemNaTela(): Promise<{ pessoa: QuemContribui } | { frase: string }> {
   let pessoa: QuemContribui | null;
   try {
     pessoa = await lerContribuidor();
   } catch {
-    return { frase: CLERK_FORA };
+    return { frase: CLERK_FORA_AO_ABRIR };
   }
   if (pessoa === null) return irPraEntrar();
   if (await estaBloqueado(getClient(), pessoa.id)) return { frase: BLOQUEADA };

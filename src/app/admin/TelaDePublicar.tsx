@@ -36,7 +36,7 @@ export const AVISO_PUBLICAR = "Publicar põe este lugar no ar, pra quem abrir o 
 /** O aviso da tela de publicar DE QUEM USA (Task 13, 07/10) — só com
  *  `onde="contribuir"`. A afirmação é sobre a ORIGEM (o lugar dela vai ao ar
  *  marcado), verdade em todo lugar que ela publica. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const AVISO_PUBLICAR_PESSOA =
   "Publicar põe este lugar no ar na hora, pra quem abrir o app — marcado como não conferido até o BatePerna conferir.";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.

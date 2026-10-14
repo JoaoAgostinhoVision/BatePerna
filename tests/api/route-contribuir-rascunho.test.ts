@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { gravarVersao } from "@/lib/db";
 import { contribuidorPorId, criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
 import { SEM_NAO_SEI, TEXTO_LONGO_DEMAIS } from "@/lib/campos-da-pessoa";
-import { BLOQUEADA, CLERK_FORA, NOME_JA_EM_USO, RASCUNHO_DELA_SUMIU } from "@/lib/porta-da-pessoa";
+import { BLOQUEADA, CLERK_FORA, CLERK_FORA_AO_ABRIR, NOME_JA_EM_USO, RASCUNHO_DELA_SUMIU } from "@/lib/porta-da-pessoa";
 import { CIDADE_SEM_LETRA, CIDADE_VAZIA, NOME_SEM_LETRA, NOME_VAZIO } from "@/lib/rascunho";
 import { clienteQueIntercala, rascunhoNoBanco, semearAcervo } from "../banco";
 import { OUTRA, PESSOA, sessao } from "../sessao-da-pessoa";
@@ -89,6 +89,19 @@ describe("a porta: sessão, Clerk, bloqueio", () => {
     expect(res.status).toBe(503);
     expect(await res.text()).toBe(CLERK_FORA);
     expect(await total()).toBe(0);
+  });
+
+  // Onda de copy de 13/10: o GET só LÊ — ninguém tentou gravar, e "Nada foi
+  // gravado" sobrava. O 503 dele diz a irmã de abrir; os que gravam (POST,
+  // PUT, DELETE) seguem com `CLERK_FORA`.
+  it("Clerk fora no GET: 503 com a frase de ABRIR, não a de gravar", async () => {
+    sessao.fora = true;
+    const res = await rota.GET(pedido("GET"));
+    expect(res.status).toBe(503);
+    expect(await res.text()).toBe(CLERK_FORA_AO_ABRIR);
+    const apagar = await rota.DELETE(pedido("DELETE", { slug: "qualquer" }));
+    expect(apagar.status).toBe(503);
+    expect(await apagar.text()).toBe(CLERK_FORA);
   });
 
   it("bloqueada: 403 com a frase, e nada nasce", async () => {
@@ -565,7 +578,10 @@ it("NOME_JA_EM_USO não promete onde o outro lugar está", () => {
 // Task 17: rascunho não ocupa nada — a frase não fala mais dele. O pedaço "ou de
 // um que alguém começou e ainda não publicou" (I1 da revisão final) saiu por
 // subtração: ficou falso.
+// (Onda de copy de 13/10: a frase ganhou a saída que o João escolheu — "use
+// um nome que diferencie, como fazem por lá" — e o texto exato é travado em
+// `tests/lib/onda-de-copy-13-10.test.ts`.)
 it("NOME_JA_EM_USO não fala de rascunho: só de lugar que já é do BatePerna", () => {
   expect(NOME_JA_EM_USO).not.toMatch(/começou|ainda não publicou/);
-  expect(NOME_JA_EM_USO).toMatch(/já é de outro lugar no BatePerna\.$/);
+  expect(NOME_JA_EM_USO).toMatch(/já é de outro lugar no BatePerna\. /);
 });

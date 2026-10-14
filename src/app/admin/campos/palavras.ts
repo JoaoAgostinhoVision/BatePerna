@@ -30,7 +30,7 @@ export const SALVAR = "Salvar";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Estava no ar sem marcador, vindo do `EditorDeVoz`.
 export const SALVANDO = "Salvando…";
 
-// PENDENTE: redação minha, o João ainda não leu (o nome é o da spec de 07/10, Parte 4)
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13. (O nome é o da spec de 07/10, Parte 4.)
 export const TITULO_REGRA_PADRAO = "Regra padrão da chuva";
 
 /** A recusa de "nada escolhido" — vale pra lista fechada (nenhuma opção) e pro
@@ -241,17 +241,23 @@ export const DESFAZER = "Desfazer";
  *  `UPDATE` único de `conferirLugar` não distingue, ditas juntas: ele não sabe
  *  qual das condições falhou, e escolher uma seria inventar. Desde a revisão
  *  final (C1), "mudou desde que você abriu" inclui a EDIÇÃO de quem mandou —
- *  a mais provável das causas, e a que pede ler de novo antes de conferir. */
-// PENDENTE: redação minha, o João ainda não leu
+ *  a mais provável das causas, e a que pede ler de novo antes de conferir.
+ *
+ *  🔴 SEM O PARÊNTESE (onda de copy de 13/10, por subtração): ele dizia
+ *  "(quem mandou editou, ou ele mudou de endereço)", e não listava todas as
+ *  causas — o próprio João salvando este lugar em OUTRA aba também cai aqui,
+ *  e a frase diria que quem mandou editou. "Mudou desde que você abriu esta
+ *  página" vale em todas. Proposta da revisão, aprovada por ele. */
+// LIDA: proposta aprovada pelo João no pacote de copy em 2026-10-13.
 export const NAO_CONFERIU =
-  "Nada mudou: este lugar já foi conferido, não foi mandado por quem usa o app, ou mudou desde que você abriu esta página (quem mandou editou, ou ele mudou de endereço). Recarregue a página e leia de novo antes de conferir.";
+  "Nada mudou: este lugar já foi conferido, não foi mandado por quem usa o app, ou mudou desde que você abriu esta página. Recarregue a página e leia de novo antes de conferir.";
 
 /** BLOQUEAR QUEM MANDOU (Task 15 da rodada de 07/10, spec Parte 3), no
  *  `BotaoBloquear` da caixa da origem: dois toques pra bloquear (o 2º diz o
  *  que acontece), um pra desbloquear. */
-// PENDENTE: redação minha, o João ainda não leu (o texto é o da spec de 07/10, Parte 3)
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13. (O texto é o da spec de 07/10, Parte 3.)
 export const BLOQUEAR = "Bloquear quem mandou";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const BLOQUEAR_MESMO = "Bloquear mesmo? Todos os lugares dessa pessoa saem do ar, e ela não manda nem muda mais nada.";
-// PENDENTE: redação minha, o João ainda não leu (o texto é o da spec de 07/10, Parte 3)
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13. (O texto é o da spec de 07/10, Parte 3.)
 export const DESBLOQUEAR = "Desbloquear";
