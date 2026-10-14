@@ -1,0 +1,233 @@
+<title>Frases de quem manda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* Layout: uma coluna de leitura pro celular; cartão por frase, três toques, telas em dobras. */
+:root{
+  --bg:#eef1ec; --surface:#fbfcf9; --ink:#1d2621; --muted:#5b665f; --line:#d3d9d2;
+  --accent:#2f5d50; --accent-ink:#ffffff; --warn-bg:#fbefd6; --warn-ink:#7a4a05;
+  --ok:#2f6b3a; --change:#8a4b12; --doubt:#3c4f8f;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --read:"Source Serif 4",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a17; --surface:#1c2420; --ink:#e4ebe6; --muted:#9aa8a0; --line:#2e3a34;
+  --accent:#7fb5a3; --accent-ink:#0f1a16; --warn-bg:#3a2c12; --warn-ink:#f0c879;
+  --ok:#8fd39c; --change:#f0a868; --doubt:#a9b8f0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a17; --surface:#1c2420; --ink:#e4ebe6; --muted:#9aa8a0; --line:#2e3a34;
+  --accent:#7fb5a3; --accent-ink:#0f1a16; --warn-bg:#3a2c12; --warn-ink:#f0c879;
+  --ok:#8fd39c; --change:#f0a868; --doubt:#a9b8f0; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--display)}
+.wrap{max-width:680px;margin:0 auto;padding-inline:16px;padding-block:20px 80px;display:flex;flex-direction:column;gap:20px}
+h1{font:700 1.7rem/1.15 var(--display);margin:0;text-wrap:balance}
+.lede{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:2;background:var(--bg);padding-block:10px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line)}
+.prog{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums;font-size:.9rem;color:var(--muted)}
+.prog b{color:var(--ink)}
+.track{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.fill{height:100%;background:var(--accent);width:0;transition:width .3s}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font:500 .85rem var(--display);padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.aviso{font-size:.9rem;padding:10px 12px;background:var(--warn-bg);color:var(--warn-ink);border-radius:8px}
+h2{font:700 1.15rem/1.25 var(--display);margin:0}
+.secao{display:flex;flex-direction:column;gap:12px}
+details.tela>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding-block:12px;border-top:2px solid var(--ink)}
+details.tela>summary::-webkit-details-marker{display:none}
+.tela-nome{font:700 1.05rem/1.3 var(--display);min-width:0}
+.tela-conta{font:400 .85rem var(--mono);color:var(--muted);white-space:nowrap}
+.lista{display:flex;flex-direction:column;gap:12px;padding-bottom:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card[data-v="serve"]{border-left:4px solid var(--ok)}
+.card[data-v="muda"]{border-left:4px solid var(--change)}
+.card[data-v="duvida"]{border-left:4px solid var(--doubt)}
+.quando{font-size:.8rem;letter-spacing:.02em;color:var(--muted)}
+.frase{font:400 1.12rem/1.45 var(--read);margin:0;overflow-wrap:anywhere}
+.alerta{font-size:.88rem;padding:8px 10px;background:var(--warn-bg);color:var(--warn-ink);border-radius:6px}
+.alerta b{font-weight:700}
+.origem{font-size:.8rem;color:var(--muted);overflow-wrap:anywhere}
+.origem code{font:400 .75rem var(--mono)}
+.acoes{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:500 .9rem var(--display);padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;min-height:40px}
+.btn[aria-pressed="true"].serve{background:var(--ok);color:var(--surface);border-color:var(--ok)}
+.btn[aria-pressed="true"].muda{background:var(--change);color:var(--surface);border-color:var(--change)}
+.btn[aria-pressed="true"].duvida{background:var(--doubt);color:var(--surface);border-color:var(--doubt)}
+.btn.prim{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:focus-visible,.chip:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+textarea{width:100%;box-sizing:border-box;min-height:80px;font:400 1rem/1.4 var(--read);padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.editor{display:flex;flex-direction:column;gap:8px}
+.salvo{font-size:.8rem;color:var(--muted)}
+.perg{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.perg p{margin:0;font:400 1.02rem/1.45 var(--read)}
+.ops{display:flex;flex-direction:column;gap:8px}
+.ops .btn{text-align:left}
+.ops .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+@media (prefers-reduced-motion: reduce){.fill{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Frases de quem manda</h1>
+    <p class="lede">Todo texto novo da rodada "lugar de quem usa", por tela, como está no código hoje. Nada disso foi ao ar. Toque <b>Serve</b>, <b>Mudar</b> (escreva como deve ficar) ou <b>Dúvida</b>. As com faixa amarela têm um problema achado na revisão e uma proposta: comece por elas. Antes, as cinco decisões lá embaixo do título.</p>
+  </header>
+
+  <div class="bar">
+    <div class="prog"><span><b id="lidas">0</b> de <b id="total">0</b> respondidas</span><span id="alertas-conta"></span></div>
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <div class="chips" role="group" aria-label="Filtro">
+      <button class="chip" data-f="alerta" aria-pressed="true">Com alerta</button>
+      <button class="chip" data-f="faltam" aria-pressed="false">Sem resposta</button>
+      <button class="chip" data-f="todas" aria-pressed="false">Todas</button>
+    </div>
+  </div>
+
+  <p class="aviso" id="sem-banco" hidden>Esta visualização não consegue guardar suas respostas. Abra pelo link do claude.ai, logado.</p>
+
+  <section class="secao" aria-labelledby="h-decisoes">
+    <h2 id="h-decisoes">Cinco decisões antes das frases</h2>
+    <div id="perguntas" class="secao"></div>
+  </section>
+
+  <section class="secao" aria-labelledby="h-frases">
+    <h2 id="h-frases">As frases</h2>
+    <div id="telas"></div>
+  </section>
+</div>
+
+<script id="dados" type="application/json">{"telas":[{"tela":"Tela pública (quem abre o app)","frases":[{"id":"q01-etiquetanaoconferido","q":"Ao lado do nome de um lugar mandado por alguém, no cartão da home, na lista e no pin do mapa (leitor de tela: \"Ver [nome], não conferido\")","t":"não conferido","o":"redação do Claude","w":"src/lib/origem.ts:10","a":null},{"id":"q02-faixanaoconferido","q":"Faixa no topo da ficha de um lugar mandado por alguém, até você conferir","t":"Mandado por alguém que usa o app. O BatePerna ainda não conferiu.","o":"redação do Claude","w":"src/lib/origem.ts:13","a":null},{"id":"q03-meialinharegrapadrao","q":"Embaixo do carimbo da chuva, em lugar que usa a regra padrão (fica mesmo depois do Conferi, até alguém calibrar)","t":"regra padrão — ninguém calibrou a chuva aqui","o":"redação do Claude","w":"src/lib/origem.ts:16","a":null},{"id":"q04-secosemcarro","q":"O carimbo verde em lugar sem regra própria. É \"seco · carro comum\" (que você já leu) sem o \"carro comum\", porque ninguém respondeu sobre carro","t":"seco","o":"subtração de frase sua já lida","w":"src/lib/origem.ts:27","a":null},{"id":"q05-titulo","q":"Título da aba/link compartilhado de um lugar não conferido","t":"[Nome] — [Cidade] · não conferido","o":"redação do Claude","w":"src/app/[slug]/page.tsx:66","a":null},{"id":"q06-mandarumlugar","q":"Item novo na barra de baixo do app (terceiro item, sem ícone)","t":"+ mandar um lugar","o":"redação do Claude","w":"src/app/BarraNavegacao.tsx:15","a":null}]},{"tela":"Seu painel (/admin)","frases":[{"id":"q07-quem","q":"No histórico da ficha, como autor de uma versão gravada pela pessoa","t":"quem mandou","o":"redação do Claude","w":"src/app/admin/HistoricoDaFicha.tsx:17","a":null},{"id":"q08-titulonaoconferidos","q":"Título da seção nova no topo da lista do painel","t":"Mandados por quem usa o app, ainda não conferidos","o":"redação do Claude","w":"src/app/admin/SecaoNaoConferidos.tsx:4","a":null},{"id":"q09-mandadopor","q":"Caixa na tela do lugar, quando ele foi mandado por alguém","t":"Mandado por quem usa o app","o":"redação do Claude","w":"src/app/admin/CaixaDaOrigem.tsx:8","a":null},{"id":"q10-conferi","q":"Botão nessa caixa","t":"Conferi","o":"redação do Claude","w":"src/app/admin/CaixaDaOrigem.tsx:10","a":null},{"id":"q11-conferimesmo","q":"Segundo toque do Conferi","t":"Conferi mesmo? A marca sai do ar, e quem mandou não edita mais.","o":"redação do Claude","w":"src/app/admin/CaixaDaOrigem.tsx:12","a":"Meio falsa: a meia-linha \"regra padrão — ninguém calibrou a chuva aqui\" continua no carimbo depois do Conferi. Proposta da revisão: \"Conferi mesmo? A etiqueta e a faixa saem do ar, e quem mandou não edita mais.\""},{"id":"q12-naoconferiu","q":"Quando o Conferi não pega","t":"Nada mudou: este lugar já foi conferido, não foi mandado por quem usa o app, ou mudou desde que você abriu esta página (quem mandou editou, ou ele mudou de endereço). Recarregue a página e leia de novo antes de conferir.","o":"redação do Claude (o fim foi reescrito na onda de 12/10)","w":"src/app/admin/campos/palavras.ts:246","a":"O parêntese não lista todas as causas: se você mesmo salvou este lugar em OUTRA aba, também cai aqui, e a frase diz que quem mandou editou. Saída por subtração: tirar o parêntese. \"mudou desde que você abriu esta página\" vale em todos os casos."},{"id":"q13-bloquear","q":"Botão na caixa de quem mandou","t":"Bloquear quem mandou","o":"redação do Claude","w":"src/app/admin/campos/palavras.ts:253","a":null},{"id":"q14-bloquearmesmo","q":"Segundo toque do Bloquear","t":"Bloquear mesmo? Todos os lugares dessa pessoa saem do ar, e ela não manda nem muda mais nada.","o":"redação do Claude","w":"src/app/admin/campos/palavras.ts:255","a":null},{"id":"q15-desbloquear","q":"O mesmo botão, com a pessoa bloqueada","t":"Desbloquear","o":"redação do Claude","w":"src/app/admin/campos/palavras.ts:257","a":null},{"id":"q16-par","q":"Quando VOCÊ cria um lugar com o nome+cidade de um rascunho que alguém está mandando","t":"Alguém que usa o app está mandando um lugar com esse nome: [nome]. Ele ainda não foi publicado; se for o mesmo lugar, espere ele ir ao ar e confira por lá.","o":"redação do Claude","w":"src/lib/rascunho.ts:109","a":"\"espere ele ir ao ar\" pode nunca acontecer, se a pessoa abandonou o rascunho. Depende da decisão do rascunho abandonado, lá em cima."},{"id":"q17-endereco","q":"O mesmo caso, quando o que bate é o endereço","t":"O endereço que sairia desse nome e dessa cidade já é de um lugar que alguém que usa o app está mandando: [nome]. Se for o mesmo lugar, espere ele ir ao ar e confira por lá; se não for, o painel ainda não sabe dar outro endereço a este.","o":"redação do Claude","w":"src/lib/rascunho.ts:112","a":"Mesma dependência da decisão do rascunho abandonado."}]},{"tela":"Regra padrão da chuva e Calibrar (painel)","frases":[{"id":"q18-tituloregrapadrao","q":"Título da tela da regra padrão","t":"Regra padrão da chuva","o":"redação do Claude","w":"src/app/admin/campos/palavras.ts:34","a":null},{"id":"q19-valepara","q":"Embaixo do título","t":"Vale pra todo lugar que ainda não tem regra de chuva própria.","o":"redação do Claude, reescrita na onda de conserto de 12/10: cortado \"— hoje, os mandados por quem usa o app\", que ficava falso no primeiro Calibrar","w":"src/app/admin/TelaDaRegraPadrao.tsx:12","a":null},{"id":"q20-salvarregra","q":"Botão","t":"Salvar a regra padrão","o":"redação do Claude","w":"src/app/admin/TelaDaRegraPadrao.tsx:10","a":null},{"id":"q21-janelanegativapadrao","q":"Recusa: janela negativa","t":"Nada foi gravado: uma janela de chuva não pode ser negativa. Escreva 0 ou mais horas.","o":"redação do Claude","w":"src/lib/porta-da-regra-padrao.ts:7","a":null},{"id":"q22-janelaszeradas","q":"Recusa: as duas janelas em 0","t":"Nada foi gravado: com as duas janelas em 0 a regra nunca olha chuva nenhuma, e todo lugar sem regra própria ficaria 'seco' pra sempre.","o":"redação do Claude","w":"src/lib/porta-da-regra-padrao.ts:9","a":null},{"id":"q23-limiarsemchuva","q":"Recusa: limite de chuva 0","t":"Nada foi gravado: o limite de chuva tem de ser maior que 0 mm. Com 0, qualquer orvalho fecharia todo lugar sem regra própria.","o":"redação do Claude","w":"src/lib/porta-da-regra-padrao.ts:12","a":"\"fecharia\" confunde: no app, \"Fechado\" é outro estado (horário). Com limite 0 o carimbo diria que choveu, não \"Fechado\". Proposta: trocar \"fecharia\" por \"faria o carimbo dizer que choveu em\"."},{"id":"q24-janelaalemdaprevisao","q":"Recusa: janela pra frente maior que 384 horas","t":"Nada foi gravado: a previsão do tempo só vai até 384 horas pra frente.","o":"redação do Claude","w":"src/lib/porta-da-regra-padrao.ts:15","a":null},{"id":"q25-janelaalemdopassado","q":"Recusa: janela pra trás maior que 2232 horas","t":"Nada foi gravado: o histórico de chuva só volta 2232 horas.","o":"redação do Claude","w":"src/lib/porta-da-regra-padrao.ts:17","a":null},{"id":"q26-calibrar","q":"Na ficha inteira de um lugar sem regra própria","t":"Calibrar a chuva deste lugar","o":"redação do Claude","w":"src/app/admin/campos/EditorCalibrar.tsx:8","a":null},{"id":"q27-calibrarajuda","q":"Embaixo do Calibrar","t":"Este lugar usa a regra padrão. Responda os quatro pra ele ter a regra dele.","o":"redação do Claude","w":"src/app/admin/campos/EditorCalibrar.tsx:10","a":null},{"id":"q28-faltaumdosquatro","q":"Calibrar (e agora também a regra padrão) com uma caixa vazia","t":"Faltou responder um dos quatro: nada foi gravado.","o":"redação do Claude; desde 12/10 também na tela da regra padrão","w":"src/app/admin/campos/EditorCalibrar.tsx:12","a":null},{"id":"q29-jatemregra","q":"Calibrar num lugar que já tem regra","t":"Nada foi gravado: este lugar já tem regra de chuva própria. Mude os números dela um a um, nos campos da regra.","o":"redação do Claude","w":"src/lib/calibrar.ts:11","a":null}]},{"tela":"Telas de quem manda um lugar (/contribuir)","frases":[{"id":"q30-titulomeus","q":"Título da lista dela","t":"Os lugares que você mandou","o":"redação do Claude","w":"src/app/contribuir/palavras.ts:5","a":null},{"id":"q31-mandarumlugarnovo","q":"Link na lista dela","t":"+ mandar um lugar novo","o":"redação do Claude","w":"src/app/contribuir/palavras.ts:11","a":null},{"id":"q32-titulomandar","q":"Título da tela de começar","t":"Mandar um lugar","o":"redação do Claude","w":"src/app/contribuir/palavras.ts:17","a":null},{"id":"q33-conferido","q":"Ao lado de um lugar dela que você já conferiu","t":"conferido pelo BatePerna","o":"redação do Claude","w":"src/app/contribuir/palavras.ts:13","a":null},{"id":"q34-mudar","q":"Link ao lado de um lugar dela ainda não conferido","t":"mudar","o":"redação do Claude","w":"src/app/contribuir/palavras.ts:15","a":null},{"id":"q35-avisopublicarpessoa","q":"Acima do botão Publicar, na tela dela","t":"Publicar põe este lugar no ar na hora, pra quem abrir o app — marcado como não conferido até o BatePerna conferir.","o":"redação do Claude","w":"src/app/admin/TelaDePublicar.tsx:37","a":null}]},{"tela":"Recusas que ela pode ver","frases":[{"id":"q36-clerkfora","q":"Quando o login não responde (também ao só ABRIR uma tela dela)","t":"Não deu pra conferir quem você é agora. Nada foi gravado: tente de novo daqui a pouco.","o":"redação do Claude","w":"src/lib/porta-da-pessoa.ts:15","a":"Ao só abrir a tela, ninguém tentou gravar, então \"Nada foi gravado\" sobra. E sem as chaves do login no ar, \"daqui a pouco\" nunca chega. Proposta: tirar o \"Nada foi gravado:\" quando é só abrir."},{"id":"q37-bloqueada","q":"Conta bloqueada, em qualquer tela dela","t":"Esta conta não pode mais mandar nem mudar lugares no BatePerna.","o":"redação do Claude","w":"src/lib/porta-da-pessoa.ts:17","a":null},{"id":"q38-jaconferido","q":"Ela tenta mudar um lugar que você já conferiu (também ao só ABRIR a tela de mudar)","t":"Nada foi gravado: o BatePerna já conferiu este lugar, e agora só ele muda o que o app diz daqui.","o":"redação do Claude","w":"src/lib/porta-da-pessoa.ts:57","a":"Ao só abrir a tela, \"Nada foi gravado\" sobra, e o link mostra o endereço cru. Proposta: na abertura, só \"O BatePerna já conferiu este lugar, e agora só ele muda o que o app diz daqui.\""},{"id":"q39-rascunhodelasumiu","q":"O rascunho dela não está mais no endereço","t":"Nada foi gravado: este rascunho não está mais neste endereço. Ele foi publicado, apagado, ou mudou de nome ou de cidade: volte pela sua lista de lugares.","o":"redação do Claude","w":"src/lib/porta-da-pessoa.ts:21","a":null},{"id":"q40-nomejaemuso","q":"O nome ou o endereço já é de outro lugar ou rascunho","t":"Nada foi gravado: este nome, ou o endereço que sairia dele, já é de outro lugar no BatePerna, ou de um que alguém começou e ainda não publicou.","o":"redação do Claude, reescrita na onda de conserto de 12/10: acrescentado \"ou de um que alguém começou e ainda não publicou\"","w":"src/lib/porta-da-pessoa.ts:41","a":"Em dois casos ela fica sem saída: um lugar seu com o mesmo nome e sem cidade, ou um lugar real diferente com o mesmo nome na mesma cidade. Ver a decisão lá em cima."},{"id":"q41-rascunhodelajaexiste","q":"Ela começa de novo um lugar que ela mesma já tinha começado","t":"Nada foi gravado: você já começou um lugar com este nome, ou com o endereço que sairia dele. Continue por ele, na sua lista de lugares.","o":"redação do Claude, nasceu na onda de conserto de 12/10","w":"src/lib/porta-da-pessoa.ts:51","a":null},{"id":"q42-semnaosei","q":"\"Não sei\" numa pergunta obrigatória","t":"Nada foi gravado: esta pergunta precisa de resposta, então aqui não dá pra dizer \"não sei\".","o":"redação do Claude","w":"src/lib/campos-da-pessoa.ts:47","a":null},{"id":"q43-textolongodemais","q":"Resposta com mais de 2.000 caracteres, ao salvar","t":"Nada foi gravado: esta resposta passa de 2.000 caracteres. Encurte e tente de novo.","o":"redação do Claude, nasceu na onda de conserto de 12/10","w":"src/lib/campos-da-pessoa.ts:57","a":null},{"id":"q44-textolongodemaisnopu","q":"O mesmo, ao publicar","t":"Nada foi publicado: uma resposta passa de 2.000 caracteres. Encurte e tente de novo.","o":"redação do Claude, nasceu na onda de conserto de 12/10","w":"src/lib/campos-da-pessoa.ts:61","a":null},{"id":"q45-faltadapessoa","q":"Publicar com pergunta obrigatória sem resposta","t":"Nada foi publicado: ainda falta responder pergunta obrigatória. As que faltam estão listadas nesta tela.","o":"redação do Claude","w":"src/lib/porta-da-pessoa.ts:81","a":null},{"id":"q46-foradalistadela","q":"Publicar com resposta que não é das perguntas dela","t":"Nada foi publicado: este rascunho tem resposta que não é das perguntas daqui.","o":"redação do Claude","w":"src/lib/porta-da-pessoa.ts:83","a":null},{"id":"q47-janoardapessoa","q":"Publicar duas vezes, ou o endereço foi tomado","t":"Nada foi publicado agora: este endereço já é de um lugar do app, e o rascunho não está mais aqui. Se você tocou duas vezes, o lugar foi publicado no primeiro toque: confira na sua lista de lugares.","o":"redação do Claude","w":"src/lib/porta-da-pessoa.ts:89","a":null},{"id":"q48-recusadapessoa","q":"Publicar com respostas que se contradizem","t":"Nada foi publicado: uma resposta não combina com outra. Confira as respostas e tente de novo.","o":"redação do Claude","w":"src/lib/porta-da-pessoa.ts:92","a":null},{"id":"q49-frasedapessoatextoem","q":"Publicar com a frase do lugar igual à de outro lugar","t":"Nada foi publicado: outro lugar do app já tem esta mesma frase do que é o lugar. Escreva com as suas palavras.","o":"redação do Claude","w":"src/lib/porta-da-pessoa.ts:121","a":null},{"id":"q50-frasedapessoahorario","q":"Publicar com a hora de fechar antes da de abrir","t":"Nada foi publicado: no horário, a hora de fechar não vem depois da de abrir. Se o lugar abre de noite ou fica aberto 24h, diga isso no que pode dar errado; se não, confira as duas horas.","o":"redação do Claude","w":"src/lib/porta-da-pessoa.ts:123","a":null},{"id":"q51-frasedapessoahoradef","q":"Publicar com hora de fechar no texto e sem horário","t":"Nada foi publicado: o texto diz a que horas o lugar fecha, mas a pergunta do horário não foi respondida.","o":"redação do Claude","w":"src/lib/porta-da-pessoa.ts:126","a":null},{"id":"q52-frasedapessoaprosaba","q":"Publicar com o texto e o horário discordando","t":"Nada foi publicado: a hora de fechar escrita no texto não é a mesma da pergunta do horário.","o":"redação do Claude","w":"src/lib/porta-da-pessoa.ts:128","a":null},{"id":"q53-frasedapessoadiarepe","q":"Publicar com dia repetido","t":"Nada foi publicado: um dia da semana aparece mais de uma vez nos dias.","o":"redação do Claude","w":"src/lib/porta-da-pessoa.ts:130","a":null},{"id":"q54-frasedapessoasemanai","q":"Publicar com os sete dias marcados","t":"Nada foi publicado: marcar os sete dias é o mesmo que não marcar nenhum. Se o lugar abre todo dia, deixe a pergunta dos dias sem resposta.","o":"redação do Claude","w":"src/lib/porta-da-pessoa.ts:132","a":null},{"id":"q55-aberturadaedicao","q":"Quando ela MUDA um lugar que já está no ar, as oito recusas acima trocam \"Nada foi publicado:\" por esta abertura","t":"Nada foi gravado:","o":"redação do Claude, nasceu na onda de conserto de 12/10 (antes diziam \"Nada foi publicado\" sobre um lugar que está publicado)","w":"src/lib/porta-da-pessoa.ts:144","a":null}]}],"total":55,"perguntas":[{"id":"d-abandonado","t":"1. Rascunho abandonado. Se alguém começa \"Pedra do Navio / Floresta\" e larga, ou é bloqueado com rascunhos abertos, esse nome+cidade fica ocupado pra sempre: nem você consegue criar o lugar pelo painel. Só se desfaz mexendo no banco. O que fazer?","ops":["Bloquear também apaga os rascunhos da pessoa (barato, mas não resolve quem só largou)","Um botão \"liberar este nome\" no seu painel, que apaga o rascunho dela que atrapalha","Prazo: rascunho parado há alguns dias deixa de ocupar o nome","Aceito o risco por agora; resolvo depois"]},{"id":"d-401","t":"2. Login vencido no meio. Se a sessão dela vence de verdade enquanto escreve, o Salvar recarrega a tela, pede login de novo e volta na mesma pergunta, mas o texto daquela pergunta se perde. Já ficou raro (o login se renova sozinho enquanto ela está na tela). E aí?","ops":["Aceito assim por agora","Guardar o texto no aparelho antes de recarregar (rodada própria, depois)"]},{"id":"d-vaza","t":"3. Descobrir lugar escondido. Quem tem login consegue testar um nome+cidade e saber se já existe um lugar ali, mesmo escondido, porque a recusa é diferente do aceite. A frase nunca diz qual lugar é. E aí?","ops":["Aceito: só revela que existe, não o que é","Fechar isso (a recusa fica igual pra tudo, e a frase ajuda menos ela)"]},{"id":"d-teto","t":"4. Tamanho das respostas dela. Pus um teto de 2.000 caracteres por resposta (mais ou menos meia página), pra ninguém colar um texto gigante que apareceria na home. É um número só no código, fácil de mudar.","ops":["2.000 serve","Quero menos","Quero mais"]},{"id":"d-sem-saida","t":"5. Nome repetido sem saída. Quando o nome que ela escreve já é de outro lugar na mesma cidade, a recusa diz isso e para aí. Em dois casos ela não tem como seguir: um lugar real diferente com o mesmo nome na mesma cidade, ou um lugar seu com esse nome e sem cidade. O que fazer?","ops":["Aceito por agora: ela escreve o nome de outro jeito","Acrescentar na frase \"use um nome que diferencie, como fazem por lá\"","Rodada própria pra isso, depois"]}]}</script>
+<script>
+(function(){
+  const D = JSON.parse(document.getElementById("dados").textContent);
+  const resp = {};            // id -> {v, texto}
+  let filtro = "alerta";
+  let db = null;
+  let local = {};
+  try { local = JSON.parse(localStorage.getItem("bp-frases-quem-manda") || "{}"); } catch (e) {}
+  Object.assign(resp, local);
+
+  const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const todas = D.telas.flatMap(t => t.frases);
+  const nAlertas = todas.filter(f => f.a).length;
+  document.getElementById("total").textContent = D.total;
+  document.getElementById("alertas-conta").textContent = nAlertas + " com alerta";
+
+  function progresso(){
+    const n = todas.filter(f => resp[f.id] && resp[f.id].v).length;
+    document.getElementById("lidas").textContent = n;
+    document.getElementById("fill").style.width = (100 * n / D.total) + "%";
+  }
+
+  async function gravar(id, corpo){
+    resp[id] = corpo;
+    try { local[id] = corpo; localStorage.setItem("bp-frases-quem-manda", JSON.stringify(local)); } catch (e) {}
+    progresso();
+    if (!db) return false;
+    try { await db.doc("respostas/" + id).set(Object.assign({ em: Date.now() }, corpo)); return true; }
+    catch (e) { return false; }
+  }
+
+  function cartao(f){
+    const c = el("article", "card"); c.dataset.id = f.id;
+    c.appendChild(el("div", "quando", f.q));
+    c.appendChild(el("p", "frase", f.t));
+    if (f.a) { const a = el("div", "alerta"); const b = el("b", null, "Alerta: "); a.append(b, document.createTextNode(f.a)); c.appendChild(a); }
+    const o = el("div", "origem"); o.append(document.createTextNode("Origem: " + f.o + " · ")); o.appendChild(el("code", null, f.w)); c.appendChild(o);
+    const acoes = el("div", "acoes");
+    const botoes = {};
+    [["serve","Serve"],["muda","Mudar"],["duvida","Dúvida"]].forEach(([v, rot]) => {
+      const b = el("button", "btn " + v, rot); b.type = "button"; b.setAttribute("aria-pressed", "false");
+      b.addEventListener("click", () => escolher(v)); botoes[v] = b; acoes.appendChild(b);
+    });
+    c.appendChild(acoes);
+    const ed = el("div", "editor"); ed.hidden = true;
+    const ta = document.createElement("textarea"); ta.id = "ta-" + f.id;
+    const salvar = el("button", "btn prim", "Guardar"); salvar.type = "button";
+    const st = el("div", "salvo");
+    ed.append(ta, salvar, st); c.appendChild(ed);
+
+    function pintar(){
+      const r = resp[f.id] || {};
+      c.dataset.v = r.v || "";
+      for (const v in botoes) botoes[v].setAttribute("aria-pressed", String(r.v === v));
+      ed.hidden = !(r.v === "muda" || r.v === "duvida");
+      if (document.activeElement !== ta) ta.value = r.texto != null ? r.texto : (r.v === "muda" ? f.t : "");
+      ta.placeholder = r.v === "duvida" ? "Qual é a dúvida?" : "Como a frase deve ficar";
+    }
+    async function escolher(v){
+      const atual = resp[f.id] || {};
+      const corpo = { v, texto: v === "serve" ? null : (atual.v === v ? atual.texto : (v === "muda" ? f.t : "")) };
+      resp[f.id] = corpo; pintar();
+      const ok = await gravar(f.id, corpo);
+      st.textContent = ok ? "" : (db ? "Não consegui guardar agora. Tente de novo." : "");
+      if (v !== "serve") ta.focus();
+    }
+    salvar.addEventListener("click", async () => {
+      const corpo = { v: (resp[f.id] || {}).v || "muda", texto: ta.value };
+      const ok = await gravar(f.id, corpo);
+      st.textContent = ok ? "Guardado." : (db ? "Não consegui guardar agora. Tente de novo." : "Guardado só neste aparelho.");
+    });
+    c._pintar = pintar; pintar();
+    return c;
+  }
+
+  const cards = [];
+  function montar(){
+    const raiz = document.getElementById("telas");
+    D.telas.forEach((t, i) => {
+      const d = el("details", "tela"); d.open = true;
+      const s = el("summary"); const nome = el("span", "tela-nome", t.tela); const conta = el("span", "tela-conta");
+      s.append(nome, conta); d.appendChild(s);
+      const lista = el("div", "lista");
+      t.frases.forEach(f => { const c = cartao(f); c._f = f; cards.push(c); lista.appendChild(c); });
+      d.appendChild(lista); d._conta = conta; d._t = t; raiz.appendChild(d);
+    });
+    const pr = document.getElementById("perguntas");
+    D.perguntas.forEach(q => {
+      const b = el("div", "perg"); b.appendChild(el("p", null, q.t));
+      const ops = el("div", "ops"); const bs = [];
+      q.ops.forEach((op, i) => {
+        const x = el("button", "btn", op); x.type = "button"; x.setAttribute("aria-pressed", "false");
+        x.addEventListener("click", async () => { await gravar(q.id, { v: "escolha", texto: op }); pintarQ(); });
+        bs.push(x); ops.appendChild(x);
+      });
+      function pintarQ(){ const r = resp[q.id]; bs.forEach((x, i) => x.setAttribute("aria-pressed", String(!!r && r.texto === q.ops[i]))); }
+      b.appendChild(ops); b._pintar = pintarQ; pintarQ(); pr.appendChild(b); cards.push(b);
+    });
+  }
+
+  function aplicarFiltro(){
+    cards.forEach(c => {
+      if (!c._f) return;
+      const r = resp[c._f.id];
+      c.hidden = filtro === "alerta" ? !c._f.a : filtro === "faltam" ? !!(r && r.v) : false;
+    });
+    document.querySelectorAll("details.tela").forEach(d => {
+      const vis = d._t.frases.filter(f => { const r = resp[f.id]; return filtro === "alerta" ? f.a : filtro === "faltam" ? !(r && r.v) : true; }).length;
+      const feitas = d._t.frases.filter(f => resp[f.id] && resp[f.id].v).length;
+      d._conta.textContent = feitas + "/" + d._t.frases.length;
+      d.hidden = vis === 0;
+    });
+  }
+
+  document.querySelectorAll(".chip").forEach(ch => ch.addEventListener("click", () => {
+    filtro = ch.dataset.f;
+    document.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", String(x === ch)));
+    aplicarFiltro();
+  }));
+
+  montar(); progresso(); aplicarFiltro();
+
+  const repintar = () => { cards.forEach(c => c._pintar && c._pintar()); progresso(); aplicarFiltro(); };
+  const usar = window.claude && window.claude.use ? window.claude.use("db") : Promise.resolve(null);
+  usar.then(d => {
+    if (!d) { document.getElementById("sem-banco").hidden = false; return; }
+    db = d;
+    db.collection("respostas").onSnapshot(snap => {
+      snap.docs.forEach(doc => { const x = doc.data(); if (x) resp[doc.id] = { v: x.v, texto: x.texto }; });
+      repintar();
+    }, () => {});
+  }).catch(() => { document.getElementById("sem-banco").hidden = false; });
+})();
+</script>

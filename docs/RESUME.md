@@ -2,7 +2,25 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — PARADA DE 12/10 (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 13/10 (vence TUDO abaixo)
+
+**O CÓDIGO DA RODADA "lugar de quem usa" ESTÁ FECHADO.** Re-revisão da onda (`final-rereview.md`): tudo endereçado,
+0 C · 0 I novos, 1 M de copy. Resíduos de comentário consertados por mim em `0e80697` (2938/2938, tsc 0, build 0 sem
+chave, mutar 42/0/0). Branch `painel-completo`, NADA no ar.
+
+**O pacote pro João está publicado: "Frases de quem manda" — https://claude.ai/artifact/3AhYyqJ1C62UpaN7HKcwm1**
+(fonte `_bmad-output/planning-artifacts/bateperna-frases-de-quem-manda.html`, gerada por script a partir do texto
+ATUAL do código; banco do artifact, coleção `respostas`). 55 frases (as 51 da Task 16 + 4 nascidas na onda), 8 com
+alerta (M1, M3, M4, M5, o parêntese de `NAO_CONFERIU`, `NOME_JA_EM_USO` sem saída, as 2 do I3) e 5 decisões no topo
+(`d-abandonado` = I3, `d-401`, `d-vaza` = M10+409×201, `d-teto` = 2000, `d-sem-saida`).
+
+→ **O PRIMEIRO PASSO:** `ArtifactData list` na URL acima, coleção `respostas` (limit 1000).
+- **Vazio:** diga a ele, curto, que o deploy espera a leitura; link; comece pelas 5 decisões e as 8 com alerta.
+- **Com respostas:** montar a onda de copy (frases "Serve" → `LIDA:`; o guarda `frases-da-rodada-marcadas` recusa
+  `LIDA:` nova — avançar a BASE dele ou lista datada, NUNCA afrouxar) + o que as decisões pedirem.
+- Depois: passo DELE do Clerk (item 5 abaixo) → runbook do deploy (item 4 abaixo, em VERMELHO) → olho de tela (item 6).
+
+## ▶ (histórico) PARADA DE 12/10
 
 **Ele parou em 12/10: *"quero continuar na próxima sessão"*.** Branch `painel-completo`. Nada do "lugar de quem usa"
 está no ar. **As 16 tarefas do plano estão FEITAS e revisadas** (ledger: `Task 16: complete`, último código `570e455`).
