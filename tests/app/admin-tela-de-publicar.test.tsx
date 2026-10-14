@@ -194,6 +194,28 @@ describe("TelaDePublicar — o componente", () => {
     });
     expect(assign).toHaveBeenCalledTimes(1);
   });
+
+  // 🔴 I1 da revisão da Task 17 — a tela é a MESMA do João: depois do 200 o
+  // botão continua desligado até a navegação (o lugar já foi; um 2º toque só
+  // acharia recusa), e o 2º toque não manda outro POST.
+  it("depois do 200: o botão continua desligado até a navegação, e o segundo toque não sai", async () => {
+    const fetchFalso = vi.fn(async () => Response.json({ slug: S }));
+    vi.stubGlobal("fetch", fetchFalso);
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    render(<TelaDePublicar slug={S} atualizadoEm={ATUALIZADO} frases={[]} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: PUBLICAR }));
+    });
+    expect(assign).toHaveBeenCalledTimes(1);
+    const botao = screen.getByRole("button", { name: PUBLICANDO }) as HTMLButtonElement;
+    expect(botao.disabled).toBe(true);
+    await act(async () => {
+      fireEvent.click(botao);
+    });
+    expect(fetchFalso).toHaveBeenCalledTimes(1);
+    expect(assign).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

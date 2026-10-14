@@ -785,8 +785,10 @@ export async function criarRascunho(client: Client, slug: string, doc: string, a
  *  O `atualizado_em` cresce ESTRITAMENTE, pela régua de `regravarRascunho`.
  *
  *  SÓ os do João (07/10): o rascunho de quem usa o app é dela até publicar, e
- *  o painel não age sobre ele. Os dois `NOT EXISTS` do destino continuam sem filtro de dono: o
- *  destino tem de estar livre de rascunho de QUALQUER um. */
+ *  o painel não age sobre ele. Os dois `NOT EXISTS` do destino continuam sem filtro de dono, mas
+ *  desde a Task 17 (13/10) o de rascunho só alcança os do JOÃO: hoje só o
+ *  rascunho dele tem chave = endereço; o dela mora numa chave (`rascunho_…`)
+ *  que nenhum endereço iguala, e nunca ocupa `para`. */
 export async function moverRascunho(client: Client, de: string, para: string, doc: string, agora: number): Promise<boolean> {
   const r = await client.execute({
     sql: `UPDATE ficha_rascunhos SET slug = ?, doc = ?, atualizado_em = MAX(?, atualizado_em + 1)
@@ -1039,14 +1041,25 @@ export async function trocarEndereco(
  *  e da cidade, na hora de publicar. Os dois andam SEPARADOS e cada passo usa
  *  o seu: o 1º passo confere a versão (`NOT EXISTS`) e o endereço antigo no
  *  ENDEREÇO, e o rascunho (dela, com o `atualizado_em` da tela) na CHAVE; a
- *  `porta` confere o rascunho pela CHAVE e a versão recém-gravada pelo
- *  ENDEREÇO; os passos 2 a 5 (órfãos, `freshness`, `enderecos_antigos`) operam
+ *  `porta` confere o rascunho pela CHAVE e, pelo ENDEREÇO, UMA versão com este
+ *  doc, este `criado_em` e este autor; os passos 2 a 5 (órfãos, `freshness`, `enderecos_antigos`) operam
  *  no ENDEREÇO; o DELETE final, na CHAVE. Tudo na mesma transação. É o
  *  `NOT EXISTS` do 1º passo que decide quem fica com o endereço quando duas
  *  pessoas (ou ela e o João) publicam o mesmo par: o primeiro batch grava a
  *  versão, e o segundo a acha ali. ⚠️ Pra ela, os passos 2, 3 e 5 nunca acham
  *  linha: o 1º passo já recusou o endereço que é antigo, e são eles que leem a
  *  linha `velho = slug`. Ficam porque o batch é um só pros dois donos.
+ *  ⚠️ PRA ELA, A PORTA JÁ NÃO PROVA "foi ESTE batch que gravou a versão" (M1
+ *  da revisão da Task 17): antes só cabia um rascunho por endereço; agora dois
+ *  rascunhos DELA (chaves diferentes) com o mesmo doc, publicados no mesmo
+ *  segundo, fazem o 2º batch ser recusado no 1º passo e PASSAR na porta (o
+ *  rascunho dele está lá; a versão do 1º tem o mesmo doc, `criado_em` e
+ *  autor). Quem segura é o INSERT de `origem_do_lugar`: a versão do 1º já tem
+ *  origem, a chave primária estoura, e a transação volta INTEIRA — nada do 2º
+ *  fica gravado, nem o DELETE do rascunho dele. Esta função então LANÇA o
+ *  erro de restrição (não devolve `false`), e a rota dela o trata como
+ *  recusa (`/api/contribuir/publicar`). No do João não acontece: uma chave =
+ *  um endereço = um rascunho.
  *  Sem `dela`, a chave É o endereço — o caminho do João, byte a byte o de
  *  antes. Um rascunho do João no mesmo endereço não impede o dela (não é o
  *  rascunho dela, e rascunho não ocupa); depois, é o publicar dele que acha o

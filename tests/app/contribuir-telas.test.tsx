@@ -230,6 +230,29 @@ describe("publicar o dela", () => {
     expect(JSON.parse(String(fetch.mock.calls[0][1]?.body)).slug).toBe(chave);
     expect(assign).toHaveBeenCalledWith(`/${SO_NOME}`);
   });
+
+  // 🔴 I1 da revisão da Task 17: depois do 200 o lugar JÁ ESTÁ no ar e a chave
+  // já não existe — um 2º toque, enquanto a página pública carrega, iria à rota
+  // e voltaria 404 ("Não consegui salvar.", falso: o lugar foi). O botão fica
+  // desligado do 200 até a navegação, e o 2º toque não sai.
+  it("publicou: o botão fica desligado até a navegação, e o 2º toque não manda outro POST", async () => {
+    const chave = await rascunhoDe(SO_NOME, docSoNome);
+    const fetch = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ slug: SO_NOME }), { status: 200 }));
+    vi.stubGlobal("fetch", fetch);
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign, reload: vi.fn() });
+    const { container } = render(await Publicar({ searchParams: Promise.resolve({ slug: chave }) }));
+    const botao = container.querySelector(".adm-publicar button") as HTMLButtonElement;
+    fireEvent.click(botao);
+    await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+    // Deixa o `finally` (e o render que ele pediria) assentar antes de medir.
+    await new Promise((ok) => setTimeout(ok, 0));
+    expect(botao.disabled).toBe(true);
+    fireEvent.click(botao);
+    await new Promise((ok) => setTimeout(ok, 0));
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(assign).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("editar o dela no ar", () => {

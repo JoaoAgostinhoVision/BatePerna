@@ -190,6 +190,54 @@ describe("POST /api/contribuir/publicar", () => {
     expect((await c.execute({ sql: "SELECT COUNT(*) AS n FROM ficha_versoes WHERE ficha_slug = ?", args: [SLUG] })).rows[0].n).toBe(1);
   });
 
+  // 🔴 M1 da revisão da Task 17: DOIS rascunhos dela (chaves diferentes — a
+  // Task 17 permite) com o MESMO documento, publicados no MESMO segundo (duas
+  // abas). O 1º batch grava; o 2º é recusado no 1º passo, mas a `porta` dele
+  // PASSA (o rascunho dele está lá, e a versão no endereço tem este doc, este
+  // `criado_em` e este autor) — e o INSERT de `origem_do_lugar` estoura a
+  // restrição do banco. A transação volta inteira; a rota não pode responder
+  // 500: é a mesma recusa de "outro lugar chegou primeiro".
+  it("dois rascunhos dela, o mesmo doc, o mesmo segundo: o 2º é 409 com a frase de endereço tomado, não 500, e o rascunho fica", async () => {
+    const primeiro = await rascunho();
+    const chave1 = CHAVE;
+    const segundo = await rascunho();
+    const chave2 = CHAVE;
+    expect(chave2, "a premissa: duas chaves").not.toBe(chave1);
+    expect(segundo.atualizadoEm).toBe(primeiro.atualizadoEm);
+    const lido = (await rascunhoNoBanco(c, chave1))!;
+    const corrida = clienteQueIntercala(c, /^INSERT INTO ficha_versoes/, async () => {
+      const { prepararPublicacaoDaPessoa } = await import("@/lib/porta-da-pessoa");
+      const preparo = prepararPublicacaoDaPessoa(lido.doc, SLUG);
+      if (!("doc" in preparo)) throw new Error("a premissa: o rascunho publica");
+      // O MESMO `agora` da rota (o relógio é falso): é o que faz a porta passar.
+      expect(await publicarRascunho(c, SLUG, preparo.doc, AGORA, lido.atualizado_em, { contribuidor: PESSOA.id, chave: chave1 })).toBe(true);
+    });
+    cli = corrida.cliente;
+    const res = await POST(pedido(segundo));
+    expect(corrida.disparos(), "o dublê não disparou: o teste mediu o vazio").toBe(1);
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(NOME_JA_EM_USO);
+    expect((await c.execute({ sql: "SELECT COUNT(*) AS n FROM ficha_versoes WHERE ficha_slug = ?", args: [SLUG] })).rows[0].n).toBe(1);
+    expect((await c.execute("SELECT COUNT(*) AS n FROM origem_do_lugar")).rows[0].n).toBe(1);
+    expect(await rascunhoNoBanco(c, chave2), "o rascunho da 2ª aba fica").not.toBeNull();
+    expect(await rascunhoNoBanco(c, chave1)).toBeNull();
+  });
+
+  // Só a restrição do banco vira recusa: qualquer outro erro do batch continua
+  // subindo (a rota não engole falha de rede/banco como "nome em uso").
+  it("outro erro no batch (não de restrição) continua subindo", async () => {
+    const corpo = await rascunho();
+    cli = new Proxy(c, {
+      get(alvo, chave) {
+        if (chave === "batch") return async () => { throw Object.assign(new Error("banco caiu"), { code: "SQLITE_IOERR" }); };
+        const v = (alvo as unknown as Record<PropertyKey, unknown>)[chave];
+        return typeof v === "function" ? (v as (...a: unknown[]) => unknown).bind(alvo) : v;
+      },
+    });
+    await expect(POST(pedido(corpo))).rejects.toThrow("banco caiu");
+    expect(await rascunhoNoBanco(c, CHAVE)).not.toBeNull();
+  });
+
   it("sem sessão 401; bloqueada 403; corpo torto 400 — nada vai ao ar", async () => {
     const corpo = await rascunho();
     sessao.atual = null;

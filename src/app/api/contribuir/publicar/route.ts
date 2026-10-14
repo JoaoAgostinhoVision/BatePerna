@@ -40,6 +40,14 @@ async function porQueRecusou(chave: string, endereco: string, atualizadoEm: numb
   return NADA_PUBLICADO;
 }
 
+/** O erro é uma restrição do SQLite (`SQLITE_CONSTRAINT`, com ou sem o sufixo
+ *  estendido — `_PRIMARYKEY`, `_UNIQUE`…), como o `LibsqlError` a traz em
+ *  `code`. Qualquer outro erro não é. */
+function eRestricaoDoBanco(e: unknown): boolean {
+  const code = (e as { code?: unknown } | null)?.code;
+  return typeof code === "string" && /^SQLITE_CONSTRAINT(_|$)/.test(code);
+}
+
 /** PUBLICAR O LUGAR DELA (spec de 07/10, Parte 1): "no ar na hora, com a
  *  marca". A marca não é desta rota: é a linha de `origem_do_lugar` que
  *  `publicarRascunho` faz nascer NO MESMO batch da versão 1 (Task 1) — e o
@@ -107,7 +115,21 @@ export async function POST(req: Request): Promise<Response> {
   const violacao = violacaoIntroduzidaInteira(await versoesAtuais(getClient(), { incluirOcultos: true }), endereco, null, doc);
   if (violacao !== null) return recusa(409, fraseDaPessoa(violacao, "publicar"));
 
-  if (await publicarRascunho(getClient(), endereco, doc, agora, atualizadoEm, { contribuidor: id, chave })) {
+  // 🔴 A RESTRIÇÃO DO BANCO É RECUSA, NÃO 500 (M1 da revisão da Task 17): dois
+  // rascunhos DELA com o mesmo documento, publicados no mesmo segundo (duas
+  // abas), fazem o 2º batch passar na `porta` de `publicarRascunho` — a versão
+  // do 1º tem este doc, este `criado_em` e este autor — e o INSERT de
+  // `origem_do_lugar` estoura a chave primária. A transação volta inteira (o
+  // rascunho do 2º fica), e o caso é o mesmo de "outro lugar chegou primeiro":
+  // cai na régua de `porQueRecusou`. SÓ a restrição: qualquer outro erro sobe.
+  let publicou: boolean;
+  try {
+    publicou = await publicarRascunho(getClient(), endereco, doc, agora, atualizadoEm, { contribuidor: id, chave });
+  } catch (e) {
+    if (!eRestricaoDoBanco(e)) throw e;
+    publicou = false;
+  }
+  if (publicou) {
     return Response.json({ slug: endereco }, { headers: { "cache-control": "no-store" } });
   }
   // 🔴 O bloqueio que chegou entre a porta e o batch (lição da Task 10): a

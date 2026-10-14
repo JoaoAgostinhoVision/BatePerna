@@ -19,7 +19,10 @@ import { ROTAS, type Onde } from "./novo/enderecos";
  *
  *  O pedido leva `atualizadoEm`, o `atualizado_em` do rascunho que a página leu:
  *  o que vai ao ar é o que esta tela mostrou, ou nada (I1 da auditoria). O botão
- *  fica desligado enquanto o pedido anda — o duplo toque (M4) não chega a sair.
+ *  fica desligado enquanto o pedido anda — o duplo toque (M4) não chega a sair —
+ *  e, depois do 200, até a navegação (I1 da revisão da Task 17): o lugar já está
+ *  no ar, e um 2º toque só acharia recusa (no dela, a chave já sumiu: 404, que
+ *  viraria "não consegui salvar" sobre um lugar que FOI).
  *
  *  ⚠️ NENHUM TEXTO SOBRE UM LUGAR ESPECÍFICO mora aqui: as frases e os pedidos
  *  chegam por prop, e as palavras fixas abaixo servem a todo lugar. */
@@ -68,6 +71,9 @@ export default function TelaDePublicar({
     if (indo) return;
     setErro(null);
     setIndo(true);
+    // Só o sucesso liga: o `finally` roda também depois do `return` do 200, e
+    // não pode religar o botão enquanto a página seguinte carrega.
+    let saindo = false;
     try {
       const r = await fetch(ROTAS[onde].publicarApi, { method: "POST", body: JSON.stringify({ slug, atualizadoEm }) });
       if (r.ok) {
@@ -78,6 +84,7 @@ export default function TelaDePublicar({
         // o endereço do lugar só nasce no publicar. No do João os dois são o
         // mesmo.
         const { slug: endereco } = (await r.json()) as { slug: string };
+        saindo = true;
         location.assign(ROTAS[onde].publicou(endereco));
         return;
       }
@@ -90,7 +97,7 @@ export default function TelaDePublicar({
     } catch {
       setErro(ERRO_REDE);
     } finally {
-      setIndo(false);
+      if (!saindo) setIndo(false);
     }
   }
 
