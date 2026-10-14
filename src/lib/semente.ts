@@ -34,7 +34,7 @@ export async function semear(
   // 🔴 E TODO ENDEREÇO COM RASCUNHO TAMBÉM (M3 da revisão final, 2026-10-06).
   // Um rascunho no endereço de um JSON do disco faria a semente gravar a versão
   // AO LADO dele — rascunho e lugar no mesmo endereço, o estado que
-  // `criarRascunho` declara impossível. Sem caminho real hoje (os JSONs já
+  // `criarRascunho` recusa. Sem caminho real hoje (os JSONs já
   // estão no banco de produção); é guarda barato, não trava de deploy.
   const comRascunho = await enderecosComRascunho(client);
   const semeados: string[] = [];

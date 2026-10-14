@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Client } from "@libsql/client";
 import type { Rascunho } from "@/lib/db";
 import type { QuemContribui } from "@/lib/contribuidor-sessao";
@@ -81,12 +82,37 @@ export async function conferirLugar(client: Client, slug: string, baseId: number
  *  pode bloquear entre a porta da rota e a gravação). */
 const LIVRE = `NOT EXISTS (SELECT 1 FROM contribuidores WHERE id = ? AND bloqueado = 1)`;
 
-/** 🔴 O endereço não é endereço ANTIGO de outro lugar (ruling de produto da
- *  pré-auditoria de 07/10): o link velho que circula continua levando ao lugar
- *  de onde veio, e o rascunho dela não nasce nem se muda pra lá. Em SQL, pra
- *  morar NO statement que grava; o `publicarRascunho` (Task 1) confere de novo,
- *  no batch, pra corrida. Um `?`: o endereço. */
-const SEM_ENDERECO_ANTIGO = `NOT EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ?)`;
+/** 🔴 O endereço que o nome e a cidade dela dariam não é de um LUGAR (no ar ou
+ *  escondido) nem endereço ANTIGO de outro lugar (ruling de produto da
+ *  pré-auditoria de 07/10: o link velho que circula continua levando ao lugar
+ *  de onde veio). É o AVISO CEDO do começar e do renomear (Task 17): quem
+ *  decide de verdade é o 1º passo do batch de `publicarRascunho`, na hora de
+ *  publicar — entre o rascunho e o publicar um lugar pode nascer ali. Em SQL,
+ *  pra morar no statement que grava, como antes. Dois `?`: o endereço, duas
+ *  vezes. Rascunho NENHUM entra aqui — nem dela, nem de outra pessoa, nem do
+ *  João: rascunho não ocupa nome (decisão do João de 13/10). */
+const ENDERECO_LIVRE = `NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
+                       AND NOT EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ?)`;
+
+/** 🔴 A CHAVE DO RASCUNHO DELA (Task 17) — e ela NUNCA é um endereço. Até a
+ *  Task 17 a chave de `ficha_rascunhos` era o endereço onde o lugar ia nascer,
+ *  e por isso dois rascunhos de mesmo nome e cidade não cabiam: o primeiro
+ *  ocupava o par pra sempre, mesmo abandonado. A decisão do João de 13/10
+ *  ("rascunho não deve bloquear", "Nenhum ocupa") tirou o endereço da chave: o
+ *  endereço é calculado do nome e da cidade do documento NA HORA DE PUBLICAR,
+ *  e quem publicar primeiro fica com ele.
+ *
+ *  O formato é `rascunho_` + 32 dígitos hexadecimais. O `_` é o ponto: todo
+ *  endereço sai de `slugDoNome` (só `[a-z0-9-]`) ou da semente (o mesmo
+ *  formato), então a chave nunca coincide com um endereço — nem de lugar, nem
+ *  de rascunho do João (cuja chave continua sendo o endereço), nem antigo — e
+ *  as portas do João que conferem "endereço livre de rascunho" (`criarRascunho`,
+ *  `moverRascunho`, `trocarEndereco`) nunca esbarram num rascunho dela. Anda
+ *  na URL das telas dela (`?slug=`) sem mudar. Provado em
+ *  `tests/api/rascunho-nao-ocupa.test.ts`. */
+export function novaChaveDeRascunho(): string {
+  return `rascunho_${randomUUID().replace(/-/g, "")}`;
+}
 
 const rascunho = (r: Record<string, unknown>): Rascunho => ({
   slug: String(r.slug), doc: String(r.doc), atualizado_em: Number(r.atualizado_em),
@@ -153,18 +179,20 @@ export async function desbloquearContribuidor(client: Client, id: string): Promi
   return r.rowsAffected === 1;
 }
 
-/** O rascunho DELA nasce — com a régua de `criarRascunho` (endereço livre nas
- *  duas tabelas, numa consulta só) e mais duas: é dela, e ela não está
- *  bloqueada. */
-export async function criarRascunhoDaPessoa(client: Client, slug: string, doc: string, agora: number, id: string): Promise<boolean> {
+/** O rascunho DELA nasce, numa CHAVE nova (`novaChaveDeRascunho`), e devolve a
+ *  chave — `null` quando nada nasceu: ela está bloqueada, ou o `endereco` que o
+ *  nome e a cidade dela dariam já é de um lugar ou endereço antigo
+ *  (`ENDERECO_LIVRE`). Rascunho de ninguém recusa (Task 17). Numa consulta só. */
+export async function criarRascunhoDaPessoa(
+  client: Client, endereco: string, doc: string, agora: number, id: string,
+): Promise<string | null> {
+  const chave = novaChaveDeRascunho();
   const r = await client.execute({
     sql: `INSERT INTO ficha_rascunhos (slug, doc, atualizado_em, contribuidor)
-          SELECT ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
-                             AND ${SEM_ENDERECO_ANTIGO} AND ${LIVRE}
-          ON CONFLICT(slug) DO NOTHING`,
-    args: [slug, doc, agora, id, slug, slug, id],
+          SELECT ?, ?, ?, ? WHERE ${ENDERECO_LIVRE} AND ${LIVRE}`,
+    args: [chave, doc, agora, id, endereco, endereco, id],
   });
-  return r.rowsAffected === 1;
+  return r.rowsAffected === 1 ? chave : null;
 }
 
 export async function lerRascunhoDaPessoa(client: Client, slug: string, id: string): Promise<Rascunho | null> {
@@ -184,26 +212,19 @@ export async function rascunhosDaPessoa(client: Client, id: string): Promise<Ras
 }
 
 /** A régua de `regravarRascunho` (UPDATE, nunca upsert; `atualizado_em` cresce
- *  estritamente), e só no rascunho DELA, livre. */
-export async function regravarRascunhoDaPessoa(client: Client, slug: string, doc: string, agora: number, id: string): Promise<boolean> {
+ *  estritamente), e só no rascunho DELA, livre. A chave NUNCA muda (Task 17):
+ *  renomear, ou mudar a cidade, é regravar o documento — e aí quem chama passa
+ *  o `endereco` que o par novo daria, e ele tem de estar livre de lugar e de
+ *  endereço antigo (`ENDERECO_LIVRE`, o aviso cedo). `null` = qualquer outro
+ *  campo, sem conferir endereço. */
+export async function regravarRascunhoDaPessoa(
+  client: Client, chave: string, doc: string, agora: number, id: string, endereco: string | null = null,
+): Promise<boolean> {
   const r = await client.execute({
     sql: `UPDATE ficha_rascunhos SET doc = ?, atualizado_em = MAX(?, atualizado_em + 1)
-           WHERE slug = ? AND contribuidor = ? AND ${LIVRE}`,
-    args: [doc, agora, slug, id, id],
-  });
-  return r.rowsAffected === 1;
-}
-
-/** A régua de `moverRascunho` (o destino livre nas duas tabelas, num UPDATE
- *  só), e só no rascunho DELA, livre — e o destino não é endereço antigo. */
-export async function moverRascunhoDaPessoa(client: Client, de: string, para: string, doc: string, agora: number, id: string): Promise<boolean> {
-  const r = await client.execute({
-    sql: `UPDATE ficha_rascunhos SET slug = ?, doc = ?, atualizado_em = MAX(?, atualizado_em + 1)
            WHERE slug = ? AND contribuidor = ? AND ${LIVRE}
-             AND NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
-             AND NOT EXISTS (SELECT 1 FROM ficha_rascunhos WHERE slug = ?)
-             AND ${SEM_ENDERECO_ANTIGO}`,
-    args: [para, doc, agora, de, id, id, para, para, para],
+             AND (? IS NULL OR (${ENDERECO_LIVRE}))`,
+    args: [doc, agora, chave, id, id, endereco, endereco, endereco],
   });
   return r.rowsAffected === 1;
 }

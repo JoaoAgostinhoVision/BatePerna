@@ -4,11 +4,11 @@ import {
 } from "@/lib/campos-da-pessoa";
 import { getClient } from "@/lib/db";
 import {
-  apagarRascunhoDaPessoa, criarRascunhoDaPessoa, estaBloqueado, lerRascunhoDaPessoa, moverRascunhoDaPessoa, rascunhosDaPessoa,
+  apagarRascunhoDaPessoa, criarRascunhoDaPessoa, estaBloqueado, lerRascunhoDaPessoa, rascunhosDaPessoa,
   regravarRascunhoDaPessoa,
 } from "@/lib/db-contribuidor";
-import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, colisaoDaMudanca, colisaoDoPar, type Colisao } from "@/lib/par-de-lugar";
-import { BLOQUEADA, NOME_JA_EM_USO, RASCUNHO_DELA_JA_EXISTE, RASCUNHO_DELA_SUMIU, portaDaPessoa } from "@/lib/porta-da-pessoa";
+import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, colisaoDaMudanca, colisaoDoPar } from "@/lib/par-de-lugar";
+import { BLOQUEADA, NOME_JA_EM_USO, RASCUNHO_DELA_SUMIU, portaDaPessoa } from "@/lib/porta-da-pessoa";
 import {
   CIDADE_SEM_LETRA, CIDADE_VAZIA, NOME_SEM_LETRA, NOME_VAZIO, cidadeDoDoc, docDoLugarNovo,
   docNoEndereco, nomeDoRascunho, slugDoNome,
@@ -38,19 +38,6 @@ function recusar400(erro: unknown): Response {
 
 const emUso = (): Response => new Response(NOME_JA_EM_USO, { status: 409, headers: TEXTO });
 
-/** 🔴 I1 DA REVISÃO FINAL: quando o que ocupa o par ou o endereço é um rascunho
- *  DELA, a frase é a que aponta a lista dela — `NOME_JA_EM_USO` diria "de
- *  outro lugar". A leitura só escolhe a frase; quem recusou foi a colisão ou o
- *  statement. `lerRascunhoDaPessoa` filtra por `contribuidor`: rascunho de
- *  outro nunca vira "você já começou". */
-async function ocupadoPor(slug: string, id: string): Promise<Response> {
-  return (await lerRascunhoDaPessoa(getClient(), slug, id)) !== null
-    ? new Response(RASCUNHO_DELA_JA_EXISTE, { status: 409, headers: TEXTO })
-    : emUso();
-}
-const colidiu = (colisao: Colisao, id: string): Promise<Response> =>
-  colisao.de === "rascunho-de-quem-usa" ? ocupadoPor(colisao.slug, id) : Promise.resolve(emUso());
-
 /** 🔴 A GRAVAÇÃO RECUSADA POR BLOQUEIO NO MEIO (onda de fix da Task 10): a
  *  porta deixou passar, e o João bloqueou antes do statement — o `LIVRE` de
  *  `db-contribuidor.ts` derrubou a gravação. A recusa é a MESMA da porta, e
@@ -59,13 +46,20 @@ const colidiu = (colisao: Colisao, id: string): Promise<Response> =>
 const bloqueada = (): Response => new Response(BLOQUEADA, { status: 403, headers: TEXTO });
 
 /** COMEÇAR: o nome e a cidade, como no painel (mesmas frases de campo, mesma
- *  colisão pelo par, mesmo endereço). O rascunho nasce DELA.
+ *  colisão pelo par contra LUGAR, mesmo endereço no documento). O rascunho
+ *  nasce DELA, numa chave própria que nunca é um endereço (Task 17), e a
+ *  resposta é `{slug}` com essa CHAVE — é ela que as telas dela levam na URL.
  *
- *  🔴 I3 da pré-auditoria: TODA colisão — o par, o gêmeo sem cidade, o
- *  endereço ocupado, o endereço antigo — responde `NOME_JA_EM_USO`, menos a com
- *  um rascunho DELA (`RASCUNHO_DELA_JA_EXISTE`, I1 da revisão final). A rota lê
- *  a colisão ESTRUTURADA (`colisaoDoPar`) e nunca diz QUEM ocupa: nada do
- *  painel ("pela lista do painel") e nenhum nome de outro chega a ela. */
+ *  🔴 Task 17 (decisão do João de 13/10, "Nenhum ocupa"): nenhum rascunho
+ *  recusa — nem dela, nem de outra pessoa, nem do João. Dois rascunhos de
+ *  mesmo nome e cidade podem existir, e quem publicar primeiro fica com o
+ *  endereço. O que ainda recusa AQUI, cedo, é o que já existe: o par de um
+ *  lugar (escondido inclusive, e o gêmeo sem cidade), o endereço de um lugar,
+ *  e o endereço antigo — um aviso útil; o publicar confere de novo.
+ *
+ *  🔴 I3 da pré-auditoria: TODA colisão responde `NOME_JA_EM_USO`. A rota lê a
+ *  colisão ESTRUTURADA (`colisaoDoPar`) e nunca diz QUEM ocupa: nada do painel
+ *  ("pela lista do painel") e nenhum nome de outro chega a ela. */
 export async function POST(req: Request): Promise<Response> {
   const agora = agoraS();
   const porta = await portaDaPessoa(agora);
@@ -83,19 +77,18 @@ export async function POST(req: Request): Promise<Response> {
   if (slugDoNome(nome) === "") return new Response(NOME_SEM_LETRA, { status: 400, headers: TEXTO });
   if (slugDoNome(cidade) === "") return new Response(CIDADE_SEM_LETRA, { status: 400, headers: TEXTO });
 
-  const colisao = await colisaoDoPar(nome, cidade, { exceto: null, nomeNovo: true });
-  if (colisao !== null) return colidiu(colisao, porta.pessoa.id);
+  if ((await colisaoDoPar(nome, cidade, { exceto: null, nomeNovo: true, quem: "pessoa" })) !== null) return emUso();
 
-  const slug = slugDoNome(`${nome} ${cidade}`);
-  if (await criarRascunhoDaPessoa(getClient(), slug, docDoLugarNovo(slug, nome, cidade), agora, porta.pessoa.id)) {
-    return Response.json({ slug }, { status: 201, headers: SEM_CACHE });
-  }
+  // O ENDEREÇO vai no documento (o `slug` de dentro, como no do João); a chave
+  // nasce no banco.
+  const endereco = slugDoNome(`${nome} ${cidade}`);
+  const chave = await criarRascunhoDaPessoa(getClient(), endereco, docDoLugarNovo(endereco, nome, cidade), agora, porta.pessoa.id);
+  if (chave !== null) return Response.json({ slug: chave }, { status: 201, headers: SEM_CACHE });
   // O banco recusou. 🔴 O bloqueio PRIMEIRO (Task 15): o João bloqueou entre
   // a porta e o INSERT, e o `LIVRE` derrubou — o endereço pode estar livre.
-  // Senão, endereço de um lugar, de um rascunho (dela ou de outro), ou
-  // endereço antigo: a frase é a dela.
+  // Senão, o endereço é de um lugar, ou endereço antigo: a frase é a dela.
   if (await estaBloqueado(getClient(), porta.pessoa.id)) return bloqueada();
-  return ocupadoPor(slug, porta.pessoa.id);
+  return emUso();
 }
 
 /** RESPONDER uma pergunta dela. Três corpos, mutuamente exclusivos:
@@ -116,8 +109,8 @@ export async function PUT(req: Request): Promise<Response> {
   // leem. Só de espaços vira `""`, e quem a recusa é a folha (`recusarVazio`,
   // em `campos-da-ficha.ts`, com `CIDADE_VAZIA` pra cidade) — uma porta só,
   // não duas em série. É isto, com o `trim` do POST, que deixa o rascunho
-  // dela SEMPRE com cidade com letra: o ramo `semCidade` de `colisaoDoPar`
-  // nunca é de um rascunho dela.
+  // dela SEMPRE com cidade com letra: o endereço que sai do par dela tem
+  // sempre o hífen do meio.
   const valor = typeof corpo.valor === "string" ? corpo.valor.trim() : corpo.valor;
   const trazCampo = "campo" in corpo || "valor" in corpo || "naoSei" in corpo;
   const trazPonto = "ponto" in corpo || "lat" in corpo || "lng" in corpo;
@@ -140,8 +133,7 @@ export async function PUT(req: Request): Promise<Response> {
   const atual = await lerRascunhoDaPessoa(getClient(), slug, id);
   if (atual === null) return new Response("", { status: 404, headers: TEXTO });
 
-  const colisao = await colisaoDaMudanca(atual.doc, slug, campo, valor);
-  if (colisao !== null) return colidiu(colisao, id);
+  if ((await colisaoDaMudanca(atual.doc, slug, campo, valor, "pessoa")) !== null) return emUso();
 
   let novoDoc: string;
   try {
@@ -150,25 +142,25 @@ export async function PUT(req: Request): Promise<Response> {
     return recusar400(erro);
   }
 
+  // 🔴 RENOMEAR, OU MUDAR A CIDADE, É REGRAVAR O DOCUMENTO (Task 17): a chave
+  // não anda. O `slug` de dentro acompanha o par (o endereço onde o lugar
+  // nasceria), e ele tem de estar livre de LUGAR e de endereço antigo — o aviso
+  // cedo, no mesmo UPDATE (`regravarRascunhoDaPessoa` com `endereco`).
+  let endereco: string | null = null;
   if (trazCampo && (campo === CAMPO_DO_NOME || campo === CAMPO_DA_CIDADE)) {
     if (slugDoNome(nomeDoRascunho(novoDoc, "")) === "") return new Response(NOME_SEM_LETRA, { status: 400, headers: TEXTO });
     if (slugDoNome(cidadeDoDoc(novoDoc) ?? "") === "") return new Response(CIDADE_VAZIA, { status: 400, headers: TEXTO });
-    const destino = slugDoNome(`${nomeDoRascunho(novoDoc, "")} ${cidadeDoDoc(novoDoc)}`);
-    if (destino !== slug) {
-      if (await moverRascunhoDaPessoa(getClient(), slug, destino, docNoEndereco(novoDoc, destino), agora, id)) {
-        return Response.json({ slug: destino }, { headers: SEM_CACHE });
-      }
-      if (await estaBloqueado(getClient(), id)) return bloqueada();
-      if ((await lerRascunhoDaPessoa(getClient(), slug, id)) === null) {
-        return new Response(RASCUNHO_DELA_SUMIU, { status: 409, headers: TEXTO });
-      }
-      // O destino está ocupado (lugar, rascunho dela ou de outro, endereço antigo): a frase dela.
-      return ocupadoPor(destino, id);
-    }
+    endereco = slugDoNome(`${nomeDoRascunho(novoDoc, "")} ${cidadeDoDoc(novoDoc)}`);
+    novoDoc = docNoEndereco(novoDoc, endereco);
   }
-  if (!(await regravarRascunhoDaPessoa(getClient(), slug, novoDoc, agora, id))) {
+  if (!(await regravarRascunhoDaPessoa(getClient(), slug, novoDoc, agora, id, endereco))) {
     if (await estaBloqueado(getClient(), id)) return bloqueada();
-    return new Response(RASCUNHO_DELA_SUMIU, { status: 409, headers: TEXTO });
+    if (endereco === null || (await lerRascunhoDaPessoa(getClient(), slug, id)) === null) {
+      return new Response(RASCUNHO_DELA_SUMIU, { status: 409, headers: TEXTO });
+    }
+    // O rascunho está lá, livre, e o par mudou: quem recusou foi o endereço
+    // (de um lugar, ou antigo).
+    return emUso();
   }
   return Response.json({ slug }, { headers: SEM_CACHE });
 }

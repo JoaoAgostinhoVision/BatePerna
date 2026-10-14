@@ -38,6 +38,14 @@ beforeEach(async () => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
+/** O rascunho DELA (ou de `dono`) nasce; devolve a CHAVE — Task 17: a chave é
+ *  o que anda na URL das telas dela, e nunca é o endereço. */
+async function rascunhoDe(endereco: string, doc: unknown, dono = PESSOA.id): Promise<string> {
+  const chave = await criarRascunhoDaPessoa(banco, endereco, JSON.stringify(doc), 1, dono);
+  expect(chave, "a premissa: o rascunho nasceu").not.toBeNull();
+  return chave!;
+}
+
 /** O `fetch` e a navegação dublados, pra conferir PRA ONDE as telas dela
  *  gravam e levam (I2 da revisão da Task 14): sem isto, apagar o
  *  `onde="contribuir"` deixava a tela dela gravando no /api/admin, verde. */
@@ -125,9 +133,9 @@ describe("Meus lugares", () => {
   });
 
   it("os rascunhos dela aparecem, com o caminho de volta pras perguntas", async () => {
-    await criarRascunhoDaPessoa(banco, "comecado-cidade", JSON.stringify({ slug: "comecado-cidade" }), 1, PESSOA.id);
+    const chave = await rascunhoDe("comecado-cidade", { slug: "comecado-cidade" });
     const { container } = render(await Meus());
-    expect(container.querySelector('a[href="/contribuir/novo?slug=comecado-cidade"]')).not.toBeNull();
+    expect(container.querySelector(`a[href="/contribuir/novo?slug=${chave}"]`)).not.toBeNull();
   });
 });
 
@@ -148,8 +156,7 @@ describe("as perguntas na tela", () => {
   // 🔴 I2(a) da revisão: a pergunta do rascunho dela grava pela rota DELA e
   // leva às telas DELA — Próxima, Anterior, os saltos e o Desistir.
   it("com slug: grava em /api/contribuir/rascunho, e todo link fica em /contribuir", async () => {
-    const S = "comecado-cidade";
-    await criarRascunhoDaPessoa(banco, S, JSON.stringify({ slug: S }), 1, PESSOA.id);
+    const S = await rascunhoDe("comecado-cidade", { slug: "comecado-cidade" });
     const fetch = portasFalsas();
     const n = ORDEM_DA_PESSOA.indexOf("promessa") + 1;
     const { container } = render(await Novo({ searchParams: Promise.resolve({ slug: S, p: String(n) }) }));
@@ -164,8 +171,8 @@ describe("as perguntas na tela", () => {
   });
 
   it("o rascunho de OUTRA pessoa é 404", async () => {
-    await criarRascunhoDaPessoa(banco, "da-outra-cidade", JSON.stringify({ slug: "da-outra-cidade" }), 1, OUTRA.id);
-    await expect(Novo({ searchParams: Promise.resolve({ slug: "da-outra-cidade" }) })).rejects.toThrow("NEXT_NOT_FOUND");
+    const dela = await rascunhoDe("da-outra-cidade", { slug: "da-outra-cidade" }, OUTRA.id);
+    await expect(Novo({ searchParams: Promise.resolve({ slug: dela }) })).rejects.toThrow("NEXT_NOT_FOUND");
   });
 
   // Carregado da revisão da Task 11: `problemaDasFaixas` manda usar "não tem"
@@ -173,9 +180,9 @@ describe("as perguntas na tela", () => {
   // opcional na régua dela, e o botão só existe em campo opcional preenchido).
   it("o horário respondido oferece o 'não tem' (a saída que a frase das faixas cita)", async () => {
     const doc = { slug: "com-hora-cidade", horario: [{ abre: "08:00", fecha: "17:00" }] };
-    await criarRascunhoDaPessoa(banco, "com-hora-cidade", JSON.stringify(doc), 1, PESSOA.id);
+    const chave = await rascunhoDe("com-hora-cidade", doc);
     const n = ORDEM_DA_PESSOA.indexOf("horario") + 1;
-    const { container } = render(await Novo({ searchParams: Promise.resolve({ slug: "com-hora-cidade", p: String(n) }) }));
+    const { container } = render(await Novo({ searchParams: Promise.resolve({ slug: chave, p: String(n) }) }));
     const pergunta = container.querySelector('[data-testid="pergunta-horario"]');
     expect(pergunta, "a premissa: a tela é a do horário").not.toBeNull();
     expect(pergunta?.querySelector('[data-nao-sei="horario"]')?.textContent).toBe(NAO_TEM);
@@ -191,20 +198,37 @@ describe("publicar o dela", () => {
   // DELA, na posição da lista DELA, e na ordem em que ela as vê — um link pra
   // /admin seria a tela dela mandando-a ao painel do João, que ela não abre.
   it("o que falta leva às perguntas DELA, na posição da lista dela — nunca ao painel", async () => {
-    await criarRascunhoDaPessoa(banco, SO_NOME, JSON.stringify(docSoNome), 1, PESSOA.id);
-    const { container } = render(await Publicar({ searchParams: Promise.resolve({ slug: SO_NOME }) }));
+    const chave = await rascunhoDe(SO_NOME, docSoNome);
+    const { container } = render(await Publicar({ searchParams: Promise.resolve({ slug: chave }) }));
     const faltam = [...container.querySelectorAll('[data-testid="falta"] a')];
     const esperado = ["trajeto.waypoints.0.lat", "promessa", "acesso", "custo.tag"].map((c) => ({
       texto: PERGUNTAS[c],
-      href: `/contribuir/novo?slug=${SO_NOME}&p=${ORDEM_DA_PESSOA.indexOf(c) + 1}`,
+      href: `/contribuir/novo?slug=${chave}&p=${ORDEM_DA_PESSOA.indexOf(c) + 1}`,
     }));
     expect(faltam.map((a) => ({ texto: a.textContent, href: a.getAttribute("href") }))).toEqual(esperado);
     expect(container.querySelector("a[href*='/admin']")).toBeNull();
   });
 
   it("o rascunho de OUTRA pessoa é 404", async () => {
-    await criarRascunhoDaPessoa(banco, SO_NOME, JSON.stringify(docSoNome), 1, OUTRA.id);
-    await expect(Publicar({ searchParams: Promise.resolve({ slug: SO_NOME }) })).rejects.toThrow("NEXT_NOT_FOUND");
+    const dela = await rascunhoDe(SO_NOME, docSoNome, OUTRA.id);
+    await expect(Publicar({ searchParams: Promise.resolve({ slug: dela }) })).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  // 🔴 Task 17: a tela dela publica pela CHAVE, e leva ao ENDEREÇO que a porta
+  // responde — o lugar acabou de nascer lá. Ir pela chave seria um 404 na
+  // página pública.
+  it("publicou: leva à página pública pelo ENDEREÇO que a porta respondeu, nunca pela chave", async () => {
+    const chave = await rascunhoDe(SO_NOME, docSoNome);
+    const fetch = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ slug: SO_NOME }), { status: 200 }));
+    vi.stubGlobal("fetch", fetch);
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign, reload: vi.fn() });
+    const { container } = render(await Publicar({ searchParams: Promise.resolve({ slug: chave }) }));
+    fireEvent.click(container.querySelector(".adm-publicar button")!);
+    await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+    expect(fetch.mock.calls[0][0]).toBe("/api/contribuir/publicar");
+    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body)).slug).toBe(chave);
+    expect(assign).toHaveBeenCalledWith(`/${SO_NOME}`);
   });
 });
 

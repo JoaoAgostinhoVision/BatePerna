@@ -239,12 +239,14 @@ describe("toda frase nova desta rodada nasce marcada", () => {
   });
 
   // As frases desta rodada que o regex de `export const NOME = "…"` não lê
-  // (M9 da pré-auditoria): entrada de objeto, função que devolve frase, e a
-  // marca que divide a linha com um `LIDA:` antigo. Conferidas POR NOME.
+  // (M9 da pré-auditoria): entrada de objeto, e a marca que divide a linha com
+  // um `LIDA:` antigo (caso de baixo). Conferidas POR NOME. (As duas funções
+  // que devolviam frase — `parDeRascunhoDeQuemUsa` e
+  // `enderecoDeRascunhoDeQuemUsa`, em `rascunho.ts` — foram apagadas na Task
+  // 17, com o estado que as alcançava: rascunho de quem usa não ocupa mais
+  // nome. Não há outra função-frase nova na rodada.)
   it.each([
     ["src/app/admin/HistoricoDaFicha.tsx", /^\s+contribuidor: "quem mandou",/],
-    ["src/lib/rascunho.ts", /^export const parDeRascunhoDeQuemUsa = /],
-    ["src/lib/rascunho.ts", /^export const enderecoDeRascunhoDeQuemUsa = /],
   ] as const)("%s: %s tem PENDENTE na linha de cima", (arquivo, alvo) => {
     const linhas = ler(arquivo);
     const i = linhas.findIndex((l) => alvo.test(l));

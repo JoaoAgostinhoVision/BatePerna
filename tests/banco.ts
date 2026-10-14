@@ -1,5 +1,6 @@
 import { createClient, type Client } from "@libsql/client";
 import { ensureSchema, getClient, gravarVersao, publicarRascunho } from "@/lib/db";
+import { novaChaveDeRascunho } from "@/lib/db-contribuidor";
 import { loadAll } from "@/lib/ficha";
 import { slugDoNome } from "@/lib/rascunho";
 import { REGRA_PADRAO_INICIAL } from "@/lib/regra-padrao";
@@ -150,6 +151,26 @@ export async function salvarRascunho(client: Client, slug: string, doc: string, 
           ON CONFLICT(slug) DO UPDATE SET doc = excluded.doc, atualizado_em = excluded.atualizado_em`,
     args: [slug, doc, agora],
   });
+}
+
+/** O rascunho que mora na chave `slug`, de QUEM FOR, com o dono — HELPER DE
+ *  TESTE, pra conferir o banco. Morava em `src` (`rascunhoDeQualquerUm`) até a
+ *  Task 17: desde que a chave do rascunho de quem usa deixou de ser um
+ *  endereço, nenhuma rota precisa mais ler "o rascunho de qualquer um" num
+ *  endereço — o do João é `lerRascunho`, o dela é `lerRascunhoDaPessoa`. */
+export async function rascunhoNoBanco(
+  client: Client, slug: string,
+): Promise<{ slug: string; doc: string; atualizado_em: number; contribuidor: string | null } | null> {
+  const r = await client.execute({
+    sql: "SELECT slug, doc, atualizado_em, contribuidor FROM ficha_rascunhos WHERE slug = ?",
+    args: [slug],
+  });
+  if (!r.rows.length) return null;
+  const l = r.rows[0];
+  return {
+    slug: String(l.slug), doc: String(l.doc), atualizado_em: Number(l.atualizado_em),
+    contribuidor: l.contribuidor == null ? null : String(l.contribuidor),
+  };
 }
 
 /** Um banco `:memory:` VAZIO e avulso, pra quem precisa de um cliente só seu. */
@@ -307,11 +328,13 @@ export async function semearLugarDaPessoa(
     condicao: { coords: ponto },
     custo: { tag: "gratis" },
   });
+  // O rascunho dela mora numa CHAVE, nunca no endereço (Task 17).
+  const chave = novaChaveDeRascunho();
   await client.execute({
     sql: "INSERT INTO ficha_rascunhos (slug, doc, atualizado_em, contribuidor) VALUES (?, ?, ?, ?)",
-    args: [slug, doc, agora, contribuidor],
+    args: [chave, doc, agora, contribuidor],
   });
-  if (!(await publicarRascunho(client, slug, doc, agora, agora, contribuidor))) {
+  if (!(await publicarRascunho(client, slug, doc, agora, agora, { contribuidor, chave }))) {
     throw new Error(`semearLugarDaPessoa: "${slug}" não publicou — confira a porta de publicarRascunho.`);
   }
   return slug;

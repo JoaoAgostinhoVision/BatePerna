@@ -88,6 +88,6 @@ describe("desbloquearContribuidor", () => {
   it("depois de desbloqueada, ela volta a gravar", async () => {
     await bloquearContribuidor(c, PESSOA.id, T);
     await desbloquearContribuidor(c, PESSOA.id);
-    expect(await criarRascunhoDaPessoa(c, "nova-cidade", '{"slug":"nova-cidade"}', T, PESSOA.id)).toBe(true);
+    expect(await criarRascunhoDaPessoa(c, "nova-cidade", '{"slug":"nova-cidade"}', T, PESSOA.id)).not.toBeNull();
   });
 });

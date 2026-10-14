@@ -84,8 +84,9 @@ export async function PUT(req: Request): Promise<Response> {
   if (lugar.origem.conferido) return new Response(JA_CONFERIDO, { status: 409, headers: TEXTO });
 
   // I3: a colisão estruturada, e a frase DELA — nunca `parDaMudanca`, a do
-  // painel, que nomeia quem ocupa. O próprio `slug` fica de fora.
-  if ((await colisaoDaMudanca(lugar.versao.doc, slug, campo, valor)) !== null) {
+  // painel, que nomeia quem ocupa. O próprio `slug` fica de fora. Contra LUGAR
+  // só: rascunho nenhum ocupa o par dela (Task 17, decisão do João de 13/10).
+  if ((await colisaoDaMudanca(lugar.versao.doc, slug, campo, valor, "pessoa")) !== null) {
     return new Response(NOME_JA_EM_USO, { status: 409, headers: TEXTO });
   }
 

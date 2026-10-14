@@ -13,14 +13,15 @@ import {
   listarRascunhos,
   lugarDoDono,
   moverRascunho,
+  getFreshness,
   publicarRascunho,
-  rascunhoDeQualquerUm,
   regravarRascunho,
-  todosOsRascunhos,
+  upsertFreshness,
   versaoAtual,
 } from "@/lib/db";
+import { criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
 import { REGRA_PADRAO_INICIAL } from "@/lib/regra-padrao";
-import { AGORA_SEMENTE, PESSOA_DE_TESTE, semearAcervo, semearLugarDaPessoa } from "../banco";
+import { AGORA_SEMENTE, PESSOA_DE_TESTE, rascunhoNoBanco, semearAcervo, semearLugarDaPessoa } from "../banco";
 
 let c: Client;
 beforeEach(async () => {
@@ -102,11 +103,8 @@ describe("publicar de quem usa", () => {
   it("publicar recusado (rascunho mudou) não deixa linha de origem nenhuma", async () => {
     const slug = "pedra-mandada-cidade-teste";
     const doc = JSON.stringify({ slug, modos: [], cidade: "Cidade Teste", trajeto: { waypoints: [{ nome: "Pedra Mandada" }] } });
-    await c.execute({
-      sql: "INSERT INTO ficha_rascunhos (slug, doc, atualizado_em, contribuidor) VALUES (?, ?, ?, ?)",
-      args: [slug, doc, AGORA_SEMENTE, PESSOA_DE_TESTE],
-    });
-    expect(await publicarRascunho(c, slug, doc, AGORA_SEMENTE + 1, AGORA_SEMENTE - 1, PESSOA_DE_TESTE)).toBe(false);
+    const chave = (await criarRascunhoDaPessoa(c, slug, doc, AGORA_SEMENTE, PESSOA_DE_TESTE))!;
+    expect(await publicarRascunho(c, slug, doc, AGORA_SEMENTE + 1, AGORA_SEMENTE - 1, { contribuidor: PESSOA_DE_TESTE, chave })).toBe(false);
     expect(await contarOrigens()).toBe(0);
     expect(await versaoAtual(c, slug)).toBeNull();
   });
@@ -126,7 +124,7 @@ describe("publicar de quem usa", () => {
     const slug = "lugar-do-joao-cidade";
     const doc = JSON.stringify({ slug, modos: [] });
     expect(await criarRascunho(c, slug, doc, AGORA_SEMENTE)).toBe(true);
-    expect(await publicarRascunho(c, slug, doc, AGORA_SEMENTE + 1, AGORA_SEMENTE, PESSOA_DE_TESTE)).toBe(false);
+    expect(await publicarRascunho(c, slug, doc, AGORA_SEMENTE + 1, AGORA_SEMENTE, { contribuidor: PESSOA_DE_TESTE, chave: slug })).toBe(false);
     expect(await versaoAtual(c, slug)).toBeNull();
   });
 
@@ -182,10 +180,14 @@ describe("a lista de rascunhos do painel é só do João", () => {
   });
 });
 
-// 🔴 M11 E I4 DA PRÉ-AUDITORIA, e o ruling de produto: o painel do João NÃO
-// age sobre rascunho de quem usa (nem lê, nem regrava, nem move, nem apaga —
-// um caso por porta), mas a COLISÃO o vê, com o dono.
-describe("o rascunho de quem usa: o painel não alcança, a colisão vê", () => {
+// 🔴 M11 DA PRÉ-AUDITORIA, e o ruling de produto: o painel do João NÃO age
+// sobre rascunho de quem usa (nem lê, nem regrava, nem move, nem apaga — um
+// caso por porta). O rascunho é montado NUM ENDEREÇO de propósito (estado que
+// as portas dela não produzem desde a Task 17: a chave dela nunca é um
+// endereço): é o filtro de dono de cada porta que se prova aqui, não o formato
+// da chave. (Até a Task 17 a COLISÃO o via, com o dono — `todosOsRascunhos`;
+// desde ela, rascunho de quem usa não ocupa nada.)
+describe("o rascunho de quem usa: o painel não alcança", () => {
   const DELA = "da-pessoa-cidade";
   const DOC_DELA = JSON.stringify({ slug: DELA });
   beforeEach(async () => {
@@ -197,32 +199,63 @@ describe("o rascunho de quem usa: o painel não alcança, a colisão vê", () =>
 
   it("lerRascunho do painel não o lê", async () => {
     expect(await lerRascunho(c, DELA)).toBeNull();
-    expect(await rascunhoDeQualquerUm(c, DELA), "a premissa: o rascunho dela está no banco").not.toBeNull();
+    expect(await rascunhoNoBanco(c, DELA), "a premissa: o rascunho dela está no banco").not.toBeNull();
   });
 
   it("regravarRascunho do painel não o regrava", async () => {
     expect(await regravarRascunho(c, DELA, '{"x":1}', AGORA_SEMENTE + 1)).toBe(false);
-    expect((await rascunhoDeQualquerUm(c, DELA))?.doc).toBe(DOC_DELA);
+    expect((await rascunhoNoBanco(c, DELA))?.doc).toBe(DOC_DELA);
   });
 
   it("moverRascunho do painel não o move", async () => {
     expect(await moverRascunho(c, DELA, "outro-cidade", '{"slug":"outro-cidade"}', AGORA_SEMENTE + 1)).toBe(false);
-    expect((await rascunhoDeQualquerUm(c, DELA))?.slug).toBe(DELA);
+    expect((await rascunhoNoBanco(c, DELA))?.slug).toBe(DELA);
   });
 
   it("apagarRascunho do painel não o apaga", async () => {
     expect(await apagarRascunho(c, DELA)).toBe(false);
-    expect(await rascunhoDeQualquerUm(c, DELA)).not.toBeNull();
+    expect(await rascunhoNoBanco(c, DELA)).not.toBeNull();
+  });
+});
+
+// 🔴 TASK 17: o publicar dela recebe a CHAVE do rascunho e o ENDEREÇO de
+// destino, separados. Cada caso trava um dos usos: o `NOT EXISTS` de versão no
+// ENDEREÇO (1º passo), a `freshness` órfã no ENDEREÇO (passo 4 — os passos 2,
+// 3 e 5 leem a linha `velho = endereço`, que pra ela o 1º passo já recusou), e
+// o DELETE na CHAVE (o último). O rascunho do João no mesmo endereço é o
+// vizinho que um DELETE pelo endereço apagaria.
+describe("o publicar dela: a chave e o endereço, separados", () => {
+  const E = "pedra-mandada-cidade-teste";
+  const DOC = JSON.stringify({ slug: E, modos: [], cidade: "Cidade Teste", trajeto: { waypoints: [{ nome: "Pedra Mandada" }] } });
+  const T = AGORA_SEMENTE + 40;
+  const dela = async () => (await criarRascunhoDaPessoa(c, E, DOC, AGORA_SEMENTE, PESSOA_DE_TESTE))!;
+
+  it("vai ao ar no ENDEREÇO; o rascunho dela some pela CHAVE; o do João no mesmo endereço fica", async () => {
+    const chave = await dela();
+    expect(await criarRascunho(c, E, DOC, AGORA_SEMENTE), "a premissa: o João tem rascunho no endereço").toBe(true);
+    expect(await publicarRascunho(c, E, DOC, T, AGORA_SEMENTE, { contribuidor: PESSOA_DE_TESTE, chave })).toBe(true);
+    expect((await versaoAtual(c, E))?.autor).toBe("contribuidor");
+    expect((await lerAcervoComOrigem(c)).linhas.get(E)).toMatchObject({ contribuidor: PESSOA_DE_TESTE, conferido: false });
+    expect(await rascunhoNoBanco(c, chave)).toBeNull();
+    expect(await lerRascunho(c, E), "o rascunho do João não é dela").not.toBeNull();
+    expect(await versaoAtual(c, chave)).toBeNull();
   });
 
-  it("todosOsRascunhos e rascunhoDeQualquerUm o veem, com o dono — e os do João com dono nulo", async () => {
-    await criarRascunho(c, "do-joao-cidade", JSON.stringify({ slug: "do-joao-cidade" }), AGORA_SEMENTE + 1);
-    expect((await todosOsRascunhos(c)).map((r) => [r.slug, r.contribuidor])).toEqual([
-      ["do-joao-cidade", null],
-      [DELA, PESSOA_DE_TESTE],
-    ]);
-    expect(await rascunhoDeQualquerUm(c, DELA)).toMatchObject({ slug: DELA, contribuidor: PESSOA_DE_TESTE });
-    expect(await rascunhoDeQualquerUm(c, "ninguem-cidade")).toBeNull();
+  it("o endereço já é de um lugar (escondido inclusive): não publica, nada muda, e o rascunho dela fica", async () => {
+    const chave = await dela();
+    await gravarVersao(c, E, JSON.stringify({ slug: E, modos: [] }), "painel", AGORA_SEMENTE + 5, true);
+    expect(await publicarRascunho(c, E, DOC, T, AGORA_SEMENTE, { contribuidor: PESSOA_DE_TESTE, chave })).toBe(false);
+    expect(Number((await c.execute({ sql: "SELECT COUNT(*) AS n FROM ficha_versoes WHERE ficha_slug = ?", args: [E] })).rows[0].n)).toBe(1);
+    expect(await contarOrigens()).toBe(0);
+    expect(await rascunhoNoBanco(c, chave)).not.toBeNull();
+  });
+
+  it("a `freshness` órfã do ENDEREÇO sai (cache de outro lugar não fica no novo)", async () => {
+    const chave = await dela();
+    await upsertFreshness(c, { slug: E, estado: "fresco", calculadoEm: AGORA_SEMENTE, fonte: "marcador", previsaoBruta: "{}" });
+    expect(await getFreshness(c, E), "a premissa: há freshness no endereço").not.toBeNull();
+    expect(await publicarRascunho(c, E, DOC, T, AGORA_SEMENTE, { contribuidor: PESSOA_DE_TESTE, chave })).toBe(true);
+    expect(await getFreshness(c, E)).toBeNull();
   });
 });
 

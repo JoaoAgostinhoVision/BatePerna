@@ -20,7 +20,8 @@ import {
   enderecoOcupadoPorRascunho,
 } from "@/lib/endereco";
 import { enderecoDeLugar } from "@/lib/rascunho";
-import { PESSOA_DE_TESTE, semearAcervo, base, comBaseAtual } from "../banco";
+import { criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
+import { PESSOA_DE_TESTE, rascunhoNoBanco, semearAcervo, base, comBaseAtual } from "../banco";
 import { lugarMarcador } from "../lugar-marcador";
 
 // Molde: `tests/api/route-admin-visibilidade.test.ts` — `Request` à mão, sessão
@@ -37,8 +38,9 @@ let cookieBom: string;
 let POST: typeof import("@/app/api/admin/endereco/route").POST;
 
 // A CORRIDA de duas abas (M1 da revisão): o que roda logo depois da ÚLTIMA
-// leitura da rota (`rascunhoDeQualquerUm` desde 07/10 — era `lerRascunho`, que
-// passou a ver só os rascunhos do João) e antes do batch dela.
+// leitura da rota (`lerRascunho` — de 07/10 até a Task 17 foi
+// `rascunhoDeQualquerUm`, enquanto o rascunho de quem usa ocupava endereço) e
+// antes do batch dela.
 const corrida = vi.hoisted(() => ({ antesDoBatch: null as null | (() => Promise<void>) }));
 
 vi.mock("@/lib/db", async (io) => {
@@ -46,8 +48,8 @@ vi.mock("@/lib/db", async (io) => {
   return {
     ...mod,
     getClient: () => c,
-    rascunhoDeQualquerUm: async (cliente: Client, slug: string) => {
-      const lido = await mod.rascunhoDeQualquerUm(cliente, slug);
+    lerRascunho: async (cliente: Client, slug: string) => {
+      const lido = await mod.lerRascunho(cliente, slug);
       const meio = corrida.antesDoBatch;
       corrida.antesDoBatch = null;
       if (meio !== null) await meio();
@@ -269,19 +271,20 @@ describe("POST /api/admin/endereco — recusas, e nada muda", () => {
     expect(await retrato()).toEqual(antes);
   });
 
-  // M11 da pré-auditoria: a `lerRascunho` do painel não vê rascunho de quem usa;
-  // a frase de quem ocupa lê `rascunhoDeQualquerUm`. Sem isso, a troca seria
-  // recusada pelo batch e a resposta seria "nada mudou", sem dizer por quê.
-  it("novo ocupado por um rascunho de QUEM USA: 409 dizendo quem, e nada muda", async () => {
-    await c.execute({
-      sql: "INSERT INTO ficha_rascunhos (slug, doc, atualizado_em, contribuidor) VALUES (?, ?, ?, ?)",
-      args: [B, JSON.stringify({ slug: B, cidade: "Outra Marcadora", trajeto: { waypoints: [{ nome: "Lugar Marcador" }] } }), AGORA - 5, PESSOA_DE_TESTE],
-    });
-    const antes = await retrato();
+  // 🔴 Task 17 (decisão do João de 13/10, "Nenhum ocupa"): o rascunho de quem
+  // usa o app não ocupa endereço — a chave dele nunca é um endereço. O João
+  // troca pro endereço que o par dela daria, e o rascunho dela fica. (De 07/10
+  // até a Task 17 era 409, por `rascunhoDeQualquerUm` — M11 da pré-auditoria.)
+  it("novo é o endereço que um rascunho de QUEM USA daria: troca, e o dela fica", async () => {
+    const doc = JSON.stringify({ slug: B, cidade: "Outra Marcadora", trajeto: { waypoints: [{ nome: "Lugar Marcador" }] } });
+    const chave = await criarRascunhoDaPessoa(c, B, doc, AGORA - 5, PESSOA_DE_TESTE);
+    expect(chave, "a premissa: o rascunho dela nasceu").not.toBeNull();
     const res = await POST(pedido({ slug: A }));
-    expect(res.status).toBe(409);
-    expect(await res.text()).toBe(enderecoOcupadoPorRascunho(B, "Lugar Marcador (Outra Marcadora)"));
-    expect(await retrato()).toEqual(antes);
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await res.json()).toEqual({ slug: B });
+    expect(await versaoAtual(c, A)).toBeNull();
+    expect((await versaoAtual(c, B))?.autor).toBe("painel");
+    expect(await rascunhoNoBanco(c, chave!)).toMatchObject({ doc, contribuidor: PESSOA_DE_TESTE });
   });
 });
 

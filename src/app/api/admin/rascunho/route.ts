@@ -14,7 +14,6 @@ import {
   lerRascunho,
   listarRascunhos,
   moverRascunho,
-  rascunhoDeQualquerUm,
   regravarRascunho,
   versaoAtual,
 } from "@/lib/db";
@@ -30,7 +29,6 @@ import {
   docNoEndereco,
   enderecoDeLugar,
   enderecoDeRascunho,
-  enderecoDeRascunhoDeQuemUsa,
   nomeComCidade,
   nomeDoRascunho,
   slugDoNome,
@@ -51,8 +49,10 @@ const SEM_CACHE = { "cache-control": "no-store" } as const;
  *     obrigatória, e é ela que separa dois lugares de mesmo nome). O endereço
  *     é `slugDoNome(nome + " " + cidade)`, um só; é recusado com frase quando o
  *     PAR (nome, cidade) já é de um lugar (inclusive ESCONDIDO) ou de um
- *     rascunho, quando um lugar de MESMO nome ainda não tem cidade
- *     (`parOcupado`), ou quando o endereço já é de um lugar ou de um rascunho.
+ *     rascunho DELE, quando um lugar de MESMO nome ainda não tem cidade
+ *     (`parOcupado`), ou quando o endereço já é de um lugar ou de um rascunho
+ *     dele. Rascunho de quem usa o app não recusa (Task 17: nenhum rascunho
+ *     ocupa nome; o do João conta só pra ele, porque é a lista dele).
  *     Nome repetido em OUTRA cidade nasce. 201 `{slug}`.
  *   - `PUT` — responde uma pergunta, nas formas de corpo da porta da ficha
  *     (`src/app/api/admin/ficha/route.ts`), mutuamente exclusivas:
@@ -112,18 +112,19 @@ function recusar400(erro: unknown): Response {
 }
 
 /** QUEM OCUPA um endereço que `criarRascunho` recusou — a frase nomeia o lugar
- *  (ou o rascunho, do João ou de quem usa o app) que JÁ ESTÁ lá, com o nome e a cidade DELE, lidos do dado.
+ *  (ou o rascunho do João) que JÁ ESTÁ lá, com o nome e a cidade DELE, lidos do dado.
  *  `versaoAtual`, NUNCA a leitura pública (`versoesAtuais` sem
  *  `incluirOcultos`): com ela, um lugar escondido levaria a frase do rascunho. */
 async function quemOcupa(slug: string): Promise<string> {
   const lugar = await versaoAtual(getClient(), slug);
   if (lugar !== null) return enderecoDeLugar(nomeComCidade(nomeDoRascunho(lugar.doc, slug), cidadeDoDoc(lugar.doc)));
-  // `rascunhoDeQualquerUm`, NUNCA `lerRascunho` (só do João desde 07/10): o
-  // rascunho de quem usa ocupa o endereço do mesmo jeito, e a frase é outra.
-  const r = await rascunhoDeQualquerUm(getClient(), slug);
+  // `lerRascunho` (só os do João): o rascunho de quem usa o app não ocupa
+  // endereço — a chave dele nunca é um endereço (Task 17), e o `criarRascunho`
+  // não o vê. Entre 07/10 e a Task 17 era `rascunhoDeQualquerUm`, com uma
+  // frase própria pro dela.
+  const r = await lerRascunho(getClient(), slug);
   const doc = r?.doc ?? "";
-  const quem = nomeComCidade(nomeDoRascunho(doc, slug), cidadeDoDoc(doc));
-  return r !== null && r.contribuidor !== null ? enderecoDeRascunhoDeQuemUsa(quem) : enderecoDeRascunho(quem);
+  return enderecoDeRascunho(nomeComCidade(nomeDoRascunho(doc, slug), cidadeDoDoc(doc)));
 }
 
 export async function POST(req: Request): Promise<Response> {

@@ -24,7 +24,9 @@ import { createContext, createElement, useContext, useState, type ReactNode } fr
  *  PRÓXIMA pergunta a partir do `slug` que a porta DEVOLVEU — e a tela vai pra
  *  lá com `location.assign`, também relida do banco. 🔴 O slug devolvido, nunca
  *  o que a tela tinha: corrigir o nome ou a cidade muda o endereço do rascunho
- *  (onda de fix 2 da 11b), e o endereço velho já não existe. Recusa e falha de
+ *  DO JOÃO (onda de fix 2 da 11b), e o endereço velho já não existe. (O de
+ *  quem usa mora numa chave que não muda — Task 17 —, e a porta devolve a
+ *  mesma.) Recusa e falha de
  *  rede não vão a lugar nenhum, nos dois casos. */
 export const PortaDoEditor = createContext<{
   gravarEm: string;

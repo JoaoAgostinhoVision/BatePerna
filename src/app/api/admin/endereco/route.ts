@@ -1,6 +1,6 @@
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
-import { enderecoNovoDe, getClient, rascunhoDeQualquerUm, trocarEndereco, versaoAtual, versaoPorId } from "@/lib/db";
+import { enderecoNovoDe, getClient, lerRascunho, trocarEndereco, versaoAtual, versaoPorId } from "@/lib/db";
 import {
   ENDERECO_JA_E_ESSE,
   ENDERECO_NAO_TROCOU,
@@ -86,9 +86,11 @@ export async function POST(req: Request): Promise<Response> {
     const quem = nomeComCidade(nomeDoRascunho(dono.doc, novo), cidadeDoDoc(dono.doc));
     return new Response(enderecoOcupadoPorLugar(novo, quem), { status: 409, headers: TEXTO });
   }
-  // `rascunhoDeQualquerUm`, NUNCA `lerRascunho` (só do João desde 07/10, M11
-  // da pré-auditoria): o rascunho de quem usa também ocupa o endereço novo.
-  const rascunho = await rascunhoDeQualquerUm(getClient(), novo);
+  // `lerRascunho` (só os do João): o rascunho de quem usa o app não ocupa
+  // endereço (Task 17) — a chave dele nunca é um endereço, então nem o batch
+  // de `trocarEndereco` o vê. Entre 07/10 e a Task 17 era
+  // `rascunhoDeQualquerUm`, porque o dela ocupava (M11 da pré-auditoria).
+  const rascunho = await lerRascunho(getClient(), novo);
   if (rascunho !== null) {
     const quem = nomeComCidade(nomeDoRascunho(rascunho.doc, novo), cidadeDoDoc(rascunho.doc));
     return new Response(enderecoOcupadoPorRascunho(novo, quem), { status: 409, headers: TEXTO });

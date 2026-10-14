@@ -21,17 +21,24 @@ export const BLOQUEADA = "Esta conta não pode mais mandar nem mudar lugares no 
 export const RASCUNHO_DELA_SUMIU =
   "Nada foi gravado: este rascunho não está mais neste endereço. Ele foi publicado, apagado, ou mudou de nome ou de cidade: volte pela sua lista de lugares.";
 /** 🔴 O 409 DE TODA COLISÃO DELA (I3 da pré-auditoria de 07/10) — o par, o
- *  gêmeo sem cidade, o endereço ocupado por lugar ou rascunho de outro, e o
- *  endereço antigo de outro lugar. UMA frase, e de propósito: as do painel
- *  falam do painel ("pela lista do painel", "responda a cidade dele") e
- *  NOMEIAM quem ocupa — um rascunho de outra pessoa, ou um lugar escondido do
- *  João. Esta não nomeia ninguém, e foi escrita POR SUBTRAÇÃO (onda de fix da
- *  Task 10): a anterior dizia "um lugar no ar ou um que alguém está mandando"
- *  e "ele já está (ou logo estará) no app" — falso pro lugar ESCONDIDO (não
- *  está no ar) e pro ENDEREÇO ANTIGO (o nome dela não está em uso: é o
- *  endereço que sairia dele que leva a outro lugar). Sobrou só o que vale nos
- *  quatro: o nome, ou o endereço que sairia dele, já é de outro lugar — sem
- *  dizer onde ele está nem se vai ao ar.
+ *  gêmeo sem cidade, o endereço ocupado por um lugar, e o endereço antigo de
+ *  outro lugar. UMA frase, e de propósito: as do painel falam do painel ("pela
+ *  lista do painel", "responda a cidade dele") e NOMEIAM quem ocupa — um lugar
+ *  escondido do João, por exemplo. Esta não nomeia ninguém, e foi escrita POR
+ *  SUBTRAÇÃO (onda de fix da Task 10): a anterior dizia "um lugar no ar ou um
+ *  que alguém está mandando" e "ele já está (ou logo estará) no app" — falso
+ *  pro lugar ESCONDIDO (não está no ar) e pro ENDEREÇO ANTIGO (o nome dela não
+ *  está em uso: é o endereço que sairia dele que leva a outro lugar). Sobrou só
+ *  o que vale nos quatro: o nome, ou o endereço que sairia dele, já é de outro
+ *  lugar — sem dizer onde ele está nem se vai ao ar.
+ *
+ *  🔴 E DE NOVO POR SUBTRAÇÃO NA TASK 17: a revisão final tinha acrescentado
+ *  "ou de um que alguém começou e ainda não publicou", porque um rascunho de
+ *  outro ocupava o par. Desde a decisão do João de 13/10 ("rascunho não deve
+ *  bloquear", "Nenhum ocupa") nenhum rascunho ocupa nada — só lugar que existe
+ *  e endereço antigo —, e o pedaço saiu: ficou falso. Quando duas pessoas
+ *  começam o mesmo par, a segunda ouve esta frase NO PUBLICAR, quando o lugar
+ *  da primeira já está no BatePerna — e aí ela é verdade.
  *
  *  📝 DECISÃO DO JOÃO, pro pacote de copy: em dois casos ela fica SEM saída —
  *  o gêmeo sem cidade (só o João responde a cidade do lugar dele) e um lugar
@@ -39,17 +46,7 @@ export const RASCUNHO_DELA_SUMIU =
  *  saída; o que fazer nesses dois é dele. */
 // PENDENTE: redação minha, o João ainda não leu
 export const NOME_JA_EM_USO =
-  "Nada foi gravado: este nome, ou o endereço que sairia dele, já é de outro lugar no BatePerna, ou de um que alguém começou e ainda não publicou.";
-/** O 409 quando o que colide é o rascunho DELA mesma (I1 da revisão final):
- *  `NOME_JA_EM_USO` diria "de outro lugar", e é o lugar que ELA começou — está
- *  na lista dela (`/contribuir`), que é onde ela continua. Só nomeia o que é
- *  dela, então o I3 da pré-auditoria continua valendo. Desde a mesma revisão,
- *  `NOME_JA_EM_USO` ganhou "ou de um que alguém começou": rascunho de outra
- *  pessoa (ou do João) não está "no BatePerna", e a frase não dizia isso — o
- *  acréscimo diz a categoria, nunca quem. */
-// PENDENTE: redação minha, o João ainda não leu
-export const RASCUNHO_DELA_JA_EXISTE =
-  "Nada foi gravado: você já começou um lugar com este nome, ou com o endereço que sairia dele. Continue por ele, na sua lista de lugares.";
+  "Nada foi gravado: este nome, ou o endereço que sairia dele, já é de outro lugar no BatePerna.";
 
 /** O 409 da edição DELA depois do "Conferi" do João (Task 12): conferido, o
  *  lugar passa a ser do BatePerna — ela não edita mais. */

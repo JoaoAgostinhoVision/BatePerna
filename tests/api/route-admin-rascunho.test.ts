@@ -12,7 +12,6 @@ import {
   historico,
   lerRascunho,
   listarRascunhos,
-  rascunhoDeQualquerUm,
   versaoAtual,
   versoesAtuais,
 } from "@/lib/db";
@@ -24,15 +23,14 @@ import {
   SLUGS_RESERVADOS,
   enderecoDeLugar,
   enderecoDeRascunho,
-  enderecoDeRascunhoDeQuemUsa,
   gemeoSemCidade,
   parDeLugar,
   parDeRascunho,
-  parDeRascunhoDeQuemUsa,
   slugDoNome,
 } from "@/lib/rascunho";
 import type { Ficha } from "@/types/ficha";
-import { PESSOA_DE_TESTE, salvarRascunho, semearAcervo } from "../banco";
+import { criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
+import { PESSOA_DE_TESTE, rascunhoNoBanco, salvarRascunho, semearAcervo } from "../banco";
 
 /** A PORTA DO RASCUNHO (Tarefa 11): `/api/admin/rascunho`.
  *
@@ -981,36 +979,35 @@ describe("GET e DELETE", () => {
   });
 });
 
-// 🔴 I4 DA PRÉ-AUDITORIA (07/10): o rascunho de quem usa o app não está na lista
-// do painel — então a frase "continue por ele, na lista do painel" seria
-// MENTIRA quando é ele que colide. E a colisão tem de VÊ-LO (`todosOsRascunhos`),
-// senão dois rascunhos de mesmo par virariam dois lugares no mesmo par.
+// 🔴 TASK 17 (decisão do João de 13/10, "rascunho não deve bloquear", "Nenhum
+// ocupa"): o rascunho de quem usa o app não recusa o João — nem pelo PAR, nem
+// pelo ENDEREÇO que o par dele daria. Os dois existem; quem publicar primeiro
+// fica com o endereço, e o segundo é recusado no publicar. (De 07/10 até a Task
+// 17 a colisão o via — `todosOsRascunhos` —, e o painel respondia com frases
+// próprias pra ele, apagadas com o estado que as alcançava.)
 describe("o rascunho de quem usa o app, visto do painel", () => {
-  async function rascunhoDela(slug: string, nome: string, cidade: string): Promise<void> {
-    await c.execute({
-      sql: "INSERT INTO ficha_rascunhos (slug, doc, atualizado_em, contribuidor) VALUES (?, ?, ?, ?)",
-      args: [slug, JSON.stringify({ slug, modos: [], cidade, trajeto: { waypoints: [{ nome }] } }), AGORA - 5, PESSOA_DE_TESTE],
-    });
+  async function rascunhoDela(endereco: string, nome: string, cidade: string): Promise<string> {
+    const doc = JSON.stringify({ slug: endereco, modos: [], cidade, trajeto: { waypoints: [{ nome }] } });
+    const chave = await criarRascunhoDaPessoa(c, endereco, doc, AGORA - 5, PESSOA_DE_TESTE);
+    expect(chave, "a premissa: o rascunho dela nasceu").not.toBeNull();
+    return chave!;
   }
 
-  it("o PAR de um rascunho dela: 409 com a frase de quem usa — nunca 'na lista do painel' —, e nada nasce", async () => {
-    await rascunhoDela(S, NOME, CIDADE);
+  it("o PAR de um rascunho dela: o João cria, e o dela fica", async () => {
+    const dela = await rascunhoDela(S, NOME, CIDADE);
     const res = await criar("lugar   marcador UM", " cidade marcador UM ");
-    expect(res.status).toBe(409);
-    const frase = await res.text();
-    expect(frase).toBe(parDeRascunhoDeQuemUsa(`${NOME} (${CIDADE})`));
-    expect(frase).not.toMatch(/lista do painel/);
-    expect(await listarRascunhos(c)).toEqual([]);
-    expect((await rascunhoDeQualquerUm(c, S))?.contribuidor).toBe(PESSOA_DE_TESTE);
+    expect(res.status, await res.clone().text()).toBe(201);
+    expect((await listarRascunhos(c)).map((r) => r.slug)).toEqual([S]);
+    expect((await rascunhoNoBanco(c, dela))?.contribuidor).toBe(PESSOA_DE_TESTE);
   });
 
-  // A fronteira entre o nome e a cidade que anda (o molde do caso "endereço
-  // ocupado por um RASCUNHO de nome diferente", lá em cima).
-  it("o ENDEREÇO de um rascunho dela, de nome diferente: 409 com a frase de quem usa, e ele não muda", async () => {
-    await rascunhoDela("lugar-marcador-cidade-marcador", "Lugar Marcador", "Cidade Marcador");
+  // A fronteira entre o nome e a cidade que anda: o par dela é outro, e o
+  // endereço que ele daria é o do João.
+  it("o ENDEREÇO que o par de um rascunho dela daria, de nome diferente: o João cria, e o dela fica", async () => {
+    const dela = await rascunhoDela("lugar-marcador-cidade-marcador", "Lugar Marcador", "Cidade Marcador");
     const res = await criar("Lugar Marcador Cidade", "Marcador");
-    expect(res.status).toBe(409);
-    expect(await res.text()).toBe(enderecoDeRascunhoDeQuemUsa("Lugar Marcador (Cidade Marcador)"));
-    expect(await rascunhoDeQualquerUm(c, "lugar-marcador-cidade-marcador")).toMatchObject({ contribuidor: PESSOA_DE_TESTE });
+    expect(res.status, await res.clone().text()).toBe(201);
+    expect(await lerRascunho(c, "lugar-marcador-cidade-marcador")).not.toBeNull();
+    expect((await rascunhoNoBanco(c, dela))?.contribuidor).toBe(PESSOA_DE_TESTE);
   });
 });

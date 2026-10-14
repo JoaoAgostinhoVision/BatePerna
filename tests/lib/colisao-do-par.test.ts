@@ -2,25 +2,24 @@ import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { criarRascunho } from "@/lib/db";
 import { criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
-import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, colisaoDaMudanca, colisaoDaTroca, colisaoDoPar } from "@/lib/par-de-lugar";
+import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, colisaoDaMudanca, colisaoDaTroca, colisaoDoPar, parOcupado } from "@/lib/par-de-lugar";
+import { parDeRascunho } from "@/lib/rascunho";
 import { AGORA_SEMENTE, semearAcervo } from "../banco";
 import { OUTRA, PESSOA } from "../sessao-da-pessoa";
 
 /** 🔴 O DADO ESTRUTURADO DA COLISÃO — o que a rota de quem usa (Task 10) lê.
  *
  *  Até a Task 10, `colisaoDoPar`/`colisaoDaTroca`/`colisaoDaMudanca` só tinham
- *  prova pela FRASE do painel (`parOcupado`, `parDaMudanca`): um `de` trocado
- *  entre os dois tipos de rascunho, ou um `semCidade` invertido, aparecia lá
- *  como frase errada. A rota dela não lê frase nenhuma — lê `!== null` — e a
- *  frase do painel de quem usa (`parDeRascunhoDeQuemUsa`) é a MESMA nos dois
- *  ramos de `semCidade`, então a troca dele no ramo de quem usa passava verde
- *  por todas as provas de antes. Aqui cada ramo é provado pelo objeto inteiro
- *  (`toEqual`), com os dois valores de `semCidade` no ramo de quem usa.
+ *  prova pela FRASE do painel (`parOcupado`, `parDaMudanca`): um `de` trocado,
+ *  ou um `semCidade` invertido, aparecia lá como frase errada. A rota dela não
+ *  lê frase nenhuma — lê `!== null` —, então aqui cada ramo é provado pelo
+ *  objeto inteiro (`toEqual`).
  *
- *  O rascunho de quem usa SEM cidade é montado direto no banco: as portas dela
- *  nunca o produzem (provado em `tests/api/route-contribuir-rascunho.test.ts`,
- *  "cidade vazia não chega ao rascunho dela"), mas o ramo existe em
- *  `colisaoDoPar` e a troca dele tem de ficar vermelha. */
+ *  🔴 E DESDE A TASK 17 (decisão do João de 13/10, "Nenhum ocupa"), QUEM
+ *  PERGUNTA muda o que conta: rascunho de quem usa o app não colide com
+ *  ninguém, e o rascunho do João colide SÓ quando quem pergunta é ele (é a
+ *  lista dele). Lugar — no ar ou escondido — colide pros dois. Cada caso de
+ *  rascunho é provado pelos DOIS lados (`"joao"` e `"pessoa"`). */
 
 vi.mock("@/lib/db", async (io) => ({ ...(await io<typeof import("@/lib/db")>()), getClient: () => c }));
 
@@ -35,81 +34,124 @@ const docDe = (slug: string, nome: string, cidade?: string) =>
 /** O rascunho DELA que muda — "Pedra Minha", em "Cidade Teste". */
 const MEU = "pedra-minha-cidade-teste";
 const MEU_DOC = docDe(MEU, "Pedra Minha", "Cidade Teste");
+let minhaChave: string;
 
 beforeEach(async () => {
-  expect(await criarRascunhoDaPessoa(c, MEU, MEU_DOC, A, PESSOA.id)).toBe(true);
+  const chave = await criarRascunhoDaPessoa(c, MEU, MEU_DOC, A, PESSOA.id);
+  expect(chave).not.toBeNull();
+  minhaChave = chave!;
 });
 
-describe("o ramo de quem usa", () => {
+describe("o rascunho de quem usa não colide com ninguém", () => {
   beforeEach(async () => {
-    expect(await criarRascunhoDaPessoa(c, "pedra-dela-cidade-teste", docDe("pedra-dela-cidade-teste", "Pedra Dela", "Cidade Teste"), A, OUTRA.id)).toBe(true);
+    const outro = "pedra-dela-cidade-teste";
+    expect(await criarRascunhoDaPessoa(c, outro, docDe(outro, "Pedra Dela", "Cidade Teste"), A, OUTRA.id)).not.toBeNull();
   });
 
-  it("renomear pro par de um rascunho de OUTRA pessoa: de quem usa, COM cidade", async () => {
-    expect(await colisaoDaMudanca(MEU_DOC, MEU, CAMPO_DO_NOME, "Pedra Dela")).toEqual({
-      de: "rascunho-de-quem-usa", slug: "pedra-dela-cidade-teste", semCidade: false, quem: "Pedra Dela (Cidade Teste)",
-    });
+  it.each(["pessoa", "joao"] as const)("renomear pro par de um rascunho de OUTRA pessoa (quem pergunta: %s): livre", async (quem) => {
+    expect(await colisaoDaMudanca(MEU_DOC, minhaChave, CAMPO_DO_NOME, "Pedra Dela", quem)).toBeNull();
   });
 
-  it("mudar a cidade pro par dele: o mesmo dado", async () => {
+  it.each(["pessoa", "joao"] as const)("mudar a cidade pro par dele (%s): livre", async (quem) => {
     const meuComONome = docDe(MEU, "Pedra Dela", "Outra Cidade");
-    expect(await colisaoDaMudanca(meuComONome, MEU, CAMPO_DA_CIDADE, "Cidade Teste")).toEqual({
-      de: "rascunho-de-quem-usa", slug: "pedra-dela-cidade-teste", semCidade: false, quem: "Pedra Dela (Cidade Teste)",
-    });
+    expect(await colisaoDaMudanca(meuComONome, minhaChave, CAMPO_DA_CIDADE, "Cidade Teste", quem)).toBeNull();
   });
 
-  it("o mesmo nome noutra cidade não colide", async () => {
-    expect(await colisaoDaMudanca(docDe(MEU, "Pedra Minha", "Outra Cidade"), MEU, CAMPO_DO_NOME, "Pedra Dela")).toBeNull();
+  it.each(["pessoa", "joao"] as const)("o par do PRÓPRIO rascunho dela, sem `exceto` (%s): livre", async (quem) => {
+    expect(await colisaoDoPar("Pedra Minha", "Cidade Teste", { exceto: null, nomeNovo: true, quem })).toBeNull();
   });
 
-  it("rascunho de quem usa SEM cidade (estado que as portas dela não produzem): semCidade, só o nome", async () => {
+  // O estado que as portas dela não produzem (rascunho dela sem cidade): nem o
+  // ramo do gêmeo sem cidade o alcança mais.
+  it.each(["pessoa", "joao"] as const)("rascunho de quem usa SEM cidade (%s): não espera a cidade dele", async (quem) => {
     await c.execute({
       sql: "INSERT INTO ficha_rascunhos (slug, doc, atualizado_em, contribuidor) VALUES (?, ?, ?, ?)",
-      args: ["sem-cidade-x", docDe("sem-cidade-x", "Pedra Sem Cidade"), A, OUTRA.id],
+      args: ["rascunho_sem_cidade", docDe("sem-cidade-x", "Pedra Sem Cidade"), A, OUTRA.id],
     });
-    expect(await colisaoDaMudanca(MEU_DOC, MEU, CAMPO_DO_NOME, "Pedra Sem Cidade")).toEqual({
-      de: "rascunho-de-quem-usa", slug: "sem-cidade-x", semCidade: true, quem: "Pedra Sem Cidade",
-    });
-    // E responder a cidade nunca esbarra no gêmeo (Y1): só no par.
-    const meuComONome = docDe(MEU, "Pedra Sem Cidade", "Outra Cidade");
-    expect(await colisaoDaMudanca(meuComONome, MEU, CAMPO_DA_CIDADE, "Cidade Teste")).toBeNull();
+    expect(await colisaoDaMudanca(MEU_DOC, minhaChave, CAMPO_DO_NOME, "Pedra Sem Cidade", quem)).toBeNull();
+  });
+
+  // A porta do painel por cima: o João cria o par de um rascunho dela.
+  it("parOcupado (o painel): o par de um rascunho dela não recusa o João", async () => {
+    expect(await parOcupado("Pedra Dela", "Cidade Teste", { exceto: null, nomeNovo: true })).toBeNull();
   });
 });
 
-describe("os outros dois ramos, pelo mesmo dado", () => {
-  it("lugar do João sem cidade: de lugar, semCidade, só o nome", async () => {
-    expect(await colisaoDaMudanca(MEU_DOC, MEU, CAMPO_DO_NOME, "Rampa do Pepê")).toEqual({
-      de: "lugar", slug: "rampa-do-pepe", semCidade: true, quem: "Rampa do Pepê",
+describe("o rascunho do João: conta pro João, não pra ela", () => {
+  const DO_JOAO = "pedra-do-joao-cidade-teste";
+  beforeEach(async () => {
+    expect(await criarRascunho(c, DO_JOAO, docDe(DO_JOAO, "Pedra do João", "Cidade Teste"), A)).toBe(true);
+  });
+
+  it("quem pergunta é o João: de rascunho-do-joao, com cidade", async () => {
+    expect(await colisaoDaMudanca(MEU_DOC, minhaChave, CAMPO_DO_NOME, "Pedra do João", "joao")).toEqual({
+      de: "rascunho-do-joao", semCidade: false, quem: "Pedra do João (Cidade Teste)",
+    });
+    expect(await parOcupado("Pedra do João", "Cidade Teste", { exceto: null, nomeNovo: true })).toBe(parDeRascunho("Pedra do João (Cidade Teste)"));
+  });
+
+  it("quem pergunta é ela: livre", async () => {
+    expect(await colisaoDaMudanca(MEU_DOC, minhaChave, CAMPO_DO_NOME, "Pedra do João", "pessoa")).toBeNull();
+    expect(await colisaoDoPar("Pedra do João", "Cidade Teste", { exceto: null, nomeNovo: true, quem: "pessoa" })).toBeNull();
+  });
+
+  it("o rascunho do João SEM cidade: o gêmeo espera, pro João", async () => {
+    expect(await criarRascunho(c, "pedra-joao-sem-cidade", docDe("pedra-joao-sem-cidade", "Pedra Joao Sem Cidade"), A)).toBe(true);
+    expect(await colisaoDoPar("Pedra Joao Sem Cidade", "Cidade Teste", { exceto: null, nomeNovo: true, quem: "joao" })).toEqual({
+      de: "rascunho-do-joao", semCidade: true, quem: "Pedra Joao Sem Cidade",
+    });
+    expect(await colisaoDoPar("Pedra Joao Sem Cidade", "Cidade Teste", { exceto: null, nomeNovo: true, quem: "pessoa" })).toBeNull();
+  });
+
+  it("o `exceto` tira o próprio rascunho do João", async () => {
+    expect(await colisaoDoPar("Pedra do João", "Cidade Teste", { exceto: DO_JOAO, nomeNovo: true, quem: "joao" })).toBeNull();
+  });
+});
+
+describe("lugar colide pros dois", () => {
+  it.each(["pessoa", "joao"] as const)("lugar do João sem cidade (%s): de lugar, semCidade, só o nome", async (quem) => {
+    expect(await colisaoDaMudanca(MEU_DOC, minhaChave, CAMPO_DO_NOME, "Rampa do Pepê", quem)).toEqual({
+      de: "lugar", semCidade: true, quem: "Rampa do Pepê",
     });
   });
 
-  it("rascunho do João com cidade: de rascunho-do-joao", async () => {
-    await criarRascunho(c, "pedra-do-joao-cidade-teste", docDe("pedra-do-joao-cidade-teste", "Pedra do João", "Cidade Teste"), A);
-    expect(await colisaoDaMudanca(MEU_DOC, MEU, CAMPO_DO_NOME, "Pedra do João")).toEqual({
-      de: "rascunho-do-joao", slug: "pedra-do-joao-cidade-teste", semCidade: false, quem: "Pedra do João (Cidade Teste)",
+  it.each(["pessoa", "joao"] as const)("lugar ESCONDIDO com cidade (%s): de lugar, com cidade", async (quem) => {
+    const H = "pedra-escondida-endereco-de-antes";
+    await c.execute({
+      sql: "INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em, oculto) VALUES (?, ?, 'painel', ?, 1)",
+      args: [H, docDe(H, "Pedra Escondida", "Cidade Teste"), A],
+    });
+    expect(await colisaoDoPar("Pedra Escondida", "Cidade Teste", { exceto: null, nomeNovo: true, quem })).toEqual({
+      de: "lugar", semCidade: false, quem: "Pedra Escondida (Cidade Teste)",
     });
   });
 });
 
 describe("a troca e a mudança", () => {
-  it("o próprio rascunho fica de fora (exceto)", async () => {
-    expect(await colisaoDaTroca(MEU_DOC, MEU, "Pedra Minha", "Cidade Teste")).toBeNull();
-    // Sem o `exceto`, o par é o dele mesmo: a prova acima não é vácua.
-    expect(await colisaoDoPar("Pedra Minha", "Cidade Teste", { exceto: null, nomeNovo: true })).toEqual({
-      de: "rascunho-de-quem-usa", slug: MEU, semCidade: false, quem: "Pedra Minha (Cidade Teste)",
+  it("o próprio lugar fica de fora (exceto)", async () => {
+    const L = "pedra-com-cidade-cidade-teste";
+    const docL = docDe(L, "Pedra Com Cidade", "Cidade Teste");
+    await c.execute({
+      sql: "INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em, oculto) VALUES (?, ?, 'contribuidor', ?, 0)",
+      args: [L, docL, A],
+    });
+    expect(await colisaoDaTroca(docL, L, "Pedra Com Cidade", "Cidade Teste", "pessoa")).toBeNull();
+    // Noutro endereço, o par é o dele: a prova acima não é vácua.
+    expect(await colisaoDaTroca(docL, "outro-endereco", "Pedra Com Cidade", "Cidade Teste", "pessoa")).toEqual({
+      de: "lugar", semCidade: false, quem: "Pedra Com Cidade (Cidade Teste)",
     });
   });
 
   it("reescrever o MESMO nome noutra grafia não é nome novo: o gêmeo sem cidade não espera", async () => {
     const meuRampa = docDe(MEU, "Rampa do Pepê", "Cidade Teste");
-    expect(await colisaoDaTroca(meuRampa, MEU, "RAMPA DO PEPE", "Cidade Teste")).toBeNull();
-    expect(await colisaoDaTroca(MEU_DOC, MEU, "RAMPA DO PEPE", "Cidade Teste")).toEqual({
-      de: "lugar", slug: "rampa-do-pepe", semCidade: true, quem: "Rampa do Pepê",
+    expect(await colisaoDaTroca(meuRampa, minhaChave, "RAMPA DO PEPE", "Cidade Teste", "pessoa")).toBeNull();
+    expect(await colisaoDaTroca(MEU_DOC, minhaChave, "RAMPA DO PEPE", "Cidade Teste", "pessoa")).toEqual({
+      de: "lugar", semCidade: true, quem: "Rampa do Pepê",
     });
   });
 
   it("campo que não é o nome nem a cidade, ou valor que não é texto: null", async () => {
-    expect(await colisaoDaMudanca(MEU_DOC, MEU, "promessa", "Rampa do Pepê")).toBeNull();
-    expect(await colisaoDaMudanca(MEU_DOC, MEU, CAMPO_DO_NOME, 42)).toBeNull();
+    expect(await colisaoDaMudanca(MEU_DOC, minhaChave, "promessa", "Rampa do Pepê", "pessoa")).toBeNull();
+    expect(await colisaoDaMudanca(MEU_DOC, minhaChave, CAMPO_DO_NOME, 42, "pessoa")).toBeNull();
   });
 });

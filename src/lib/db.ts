@@ -722,7 +722,7 @@ function rascunhoDaLinha(r: Record<string, unknown>): Rascunho {
  *  rascunho e grava depois; se a PUBLICAÇÃO (`publicarRascunho`) roda no meio,
  *  o upsert que o PUT usava até a Tarefa 12 RECRIAVA o rascunho em `slug` — ao
  *  lado do lugar que acabou de ir ao ar no mesmo endereço, que é o estado que
- *  `criarRascunho` declara impossível — e a última resposta do dono ficava fora
+ *  `criarRascunho` recusa — e a última resposta do dono ficava fora
  *  do lugar no ar, em silêncio. Com o `UPDATE`, o rascunho só nasce por
  *  `criarRascunho`. (Aquele upsert não mora mais em `src`: virou helper de
  *  teste, em `tests/banco.ts`.)
@@ -1030,16 +1030,39 @@ export async function trocarEndereco(
  *  — ruling de produto da pré-auditoria de 07/10 — que o endereço NÃO é
  *  endereço antigo de outro lugar quando quem publica é ela (`? IS NULL OR …`:
  *  o João continua retomando, com a régua de hoje). O link velho do João
- *  continua levando ao lugar dele. */
+ *  continua levando ao lugar dele.
+ *
+ *  🔴 E DESDE A TASK 17 (decisão do João de 13/10, "rascunho não deve
+ *  bloquear") O RASCUNHO DELA NÃO MORA NO ENDEREÇO: mora numa CHAVE própria
+ *  (`novaChaveDeRascunho`, em `db-contribuidor.ts`), que `dela.chave` traz, e
+ *  `slug` é o ENDEREÇO onde o lugar vai nascer — calculado pela rota, do nome
+ *  e da cidade, na hora de publicar. Os dois andam SEPARADOS e cada passo usa
+ *  o seu: o 1º passo confere a versão (`NOT EXISTS`) e o endereço antigo no
+ *  ENDEREÇO, e o rascunho (dela, com o `atualizado_em` da tela) na CHAVE; a
+ *  `porta` confere o rascunho pela CHAVE e a versão recém-gravada pelo
+ *  ENDEREÇO; os passos 2 a 5 (órfãos, `freshness`, `enderecos_antigos`) operam
+ *  no ENDEREÇO; o DELETE final, na CHAVE. Tudo na mesma transação. É o
+ *  `NOT EXISTS` do 1º passo que decide quem fica com o endereço quando duas
+ *  pessoas (ou ela e o João) publicam o mesmo par: o primeiro batch grava a
+ *  versão, e o segundo a acha ali. ⚠️ Pra ela, os passos 2, 3 e 5 nunca acham
+ *  linha: o 1º passo já recusou o endereço que é antigo, e são eles que leem a
+ *  linha `velho = slug`. Ficam porque o batch é um só pros dois donos.
+ *  Sem `dela`, a chave É o endereço — o caminho do João, byte a byte o de
+ *  antes. Um rascunho do João no mesmo endereço não impede o dela (não é o
+ *  rascunho dela, e rascunho não ocupa); depois, é o publicar dele que acha o
+ *  lugar ali e é recusado. */
 export async function publicarRascunho(
   client: Client, slug: string, doc: string, agora: number, atualizadoEm: number,
-  contribuidor: string | null = null,
+  dela: { contribuidor: string; chave: string } | null = null,
 ): Promise<boolean> {
+  const contribuidor = dela?.contribuidor ?? null;
+  // A chave do rascunho: a dela (Task 17), ou — no do João — o próprio endereço.
+  const chave = dela?.chave ?? slug;
   const autor: AutorVersao = contribuidor === null ? "painel" : "contribuidor";
   const porta = `EXISTS (SELECT 1 FROM ficha_rascunhos WHERE slug = ? AND atualizado_em = ?)
               AND EXISTS (SELECT 1 FROM ficha_versoes
                           WHERE ficha_slug = ? AND doc = ? AND criado_em = ? AND autor = ? AND oculto = 0)`;
-  const p = [slug, atualizadoEm, slug, doc, agora, autor];
+  const p = [chave, atualizadoEm, slug, doc, agora, autor];
   const rs = await client.batch(
     [
       {
@@ -1050,7 +1073,7 @@ export async function publicarRascunho(
                             WHERE slug = ? AND atualizado_em = ? AND contribuidor IS ?)
                 AND NOT EXISTS (SELECT 1 FROM contribuidores WHERE id = ? AND bloqueado = 1)
                 AND (? IS NULL OR NOT EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ?))`,
-        args: [slug, doc, autor, agora, slug, slug, atualizadoEm, contribuidor, contribuidor, contribuidor, slug],
+        args: [slug, doc, autor, agora, slug, chave, atualizadoEm, contribuidor, contribuidor, contribuidor, slug],
       },
       {
         sql: `UPDATE avisos SET ficha_slug = (SELECT e.novo FROM enderecos_antigos e WHERE e.velho = ?)
@@ -1077,7 +1100,7 @@ export async function publicarRascunho(
           }]),
       {
         sql: `DELETE FROM ficha_rascunhos WHERE slug = ? AND atualizado_em = ? AND ${porta}`,
-        args: [slug, atualizadoEm, ...p],
+        args: [chave, atualizadoEm, ...p],
       },
     ],
     "write",
@@ -1112,7 +1135,12 @@ export async function enderecosVelhos(client: Client): Promise<Set<string>> {
 
 /** Todo endereço com RASCUNHO — a semente também os trata como "já tem" (M3 da
  *  revisão final do painel completo, 2026-10-06): versão ao lado de rascunho no
- *  mesmo endereço é o estado que `criarRascunho` declara impossível. */
+ *  mesmo endereço é o estado que `criarRascunho` recusa. Lê TODA chave: a do
+ *  rascunho do João é o endereço, e a de quem usa nunca coincide com um (Task
+ *  17, `novaChaveDeRascunho`) — entra no conjunto sem efeito. ⚠️ Desde a Task
+ *  17 aquele estado EXISTE por um caminho: ela publica o par de um rascunho do
+ *  João (rascunho não ocupa), e o rascunho dele fica ao lado do lugar dela até
+ *  ele desistir — o publicar dele é recusado pelo lugar. */
 export async function enderecosComRascunho(client: Client): Promise<Set<string>> {
   const r = await client.execute(`SELECT slug FROM ficha_rascunhos`);
   return new Set(r.rows.map((l) => String(l.slug)));
@@ -1226,36 +1254,4 @@ export async function lugarDoDono(
     origem: origemDaLinha(r),
     padrao: regraDaLinha(regra.rows[0] as unknown as Record<string, unknown> | undefined),
   };
-}
-
-/** O rascunho e DE QUEM ele é (`contribuidor`: null = do João). */
-export type RascunhoComDono = Rascunho & { contribuidor: string | null };
-
-const comDono = (r: Record<string, unknown>): RascunhoComDono => ({
-  slug: String(r.slug),
-  doc: String(r.doc),
-  atualizado_em: Number(r.atualizado_em),
-  contribuidor: r.contribuidor == null ? null : String(r.contribuidor),
-});
-
-/** 🔴 TODO RASCUNHO, de quem for — e SÓ pra colisão (I4 da pré-auditoria de
- *  07/10). A lista do painel (`listarRascunhos`) é só do João; a colisão por
- *  par não pode ser: um rascunho do João e um de quem usa com o mesmo par,
- *  publicados, seriam dois lugares no mesmo par. */
-export async function todosOsRascunhos(client: Client): Promise<RascunhoComDono[]> {
-  const r = await client.execute(
-    `SELECT slug, doc, atualizado_em, contribuidor FROM ficha_rascunhos ORDER BY atualizado_em DESC, slug ASC`,
-  );
-  return r.rows.map((l) => comDono(l as unknown as Record<string, unknown>));
-}
-
-/** O rascunho que mora em `slug`, de quem for — SÓ pra escolher a FRASE de uma
- *  colisão de endereço (quem ocupa). Nunca pra editar: as portas que editam são
- *  as do João (`lerRascunho` & cia.) e as dela (`*RascunhoDaPessoa`, Task 10). */
-export async function rascunhoDeQualquerUm(client: Client, slug: string): Promise<RascunhoComDono | null> {
-  const r = await client.execute({
-    sql: `SELECT slug, doc, atualizado_em, contribuidor FROM ficha_rascunhos WHERE slug = ?`,
-    args: [slug],
-  });
-  return r.rows.length ? comDono(r.rows[0] as unknown as Record<string, unknown>) : null;
 }

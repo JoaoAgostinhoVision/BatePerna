@@ -100,17 +100,6 @@ export const enderecoDeLugar = (quem: string): string =>
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const enderecoDeRascunho = (quem: string): string =>
   `O endereço que sairia desse nome e dessa cidade já é de um lugar novo começado: ${quem}. Se for o mesmo lugar, continue por ele na lista do painel; se não for, o painel ainda não sabe dar outro endereço a este.`;
-// As duas de baixo: o PAINEL quando quem colide é rascunho de QUEM USA o app
-// (I4 da pré-auditoria de 07/10). Ele não está na lista do painel, então
-// "continue por ele na lista" seria mentira. Elas nomeiam o rascunho: é o
-// painel do João, que já lê nome e e-mail de quem manda. Nenhuma diz "nessa
-// cidade": a do par vale também no ramo do gêmeo sem cidade.
-// PENDENTE: redação minha, o João ainda não leu (I4 da pré-auditoria de 07/10)
-export const parDeRascunhoDeQuemUsa = (quem: string): string =>
-  `Alguém que usa o app está mandando um lugar com esse nome: ${quem}. Ele ainda não foi publicado; se for o mesmo lugar, espere ele ir ao ar e confira por lá.`;
-// PENDENTE: redação minha, o João ainda não leu (I4 da pré-auditoria de 07/10)
-export const enderecoDeRascunhoDeQuemUsa = (quem: string): string =>
-  `O endereço que sairia desse nome e dessa cidade já é de um lugar que alguém que usa o app está mandando: ${quem}. Se for o mesmo lugar, espere ele ir ao ar e confira por lá; se não for, o painel ainda não sabe dar outro endereço a este.`;
 
 /** A recusa do PUT do rascunho quando ele já não mora no endereço pedido
  *  (Tarefa 12, I1 da auditoria de 06/10): publicado, apagado ou movido entre a

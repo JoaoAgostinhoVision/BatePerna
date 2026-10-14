@@ -73,7 +73,12 @@ export default function TelaDePublicar({
       if (r.ok) {
         // O lugar já está no ar. O João vai ao painel DELE, onde se edita lugar
         // publicado; quem usa vai à página pública, e vê o lugar com a marca.
-        location.assign(ROTAS[onde].publicou(slug));
+        // 🔴 PELO ENDEREÇO QUE A PORTA RESPONDE, não pelo `slug` desta tela
+        // (Task 17): no rascunho de quem usa, o `slug` é a CHAVE do rascunho, e
+        // o endereço do lugar só nasce no publicar. No do João os dois são o
+        // mesmo.
+        const { slug: endereco } = (await r.json()) as { slug: string };
+        location.assign(ROTAS[onde].publicou(endereco));
         return;
       }
       if (r.status === 401 && ROTAS[onde].recarregarSe401) {
