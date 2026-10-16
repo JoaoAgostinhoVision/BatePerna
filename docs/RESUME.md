@@ -2,7 +2,7 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ 15/10: A RODADA "lugar de quem usa" ESTÁ NO AR (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 15/10: A RODADA "lugar de quem usa" ESTÁ NO AR (vence TUDO abaixo)
 
 Ele disse *"pode ir"*. Feito: `npm run semear` (ensureSchema; fichas já no banco) → `vercel --prod --yes` =
 `dpl_b89kejYz9ZmwmESGMfHtVZazdwMP` (código `f5c14de`). `conferir-no-ar` sem login: `/contribuir` 307→sign-in do
