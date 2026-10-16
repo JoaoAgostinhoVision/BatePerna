@@ -2,7 +2,18 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — PARADA DE 13/10, NOITE (vence TUDO abaixo)
+## ▶ 15/10: A RODADA "lugar de quem usa" ESTÁ NO AR (vence TUDO abaixo)
+
+Ele disse *"pode ir"*. Feito: `npm run semear` (ensureSchema; fichas já no banco) → `vercel --prod --yes` =
+`dpl_b89kejYz9ZmwmESGMfHtVZazdwMP` (código `f5c14de`). `conferir-no-ar` sem login: `/contribuir` 307→sign-in do
+Clerk; APIs novas 405/401 (controle 404); home + 3 fichas 200 com `origem` no payload; barra com 3 itens; Google
+`enabled` na config pública do Clerk (botão não visto em tela). Sonda minha no Turso real (tabela TEMP, nada gravado):
+duplicata devolve `code: SQLITE_CONSTRAINT`, casa o regex do publicar → a corrida dá 409.
+**NÃO provado (exige login, fica com ELE no celular):** entrar com Google; criar+publicar um lugar; etiqueta/faixa
+nele; Salvar >60 s sem 401; barra a 375 px; etiqueta ao lado de nome longo; tracejado do pin.
+→ Próximo: o teste dele no celular → merge `painel-completo` no `main` (perguntar) → rodada do `d-401`.
+
+## ▶ (histórico) PARADA DE 13/10, NOITE
 
 **Ele parou: *"chega por hoje, vou continuar em próximas sessões"*.** Branch `painel-completo`, último commit de código
 `f5c14de`, árvore limpa. **A RODADA "lugar de quem usa" ESTÁ PRONTA PRO DEPLOY. Nada está no ar.**
