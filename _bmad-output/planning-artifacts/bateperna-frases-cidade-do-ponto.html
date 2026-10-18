@@ -1,0 +1,233 @@
+<title>Frases da cidade do ponto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* Layout: uma coluna de leitura pro celular; cartão por frase, três toques, telas em dobras. */
+:root{
+  --bg:#eef1ec; --surface:#fbfcf9; --ink:#1d2621; --muted:#5b665f; --line:#d3d9d2;
+  --accent:#2f5d50; --accent-ink:#ffffff; --warn-bg:#fbefd6; --warn-ink:#7a4a05;
+  --ok:#2f6b3a; --change:#8a4b12; --doubt:#3c4f8f;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --read:"Source Serif 4",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a17; --surface:#1c2420; --ink:#e4ebe6; --muted:#9aa8a0; --line:#2e3a34;
+  --accent:#7fb5a3; --accent-ink:#0f1a16; --warn-bg:#3a2c12; --warn-ink:#f0c879;
+  --ok:#8fd39c; --change:#f0a868; --doubt:#a9b8f0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a17; --surface:#1c2420; --ink:#e4ebe6; --muted:#9aa8a0; --line:#2e3a34;
+  --accent:#7fb5a3; --accent-ink:#0f1a16; --warn-bg:#3a2c12; --warn-ink:#f0c879;
+  --ok:#8fd39c; --change:#f0a868; --doubt:#a9b8f0; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--display)}
+.wrap{max-width:680px;margin:0 auto;padding-inline:16px;padding-block:20px 80px;display:flex;flex-direction:column;gap:20px}
+h1{font:700 1.7rem/1.15 var(--display);margin:0;text-wrap:balance}
+.lede{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:2;background:var(--bg);padding-block:10px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line)}
+.prog{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums;font-size:.9rem;color:var(--muted)}
+.prog b{color:var(--ink)}
+.track{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.fill{height:100%;background:var(--accent);width:0;transition:width .3s}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font:500 .85rem var(--display);padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.aviso{font-size:.9rem;padding:10px 12px;background:var(--warn-bg);color:var(--warn-ink);border-radius:8px}
+h2{font:700 1.15rem/1.25 var(--display);margin:0}
+.secao{display:flex;flex-direction:column;gap:12px}
+details.tela>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding-block:12px;border-top:2px solid var(--ink)}
+details.tela>summary::-webkit-details-marker{display:none}
+.tela-nome{font:700 1.05rem/1.3 var(--display);min-width:0}
+.tela-conta{font:400 .85rem var(--mono);color:var(--muted);white-space:nowrap}
+.lista{display:flex;flex-direction:column;gap:12px;padding-bottom:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card[data-v="serve"]{border-left:4px solid var(--ok)}
+.card[data-v="muda"]{border-left:4px solid var(--change)}
+.card[data-v="duvida"]{border-left:4px solid var(--doubt)}
+.quando{font-size:.8rem;letter-spacing:.02em;color:var(--muted)}
+.frase{font:400 1.12rem/1.45 var(--read);margin:0;overflow-wrap:anywhere}
+.alerta{font-size:.88rem;padding:8px 10px;background:var(--warn-bg);color:var(--warn-ink);border-radius:6px}
+.alerta b{font-weight:700}
+.origem{font-size:.8rem;color:var(--muted);overflow-wrap:anywhere}
+.origem code{font:400 .75rem var(--mono)}
+.acoes{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:500 .9rem var(--display);padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;min-height:40px}
+.btn[aria-pressed="true"].serve{background:var(--ok);color:var(--surface);border-color:var(--ok)}
+.btn[aria-pressed="true"].muda{background:var(--change);color:var(--surface);border-color:var(--change)}
+.btn[aria-pressed="true"].duvida{background:var(--doubt);color:var(--surface);border-color:var(--doubt)}
+.btn.prim{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:focus-visible,.chip:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+textarea{width:100%;box-sizing:border-box;min-height:80px;font:400 1rem/1.4 var(--read);padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.editor{display:flex;flex-direction:column;gap:8px}
+.salvo{font-size:.8rem;color:var(--muted)}
+.perg{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.perg p{margin:0;font:400 1.02rem/1.45 var(--read)}
+.ops{display:flex;flex-direction:column;gap:8px}
+.ops .btn{text-align:left}
+.ops .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+@media (prefers-reduced-motion: reduce){.fill{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Frases da cidade do ponto</h1>
+    <p class="lede">Todo texto novo da rodada "cidade do ponto" (17/10), por tela, como está no código hoje. Nada disso foi ao ar. Toque <b>Serve</b>, <b>Mudar</b> (escreva como deve ficar) ou <b>Dúvida</b>. As com faixa amarela têm uma dúvida minha e, quando dá, uma proposta: comece por elas. Antes, quatro coisas que eu decidi sem você. O crédito "© OpenStreetMap" embaixo do mapinha é exigência da licença do mapa, igual aos outros mapas do app.</p>
+  </header>
+
+  <div class="bar">
+    <div class="prog"><span><b id="lidas">0</b> de <b id="total">0</b> respondidas</span><span id="alertas-conta"></span></div>
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <div class="chips" role="group" aria-label="Filtro">
+      <button class="chip" data-f="alerta" aria-pressed="true">Com alerta</button>
+      <button class="chip" data-f="faltam" aria-pressed="false">Sem resposta</button>
+      <button class="chip" data-f="todas" aria-pressed="false">Todas</button>
+    </div>
+  </div>
+
+  <p class="aviso" id="sem-banco" hidden>Esta visualização não consegue guardar suas respostas. Abra pelo link do claude.ai, logado.</p>
+
+  <section class="secao" aria-labelledby="h-decisoes">
+    <h2 id="h-decisoes">Quatro decisões antes das frases</h2>
+    <div id="perguntas" class="secao"></div>
+  </section>
+
+  <section class="secao" aria-labelledby="h-frases">
+    <h2 id="h-frases">As frases</h2>
+    <div id="telas"></div>
+  </section>
+</div>
+
+<script id="dados" type="application/json">{"telas": [{"tela": "A pergunta do ponto e a busca no mapa (painel e quem usa)", "frases": [{"id": "f-buscar", "q": "Botão ao lado da caixinha em cima do mapa. A busca só sai quando toca nele (ou aperta Enter); nada é buscado enquanto digita.", "t": "Buscar", "o": "palavra sua na conversa de 17/10", "w": "src/app/admin/campos/palavras.ts:269", "a": null}, {"id": "f-buscando", "q": "O mesmo botão, enquanto a busca está saindo", "t": "Buscando…", "o": "redação do Claude", "w": "src/app/admin/campos/palavras.ts:271", "a": null}, {"id": "f-rotulobusca", "q": "Rótulo da caixinha de busca (fica visível em cima dela, não dentro)", "t": "Cidade ou nome do lugar", "o": "redação do Claude", "w": "src/app/admin/campos/palavras.ts:273", "a": null}, {"id": "f-nenhumachado", "q": "Quando a busca não acha nada", "t": "Não achei nada com esse nome. Tente a cidade.", "o": "redação do Claude", "w": "src/app/admin/campos/palavras.ts:275", "a": null}, {"id": "f-buscanaosaiu", "q": "Quando a busca falha (serviço fora do ar, ou duas buscas no mesmo segundo)", "t": "Não consegui buscar agora. Tente de novo daqui a pouco, ou ache o lugar mexendo no mapa.", "o": "redação do Claude", "w": "src/app/admin/campos/palavras.ts:279", "a": null}, {"id": "f-emcidade", "q": "Embaixo do mapa, antes do nome da cidade do ponto salvo (fica \"Fica em: Bom Jardim\")", "t": "Fica em:", "o": "redação do Claude", "w": "src/app/admin/campos/EditorCoordenada.tsx:172", "a": null}, {"id": "f-cidadedepois", "q": "Embaixo do mapa, quando o ponto ainda não foi salvo", "t": "A cidade sai do ponto quando você salvar.", "o": "redação do Claude", "w": "src/app/admin/campos/palavras.ts:281", "a": null}, {"id": "f-cidadenaosaiu", "q": "Ao salvar o ponto, quando não dá pra achar a cidade dele (serviço fora do ar, ponto no mar, ou outro ponto salvo no mesmo segundo). O ponto NÃO grava.", "t": "Nada foi gravado: não consegui achar a cidade deste ponto. Tente de novo daqui a pouco, ou mexa o ponto.", "o": "redação do Claude", "w": "src/lib/rascunho.ts:120", "a": null}]}, {"tela": "Nome que já existe nessa cidade (o aviso embaixo das perguntas)", "frases": [{"id": "f-nomeexiste", "q": "Tela DELA: aviso embaixo de cada pergunta, depois que o ponto achou a cidade, quando já existe um lugar publicado com esse nome nessa cidade. Não diz qual lugar é.", "t": "Já existe no BatePerna um lugar com esse nome nessa cidade. Você pode seguir respondendo, mas pra publicar o nome precisa ser outro.", "o": "redação do Claude", "w": "src/lib/porta-da-pessoa.ts:80", "a": null}, {"id": "f-corrigironome", "q": "Link logo depois do aviso (o seu e o dela). Leva à pergunta do nome; se você tiver texto não salvo, pede o segundo toque antes.", "t": "Corrigir o nome", "o": "redação do Claude", "w": "src/app/admin/AvisoDoPar.tsx:19", "a": "Ele também aparece na própria pergunta do nome, onde só recarrega a mesma tela. Proposta: não mostrar o link na pergunta do nome (o aviso fica)."}, {"id": "f-avisopainel-lugar", "q": "SEU painel: o mesmo aviso, quando o nome já é de um lugar publicado nessa cidade ([nome] = o outro lugar)", "t": "Já existe no app um lugar com esse nome nessa cidade: [nome]. Mude o que já existe pela lista.", "o": "frase sua já lida em 07/10 (Serve), agora num lugar novo", "w": "src/lib/rascunho.ts:86", "a": "Você leu esta frase como recusa ao COMEÇAR um lugar. Agora ela aparece embaixo de cada pergunta, depois do ponto, e o lugar novo continua gravando (só o publicar trava). \"Mude o que já existe pela lista\" ainda serve aqui, ou falta dizer que dá pra seguir respondendo e trocar o nome?"}, {"id": "f-avisopainel-rascunho", "q": "SEU painel: quando o nome já é de outro lugar novo seu, começado, nessa cidade", "t": "Já tem um lugar novo começado com esse nome nessa cidade: [nome]. Continue por ele, na lista do painel.", "o": "frase sua já lida em 07/10 (Serve), agora num lugar novo", "w": "src/lib/rascunho.ts:89", "a": "Mesmo caso do anterior: era recusa ao começar, agora é aviso no meio das perguntas. Serve assim?"}, {"id": "f-avisopainel-endlugar", "q": "SEU painel: quando o endereço que sairia de nome+cidade já é de outro lugar publicado", "t": "O endereço que sairia desse nome e dessa cidade já é de outro lugar do app: [nome]. Se for o mesmo lugar, mude o que já existe pela lista. Se não for, e a cidade dele foi corrigida, o painel dele oferece trocar o endereço; depois disso, este fica livre.", "o": "frase sua já lida em 07/10 (Serve), agora num lugar novo", "w": "src/lib/rascunho.ts:101", "a": null}, {"id": "f-avisopainel-endrascunho", "q": "SEU painel: quando o endereço que sairia de nome+cidade já é de outro lugar novo seu, começado", "t": "O endereço que sairia desse nome e dessa cidade já é de um lugar novo começado: [nome]. Se for o mesmo lugar, continue por ele na lista do painel; se não for, o painel ainda não sabe dar outro endereço a este.", "o": "frase sua já lida em 07/10 (Serve), agora num lugar novo", "w": "src/lib/rascunho.ts:104", "a": null}, {"id": "f-enderecoaindanao", "q": "SEU painel, ao Publicar: o lugar ficou sem endereço porque o nome estava ocupado quando o ponto foi salvo, e o outro lugar já saiu de lá", "t": "Nada foi publicado: o endereço deste lugar ainda não saiu do nome e da cidade. Corrija o nome e salve de novo.", "o": "redação do Claude", "w": "src/lib/porta-de-publicar.ts:49", "a": "\"Corrija o nome\" soa como se o nome estivesse errado, mas aqui ele pode estar certo: basta salvar o mesmo nome de novo. Proposta: \"Nada foi publicado: este lugar ainda não ganhou o endereço dele. Abra a pergunta do nome e salve de novo, mesmo sem mudar nada.\""}]}, {"tela": "As perguntas (painel e quem usa)", "frases": [{"id": "f-seguirsemsalvar", "q": "Segundo toque: com resposta não salva, tocar em Anterior, Próxima, Voltar à revisão, Pular ou Corrigir o nome pede isto antes de sair", "t": "Seguir sem salvar? O que você escreveu aqui some.", "o": "redação do Claude", "w": "src/app/admin/FormularioDeLugar.tsx:130", "a": null}, {"id": "f-voltararevisao", "q": "No lugar do Próxima, quando você chegou à pergunta pelo Corrigir da revisão", "t": "Voltar à revisão", "o": "redação do Claude", "w": "src/app/admin/FormularioDeLugar.tsx:132", "a": null}]}, {"tela": "A revisão antes de publicar (painel e quem usa)", "frases": [{"id": "f-titulorevisao", "q": "Título da tela de publicar, em cima da lista de todas as respostas", "t": "Confira tudo antes de publicar:", "o": "redação do Claude", "w": "src/app/admin/RevisaoDoLugar.tsx:14", "a": null}, {"id": "f-corrigir", "q": "Link em cada linha da revisão (o da cidade leva à pergunta do ponto)", "t": "Corrigir", "o": "palavra sua na conversa de 17/10", "w": "src/app/admin/RevisaoDoLugar.tsx:16", "a": null}, {"id": "f-acidade", "q": "Rótulo da linha da cidade, logo depois do ponto. As outras linhas mostram o texto da própria pergunta; sem resposta = \"sem resposta\", pulada = \"Pulada: o app vai calar sobre isto.\" (as três já lidas)", "t": "A cidade", "o": "palavra sua já lida, uso novo", "w": "src/app/admin/FichaInteira.tsx:173", "a": null}, {"id": "f-mapadoponto", "q": "Só pra leitor de tela: a descrição do mapinha do ponto na revisão", "t": "Mapa do ponto marcado", "o": "redação do Claude", "w": "src/app/admin/MapinhaDoPonto.tsx:5", "a": null}]}, {"tela": "Os nomes das opções (o que aparece; o que grava não muda)", "frases": [{"id": "f-gratis", "q": "Opção da pergunta do custo (grava \"gratis\")", "t": "Grátis", "o": "redação do Claude", "w": "src/lib/rotulos-das-opcoes.ts:9", "a": null}, {"id": "f-pago", "q": "Opção da pergunta do custo (grava \"pago\")", "t": "Pago", "o": "redação do Claude", "w": "src/lib/rotulos-das-opcoes.ts:11", "a": null}, {"id": "f-dias", "q": "Opções da pergunta dos dias (gravam \"dom\", \"seg\"…). São os mesmos nomes que o carimbo já mostra no ar.", "t": "domingo · segunda · terça · quarta · quinta · sexta · sábado", "o": "palavras suas já no ar, uso novo", "w": "src/lib/semana.ts:56", "a": null}]}, {"tela": "O documento do questionário", "frases": [{"id": "f-doccidade", "q": "docs/questionario-ficha.md, seção \"A cidade\": o parágrafo novo", "t": "Num lugar NOVO, a cidade não se pergunta (17/10): ela sai do ponto que você marca no mapa. Quando o ponto é gravado, o app pergunta ao Nominatim (o serviço de endereços do OpenStreetMap) em que município ele cai, e grava esse município como a cidade. Se não der pra achar a cidade (o serviço fora do ar, ou o ponto no mar), o ponto não grava, e a tela pede pra tentar de novo ou mexer o ponto. Mexer o ponto depois refaz a cidade. No painel de um lugar já publicado, a cidade continua corrigível à mão — é o caminho pra quando o município do Nominatim não for o nome certo.", "o": "redação do Claude", "w": "docs/questionario-ficha.md (A cidade)", "a": null}, {"id": "f-doccidade2", "q": "Mesma seção, a frase nova do fim de \"Por que importa\"", "t": "Se o ponto cair numa cidade onde esse nome já existe, o ponto e a cidade gravam do mesmo jeito, e o que fica travado é o publicar, até o nome mudar.", "o": "redação do Claude", "w": "docs/questionario-ficha.md (A cidade)", "a": "A frase de antes dela (\"Enquanto um lugar não tem a cidade respondida, o painel não deixa começar outro com o mesmo nome… ele pede a cidade daquele primeiro\") hoje só vale pra lugar PUBLICADO sem cidade; um lugar novo seu ainda sem ponto não trava ninguém. Ver se ainda serve."}]}], "total": 26, "perguntas": [{"id": "d-cidade-no-ar", "t": "1. Lugar já publicado que muda de ponto. Quando quem mandou um lugar mexe o ponto dele, a cidade muda junto, sem conferir se já existe outro lugar com esse nome na cidade nova (o endereço do lugar não muda). Decidi assim sem você. Pode acabar com dois lugares de mesmo nome na mesma cidade até você ver.", "ops": ["Aceito assim", "Conferir o nome também nesse caso"]}, {"id": "d-pe-primeiro", "t": "2. Pernambuco primeiro na busca. A busca pede os 10 primeiros resultados do Brasil e põe os de Pernambuco na frente. Um lugar de Pernambuco que não esteja nesses 10 não aparece. A outra saída é escrever no código uma caixa de coordenadas em volta de Pernambuco e pedir ao Nominatim que prefira ela.", "ops": ["Serve assim", "Prefira Pernambuco de verdade (caixa no código)"]}, {"id": "d-busca-na-chuva", "t": "3. Onde a caixinha de busca aparece. Ela aparece em todo mapa sem ponto nas telas de lugar novo, inclusive na pergunta da coordenada da chuva, não só na do ponto.", "ops": ["Serve assim", "Só na pergunta do ponto"]}, {"id": "d-texto-da-busca", "t": "4. Texto da busca. O que você digita na caixinha de busca não conta como \"não salvo\": sair da pergunta não pede o segundo toque, e a busca digitada se perde. Decidi assim porque é uma consulta de passagem (custa redigitar uma palavra).", "ops": ["Serve assim", "Quero o segundo toque também"]}]}</script>
+<script>
+(function(){
+  const D = JSON.parse(document.getElementById("dados").textContent);
+  const resp = {};            // id -> {v, texto}
+  let filtro = "alerta";
+  let db = null;
+  let local = {};
+  try { local = JSON.parse(localStorage.getItem("bp-frases-cidade-do-ponto") || "{}"); } catch (e) {}
+  Object.assign(resp, local);
+
+  const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const todas = D.telas.flatMap(t => t.frases);
+  const nAlertas = todas.filter(f => f.a).length;
+  document.getElementById("total").textContent = D.total;
+  document.getElementById("alertas-conta").textContent = nAlertas + " com alerta";
+
+  function progresso(){
+    const n = todas.filter(f => resp[f.id] && resp[f.id].v).length;
+    document.getElementById("lidas").textContent = n;
+    document.getElementById("fill").style.width = (100 * n / D.total) + "%";
+  }
+
+  async function gravar(id, corpo){
+    resp[id] = corpo;
+    try { local[id] = corpo; localStorage.setItem("bp-frases-cidade-do-ponto", JSON.stringify(local)); } catch (e) {}
+    progresso();
+    if (!db) return false;
+    try { await db.doc("respostas/" + id).set(Object.assign({ em: Date.now() }, corpo)); return true; }
+    catch (e) { return false; }
+  }
+
+  function cartao(f){
+    const c = el("article", "card"); c.dataset.id = f.id;
+    c.appendChild(el("div", "quando", f.q));
+    c.appendChild(el("p", "frase", f.t));
+    if (f.a) { const a = el("div", "alerta"); const b = el("b", null, "Alerta: "); a.append(b, document.createTextNode(f.a)); c.appendChild(a); }
+    const o = el("div", "origem"); o.append(document.createTextNode("Origem: " + f.o + " · ")); o.appendChild(el("code", null, f.w)); c.appendChild(o);
+    const acoes = el("div", "acoes");
+    const botoes = {};
+    [["serve","Serve"],["muda","Mudar"],["duvida","Dúvida"]].forEach(([v, rot]) => {
+      const b = el("button", "btn " + v, rot); b.type = "button"; b.setAttribute("aria-pressed", "false");
+      b.addEventListener("click", () => escolher(v)); botoes[v] = b; acoes.appendChild(b);
+    });
+    c.appendChild(acoes);
+    const ed = el("div", "editor"); ed.hidden = true;
+    const ta = document.createElement("textarea"); ta.id = "ta-" + f.id;
+    const salvar = el("button", "btn prim", "Guardar"); salvar.type = "button";
+    const st = el("div", "salvo");
+    ed.append(ta, salvar, st); c.appendChild(ed);
+
+    function pintar(){
+      const r = resp[f.id] || {};
+      c.dataset.v = r.v || "";
+      for (const v in botoes) botoes[v].setAttribute("aria-pressed", String(r.v === v));
+      ed.hidden = !(r.v === "muda" || r.v === "duvida");
+      if (document.activeElement !== ta) ta.value = r.texto != null ? r.texto : (r.v === "muda" ? f.t : "");
+      ta.placeholder = r.v === "duvida" ? "Qual é a dúvida?" : "Como a frase deve ficar";
+    }
+    async function escolher(v){
+      const atual = resp[f.id] || {};
+      const corpo = { v, texto: v === "serve" ? null : (atual.v === v ? atual.texto : (v === "muda" ? f.t : "")) };
+      resp[f.id] = corpo; pintar();
+      const ok = await gravar(f.id, corpo);
+      st.textContent = ok ? "" : (db ? "Não consegui guardar agora. Tente de novo." : "");
+      if (v !== "serve") ta.focus();
+    }
+    salvar.addEventListener("click", async () => {
+      const corpo = { v: (resp[f.id] || {}).v || "muda", texto: ta.value };
+      const ok = await gravar(f.id, corpo);
+      st.textContent = ok ? "Guardado." : (db ? "Não consegui guardar agora. Tente de novo." : "Guardado só neste aparelho.");
+    });
+    c._pintar = pintar; pintar();
+    return c;
+  }
+
+  const cards = [];
+  function montar(){
+    const raiz = document.getElementById("telas");
+    D.telas.forEach((t, i) => {
+      const d = el("details", "tela"); d.open = true;
+      const s = el("summary"); const nome = el("span", "tela-nome", t.tela); const conta = el("span", "tela-conta");
+      s.append(nome, conta); d.appendChild(s);
+      const lista = el("div", "lista");
+      t.frases.forEach(f => { const c = cartao(f); c._f = f; cards.push(c); lista.appendChild(c); });
+      d.appendChild(lista); d._conta = conta; d._t = t; raiz.appendChild(d);
+    });
+    const pr = document.getElementById("perguntas");
+    D.perguntas.forEach(q => {
+      const b = el("div", "perg"); b.appendChild(el("p", null, q.t));
+      const ops = el("div", "ops"); const bs = [];
+      q.ops.forEach((op, i) => {
+        const x = el("button", "btn", op); x.type = "button"; x.setAttribute("aria-pressed", "false");
+        x.addEventListener("click", async () => { await gravar(q.id, { v: "escolha", texto: op }); pintarQ(); });
+        bs.push(x); ops.appendChild(x);
+      });
+      function pintarQ(){ const r = resp[q.id]; bs.forEach((x, i) => x.setAttribute("aria-pressed", String(!!r && r.texto === q.ops[i]))); }
+      b.appendChild(ops); b._pintar = pintarQ; pintarQ(); pr.appendChild(b); cards.push(b);
+    });
+  }
+
+  function aplicarFiltro(){
+    cards.forEach(c => {
+      if (!c._f) return;
+      const r = resp[c._f.id];
+      c.hidden = filtro === "alerta" ? !c._f.a : filtro === "faltam" ? !!(r && r.v) : false;
+    });
+    document.querySelectorAll("details.tela").forEach(d => {
+      const vis = d._t.frases.filter(f => { const r = resp[f.id]; return filtro === "alerta" ? f.a : filtro === "faltam" ? !(r && r.v) : true; }).length;
+      const feitas = d._t.frases.filter(f => resp[f.id] && resp[f.id].v).length;
+      d._conta.textContent = feitas + "/" + d._t.frases.length;
+      d.hidden = vis === 0;
+    });
+  }
+
+  document.querySelectorAll(".chip").forEach(ch => ch.addEventListener("click", () => {
+    filtro = ch.dataset.f;
+    document.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", String(x === ch)));
+    aplicarFiltro();
+  }));
+
+  montar(); progresso(); aplicarFiltro();
+
+  const repintar = () => { cards.forEach(c => c._pintar && c._pintar()); progresso(); aplicarFiltro(); };
+  const usar = window.claude && window.claude.use ? window.claude.use("db") : Promise.resolve(null);
+  usar.then(d => {
+    if (!d) { document.getElementById("sem-banco").hidden = false; return; }
+    db = d;
+    db.collection("respostas").onSnapshot(snap => {
+      snap.docs.forEach(doc => { const x = doc.data(); if (x) resp[doc.id] = { v: x.v, texto: x.texto }; });
+      repintar();
+    }, () => {});
+  }).catch(() => { document.getElementById("sem-banco").hidden = false; });
+})();
+</script>
