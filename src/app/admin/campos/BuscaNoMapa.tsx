@@ -1,6 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import type { AchadoNoMapa } from "@/lib/nominatim";
+import { TETO_DA_BUSCA } from "@/lib/teto-da-busca";
 import { BUSCANDO, BUSCAR, BUSCA_NAO_SAIU, NENHUM_ACHADO, ROTULO_DA_BUSCA } from "./palavras";
 
 /** A CAIXA DE BUSCA EM CIMA DO MAPA DO PONTO (17/10, Task 5).
@@ -21,7 +22,14 @@ import { BUSCANDO, BUSCAR, BUSCA_NAO_SAIU, NENHUM_ACHADO, ROTULO_DA_BUSCA } from
  *  a sessão do Clerk que venceu: a tela recarrega (`recarregarSe401`, como o
  *  resto do formulário); no painel é a frase de falha. Os dois fins ruins têm
  *  frases DIFERENTES: serviço fora ou rede caída (`BUSCA_NAO_SAIU`) não é "não
- *  achei nada" (`NENHUM_ACHADO`). */
+ *  achei nada" (`NENHUM_ACHADO`).
+ *
+ *  A caixa não aceita mais que `TETO_DA_BUSCA` caracteres (`maxLength`, revisão
+ *  final de 18/10): acima disso a rota recusa com 400 mudo, e a tela diria
+ *  `BUSCA_NAO_SAIU` — "tente de novo" — de uma busca que daria o mesmo 400 de
+ *  novo. O número vem de `@/lib/teto-da-busca`, o mesmo que `@/lib/nominatim`
+ *  reexporta pra rota — um número só pros dois lados, sem puxar `lugares.ts`
+ *  pro celular. */
 
 type Centro = { lat: number; lng: number };
 
@@ -83,6 +91,7 @@ export default function BuscaNoMapa({
             type="search"
             className="adm-busca-caixa"
             value={q}
+            maxLength={TETO_DA_BUSCA}
             onChange={(e) => setQ(e.target.value)}
           />
         </label>

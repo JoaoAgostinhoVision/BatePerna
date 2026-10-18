@@ -15,8 +15,9 @@ export const INTERVALO_NOMINATIM_MS = 1_000;
 /** 30 dias, em SEGUNDOS (a coluna `em` é em segundos, como o resto do banco). */
 export const VALIDADE_DA_RESPOSTA_S = 30 * 24 * 3600;
 export const QUANTOS_NA_BUSCA = 10;
-/** Caracteres. Acima disso a rota recusa sem pedir nada. */
-export const TETO_DA_BUSCA = 120;
+/** Caracteres. Acima disso a rota recusa sem pedir nada. Mora em
+ *  `./teto-da-busca` (a caixa de cliente também o lê) e sai daqui como sempre. */
+export { TETO_DA_BUSCA } from "./teto-da-busca";
 
 export type AchadoNoMapa = { nome: string; lat: number; lng: number };
 

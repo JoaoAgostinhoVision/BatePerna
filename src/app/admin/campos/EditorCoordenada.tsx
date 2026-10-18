@@ -166,13 +166,13 @@ export const VISTA_CIDADE_AMBIGUA = "Achei mais de um lugar com o nome dessa cid
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const SEM_VISTA = "Sem mapa: não achei de onde começar.";
 
-/** Os nomes do + e do − pra quem lê a tela em voz alta (o glifo sozinho não é
- *  nome). Os glifos "+" e "−" são o desenho do botão. */
 /** 17/10: a cidade embaixo do mapa, nas telas de lugar novo (e na edição dela),
  *  enquanto o pin é o ponto salvo. É dela que sai o endereço do lugar. */
 // PENDENTE: redação minha, o João ainda não leu
 export const EM_CIDADE = "Fica em:";
 
+/** Os nomes do + e do − pra quem lê a tela em voz alta (o glifo sozinho não é
+ *  nome). Os glifos "+" e "−" são o desenho do botão. */
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const APROXIMAR = "Aproximar o mapa";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.

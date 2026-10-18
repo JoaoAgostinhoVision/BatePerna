@@ -25,6 +25,7 @@ import EditorCoordenada, {
   VISTA_SEM_CIDADE,
 } from "@/app/admin/campos/EditorCoordenada";
 import type { VistaNaTela } from "@/app/admin/campos/tipos";
+import { TETO_DA_BUSCA } from "@/lib/nominatim";
 import {
   GOTA_ACIMA_DA_PONTA_PX,
   MAPA_ALTURA_PX,
@@ -1100,6 +1101,14 @@ describe("EditorCoordenada — a busca no mapa (17/10)", () => {
     fireEvent.click(querBuscar());
     await screen.findByRole("button", { name: ACHADO.nome });
     expect(fetchFalso).toHaveBeenCalledTimes(1);
+  });
+
+  // Revisão final (18/10): acima do teto a rota dá 400 mudo, e a tela diria
+  // `BUSCA_NAO_SAIU` ("tente de novo") de uma busca que nunca sairia.
+  it("a caixa não aceita mais que TETO_DA_BUSCA caracteres (o teto da rota)", () => {
+    comRota();
+    montar();
+    expect(caixaDaBusca().maxLength).toBe(TETO_DA_BUSCA);
   });
 
   it("caixa vazia ou só de espaços: não há viagem nenhuma", () => {

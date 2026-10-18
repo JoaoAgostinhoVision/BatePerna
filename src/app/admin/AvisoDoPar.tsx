@@ -1,20 +1,27 @@
-/** O AVISO DE NOME QUE JÁ EXISTE NA CIDADE (17/10, Task 4) — componente de
- *  SERVIDOR (sem `"use client"`): a página das perguntas o calcula a cada carga
- *  (`travaDoPainel` / `travaDaPessoa`) e o passa PRONTO ao `FormularioDeLugar`
- *  (um ReactNode atravessa a fronteira de cliente; uma função não). Nada volta
- *  no corpo do PUT. A frase chega por prop: a do painel nomeia quem ocupa, a
- *  dela não nomeia ninguém (I3 de 07/10) — quem escolhe é a página.
+/** O AVISO DE NOME QUE JÁ EXISTE NA CIDADE (17/10, Task 4) — a página das
+ *  perguntas o calcula a cada carga (`travaDoPainel` / `travaDaPessoa`) e passa
+ *  ao `FormularioDeLugar` só os DADOS dele (`{ frase, corrigir }`, raso, que
+ *  atravessa a fronteira de cliente); é o formulário que o desenha, com este
+ *  componente. Nada volta no corpo do PUT. A frase chega pronta: a do painel
+ *  nomeia quem ocupa, a dela não nomeia ninguém (I3 de 07/10) — quem escolhe é a
+ *  página.
  *
  *  `<p role="status">` e não um alerta: ela pode seguir respondendo, só o
- *  publicar fica travado. O link (`ROTAS[onde].corrigir`) leva à pergunta do nome, onde se corrige, e o
- *  seguir de lá volta à revisão. */
+ *  publicar fica travado. O link (`ROTAS[onde].corrigir`) leva à pergunta do
+ *  nome, onde se corrige, e o seguir de lá volta à revisão. 🔴 O LINK CHEGA
+ *  PRONTO (`link`), feito pelo `passo()` do formulário: é uma porta pra outra
+ *  tela como "Anterior" e "Próxima", e com texto não salvo pede o mesmo segundo
+ *  toque (revisão final de 18/10, I1 — até ali era um `<a>` simples, e quem
+ *  tocava nele com texto na caixa o perdia). */
+import type { ReactNode } from "react";
+
 // PENDENTE: redação minha, o João ainda não leu
 export const CORRIGIR_O_NOME = "Corrigir o nome";
 
-export default function AvisoDoPar({ frase, corrigir }: { frase: string; corrigir: string }) {
+export default function AvisoDoPar({ frase, link }: { frase: string; link: ReactNode }) {
   return (
     <p className="adm-aviso-par" role="status">
-      {frase} <a href={corrigir}>{CORRIGIR_O_NOME}</a>
+      {frase} {link}
     </p>
   );
 }

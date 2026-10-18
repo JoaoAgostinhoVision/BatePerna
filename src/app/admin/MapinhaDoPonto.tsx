@@ -1,5 +1,12 @@
 import { MAPA_ESCALA, MAPA_ZOOM_EDITOR, TILE_PX, tilesParaCaixa, urlTile, zoomDeTiles } from "@/lib/mapa";
 
+/** O nome do mapinha pra quem lê a tela em voz alta (o `aria-label` do mosaico). */
+// PENDENTE: redação minha, o João ainda não leu
+export const MAPA_DO_PONTO = "Mapa do ponto marcado";
+
+const LARGURA_PX = 320;
+const ALTURA_PX = 140;
+
 /** O MAPINHA DO PONTO na revisão (17/10, Task 8) — componente de SERVIDOR, sem
  *  JS: o ponto que a pessoa marcou, num pin fixo no meio, no zoom do mapa de
  *  pôr o pin. Existe porque a revisão mostra o ponto como MAPA, nunca como
@@ -10,12 +17,6 @@ import { MAPA_ESCALA, MAPA_ZOOM_EDITOR, TILE_PX, tilesParaCaixa, urlTile, zoomDe
  *  Os tiles são os da vista (`tilesParaCaixa`), pedidos pelo navegador ao abrir
  *  a tela — nada de pré-carregar, a Tile Usage Policy do OSM. O crédito
  *  "© OpenStreetMap" é obrigação de licença (ODbL); não remover. */
-// PENDENTE: redação minha, o João ainda não leu
-export const MAPA_DO_PONTO = "Mapa do ponto marcado";
-
-const LARGURA_PX = 320;
-const ALTURA_PX = 140;
-
 export default function MapinhaDoPonto({ lat, lng }: { lat: number; lng: number }) {
   const tiles = tilesParaCaixa(
     { lat, lng },

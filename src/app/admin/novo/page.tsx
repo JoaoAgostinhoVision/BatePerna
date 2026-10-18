@@ -10,7 +10,6 @@ import { FONTES_DE_PRODUCAO, vistaDaCoordSemPonto } from "@/lib/vista-do-mapa";
 import CaixaDeSenha from "../CaixaDeSenha";
 import FormularioDeLugar, { ComecarLugarNovo } from "../FormularioDeLugar";
 import { travaDoPainel } from "@/lib/par-de-lugar";
-import AvisoDoPar from "../AvisoDoPar";
 import { ROTAS } from "./enderecos";
 import { PERGUNTAS, escolherPosicao, montarPerguntas } from "./perguntas";
 import "../admin.css";
@@ -105,9 +104,10 @@ export default async function Novo({
 
   // 🔴 O AVISO DO PAR (17/10, Task 4): calculado AQUI a cada carga, em TODA tela
   // de pergunta enquanto a trava existe; a frase é a do painel, que nomeia quem
-  // ocupa. O link leva à pergunta do nome (posição 1).
+  // ocupa. O link leva à pergunta do nome (posição 1). Descem só os dados: o
+  // formulário desenha o link pelo segundo toque dele (I1 de 18/10).
   const trava = await travaDoPainel(r.doc, slug);
-  const aviso = trava === null ? undefined : <AvisoDoPar frase={trava} corrigir={ROTAS.painel.corrigir(slug, 1)} />;
+  const aviso = trava === null ? undefined : { frase: trava, corrigir: ROTAS.painel.corrigir(slug, 1) };
 
   return (
     <main className="adm">

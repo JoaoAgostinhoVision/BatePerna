@@ -7,7 +7,6 @@ import { PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
 import { travaDaPessoa } from "@/lib/par-de-lugar";
 import { NOME_EXISTE_NA_CIDADE } from "@/lib/porta-da-pessoa";
 import { FONTES_DE_PRODUCAO, vistaDaCoordSemPonto } from "@/lib/vista-do-mapa";
-import AvisoDoPar from "../../admin/AvisoDoPar";
 import FormularioDeLugar, { ComecarLugarNovo } from "../../admin/FormularioDeLugar";
 import { ROTAS } from "../../admin/novo/enderecos";
 import { PERGUNTAS, escolherPosicao } from "../../admin/novo/perguntas";
@@ -57,9 +56,10 @@ export default async function NovoDaPessoa({
   const semPonto = pergunta.especie === "coord" && pergunta.valor === undefined;
   const vista = semPonto ? await vistaDaCoordSemPonto(doc, pergunta.campo.caminho, FONTES_DE_PRODUCAO) : null;
   // O aviso do par (17/10, Task 4): a frase DELA, que não nomeia o lugar que já
-  // existe (I3 de 07/10); calculado a cada carga, depois da pergunta.
+  // existe (I3 de 07/10); calculado a cada carga, desenhado pelo formulário
+  // depois da pergunta, com o link no segundo toque dele (I1 de 18/10).
   const aviso = (await travaDaPessoa(r.doc))
-    ? <AvisoDoPar frase={NOME_EXISTE_NA_CIDADE} corrigir={ROTAS.contribuir.corrigir(slug, 1)} />
+    ? { frase: NOME_EXISTE_NA_CIDADE, corrigir: ROTAS.contribuir.corrigir(slug, 1) }
     : undefined;
   return (
     <main className="adm">

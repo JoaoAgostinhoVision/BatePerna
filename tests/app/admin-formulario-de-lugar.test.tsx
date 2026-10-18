@@ -785,27 +785,30 @@ describe("/admin/novo — andar entre as perguntas", () => {
   });
 });
 
+/** Um toque que o jsdom não segue: devolve se o APP impediu a navegação nativa
+ *  (o `preventDefault` do formulário, visto antes do nosso ouvinte). Serve ao
+ *  segundo toque (Task 7) e ao link do aviso do par (I1 de 18/10). */
+function toque(el: HTMLElement): boolean {
+  let impediu = false;
+  const ouvir = (e: Event): void => {
+    impediu = e.defaultPrevented;
+    e.preventDefault();
+  };
+  document.addEventListener("click", ouvir);
+  try {
+    fireEvent.click(el);
+  } finally {
+    document.removeEventListener("click", ouvir);
+  }
+  return impediu;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // 17/10 (Task 7, melhoria 1): NENHUM TOQUE PERDE TEXTO. Com algo não salvo na
 // tela, "Anterior", "Próxima", "Voltar à revisão" e "Pular" pedem o segundo
-// toque; sem nada não salvo, um toque só.
+// toque; sem nada não salvo, um toque só. (O "Corrigir o nome" do aviso do par
+// também pede — provado no describe do aviso, que monta a colisão.)
 describe("/admin/novo — o segundo toque de quem sai com texto não salvo", () => {
-  /** Um toque que o jsdom não segue: devolve se o APP impediu a navegação nativa
-   *  (o `preventDefault` do formulário, visto antes do nosso ouvinte). */
-  function toque(el: HTMLElement): boolean {
-    let impediu = false;
-    const ouvir = (e: Event): void => {
-      impediu = e.defaultPrevented;
-      e.preventDefault();
-    };
-    document.addEventListener("click", ouvir);
-    try {
-      fireEvent.click(el);
-    } finally {
-      document.removeEventListener("click", ouvir);
-    }
-    return impediu;
-  }
   const digitar = (caminho: string, valor: string): void => {
     fireEvent.change(within(pergunta(caminho)).getByRole("textbox"), { target: { value: valor } });
   };
@@ -1632,6 +1635,36 @@ describe("/admin/novo — o aviso do par e a chave provisória", () => {
     // A pergunta fica no topo (melhoria 5): o aviso vem DEPOIS dela.
     const perg = pergunta("trajeto.waypoints.0.nome");
     expect(perg.compareDocumentPosition(aviso) & Node.DOCUMENT_POSITION_FOLLOWING, "o aviso antes da pergunta").toBeTruthy();
+  });
+
+  // 🔴 I1 DA REVISÃO FINAL (18/10): o "Corrigir o nome" é uma porta pra outra
+  // tela como a Próxima, e aparece em TODA pergunta enquanto o par colide — era
+  // um `<a>` simples, e quem tocava nele com texto na caixa o perdia.
+  it("🔴 'Corrigir o nome' com texto não salvo: o 1º toque não sai e pede; o 2º leva à pergunta do nome", async () => {
+    await lugarNoAr();
+    const chave = await rascunhoProvisorio((k) => docComCidade(k, NOME, CIDADE));
+    const { assign } = await comRotaDeVerdade();
+    const { container } = await paginaNovo(chave, String(posDe("voz")));
+    fireEvent.change(within(pergunta("voz")).getByRole("textbox"), { target: { value: "texto marcador" } });
+    expect(toque(within(avisoDe(container)!).getByRole("link", { name: CORRIGIR_O_NOME })), "o 1º toque saiu").toBe(true);
+    expect(assign).not.toHaveBeenCalled();
+    expect(within(avisoDe(container)!).queryByRole("link", { name: CORRIGIR_O_NOME }), "o rótulo não mudou").toBeNull();
+    expect(toque(within(avisoDe(container)!).getByRole("link", { name: SEGUIR_SEM_SALVAR }))).toBe(true);
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(assign).toHaveBeenCalledWith(ROTAS.painel.corrigir(chave, 1));
+    expect(within(pergunta("voz")).getByDisplayValue("texto marcador"), "o texto ficou na caixa").toBeTruthy();
+  });
+
+  it("sem nada não salvo, 'Corrigir o nome' é o link de sempre: um toque, sem pedido", async () => {
+    await lugarNoAr();
+    const chave = await rascunhoProvisorio((k) => docComCidade(k, NOME, CIDADE));
+    const { assign } = await comRotaDeVerdade();
+    const { container } = await paginaNovo(chave, String(posDe("voz")));
+    const link = within(avisoDe(container)!).getByRole("link", { name: CORRIGIR_O_NOME });
+    expect(link.getAttribute("href")).toBe(ROTAS.painel.corrigir(chave, 1));
+    expect(toque(link), "pediu segundo toque sem motivo").toBe(false);
+    expect(screen.queryByRole("link", { name: SEGUIR_SEM_SALVAR })).toBeNull();
+    expect(assign).not.toHaveBeenCalled(); // o link nativo navega; o app não interfere
   });
 
   it("o aviso aparece em TODA tela de pergunta, não só na do nome", async () => {

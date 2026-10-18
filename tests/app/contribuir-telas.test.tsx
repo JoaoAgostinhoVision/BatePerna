@@ -6,6 +6,7 @@ import { PERGUNTAS } from "@/app/admin/novo/perguntas";
 import { NAO_TEM } from "@/app/admin/campos/BotaoNaoSei";
 import { BLOQUEADA, CLERK_FORA_AO_ABRIR, JA_CONFERIDO_AO_ABRIR, NOME_EXISTE_NA_CIDADE } from "@/lib/porta-da-pessoa";
 import { CORRIGIR_O_NOME } from "@/app/admin/AvisoDoPar";
+import { SEGUIR_SEM_SALVAR } from "@/app/admin/FormularioDeLugar";
 import { ROTAS } from "@/app/admin/novo/enderecos";
 import { conferirLugar, criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
 import { versaoAtual } from "@/lib/db";
@@ -46,6 +47,23 @@ async function rascunhoDe(endereco: string, doc: unknown, dono = PESSOA.id): Pro
   const chave = await criarRascunhoDaPessoa(banco, endereco, JSON.stringify(doc), 1, dono);
   expect(chave, "a premissa: o rascunho nasceu").not.toBeNull();
   return chave!;
+}
+
+/** Um toque que o jsdom não segue: devolve se o APP impediu a navegação nativa
+ *  (o `preventDefault` do formulário, visto antes do nosso ouvinte). */
+function toqueImpedido(el: HTMLElement): boolean {
+  let impediu = false;
+  const ouvir = (e: Event): void => {
+    impediu = e.defaultPrevented;
+    e.preventDefault();
+  };
+  document.addEventListener("click", ouvir);
+  try {
+    fireEvent.click(el);
+  } finally {
+    document.removeEventListener("click", ouvir);
+  }
+  return impediu;
 }
 
 /** O `fetch` e a navegação dublados, pra conferir PRA ONDE as telas dela
@@ -205,6 +223,27 @@ describe("as perguntas na tela", () => {
     expect(link.getAttribute("href"), "o corrigir volta à revisão").toContain("&volta=revisao");
     const perg = container.querySelector(`[data-testid="pergunta-trajeto.waypoints.0.nome"]`)!;
     expect(perg.compareDocumentPosition(aviso) & Node.DOCUMENT_POSITION_FOLLOWING, "o aviso antes da pergunta").toBeTruthy();
+  });
+
+  // 🔴 I1 da revisão final (18/10): o "Corrigir o nome" dela pede o mesmo
+  // segundo toque que a Próxima quando há texto não salvo; sem, é o link de sempre.
+  it("'Corrigir o nome' dela: com texto não salvo, o 1º toque não sai e o 2º sai; sem, um toque só", async () => {
+    const doc = { slug: "x", cidade: "Cidade Teste", trajeto: { waypoints: [{ nome: "Pedra Mandada" }] } };
+    const S = await rascunhoDe("x", doc);
+    portasFalsas();
+    const n = ORDEM_DA_PESSOA.indexOf("promessa") + 1;
+    const { container } = render(await Novo({ searchParams: Promise.resolve({ slug: S, p: String(n) }) }));
+    const linkDoAviso = (rotulo: string) =>
+      [...container.querySelector<HTMLElement>('[role="status"]')!.querySelectorAll("a")].find((a) => a.textContent === rotulo);
+    // Sem nada não salvo: o app não impede a navegação nativa.
+    expect(toqueImpedido(linkDoAviso(CORRIGIR_O_NOME)!), "pediu segundo toque sem motivo").toBe(false);
+    fireEvent.change(container.querySelector('[data-caixa="promessa"]')!, { target: { value: "Porque sim." } });
+    expect(toqueImpedido(linkDoAviso(CORRIGIR_O_NOME)!), "o 1º toque com texto saiu").toBe(true);
+    expect(location.assign).not.toHaveBeenCalled();
+    expect(linkDoAviso(CORRIGIR_O_NOME), "o rótulo não mudou").toBeUndefined();
+    expect(toqueImpedido(linkDoAviso(SEGUIR_SEM_SALVAR)!)).toBe(true);
+    expect(location.assign).toHaveBeenCalledTimes(1);
+    expect(location.assign).toHaveBeenCalledWith(ROTAS.contribuir.corrigir(S, 1));
   });
 
   it("o par dela livre: nenhum aviso", async () => {

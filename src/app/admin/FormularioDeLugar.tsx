@@ -1,5 +1,6 @@
 "use client";
-import { useCallback, useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
+import { useCallback, useState, type FormEvent, type MouseEvent } from "react";
+import AvisoDoPar, { CORRIGIR_O_NOME } from "./AvisoDoPar";
 import BotaoDesistir from "./BotaoDesistir";
 import EditorFaixas from "./campos/EditorFaixas";
 import EditorBooleano from "./campos/EditorBooleano";
@@ -83,7 +84,8 @@ import { ROTAS, enderecoDaPergunta, type Onde } from "./novo/enderecos";
  *  jogava fora o que estava na caixa, e um "Próxima" discreto era a porta mais
  *  fácil do painel. Todo editor avisa por `AvisoDeMudanca` (via `BotaoDesfazer`)
  *  quando a tela difere do salvo; com algo não salvo, "Anterior", "Próxima",
- *  "Voltar à revisão" e "Pular" pedem o SEGUNDO toque, no molde do
+ *  "Voltar à revisão", "Pular" e o "Corrigir o nome" do aviso do par (este
+ *  desde a revisão final de 18/10) pedem o SEGUNDO toque, no molde do
  *  `BotaoDesistir` — o rótulo do toque vira `SEGUIR_SEM_SALVAR`, e só o segundo
  *  navega. Sem nada não salvo, um toque, como sempre. O pedido é de UM controle
  *  por vez e cai sozinho quando o Desfazer devolve a tela ao salvo.
@@ -215,10 +217,12 @@ export default function FormularioDeLugar({
   /** Quem responde: o João no painel (o padrão) ou quem usa (`"contribuir"`).
    *  Muda só pra onde grava e pra onde leva — ver `ROTAS`. */
   onde?: Onde;
-  /** O aviso de nome que já existe na cidade (`AvisoDoPar`), PRONTO, montado
-   *  pela página de servidor; desenhado logo DEPOIS da pergunta, que fica no
-   *  topo. Ausente quando nada trava o publicar. */
-  aviso?: ReactNode;
+  /** O aviso de nome que já existe na cidade: a frase e o endereço do
+   *  "Corrigir o nome", calculados pela página de servidor; desenhado aqui
+   *  (`AvisoDoPar`) logo DEPOIS da pergunta, que fica no topo, com o link pelo
+   *  `passo()` — o mesmo segundo toque dos outros. Ausente quando nada trava o
+   *  publicar. */
+  aviso?: { frase: string; corrigir: string };
   /** Veio de um "Corrigir" (`&volta=revisao`): o seguir volta pra revisão. */
   voltaARevisao?: boolean;
 }) {
@@ -270,7 +274,7 @@ export default function FormularioDeLugar({
     recarregarSe401: rotas.recarregarSe401,
     buscarEm: rotas.buscaApi,
   };
-  const passo = (id: string, href: string, rotulo: string, classe: string) => (
+  const passo = (id: string, href: string, rotulo: string, classe?: string) => (
     <a className={classe} href={href} onClick={aoTocarNoLink(id, href)}>
       {pedindo(id) ? SEGUIR_SEM_SALVAR : rotulo}
     </a>
@@ -288,7 +292,7 @@ export default function FormularioDeLugar({
             podeSair={() => podeSair("pular")}
             pedindo={pedindo("pular")}
           />
-          {aviso}
+          {aviso && <AvisoDoPar frase={aviso.frase} link={passo("corrigir-nome", aviso.corrigir, CORRIGIR_O_NOME)} />}
           <nav className="adm-novo-passos">
             {voltaARevisao ? (
               passo("revisao", revisao, VOLTAR_A_REVISAO, "adm-novo-passo adm-novo-passo-proxima")
