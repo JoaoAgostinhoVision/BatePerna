@@ -3,8 +3,11 @@ import { useState } from "react";
 import { ERRO_GRAVAR, ERRO_REDE } from "./campos/gravar";
 import { ROTAS, type Onde } from "./novo/enderecos";
 
-/** A TELA DE PUBLICAR (Tarefa 12) — o último passo do lugar novo: o que falta, o
- *  que o app vai calar, e o botão que põe o lugar no ar.
+/** A TELA DE PUBLICAR (Tarefa 12) — o último passo do lugar novo: o que o app
+ *  vai calar e o botão que põe o lugar no ar. O que FALTA responder não mora
+ *  mais aqui (17/10, Task 8): a revisão (`RevisaoDoLugar`, de servidor, acima
+ *  desta tela) mostra toda pergunta, e as obrigatórias sem resposta ficam
+ *  destacadas nela, cada uma com o "Corrigir" que leva a ela.
  *
  *  🔴 ESTE ARQUIVO É DE CLIENTE E NÃO CONHECE O REGISTRO (G3 da auditoria): as
  *  frases chegam PRONTAS por prop, montadas por `oQueOAppCala` na página de
@@ -13,7 +16,8 @@ import { ROTAS, type Onde } from "./novo/enderecos";
  *
  *  🔴 CALAR É PERMITIDO: a lista do que o app vai calar existe pra o dono VER o
  *  preço da honestidade, e o botão NUNCA some nem trava por causa dela. Quem
- *  recusa (obrigatório faltando, par, coerência, endereço) é a porta
+ *  recusa (obrigatório faltando — que a revisão acima destaca —, par, coerência,
+ *  endereço) é a porta
  *  (`POST /api/admin/publicar`, ou `/api/contribuir/publicar` com
  *  `onde="contribuir"`), e a frase dela aparece aqui como chegou.
  *
@@ -40,27 +44,18 @@ export const AVISO_PUBLICAR = "Publicar põe este lugar no ar, pra quem abrir o 
 export const AVISO_PUBLICAR_PESSOA =
   "Publicar põe este lugar no ar na hora, pra quem abrir o app — marcado como não conferido até o BatePerna conferir.";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
-export const TITULO_FALTA = "Antes de publicar, falta responder:";
-// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const TITULO_CALA = "O que o app vai calar sobre este lugar:";
-
-/** Uma pergunta obrigatória ainda sem resposta: o texto dela e o endereço da
- *  tela onde se responde. */
-export type Falta = { texto: string; href: string };
 
 export default function TelaDePublicar({
   slug,
   atualizadoEm,
   frases,
-  faltam = [],
   onde = "painel",
 }: {
   slug: string;
   atualizadoEm: number;
   /** Uma por campo opcional sem resposta (`oQueOAppCala`, no servidor). */
   frases: readonly string[];
-  /** As obrigatórias sem resposta, se houver — a porta recusaria publicar. */
-  faltam?: readonly Falta[];
   /** Quem publica: o João (o padrão) ou quem usa — ver `ROTAS`. */
   onde?: Onde;
 }) {
@@ -103,18 +98,6 @@ export default function TelaDePublicar({
 
   return (
     <section className="adm-publicar" data-rascunho={slug}>
-      {faltam.length > 0 && (
-        <div className="adm-publicar-falta" data-testid="falta">
-          <p className="adm-publicar-titulo">{TITULO_FALTA}</p>
-          <ul>
-            {faltam.map((f) => (
-              <li key={f.href}>
-                <a href={f.href}>{f.texto}</a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
       {frases.length > 0 && (
         <div className="adm-publicar-cala" data-testid="cala">
           <p className="adm-publicar-titulo">{TITULO_CALA}</p>

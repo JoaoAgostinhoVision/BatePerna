@@ -8,6 +8,7 @@ import EditorLista from "./campos/EditorLista";
 import EditorNumeroDeMotor from "./campos/EditorNumeroDeMotor";
 import EditorProsa from "./campos/EditorProsa";
 import { AvisoDeMudanca, ERRO_GRAVAR, ERRO_REDE, PortaDoEditor } from "./campos/gravar";
+import { PULADA, SEM_RESPOSTA } from "./campos/palavras";
 import type { Editor, EspecieNaTela, PerguntaNaTela } from "./campos/tipos";
 import { ROTAS, enderecoDaPergunta, type Onde } from "./novo/enderecos";
 
@@ -106,8 +107,6 @@ export const AVISO_RASCUNHO = "Isto é um rascunho: nada daqui aparece no app at
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const PULAR = "Pular";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
-export const PULADA = "Pulada: o app vai calar sobre isto.";
-// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const COMECAR = "Começar";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const COMECANDO = "Começando…";
@@ -115,8 +114,6 @@ export const COMECANDO = "Começando…";
 export const ANTERIOR = "Anterior";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const PROXIMA = "Próxima";
-// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
-export const SEM_RESPOSTA = "sem resposta";
 // PENDENTE: redação minha, o João ainda não leu
 export const SEGUIR_SEM_SALVAR = "Seguir sem salvar? O que você escreveu aqui some.";
 // PENDENTE: redação minha, o João ainda não leu
@@ -124,6 +121,10 @@ export const VOLTAR_A_REVISAO = "Voltar à revisão";
 /** "Pergunta N de M". */
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const posicaoNaTela = (n: number, total: number): string => `Pergunta ${n} de ${total}`;
+
+/** `PULADA` e `SEM_RESPOSTA` moram em `./campos/palavras` (a revisão, de servidor, as lê);
+ *  saem daqui como sempre saíram. */
+export { PULADA, SEM_RESPOSTA };
 
 /** O endereço da pergunta N mora em `./novo/enderecos` desde a Tarefa 12 (a
  *  página de publicar, de servidor, também o usa); continua saindo daqui. */

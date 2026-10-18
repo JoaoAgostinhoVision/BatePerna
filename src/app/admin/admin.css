@@ -278,8 +278,32 @@
 .adm-publicar { display: grid; gap: 1.2rem; }
 .adm-publicar-nome { margin: 0; font-weight: bold; }
 .adm-publicar-titulo { margin: 0 0 .4rem; font-weight: bold; }
-.adm-publicar-falta ul, .adm-publicar-cala ul { margin: 0; padding-left: 1.2rem; display: grid; gap: .4rem; }
+.adm-publicar-cala ul { margin: 0; padding-left: 1.2rem; display: grid; gap: .4rem; }
 .adm-publicar-aviso { margin: 0; font-size: .85rem; color: #777; }
+/* Task 8 (17/10) — a revisão antes de publicar: uma linha por pergunta, no molde
+   de `.adm-pergunta` (cartão com a pergunta em cima); a que FALTA leva a cor do
+   erro de `.adm-aviso-par`, e o "Corrigir" tem o alvo de dedo de
+   `.adm-novo-passo`. */
+.adm-revisao { display: grid; gap: .6rem; }
+.adm-revisao-linhas { margin: 0; padding: 0; list-style: none; display: grid; gap: .6rem; }
+.adm-revisao-linha { display: grid; gap: .4rem; padding: .8rem 1rem; border: 1px solid #ccc; border-radius: 10px; }
+.adm-revisao-linha[data-estado="falta"] { border-color: #b3261e; }
+.adm-revisao-pergunta { margin: 0; font-size: .85rem; color: #777; }
+.adm-revisao-resposta { margin: 0; font-size: 1.05rem; overflow-wrap: anywhere; }
+.adm-revisao-linha[data-estado="falta"] .adm-revisao-resposta { color: #b3261e; font-weight: bold; }
+.adm-revisao-linha[data-estado="pulada"] .adm-revisao-resposta { color: #777; font-size: .95rem; }
+.adm-revisao-corrigir { justify-self: start; padding: .6rem 1rem; border: 1px solid #999; border-radius: 10px; text-decoration: none; color: inherit; }
+/* O mapinha do ponto na revisão: a caixa dos tiles fica centrada (como `.wp-tiles`
+   da ficha) e o pin é o de `.wp-pin`, sem o `.bp` que o painel não tem. */
+.adm-mapinha { position: relative; width: min(320px, 100%); overflow: hidden; border-radius: 8px; background: #eee; }
+.adm-mapinha-tiles { position: absolute; top: 0; left: 50%; margin-left: -160px; overflow: hidden; }
+.adm-mapinha-tiles-in { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.adm-mapinha-tiles-in img { position: absolute; display: block; max-width: none; width: 256px; height: 256px; }
+.adm-mapinha-pin { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -21.7px 0 0 -9px;
+  background: #b3261e; border: 2px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.adm-mapinha-osm { position: absolute; right: 0; bottom: 0; padding: .25rem .45rem; font-size: .64rem;
+  text-decoration: none; color: #444; background: rgba(255,255,255,.78); border-top-left-radius: 6px; }
 /* Tarefa 15 — o "Desistir deste lugar": o mesmo botão no formulário (no grid de
    `.adm-novo`, por isso o `justify-self`, que o impede de esticar) e no item do
    rascunho (ao lado do `.adm-item-publicar`, com o mesmo alvo de dedo; o respiro

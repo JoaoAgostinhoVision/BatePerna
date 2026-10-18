@@ -11,9 +11,11 @@ import { oQueOAppCala } from "@/lib/o-que-o-app-cala";
 import { FALTA_OBRIGATORIO } from "@/lib/porta-de-publicar";
 import { PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
 import { nomeComCidade } from "@/lib/rascunho";
-import TelaDePublicar, { PUBLICANDO, PUBLICAR, TITULO_CALA, TITULO_FALTA } from "@/app/admin/TelaDePublicar";
+import TelaDePublicar, { PUBLICANDO, PUBLICAR, TITULO_CALA } from "@/app/admin/TelaDePublicar";
+import { CORRIGIR } from "@/app/admin/RevisaoDoLugar";
+import { SEM_RESPOSTA } from "@/app/admin/campos/palavras";
 import { ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
-import { enderecoDaPergunta } from "@/app/admin/novo/enderecos";
+import { ROTAS } from "@/app/admin/novo/enderecos";
 import { ORDEM, PERGUNTAS, montarPerguntas } from "@/app/admin/novo/perguntas";
 import { bancoVazio, salvarRascunho, semearAcervo } from "../banco";
 import { rascunhoCompleto } from "../rascunho-completo";
@@ -228,7 +230,7 @@ describe("/admin/novo/publicar — a página, contra o banco", () => {
     expect(frases, "a premissa: o rascunho cala duas coisas").toHaveLength(2);
     const lista = screen.getByTestId("cala");
     for (const frase of frases) expect(within(lista).getByText(frase)).toBeTruthy();
-    expect(screen.queryByTestId("falta"), "um rascunho completo não tem o que faltar").toBeNull();
+    expect(document.querySelector("[data-estado=falta]"), "um rascunho completo não tem o que faltar").toBeNull();
     // O lugar pelo NOME e pela cidade — nunca pelo endereço.
     expect(screen.getByText(nomeComCidade(NOME, CIDADE))).toBeTruthy();
     expect(screen.queryByText(S)).toBeNull();
@@ -250,23 +252,78 @@ describe("/admin/novo/publicar — a página, contra o banco", () => {
     expect(await lerRascunho(cliente, S)).toBeNull();
   });
 
-  it("o que falta: cada obrigatória sem resposta, com o link da pergunta dela; e a porta recusa com a frase", async () => {
+  // 🔴 17/10, Task 8: a lista "falta responder" saiu; a REVISÃO mostra toda
+  // pergunta, e a que falta é destacada, com o "Corrigir" que volta pra cá.
+  it("a página do painel: a revisão e o botão; a lista 'falta responder' saiu", async () => {
     await salvarRascunho(cliente, S, JSON.stringify(semCampo(rascunhoCompleto(S, NOME, CIDADE), "voz")), ATUALIZADO);
     await comRotaDeVerdade();
     await paginaPublicar(S);
-    const falta = screen.getByTestId("falta");
-    expect(within(falta).getByText(TITULO_FALTA)).toBeTruthy();
-    const links = within(falta).getAllByRole("link");
-    expect(links).toHaveLength(1);
-    expect(links[0].textContent).toBe(PERGUNTAS.voz);
-    expect(links[0].getAttribute("href")).toBe(enderecoDaPergunta(S, ORDEM.indexOf("voz") + 1));
-    // O botão continua lá — quem recusa é a porta, e diz por quê.
+    const revisao = screen.getByTestId("revisao");
+    // Uma linha por pergunta (+ a cidade, que não é pergunta).
+    expect(revisao.querySelectorAll("li")).toHaveLength(montarPerguntas({}).length + 1);
+    expect(screen.queryByTestId("falta"), "a lista antiga saiu").toBeNull();
+    expect(document.querySelector(".adm-publicar-falta")).toBeNull();
+    const voz = revisao.querySelector<HTMLElement>('[data-caminho="voz"]')!;
+    expect(voz.getAttribute("data-estado")).toBe("falta");
+    expect(voz.textContent).toContain(SEM_RESPOSTA);
+    expect(within(voz).getByRole("link", { name: CORRIGIR }).getAttribute("href")).toBe(
+      ROTAS.painel.corrigir(S, ORDEM.indexOf("voz") + 1),
+    );
+    // O Publicar continua lá, com pergunta faltando — quem recusa é a porta, e diz por quê.
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: PUBLICAR }));
     });
     expect(screen.getByRole("alert").textContent).toBe(FALTA_OBRIGATORIO);
     expect(await historico(cliente, S)).toEqual([]);
     expect(await lerRascunho(cliente, S)).not.toBeNull();
+  });
+
+  // 🔴 O ruling da revisão da Task 3: rascunho do painel com ponto e SEM cidade
+  // (dado antigo) não tinha falta nenhuma na tela, e a porta dizia que as faltas
+  // "estão listadas nesta tela". Agora a cidade é uma linha, logo depois do ponto.
+  it("rascunho com ponto e sem cidade: a revisão mostra a falta da cidade, e o Corrigir dela é o do ponto", async () => {
+    const doc = semCampo(rascunhoCompleto(S, NOME, CIDADE), "cidade");
+    await salvarRascunho(cliente, S, JSON.stringify(doc), ATUALIZADO);
+    await comRotaDeVerdade();
+    await paginaPublicar(S);
+    const cidade = screen.getByTestId("revisao").querySelector<HTMLElement>('[data-caminho="cidade"]')!;
+    expect(cidade, "a linha da cidade está lá").not.toBeNull();
+    expect(cidade.getAttribute("data-estado")).toBe("falta");
+    expect(cidade.textContent).toContain(SEM_RESPOSTA);
+    const n = ORDEM.indexOf("trajeto.waypoints.0.lat") + 1;
+    expect(within(cidade).getByRole("link", { name: CORRIGIR }).getAttribute("href")).toBe(ROTAS.painel.corrigir(S, n));
+    // E a porta recusa com a frase que manda olhar esta tela.
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: PUBLICAR }));
+    });
+    expect(screen.getByRole("alert").textContent).toBe(FALTA_OBRIGATORIO);
+    expect(await lerRascunho(cliente, S)).not.toBeNull();
+  });
+
+  // A chave provisória (`rascunho_<hex>`, Task 3): o rascunho cujo nome-cidade já
+  // é de outro mora nela, e a tela de publicar abre igual.
+  it("chave provisória: a revisão abre, com o Corrigir apontando pra ela", async () => {
+    const chave = "rascunho_0a1b2c3d4e5f";
+    await salvarRascunho(cliente, chave, JSON.stringify(rascunhoCompleto(chave, NOME, CIDADE)), ATUALIZADO);
+    await comRotaDeVerdade();
+    await paginaPublicar(chave);
+    const revisao = screen.getByTestId("revisao");
+    expect(within(revisao.querySelector<HTMLElement>('[data-caminho="trajeto.waypoints.0.nome"]')!).getByRole("link", { name: CORRIGIR }).getAttribute("href")).toBe(
+      ROTAS.painel.corrigir(chave, 1),
+    );
+    expect(screen.getByRole("button", { name: PUBLICAR })).toBeTruthy();
+  });
+
+  // O aviso do par (Task 4) chega à linha do nome: outro rascunho já mora no
+  // endereço que este ocuparia.
+  it("com a trava, o aviso aparece na linha do nome", async () => {
+    const chave = "rascunho_0a1b2c3d4e5f";
+    await salvarRascunho(cliente, S, JSON.stringify(rascunhoCompleto(S, NOME, CIDADE)), ATUALIZADO);
+    await salvarRascunho(cliente, chave, JSON.stringify(rascunhoCompleto(chave, NOME, CIDADE)), ATUALIZADO);
+    await paginaPublicar(chave);
+    const aviso = screen.getByTestId("revisao").querySelector('[data-caminho="trajeto.waypoints.0.nome"] [role="status"]');
+    expect(aviso, "a linha do nome carrega o aviso do par").not.toBeNull();
+    expect(aviso!.textContent!.length).toBeGreaterThan(10);
   });
 
   it("slug sem rascunho — inclusive o de um lugar no ar — é 404", async () => {
@@ -297,10 +354,13 @@ describe("/admin/novo/publicar — a página, contra o banco", () => {
   it("rascunho que não abre: a tela fica de pé, com cada obrigatória no que falta", async () => {
     await salvarRascunho(cliente, S, "{{", ATUALIZADO);
     await paginaPublicar(S);
-    const esperadas = montarPerguntas({}).filter((q) => q.campo.obrigatorio && q.valor === undefined).map((q) => q.texto);
+    const esperadas = montarPerguntas({}).filter((q) => q.campo.obrigatorio).map((q) => q.campo.caminho);
     expect(esperadas.length, "a premissa: o registro tem obrigatórias").toBeGreaterThan(3);
-    const links = within(screen.getByTestId("falta")).getAllByRole("link");
-    expect(links.map((l) => l.textContent)).toEqual(esperadas);
+    const faltam = [...screen.getByTestId("revisao").querySelectorAll<HTMLElement>('[data-estado="falta"]')];
+    // A cidade também falta (documento sem nada), logo depois do ponto.
+    expect(faltam.map((l) => l.getAttribute("data-caminho"))).toEqual(
+      esperadas.flatMap((c) => (c === "trajeto.waypoints.0.lat" ? [c, "cidade"] : [c])),
+    );
     expect(screen.getByRole("button", { name: PUBLICAR })).toBeTruthy();
   });
 

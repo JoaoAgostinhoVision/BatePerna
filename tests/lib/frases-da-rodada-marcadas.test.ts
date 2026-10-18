@@ -179,16 +179,37 @@ function marcasDatadasEmSrc(): { arquivo: string; linha: number }[] {
   });
 }
 
-/** Os nomes das constantes de texto que o arquivo exportava na BASE. Arquivo
- *  que não existia lá = nenhum (toda frase dele é nova). */
-function nomesNaBase(arquivo: string): Set<string> {
-  let antes = "";
+/** 🔴 FRASE MUDADA DE ARQUIVO NÃO É FRASE NOVA (Task 8, 17/10): `PULADA` e
+ *  `SEM_RESPOSTA`, que o João já leu, moravam em `FormularioDeLugar.tsx`
+ *  (cliente) e foram pra `palavras.ts` porque a revisão, de SERVIDOR, não pode
+ *  importar constante de módulo `"use client"` (chegaria como referência de
+ *  cliente). Sem esta tabela o guarda as leria como nascidas aqui e exigiria
+ *  `PENDENTE` de frase que ele leu. Destino → { nome → arquivo onde ela estava
+ *  na BASE }; o caso "as movidas" confere que cada uma estava mesmo lá. */
+const MOVIDAS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  "src/app/admin/campos/palavras.ts": {
+    PULADA: "src/app/admin/FormularioDeLugar.tsx",
+    SEM_RESPOSTA: "src/app/admin/FormularioDeLugar.tsx",
+  },
+};
+
+function fonteNaBase(arquivo: string): string {
   try {
-    antes = execFileSync("git", ["show", `${BASE}:${arquivo}`], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    return execFileSync("git", ["show", `${BASE}:${arquivo}`], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
   } catch {
-    antes = "";
+    return "";
   }
-  return new Set(frasesExportadas(antes).map((f) => f.nome));
+}
+
+/** Os nomes das constantes de texto que o arquivo exportava na BASE (mais as
+ *  que se mudaram pra ele de um arquivo que as exportava lá). Arquivo que não
+ *  existia lá = nenhum (toda frase dele é nova). */
+function nomesNaBase(arquivo: string): Set<string> {
+  const nomes = new Set(frasesExportadas(fonteNaBase(arquivo)).map((f) => f.nome));
+  for (const [nome, origem] of Object.entries(MOVIDAS[arquivo] ?? {})) {
+    if (frasesExportadas(fonteNaBase(origem)).some((f) => f.nome === nome)) nomes.add(nome);
+  }
+  return nomes;
 }
 
 /** 🔴 I6 DA PRÉ-AUDITORIA: `LIDA:` só vale pra frase que JÁ EXISTIA na base.
@@ -279,6 +300,16 @@ describe("toda frase nova desta rodada nasce marcada", () => {
   it("o guarda lê a base: um arquivo que já existia nela devolve as frases de lá", () => {
     expect(nomesNaBase("src/lib/porta-de-publicar.ts").has("RASCUNHO_MUDOU")).toBe(true);
     expect(nomesNaBase("src/lib/origem.ts").size, "origem.ts nasce nesta rodada").toBe(0);
+  });
+
+  it("as movidas: cada frase de MOVIDAS era frase exportada do arquivo de origem na base, e vive agora no destino", () => {
+    for (const [destino, nomes] of Object.entries(MOVIDAS)) {
+      const hoje = frasesExportadas(readFileSync(path.join(process.cwd(), destino), "utf8")).map((f) => f.nome);
+      for (const [nome, origem] of Object.entries(nomes)) {
+        expect(frasesExportadas(fonteNaBase(origem)).map((f) => f.nome), `${nome} na base de ${origem}`).toContain(nome);
+        expect(hoje, `${nome} em ${destino}`).toContain(nome);
+      }
+    }
   });
 
   it.each(ARQUIVOS)("%s: toda constante de texto exportada tem marca, e LIDA só em frase que já existia ou que ele leu em 13/10", (arquivo) => {

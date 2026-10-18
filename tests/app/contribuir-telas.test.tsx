@@ -238,41 +238,65 @@ describe("publicar o dela", () => {
   const SO_NOME = "so-nome-cidade-teste";
   const docSoNome = { slug: SO_NOME, cidade: "Cidade Teste", trajeto: { waypoints: [{ nome: "Só Nome" }] } };
 
-  // 🔴 Carregado da revisão da Task 13: o "falta responder" do painel é montado
-  // com `enderecoDaPergunta` (o endereço do PAINEL). O dela leva às perguntas
-  // DELA, na posição da lista DELA, e na ordem em que ela as vê — um link pra
-  // /admin seria a tela dela mandando-a ao painel do João, que ela não abre.
-  it("o que falta leva às perguntas DELA, na posição da lista dela — nunca ao painel", async () => {
+  // 🔴 Carregado da revisão da Task 13 (e refeito na Task 8, 17/10): a revisão é
+  // montada pelas perguntas DELA, e cada "Corrigir" leva à pergunta DELA, na
+  // posição da lista DELA, com a volta à revisão — nunca ao painel do João, que
+  // ela não abre. A cidade entra logo depois do ponto, com o destino do ponto.
+  it("a página dela: as linhas dela, cada Corrigir pelas ROTAS dela com volta=revisao", async () => {
     const chave = await rascunhoDe(SO_NOME, docSoNome);
     const { container } = render(await Publicar({ searchParams: Promise.resolve({ slug: chave }) }));
-    const faltam = [...container.querySelectorAll('[data-testid="falta"] a')];
-    const esperado = ["trajeto.waypoints.0.lat", "promessa", "acesso", "custo.tag"].map((c) => ({
-      texto: PERGUNTAS[c],
-      href: `/contribuir/novo?slug=${chave}&p=${ORDEM_DA_PESSOA.indexOf(c) + 1}`,
-    }));
-    expect(faltam.map((a) => ({ texto: a.textContent, href: a.getAttribute("href") }))).toEqual(esperado);
+    const linhas = [...container.querySelectorAll<HTMLElement>('[data-testid="revisao"] li')];
+    expect(linhas.map((l) => l.getAttribute("data-caminho"))).toEqual([
+      ORDEM_DA_PESSOA[0], ORDEM_DA_PESSOA[1], "cidade", ...ORDEM_DA_PESSOA.slice(2),
+    ]);
+    const hrefs = linhas.map((l) => l.querySelector("a")!.getAttribute("href"));
+    const posicao = (c: string) => (c === "cidade" ? 2 : ORDEM_DA_PESSOA.indexOf(c) + 1);
+    expect(hrefs).toEqual(linhas.map((l) => ROTAS.contribuir.corrigir(chave, posicao(l.getAttribute("data-caminho")!))));
+    expect(hrefs.every((h) => h!.endsWith("&volta=revisao") && h!.startsWith("/contribuir/novo?"))).toBe(true);
     expect(container.querySelector("a[href*='/admin']")).toBeNull();
+    expect(container.querySelector('[data-testid="falta"]'), "a lista antiga saiu").toBeNull();
+  });
+
+  it("o que falta, pela régua DELA: obrigatória sem resposta é falta; a opcional dela é pulada", async () => {
+    const chave = await rascunhoDe(SO_NOME, docSoNome);
+    const { container } = render(await Publicar({ searchParams: Promise.resolve({ slug: chave }) }));
+    const estado = (c: string) => container.querySelector(`[data-caminho="${c}"]`)!.getAttribute("data-estado");
+    for (const c of ["trajeto.waypoints.0.lat", "promessa", "acesso", "custo.tag"]) expect(estado(c), c).toBe("falta");
+    expect(estado("trajeto.waypoints.0.nome")).toBe("respondida");
+    expect(estado("cidade")).toBe("respondida");
+    for (const c of ["avisos", "custo.valor", "horario", "dias"]) expect(estado(c), c).toBe("pulada");
+  });
+
+  // Task 8: o aviso do par (Task 4) vai na linha do nome da revisão, na frase
+  // DELA — que não nomeia o lugar que já existe (I3 de 07/10).
+  it("o par dela é de um lugar: o aviso, na frase dela, só na linha do nome", async () => {
+    const doc = { slug: "x", cidade: "Cidade Teste", trajeto: { waypoints: [{ nome: "Pedra Mandada" }] } };
+    const chave = await rascunhoDe("x", doc);
+    const { container } = render(await Publicar({ searchParams: Promise.resolve({ slug: chave }) }));
+    const avisos = [...container.querySelectorAll<HTMLElement>('[data-testid="revisao"] [role="status"]')];
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0].textContent).toBe(NOME_EXISTE_NA_CIDADE);
+    expect(avisos[0].closest("li")!.getAttribute("data-caminho")).toBe("trajeto.waypoints.0.nome");
+    expect(container.textContent).not.toContain("lista do painel");
   });
 
   // 🔴 17/10: a cidade não é pergunta dela — sai do ponto. Quando ela falta (um
   // rascunho com o ponto gravado antes de a cidade sair dele), o caminho é a
-  // pergunta do PONTO, na posição 2; e faltando os dois, é uma linha só.
+  // pergunta do PONTO, na posição 2; a linha da cidade diz que falta.
   it("a falta da cidade, na tela de publicar dela, leva à pergunta do ponto (posição 2)", async () => {
     const completo = {
       slug: SO_NOME, modos: [], promessa: "Uma promessa marcadora.", acesso: "De carro.", custo: { tag: "gratis" },
       trajeto: { waypoints: [{ nome: "Só Nome", lat: -8.3, lng: -35.9 }] }, condicao: { coords: { lat: -8.3, lng: -35.9 } },
     };
-    const doPonto = { texto: PERGUNTAS["trajeto.waypoints.0.lat"], href: "" };
-    for (const doc of [completo, { ...completo, trajeto: { waypoints: [{ nome: "Só Nome" }] }, condicao: {} }]) {
-      const chave = await rascunhoDe(SO_NOME, doc);
-      const { container, unmount } = render(await Publicar({ searchParams: Promise.resolve({ slug: chave }) }));
-      const faltam = [...container.querySelectorAll('[data-testid="falta"] a')];
-      expect(ORDEM_DA_PESSOA.indexOf("trajeto.waypoints.0.lat") + 1, "a premissa: o ponto é a 2ª").toBe(2);
-      expect(faltam.map((a) => ({ texto: a.textContent, href: a.getAttribute("href") }))).toEqual([
-        { ...doPonto, href: `/contribuir/novo?slug=${chave}&p=2` },
-      ]);
-      unmount();
-    }
+    const chave = await rascunhoDe(SO_NOME, completo);
+    const { container } = render(await Publicar({ searchParams: Promise.resolve({ slug: chave }) }));
+    expect(ORDEM_DA_PESSOA.indexOf("trajeto.waypoints.0.lat") + 1, "a premissa: o ponto é a 2ª").toBe(2);
+    const cidade = container.querySelector('[data-caminho="cidade"]')!;
+    expect(cidade.getAttribute("data-estado")).toBe("falta");
+    expect(cidade.querySelector("a")!.getAttribute("href")).toBe(`/contribuir/novo?slug=${chave}&p=2&volta=revisao`);
+    expect(container.querySelector('[data-caminho="trajeto.waypoints.0.lat"]')!.getAttribute("data-estado")).toBe("respondida");
+    // Só a cidade falta aqui: o resto da régua dela está respondido.
+    expect([...container.querySelectorAll('[data-estado="falta"]')].map((l) => l.getAttribute("data-caminho"))).toEqual(["cidade"]);
   });
 
   it("o rascunho de OUTRA pessoa é 404", async () => {

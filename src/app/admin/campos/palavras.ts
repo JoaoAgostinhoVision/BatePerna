@@ -279,3 +279,13 @@ export const NENHUM_ACHADO = "Não achei nada com esse nome. Tente a cidade.";
 export const BUSCA_NAO_SAIU = "Não consegui buscar agora. Tente de novo daqui a pouco, ou ache o lugar mexendo no mapa.";
 // PENDENTE: redação minha, o João ainda não leu
 export const CIDADE_DEPOIS_DE_SALVAR = "A cidade sai do ponto quando você salvar.";
+
+/** A pergunta opcional sem resposta, e a obrigatória sem resposta. Moravam em
+ *  `FormularioDeLugar.tsx` (cliente); a revisão antes de publicar, que é de
+ *  SERVIDOR, as lê, e um servidor que importa constante de módulo
+ *  `"use client"` recebe uma REFERÊNCIA de cliente, não a frase (17/10, Task 8).
+ *  O `FormularioDeLugar` as reexporta, e quem as importava de lá segue igual. */
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
+export const PULADA = "Pulada: o app vai calar sobre isto.";
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
+export const SEM_RESPOSTA = "sem resposta";

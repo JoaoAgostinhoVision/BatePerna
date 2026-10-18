@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { comPrazo } from "@/lib/cache-rotas";
-import { PONTO, obrigatoriosDaPessoaFaltando } from "@/lib/campos-da-pessoa";
 import { getClient, type Rascunho } from "@/lib/db";
 import { lerRascunhoDaPessoa } from "@/lib/db-contribuidor";
-import { CAMPO_DA_CIDADE } from "@/lib/par-de-lugar";
+import { travaDaPessoa } from "@/lib/par-de-lugar";
+import { NOME_EXISTE_NA_CIDADE } from "@/lib/porta-da-pessoa";
 import { PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
 import { cidadeDoDoc, nomeComCidade, nomeDoRascunho } from "@/lib/rascunho";
+import RevisaoDoLugar from "../../../admin/RevisaoDoLugar";
 import TelaDePublicar from "../../../admin/TelaDePublicar";
 import { ROTAS } from "../../../admin/novo/enderecos";
-import { PERGUNTAS } from "../../../admin/novo/perguntas";
+import { montarRevisao } from "../../../admin/novo/revisao";
 import { TITULO_MANDAR } from "../../palavras";
-import { ORDEM_DA_PESSOA } from "../../perguntas";
+import { montarPerguntasDaPessoa } from "../../perguntas";
 import { quemNaTela } from "../../sessao";
 import "../../../admin/admin.css";
 
@@ -23,14 +24,13 @@ const ESTOUROU = Symbol("prazo do rascunho dela");
 /** `/contribuir/novo/publicar?slug=S` — a tela de publicar o rascunho DELA, no
  *  molde de `/admin/novo/publicar`. Rascunho que não é dela é 404.
  *
- *  🔴 O QUE FALTA É PELA RÉGUA DELA (`obrigatoriosDaPessoaFaltando`, a mesma
- *  que a porta de publicar dela usa), e cada item leva às perguntas DELA
- *  (`ROTAS.contribuir.pergunta`), na posição da lista DELA — nunca ao
- *  `enderecoDaPergunta` do painel (achado da revisão da Task 13). Em ordem de
- *  pergunta: o ponto (que a régua põe no fim) vem no 2º lugar, onde ela o vê.
- *  🔴 E A CIDADE QUE FALTA LEVA AO PONTO (17/10): ela não é pergunta — sai do
- *  ponto que ela marca —, então o caminho pra ela é gravar o ponto de novo.
- *  Uma linha só, mesmo quando faltam os dois.
+ *  🔴 A REVISÃO É PELAS PERGUNTAS DELA (`montarPerguntasDaPessoa`, com a
+ *  obrigatoriedade dela), e cada "Corrigir" leva à pergunta DELA
+ *  (`ROTAS.contribuir.corrigir`, com `volta=revisao`), na posição da lista
+ *  DELA — nunca ao endereço do painel (achado da revisão da Task 13).
+ *  🔴 E A CIDADE ENTRA LOGO DEPOIS DO PONTO (17/10): ela não é pergunta — sai do
+ *  ponto que ela marca —, então o "Corrigir" dela é o do ponto, e a linha diz
+ *  que falta quando o documento não a tem.
  *
  *  `frases={[]}`: o "o que o app vai calar" do painel fala de campos que ela nem
  *  viu — a página dela cala o que ela não respondeu, e o aviso de publicar dela
@@ -55,22 +55,18 @@ export default async function PublicarDaPessoa({ searchParams }: { searchParams:
   } catch {
     // ver acima
   }
-  const caminhos = new Set(
-    obrigatoriosDaPessoaFaltando(doc).map((c) => (c === PONTO || c === CAMPO_DA_CIDADE ? "trajeto.waypoints.0.lat" : c)),
-  );
-  const faltam = [...caminhos]
-    .map((caminho) => {
-      const n = ORDEM_DA_PESSOA.indexOf(caminho) + 1;
-      return { n, texto: PERGUNTAS[caminho] ?? caminho, href: ROTAS.contribuir.pergunta(slug, n) };
-    })
-    .sort((a, b) => a.n - b.n)
-    .map(({ texto, href }) => ({ texto, href }));
+  // A frase do aviso do par é a DELA, que não nomeia o lugar que já existe (I3).
+  const linhas = montarRevisao(montarPerguntasDaPessoa(doc), doc, {
+    corrigir: (n) => ROTAS.contribuir.corrigir(slug, n),
+    aviso: (await travaDaPessoa(r.doc)) ? NOME_EXISTE_NA_CIDADE : null,
+  });
 
   return (
     <main className="adm">
       <h1>{TITULO_MANDAR}</h1>
       <p className="adm-publicar-nome">{nomeComCidade(nomeDoRascunho(r.doc, slug), cidadeDoDoc(r.doc))}</p>
-      <TelaDePublicar slug={slug} atualizadoEm={r.atualizado_em} frases={[]} faltam={faltam} onde="contribuir" />
+      <RevisaoDoLugar linhas={linhas} />
+      <TelaDePublicar slug={slug} atualizadoEm={r.atualizado_em} frases={[]} onde="contribuir" />
     </main>
   );
 }
