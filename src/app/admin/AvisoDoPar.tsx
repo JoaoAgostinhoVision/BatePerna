@@ -8,7 +8,9 @@
  *
  *  `<p role="status">` e não um alerta: ela pode seguir respondendo, só o
  *  publicar fica travado. O link (`ROTAS[onde].corrigir`) leva à pergunta do
- *  nome, onde se corrige, e o seguir de lá volta à revisão. 🔴 O LINK CHEGA
+ *  nome, onde se corrige, e o seguir de lá volta à revisão; NA pergunta do nome
+ *  ele não vem (`link` nulo — ali só recarregaria a mesma tela; onda de copy
+ *  de 18/10), e o aviso é só a frase. 🔴 O LINK CHEGA
  *  PRONTO (`link`), feito pelo `passo()` do formulário: é uma porta pra outra
  *  tela como "Anterior" e "Próxima", e com texto não salvo pede o mesmo segundo
  *  toque (revisão final de 18/10, I1 — até ali era um `<a>` simples, e quem
@@ -21,7 +23,8 @@ export const CORRIGIR_O_NOME = "Corrigir o nome";
 export default function AvisoDoPar({ frase, link }: { frase: string; link: ReactNode }) {
   return (
     <p className="adm-aviso-par" role="status">
-      {frase} {link}
+      {frase}
+      {link ? <> {link}</> : null}
     </p>
   );
 }

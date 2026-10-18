@@ -231,7 +231,9 @@ describe("as perguntas na tela", () => {
 
   // 17/10 (Task 4): o aviso do par, na frase DELA — que não nomeia o lugar que
   // já existe (I3 de 07/10) — e DEPOIS da pergunta.
-  it("o par dela é de um lugar: a frase dela, que não nomeia o lugar que já existe, depois da pergunta", async () => {
+  // 18/10 (onda de copy, decisão dele): na pergunta do nome, só a frase — o
+  // "Corrigir o nome" ali só recarregaria a mesma tela.
+  it("o par dela é de um lugar: a frase dela, que não nomeia o lugar que já existe, depois da pergunta — sem o link na pergunta do nome", async () => {
     const doc = { slug: "x", cidade: "Cidade Teste", trajeto: { waypoints: [{ nome: "Pedra Mandada" }] } };
     const S = await rascunhoDe("x", doc);
     const { container } = render(await Novo({ searchParams: Promise.resolve({ slug: S, p: "1" }) }));
@@ -240,9 +242,8 @@ describe("as perguntas na tela", () => {
     expect(aviso.textContent).toContain(NOME_EXISTE_NA_CIDADE);
     expect(aviso.textContent).not.toContain("Pedra Mandada");
     expect(aviso.textContent).not.toContain("lista do painel");
-    const link = [...aviso.querySelectorAll("a")].find((a) => a.textContent === CORRIGIR_O_NOME)!;
-    expect(link.getAttribute("href")).toBe(ROTAS.contribuir.corrigir(S, 1));
-    expect(link.getAttribute("href"), "o corrigir volta à revisão").toContain("&volta=revisao");
+    expect(aviso.textContent, "o link na pergunta do nome").not.toContain(CORRIGIR_O_NOME);
+    expect(aviso.querySelectorAll("a"), "nenhum link no aviso da pergunta do nome").toHaveLength(0);
     const perg = container.querySelector(`[data-testid="pergunta-trajeto.waypoints.0.nome"]`)!;
     expect(perg.compareDocumentPosition(aviso) & Node.DOCUMENT_POSITION_FOLLOWING, "o aviso antes da pergunta").toBeTruthy();
   });
@@ -257,6 +258,9 @@ describe("as perguntas na tela", () => {
     const { container } = render(await Novo({ searchParams: Promise.resolve({ slug: S, p: String(n) }) }));
     const linkDoAviso = (rotulo: string) =>
       [...container.querySelector<HTMLElement>('[role="status"]')!.querySelectorAll("a")].find((a) => a.textContent === rotulo);
+    // Fora da pergunta do nome, o link está lá, pra pergunta 1 e de volta à revisão.
+    expect(linkDoAviso(CORRIGIR_O_NOME)!.getAttribute("href")).toBe(ROTAS.contribuir.corrigir(S, 1));
+    expect(linkDoAviso(CORRIGIR_O_NOME)!.getAttribute("href"), "o corrigir volta à revisão").toContain("&volta=revisao");
     // Sem nada não salvo: o app não impede a navegação nativa.
     expect(toqueImpedido(linkDoAviso(CORRIGIR_O_NOME)!), "pediu segundo toque sem motivo").toBe(false);
     fireEvent.change(container.querySelector('[data-caixa="promessa"]')!, { target: { value: "Porque sim." } });

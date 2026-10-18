@@ -57,7 +57,8 @@ export default async function NovoDaPessoa({
   const vista = semPonto ? await vistaDaCoordSemPonto(doc, pergunta.campo.caminho, FONTES_DE_PRODUCAO) : null;
   // O aviso do par (17/10, Task 4): a frase DELA, que não nomeia o lugar que já
   // existe (I3 de 07/10); calculado a cada carga, desenhado pelo formulário
-  // depois da pergunta, com o link no segundo toque dele (I1 de 18/10).
+  // depois da pergunta, com o link no segundo toque dele (I1 de 18/10) — menos
+  // na pergunta do nome, pra onde ele leva (onda de copy de 18/10).
   const aviso = (await travaDaPessoa(r.doc))
     ? { frase: NOME_EXISTE_NA_CIDADE, corrigir: ROTAS.contribuir.corrigir(slug, 1) }
     : undefined;

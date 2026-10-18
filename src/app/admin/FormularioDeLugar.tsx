@@ -230,8 +230,8 @@ export default function FormularioDeLugar({
   /** O aviso de nome que já existe na cidade: a frase e o endereço do
    *  "Corrigir o nome", calculados pela página de servidor; desenhado aqui
    *  (`AvisoDoPar`) logo DEPOIS da pergunta, que fica no topo, com o link pelo
-   *  `passo()` — o mesmo segundo toque dos outros. Ausente quando nada trava o
-   *  publicar. */
+   *  `passo()` — o mesmo segundo toque dos outros; na pergunta do nome, que é
+   *  pra onde o link leva, só a frase. Ausente quando nada trava o publicar. */
   aviso?: { frase: string; corrigir: string };
   /** Veio de um "Corrigir" (`&volta=revisao`): o seguir volta pra revisão. */
   voltaARevisao?: boolean;
@@ -302,7 +302,15 @@ export default function FormularioDeLugar({
             podeSair={() => podeSair("pular")}
             pedindo={pedindo("pular")}
           />
-          {aviso && <AvisoDoPar frase={aviso.frase} link={passo("corrigir-nome", aviso.corrigir, CORRIGIR_O_NOME)} />}
+          {/* 🔴 Na pergunta do nome (a 1, pra onde as duas páginas apontam o
+              `corrigir`), o link só recarregaria esta mesma tela: ali vai só a
+              frase (decisão do João na onda de copy de 18/10). */}
+          {aviso && (
+            <AvisoDoPar
+              frase={aviso.frase}
+              link={posicao === 1 ? null : passo("corrigir-nome", aviso.corrigir, CORRIGIR_O_NOME)}
+            />
+          )}
           <nav className="adm-novo-passos">
             {voltaARevisao ? (
               passo("revisao", revisao, VOLTAR_A_REVISAO, "adm-novo-passo adm-novo-passo-proxima")

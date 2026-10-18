@@ -44,10 +44,12 @@ export const NADA_PUBLICADO = "Nada foi publicado. Recarregue a página e tente 
  *  um lugar em `/rascunho_…` seria um endereço que nada no app produz. A rota
  *  diz antes, quando sabe, O QUE impede o rascunho de se mudar
  *  (`travaDoPainel`); esta é a frase de quando nada impede mais (quem ocupava
- *  saiu depois do ponto): salvar de novo o leva ao endereço. */
+ *  saiu depois do ponto): salvar de novo a pergunta do nome, mesmo sem mudança,
+ *  o leva ao endereço (a rota do rascunho refaz o `nome-cidade` a cada
+ *  gravação do nome). O texto é a proposta que o João escolheu em 18/10. */
 // LIDA: proposta aprovada pelo João no pacote de copy em 2026-10-18.
 export const ENDERECO_AINDA_NAO_SAIU =
-  "Nada foi publicado: o endereço deste lugar ainda não saiu do nome e da cidade. Corrija o nome e salve de novo.";
+  "Nada foi publicado: este lugar ainda não ganhou o endereço dele. Abra a pergunta do nome e salve de novo, mesmo sem mudar nada.";
 
 /** Os campos OBRIGATÓRIOS do registro que `doc` não responde (12-I1), pelo
  *  caminho — o molde `[]` conferido em CADA ponto do trajeto que o documento

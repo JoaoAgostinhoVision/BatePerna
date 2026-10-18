@@ -46,7 +46,7 @@ no topo de cada cartão na home.
 
 ### A cidade — `cidade`
 
-<!-- PENDENTE: redação minha, o João ainda não leu (Tarefa 11b e a onda de fix dela, 2026-10-04) -->
+<!-- LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18 (com a troca que ele escolheu, "um lugar" → "um lugar publicado"). Redação minha (Tarefa 11b e a onda de fix dela, 2026-10-04; reescrita em 17/10). -->
 
 (A cidade é da ficha inteira — ela mora aqui, logo depois do nome, porque é ela que
 separa dois lugares de mesmo nome.)
@@ -66,7 +66,7 @@ de um lugar NOVO (a cidade vai depois do nome, sempre — mesmo quando o nome j�
 termina com ela).
 Mudar a cidade de um lugar já publicado não muda o endereço — link que já circula
 continua valendo.
-Enquanto um lugar não tem a cidade respondida, o painel não deixa começar outro com o
+Enquanto um lugar publicado não tem a cidade respondida, o painel não deixa começar outro com o
 mesmo nome: só você sabe se é o mesmo lugar, então ele pede a cidade daquele primeiro.
 Se o ponto cair numa cidade onde esse nome já existe, o ponto e a cidade gravam do
 mesmo jeito, e o que fica travado é o publicar, até o nome mudar.
