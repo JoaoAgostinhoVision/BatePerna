@@ -42,7 +42,7 @@ describe("o teto do texto dela", () => {
 describe("a lista dela", () => {
   // 🔴 17/10: a `cidade` saiu da lista — ela não a escreve, nem no lugar novo
   // nem no lugar no ar; a cidade sai do ponto que ela marca.
-  it("são exatamente os campos das perguntas da spec (o ponto mora à parte, e a cidade sai dele)", () => {
+  it("são exatamente os campos das perguntas dela: os da spec de 07/10 menos a cidade, que sai do ponto (e o ponto mora à parte)", () => {
     expect([...CAMPOS_DA_PESSOA].sort()).toEqual(
       ["acesso", "avisos", "custo.tag", "custo.valor", "dias", "horario", "promessa", "trajeto.waypoints.0.nome"],
     );

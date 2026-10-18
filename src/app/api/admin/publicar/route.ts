@@ -21,7 +21,8 @@ const SEM_CACHE = { "cache-control": "no-store" } as const;
 const recusa = (status: 400 | 409, frase: string): Response => new Response(frase, { status, headers: TEXTO });
 
 /** A FRASE DE UM PUBLICAR QUE O BANCO RECUSOU — escolhida por leitura DEPOIS da
- *  recusa, no molde de `criarRascunho`/`quemOcupa` (a leitura nunca DECIDE
+ *  recusa, no molde de `quemOcupaNoPainel` (`par-de-lugar.ts`), que nomeia quem
+ *  ocupa o endereço que um `moverRascunho` recusou (a leitura nunca DECIDE
  *  recusar: quem decidiu foi o portão do batch, no instante da gravação).
  *  `versaoAtual`, NUNCA a leitura pública: um lugar ESCONDIDO ocupa o endereço
  *  do mesmo jeito, e a frase tem de nomeá-lo. */
@@ -58,10 +59,13 @@ async function porQueRecusou(slug: string, atualizadoEm: number): Promise<string
  *  exatamente onde um lugar pode nascer.
  *
  *  🔴 O PAR (12-M1): mesmo nome E mesma cidade de outro lugar (inclusive
- *  escondido) ou de outro rascunho é 409 — a mesma régua do POST que fez o
- *  rascunho nascer (`parOcupado`, com `nomeNovo: true`), e `exceto: slug`, senão
- *  o rascunho colidiria consigo mesmo. Esta conferência LÊ e depois o batch
- *  GRAVA; a janela é a mesma, aceita, do POST (`par-de-lugar.ts`). NOME
+ *  escondido) ou de outro rascunho é 409 — `parOcupado` com a cidade do
+ *  documento e `nomeNovo: true` (o par E a espera do gêmeo sem cidade), e
+ *  `exceto: slug`, senão o rascunho colidiria consigo mesmo. Desde 17/10 não é
+ *  mais a régua do POST: o POST chama sem cidade (`parOcupado(nome, "")`, só o
+ *  gêmeo), e o par com cidade é conferido no PONTO, com `nomeNovo: false`.
+ *  Esta conferência LÊ e depois o batch GRAVA; a janela é a de toda
+ *  `colisaoDoPar`, aceita pelo motivo escrito lá (`par-de-lugar.ts`). NOME
  *  REPETIDO NOUTRA CIDADE PUBLICA (decisão do João de 04/10, G1′).
  *
  *  🔴 A COERÊNCIA POR DIFERENÇA (12-I2): o acervo de agora, COM os escondidos,

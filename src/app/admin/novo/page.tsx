@@ -85,7 +85,8 @@ export default async function Novo({
   if (r === null) notFound();
 
   // A lista INTEIRA é montada aqui (é o registro que decide quais perguntas);
-  // o cliente recebe só a da posição `p`, e quais já têm resposta.
+  // quais já têm resposta é lido AQUI (`escolherPosicao`), e o cliente recebe
+  // só a pergunta da posição `p` e a lista, de que lê só o tamanho (o total).
   const doc: unknown = JSON.parse(r.doc);
   const perguntas = montarPerguntas(doc);
   const respondidas = perguntas.map((q) => q.valor !== undefined);

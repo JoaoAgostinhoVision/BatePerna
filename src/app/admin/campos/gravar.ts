@@ -54,6 +54,15 @@ export const PortaDoEditor = createContext<{
  *  que já sabe, por `mudou`, se a tela difere do salvo. Um lugar só, em vez de
  *  cada um dos sete editores avisar por conta própria.
  *
+ *  ⚠️ DUAS PREMISSAS (revisão final de 18/10). (1) UM `BotaoDesfazer` por
+ *  pergunta — verdade hoje nos sete editores (`./Editor*.tsx`, um cada): o
+ *  formulário guarda um booleano só, e um segundo botão na mesma tela dizendo
+ *  `false` apagaria o `true` do primeiro. (2) "Não salvo" é a RESPOSTA do
+ *  editor: o texto da caixa de busca do mapa (`BuscaNoMapa`) não avisa nada,
+ *  de propósito — é consulta efêmera, perdê-la custa redigitar uma palavra, e
+ *  contá-la faria a busca pedir o segundo toque a cada navegação (ruling do
+ *  controlador).
+ *
  *  `null` (o PADRÃO) = ninguém escutando: a `FichaInteira` não monta provedor, e
  *  nada muda lá. */
 export const AvisoDeMudanca = createContext<((mudou: boolean) => void) | null>(null);

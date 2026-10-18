@@ -72,13 +72,16 @@ export type QuemPergunta = "joao" | "pessoa";
  *  novo (`parDaTroca` compara pela normalização).
  *
  *  Devolve o que colidiu — com o nome (e a cidade, se houver) de QUEM JÁ
- *  EXISTE —, ou `null` se está livre. Sem nome, nada a conferir. Sem CIDADE
- *  (só a ficha no ar chega assim: as 3 de antes da 11b), o par não é conferido —
- *  não há par a comparar —, e só a espera do gêmeo vale (quando o nome muda).
+ *  EXISTE —, ou `null` se está livre. Sem nome, nada a conferir. Sem CIDADE —
+ *  os dois POSTs do lugar novo chamam assim a cada lugar que nasce (desde 17/10
+ *  o nome nasce antes do ponto, de onde a cidade sai), e as fichas no ar de
+ *  antes da 11b não a têm —, o par não é conferido — não há par a comparar —, e
+ *  só a espera do gêmeo vale (quando o nome muda).
  *
  *  ⚠️ Esta conferência LÊ e depois a rota GRAVA — há janela entre as duas, ao
- *  contrário da porta do endereço (`criarRascunho`, uma consulta só): a
- *  normalização não cabe numa consulta SQL. Desde 07/10 MUITAS pessoas chamam
+ *  contrário da porta do endereço (no lugar novo, `moverRascunho`, que leva o
+ *  rascunho ao `nome-cidade` numa consulta só): a normalização não cabe numa
+ *  consulta SQL. Desde 07/10 MUITAS pessoas chamam
  *  esta função (as rotas de quem usa), não só o dono do painel — a premissa
  *  "um dono só" que a sustentava ficou falsa (M7 da revisão final). O risco
  *  real segue pequeno: o par igual quase sempre vira o MESMO endereço, e o

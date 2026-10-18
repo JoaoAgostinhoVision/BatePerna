@@ -567,7 +567,9 @@ function recusarNaoSeiObrigatorio(caminho: string): void {
   if (!campo.obrigatorio) return;
   // 🔴 A CIDADE (M-N3 da re-revisão da 11b): a frase de baixo diria que sem ela
   // "a ficha não existe" — falso, as fichas de antes da 11b existem sem ela. A
-  // dela é a do POST, que diz por que ela é pedida.
+  // dela é a `CIDADE_VAZIA`, que diz por que ela é pedida (a do POST até 17/10,
+  // quando o lugar novo passou a nascer só do nome; hoje só a ficha no ar a
+  // recebe).
   if (caminho === "cidade") throw new Error(CIDADE_VAZIA);
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   throw new Error(`\`${caminho}\` é obrigatório: sem ele a ficha não existe, então não tem "não sei"`);

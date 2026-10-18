@@ -172,7 +172,7 @@ describe("a porta: sessão, Clerk, bloqueio", () => {
 });
 
 describe("POST — começar", () => {
-  it("201 com a CHAVE (nunca o endereço), o endereço do nome e da cidade no documento, e o rascunho nasce DELA e sem nada a mais", async () => {
+  it("201 com a CHAVE (nunca o endereço); depois do ponto, o endereço do nome e da cidade no documento, e o rascunho nasce DELA e sem nada a mais", async () => {
     await comecar();
     expect(CHAVE).not.toBe(SLUG);
     expect(await docDe()).toEqual({

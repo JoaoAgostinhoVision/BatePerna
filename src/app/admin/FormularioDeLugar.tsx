@@ -34,8 +34,10 @@ import { ROTAS, enderecoDaPergunta, type Onde } from "./novo/enderecos";
  *     num ponto. Ele viu e pediu o mapa — "latitude e longitude… que horror".
  *     Agora é o MESMO `EditorCoordenada` da ficha no ar: sem ponto, ele nasce
  *     SEM PIN e sem Salvar, na vista que a página de servidor calculou
- *     (`campo.vista`: a cidade do lugar, ou o ponto 0 pra a coordenada da
- *     chuva), e o ponto é o TOQUE dele no mapa — nunca o centro da vista);
+ *     (`campo.vista`, de `vistaDaCoordSemPonto`: o ponto 0 pra a coordenada da
+ *     chuva; a cidade do documento, quando ele tem uma; senão o acervo — que é
+ *     a vista do lugar novo, porque desde 17/10 ele não tem cidade antes do
+ *     ponto), e o ponto é o TOQUE dele no mapa — nunca o centro da vista);
  *   - o "PULAR" de um opcional ainda sem resposta é novo: o `BotaoNaoSei` some
  *     num campo ausente (lá ele seria um ato vazio), e no questionário pular é
  *     um ato de verdade — o dono dizendo que não vai responder. Ele não grava
@@ -51,9 +53,10 @@ import { ROTAS, enderecoDaPergunta, type Onde } from "./novo/enderecos";
  *  as ~27 numa tela, cada Salvar recarregava a página e jogava fora o que ele
  *  tinha digitado em OUTRA caixa). O estado de navegação que sobrevive à
  *  gravação é a URL: `/admin/novo?slug=X&p=N`. A página de servidor monta a
- *  lista inteira e entrega a este componente só a pergunta N, a posição e quais
- *  já têm resposta (`escolherPosicao`, em `./novo/perguntas.ts`, decide o `p`
- *  torto ou ausente: a primeira sem resposta).
+ *  lista inteira e entrega a este componente só a pergunta N, a posição e a
+ *  lista `respondidas` — da qual este componente só lê o TAMANHO, o total M
+ *  (quem lê quais têm resposta é `escolherPosicao`, em `./novo/perguntas.ts`,
+ *  na página, que decide o `p` torto ou ausente: a primeira sem resposta).
  *   - Salvar (ou o "não sei") com sucesso AVANÇA: o provedor passa
  *     `depoisDeGravar`, que dá o endereço da pergunta N+1 (na última, a
  *     própria) no slug que a porta DEVOLVEU;
@@ -80,15 +83,22 @@ import { ROTAS, enderecoDaPergunta, type Onde } from "./novo/enderecos";
  *  uma STRING e não uma função de endereço porque a página que monta este
  *  componente é de servidor, e função não atravessa essa fronteira como prop.
  *
- *  🔴 NENHUM TOQUE PERDE TEXTO (17/10, Task 7). Sair desta pergunta sem gravar
- *  jogava fora o que estava na caixa, e um "Próxima" discreto era a porta mais
- *  fácil do painel. Todo editor avisa por `AvisoDeMudanca` (via `BotaoDesfazer`)
- *  quando a tela difere do salvo; com algo não salvo, "Anterior", "Próxima",
- *  "Voltar à revisão", "Pular" e o "Corrigir o nome" do aviso do par (este
- *  desde a revisão final de 18/10) pedem o SEGUNDO toque, no molde do
- *  `BotaoDesistir` — o rótulo do toque vira `SEGUIR_SEM_SALVAR`, e só o segundo
- *  navega. Sem nada não salvo, um toque, como sempre. O pedido é de UM controle
- *  por vez e cai sozinho quando o Desfazer devolve a tela ao salvo.
+ *  🔴 NENHUM TOQUE PERDE UMA RESPOSTA (17/10, Task 7 — a "melhoria 1", que a
+ *  spec chama "nenhum toque perde texto"; o ⚠️ abaixo diz qual texto não
+ *  conta). Sair desta pergunta sem gravar jogava fora o que estava na caixa, e um "Próxima" discreto era a
+ *  porta mais fácil do painel. Todo editor avisa por `AvisoDeMudanca` (via
+ *  `BotaoDesfazer`) quando a tela difere do salvo; com algo não salvo,
+ *  "Anterior", "Próxima", "Voltar à revisão", "Pular" e o "Corrigir o nome" do
+ *  aviso do par (este desde a revisão final de 18/10) pedem o SEGUNDO toque, no
+ *  molde do `BotaoDesistir` — o rótulo do toque vira `SEGUIR_SEM_SALVAR`, e só
+ *  o segundo navega. Sem nada não salvo, um toque, como sempre. O pedido é de
+ *  UM controle por vez e cai sozinho quando o Desfazer devolve a tela ao salvo.
+ *  ⚠️ O que conta como "não salvo" é a RESPOSTA do editor, e só ela: o texto
+ *  da caixa de BUSCA do mapa (`BuscaNoMapa`) não conta, de propósito — é uma
+ *  consulta efêmera, perdê-la custa redigitar uma palavra, e contá-la faria a
+ *  busca pedir o segundo toque a cada navegação (ruling do controlador, 18/10).
+ *  E o aviso é um booleano só, porque há UM `BotaoDesfazer` por pergunta (ver
+ *  `AvisoDeMudanca`, em `./campos/gravar`).
  *
  *  🔴 A PERGUNTA VEM PRIMEIRO. A ordem é "Pergunta N de M" → a pergunta → o aviso
  *  do par → a navegação → o aviso de rascunho → o Desistir. O que não é a
@@ -212,7 +222,7 @@ export default function FormularioDeLugar({
   /** 1 a M. */
   posicao: number;
   /** Uma por pergunta, na ordem da tela: se ela já tem resposta no rascunho.
-   *  O tamanho é o total M. */
+   *  Aqui só o TAMANHO é lido — é o total M do "Pergunta N de M" e da última. */
   respondidas: readonly boolean[];
   /** Quem responde: o João no painel (o padrão) ou quem usa (`"contribuir"`).
    *  Muda só pra onde grava e pra onde leva — ver `ROTAS`. */

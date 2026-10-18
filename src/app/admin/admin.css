@@ -273,8 +273,9 @@
 /* Tarefa 12 — o "publicar" do rascunho na lista: alvo de dedo ao lado do nome,
    com a borda de `.adm-novo-passo`. */
 .adm-item-publicar { display: inline-block; margin-top: .4rem; margin-right: .4rem; padding: .6rem 1rem; border: 1px solid #999; border-radius: 10px; text-decoration: none; color: inherit; }
-/* A tela de publicar: o grid de `.adm-novo`; as listas e o aviso são texto de
-   apoio, como `.adm-novo-aviso`; o nome do lugar, como `.adm-item-nome`. */
+/* A tela de publicar: o grid de `.adm-novo`; a lista do que o app vai calar e o
+   aviso são texto de apoio, como `.adm-novo-aviso`; o nome do lugar, como
+   `.adm-item-nome`. */
 .adm-publicar { display: grid; gap: 1.2rem; }
 .adm-publicar-nome { margin: 0; font-weight: bold; }
 .adm-publicar-titulo { margin: 0 0 .4rem; font-weight: bold; }

@@ -78,7 +78,7 @@ function portasFalsas() {
 
 describe("as perguntas dela", () => {
   // 🔴 17/10: a cidade saiu (ela sai do ponto), e o mapa subiu pro 2º lugar.
-  it("são a lista dela, na ordem da spec, e o mapa no 2º lugar", () => {
+  it("são a lista dela, na ordem da spec de 07/10 sem a cidade (que sai do ponto desde 17/10), e o mapa no 2º lugar", () => {
     expect(ORDEM_DA_PESSOA).toEqual([
       "trajeto.waypoints.0.nome", "trajeto.waypoints.0.lat", "promessa", "acesso", "avisos",
       "custo.tag", "custo.valor", "horario", "dias",

@@ -666,7 +666,7 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
   const OUTRO_SLUG = "marcador-endereco-que-nao-sai-do-nome";
   const OUTRO_NOME = "Lugar Marcador Dois";
 
-  it("POST com nome e cidade de um lugar no ar cujo endereço é outro: 409 com o nome e a cidade DELE", async () => {
+  it("criar (POST do nome + PUT do ponto) com nome e cidade de um lugar no ar cujo endereço é outro: 409 com o nome e a cidade DELE", async () => {
     await lugarMarcador(OUTRO_SLUG, OUTRO_NOME, CIDADE);
     for (const [nome, cidade] of [
       [OUTRO_NOME, CIDADE],
@@ -688,7 +688,7 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
     expect(await res.json()).toEqual({ slug: "lugar-marcador-dois-cidade-marcador-dois" });
   });
 
-  it("POST com nome e cidade de um lugar ESCONDIDO: 409, e ele continua escondido", async () => {
+  it("criar (POST do nome + PUT do ponto) com nome e cidade de um lugar ESCONDIDO: 409, e ele continua escondido", async () => {
     await lugarMarcador(OUTRO_SLUG, OUTRO_NOME, CIDADE);
     await esconder(OUTRO_SLUG);
     expect((await versoesAtuais(c)).has(OUTRO_SLUG), "a premissa: o público não o vê").toBe(false);
@@ -803,7 +803,7 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
     expect(await historico(c, S)).toEqual(h0);
   });
 
-  it("POST com o nome que OUTRO rascunho tem agora, na cidade dele: 409 do rascunho; o nome que ele largou nasce", async () => {
+  it("criar (POST do nome + PUT do ponto) com o nome que OUTRO rascunho tem agora, na cidade dele: 409 do rascunho; o nome que ele largou nasce", async () => {
     expect((await criar(NOME)).status).toBe(201);
     const ren = await mudar({ slug: S, campo: "trajeto.waypoints.0.nome", valor: "Nome Marcador Novo" });
     expect(ren.status).toBe(200);
