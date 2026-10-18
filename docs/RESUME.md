@@ -2,22 +2,16 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 18/10: RODADA "cidade do ponto" COM CÓDIGO FECHADO; ESPERANDO A LEITURA DO PACOTE (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 18/10, TARDE: "cidade do ponto" PRONTA PRO DEPLOY, ESPERANDO O OK DELE (vence TUDO abaixo)
 
-Branch `cidade-do-ponto`, código fechado em `4ed8058`. Tasks 1–9 + revisão final + `prova-que-trava` + `contracao-honesta`
-+ onda única de fix + re-revisão (16/16 ADDRESSED). Medido no `4ed8058`: 3163/3163, tsc 0, build 0, mutar 42/0/0. NADA no ar.
-Ledger `.superpowers/sdd/2026-10-17-cidade-do-ponto-e-revisao/progress.md` (todas as linhas `Ruling:`).
-**Pacote publicado: "Frases da cidade do ponto" — https://claude.ai/artifact/6D8Ehq2gavXijLvrDBfb5W** (fonte
-`_bmad-output/planning-artifacts/bateperna-frases-cidade-do-ponto.html`, gerada por `gerar_pacote.py` do scratchpad a partir do
-molde "Frases de quem manda"; banco do artifact, coleção `respostas`). 26 frases (5 com alerta) + 4 decisões que tomei sem ele
-(`d-cidade-no-ar`, `d-pe-primeiro`, `d-busca-na-chuva`, `d-texto-da-busca`).
-→ **O PRIMEIRO PASSO:** `ArtifactData list` na URL acima, coleção `respostas` (limit 1000).
-- **Vazio:** diga a ele, curto, que o deploy espera a leitura; link; comece pelas 4 decisões e as 5 com alerta.
-- **Com respostas:** onda de copy (Serve → `LIDA:`; o guarda `frases-da-rodada-marcadas` recusa `LIDA:` nova — avançar a BASE
-  ou lista datada, NUNCA afrouxar) + o que as decisões pedirem (resíduo: tirar "Corrigir o nome" da própria pergunta do nome).
-→ Depois, só com o ok dele: olho de tela (mapinha da revisão a 375 px) → `npm run semear` ANTES de UM `vercel --prod --yes`
-(sem as tabelas `nominatim_*` ninguém manda lugar) → `conferir-no-ar` com marcador `/api/admin/buscar-no-mapa` sem sessão
-(404→401). Merge de `painel-completo` e de `cidade-do-ponto` no `main`: perguntar.
+Branch `cidade-do-ponto`. Pacote respondido (26/26 Serve; `d-cidade-no-ar` = conferir o nome; as outras 3 = Serve; no chat:
+as 2 propostas da faixa e "um lugar publicado"). Onda de copy `973c1d1..9a3ad89` revisada (0 C · 0 I). Medido no HEAD:
+3170/3170, tsc 0, build 0, mutar 42/0/0. NADA no ar. Ledger: linhas `COPY:` e `FINAL:` em `.superpowers/sdd/2026-10-17-cidade-do-ponto-e-revisao/progress.md`.
+→ **O PRIMEIRO PASSO:** perguntar o ok do deploy (não pedido ainda respondido). Com o ok, runbook 🔴 nesta ordem:
+olho de tela (revisão + mapinha a 375 px, se der) → `npm run semear` (cria `nominatim_respostas` e `nominatim_vez`; sem elas
+ninguém manda lugar) → UM `vercel --prod --yes` → `conferir-no-ar` com marcador `/api/admin/buscar-no-mapa` sem sessão (404→401)
+e `/api/contribuir/buscar-no-mapa`. Merge de `painel-completo` e `cidade-do-ponto` no `main`: perguntar.
+→ Próximo pacote (pequeno): o questionário não descreve o 409 do ponto do lugar no ar; a frase desse 409 fala de nome.
 
 ## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 17/10: EXECUÇÃO SDD DA RODADA "cidade do ponto" EM CURSO (vence TUDO abaixo)
 
