@@ -34,7 +34,7 @@ import {
   SLUG_DE_DENTRO,
   prepararPublicacao,
 } from "@/lib/porta-de-publicar";
-import { RASCUNHO_NAO_EXISTE_MAIS, enderecoDeLugar, gemeoSemCidade, nomeComCidade, parDeLugar } from "@/lib/rascunho";
+import { RASCUNHO_NAO_EXISTE_MAIS, enderecoDeLugar, gemeoSemCidade, nomeComCidade, parDeLugar, slugDoNome } from "@/lib/rascunho";
 import { type Ficha, fichaSchema } from "@/types/ficha";
 import { base, clienteQueIntercala, salvarRascunho, semearAcervo } from "../banco";
 import { lugarMarcador } from "../lugar-marcador";
@@ -540,7 +540,27 @@ describe("POST /api/admin/publicar — o endereço já ocupado", () => {
 // lista do painel e pelo "publicar" de lá, ele chega aqui com a chave
 // provisória; e nunca vai ao ar em `/rascunho_…`.
 describe("POST /api/admin/publicar — a chave tem de ser o nome-cidade", () => {
+  // 🔴 A TRAVA QUE SÓ ESTA PORTA VÊ: o endereço `S` é de um lugar de OUTRO par
+  // (a fronteira entre o nome e a cidade que anda). O par do rascunho está
+  // livre, e o batch gravaria na chave — sem esta porta, o lugar ia ao ar em
+  // `/rascunho_…` (medido: M4). Com ela, 409 com a frase de quem ocupa `S`.
   it("chave provisória nunca vai ao ar: 409 com a frase da trava, nada em ficha_versoes", async () => {
+    await gravarVersao(c, S, JSON.stringify(lugarMarcador(S, "Lugar Marcador Publicar Cidade", "Marcador Publicar")), "painel", AGORA - 300);
+    expect(slugDoNome("Lugar Marcador Publicar Cidade Marcador Publicar"), "a premissa: o outro par cai em S").toBe(S);
+    const k = novaChaveDeRascunho();
+    await guardar(rascunhoCompleto(k, NOME, CIDADE), k);
+    const antesDeS = await historico(c, S);
+    const res = await publicar({ slug: k, atualizadoEm: ATUALIZADO });
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(enderecoDeLugar(nomeComCidade("Lugar Marcador Publicar Cidade", "Marcador Publicar")));
+    expect(await historico(c, k), "um lugar foi ao ar na chave provisória").toEqual([]);
+    expect(await historico(c, S)).toEqual(antesDeS);
+    expect((await lerRascunho(c, k))?.atualizado_em).toBe(ATUALIZADO);
+  });
+
+  // E quando o que trava é o PAR (um lugar de mesmo nome e cidade noutro
+  // endereço), a frase é a do par — a mesma que o ponto deixou na tela.
+  it("chave provisória com o par de outro: 409 com a frase do par, nada em ficha_versoes", async () => {
     const gemeo = "lugar-marcador-gemeo";
     await gravarVersao(c, gemeo, JSON.stringify(lugarMarcador(gemeo, NOME, CIDADE)), "painel", AGORA - 300);
     const k = novaChaveDeRascunho();

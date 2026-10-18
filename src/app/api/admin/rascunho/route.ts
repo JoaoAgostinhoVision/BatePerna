@@ -174,18 +174,16 @@ export async function PUT(req: Request): Promise<Response> {
 
   let mudar: (doc: string) => string;
   if (trazPonto) {
-    // 🔴 FINITOS, ANTES DE TUDO: o `JSON.parse` vira `1e999` em `Infinity`, que
-    // é `number`. A folha também o recusaria, mas o ponto 0 pergunta a cidade
-    // ao Nominatim (`cidadeDoPonto`, que não confere a coordenada) — e nada
-    // que não é um ponto do planeta chega a ele.
+    // ⚠️ `1e999` chega do `JSON.parse` como `Infinity`, que é `number`, e o
+    // ponto 0 pergunta a cidade ao Nominatim (`cidadeDoPonto`, que não confere
+    // a coordenada). Quem o barra é a FOLHA (`gravarPontoNoRascunho`, fora do
+    // planeta), que roda ANTES da pergunta — uma porta só, não duas em série.
     if (
       typeof ponto !== "number" ||
       !Number.isInteger(ponto) ||
       ponto < 0 ||
       typeof lat !== "number" ||
-      typeof lng !== "number" ||
-      !Number.isFinite(lat) ||
-      !Number.isFinite(lng)
+      typeof lng !== "number"
     ) {
       return new Response("", { status: 400, headers: TEXTO });
     }
@@ -229,7 +227,9 @@ export async function PUT(req: Request): Promise<Response> {
   const agora = Math.floor(Date.now() / 1000);
 
   // 🔴 SÓ O PONTO 0 PERGUNTA A CIDADE (17/10): é ele que é o lugar. Os outros
-  // pontos do trajeto e o `condicao.coords` gravam sem consultar ninguém.
+  // pontos do trajeto e o `condicao.coords` gravam sem consultar ninguém. E a
+  // pergunta vem DEPOIS da folha (`mudar`, lá em cima): coordenada fora do
+  // planeta, ou `Infinity`, é 400 sem consultar o Nominatim.
   if (trazPonto && ponto === 0) return pontoComCidade(slug, novoDoc, lat as number, lng as number, agora);
 
   // 🔴 O ENDEREÇO DO RASCUNHO ACOMPANHA O NOME (onda de fix 2 da 11b, Y2 — o

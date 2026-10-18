@@ -117,11 +117,7 @@ export async function PUT(req: Request): Promise<Response> {
 
   let mudar: (doc: string) => string;
   if (trazPonto) {
-    // Finitos: `1e999` chega como `Infinity`, e nada que não é um ponto do
-    // planeta vai ao Nominatim (`cidadeDoPonto` não confere a coordenada).
-    if (ponto !== 0 || typeof lat !== "number" || typeof lng !== "number" || !Number.isFinite(lat) || !Number.isFinite(lng)) {
-      return new Response("", { status: 400, headers: TEXTO });
-    }
+    if (ponto !== 0 || typeof lat !== "number" || typeof lng !== "number") return new Response("", { status: 400, headers: TEXTO });
     mudar = (doc) => pontoNoRascunhoDaPessoa(doc, lat, lng);
   } else {
     const trazValor = "valor" in corpo;
@@ -146,8 +142,9 @@ export async function PUT(req: Request): Promise<Response> {
   }
 
   // 🔴 O PONTO E A CIDADE QUE SAI DELE (17/10). A pergunta ao Nominatim vem
-  // DEPOIS de a folha aceitar o ponto: coordenada fora do planeta é 400 sem
-  // consultar ninguém.
+  // DEPOIS de a folha aceitar o ponto (`mudar`, logo acima): coordenada fora do
+  // planeta — e `1e999`, que o `JSON.parse` vira `Infinity` — é 400 sem
+  // consultar ninguém (`cidadeDoPonto` não confere a coordenada).
   if (trazPonto) {
     const achou = await cidadeDoPonto(lat as number, lng as number);
     if ("falha" in achou || slugDoNome(achou.cidade) === "") {
