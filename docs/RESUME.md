@@ -2,6 +2,19 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
+## ▶ 17/10: PONTOS NOVOS DELE, EM CONVERSA (brainstorming, nada construído; ele vai dizendo "aos poucos")
+
+1. **Perfil próprio de cada pessoa / um lado de se registrar.** ABERTO — falta ele dizer o que a pessoa vê/faz no perfil.
+   (Hoje: login Google pelo Clerk só em `/contribuir`; a conta nasce no 1º login; lugar mandado já guarda o dono.)
+2. **Cidade automática a partir do ponto — DECIDIDO por ele:** sem campo de cidade digitada. Fila nova: nome → mapa →
+   ponto → cidade sai do ponto (Nominatim reverse) → só então a checagem nome+cidade. Mapa abre sem cidade, com
+   **caixinha de busca + botão "Buscar"** em cima (cidade E lugar; lista pra escolher — "Praia do Sossego" dá 3).
+   **Nominatim com botão** (escolha dele): a política PROÍBE busca-enquanto-digita; exige ≤1 req/s, User-Agent,
+   cache, atribuição "© OpenStreetMap". Testado 17/10: Pedra do Navio/Bom Jardim, Monte das Tabocas, reverse → Bom Jardim OK.
+   Chutes meus, não aprovados: vale também pro `/admin/novo`; ponto sem cidade → pedir pra mexer o ponto; chave de
+   cidade no reverse varia (town/city/village/municipality).
+3. (próximos pontos dele aqui)
+
 ## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 15/10: A RODADA "lugar de quem usa" ESTÁ NO AR (vence TUDO abaixo)
 
 Ele disse *"pode ir"*. Feito: `npm run semear` (ensureSchema; fichas já no banco) → `vercel --prod --yes` =
