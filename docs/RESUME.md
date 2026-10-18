@@ -2,7 +2,25 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ 17/10: PONTOS NOVOS DELE, EM CONVERSA (brainstorming, nada construído; ele vai dizendo "aos poucos")
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 17/10: EXECUÇÃO SDD DA RODADA "cidade do ponto" EM CURSO (vence TUDO abaixo)
+
+Ele parou: *"quero continuar em outra sessão"*. **Branch `cidade-do-ponto`** (saiu de `painel-completo` em `f0db73b`;
+`painel-completo` ainda NÃO mergeada no `main` e o teste dele no celular da rodada anterior segue pendente).
+Spec `docs/superpowers/specs/2026-10-17-cidade-do-ponto-e-revisao-design.md`; plano
+`docs/superpowers/plans/2026-10-17-cidade-do-ponto-e-revisao.md` (9 tarefas). Skill `superpowers:subagent-driven-development`.
+**FONTE DA VERDADE: o ledger `.superpowers/sdd/2026-10-17-cidade-do-ponto-e-revisao/progress.md`** (git-ignorado, no disco;
+lá também `regras-do-implementador.md`, `global-constraints.md`, `contrato-do-{implementador,revisor,re-revisor}.md`, briefs).
+- Tasks 1 e 2: **complete**, revisadas limpas (`f0db73b..933e4f8`).
+- **Task 3: INTERROMPIDA por mim.** O implementador já tinha comitado `4492d1e` + `409fee4`, mas NÃO escreveu relatório;
+  portões e mutações NÃO conferidos.
+
+→ **O PRIMEIRO PASSO:** `git status --short` limpo; `git log --oneline -1` = `409fee4` (ou um docs depois). Despachar um
+implementador NOVO (opus) da Task 3: brief `task-3-brief.md` + "já feito em `933e4f8..409fee4`, confira contra o brief,
+complete o que faltar, rode os 4 portões e a tabela de mutações, escreva `task-3-report.md`". Depois o revisor
+(`review-package … 933e4f8 HEAD`). Seguir 4 → 9 sem parar; a Task 9 PARA pro pacote de frases dele. Deploy só com o ok dele
+(`npm run semear` cria `nominatim_respostas` e `nominatim_vez` ANTES do `vercel --prod --yes`).
+
+## ▶ (histórico) 17/10: PONTOS NOVOS DELE, EM CONVERSA (brainstorming, nada construído; ele vai dizendo "aos poucos")
 
 1. **Perfil próprio de cada pessoa / um lado de se registrar.** ABERTO — falta ele dizer o que a pessoa vê/faz no perfil.
    (Hoje: login Google pelo Clerk só em `/contribuir`; a conta nasce no 1º login; lugar mandado já guarda o dono.)
