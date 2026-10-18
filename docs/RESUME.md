@@ -2,16 +2,17 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 18/10, TARDE: "cidade do ponto" PRONTA PRO DEPLOY, ESPERANDO O OK DELE (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 18/10, NOITE: "cidade do ponto" NO AR (vence TUDO abaixo)
 
-Branch `cidade-do-ponto`. Pacote respondido (26/26 Serve; `d-cidade-no-ar` = conferir o nome; as outras 3 = Serve; no chat:
-as 2 propostas da faixa e "um lugar publicado"). Onda de copy `973c1d1..9a3ad89` revisada (0 C · 0 I). Medido no HEAD:
-3170/3170, tsc 0, build 0, mutar 42/0/0. NADA no ar. Ledger: linhas `COPY:` e `FINAL:` em `.superpowers/sdd/2026-10-17-cidade-do-ponto-e-revisao/progress.md`.
-→ **O PRIMEIRO PASSO:** perguntar o ok do deploy (não pedido ainda respondido). Com o ok, runbook 🔴 nesta ordem:
-olho de tela (revisão + mapinha a 375 px, se der) → `npm run semear` (cria `nominatim_respostas` e `nominatim_vez`; sem elas
-ninguém manda lugar) → UM `vercel --prod --yes` → `conferir-no-ar` com marcador `/api/admin/buscar-no-mapa` sem sessão (404→401)
-e `/api/contribuir/buscar-no-mapa`. Merge de `painel-completo` e `cidade-do-ponto` no `main`: perguntar.
-→ Próximo pacote (pequeno): o questionário não descreve o 409 do ponto do lugar no ar; a frase desse 409 fala de nome.
+Ele disse *"pode sim"*. Feito: `npm run semear` (tabelas `nominatim_respostas` e `nominatim_vez` conferidas no Turso) →
+`vercel --prod --yes` = `dpl_CgGx4gHyAyZaHQqM5hkokht4R1qL` (código `a8beed3`, branch `cidade-do-ponto`). `conferir-no-ar`:
+home + 3 fichas 200; as 2 rotas de busca 401 sem sessão (controle irmão 404); bundle tem as frases novas e 0 de "Em que cidade".
+Sem navegador nesta sessão: camada 3 NÃO feita.
+**NÃO provado (exige login, fica com ELE no celular):** buscar no mapa; salvar ponto e ver "Fica em: <cidade>"; a revisão com
+Corrigir; "Seguir sem salvar"; mandar um lugar pela /contribuir até publicar; o mapinha a 375 px.
+→ Próximo: o teste dele no celular → merge de `painel-completo` e `cidade-do-ponto` no `main` (perguntado, sem resposta) →
+pacote pequeno (o 409 do ponto do lugar no ar: questionário e a frase que fala de nome) → rodada do `d-401` → pontos 1 e 4
+dele (perfil próprio; pontos turísticos do mapa — ler a política do Overpass antes).
 
 ## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 17/10: EXECUÇÃO SDD DA RODADA "cidade do ponto" EM CURSO (vence TUDO abaixo)
 
