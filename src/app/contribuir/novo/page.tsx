@@ -4,8 +4,12 @@ import { comPrazo } from "@/lib/cache-rotas";
 import { getClient, type Rascunho } from "@/lib/db";
 import { lerRascunhoDaPessoa } from "@/lib/db-contribuidor";
 import { PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
+import { travaDaPessoa } from "@/lib/par-de-lugar";
+import { NOME_EXISTE_NA_CIDADE } from "@/lib/porta-da-pessoa";
 import { FONTES_DE_PRODUCAO, vistaDaCoordSemPonto } from "@/lib/vista-do-mapa";
+import AvisoDoPar from "../../admin/AvisoDoPar";
 import FormularioDeLugar, { ComecarLugarNovo } from "../../admin/FormularioDeLugar";
+import { ROTAS } from "../../admin/novo/enderecos";
 import { PERGUNTAS, escolherPosicao } from "../../admin/novo/perguntas";
 import { TITULO_MANDAR } from "../palavras";
 import { montarPerguntasDaPessoa } from "../perguntas";
@@ -52,10 +56,16 @@ export default async function NovoDaPessoa({
   // em `/admin/novo` (Tarefa 11f).
   const semPonto = pergunta.especie === "coord" && pergunta.valor === undefined;
   const vista = semPonto ? await vistaDaCoordSemPonto(doc, pergunta.campo.caminho, FONTES_DE_PRODUCAO) : null;
+  // O aviso do par (17/10, Task 4): a frase DELA, que não nomeia o lugar que já
+  // existe (I3 de 07/10); calculado a cada carga, depois da pergunta.
+  const aviso = (await travaDaPessoa(r.doc))
+    ? <AvisoDoPar frase={NOME_EXISTE_NA_CIDADE} corrigir={ROTAS.contribuir.pergunta(slug, 1)} />
+    : undefined;
   return (
     <main className="adm">
       <h1>{TITULO_MANDAR}</h1>
       <FormularioDeLugar
+        aviso={aviso}
         slug={slug}
         pergunta={vista ? { ...pergunta, campo: { ...pergunta.campo, vista } } : pergunta}
         posicao={posicao}

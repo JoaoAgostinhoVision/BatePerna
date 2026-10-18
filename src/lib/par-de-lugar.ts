@@ -1,4 +1,4 @@
-import { getClient, lerRascunho, listarRascunhos, versaoAtual, versoesAtuais } from "@/lib/db";
+import { enderecoNovoDe, getClient, lerRascunho, listarRascunhos, versaoAtual, versoesAtuais } from "@/lib/db";
 import {
   cidadeDoDoc, enderecoDeLugar, enderecoDeRascunho, gemeoSemCidade, nomeComCidade, nomeDoRascunho, parDeLugar,
   parDeRascunho, slugDoNome,
@@ -159,6 +159,23 @@ export async function travaDoPainel(doc: string, slug: string): Promise<string |
   if (destino === slug) return null;
   const ocupado = (await versaoAtual(getClient(), destino)) !== null || (await lerRascunho(getClient(), destino)) !== null;
   return ocupado ? quemOcupaNoPainel(destino) : null;
+}
+
+/** 🔴 O QUE TRAVA O PUBLICAR DELA, para o aviso das perguntas (Task 4): `true`
+ *  quando o par (o nome nessa cidade) já é de um LUGAR, ou o endereço que sairia
+ *  dele já é de um lugar ou é o endereço ANTIGO de um — as mesmas recusas que o
+ *  publicar dela dá (`NOME_JA_EM_USO`). Só lugar conta: o rascunho de ninguém
+ *  ocupa nada dela (decisão do João de 13/10), nem o do João (`quem: "pessoa"`).
+ *  O par com `nomeNovo: false`, como `travaDoPainel`: o gêmeo sem cidade é da
+ *  tela do nome. Devolve só o booleano — a frase dela não nomeia ninguém (I3).
+ *  Sem nome ou sem cidade com letra, não há par nem endereço: `false`. */
+export async function travaDaPessoa(doc: string): Promise<boolean> {
+  const nome = nomeDoRascunho(doc, "");
+  const cidade = cidadeDoDoc(doc) ?? "";
+  if (slugDoNome(nome) === "" || slugDoNome(cidade) === "") return false;
+  if ((await colisaoDoPar(nome, cidade, { exceto: null, nomeNovo: false, quem: "pessoa" })) !== null) return true;
+  const destino = slugDoNome(`${nome} ${cidade}`);
+  return (await versaoAtual(getClient(), destino)) !== null || (await enderecoNovoDe(getClient(), destino)) !== null;
 }
 
 /** A FRASE DO PAINEL pra uma colisão. */

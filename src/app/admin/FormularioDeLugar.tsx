@@ -1,5 +1,5 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import BotaoDesistir from "./BotaoDesistir";
 import EditorFaixas from "./campos/EditorFaixas";
 import EditorBooleano from "./campos/EditorBooleano";
@@ -165,6 +165,7 @@ export default function FormularioDeLugar({
   posicao,
   respondidas,
   onde = "painel",
+  aviso,
 }: {
   slug: string;
   /** A pergunta da posição `posicao` — e só ela. */
@@ -177,6 +178,10 @@ export default function FormularioDeLugar({
   /** Quem responde: o João no painel (o padrão) ou quem usa (`"contribuir"`).
    *  Muda só pra onde grava e pra onde leva — ver `ROTAS`. */
   onde?: Onde;
+  /** O aviso de nome que já existe na cidade (`AvisoDoPar`), PRONTO, montado
+   *  pela página de servidor; desenhado logo DEPOIS da pergunta, que fica no
+   *  topo. Ausente quando nada trava o publicar. */
+  aviso?: ReactNode;
 }) {
   const rotas = ROTAS[onde];
   const total = respondidas.length;
@@ -209,6 +214,7 @@ export default function FormularioDeLugar({
         <BotaoDesistir slug={slug} voltarAoPainel onde={onde} />
         <p className="adm-novo-posicao">{posicaoNaTela(posicao, total)}</p>
         <Pergunta key={pergunta.campo.caminho} pergunta={pergunta} slug={slug} proxima={proxima} />
+        {aviso}
         <nav className="adm-novo-passos">
           {posicao > 1 && (
             <a className="adm-novo-passo" href={ir(posicao - 1)}>

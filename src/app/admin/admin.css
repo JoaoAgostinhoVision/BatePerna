@@ -245,6 +245,10 @@
 .adm-novo { display: grid; gap: 1.2rem; }
 /* O aviso de rascunho é texto de apoio, como `.adm-campo-ausente`. */
 .adm-novo-aviso { margin: 0; font-size: .85rem; color: #777; }
+/* O aviso de nome que já existe na cidade (Task 4): depois da pergunta, em cor
+   de aviso — seguir respondendo pode; publicar com esse nome, não. */
+.adm-aviso-par { margin: 0; font-size: .9rem; color: #b3261e; }
+.adm-aviso-par a { color: inherit; }
 /* O campo do nome usa a moldura de `.adm-porta` (é a mesma forma: uma caixa e
    um botão); isto só dá a ele o respiro de `.adm-ficha-inteira`. */
 .adm-novo-nome { margin-top: 1.2rem; }

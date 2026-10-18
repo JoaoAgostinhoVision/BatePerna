@@ -72,6 +72,14 @@ export const RASCUNHO_DELA_SUMIU =
 export const NOME_JA_EM_USO =
   "Nada foi gravado: este nome, ou o endereço que sairia dele, já é de outro lugar no BatePerna. Use um nome que diferencie, como fazem por lá.";
 
+/** 🔴 O AVISO DELA, nas perguntas (17/10, Task 4): o par (o nome nessa cidade)
+ *  já é de um lugar no BatePerna. É AVISO, não recusa — ela segue respondendo, e
+ *  o publicar é que trava (`NOME_JA_EM_USO`). Não nomeia ninguém (I3 de 07/10):
+ *  a do painel nomeia quem ocupa, esta só diz que existe, como o 409. */
+// PENDENTE: redação minha, o João ainda não leu
+export const NOME_EXISTE_NA_CIDADE =
+  "Já existe no BatePerna um lugar com esse nome nessa cidade. Você pode seguir respondendo, mas pra publicar o nome precisa ser outro.";
+
 /** O 409 da edição DELA depois do "Conferi" do João (Task 12): conferido, o
  *  lugar passa a ser do BatePerna — ela não edita mais. É a do PUT: ela
  *  tentou gravar. */

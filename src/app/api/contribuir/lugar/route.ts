@@ -3,7 +3,9 @@ import { TEXTO_LONGO_DEMAIS, ehCampoDaPessoa, pontoDaPessoa, textoAcimaDoTeto, t
 import { getClient, lugarDoDono, versoesAtuais } from "@/lib/db";
 import { estaBloqueado, gravarEdicaoDaPessoa } from "@/lib/db-contribuidor";
 import { LUGAR_MUDOU_DE_ENDERECO, baseIdValido } from "@/lib/endereco";
+import { cidadeDoPonto } from "@/lib/nominatim-servico";
 import { colisaoDaMudanca } from "@/lib/par-de-lugar";
+import { slugDoNome } from "@/lib/rascunho";
 import { violacaoIntroduzidaInteira } from "@/lib/porta-de-coerencia";
 import { BLOQUEADA, JA_CONFERIDO, NOME_JA_EM_USO, fraseDaPessoa, portaDaPessoa } from "@/lib/porta-da-pessoa";
 
@@ -27,7 +29,8 @@ function recusar400(erro: unknown): Response {
  *  pessoa bloqueada nunca ouve uma frase de colisão) → corpo (400) → o lugar
  *  DELA (404 se não é dela, nunca revelando que existe; 409 `JA_CONFERIDO`) →
  *  o par (409 `NOME_JA_EM_USO`, pela colisão ESTRUTURADA — I3) → o documento
- *  novo pelas formas de escrita (400) → a coerência por diferença (409, na
+ *  novo pelas formas de escrita (400) → a cidade do ponto, se o corpo é um
+ *  ponto (o reverse fora não recusa: a cidade de antes fica) → a coerência por diferença (409, na
  *  frase DELA, aberta por "Nada foi gravado" — o lugar está publicado, I2 da
  *  revisão final) → o banco.
  *
@@ -95,6 +98,24 @@ export async function PUT(req: Request): Promise<Response> {
     novo = mudar(lugar.versao.doc);
   } catch (erro) {
     return recusar400(erro);
+  }
+  // 🔴 O PONTO REGRAVA A CIDADE (17/10, spec §2.4): a cidade sai do ponto que
+  // ela marcou, no lugar no ar como no rascunho. Só DEPOIS de a folha aceitar a
+  // coordenada (`mudar`, acima — `1e999` vira `Infinity` e é 400 sem consultar
+  // ninguém) e depois do 404/409 do lugar (o reverse tem limite de 1/s, e só
+  // quem pode gravar o gasta). Diferente do rascunho, ali o ponto NÃO trava:
+  // reverse fora (ou sem município) e o ponto grava com a cidade de antes — o
+  // lugar já está no ar e tem cidade. Sem conferir o par: a cidade que vem do
+  // mapa não é uma palavra que ela escolheu pra escapar de nada.
+  if (trazPonto) {
+    const achou = await cidadeDoPonto(lat as number, lng as number);
+    if (!("falha" in achou) && slugDoNome(achou.cidade) !== "") {
+      try {
+        novo = aplicarCampo(novo, "cidade", achou.cidade);
+      } catch (erro) {
+        return recusar400(erro);
+      }
+    }
   }
   const violacao = violacaoIntroduzidaInteira(await versoesAtuais(getClient(), { incluirOcultos: true }), slug, lugar.versao.doc, novo);
   if (violacao !== null) return new Response(fraseDaPessoa(violacao, "editar"), { status: 409, headers: TEXTO });

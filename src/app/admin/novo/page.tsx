@@ -9,6 +9,9 @@ import { PRAZO_FICHA_MS } from "@/lib/ficha-fonte";
 import { FONTES_DE_PRODUCAO, vistaDaCoordSemPonto } from "@/lib/vista-do-mapa";
 import CaixaDeSenha from "../CaixaDeSenha";
 import FormularioDeLugar, { ComecarLugarNovo } from "../FormularioDeLugar";
+import { travaDoPainel } from "@/lib/par-de-lugar";
+import AvisoDoPar from "../AvisoDoPar";
+import { ROTAS } from "./enderecos";
 import { PERGUNTAS, escolherPosicao, montarPerguntas } from "./perguntas";
 import "../admin.css";
 
@@ -100,11 +103,18 @@ export default async function Novo({
   const semPonto = pergunta.especie === "coord" && pergunta.valor === undefined;
   const vista = semPonto ? await vistaDaCoordSemPonto(doc, pergunta.campo.caminho, FONTES_DE_PRODUCAO) : null;
 
+  // 🔴 O AVISO DO PAR (17/10, Task 4): calculado AQUI a cada carga, em TODA tela
+  // de pergunta enquanto a trava existe; a frase é a do painel, que nomeia quem
+  // ocupa. O link leva à pergunta do nome (posição 1).
+  const trava = await travaDoPainel(r.doc, slug);
+  const aviso = trava === null ? undefined : <AvisoDoPar frase={trava} corrigir={ROTAS.painel.pergunta(slug, 1)} />;
+
   return (
     <main className="adm">
       <h1>Painel</h1>
       <h2>{TITULO_NOVO}</h2>
       <FormularioDeLugar
+        aviso={aviso}
         slug={slug}
         pergunta={vista ? { ...pergunta, campo: { ...pergunta.campo, vista } } : pergunta}
         posicao={posicao}

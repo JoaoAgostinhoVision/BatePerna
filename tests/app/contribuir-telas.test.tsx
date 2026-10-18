@@ -4,7 +4,8 @@ import { ORDEM_DA_PESSOA, montarPerguntasDaPessoa } from "@/app/contribuir/pergu
 import { CAMPOS_DA_PESSOA, OPCIONAIS_DA_PESSOA } from "@/lib/campos-da-pessoa";
 import { PERGUNTAS } from "@/app/admin/novo/perguntas";
 import { NAO_TEM } from "@/app/admin/campos/BotaoNaoSei";
-import { BLOQUEADA, CLERK_FORA_AO_ABRIR, JA_CONFERIDO_AO_ABRIR } from "@/lib/porta-da-pessoa";
+import { BLOQUEADA, CLERK_FORA_AO_ABRIR, JA_CONFERIDO_AO_ABRIR, NOME_EXISTE_NA_CIDADE } from "@/lib/porta-da-pessoa";
+import { CORRIGIR_O_NOME } from "@/app/admin/AvisoDoPar";
 import { conferirLugar, criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
 import { versaoAtual } from "@/lib/db";
 import { ETIQUETA_NAO_CONFERIDO } from "@/lib/origem";
@@ -185,6 +186,31 @@ describe("as perguntas na tela", () => {
     fireEvent.click(container.querySelector('[data-salvar="promessa"]')!);
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
     expect(fetch.mock.calls[0][0]).toBe("/api/contribuir/rascunho");
+  });
+
+  // 17/10 (Task 4): o aviso do par, na frase DELA — que não nomeia o lugar que
+  // já existe (I3 de 07/10) — e DEPOIS da pergunta.
+  it("o par dela é de um lugar: a frase dela, que não nomeia o lugar que já existe, depois da pergunta", async () => {
+    const doc = { slug: "x", cidade: "Cidade Teste", trajeto: { waypoints: [{ nome: "Pedra Mandada" }] } };
+    const S = await rascunhoDe("x", doc);
+    const { container } = render(await Novo({ searchParams: Promise.resolve({ slug: S, p: "1" }) }));
+    const aviso = container.querySelector<HTMLElement>('[role="status"]')!;
+    expect(aviso, "a premissa: há aviso").not.toBeNull();
+    expect(aviso.textContent).toContain(NOME_EXISTE_NA_CIDADE);
+    expect(aviso.textContent).not.toContain("Pedra Mandada");
+    expect(aviso.textContent).not.toContain("lista do painel");
+    const link = [...aviso.querySelectorAll("a")].find((a) => a.textContent === CORRIGIR_O_NOME)!;
+    expect(link.getAttribute("href")).toBe(`/contribuir/novo?slug=${S}&p=1`);
+    const perg = container.querySelector(`[data-testid="pergunta-trajeto.waypoints.0.nome"]`)!;
+    expect(perg.compareDocumentPosition(aviso) & Node.DOCUMENT_POSITION_FOLLOWING, "o aviso antes da pergunta").toBeTruthy();
+  });
+
+  it("o par dela livre: nenhum aviso", async () => {
+    const doc = { slug: "y", cidade: "Cidade Teste", trajeto: { waypoints: [{ nome: "Pedra Livre Dela" }] } };
+    const S = await rascunhoDe("y", doc);
+    const { container } = render(await Novo({ searchParams: Promise.resolve({ slug: S, p: "1" }) }));
+    expect(container.querySelector('[data-testid="pergunta-trajeto.waypoints.0.nome"]'), "a premissa: a pergunta abriu").not.toBeNull();
+    expect(container.querySelector('[role="status"]')).toBeNull();
   });
 
   it("o rascunho de OUTRA pessoa é 404", async () => {

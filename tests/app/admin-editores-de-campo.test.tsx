@@ -24,6 +24,7 @@ import {
 } from "@/app/admin/campos/EditorCoordenada";
 import { ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
 import { DESISTIR, DESISTIR_MESMO, ERRO_DESISTIR } from "@/app/admin/BotaoDesistir";
+import { CORRIGIR_O_NOME } from "@/app/admin/AvisoDoPar";
 import {
   ANTERIOR,
   AVISO_RASCUNHO,
@@ -1548,6 +1549,9 @@ describe("Os editores servem os três lugares", () => {
     // Task 13 (07/10): o aviso da tela de publicar DE QUEM USA. Só aparece com
     // `onde="contribuir"` — nunca no painel do João, nunca nas três fichas.
     AVISO_PUBLICAR_PESSOA,
+    // Task 4 (17/10): o link do aviso de nome que já existe na cidade. Só nasce
+    // numa pergunta cujo par colide com um lugar — nenhuma das três fichas.
+    CORRIGIR_O_NOME,
   ];
 
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem

@@ -5,10 +5,13 @@ import { conferirLugar } from "@/lib/db-contribuidor";
 import { BLOQUEADA, CLERK_FORA, JA_CONFERIDO, NOME_JA_EM_USO, fraseDaPessoa } from "@/lib/porta-da-pessoa";
 import { TEXTO_LONGO_DEMAIS } from "@/lib/campos-da-pessoa";
 import { clienteQueIntercala, semearAcervo, semearLugarDaPessoa } from "../banco";
+import { nominatimDeTeste } from "../nominatim";
 import { OUTRA, PESSOA, sessao } from "../sessao-da-pessoa";
 
 vi.mock("@/lib/contribuidor-sessao", async () => (await import("../sessao-da-pessoa")).moduloFalso);
 vi.mock("@/lib/db", async (io) => ({ ...(await io<typeof import("@/lib/db")>()), getClient: () => cli }));
+// 🔴 A suíte nunca bate no Nominatim (spec §7): o ponto pergunta a cidade ao dublê.
+vi.mock("@/lib/nominatim-servico", async () => (await import("../nominatim")).dubleDoNominatim());
 
 const AGORA = 1_758_300_000;
 let c: Client;
@@ -18,6 +21,9 @@ let SLUG: string;
 let PUT: typeof import("@/app/api/contribuir/lugar/route").PUT;
 
 beforeEach(async () => {
+  nominatimDeTeste.ponto = { cidade: "Cidade Teste" };
+  nominatimDeTeste.pontos.length = 0;
+  nominatimDeTeste.buscas.length = 0;
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(AGORA * 1000);
   c = createClient({ url: ":memory:" });
@@ -69,6 +75,34 @@ describe("PUT /api/contribuir/lugar", () => {
     const d = JSON.parse((await versaoAtual(c, SLUG))!.doc);
     expect(d.condicao.coords).toEqual({ lat: -8.4, lng: -36.0 });
     expect(d.trajeto.waypoints[0]).toMatchObject({ lat: -8.4, lng: -36.0 });
+  });
+
+  // 17/10 (spec §2.4): a cidade sai do ponto, também no lugar no ar dela.
+  it("o ponto do lugar no ar dela regrava a cidade", async () => {
+    nominatimDeTeste.ponto = { cidade: "Cidade Marcador Nova" };
+    const res = await PUT(pedido({ slug: SLUG, baseId: await base(), ponto: 0, lat: -8.4, lng: -36.0 }));
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(nominatimDeTeste.pontos).toEqual([{ lat: -8.4, lng: -36.0 }]);
+    const d = JSON.parse((await versaoAtual(c, SLUG))!.doc);
+    expect(d.cidade).toBe("Cidade Marcador Nova");
+    expect(d.trajeto.waypoints[0]).toMatchObject({ lat: -8.4, lng: -36.0 });
+    expect(await versoes(), "uma versão nova só, com o ponto e a cidade juntos").toBe(2);
+  });
+
+  it("o ponto do lugar no ar dela com o reverse fora: grava o ponto, a cidade de antes fica", async () => {
+    nominatimDeTeste.ponto = { falha: "fora" };
+    const res = await PUT(pedido({ slug: SLUG, baseId: await base(), ponto: 0, lat: -8.4, lng: -36.0 }));
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(nominatimDeTeste.pontos, "a premissa: o reverse foi chamado").toHaveLength(1);
+    const d = JSON.parse((await versaoAtual(c, SLUG))!.doc);
+    expect(d.cidade).toBe("Cidade Teste");
+    expect(d.trajeto.waypoints[0]).toMatchObject({ lat: -8.4, lng: -36.0 });
+  });
+
+  it("o campo dela (não o ponto) não consulta o Nominatim", async () => {
+    const res = await PUT(pedido({ slug: SLUG, baseId: await base(), campo: "acesso", valor: "De moto também." }));
+    expect(res.status).toBe(200);
+    expect(nominatimDeTeste.pontos).toEqual([]);
   });
 
   // I1 da revisão da Task 12: o portão da coerência na edição dela. A

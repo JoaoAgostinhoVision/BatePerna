@@ -2,7 +2,7 @@ import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { criarRascunho } from "@/lib/db";
 import { criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
-import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, colisaoDaMudanca, colisaoDaTroca, colisaoDoPar, parOcupado } from "@/lib/par-de-lugar";
+import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, colisaoDaMudanca, colisaoDaTroca, colisaoDoPar, parOcupado, travaDaPessoa } from "@/lib/par-de-lugar";
 import { parDeRascunho } from "@/lib/rascunho";
 import { AGORA_SEMENTE, semearAcervo } from "../banco";
 import { OUTRA, PESSOA } from "../sessao-da-pessoa";
@@ -159,5 +159,45 @@ describe("a troca e a mudança", () => {
   it("campo que não é o nome nem a cidade, ou valor que não é texto: null", async () => {
     expect(await colisaoDaMudanca(MEU_DOC, minhaChave, "promessa", "Rampa do Pepê", "pessoa")).toBeNull();
     expect(await colisaoDaMudanca(MEU_DOC, minhaChave, CAMPO_DO_NOME, 42, "pessoa")).toBeNull();
+  });
+});
+
+/** 🔴 A TRAVA DELA (Task 4): o aviso das perguntas dela. Ela só ouve que o par
+ *  (ou o endereço que sairia dele) é de um LUGAR — e antigo de um lugar —,
+ *  nunca de um rascunho (decisão do João de 13/10). */
+describe("travaDaPessoa", () => {
+  const insere = (slug: string, doc: string) =>
+    c.execute({
+      sql: "INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em, oculto) VALUES (?, ?, 'painel', ?, 0)",
+      args: [slug, doc, A],
+    });
+
+  it("o par é de um lugar: trava; outra cidade ou outro nome: livre", async () => {
+    await insere("pedra-ocupada-cidade-teste", docDe("pedra-ocupada-cidade-teste", "Pedra Ocupada", "Cidade Teste"));
+    expect(await travaDaPessoa(docDe("x", "Pedra Ocupada", "Cidade Teste"))).toBe(true);
+    expect(await travaDaPessoa(docDe("x", "Pedra Ocupada", "Outra Cidade"))).toBe(false);
+    expect(await travaDaPessoa(docDe("x", "Pedra Livre", "Cidade Teste"))).toBe(false);
+  });
+
+  it("o endereço que sairia dela é de um lugar de OUTRO nome: trava", async () => {
+    await insere("pedra-fantasma-cidade-teste", docDe("pedra-fantasma-cidade-teste", "Outro Nome Qualquer", "Cidade Teste"));
+    expect(await travaDaPessoa(docDe("x", "Pedra Fantasma", "Cidade Teste"))).toBe(true);
+  });
+
+  it("endereço antigo de outro lugar também trava", async () => {
+    expect(await travaDaPessoa(docDe("x", "Pedra Antiga", "Cidade Teste"))).toBe(false);
+    await c.execute({
+      sql: "INSERT INTO enderecos_antigos (velho, novo, em) VALUES (?, ?, ?)",
+      args: ["pedra-antiga-cidade-teste", "pedra-ocupada-cidade-teste", A],
+    });
+    expect(await travaDaPessoa(docDe("x", "Pedra Antiga", "Cidade Teste"))).toBe(true);
+  });
+
+  it("rascunho do João com o mesmo par não trava ela; sem cidade com letra, nada a travar", async () => {
+    expect(await criarRascunho(c, "pedra-do-joao-2-cidade-teste", docDe("pedra-do-joao-2-cidade-teste", "Pedra do Joao 2", "Cidade Teste"), A)).toBe(true);
+    expect(await travaDaPessoa(docDe("x", "Pedra do Joao 2", "Cidade Teste"))).toBe(false);
+    await insere("pedra-sem-cidade-x", docDe("pedra-sem-cidade-x", "Pedra Sem Cidade X"));
+    expect(await travaDaPessoa(docDe("x", "Pedra Sem Cidade X"))).toBe(false);
+    expect(await travaDaPessoa(docDe("x", "Pedra Sem Cidade X", "--"))).toBe(false);
   });
 });

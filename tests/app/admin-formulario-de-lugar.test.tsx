@@ -11,7 +11,8 @@ import { criarRascunho, gravarVersao, historico, lerRascunho, listarRascunhos, v
 import { novaChaveDeRascunho } from "@/lib/db-contribuidor";
 import { aberturaDaFicha, fechadoAgora, rotuloAbertura } from "@/lib/horario";
 import { fichaSchema } from "@/types/ficha";
-import { docDoLugarNovo, ehChaveDeRascunho } from "@/lib/rascunho";
+import { docDoLugarNovo, ehChaveDeRascunho, nomeComCidade, parDeLugar } from "@/lib/rascunho";
+import { CORRIGIR_O_NOME } from "@/app/admin/AvisoDoPar";
 
 /** O documento de um rascunho que JÁ tem cidade (a cidade chega do ponto, depois do nascimento). */
 const docComCidade = (slug: string, nome: string, cidade: string): string =>
@@ -1377,5 +1378,66 @@ describe("o formulário e a lista têm regra no admin.css", () => {
     const regras = [...css.matchAll(/\.(adm-(?:novo|pergunta|rascunho)[a-z-]*)\s*[,{:]/g)].map((m) => m[1]);
     expect(regras.length).toBeGreaterThan(4);
     for (const r of new Set(regras)) expect(nossas, `.${r} tem regra e nenhuma tela usa`).toContain(r);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 TASK 4 (17/10): O AVISO DO PAR NAS PERGUNTAS DO PAINEL — e a página que
+// abre quando o rascunho mora numa chave provisória `rascunho_<hex>` (até aqui
+// só a rota estava provada com essa chave; a revisão da Task 3 pediu a página).
+// ═══════════════════════════════════════════════════════════════════════════
+describe("/admin/novo — o aviso do par e a chave provisória", () => {
+  const OCUPADO = "lugar-ocupado-cidade-marcador-um";
+  const avisoDe = (c: HTMLElement) => c.querySelector<HTMLElement>('[role="status"]');
+
+  /** Um lugar NO AR com o par (NOME, CIDADE) — o que o rascunho do painel colide. */
+  const lugarNoAr = async () => {
+    await gravarVersao(cliente, OCUPADO, docComCidade(OCUPADO, NOME, CIDADE), "painel", 1);
+  };
+  const rascunhoProvisorio = async (doc: (chave: string) => string): Promise<string> => {
+    const chave = novaChaveDeRascunho();
+    expect(await criarRascunho(cliente, chave, doc(chave), 2)).toBe(true);
+    return chave;
+  };
+
+  it("com o par colidindo, a pergunta mostra a frase de quem ocupa e o link do nome, DEPOIS da pergunta", async () => {
+    await lugarNoAr();
+    const chave = await rascunhoProvisorio((k) => docComCidade(k, NOME, CIDADE));
+    const { container } = await paginaNovo(chave, "1");
+    const aviso = avisoDe(container)!;
+    expect(aviso, "a premissa: há aviso").not.toBeNull();
+    expect(aviso.textContent).toContain(parDeLugar(nomeComCidade(NOME, CIDADE)));
+    const link = within(aviso).getByRole("link", { name: CORRIGIR_O_NOME });
+    expect(link.getAttribute("href")).toBe(`/admin/novo?slug=${chave}&p=1`);
+    // A pergunta fica no topo (melhoria 5): o aviso vem DEPOIS dela.
+    const perg = pergunta("trajeto.waypoints.0.nome");
+    expect(perg.compareDocumentPosition(aviso) & Node.DOCUMENT_POSITION_FOLLOWING, "o aviso antes da pergunta").toBeTruthy();
+  });
+
+  it("o aviso aparece em TODA tela de pergunta, não só na do nome", async () => {
+    await lugarNoAr();
+    const chave = await rascunhoProvisorio((k) => docComCidade(k, NOME, CIDADE));
+    const total = esperadas().length;
+    for (const n of [2, total]) {
+      const { container } = await paginaNovo(chave, String(n));
+      expect(avisoDe(container), `p=${n}`).not.toBeNull();
+      cleanup();
+    }
+  });
+
+  it("sem colisão, nenhum aviso — e a página abre na chave provisória, com ou sem cidade", async () => {
+    // Sem cidade ainda: o estado normal do lugar que acabou de nascer.
+    const nova = await rascunhoProvisorio((k) => docDoLugarNovo(k, NOME));
+    expect(ehChaveDeRascunho(nova)).toBe(true);
+    const a = await paginaNovo(nova, "1");
+    expect(pergunta("trajeto.waypoints.0.nome")).toBeTruthy();
+    expect(avisoDe(a.container)).toBeNull();
+    cleanup();
+    // Com cidade, na chave provisória, e o par livre.
+    const comCidade = await rascunhoProvisorio((k) => docComCidade(k, "Lugar Marcador Livre", CIDADE));
+    const b = await paginaNovo(comCidade, "1");
+    expect(pergunta("trajeto.waypoints.0.nome")).toBeTruthy();
+    expect(b.container.querySelector(`[data-rascunho="${comCidade}"]`), "a página montou o formulário da chave").not.toBeNull();
+    expect(avisoDe(b.container)).toBeNull();
   });
 });

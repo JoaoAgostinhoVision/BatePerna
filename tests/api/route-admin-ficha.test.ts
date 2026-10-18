@@ -6,6 +6,7 @@ import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
 import { ensureSchema, gravarVersao, historico, versaoAtual, versoesAtuais } from "@/lib/db";
 import { CIDADE_SEM_LETRA, CIDADE_VAZIA, gemeoSemCidade, parDeLugar, parDeRascunho } from "@/lib/rascunho";
 import { salvarRascunho, semearAcervo, comBaseAtual } from "../banco";
+import { nominatimDeTeste } from "../nominatim";
 import { fichaSchema, type Ficha } from "@/types/ficha";
 import type { Violacao } from "@/lib/coerencia";
 import { RECUSA_TIRAR_O_LUGAR } from "@/lib/campos-da-ficha";
@@ -57,12 +58,17 @@ vi.mock("@/lib/coerencia", async (io) => {
   };
 });
 
+// 🔴 A suíte nunca bate no Nominatim (spec §7); a FichaInteira do João nem o consulta.
+vi.mock("@/lib/nominatim-servico", async () => (await import("../nominatim")).dubleDoNominatim());
 vi.mock("@/lib/db", async (io) => {
   const mod = await io<typeof import("@/lib/db")>();
   return { ...mod, getClient: () => c };
 });
 
 beforeEach(async () => {
+  nominatimDeTeste.ponto = { cidade: "Cidade Marcador Que Nao Deve Entrar" };
+  nominatimDeTeste.pontos.length = 0;
+  nominatimDeTeste.buscas.length = 0;
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(AGORA * 1000);
 
@@ -1151,6 +1157,16 @@ describe("PUT /api/admin/ficha — a forma `{slug, ponto, lat, lng}`", () => {
     expect(doc.trajeto.waypoints[0].nome).toBe(ficha.trajeto.waypoints[0].nome);
     expect(doc.condicao.coords).toEqual(ficha.condicao.coords);
     expect(doc.voz).toBe(ficha.voz);
+  });
+
+  // 17/10: a cidade do lugar no ar do João muda por pergunta própria, nunca pelo
+  // ponto — a FichaInteira não consulta o Nominatim, e a cidade fica como está.
+  it("o ponto da FichaInteira do João não consulta o Nominatim, e a cidade não muda", async () => {
+    const antes = JSON.parse((await versaoAtual(c, SLUG))!.doc).cidade;
+    const res = await PUT(pedido({ slug: SLUG, ponto: 0, ...NOVO }, cookieBom));
+    expect(res.status, await res.text()).toBe(200);
+    expect(nominatimDeTeste.pontos).toEqual([]);
+    expect(JSON.parse((await versaoAtual(c, SLUG))!.doc).cidade).toBe(antes);
   });
 
   it("a versão nova herda a visibilidade: ponto gravado num lugar escondido não o devolve ao ar", async () => {
