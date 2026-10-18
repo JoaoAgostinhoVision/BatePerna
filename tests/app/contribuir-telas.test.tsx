@@ -6,7 +6,7 @@ import { PERGUNTAS } from "@/app/admin/novo/perguntas";
 import { NAO_TEM } from "@/app/admin/campos/BotaoNaoSei";
 import { BLOQUEADA, CLERK_FORA_AO_ABRIR, JA_CONFERIDO_AO_ABRIR, NOME_EXISTE_NA_CIDADE } from "@/lib/porta-da-pessoa";
 import { CORRIGIR_O_NOME } from "@/app/admin/AvisoDoPar";
-import { SEGUIR_SEM_SALVAR } from "@/app/admin/FormularioDeLugar";
+import { PROXIMA, SEGUIR_SEM_SALVAR, VOLTAR_A_REVISAO } from "@/app/admin/FormularioDeLugar";
 import { ROTAS } from "@/app/admin/novo/enderecos";
 import { conferirLugar, criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
 import { versaoAtual } from "@/lib/db";
@@ -205,6 +205,28 @@ describe("as perguntas na tela", () => {
     fireEvent.click(container.querySelector('[data-salvar="promessa"]')!);
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
     expect(fetch.mock.calls[0][0]).toBe("/api/contribuir/rascunho");
+  });
+
+  // 🔴 A PÁGINA DELA LÊ O `volta` (prova-que-trava, revisão final de 18/10):
+  // trocar `voltaARevisao={volta === "revisao"}` por `{false}` sobrevivia à
+  // suíte inteira — só o painel tinha o caso. Com `volta=revisao` a navegação é
+  // só o "Voltar à revisão", pra a revisão DELA (o literal, não as ROTAS); com
+  // qualquer outro `volta`, a de sempre.
+  it("com volta=revisao: só o 'Voltar à revisão', pra a revisão dela; com outro volta, Anterior e Próxima", async () => {
+    const S = await rascunhoDe("comecado-cidade", { slug: "comecado-cidade" });
+    portasFalsas();
+    const { container } = render(await Novo({ searchParams: Promise.resolve({ slug: S, p: "2", volta: "revisao" }) }));
+    const voltar = [...container.querySelectorAll("main a")].find((a) => a.textContent === VOLTAR_A_REVISAO);
+    expect(voltar, "a premissa: há o Voltar à revisão").toBeDefined();
+    expect(voltar!.getAttribute("href")).toBe(`/contribuir/novo/publicar?slug=${S}`);
+    expect([...container.querySelectorAll("main a")].some((a) => a.textContent === PROXIMA), "a Próxima na volta").toBe(false);
+    cleanup();
+    const outra = render(await Novo({ searchParams: Promise.resolve({ slug: S, p: "2", volta: "outra" }) }));
+    const rotulos = [...outra.container.querySelectorAll("main a")].map((a) => a.textContent);
+    expect(rotulos).toContain(PROXIMA);
+    expect(rotulos).not.toContain(VOLTAR_A_REVISAO);
+    const proxima = [...outra.container.querySelectorAll("main a")].find((a) => a.textContent === PROXIMA)!;
+    expect(proxima.getAttribute("href")).toBe(`/contribuir/novo?slug=${S}&p=3`);
   });
 
   // 17/10 (Task 4): o aviso do par, na frase DELA — que não nomeia o lugar que

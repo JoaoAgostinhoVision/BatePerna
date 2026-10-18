@@ -326,14 +326,25 @@ async function pontoComCidade(slug: string, comPonto: string, lat: number, lng: 
     destino === null ||
     (await colisaoDoPar(nome, achou.cidade, { exceto: slug, nomeNovo: false, quem: "joao" })) !== null;
 
+  // A recusa do `moverRascunho` pode ser do ORIGEM (o rascunho sumiu no meio) e
+  // não do destino: não se confere aqui — os dois caminhos do FICAR, abaixo,
+  // gravam numa consulta que exige a linha do `slug`, e sem ela já são o
+  // `sumiu()`. (Até 18/10 havia aqui um `lerRascunho` que dava o mesmo 409 uma
+  // leitura antes; saiu porque nenhum caso o distinguia — prova-que-trava.)
   if (!colidiu && destino !== slug) {
     if (await moverRascunho(getClient(), slug, destino, docNoEndereco(novoDoc, destino), agora)) {
       return Response.json({ slug: destino }, { headers: SEM_CACHE });
     }
-    if ((await lerRascunho(getClient(), slug)) === null) return sumiu();
   }
   // FICAR.
   if (ehChaveDeRascunho(slug) || slug === destino) {
+    // ⚠️ `docNoEndereco(novoDoc, slug)` é DEFESA SEM PROVA: todo caminho das
+    // portas já grava o `slug` de dentro igual à chave (o POST com
+    // `docDoLugarNovo`, todo `moverRascunho` com `docNoEndereco`), então hoje
+    // nada muda e nenhum teste o distingue. Fica porque o documento não pode
+    // dizer um endereço e morar noutro (o docblock de `docNoEndereco`), e um
+    // documento gravado por fora das portas sairia daqui consertado, não
+    // perpetuado.
     if (!(await regravarRascunho(getClient(), slug, docNoEndereco(novoDoc, slug), agora))) return sumiu();
     return Response.json({ slug }, { headers: SEM_CACHE });
   }

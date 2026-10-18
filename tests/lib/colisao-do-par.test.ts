@@ -1,9 +1,9 @@
 import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { criarRascunho } from "@/lib/db";
-import { criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
-import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, colisaoDaMudanca, colisaoDaTroca, colisaoDoPar, parOcupado, travaDaPessoa } from "@/lib/par-de-lugar";
-import { parDeRascunho } from "@/lib/rascunho";
+import { criarRascunho, versaoAtual } from "@/lib/db";
+import { criarRascunhoDaPessoa, novaChaveDeRascunho } from "@/lib/db-contribuidor";
+import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, colisaoDaMudanca, colisaoDaTroca, colisaoDoPar, parOcupado, travaDaPessoa, travaDoPainel } from "@/lib/par-de-lugar";
+import { parDeRascunho, slugDoNome } from "@/lib/rascunho";
 import { AGORA_SEMENTE, semearAcervo } from "../banco";
 import { OUTRA, PESSOA } from "../sessao-da-pessoa";
 
@@ -159,6 +159,31 @@ describe("a troca e a mudança", () => {
   it("campo que não é o nome nem a cidade, ou valor que não é texto: null", async () => {
     expect(await colisaoDaMudanca(MEU_DOC, minhaChave, "promessa", "Rampa do Pepê", "pessoa")).toBeNull();
     expect(await colisaoDaMudanca(MEU_DOC, minhaChave, CAMPO_DO_NOME, 42, "pessoa")).toBeNull();
+  });
+});
+
+/** 🔴 A TRAVA DO PAINEL SEM CIDADE (prova-que-trava, revisão final de 18/10):
+ *  apagar o `if (slugDoNome(nome) === "" || slugDoNome(cidade) === "") return null;`
+ *  de `travaDoPainel` sobrevivia à suíte inteira. Sem a guarda, o rascunho que
+ *  acabou de nascer (provisório, só com o nome) teria "destino" =
+ *  `slugDoNome(nome + " ")` = `slugDoNome(nome)` — e um lugar no ar NESSE
+ *  endereço (o de antes da 11b, sem cidade no slug) viraria aviso de colisão,
+ *  de um par que ainda nem existe. */
+describe("travaDoPainel sem cidade", () => {
+  const NOME = "Lugar Marcador Sem Cidade";
+  it("lugar no ar no endereço do nome sozinho; rascunho provisório só com o nome: nada trava", async () => {
+    const S = slugDoNome(NOME);
+    await c.execute({
+      sql: "INSERT INTO ficha_versoes (ficha_slug, doc, autor, criado_em, oculto) VALUES (?, ?, 'painel', ?, 0)",
+      args: [S, docDe(S, NOME, "Cidade Marcador Um"), A],
+    });
+    expect(await versaoAtual(c, S), "a premissa: há lugar no endereço do nome sozinho").not.toBeNull();
+    const chave = novaChaveDeRascunho();
+    const doc = docDe(chave, NOME);
+    expect(await criarRascunho(c, chave, doc, A)).toBe(true);
+    expect(await travaDoPainel(doc, chave)).toBeNull();
+    // e cidade sem letra é o mesmo que sem cidade
+    expect(await travaDoPainel(docDe(chave, NOME, "--"), chave)).toBeNull();
   });
 });
 

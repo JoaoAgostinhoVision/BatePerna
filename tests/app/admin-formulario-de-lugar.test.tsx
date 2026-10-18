@@ -11,7 +11,7 @@ import { criarRascunho, gravarVersao, historico, lerRascunho, listarRascunhos, v
 import { novaChaveDeRascunho } from "@/lib/db-contribuidor";
 import { aberturaDaFicha, fechadoAgora, rotuloAbertura } from "@/lib/horario";
 import { fichaSchema } from "@/types/ficha";
-import { docDoLugarNovo, ehChaveDeRascunho, nomeComCidade, parDeLugar } from "@/lib/rascunho";
+import { docDoLugarNovo, ehChaveDeRascunho, nomeComCidade, parDeLugar, slugDoNome } from "@/lib/rascunho";
 import { CORRIGIR_O_NOME } from "@/app/admin/AvisoDoPar";
 
 /** O documento de um rascunho que JÁ tem cidade (a cidade chega do ponto, depois do nascimento). */
@@ -1665,6 +1665,18 @@ describe("/admin/novo — o aviso do par e a chave provisória", () => {
     expect(toque(link), "pediu segundo toque sem motivo").toBe(false);
     expect(screen.queryByRole("link", { name: SEGUIR_SEM_SALVAR })).toBeNull();
     expect(assign).not.toHaveBeenCalled(); // o link nativo navega; o app não interfere
+  });
+
+  // Prova-que-trava (18/10): sem a guarda de cidade de `travaDoPainel`, o lugar
+  // no ar no endereço do NOME SOZINHO viraria aviso no rascunho que acabou de
+  // nascer (sem cidade, o "destino" seria esse endereço) — a página o mostra.
+  it("lugar no ar no endereço do nome sozinho, rascunho ainda sem cidade: nenhum aviso", async () => {
+    await gravarVersao(cliente, slugDoNome(NOME), docComCidade(slugDoNome(NOME), NOME, CIDADE), "painel", 1);
+    expect(await versaoAtual(cliente, slugDoNome(NOME)), "a premissa: há lugar no endereço do nome").not.toBeNull();
+    const chave = await rascunhoProvisorio((k) => docDoLugarNovo(k, NOME));
+    const { container } = await paginaNovo(chave, "1");
+    expect(container.querySelector(`[data-rascunho="${chave}"]`), "a premissa: a página abriu").not.toBeNull();
+    expect(avisoDe(container)).toBeNull();
   });
 
   it("o aviso aparece em TODA tela de pergunta, não só na do nome", async () => {

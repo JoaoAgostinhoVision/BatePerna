@@ -903,6 +903,24 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
     expect(await semLetra.text()).toBe(NOME_SEM_LETRA);
   });
 
+  // 🔴 CIDADE SEM LETRA NO RENOMEAR (prova-que-trava, revisão final de 18/10):
+  // trocar `cidade !== undefined && slugDoNome(cidade) !== ""` por só
+  // `cidade !== undefined` sobrevivia à suíte inteira. Só DADO ANTIGO chega
+  // assim — um rascunho gravado antes de as portas recusarem cidade sem letra;
+  // hoje a cidade só entra pelo ponto, e o ponto sem letra é 503. Sem a metade
+  // de letra, o "destino" seria `slugDoNome("Novo --")` = "novo", um endereço
+  // RESERVADO, e o rascunho se mudaria pra lá.
+  it("rascunho antigo com cidade sem letra: renomear só regrava, a chave não anda, nada nasce em 'novo'", async () => {
+    const chave = novaChaveDeRascunho();
+    await salvarRascunho(c, chave, JSON.stringify({ slug: chave, modos: [], cidade: "--", trajeto: { waypoints: [{ nome: "Lugar Marcador Antigo" }] } }), AGORA);
+    expect(SLUGS_RESERVADOS, "a premissa: 'novo' é reservado").toContain(slugDoNome("Novo"));
+    const res = await mudar({ slug: chave, campo: "trajeto.waypoints.0.nome", valor: "Novo" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await res.json()).toEqual({ slug: chave });
+    expect(await docDe(chave)).toEqual({ slug: chave, modos: [], cidade: "--", trajeto: { waypoints: [{ nome: "Novo" }] } });
+    expect(await lerRascunho(c, slugDoNome("Novo"))).toBeNull();
+  });
+
   // 🔴 11b-M3: renomear um rascunho passa pelo MESMO par (409). Mudar a cidade
   // é marcar o ponto (17/10), e a colisão ali é a saída (b) ("a cidade sai do
   // ponto"). E o endereço do rascunho ACOMPANHA os dois (onda de fix 2, Y2):

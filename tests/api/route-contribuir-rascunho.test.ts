@@ -370,6 +370,22 @@ describe("PUT — responder", () => {
     expect((await docDe()).promessa).toBe("Uma pedra.");
   });
 
+  // 🔴 CIDADE SEM LETRA NO RENOMEAR (prova-que-trava, revisão final de 18/10):
+  // trocar o `comEndereco` por só `cidade !== undefined` sobrevivia à suíte
+  // inteira. Só DADO ANTIGO chega assim (gravado antes de as portas recusarem
+  // cidade sem letra; hoje a cidade só entra pelo ponto). Sem a metade de
+  // letra, o `slug` de dentro viraria `slugDoNome("Novo --")` = "novo", um
+  // endereço reservado.
+  it("rascunho antigo dela com cidade sem letra: renomear só regrava, o slug de dentro não muda", async () => {
+    const chave = await deOutra("x", { slug: "", modos: [], cidade: "--", trajeto: { waypoints: [{ nome: "Pedra Antiga" }] } }, PESSOA.id);
+    const res = await rota.PUT(pedido("PUT", { slug: chave, campo: "trajeto.waypoints.0.nome", valor: "Novo" }));
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await res.json()).toEqual({ slug: chave });
+    const doc = await docDe(chave);
+    expect(doc.trajeto.waypoints[0].nome).toBe("Novo");
+    expect(doc.slug).toBe("");
+  });
+
   // 🔴 Task 17: a chave não anda — renomear regrava o documento, e o `slug` de
   // dentro (o endereço onde o lugar nasceria) acompanha o par.
   it("trocar o nome regrava o documento na MESMA chave, e o endereço de dentro acompanha", async () => {
