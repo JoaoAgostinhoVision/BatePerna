@@ -76,12 +76,33 @@ const json = (url: string, metodo: string, corpo: unknown, comCookie = false) =>
     body: JSON.stringify(corpo),
   });
 
+/** 17/10: o lugar nasce só do nome, e a cidade chega pelo PUT de campo `cidade`
+ *  (até a Task 3, que a tira do ponto). Ela começa um lugar pela rota dela e
+ *  devolve a CHAVE do rascunho e a resposta do PUT da cidade — é no PUT que o
+ *  PAR e o ENDEREÇO se conferem agora. */
+async function comecarSemConferir(quem: QuemContribui, nome: string, cidade: string): Promise<{ chave: string; cidade: Response }> {
+  sessao.atual = quem;
+  const res = await dela.POST(json("http://x/api/contribuir/rascunho", "POST", { nome }));
+  expect(res.status, await res.clone().text()).toBe(201);
+  const chave = ((await res.json()) as { slug: string }).slug;
+  return { chave, cidade: await dela.PUT(json("http://x/api/contribuir/rascunho", "PUT", { slug: chave, campo: "cidade", valor: cidade })) };
+}
+
 /** Ela começa um lugar pela rota dela; devolve a CHAVE do rascunho. */
 async function comecar(quem: QuemContribui, nome: string, cidade: string): Promise<string> {
-  sessao.atual = quem;
-  const res = await dela.POST(json("http://x/api/contribuir/rascunho", "POST", { nome, cidade }));
-  expect(res.status, await res.clone().text()).toBe(201);
-  return ((await res.json()) as { slug: string }).slug;
+  const { chave, cidade: res } = await comecarSemConferir(quem, nome, cidade);
+  expect(res.status, await res.clone().text()).toBe(200);
+  return chave;
+}
+
+/** O João cria um lugar novo pelo painel: o nome, e a cidade pelo PUT (o
+ *  rascunho muda de chave provisória pro endereço). Devolve a resposta do PUT
+ *  quando ele recusa, e a do POST quando é o POST que recusa. */
+async function painelCria(nome: string, cidade: string): Promise<Response> {
+  const res = await painel.POST(json("http://x/api/admin/rascunho", "POST", { nome }, true));
+  if (res.status !== 201) return res;
+  const { slug: chave } = (await res.clone().json()) as { slug: string };
+  return painel.PUT(json("http://x/api/admin/rascunho", "PUT", { slug: chave, campo: "cidade", valor: cidade }, true));
 }
 
 /** Ela responde as obrigatórias dela, pela rota dela (a promessa é só dela: a
@@ -170,8 +191,8 @@ describe("o João e ela, no mesmo par", () => {
   const X = slugDoNome(`${NOME_J} ${CIDADE_J}`);
 
   it("o João tem rascunho em X; ela começa e publica o mesmo par: vai ao ar em X; o publicar do João depois é recusado com enderecoDeLugar (a frase de hoje do painel pra endereço ocupado por lugar)", async () => {
-    const criou = await painel.POST(json("http://x/api/admin/rascunho", "POST", { nome: NOME_J, cidade: CIDADE_J }, true));
-    expect(criou.status, await criou.clone().text()).toBe(201);
+    const criou = await painelCria(NOME_J, CIDADE_J);
+    expect(criou.status, await criou.clone().text()).toBe(200);
     expect(await criou.json()).toEqual({ slug: X });
     await salvarRascunho(c, X, JSON.stringify(rascunhoCompleto(X, NOME_J, CIDADE_J)), AGORA - 50);
 
@@ -194,14 +215,14 @@ describe("o João e ela, no mesmo par", () => {
 
   it("ela tem rascunho com o par P; o João CRIA lugar novo com P pelo painel: não é recusado", async () => {
     const chave = await comecar(PESSOA, NOME_J, CIDADE_J);
-    const res = await painel.POST(json("http://x/api/admin/rascunho", "POST", { nome: NOME_J, cidade: CIDADE_J }, true));
-    expect(res.status, await res.clone().text()).toBe(201);
+    const res = await painelCria(NOME_J, CIDADE_J);
+    expect(res.status, await res.clone().text()).toBe(200);
     expect(await lerRascunho(c, X)).not.toBeNull();
     expect(await rascunhoNoBanco(c, chave), "o dela continua").toMatchObject({ contribuidor: PESSOA.id });
   });
 
   it("ela começa o par de um rascunho do João: não é recusada", async () => {
-    expect((await painel.POST(json("http://x/api/admin/rascunho", "POST", { nome: NOME_J, cidade: CIDADE_J }, true))).status).toBe(201);
+    expect((await painelCria(NOME_J, CIDADE_J)).status).toBe(200);
     const chave = await comecar(PESSOA, NOME_J, CIDADE_J);
     expect(await rascunhoNoBanco(c, chave)).toMatchObject({ contribuidor: PESSOA.id });
   });
@@ -209,8 +230,8 @@ describe("o João e ela, no mesmo par", () => {
   // Pro João, o rascunho DELE continua contando (a lista dele): a colisão
   // João × João é a de hoje.
   it("o João começa o par de um rascunho DELE: a frase de hoje, 'continue por ele, na lista do painel'", async () => {
-    expect((await painel.POST(json("http://x/api/admin/rascunho", "POST", { nome: NOME_J, cidade: CIDADE_J }, true))).status).toBe(201);
-    const res = await painel.POST(json("http://x/api/admin/rascunho", "POST", { nome: NOME_J, cidade: CIDADE_J }, true));
+    expect((await painelCria(NOME_J, CIDADE_J)).status).toBe(200);
+    const res = await painelCria(NOME_J, CIDADE_J);
     expect(res.status).toBe(409);
     expect(await res.text()).toMatch(/lista do painel/);
   });
@@ -233,24 +254,24 @@ describe("o João e ela, no mesmo par", () => {
 describe("o que ainda recusa cedo: lugar que existe", () => {
   // O endereço do lugar escondido NÃO é o que o par dela daria: a recusa só
   // pode vir da colisão pelo PAR, e não do endereço no statement.
-  it("o par de um lugar ESCONDIDO: recusada no começar, com a frase dela, e nada nasce", async () => {
+  it("o par de um lugar ESCONDIDO: recusada quando a cidade chega, com a frase dela", async () => {
     const H = "pedra-escondida-endereco-de-antes";
     await gravarVersao(c, H, JSON.stringify(lugarMarcador(H, "Pedra Escondida", "Cidade Teste")), "painel", AGORA - 100, true);
-    sessao.atual = PESSOA;
-    const res = await dela.POST(json("http://x/api/contribuir/rascunho", "POST", { nome: "Pedra Escondida", cidade: "Cidade Teste" }));
+    const { chave, cidade: res } = await comecarSemConferir(PESSOA, "Pedra Escondida", "Cidade Teste");
     expect(res.status).toBe(409);
     expect(await res.text()).toBe(NOME_JA_EM_USO);
-    expect((await c.execute("SELECT COUNT(*) AS n FROM ficha_rascunhos")).rows[0].n).toBe(0);
+    expect((await c.execute("SELECT COUNT(*) AS n FROM ficha_rascunhos")).rows[0].n).toBe(1);
+    expect(JSON.parse((await rascunhoNoBanco(c, chave))!.doc).cidade, "o rascunho fica sem cidade").toBeUndefined();
   });
 
-  it("o ENDEREÇO de um lugar, de par diferente: recusada no começar, com a frase dela", async () => {
+  it("o ENDEREÇO de um lugar, de par diferente: recusada quando a cidade chega, com a frase dela", async () => {
     const A = "lugar-marcador-outra-marcadora";
     await gravarVersao(c, A, JSON.stringify(lugarMarcador(A, "Lugar Marcador", "Outra Marcadora")), "painel", AGORA - 100);
-    sessao.atual = PESSOA;
-    const res = await dela.POST(json("http://x/api/contribuir/rascunho", "POST", { nome: "Lugar Marcador Outra", cidade: "Marcadora" }));
+    const { chave, cidade: res } = await comecarSemConferir(PESSOA, "Lugar Marcador Outra", "Marcadora");
     expect(res.status).toBe(409);
     expect(await res.text()).toBe(NOME_JA_EM_USO);
-    expect((await c.execute("SELECT COUNT(*) AS n FROM ficha_rascunhos")).rows[0].n).toBe(0);
+    expect((await c.execute("SELECT COUNT(*) AS n FROM ficha_rascunhos")).rows[0].n).toBe(1);
+    expect(JSON.parse((await rascunhoNoBanco(c, chave))!.doc).cidade, "o rascunho fica sem cidade").toBeUndefined();
   });
 
   it("renomear o rascunho dela pro par de um lugar escondido: recusada, e o nome fica", async () => {

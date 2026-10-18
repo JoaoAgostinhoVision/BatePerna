@@ -5,6 +5,10 @@ import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
 import { criarRascunho, lerRascunho, moverRascunho } from "@/lib/db";
 import { docDoLugarNovo } from "@/lib/rascunho";
+
+/** O documento de um rascunho que JÁ tem cidade (a cidade chega do ponto, depois do nascimento). */
+const docComCidade = (slug: string, nome: string, cidade: string): string =>
+  JSON.stringify({ ...JSON.parse(docDoLugarNovo(slug, nome)), cidade });
 import { DESISTIR, DESISTIR_MESMO, ERRO_DESISTIR } from "@/app/admin/BotaoDesistir";
 import { AVISO_RASCUNHO } from "@/app/admin/FormularioDeLugar";
 import { ERRO_REDE } from "@/app/admin/campos/gravar";
@@ -68,7 +72,7 @@ beforeEach(async () => {
   vi.mocked(resolverEstados).mockResolvedValue(new Map());
   token = criarSessao(SEGREDO, Math.floor(Date.now() / 1000), DURACAO_SESSAO_S);
   cookiesFalso.mockResolvedValue({ get: (nome: string) => (nome === COOKIE_ADMIN ? { value: token } : undefined) });
-  expect(await criarRascunho(cliente, S, docDoLugarNovo(S, NOME, CIDADE), 1)).toBe(true);
+  expect(await criarRascunho(cliente, S, docComCidade(S, NOME, CIDADE), 1)).toBe(true);
 });
 
 afterEach(() => {
@@ -148,7 +152,7 @@ describe("/admin/novo — desistir do lugar novo", () => {
   it("o 2º toque manda DELETE com o slug DESTE rascunho, o rascunho some do banco, e a tela volta ao painel", async () => {
     // 🔴 Dois rascunhos: o slug errado apagaria o OUTRO, e só a dupla distingue.
     const OUTRO = "lugar-marcador-dois";
-    expect(await criarRascunho(cliente, OUTRO, docDoLugarNovo(OUTRO, "Lugar Marcador Dois", CIDADE), 1)).toBe(true);
+    expect(await criarRascunho(cliente, OUTRO, docComCidade(OUTRO, "Lugar Marcador Dois", CIDADE), 1)).toBe(true);
     const { chamadas, assign, reload } = await comRotaDeVerdade();
     const { container } = await paginaNovo(S, "1");
     const aqui = formulario(container);
@@ -172,9 +176,9 @@ describe("/admin/novo — desistir do lugar novo", () => {
     }
   });
 
-  it("a tela do nome e da cidade (ainda sem rascunho) não tem o botão", async () => {
+  it("a tela do nome (ainda sem rascunho) não tem o botão", async () => {
     await paginaNovo();
-    expect(screen.getAllByRole("textbox"), "a premissa: é a tela do nome e da cidade").toHaveLength(2);
+    expect(screen.getAllByRole("textbox"), "a premissa: é a tela do nome").toHaveLength(1);
     expect(screen.queryByRole("button", { name: DESISTIR })).toBeNull();
     expect(screen.queryByRole("button", { name: DESISTIR_MESMO })).toBeNull();
   });
@@ -270,7 +274,7 @@ describe("/admin — desistir de um rascunho da lista", () => {
 
   it("1º toque pergunta e não manda nada; 2º manda DELETE com o slug do ITEM, apaga, e a lista se relê do banco", async () => {
     const OUTRO = "lugar-marcador-dois";
-    expect(await criarRascunho(cliente, OUTRO, docDoLugarNovo(OUTRO, "Lugar Marcador Dois", CIDADE), 1)).toBe(true);
+    expect(await criarRascunho(cliente, OUTRO, docComCidade(OUTRO, "Lugar Marcador Dois", CIDADE), 1)).toBe(true);
     const { fetchFalso, chamadas, reload, assign } = await comRotaDeVerdade();
     await paginaAdmin();
     const item = itemDaLista();

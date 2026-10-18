@@ -70,11 +70,11 @@ describe("o formulário com onde='contribuir'", () => {
     const { assign } = navegacaoFalsa();
     const fetchFalso = vi.fn().mockResolvedValue(new Response(JSON.stringify({ slug: "a-b" }), { status: 201 }));
     vi.stubGlobal("fetch", fetchFalso);
-    const { container } = render(<ComecarLugarNovo perguntas={{ nome: "N", cidade: "C" }} onde="contribuir" />);
+    const { container } = render(<ComecarLugarNovo pergunta="N" onde="contribuir" />);
     fireEvent.change(container.querySelectorAll("input")[0], { target: { value: "A" } });
-    fireEvent.change(container.querySelectorAll("input")[1], { target: { value: "B" } });
     fireEvent.submit(container.querySelector("form")!);
     await waitFor(() => expect(assign).toHaveBeenCalledWith("/contribuir/novo?slug=a-b"));
+    expect(JSON.parse(String(fetchFalso.mock.calls[0][1].body))).toEqual({ nome: "A" });
     expect(fetchFalso.mock.calls[0][0]).toBe("/api/contribuir/rascunho");
   });
 
@@ -134,11 +134,11 @@ describe("401 — a sessão dela venceu no meio (Review Focus 4)", () => {
   it("começar, na tela dela, recarrega no 401; no painel, mostra a frase e não recarrega", async () => {
     const { reload } = navegacaoFalsa();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 401 })));
-    const dela = render(<ComecarLugarNovo perguntas={{ nome: "N", cidade: "C" }} onde="contribuir" />);
+    const dela = render(<ComecarLugarNovo pergunta="N" onde="contribuir" />);
     fireEvent.submit(dela.container.querySelector("form")!);
     await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
     cleanup();
-    const painel = render(<ComecarLugarNovo perguntas={{ nome: "N", cidade: "C" }} />);
+    const painel = render(<ComecarLugarNovo pergunta="N" />);
     fireEvent.submit(painel.container.querySelector("form")!);
     expect((await painel.findByRole("alert")).textContent).toBe("Não consegui salvar.");
     expect(reload).toHaveBeenCalledTimes(1);

@@ -8,7 +8,7 @@ import { ROTAS, type Onde } from "./novo/enderecos";
  *  dois cancelar, e este é o primeiro). Mora em DOIS lugares, o mesmo botão:
  *  em toda pergunta do `/admin/novo` (`FormularioDeLugar`, perto do aviso de
  *  rascunho) e em cada item de "Começados, ainda fora do ar" (`ListaDeLugares`,
- *  ao lado do "publicar"). A tela do nome e da cidade (`ComecarLugarNovo`) NÃO o
+ *  ao lado do "publicar"). A tela do nome (`ComecarLugarNovo`) NÃO o
  *  tem: ali o rascunho ainda não nasceu, e não há nada pra apagar. A tela de
  *  publicar também não — o desenho aprovado não a cita.
  *

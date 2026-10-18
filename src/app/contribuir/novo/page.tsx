@@ -18,7 +18,7 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 const ESTOUROU = Symbol("prazo do rascunho dela");
 
 /** `/contribuir/novo` — as perguntas DELA, no molde de `/admin/novo`: sem
- *  `?slug=`, o nome e a cidade (é deles que sai o endereço); com `?slug=`, uma
+ *  `?slug=`, só o nome (a cidade vem do ponto que ela marca); com `?slug=`, uma
  *  pergunta por vez sobre o rascunho DELA (`&p=N`). Rascunho que não é dela —
  *  de outra pessoa, do João, ou que não existe — é 404: não revela que existe.
  *  A porta é `quemNaTela` (Clerk), não a senha do painel. */
@@ -32,7 +32,7 @@ export default async function NovoDaPessoa({
     return (
       <main className="adm">
         <h1>{TITULO_MANDAR}</h1>
-        <ComecarLugarNovo perguntas={{ nome: PERGUNTAS["trajeto.waypoints.0.nome"], cidade: PERGUNTAS.cidade }} onde="contribuir" />
+        <ComecarLugarNovo pergunta={PERGUNTAS["trajeto.waypoints.0.nome"]} onde="contribuir" />
       </main>
     );
   }

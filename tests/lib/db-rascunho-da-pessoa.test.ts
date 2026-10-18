@@ -82,6 +82,16 @@ describe("o rascunho dela é dela", () => {
     expect(Number((await c.execute("SELECT COUNT(*) AS n FROM ficha_rascunhos")).rows[0].n)).toBe(4);
   });
 
+  // 17/10: o lugar nasce só do nome, e sem cidade não há endereço a conferir
+  // (`endereco === null` pula `ENDERECO_LIVRE`) — mas o bloqueio continua valendo.
+  it("nasce sem endereço (null) mesmo com um lugar em qualquer slug; bloqueada, não", async () => {
+    const chave = await criarRascunhoDaPessoa(c, null, '{"slug":"","modos":[]}', A, PESSOA.id);
+    expect(chave).not.toBeNull();
+    expect((await rascunhoNoBanco(c, chave!))?.contribuidor).toBe(PESSOA.id);
+    await c.execute({ sql: "INSERT INTO contribuidores (id, bloqueado, criado_em) VALUES (?, 1, ?)", args: [PESSOA.id, A] });
+    expect(await criarRascunhoDaPessoa(c, null, '{"slug":"","modos":[]}', A, PESSOA.id)).toBeNull();
+  });
+
   it("renomear (regravar COM endereço) pro endereço de um lugar: não grava; pro de um rascunho: grava", async () => {
     const chave = await nasce("pedra-cidade");
     expect(await regravarRascunhoDaPessoa(c, chave, doc("rampa-do-pepe"), A + 1, PESSOA.id, "rampa-do-pepe")).toBe(false);

@@ -95,12 +95,18 @@ describe("o rascunho do João: conta pro João, não pra ela", () => {
     expect(await colisaoDoPar("Pedra do João", "Cidade Teste", { exceto: null, nomeNovo: true, quem: "pessoa" })).toBeNull();
   });
 
-  it("o rascunho do João SEM cidade: o gêmeo espera, pro João", async () => {
+  // 17/10: o lugar nasce só do nome, então rascunho do João sem cidade é o
+  // estado normal — só LUGAR é gêmeo (M3). Vale pra qualquer cidade perguntada, e
+  // pra cidade sem letra (`"--"`), que também não separa nada.
+  it("o rascunho do João SEM cidade não é gêmeo, nem pro João", async () => {
     expect(await criarRascunho(c, "pedra-joao-sem-cidade", docDe("pedra-joao-sem-cidade", "Pedra Joao Sem Cidade"), A)).toBe(true);
-    expect(await colisaoDoPar("Pedra Joao Sem Cidade", "Cidade Teste", { exceto: null, nomeNovo: true, quem: "joao" })).toEqual({
-      de: "rascunho-do-joao", semCidade: true, quem: "Pedra Joao Sem Cidade",
-    });
-    expect(await colisaoDoPar("Pedra Joao Sem Cidade", "Cidade Teste", { exceto: null, nomeNovo: true, quem: "pessoa" })).toBeNull();
+    expect(await criarRascunho(c, "pedra-joao-tracos", docDe("pedra-joao-tracos", "Pedra Joao Tracos", "--"), A)).toBe(true);
+    for (const quem of ["joao", "pessoa"] as const) {
+      expect(await colisaoDoPar("Pedra Joao Sem Cidade", "Cidade Teste", { exceto: null, nomeNovo: true, quem }), quem).toBeNull();
+      expect(await colisaoDoPar("Pedra Joao Sem Cidade", "", { exceto: null, nomeNovo: true, quem }), quem).toBeNull();
+      expect(await colisaoDoPar("Pedra Joao Tracos", "", { exceto: null, nomeNovo: true, quem }), quem).toBeNull();
+    }
+    expect(await parOcupado("Pedra Joao Sem Cidade", "", { exceto: null, nomeNovo: true })).toBeNull();
   });
 
   it("o `exceto` tira o próprio rascunho do João", async () => {

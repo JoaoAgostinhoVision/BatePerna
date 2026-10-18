@@ -7,10 +7,15 @@ import type { Client } from "@libsql/client";
 import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
 import { CAMPOS_DA_FICHA, lerCaminho, type CampoDaFicha } from "@/lib/campos-da-ficha";
-import { criarRascunho, gravarVersao, historico, lerRascunho, versaoAtual } from "@/lib/db";
+import { criarRascunho, gravarVersao, historico, lerRascunho, listarRascunhos, versaoAtual } from "@/lib/db";
+import { novaChaveDeRascunho } from "@/lib/db-contribuidor";
 import { aberturaDaFicha, fechadoAgora, rotuloAbertura } from "@/lib/horario";
 import { fichaSchema } from "@/types/ficha";
-import { docDoLugarNovo } from "@/lib/rascunho";
+import { docDoLugarNovo, ehChaveDeRascunho } from "@/lib/rascunho";
+
+/** O documento de um rascunho que JÁ tem cidade (a cidade chega do ponto, depois do nascimento). */
+const docComCidade = (slug: string, nome: string, cidade: string): string =>
+  JSON.stringify({ ...JSON.parse(docDoLugarNovo(slug, nome)), cidade });
 import { rotuloDe } from "@/app/admin/FichaInteira";
 import { ORDEM, PERGUNTAS, escolherPosicao } from "@/app/admin/novo/perguntas";
 import {
@@ -143,7 +148,7 @@ afterEach(() => vi.unstubAllEnvs());
 /** O rascunho nasce pela porta de verdade do banco — o mesmo `criarRascunho`
  *  e o mesmo documento que a rota usa. */
 async function lugarNovo(): Promise<void> {
-  expect(await criarRascunho(cliente, S, docDoLugarNovo(S, NOME, CIDADE), 1)).toBe(true);
+  expect(await criarRascunho(cliente, S, docComCidade(S, NOME, CIDADE), 1)).toBe(true);
 }
 
 async function paginaNovo(slug?: string, p?: string | string[]) {
@@ -225,7 +230,7 @@ const ALMOCO = [
 ];
 function docTodoRespondido(horario: readonly { abre: string; fecha: string }[] = ALMOCO): string {
   return JSON.stringify({
-    ...JSON.parse(docDoLugarNovo(S, NOME, CIDADE)),
+    ...JSON.parse(docComCidade(S, NOME, CIDADE)),
     trajeto: { waypoints: [{ nome: NOME, lat: -8.4, lng: -36.2, nota: "Nota marcadora." }] },
     rotulo_escaneio: "Rótulo marcador",
     promessa: "Promessa marcadora.",
@@ -413,7 +418,7 @@ describe("/admin/novo — as perguntas", () => {
   // mesmo silêncio.
   it("opcional respondido: o 'não sei' de sempre, e nenhum 'pular' junto", async () => {
     await lugarNovo();
-    await salvarRascunho(cliente, S, JSON.stringify({ ...JSON.parse(docDoLugarNovo(S, NOME, CIDADE)), piso: "barro" }), 2);
+    await salvarRascunho(cliente, S, JSON.stringify({ ...JSON.parse(docComCidade(S, NOME, CIDADE)), piso: "barro" }), 2);
     await telaDe("piso");
     const botoes = within(pergunta("piso")).getAllByRole("button", { name: /não sei|não tem|pular/i });
     expect(botoes).toHaveLength(1);
@@ -555,7 +560,7 @@ describe("/admin/novo — rascunho com TODAS as perguntas respondidas", () => {
     await salvarRascunho(
       cliente,
       S,
-      JSON.stringify({ ...JSON.parse(docDoLugarNovo(S, NOME, CIDADE)), horario: [{ abre: "08:00", fecha: "17:00" }] }),
+      JSON.stringify({ ...JSON.parse(docComCidade(S, NOME, CIDADE)), horario: [{ abre: "08:00", fecha: "17:00" }] }),
       2,
     );
     const { chamadas, assign, reload } = await comRotaDeVerdade();
@@ -679,7 +684,7 @@ describe("/admin/novo — a posição mora na URL", () => {
   // `p`) cai na primeira pergunta SEM resposta — e não no começo de novo.
   it("sai e volta pela lista do painel: cai na primeira pergunta sem resposta", async () => {
     await lugarNovo();
-    const doc = JSON.parse(docDoLugarNovo(S, NOME, CIDADE));
+    const doc = JSON.parse(docComCidade(S, NOME, CIDADE));
     doc.trajeto.waypoints[0] = { ...doc.trajeto.waypoints[0], lat: -8.1, lng: -35.2 };
     await salvarRascunho(cliente, S, JSON.stringify(doc), 2);
     const { default: Admin } = await import("@/app/admin/page");
@@ -739,7 +744,7 @@ describe("/admin/novo — andar entre as perguntas", () => {
     await salvarRascunho(
       cliente,
       S,
-      JSON.stringify({ ...JSON.parse(docDoLugarNovo(S, NOME, CIDADE)), voz: "frase marcadora" }),
+      JSON.stringify({ ...JSON.parse(docComCidade(S, NOME, CIDADE)), voz: "frase marcadora" }),
       2,
     );
     const total = esperadas().length;
@@ -969,7 +974,7 @@ describe("/admin/novo — responder, sair e voltar", () => {
 
   it("gravado, a pergunta volta com o pin no ponto dele, e sem buscar cidade nenhuma", async () => {
     await lugarNovo();
-    const doc = JSON.parse(docDoLugarNovo(S, NOME, CIDADE));
+    const doc = JSON.parse(docComCidade(S, NOME, CIDADE));
     doc.trajeto.waypoints[0] = { ...doc.trajeto.waypoints[0], lat: -8.42, lng: -36.21 };
     await salvarRascunho(cliente, S, JSON.stringify(doc), 2);
     await comRotaDeVerdade();
@@ -985,7 +990,7 @@ describe("/admin/novo — responder, sair e voltar", () => {
   // M2: a coordenada da CHUVA começa no ponto 0 que ele já marcou — sem rede.
   it("a chuva, com o ponto 0 marcado: a vista começa NELE, perto, sem buscar a cidade; tocar e salvar grava o toque", async () => {
     await lugarNovo();
-    const doc = JSON.parse(docDoLugarNovo(S, NOME, CIDADE));
+    const doc = JSON.parse(docComCidade(S, NOME, CIDADE));
     const P0 = { lat: -8.42, lng: -36.21 };
     doc.trajeto.waypoints[0] = { ...doc.trajeto.waypoints[0], ...P0 };
     await salvarRascunho(cliente, S, JSON.stringify(doc), 2);
@@ -1087,47 +1092,41 @@ describe("/admin/novo — responder, sair e voltar", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-describe("/admin/novo — o lugar novo nasce do nome e da cidade", () => {
-  // 🔴 TAREFA 11b: o lugar nasce com as DUAS respostas — o nome e a cidade, as
-  // duas caixas vazias e sem placeholder (nada pré-preenchido, spec §4.4).
-  it("sem slug: só as perguntas do nome e da cidade, caixas vazias, e começar leva ao rascunho", async () => {
+describe("/admin/novo — o lugar novo nasce só do nome", () => {
+  // 🔴 17/10: a tela 1 tem UMA caixa, a do nome, vazia e sem placeholder (nada
+  // pré-preenchido, spec §4.4). A cidade vem do ponto, depois.
+  it("sem slug: a tela 1 tem UMA caixa, a do nome, e manda {nome}", async () => {
     const { chamadas, assign } = await comRotaDeVerdade();
     const { container } = await paginaNovo();
-    const caixaDo = (texto: string) => screen.getByRole("textbox", { name: texto }) as HTMLInputElement;
-    const nome = caixaDo(PERGUNTAS["trajeto.waypoints.0.nome"]);
-    const cidade = caixaDo(PERGUNTAS.cidade);
-    expect(screen.getAllByRole("textbox"), "uma caixa a mais ou a menos").toHaveLength(2);
-    for (const caixa of [nome, cidade]) {
-      expect(caixa.value).toBe("");
-      expect(caixa.getAttribute("placeholder") ?? "").toBe("");
-    }
+    const nome = screen.getByRole("textbox", { name: PERGUNTAS["trajeto.waypoints.0.nome"] }) as HTMLInputElement;
+    expect(screen.getAllByRole("textbox"), "uma caixa a mais ou a menos").toHaveLength(1);
+    expect(nome.value).toBe("");
+    expect(nome.getAttribute("placeholder") ?? "").toBe("");
     expect(screen.queryAllByTestId(/^pergunta-/)).toHaveLength(0);
 
     fireEvent.change(nome, { target: { value: NOME } });
-    fireEvent.change(cidade, { target: { value: CIDADE } });
     fireEvent.submit(container.querySelector("form")!);
-    const nasce = "lugar-marcador-um-cidade-marcador-um";
-    await waitFor(() => expect(assign).toHaveBeenCalledWith(`/admin/novo?slug=${nasce}`));
-    expect(chamadas[0]).toEqual({ url: "/api/admin/rascunho", metodo: "POST", corpo: { nome: NOME, cidade: CIDADE } });
-    expect(JSON.parse((await lerRascunho(cliente, nasce))!.doc).cidade).toBe(CIDADE);
+    await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+    expect(chamadas[0]).toEqual({ url: "/api/admin/rascunho", metodo: "POST", corpo: { nome: NOME } });
+    const chave = chamadas[0] && new URL(assign.mock.calls[0][0] as string, "http://x").searchParams.get("slug")!;
+    expect(ehChaveDeRascunho(chave), "a tela leva à chave provisória").toBe(true);
+    const doc = JSON.parse((await lerRascunho(cliente, chave))!.doc);
+    expect(doc).toEqual({ slug: chave, modos: [], trajeto: { waypoints: [{ nome: NOME }] } });
   });
 
-  it("sem a cidade: a frase da porta na tela, o nome fica na caixa, e nada nasce", async () => {
+  it("sem o nome: a frase da porta na tela, e nada nasce", async () => {
     const { assign } = await comRotaDeVerdade();
     const { container } = await paginaNovo();
-    const { CIDADE_VAZIA } = await import("@/lib/rascunho");
-    const nome = screen.getByRole("textbox", { name: PERGUNTAS["trajeto.waypoints.0.nome"] }) as HTMLInputElement;
-    fireEvent.change(nome, { target: { value: NOME } });
+    const { NOME_VAZIO } = await import("@/lib/rascunho");
     fireEvent.submit(container.querySelector("form")!);
-    expect(await screen.findByText(CIDADE_VAZIA)).toBeTruthy();
+    expect(await screen.findByText(NOME_VAZIO)).toBeTruthy();
     expect(assign).not.toHaveBeenCalled();
-    expect(nome.value).toBe(NOME);
-    expect(await lerRascunho(cliente, "lugar-marcador-um-cidade-marcador-um")).toBeNull();
+    expect(await listarRascunhos(cliente)).toEqual([]);
   });
 
   // A INVERSÃO DA INVERSÃO (onda de fix da 11b, X2): o nome de um lugar que já
   // está no ar SEM cidade (como os de hoje) não nasce — a tela mostra a frase
-  // que pede a cidade DAQUELE, e o que ele digitou fica nas caixas.
+  // que pede a cidade DAQUELE, e o que ele digitou fica na caixa.
   it("nome de um lugar que já existe SEM cidade: a frase pede a cidade dele, e nada nasce", async () => {
     const { assign } = await comRotaDeVerdade();
     const { container } = await paginaNovo();
@@ -1137,29 +1136,26 @@ describe("/admin/novo — o lugar novo nasce do nome e da cidade", () => {
     expect(alvo.cidade, "a premissa: os lugares de hoje não têm cidade").toBeUndefined();
     const nome = screen.getByRole("textbox", { name: PERGUNTAS["trajeto.waypoints.0.nome"] }) as HTMLInputElement;
     fireEvent.change(nome, { target: { value: alvo.trajeto.waypoints[0].nome } });
-    fireEvent.change(screen.getByRole("textbox", { name: PERGUNTAS.cidade }), { target: { value: CIDADE } });
     fireEvent.submit(container.querySelector("form")!);
     expect(await screen.findByText(gemeoSemCidade(alvo.trajeto.waypoints[0].nome))).toBeTruthy();
     expect(assign).not.toHaveBeenCalled();
     expect(nome.value).toBe(alvo.trajeto.waypoints[0].nome);
-    expect(await lerRascunho(cliente, `${alvo.slug}-cidade-marcador-um`)).toBeNull();
+    expect(await listarRascunhos(cliente)).toEqual([]);
     expect(await historico(cliente, alvo.slug)).toHaveLength(1);
   });
 
-  it("nome e cidade de um rascunho que já existe: a frase da porta na tela, e nada nasce", async () => {
+  it("o mesmo nome duas vezes: os dois rascunhos nascem, cada um na sua chave", async () => {
     const { assign } = await comRotaDeVerdade();
-    const { parDeRascunho } = await import("@/lib/rascunho");
-    await lugarNovo();
-    const { container } = await paginaNovo();
-    fireEvent.change(screen.getByRole("textbox", { name: PERGUNTAS["trajeto.waypoints.0.nome"] }), {
-      target: { value: NOME },
-    });
-    fireEvent.change(screen.getByRole("textbox", { name: PERGUNTAS.cidade }), { target: { value: CIDADE } });
-    fireEvent.submit(container.querySelector("form")!);
-    expect(await screen.findByText(parDeRascunho(`${NOME} (${CIDADE})`))).toBeTruthy();
-    expect(assign).not.toHaveBeenCalled();
-    expect(await lerRascunho(cliente, "lugar-marcador-um-cidade-marcador-um")).toBeNull();
-    expect(screen.getByRole("button", { name: COMECAR })).toBeTruthy();
+    for (let i = 0; i < 2; i++) {
+      cleanup();
+      const { container } = await paginaNovo();
+      fireEvent.change(screen.getByRole("textbox"), { target: { value: NOME } });
+      fireEvent.submit(container.querySelector("form")!);
+      await waitFor(() => expect(assign).toHaveBeenCalledTimes(i + 1));
+    }
+    const chaves = (await listarRascunhos(cliente)).map((r) => r.slug);
+    expect(chaves).toHaveLength(2);
+    expect(chaves.every(ehChaveDeRascunho)).toBe(true);
   });
 });
 
@@ -1204,15 +1200,19 @@ describe("/admin — a lista ganha a porta do lugar novo e a dos rascunhos", () 
     expect(within(item).getByText(CIDADE)).toBeTruthy();
   });
 
-  it("rascunho SEM cidade (nascido antes da 11b): só o nome, e nenhuma palavra no lugar dela", async () => {
-    expect(await criarRascunho(cliente, S, JSON.stringify({ slug: S, modos: [], trajeto: { waypoints: [{ nome: NOME }] } }), 1)).toBe(true);
+  // Review Focus 4: o rascunho do painel nasce SEM cidade, na chave provisória.
+  it("a lista mostra o rascunho sem cidade pelo nome, sem 'sem cidade' e sem a chave", async () => {
+    const chave = novaChaveDeRascunho();
+    expect(await criarRascunho(cliente, chave, docDoLugarNovo(chave, NOME), 1)).toBe(true);
     await paginaAdmin();
-    const item = screen.getByTestId("rascunhos").querySelector<HTMLElement>(`[data-rascunho="${S}"]`)!;
+    const item = screen.getByTestId("rascunhos").querySelector<HTMLElement>(`[data-rascunho="${chave}"]`)!;
     // O link de CONTINUAR é o do nome; o outro do item é o "publicar" (Tarefa 12).
     const continuar = within(item).getByRole("link", { name: new RegExp(NOME) });
     expect(continuar.textContent).toBe(NOME);
+    expect(continuar.getAttribute("href")).toBe(`/admin/novo?slug=${chave}`);
     // E o "Desistir deste lugar" (Tarefa 15), o terceiro toque do item.
     expect(item.textContent).toBe(NOME + IR_PUBLICAR + DESISTIR);
+    expect(item.textContent).not.toMatch(/sem cidade/i);
   });
 
   // 🔴 TAREFA 12 (R3): a segunda porta pra tela de publicar — e é um LINK, que
@@ -1315,7 +1315,7 @@ describe("o formulário e a lista têm regra no admin.css", () => {
     await salvarRascunho(
       cliente,
       S,
-      JSON.stringify({ ...JSON.parse(docDoLugarNovo(S, NOME, CIDADE)), horario: { abre: "05:00", fecha: "17:00" } }),
+      JSON.stringify({ ...JSON.parse(docComCidade(S, NOME, CIDADE)), horario: { abre: "05:00", fecha: "17:00" } }),
       2,
     );
     await comRotaDeVerdade();

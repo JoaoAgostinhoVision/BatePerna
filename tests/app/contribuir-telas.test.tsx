@@ -156,17 +156,17 @@ describe("Meus lugares", () => {
 });
 
 describe("as perguntas na tela", () => {
-  it("sem slug: começar (nome e cidade), pela rota dela", async () => {
+  it("sem slug: começar (só o nome), pela rota dela", async () => {
     const fetch = portasFalsas();
     const { container } = render(await Novo({ searchParams: Promise.resolve({}) }));
-    expect(container.querySelectorAll("input")).toHaveLength(2);
+    expect(container.querySelectorAll("input")).toHaveLength(1);
     // 🔴 I2(b): o rascunho nasce pela porta DELA, nunca pela do painel.
     fireEvent.change(container.querySelectorAll("input")[0], { target: { value: "Pedra" } });
-    fireEvent.change(container.querySelectorAll("input")[1], { target: { value: "Cidade" } });
     fireEvent.submit(container.querySelector("form")!);
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
     expect(fetch.mock.calls[0][0]).toBe("/api/contribuir/rascunho");
     expect(fetch.mock.calls[0][1]?.method).toBe("POST");
+    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toEqual({ nome: "Pedra" });
   });
 
   // 🔴 I2(a) da revisão: a pergunta do rascunho dela grava pela rota DELA e

@@ -7,6 +7,7 @@ import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
 import { CAMPOS_DA_FICHA, lerCaminho } from "@/lib/campos-da-ficha";
 import {
+  apagarRascunho,
   ensureSchema,
   gravarVersao,
   historico,
@@ -21,6 +22,7 @@ import {
   NOME_SEM_LETRA,
   NOME_VAZIO,
   SLUGS_RESERVADOS,
+  ehChaveDeRascunho,
   enderecoDeLugar,
   enderecoDeRascunho,
   gemeoSemCidade,
@@ -29,7 +31,7 @@ import {
   slugDoNome,
 } from "@/lib/rascunho";
 import type { Ficha } from "@/types/ficha";
-import { criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
+import { criarRascunhoDaPessoa, novaChaveDeRascunho } from "@/lib/db-contribuidor";
 import { PESSOA_DE_TESTE, rascunhoNoBanco, salvarRascunho, semearAcervo } from "../banco";
 
 /** A PORTA DO RASCUNHO (Tarefa 11): `/api/admin/rascunho`.
@@ -95,9 +97,33 @@ function pedido(metodo: string, corpo: unknown, cookie?: string, busca = ""): Re
 // vira o cookie bom em silêncio, e o caso do 401 manda sessão válida. Medido:
 // foi assim que os dois casos de 401 nasceram, VERMELHOS contra uma rota certa
 // (201 e 200 onde se esperava 401) — o defeito era do teste, não da porta.
-const criar = (nome: string, cidade: string = CIDADE, cookie: string | null = cookieBom) =>
-  rota.POST(pedido("POST", { nome, cidade }, cookie ?? undefined));
+
+/** 🔴 17/10: o lugar nasce SÓ do nome (`POST {nome}`, numa chave provisória) e a
+ *  cidade só chega pelo PUT de campo `cidade` — até a Task 3 (a cidade sai do
+ *  ponto) esse PUT é o único caminho, e é ele que leva o rascunho ao endereço
+ *  nome + cidade. `criar` faz os dois passos, pra os casos de PAR e de ENDEREÇO
+ *  (que agora moram no PUT) continuarem medindo a mesma coisa. Se o POST recusa,
+ *  devolve a recusa dele; se o PUT recusa, apaga o rascunho provisório e devolve
+ *  a recusa do PUT (os casos que dizem "nada nasce" olham o banco); se tudo
+ *  passa, devolve 201 com o endereço, como o POST de antes. */
+async function criar(nome: string, cidade: string = CIDADE, cookie: string | null = cookieBom): Promise<Response> {
+  const nasceu = await rota.POST(pedido("POST", { nome }, cookie ?? undefined));
+  if (nasceu.status !== 201) return nasceu;
+  const { slug: chave } = (await nasceu.clone().json()) as { slug: string };
+  const res = await rota.PUT(pedido("PUT", { slug: chave, campo: "cidade", valor: cidade }, cookie ?? undefined));
+  if (res.status !== 200) {
+    await apagarRascunho(c, chave);
+    return res;
+  }
+  return Response.json(await res.json(), { status: 201 });
+}
 const mudar = (corpo: unknown, cookie: string | null = cookieBom) => rota.PUT(pedido("PUT", corpo, cookie ?? undefined));
+/** O documento do rascunho que o POST {nome} fez nascer. */
+async function docDoPost(nome: string): Promise<Record<string, unknown>> {
+  const r = await rota.POST(pedido("POST", { nome }, cookieBom));
+  expect(r.status).toBe(201);
+  return JSON.parse((await lerRascunho(c, ((await r.json()) as { slug: string }).slug))!.doc);
+}
 const docDe = async (slug: string): Promise<Record<string, unknown>> => JSON.parse((await lerRascunho(c, slug))!.doc);
 
 /** Esconde um lugar do jeito que a porta de visibilidade faz: versão nova, `oculto`. */
@@ -179,14 +205,60 @@ describe("POST — o lugar novo nasce", () => {
   // disse (o nome e a cidade), a identidade (`slug`) e o `modos: []` da R3.
   it("rascunho novo nasce VAZIO — não herda de lugar nenhum", async () => {
     expect(acervo.length, "a premissa: há lugares no banco de onde copiar").toBeGreaterThan(1);
-    expect((await criar(NOME)).status).toBe(201);
-    const doc = await docDe(S);
-    expect(doc).toEqual({ slug: S, modos: [], cidade: CIDADE, trajeto: { waypoints: [{ nome: NOME }] } });
+    const doc = await docDoPost(NOME);
+    expect(doc).toEqual({ slug: doc.slug, modos: [], trajeto: { waypoints: [{ nome: NOME }] } });
     for (const campo of CAMPOS_DA_FICHA) {
       const caminho = campo.caminho.replace("[]", ".0");
-      if (caminho === "trajeto.waypoints.0.nome" || caminho === "cidade") continue;
+      if (caminho === "trajeto.waypoints.0.nome") continue;
       expect(lerCaminho(doc, caminho.split(".")), caminho).toBeUndefined();
     }
+  });
+
+  // 🔴 17/10 (M2): sem cidade não há endereço — o rascunho nasce numa CHAVE
+  // PROVISÓRIA (`rascunho_<hex>`, a de quem usa o app), e o `slug` de dentro do
+  // documento é essa chave. Medido pelo corpo da resposta E pelo documento.
+  it("POST {nome} nasce numa chave provisória, com o documento exato", async () => {
+    const r = await rota.POST(pedido("POST", { nome: NOME }, cookieBom));
+    expect(r.status).toBe(201);
+    const { slug } = (await r.json()) as { slug: string };
+    expect(ehChaveDeRascunho(slug)).toBe(true);
+    expect(slug).not.toBe(slugDoNome(NOME));
+    expect(JSON.parse((await lerRascunho(c, slug))!.doc)).toEqual({ slug, modos: [], trajeto: { waypoints: [{ nome: NOME }] } });
+    expect(await versaoAtual(c, slug)).toBeNull();
+  });
+
+  it("POST com cidade é 400, nada nasce", async () => {
+    expect((await rota.POST(pedido("POST", { nome: NOME, cidade: CIDADE }, cookieBom))).status).toBe(400);
+    expect(await listarRascunhos(c)).toEqual([]);
+  });
+
+  it("dois rascunhos do João com o MESMO nome, sem cidade, nascem os dois", async () => {
+    const a = await rota.POST(pedido("POST", { nome: NOME }, cookieBom));
+    const b = await rota.POST(pedido("POST", { nome: ` ${NOME.toUpperCase()} ` }, cookieBom));
+    expect([a.status, b.status]).toEqual([201, 201]);
+    const chaves = (await listarRascunhos(c)).map((r) => r.slug);
+    expect(chaves).toHaveLength(2);
+    expect(new Set(chaves).size).toBe(2);
+  });
+
+  // M4: o gêmeo de um LUGAR sem cidade continua recusado na tela do nome, com
+  // a frase que pede a cidade DELE — e nada nasce.
+  it("o gêmeo de um LUGAR sem cidade continua recusado na tela do nome", async () => {
+    const alvo = acervo.find((f) => slugDoNome(f.trajeto.waypoints[0].nome) === f.slug)!;
+    const nome = alvo.trajeto.waypoints[0].nome;
+    const res = await rota.POST(pedido("POST", { nome }, cookieBom));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(gemeoSemCidade(nome));
+    expect(await listarRascunhos(c)).toEqual([]);
+  });
+
+  it("a chave provisória nunca é uma tela nem um endereço", () => {
+    const k = novaChaveDeRascunho();
+    expect(ehChaveDeRascunho(k)).toBe(true);
+    expect(SLUGS_RESERVADOS).not.toContain(k);
+    expect(slugDoNome(k)).not.toBe(k);
+    expect(ehChaveDeRascunho(slugDoNome(NOME))).toBe(false);
+    expect(ehChaveDeRascunho("rascunho_" + "g".repeat(32))).toBe(false);
   });
 
   it("sem cookie: 401, e nada nasce", async () => {
@@ -282,23 +354,22 @@ describe("POST — o lugar novo nasce", () => {
     expect(h[0].oculto).toBe(true);
   });
 
-  // Um rascunho começado ANTES da 11b não tem cidade: o gêmeo dele também espera.
-  // E a cidade sem letra nem número (`"--"`, gravada antes de as portas a
-  // recusarem — o schema a aceita) não separa nada: conta como sem cidade.
-  it("nome de um RASCUNHO sem cidade, ou com cidade sem letra: 409 pedindo a cidade dele, e ele não muda", async () => {
+  // 17/10: rascunho do João sem cidade (o estado normal de todo lugar novo), ou
+  // com cidade sem letra nem número (`"--"`, gravada antes de as portas a
+  // recusarem), NÃO é gêmeo — só LUGAR é. Era 409 `gemeoSemCidade`, e a frase
+  // manda responder uma cidade que não existe mais como pergunta (M3).
+  it("nome de um RASCUNHO sem cidade, ou com cidade sem letra: nasce, e o outro não muda", async () => {
     const doc = JSON.stringify({ slug: "marcador-rascunho-antigo", modos: [], trajeto: { waypoints: [{ nome: NOME }] } });
     await salvarRascunho(c, "marcador-rascunho-antigo", doc, AGORA);
-    const res = await criar(NOME, CIDADE);
-    expect(res.status).toBe(409);
-    expect(await res.text()).toBe(gemeoSemCidade(NOME));
-    expect((await listarRascunhos(c)).map((r) => r.slug)).toEqual(["marcador-rascunho-antigo"]);
+    const res = await rota.POST(pedido("POST", { nome: NOME }, cookieBom));
+    expect(res.status).toBe(201);
     expect((await lerRascunho(c, "marcador-rascunho-antigo"))!.doc).toBe(doc);
 
     const tracos = JSON.stringify({ slug: "marcador-rascunho-tracos", modos: [], cidade: "--", trajeto: { waypoints: [{ nome: "Lugar Marcador Nove" }] } });
     await salvarRascunho(c, "marcador-rascunho-tracos", tracos, AGORA);
-    const res2 = await criar("Lugar Marcador Nove", CIDADE);
-    expect(res2.status).toBe(409);
-    expect(await res2.text()).toBe(gemeoSemCidade("Lugar Marcador Nove"));
+    const res2 = await rota.POST(pedido("POST", { nome: "Lugar Marcador Nove" }, cookieBom));
+    expect(res2.status).toBe(201);
+    expect((await listarRascunhos(c)).map((r) => r.slug)).toHaveLength(4);
   });
 
   it("nome E cidade de um rascunho que já existe: 409, e o primeiro não perde nada", async () => {
@@ -340,17 +411,17 @@ describe("POST — o lugar novo nasce", () => {
     expect(await listarRascunhos(c)).toEqual([]);
   });
 
-  // Exatamente `{nome, cidade}`: chave a menos (o corpo de antes da 11b, só com
-  // o nome) ou a mais (um `slug` escolhido por fora) é corpo malformado.
+  // Exatamente `{nome}`: chave a mais (uma `cidade`, um `slug` escolhido por
+  // fora) ou a menos é corpo malformado.
   it("corpo malformado: 400 sem nada nascer", async () => {
     for (const corpo of [
       null,
       { nome: 7, cidade: CIDADE },
       { nome: NOME, cidade: 7 },
       {},
-      { nome: NOME },
       { cidade: CIDADE },
-      { nome: NOME, cidade: CIDADE, slug: "outro" },
+      { nome: NOME, cidade: CIDADE },
+      { nome: NOME, slug: "outro" },
     ]) {
       expect((await rota.POST(pedido("POST", corpo, cookieBom))).status, JSON.stringify(corpo)).toBe(400);
     }
@@ -362,6 +433,16 @@ describe("POST — o lugar novo nasce", () => {
 describe("PUT — responder uma pergunta", () => {
   beforeEach(async () => {
     expect((await criar(NOME)).status).toBe(201);
+  });
+
+  // M5: antes do ponto não há cidade, e renomear só regrava.
+  it("renomear antes do ponto: regrava, a chave não muda, sem CIDADE_VAZIA", async () => {
+    const chave = ((await (await rota.POST(pedido("POST", { nome: "Lugar Marcador Seis" }, cookieBom))).json()) as { slug: string }).slug;
+    const res = await mudar({ slug: chave, campo: "trajeto.waypoints.0.nome", valor: "Lugar Marcador Sete" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await res.json()).toEqual({ slug: chave });
+    expect(await docDe(chave)).toEqual({ slug: chave, modos: [], trajeto: { waypoints: [{ nome: "Lugar Marcador Sete" }] } });
+    expect((await listarRascunhos(c)).map((r) => r.slug).sort()).toEqual([chave, S].sort());
   });
 
   it("grava o campo no rascunho, e NADA entra em ficha_versoes", async () => {
@@ -739,9 +820,10 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
 
   // O endereço precisa de letra nas duas metades — é o que garante o hífen que
   // nunca deixa um lugar cair numa tela do app. Renomear o rascunho pra um nome
-  // sem letra é recusado com a frase do POST; e um rascunho sem cidade (nenhum
-  // nasce assim desde a 11b) não muda de nome antes de ganhá-la.
-  it("renomear o rascunho pra nome sem letra, ou um rascunho sem cidade: 400 com a frase do POST, e nada muda", async () => {
+  // sem letra é recusado com a frase do POST; e um rascunho sem cidade (o estado
+  // normal desde 17/10) renomeia sem pedir cidade (M5): só regrava, a chave e o
+  // `slug` de dentro ficam.
+  it("renomear o rascunho pra nome sem letra: 400 com a frase do POST; renomear antes do ponto regrava, sem CIDADE_VAZIA", async () => {
     expect((await criar(NOME, CIDADE)).status).toBe(201);
     const antes = (await lerRascunho(c, S))!.doc;
     for (const valor of ["--", " ... "]) {
@@ -751,14 +833,17 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
     }
     expect((await lerRascunho(c, S))!.doc).toBe(antes);
 
-    const sem = "lugar-marcador-sem-cidade";
-    await salvarRascunho(c, sem, JSON.stringify({ slug: sem, modos: [], trajeto: { waypoints: [{ nome: "Novo" }] } }), AGORA);
-    const semAntes = (await lerRascunho(c, sem))!.doc;
+    const sem = (await (await rota.POST(pedido("POST", { nome: "Novo" }, cookieBom))).json()).slug as string;
+    expect(ehChaveDeRascunho(sem), "a premissa: nasceu sem cidade, na chave provisória").toBe(true);
     const res = await mudar({ slug: sem, campo: "trajeto.waypoints.0.nome", valor: "Admin" });
-    expect(res.status).toBe(400);
-    expect(await res.text()).toBe(CIDADE_VAZIA);
-    expect((await lerRascunho(c, sem))!.doc).toBe(semAntes);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ slug: sem });
+    expect(await docDe(sem)).toEqual({ slug: sem, modos: [], trajeto: { waypoints: [{ nome: "Admin" }] } });
     expect(await lerRascunho(c, "admin")).toBeNull();
+    // e nome sem letra continua recusado antes do ponto
+    const semLetra = await mudar({ slug: sem, campo: "trajeto.waypoints.0.nome", valor: "--" });
+    expect(semLetra.status).toBe(400);
+    expect(await semLetra.text()).toBe(NOME_SEM_LETRA);
   });
 
   // 🔴 11b-M3: renomear, ou mudar a cidade, de um rascunho passa pelo MESMO par.
@@ -918,7 +1003,7 @@ describe("meia coordenada no rascunho (onda de conserto 1)", () => {
 describe("sem cookie, nos quatro métodos", () => {
   it("401 com corpo VAZIO", async () => {
     for (const [metodo, corpo] of [
-      ["POST", { nome: NOME, cidade: CIDADE }],
+      ["POST", { nome: NOME }],
       ["PUT", { slug: S, campo: "voz", valor: "x" }],
       ["GET", undefined],
       ["DELETE", { slug: S }],
@@ -940,7 +1025,7 @@ describe("GET e DELETE", () => {
   it("GET lista os rascunhos; com ?slug= devolve o documento", async () => {
     const lista = await rota.GET(pedido("GET", undefined, cookieBom));
     expect(lista.status).toBe(200);
-    expect(await lista.json()).toEqual({ rascunhos: [{ slug: S, nome: NOME, atualizado_em: AGORA }] });
+    expect(await lista.json()).toEqual({ rascunhos: [{ slug: S, nome: NOME, atualizado_em: (await lerRascunho(c, S))!.atualizado_em }] });
     const um = await rota.GET(pedido("GET", undefined, cookieBom, `?slug=${S}`));
     expect(await um.json()).toEqual({ slug: S, doc: await docDe(S) });
     expect((await rota.GET(pedido("GET", undefined, cookieBom, "?slug=nao-tem"))).status).toBe(404);

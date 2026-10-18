@@ -1,6 +1,7 @@
 /** O LUGAR NOVO, ANTES DE EXISTIR (Tarefa 11): de onde sai o endereço dele, e
- *  o que um rascunho tem quando nasce. Desde a Tarefa 11b (2026-10-04), o lugar
- *  nasce com NOME e CIDADE, e é a cidade que separa dois lugares de mesmo nome.
+ *  o que um rascunho tem quando nasce. Desde a Tarefa 11b (2026-10-04), é a
+ *  cidade que separa dois lugares de mesmo nome; desde 17/10 o lugar NASCE só
+ *  do nome, e a cidade chega depois, do ponto que a pessoa marca no mapa.
  *
  *  ⚠️ Sem `zod` e sem o registro de campos de propósito: este módulo é lido pela
  *  rota e pela página de servidor, mas nada aqui precisaria pesar no celular. */
@@ -34,7 +35,9 @@ export function slugDoNome(nome: string): string {
  *
  *  Desde a onda de fix da Tarefa 11b, nenhum endereço de lugar novo chega a
  *  uma delas POR CONSTRUÇÃO: o endereço é sempre nome + cidade, os dois com
- *  letra, então tem sempre um hífen no meio — e nenhuma tela tem. A lista fica
+ *  letra, então tem sempre um hífen no meio — e nenhuma tela tem. (O rascunho
+ *  que ainda não tem cidade mora numa chave `rascunho_<hex>`, com `_`: também
+ *  nunca é uma tela — ver `ehChaveDeRascunho`.) A lista fica
  *  como a prova disso, e por isso é VIGIADA PELO DISCO: o teste
  *  `route-admin-rascunho.test.ts` lê as pastas de `src/app`, de `src/app/admin`
  *  e de `src/app/contribuir` (o editar dela mora em `/contribuir/<slug>`) e
@@ -111,17 +114,28 @@ export const RASCUNHO_NAO_EXISTE_MAIS =
 /** O DOCUMENTO COM QUE UM RASCUNHO NASCE — e é tudo o que ele tem.
  *
  *  🔴 NADA É PRÉ-PREENCHIDO (spec §4.4): nenhum campo vem de outro lugar, de
- *  busca, ou de mim. Quatro chaves, e cada uma tem dono:
- *   - `slug` — a identidade, derivada do nome e da cidade;
+ *  busca, ou de mim. Três chaves, e cada uma tem dono:
+ *   - `slug` — a identidade: a CHAVE provisória no painel (o documento não diz
+ *     um endereço e mora noutro), `""` pra quem usa o app (a chave dela só
+ *     existe dentro do `INSERT`, e o `slug` de dentro só vale no publicar, que o
+ *     recalcula);
  *   - `trajeto.waypoints[0].nome` — o nome que ELE acabou de digitar;
- *   - `cidade` — a cidade que ELE acabou de digitar (Tarefa 11b);
  *   - `modos: []` — ruling R3 da spec: o campo fica no schema e sai do
  *     formulário, e criar grava a lista vazia. Não afirma nada sobre o lugar
  *     (nenhuma tela lê `modos` hoje).
+ *  SEM `cidade`: ela só entra quando a pessoa marca o ponto (spec de 17/10).
  *  Há teste que cria o rascunho pela rota, com o acervo inteiro no banco, e
  *  exige este documento EXATO. */
-export function docDoLugarNovo(slug: string, nome: string, cidade: string): string {
-  return JSON.stringify({ slug, modos: [], cidade, trajeto: { waypoints: [{ nome }] } });
+export function docDoLugarNovo(slug: string, nome: string): string {
+  return JSON.stringify({ slug, modos: [], trajeto: { waypoints: [{ nome }] } });
+}
+
+/** A CHAVE PROVISÓRIA de um rascunho (`rascunho_` + 32 hexadecimais, a de
+ *  `novaChaveDeRascunho`): o lugar que ainda não tem cidade não tem endereço, e
+ *  mora nela. O `_` é a garantia — nenhum endereço (`slugDoNome`) nem pasta de
+ *  `SLUGS_RESERVADOS` tem `_`. */
+export function ehChaveDeRascunho(slug: string): boolean {
+  return /^rascunho_[0-9a-f]{32}$/.test(slug);
 }
 
 /** O documento de um rascunho com o `slug` de dentro trocado pelo endereço

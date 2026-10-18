@@ -15,8 +15,9 @@ export const TITULO_RASCUNHOS = "Começados, ainda fora do ar";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const IR_PUBLICAR = "publicar";
 
-/** Um rascunho na lista: o slug (pro link), o nome e a cidade que ele digitou
- *  ao criar. `cidade` ausente: rascunho nascido antes da Tarefa 11b — cala. */
+/** Um rascunho na lista: o slug (pro link), o nome que ele digitou e a
+ *  cidade, quando já há (ela vem do ponto, depois de nascer). `cidade` ausente:
+ *  rascunho ainda sem ponto — cala. */
 export type RascunhoNaLista = { slug: string; nome: string; cidade?: string };
 
 type Props = {

@@ -94,22 +94,24 @@ const LIVRE = `NOT EXISTS (SELECT 1 FROM contribuidores WHERE id = ? AND bloquea
 const ENDERECO_LIVRE = `NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug = ?)
                        AND NOT EXISTS (SELECT 1 FROM enderecos_antigos WHERE velho = ?)`;
 
-/** 🔴 A CHAVE DO RASCUNHO DELA (Task 17) — e ela NUNCA é um endereço. Até a
- *  Task 17 a chave de `ficha_rascunhos` era o endereço onde o lugar ia nascer,
- *  e por isso dois rascunhos de mesmo nome e cidade não cabiam: o primeiro
- *  ocupava o par pra sempre, mesmo abandonado. A decisão do João de 13/10
- *  ("rascunho não deve bloquear", "Nenhum ocupa") tirou o endereço da chave: o
- *  endereço é calculado do nome e da cidade do documento NA HORA DE PUBLICAR,
- *  e quem publicar primeiro fica com ele.
+/** 🔴 A CHAVE DE UM RASCUNHO SEM ENDEREÇO (Task 17, e do painel desde 17/10) —
+ *  e ela NUNCA é um endereço. Até a Task 17 a chave de `ficha_rascunhos` era o
+ *  endereço onde o lugar ia nascer, e por isso dois rascunhos de mesmo nome e
+ *  cidade não cabiam: o primeiro ocupava o par pra sempre, mesmo abandonado. A
+ *  decisão do João de 13/10 ("rascunho não deve bloquear", "Nenhum ocupa") tirou
+ *  o endereço da chave dela: o endereço é calculado do nome e da cidade do
+ *  documento NA HORA DE PUBLICAR, e quem publicar primeiro fica com ele. Em
+ *  17/10 o lugar passou a nascer só do nome (a cidade vem do ponto), então o
+ *  rascunho do João também nasce nela: não há endereço sem cidade.
  *
- *  O formato é `rascunho_` + 32 dígitos hexadecimais. O `_` é o ponto: todo
- *  endereço sai de `slugDoNome` (só `[a-z0-9-]`) ou da semente (o mesmo
- *  formato), então a chave nunca coincide com um endereço — nem de lugar, nem
- *  de rascunho do João (cuja chave continua sendo o endereço), nem antigo — e
- *  as portas do João que conferem "endereço livre de rascunho" (`criarRascunho`,
- *  `moverRascunho`, `trocarEndereco`) nunca esbarram num rascunho dela. Anda
- *  na URL das telas dela (`?slug=`) sem mudar. Provado em
- *  `tests/api/rascunho-nao-ocupa.test.ts`. */
+ *  O formato é `rascunho_` + 32 dígitos hexadecimais (`ehChaveDeRascunho`). O
+ *  `_` é o ponto: todo endereço sai de `slugDoNome` (só `[a-z0-9-]`) ou da
+ *  semente (o mesmo formato), então a chave nunca coincide com um endereço —
+ *  nem de lugar, nem de rascunho que já tem cidade (cuja chave, no painel,
+ *  passa a ser o endereço), nem antigo — e as portas que conferem "endereço
+ *  livre de rascunho" (`criarRascunho`, `moverRascunho`, `trocarEndereco`)
+ *  nunca esbarram num rascunho sem cidade. Anda na URL das telas (`?slug=`)
+ *  sem mudar. Provado em `tests/api/rascunho-nao-ocupa.test.ts`. */
 export function novaChaveDeRascunho(): string {
   return `rascunho_${randomUUID().replace(/-/g, "")}`;
 }
@@ -182,15 +184,17 @@ export async function desbloquearContribuidor(client: Client, id: string): Promi
 /** O rascunho DELA nasce, numa CHAVE nova (`novaChaveDeRascunho`), e devolve a
  *  chave — `null` quando nada nasceu: ela está bloqueada, ou o `endereco` que o
  *  nome e a cidade dela dariam já é de um lugar ou endereço antigo
- *  (`ENDERECO_LIVRE`). Rascunho de ninguém recusa (Task 17). Numa consulta só. */
+ *  (`ENDERECO_LIVRE`). `endereco === null` (o lugar que nasce só do nome: não há
+ *  endereço sem cidade) pula essa conferência, como `regravarRascunhoDaPessoa`.
+ *  Rascunho de ninguém recusa (Task 17). Numa consulta só. */
 export async function criarRascunhoDaPessoa(
-  client: Client, endereco: string, doc: string, agora: number, id: string,
+  client: Client, endereco: string | null, doc: string, agora: number, id: string,
 ): Promise<string | null> {
   const chave = novaChaveDeRascunho();
   const r = await client.execute({
     sql: `INSERT INTO ficha_rascunhos (slug, doc, atualizado_em, contribuidor)
-          SELECT ?, ?, ?, ? WHERE ${ENDERECO_LIVRE} AND ${LIVRE}`,
-    args: [chave, doc, agora, id, endereco, endereco, id],
+          SELECT ?, ?, ?, ? WHERE (? IS NULL OR (${ENDERECO_LIVRE})) AND ${LIVRE}`,
+    args: [chave, doc, agora, id, endereco, endereco, endereco, id],
   });
   return r.rowsAffected === 1 ? chave : null;
 }

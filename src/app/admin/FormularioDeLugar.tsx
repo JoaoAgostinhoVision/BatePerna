@@ -202,7 +202,7 @@ export default function FormularioDeLugar({
       <section className="adm-novo" data-rascunho={slug}>
         <p className="adm-novo-aviso">{AVISO_RASCUNHO}</p>
         {/* Desistir (Tarefa 15): em TODA pergunta, porque este componente só
-            existe com o rascunho já nascido — a tela do nome e da cidade é o
+            existe com o rascunho já nascido — a tela do nome é o
             `ComecarLugarNovo`, sem ele. Apagado, volta à lista (a do painel, ou
             a de quem usa — `ROTAS[onde].desistiu`). */}
         <BotaoDesistir slug={slug} voltarAoPainel onde={onde} />
@@ -238,25 +238,25 @@ export default function FormularioDeLugar({
   );
 }
 
-/** O NOME E A CIDADE, ANTES DE TUDO — é deles que sai o endereço do lugar
- *  (Tarefa 11b: dois lugares podem ter o mesmo nome, e a cidade os separa).
+/** O NOME, ANTES DE TUDO — é a única pergunta da tela 1 (17/10: a cidade não
+ *  é mais uma caixa; vem do ponto que ele marca no mapa, e o endereço do lugar
+ *  sai dela depois).
  *
- *  As perguntas são as do questionário (chegam por prop, do servidor), e as
- *  duas caixas nascem VAZIAS, sem placeholder. A porta (`POST
- *  /api/admin/rascunho`) faz o rascunho nascer e recusa com frase a caixa vazia,
- *  o nome e a cidade de um lugar (inclusive escondido) ou de um rascunho que já
- *  existe, e o endereço ocupado; a frase dela aparece aqui como chegou, e o que
- *  ele digitou fica nas caixas. Com `onde="contribuir"` a porta é
- *  `POST /api/contribuir/rascunho`, e o 401 (a sessão do Clerk venceu) recarrega. */
+ *  A pergunta é a do questionário (chega por prop, do servidor), e a caixa
+ *  nasce VAZIA, sem placeholder. A porta (`POST /api/admin/rascunho`) faz o
+ *  rascunho nascer, numa chave provisória, e recusa com frase o nome vazio ou
+ *  sem letra e o nome de um lugar que ainda não tem cidade; a frase dela
+ *  aparece aqui como chegou, e o que ele digitou fica na caixa. Com
+ *  `onde="contribuir"` a porta é `POST /api/contribuir/rascunho`, e o 401 (a
+ *  sessão do Clerk venceu) recarrega. */
 export function ComecarLugarNovo({
-  perguntas,
+  pergunta,
   onde = "painel",
 }: {
-  perguntas: { nome: string; cidade: string };
+  pergunta: string;
   onde?: Onde;
 }) {
   const [nome, setNome] = useState("");
-  const [cidade, setCidade] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [indo, setIndo] = useState(false);
 
@@ -266,7 +266,7 @@ export function ComecarLugarNovo({
     setErro(null);
     setIndo(true);
     try {
-      const r = await fetch(ROTAS[onde].rascunhoApi, { method: "POST", body: JSON.stringify({ nome, cidade }) });
+      const r = await fetch(ROTAS[onde].rascunhoApi, { method: "POST", body: JSON.stringify({ nome }) });
       if (r.ok) {
         const { slug } = (await r.json()) as { slug: string };
         location.assign(ROTAS[onde].comecou(slug));
@@ -288,12 +288,8 @@ export function ComecarLugarNovo({
   return (
     <form className="adm-porta adm-novo-nome" onSubmit={comecar}>
       <label className="adm-rotulo">
-        {perguntas.nome}
+        {pergunta}
         <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} />
-      </label>
-      <label className="adm-rotulo">
-        {perguntas.cidade}
-        <input type="text" value={cidade} onChange={(e) => setCidade(e.target.value)} />
       </label>
       <button type="submit" disabled={indo}>
         {indo ? COMECANDO : COMECAR}

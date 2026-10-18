@@ -1,6 +1,7 @@
-import { getClient, listarRascunhos, versoesAtuais } from "@/lib/db";
+import { getClient, lerRascunho, listarRascunhos, versaoAtual, versoesAtuais } from "@/lib/db";
 import {
-  cidadeDoDoc, gemeoSemCidade, nomeComCidade, nomeDoRascunho, parDeLugar, parDeRascunho, slugDoNome,
+  cidadeDoDoc, enderecoDeLugar, enderecoDeRascunho, gemeoSemCidade, nomeComCidade, nomeDoRascunho, parDeLugar,
+  parDeRascunho, slugDoNome,
 } from "@/lib/rascunho";
 
 /** O QUE COLIDIU — sem frase. `quem` é o nome (e a cidade, se houver) de quem
@@ -40,6 +41,13 @@ export type QuemPergunta = "joao" | "pessoa";
  *     sempre. Quem publica primeiro fica com o par; o segundo esbarra no
  *     LUGAR, na hora de publicar;
  *  menos `exceto` (o próprio lugar ou rascunho, quando ele muda nome ou cidade).
+ *
+ *  🔴 RASCUNHO DO JOÃO SEM CIDADE NÃO É GÊMEO (17/10: o lugar nasce só do nome,
+ *  e a cidade só chega com o ponto): o gêmeo sem cidade é pergunta pra quem
+ *  responde a cidade de um LUGAR, e rascunho ainda sem cidade é o estado normal
+ *  de todo lugar novo — contá-lo recusaria o segundo "Pedra do Navio" dele com
+ *  uma frase que manda responder uma cidade que nem existe ainda. Só lugar
+ *  conta como gêmeo; rascunho do João COM cidade continua contando no par.
  *
  *  🔴 O GÊMEO DE UM LUGAR SEM CIDADE (X2 da onda de fix): o par só separa dois
  *  lugares quando os DOIS têm cidade. Os que nasceram antes da 11b não têm até o
@@ -107,9 +115,28 @@ export async function colisaoDoPar(
   if (quem === "pessoa") return null;
   for (const r of await listarRascunhos(getClient())) {
     const achou = bate(r.doc, r.slug);
-    if (achou !== null) return { de: "rascunho-do-joao", ...achou };
+    if (achou !== null && !achou.semCidade) return { de: "rascunho-do-joao", ...achou };
   }
   return null;
+}
+
+/** QUEM OCUPA um endereço que `criarRascunho` ou `moverRascunho` recusou — a
+ *  frase nomeia o lugar (ou o rascunho do João) que JÁ ESTÁ lá, com o nome e a
+ *  cidade DELE, lidos do dado. `versaoAtual`, NUNCA a leitura pública
+ *  (`versoesAtuais` sem `incluirOcultos`): com ela, um lugar escondido levaria a
+ *  frase do rascunho. Era o `quemOcupa` da rota do rascunho; mora aqui porque a
+ *  rota do Next não pode exportar nada além dos métodos. */
+export async function quemOcupaNoPainel(endereco: string): Promise<string> {
+  const lugar = await versaoAtual(getClient(), endereco);
+  if (lugar !== null) {
+    return enderecoDeLugar(nomeComCidade(nomeDoRascunho(lugar.doc, endereco), cidadeDoDoc(lugar.doc)));
+  }
+  // `lerRascunho` (só os do João): o rascunho de quem usa o app não ocupa
+  // endereço — a chave dele nunca é um endereço (Task 17), e o `criarRascunho`
+  // não o vê.
+  const r = await lerRascunho(getClient(), endereco);
+  const doc = r?.doc ?? "";
+  return enderecoDeRascunho(nomeComCidade(nomeDoRascunho(doc, endereco), cidadeDoDoc(doc)));
 }
 
 /** A FRASE DO PAINEL pra uma colisão. */
@@ -165,9 +192,9 @@ export async function colisaoDaMudanca(
 }
 
 /** O PAR DE UMA MUDANÇA — o que os dois PUTs (rascunho e ficha no ar) chamam
- *  antes de gravar. Renomear, ou mudar a cidade, é a segunda porta do mesmo
- *  buraco do POST: um lugar que nasceu com um par não pode virar o par de outro
- *  depois (11b-M3, e X4 da onda de fix). O par novo é o valor que chega e a
+ *  antes de gravar. Renomear, ou mudar a cidade, é a porta onde o par de um
+ *  lugar novo se confere (o POST nasce só do nome, sem cidade): um lugar não
+ *  pode virar o par de outro (11b-M3, e X4 da onda de fix). O par novo é o valor que chega e a
  *  outra metade como está no documento `atual` do próprio `slug`, que fica de
  *  fora da comparação. Qualquer outro campo, ou valor que não é texto (a folha
  *  o recusa depois): `null`. */

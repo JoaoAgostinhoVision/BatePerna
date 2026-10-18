@@ -10,7 +10,7 @@ import {
 import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, colisaoDaMudanca, colisaoDoPar } from "@/lib/par-de-lugar";
 import { BLOQUEADA, NOME_JA_EM_USO, RASCUNHO_DELA_SUMIU, portaDaPessoa } from "@/lib/porta-da-pessoa";
 import {
-  CIDADE_SEM_LETRA, CIDADE_VAZIA, NOME_SEM_LETRA, NOME_VAZIO, cidadeDoDoc, docDoLugarNovo,
+  CIDADE_VAZIA, NOME_SEM_LETRA, NOME_VAZIO, cidadeDoDoc, docDoLugarNovo,
   docNoEndereco, nomeDoRascunho, slugDoNome,
 } from "@/lib/rascunho";
 
@@ -45,17 +45,18 @@ const emUso = (): Response => new Response(NOME_JA_EM_USO, { status: 409, header
  *  estar livre; quem recusou foi o bloqueio. */
 const bloqueada = (): Response => new Response(BLOQUEADA, { status: 403, headers: TEXTO });
 
-/** COMEÇAR: o nome e a cidade, como no painel (mesmas frases de campo, mesma
- *  colisão pelo par contra LUGAR, mesmo endereço no documento). O rascunho
- *  nasce DELA, numa chave própria que nunca é um endereço (Task 17), e a
- *  resposta é `{slug}` com essa CHAVE — é ela que as telas dela levam na URL.
+/** COMEÇAR: só o nome (17/10: a cidade vem do ponto que ela marca no mapa).
+ *  O rascunho nasce DELA, numa chave própria que nunca é um endereço (Task 17),
+ *  e a resposta é `{slug}` com essa CHAVE — é ela que as telas dela levam na
+ *  URL. Sem cidade não há endereço: o documento nasce com `slug: ""` (o de
+ *  dentro só vale no publicar, que o recalcula) e o `INSERT` não confere
+ *  endereço.
  *
  *  🔴 Task 17 (decisão do João de 13/10, "Nenhum ocupa"): nenhum rascunho
- *  recusa — nem dela, nem de outra pessoa, nem do João. Dois rascunhos de
- *  mesmo nome e cidade podem existir, e quem publicar primeiro fica com o
- *  endereço. O que ainda recusa AQUI, cedo, é o que já existe: o par de um
- *  lugar (escondido inclusive, e o gêmeo sem cidade), o endereço de um lugar,
- *  e o endereço antigo — um aviso útil; o publicar confere de novo.
+ *  recusa — nem dela, nem de outra pessoa, nem do João. O que ainda recusa AQUI,
+ *  cedo, é o que já existe: o gêmeo sem cidade de um LUGAR (o par e o endereço
+ *  só se conferem quando a cidade chega, no PUT) — um aviso útil; o publicar
+ *  confere de novo.
  *
  *  🔴 I3 da pré-auditoria: TODA colisão responde `NOME_JA_EM_USO`. A rota lê a
  *  colisão ESTRUTURADA (`colisaoDoPar`) e nunca diz QUEM ocupa: nada do painel
@@ -66,27 +67,20 @@ export async function POST(req: Request): Promise<Response> {
   if ("resposta" in porta) return porta.resposta;
 
   const corpo = await corpoDe(req);
-  if (corpo === null || Object.keys(corpo).length !== 2 || typeof corpo.nome !== "string" || typeof corpo.cidade !== "string") {
+  if (corpo === null || Object.keys(corpo).length !== 1 || typeof corpo.nome !== "string") {
     return new Response("", { status: 400, headers: TEXTO });
   }
   const nome = corpo.nome.trim();
-  const cidade = corpo.cidade.trim();
-  if (textoAcimaDoTeto([nome, cidade])) return new Response(TEXTO_LONGO_DEMAIS, { status: 400, headers: TEXTO });
+  if (textoAcimaDoTeto([nome])) return new Response(TEXTO_LONGO_DEMAIS, { status: 400, headers: TEXTO });
   if (nome === "") return new Response(NOME_VAZIO, { status: 400, headers: TEXTO });
-  if (cidade === "") return new Response(CIDADE_VAZIA, { status: 400, headers: TEXTO });
   if (slugDoNome(nome) === "") return new Response(NOME_SEM_LETRA, { status: 400, headers: TEXTO });
-  if (slugDoNome(cidade) === "") return new Response(CIDADE_SEM_LETRA, { status: 400, headers: TEXTO });
 
-  if ((await colisaoDoPar(nome, cidade, { exceto: null, nomeNovo: true, quem: "pessoa" })) !== null) return emUso();
+  if ((await colisaoDoPar(nome, "", { exceto: null, nomeNovo: true, quem: "pessoa" })) !== null) return emUso();
 
-  // O ENDEREÇO vai no documento (o `slug` de dentro, como no do João); a chave
-  // nasce no banco.
-  const endereco = slugDoNome(`${nome} ${cidade}`);
-  const chave = await criarRascunhoDaPessoa(getClient(), endereco, docDoLugarNovo(endereco, nome, cidade), agora, porta.pessoa.id);
+  const chave = await criarRascunhoDaPessoa(getClient(), null, docDoLugarNovo("", nome), agora, porta.pessoa.id);
   if (chave !== null) return Response.json({ slug: chave }, { status: 201, headers: SEM_CACHE });
-  // O banco recusou. 🔴 O bloqueio PRIMEIRO (Task 15): o João bloqueou entre
-  // a porta e o INSERT, e o `LIVRE` derrubou — o endereço pode estar livre.
-  // Senão, o endereço é de um lugar, ou endereço antigo: a frase é a dela.
+  // O banco recusou: sem endereço a conferir, só o bloqueio (Task 15) — o João
+  // bloqueou entre a porta e o INSERT, e o `LIVRE` derrubou.
   if (await estaBloqueado(getClient(), porta.pessoa.id)) return bloqueada();
   return emUso();
 }
@@ -108,9 +102,8 @@ export async function PUT(req: Request): Promise<Response> {
   // nas pontas iria pra tela, e o nome aparado é o que a colisão e o endereço
   // leem. Só de espaços vira `""`, e quem a recusa é a folha (`recusarVazio`,
   // em `campos-da-ficha.ts`, com `CIDADE_VAZIA` pra cidade) — uma porta só,
-  // não duas em série. É isto, com o `trim` do POST, que deixa o rascunho
-  // dela SEMPRE com cidade com letra: o endereço que sai do par dela tem
-  // sempre o hífen do meio.
+  // não duas em série. É isto que deixa a cidade dela, quando chega, SEMPRE
+  // com letra: o endereço que sai do par dela tem sempre o hífen do meio.
   const valor = typeof corpo.valor === "string" ? corpo.valor.trim() : corpo.valor;
   const trazCampo = "campo" in corpo || "valor" in corpo || "naoSei" in corpo;
   const trazPonto = "ponto" in corpo || "lat" in corpo || "lng" in corpo;
@@ -146,9 +139,14 @@ export async function PUT(req: Request): Promise<Response> {
   // não anda. O `slug` de dentro acompanha o par (o endereço onde o lugar
   // nasceria), e ele tem de estar livre de LUGAR e de endereço antigo — o aviso
   // cedo, no mesmo UPDATE (`regravarRascunhoDaPessoa` com `endereco`).
+  // O endereço só entra quando o documento JÁ TEM cidade: antes do ponto,
+  // renomear só regrava (nada de `CIDADE_VAZIA`, nem endereço a conferir). O
+  // nome com letra vale sempre.
   let endereco: string | null = null;
   if (trazCampo && (campo === CAMPO_DO_NOME || campo === CAMPO_DA_CIDADE)) {
     if (slugDoNome(nomeDoRascunho(novoDoc, "")) === "") return new Response(NOME_SEM_LETRA, { status: 400, headers: TEXTO });
+  }
+  if (trazCampo && (campo === CAMPO_DO_NOME || campo === CAMPO_DA_CIDADE) && cidadeDoDoc(novoDoc) !== undefined) {
     if (slugDoNome(cidadeDoDoc(novoDoc) ?? "") === "") return new Response(CIDADE_VAZIA, { status: 400, headers: TEXTO });
     endereco = slugDoNome(`${nomeDoRascunho(novoDoc, "")} ${cidadeDoDoc(novoDoc)}`);
     novoDoc = docNoEndereco(novoDoc, endereco);

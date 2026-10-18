@@ -4,7 +4,7 @@ import { gravarVersao } from "@/lib/db";
 import { contribuidorPorId, criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
 import { SEM_NAO_SEI, TEXTO_LONGO_DEMAIS } from "@/lib/campos-da-pessoa";
 import { BLOQUEADA, CLERK_FORA, CLERK_FORA_AO_ABRIR, NOME_JA_EM_USO, RASCUNHO_DELA_SUMIU } from "@/lib/porta-da-pessoa";
-import { CIDADE_SEM_LETRA, CIDADE_VAZIA, NOME_SEM_LETRA, NOME_VAZIO } from "@/lib/rascunho";
+import { CIDADE_SEM_LETRA, CIDADE_VAZIA, NOME_SEM_LETRA, NOME_VAZIO, ehChaveDeRascunho } from "@/lib/rascunho";
 import { clienteQueIntercala, rascunhoNoBanco, semearAcervo } from "../banco";
 import { OUTRA, PESSOA, sessao } from "../sessao-da-pessoa";
 
@@ -38,10 +38,15 @@ const SLUG = "pedra-mandada-cidade-teste";
 let CHAVE: string;
 const docDe = async (chave = CHAVE) => JSON.parse((await rascunhoNoBanco(c, chave))!.doc);
 const total = async () => Number((await c.execute("SELECT COUNT(*) AS n FROM ficha_rascunhos")).rows[0].n);
+/** 17/10: o lugar nasce só do nome (`POST {nome}`); a cidade chega pelo PUT de
+ *  campo `cidade` até a Task 3 (que a tira do ponto). Os casos que partem de um
+ *  rascunho "com cidade" começam por aqui, pelo caminho de verdade. */
 async function comecar(): Promise<void> {
-  const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }));
+  const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada" }));
   expect(res.status, await res.clone().text()).toBe(201);
   CHAVE = ((await res.json()) as { slug: string }).slug;
+  const cid = await rota.PUT(pedido("PUT", { slug: CHAVE, campo: "cidade", valor: "Cidade Teste" }));
+  expect(cid.status, await cid.clone().text()).toBe(200);
 }
 /** Um rascunho de OUTRA pessoa (ou dela), direto no banco; devolve a chave. */
 async function deOutra(endereco: string, doc: unknown, dono = OUTRA.id): Promise<string> {
@@ -79,13 +84,13 @@ describe("a porta: sessão, Clerk, bloqueio", () => {
 
   it("sem sessão: 401, e nada nasce", async () => {
     sessao.atual = null;
-    expect((await rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }))).status).toBe(401);
+    expect((await rota.POST(pedido("POST", { nome: "Pedra Mandada" }))).status).toBe(401);
     expect(await total()).toBe(0);
   });
 
   it("Clerk fora: 503 com a frase, e nada nasce", async () => {
     sessao.fora = true;
-    const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }));
+    const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada" }));
     expect(res.status).toBe(503);
     expect(await res.text()).toBe(CLERK_FORA);
     expect(await total()).toBe(0);
@@ -111,7 +116,7 @@ describe("a porta: sessão, Clerk, bloqueio", () => {
   // `"gravar"` → `"abrir"` no PUT sobrevivia à suíte inteira (medido pelo
   // revisor). Um corpo que a rota aceitaria, pra que só a porta responda.
   it.each([
-    ["POST", () => rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }))],
+    ["POST", () => rota.POST(pedido("POST", { nome: "Pedra Mandada" }))],
     ["PUT", () => rota.PUT(pedido("PUT", { slug: "qualquer", campo: "promessa", valor: "Uma pedra." }))],
     ["DELETE", () => rota.DELETE(pedido("DELETE", { slug: "qualquer" }))],
   ] as const)("Clerk fora no %s (que grava): 503 com CLERK_FORA, nunca a frase de abrir", async (_metodo, chamar) => {
@@ -124,7 +129,7 @@ describe("a porta: sessão, Clerk, bloqueio", () => {
 
   it("bloqueada: 403 com a frase, e nada nasce", async () => {
     await c.execute({ sql: "INSERT INTO contribuidores (id, bloqueado, criado_em) VALUES (?, 1, ?)", args: [PESSOA.id, AGORA] });
-    const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }));
+    const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada" }));
     expect(res.status).toBe(403);
     expect(await res.text()).toBe(BLOQUEADA);
     expect(await total()).toBe(0);
@@ -145,12 +150,31 @@ describe("POST — começar", () => {
     expect(await rascunhoNoBanco(c, SLUG), "nada mora no endereço").toBeNull();
   });
 
+  // 17/10 (M6): o lugar nasce só do nome — sem cidade não há endereço, e o
+  // `INSERT` não o confere. O caso semeia um LUGAR morando em `slugDoNome(NOME)`
+  // (o endereço que um POST que passasse o nome como endereço conferiria).
+  it("POST {nome} dela nasce, sem cidade e sem conferir endereço", async () => {
+    await gravarVersao(c, "pedra-mandada", JSON.stringify({ slug: "pedra-mandada", modos: [], cidade: "Cidade Outra", trajeto: { waypoints: [{ nome: "Outro Nome Marcador" }] } }), "painel", AGORA - 5);
+    const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada" }));
+    expect(res.status, await res.clone().text()).toBe(201);
+    const { slug } = (await res.json()) as { slug: string };
+    expect(ehChaveDeRascunho(slug)).toBe(true);
+    expect(await docDe(slug)).toEqual({ slug: "", modos: [], trajeto: { waypoints: [{ nome: "Pedra Mandada" }] } });
+    expect((await rascunhoNoBanco(c, slug))?.contribuidor).toBe(PESSOA.id);
+  });
+
+  it("POST dela com cidade é 400", async () => {
+    const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }));
+    expect(res.status).toBe(400);
+    expect(await total()).toBe(0);
+  });
+
   // Review Focus 3: o par de um lugar do João. As fichas dele nasceram sem
   // cidade, então nome igual É colisão (o gêmeo sem cidade).
   // 🔴 I3 da pré-auditoria: a frase é a DELA — nunca "responda primeiro a cidade
   // dele, pela lista do painel" (ela não tem painel) —, e não nomeia ninguém.
-  it("o par de um lugar do João: 409 com a frase DELA, e nada nasce", async () => {
-    const res = await rota.POST(pedido("POST", { nome: "Rampa do Pepê", cidade: "Cidade Teste" }));
+  it("o gêmeo sem cidade de um lugar responde NOME_JA_EM_USO: a frase DELA, e nada nasce", async () => {
+    const res = await rota.POST(pedido("POST", { nome: "Rampa do Pepê" }));
     expect(res.status).toBe(409);
     const frase = await res.text();
     expect(frase).toBe(NOME_JA_EM_USO);
@@ -172,8 +196,12 @@ describe("POST — começar", () => {
   it("o endereço de um rascunho de OUTRA pessoa, de nome diferente: nasce", async () => {
     const outro = "lugar-marcador-cidade-marcador";
     const dela = await deOutra(outro, { slug: outro, modos: [], cidade: "Cidade Marcador", trajeto: { waypoints: [{ nome: "Lugar Marcador" }] } });
-    const res = await rota.POST(pedido("POST", { nome: "Lugar Marcador Cidade", cidade: "Marcador" }));
+    const res = await rota.POST(pedido("POST", { nome: "Lugar Marcador Cidade" }));
     expect(res.status, await res.clone().text()).toBe(201);
+    // o endereço só se confere quando a cidade chega (o PUT)
+    const { slug } = (await res.json()) as { slug: string };
+    const cid = await rota.PUT(pedido("PUT", { slug, campo: "cidade", valor: "Marcador" }));
+    expect(cid.status, await cid.clone().text()).toBe(200);
     expect((await rascunhoNoBanco(c, dela))?.contribuidor).toBe(OUTRA.id);
   });
 
@@ -183,22 +211,31 @@ describe("POST — começar", () => {
   it("o endereço de um LUGAR, de nome diferente: 409 com a frase dela, e nada nasce", async () => {
     const outro = "lugar-marcador-cidade-marcador";
     await gravarVersao(c, outro, JSON.stringify({ slug: outro, modos: [], cidade: "Cidade Marcador", trajeto: { waypoints: [{ nome: "Lugar Marcador" }] } }), "painel", AGORA - 5);
-    const res = await rota.POST(pedido("POST", { nome: "Lugar Marcador Cidade", cidade: "Marcador" }));
+    const nasceu = await rota.POST(pedido("POST", { nome: "Lugar Marcador Cidade" }));
+    expect(nasceu.status).toBe(201);
+    const { slug } = (await nasceu.json()) as { slug: string };
+    const antes = await docDe(slug);
+    const res = await rota.PUT(pedido("PUT", { slug, campo: "cidade", valor: "Marcador" }));
     expect(res.status).toBe(409);
     expect(await res.text()).toBe(NOME_JA_EM_USO);
-    expect(await total()).toBe(0);
+    expect(await docDe(slug), "o rascunho fica como estava").toEqual(antes);
+    expect(await total()).toBe(1);
   });
 
   // Ruling de produto da pré-auditoria: endereço antigo de outro lugar não é dela.
   it("um endereço antigo de um lugar do João: 409 com a frase dela, nada nasce, e o link velho continua", async () => {
     await c.execute({ sql: "INSERT INTO enderecos_antigos (velho, novo, em) VALUES (?, 'rampa-do-pepe', ?)", args: [SLUG, AGORA] });
-    const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada", cidade: "Cidade Teste" }));
+    const nasceu = await rota.POST(pedido("POST", { nome: "Pedra Mandada" }));
+    expect(nasceu.status).toBe(201);
+    const { slug } = (await nasceu.json()) as { slug: string };
+    const res = await rota.PUT(pedido("PUT", { slug, campo: "cidade", valor: "Cidade Teste" }));
     expect(res.status).toBe(409);
     expect(await res.text()).toBe(NOME_JA_EM_USO);
-    expect(await total()).toBe(0);
+    expect((await docDe(slug)).cidade, "o rascunho fica sem cidade").toBeUndefined();
+    expect(await total()).toBe(1);
   });
 
-  it.each([[{ nome: "", cidade: "C" }], [{ nome: "N", cidade: " " }], [{ nome: "N" }], [{ nome: "N", cidade: "C", voz: "x" }]])(
+  it.each([[{ nome: "" }], [{}], [{ nome: 7 }], [{ nome: "N", cidade: "C" }], [{ nome: "N", voz: "x" }]])(
     "corpo %j: 400",
     async (corpo) => expect((await rota.POST(pedido("POST", corpo))).status).toBe(400),
   );
@@ -206,6 +243,20 @@ describe("POST — começar", () => {
 
 describe("PUT — responder", () => {
   beforeEach(comecar);
+
+  // 17/10: antes do ponto não há cidade — renomear só regrava (nada de
+  // `CIDADE_VAZIA`), e o `slug` de dentro continua `""`.
+  it("renomear antes do ponto: regrava, a chave não muda, sem CIDADE_VAZIA", async () => {
+    const nasceu = await rota.POST(pedido("POST", { nome: "Pedra Primeira" }));
+    const { slug } = (await nasceu.json()) as { slug: string };
+    const res = await rota.PUT(pedido("PUT", { slug, campo: "trajeto.waypoints.0.nome", valor: "Pedra Segunda Marcada" }));
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await res.json()).toEqual({ slug });
+    expect(await docDe(slug)).toEqual({ slug: "", modos: [], trajeto: { waypoints: [{ nome: "Pedra Segunda Marcada" }] } });
+    const semLetra = await rota.PUT(pedido("PUT", { slug, campo: "trajeto.waypoints.0.nome", valor: "--" }));
+    expect(semLetra.status).toBe(400);
+    expect(await semLetra.text()).toBe(NOME_SEM_LETRA);
+  });
 
   it("um campo dela grava", async () => {
     expect((await rota.PUT(pedido("PUT", { slug: CHAVE, campo: "promessa", valor: "Uma pedra." }))).status).toBe(200);
@@ -379,20 +430,17 @@ describe("GET e DELETE", () => {
 describe("o texto dela entra aparado, e cidade vazia não chega ao rascunho dela", () => {
   const total = async () => Number((await c.execute("SELECT COUNT(*) AS n FROM ficha_rascunhos")).rows[0].n);
 
-  it("POST: nome e cidade com espaço nas pontas nascem aparados", async () => {
-    const res = await rota.POST(pedido("POST", { nome: "  Pedra Mandada ", cidade: "\tCidade Teste  " }));
+  it("POST: o nome com espaço nas pontas nasce aparado", async () => {
+    const res = await rota.POST(pedido("POST", { nome: "  Pedra Mandada " }));
     expect(res.status).toBe(201);
-    expect(await docDe(((await res.json()) as { slug: string }).slug)).toEqual({ slug: SLUG, modos: [], cidade: "Cidade Teste", trajeto: { waypoints: [{ nome: "Pedra Mandada" }] } });
+    expect(await docDe(((await res.json()) as { slug: string }).slug)).toEqual({ slug: "", modos: [], trajeto: { waypoints: [{ nome: "Pedra Mandada" }] } });
   });
 
   // A FRASE de cada recusa, e não só o 400: as recusas do POST são portas em
   // série (vazia → sem letra), e só a frase diz qual delas recusou.
   it.each([
-    [{ nome: "   ", cidade: "Cidade Teste" }, NOME_VAZIO],
-    [{ nome: "Pedra Mandada", cidade: "" }, CIDADE_VAZIA],
-    [{ nome: "Pedra Mandada", cidade: "   " }, CIDADE_VAZIA],
-    [{ nome: "Pedra Mandada", cidade: "--" }, CIDADE_SEM_LETRA],
-    [{ nome: "--", cidade: "Cidade Teste" }, NOME_SEM_LETRA],
+    [{ nome: "   " }, NOME_VAZIO],
+    [{ nome: "--" }, NOME_SEM_LETRA],
   ])("POST %j: 400 com a frase, e nada nasce", async (corpo, frase) => {
     const res = await rota.POST(pedido("POST", corpo));
     expect(res.status).toBe(400);
@@ -518,7 +566,7 @@ describe("o bloqueio que chega entre a porta e a gravação", () => {
   it("POST que começa: 403 com a frase de bloqueada, não a de em uso, e nada nasce", async () => {
     const corrida = clienteQueIntercala(c, /^INSERT INTO ficha_rascunhos/, bloquear);
     cli = corrida.cliente;
-    const res = await rota.POST(pedido("POST", { nome: "Pedra Segunda", cidade: "Cidade Teste" }));
+    const res = await rota.POST(pedido("POST", { nome: "Pedra Segunda" }));
     expect(corrida.disparos(), "o dublê não disparou: o teste mediu o vazio").toBe(1);
     expect(res.status).toBe(403);
     expect(await res.text()).toBe(BLOQUEADA);
@@ -538,8 +586,8 @@ describe("o bloqueio que chega entre a porta e a gravação", () => {
 describe("o teto do texto dela", () => {
   const longo = (n: number) => "a".repeat(n);
 
-  it.each(["nome", "cidade"])("POST: %s com 2000 nasce; com 2001, 400 com a frase, e nada nasce", async (qual) => {
-    const corpo = (n: number) => ({ nome: "Pedra", cidade: "Cidade", [qual]: longo(n) });
+  it("POST: nome com 2000 nasce; com 2001, 400 com a frase, e nada nasce", async () => {
+    const corpo = (n: number) => ({ nome: longo(n) });
     const recusa = await rota.POST(pedido("POST", corpo(2001)));
     expect(recusa.status).toBe(400);
     expect(await recusa.text()).toBe(TEXTO_LONGO_DEMAIS);
@@ -579,7 +627,10 @@ describe("dois rascunhos dela com o mesmo nome e cidade", () => {
   it("PUT que renomeia pro par de outro rascunho dela: grava", async () => {
     await comecar();
     const primeira = CHAVE;
-    expect((await rota.POST(pedido("POST", { nome: "Pedra Segunda", cidade: "Cidade Teste" }))).status).toBe(201);
+    const segunda = await rota.POST(pedido("POST", { nome: "Pedra Segunda" }));
+    expect(segunda.status).toBe(201);
+    const cidade = await rota.PUT(pedido("PUT", { slug: ((await segunda.json()) as { slug: string }).slug, campo: "cidade", valor: "Cidade Teste" }));
+    expect(cidade.status).toBe(200);
     const res = await rota.PUT(pedido("PUT", { slug: primeira, campo: "trajeto.waypoints.0.nome", valor: "Pedra Segunda" }));
     expect(res.status, await res.clone().text()).toBe(200);
     expect((await docDe(primeira)).slug).toBe("pedra-segunda-cidade-teste");

@@ -295,15 +295,16 @@ describe("POST /api/admin/endereco — recusas, e nada muda", () => {
 // Tarefa 12 — este caso vai até o rascunho nascer no endereço retomado.
 describe("o cenário dele: retomar o endereço velho", () => {
   it("antes da troca o lugar novo esbarra no endereço; depois, nasce nele, e o velho segue levando ao lugar corrigido", async () => {
-    const { POST: criar } = await import("@/app/api/admin/rascunho/route");
-    const novoLugar = () =>
-      criar(
-        new Request("http://x/api/admin/rascunho", {
-          method: "POST",
-          headers: { cookie: `${COOKIE_ADMIN}=${cookieBom}` },
-          body: JSON.stringify({ nome: "Lugar Marcador", cidade: "Bom Marcador" }),
-        }),
-      );
+    const { POST: criar, PUT: responder } = await import("@/app/api/admin/rascunho/route");
+    const cabecas = { cookie: `${COOKIE_ADMIN}=${cookieBom}` };
+    // 17/10: o lugar nasce só do nome; a cidade chega pelo PUT (até a Task 3),
+    // e é nele que o endereço se confere. Devolve a resposta do PUT.
+    const novoLugar = async () => {
+      const nasceu = await criar(new Request("http://x/api/admin/rascunho", { method: "POST", headers: cabecas, body: JSON.stringify({ nome: "Lugar Marcador" }) }));
+      expect(nasceu.status).toBe(201);
+      const { slug } = (await nasceu.json()) as { slug: string };
+      return responder(new Request("http://x/api/admin/rascunho", { method: "PUT", headers: cabecas, body: JSON.stringify({ slug, campo: "cidade", valor: "Bom Marcador" }) }));
+    };
 
     const antes = await novoLugar();
     expect(antes.status, "o endereço ainda é do lugar corrigido").toBe(409);
@@ -313,7 +314,7 @@ describe("o cenário dele: retomar o endereço velho", () => {
     expect((await POST(pedido({ slug: A }))).status).toBe(200);
 
     const depois = await novoLugar();
-    expect(depois.status, await depois.clone().text()).toBe(201);
+    expect(depois.status, await depois.clone().text()).toBe(200);
     expect(await depois.json()).toEqual({ slug: A });
     // Enquanto é rascunho, o endereço velho continua levando ao lugar corrigido.
     expect(await enderecoNovoDe(c, A)).toBe(B);

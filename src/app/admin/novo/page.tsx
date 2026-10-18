@@ -24,8 +24,8 @@ const ESTOUROU = Symbol("prazo do rascunho");
 
 /** `/admin/novo` — o lugar novo (Tarefa 11).
  *
- *  Sem `?slug=`: as perguntas do NOME e da CIDADE, e só elas — é deles que sai
- *  o endereço (Tarefa 11b).
+ *  Sem `?slug=`: a pergunta do NOME, e só ela — a cidade vem do ponto que ele
+ *  marca no mapa (17/10), e o endereço sai dela.
  *  Com `?slug=`: o formulário sobre o RASCUNHO daquele slug, UMA PERGUNTA POR
  *  VEZ — a da posição `&p=N` (1 a M); `p` ausente ou torto cai na primeira
  *  ainda sem resposta (`escolherPosicao`).
@@ -66,7 +66,7 @@ export default async function Novo({
       <main className="adm">
         <h1>Painel</h1>
         <h2>{TITULO_NOVO}</h2>
-        <ComecarLugarNovo perguntas={{ nome: PERGUNTAS["trajeto.waypoints.0.nome"], cidade: PERGUNTAS.cidade }} />
+        <ComecarLugarNovo pergunta={PERGUNTAS["trajeto.waypoints.0.nome"]} />
       </main>
     );
   }
