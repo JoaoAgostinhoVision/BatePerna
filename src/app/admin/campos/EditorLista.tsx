@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import BotaoDesfazer from "./BotaoDesfazer";
 import BotaoNaoSei from "./BotaoNaoSei";
-import { usarGravacao } from "./gravar";
+import { PortaDoEditor, usarGravacao } from "./gravar";
 import { NADA_ESCOLHIDO, SALVANDO, SALVAR } from "./palavras";
 import type { PropsDoEditor } from "./tipos";
 
@@ -40,7 +40,18 @@ import type { PropsDoEditor } from "./tipos";
  *  ⚠️ NADA É PRÉ-PREENCHIDO (§4.4). Com o campo AUSENTE, o `<select>` abre numa
  *  opção em branco — sem texto, porque texto de exemplo num campo de lugar real
  *  é resposta plausível que se grava sem querer. Salvar sem escolher é recusado
- *  aqui, sem viagem.
+ *  aqui, sem viagem — MENOS na lista de vários opcional (abaixo).
+ *
+ *  🔴 NENHUM DIA MARCADO É UMA RESPOSTA (bug achado pelo João em 18/10). A
+ *  pergunta dos dias diz "se abre todo dia, deixe sem resposta", e o Salvar
+ *  recusava a lista vazia com "Escolha uma das opções." — a tela pedindo uma
+ *  coisa e o botão negando. Na lista de VÁRIOS e OPCIONAL (só `dias` hoje),
+ *  nada marcado é "todo dia", que no documento é a chave FORA: com dias
+ *  gravados, o Salvar manda o mesmo `naoSei` do `BotaoNaoSei` (nunca `[]`, que
+ *  o schema recusa); com os dias já ausentes não há o que gravar (seria versão
+ *  nova idêntica, o ato vazio que o `BotaoNaoSei` evita), e o Salvar só segue
+ *  pra onde uma gravação seguiria — no painel, onde gravar recarrega, não faz
+ *  nada.
  *
  *  O "Desfazer" (Tarefa 15) volta as marcações ao `valor` de AGORA (a prop). A
  *  diferença é de CONJUNTO: desmarcar e marcar de novo o mesmo dia muda a ordem
@@ -58,11 +69,18 @@ export default function EditorLista({ campo, valor, slug }: PropsDoEditor) {
   const [marcadas, setMarcadas] = useState<readonly string[]>(salvas);
   const gravacao = usarGravacao();
   const { erro, salvando, gravar, recusarAqui, limparErro } = gravacao;
+  const { depoisDeGravar } = useContext(PortaDoEditor);
   const mudou = marcadas.length !== salvas.length || marcadas.some((o) => !salvas.includes(o));
 
   function salvar(): void {
     // A ordem do REGISTRO, não a dos toques — ver o docblock.
     const emOrdem = opcoes.filter((o) => marcadas.includes(o));
+    if (emOrdem.length === 0 && campo.multiplo && !campo.obrigatorio) {
+      // Nenhum dia = "todo dia" = a chave fora — ver o docblock.
+      if (salvas.length > 0) void gravar({ slug, campo: campo.caminho, naoSei: true });
+      else if (depoisDeGravar !== null) location.assign(depoisDeGravar(slug));
+      return;
+    }
     if (emOrdem.length === 0) {
       recusarAqui(NADA_ESCOLHIDO);
       return;

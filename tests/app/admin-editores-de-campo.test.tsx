@@ -584,13 +584,31 @@ describe("EditorLista — escolher, nunca digitar", () => {
     }
   });
 
-  it("nada escolhido NÃO grava — nem lista vazia, nem palavra vazia", () => {
+  // 🔴 O BUG DE 18/10 (achado pelo João): a pergunta dos dias diz "se abre todo
+  // dia, deixe sem resposta", e este teste cravava o contrário — desmarcar tudo
+  // e Salvar dava "Escolha uma das opções." e não gravava. Na lista de VÁRIOS e
+  // OPCIONAL, nenhum dia marcado É uma resposta: "todo dia", que no documento é
+  // a chave fora. Salvar manda o mesmo `naoSei` do botão, nunca `dias: []` (que
+  // o schema recusa).
+  it("dias: desmarcar todos e Salvar TIRA a resposta (= abre todo dia) — nunca lista vazia", async () => {
     const { fetchFalso } = comRota();
     render(<FichaInteira ficha={semHorario} />);
     for (const d of ["sab", "dom"]) fireEvent.click(emCampo("dias").getByRole("checkbox", { name: NOME_DO_DIA[d as Dia] }));
     salvar("dias");
-    expect(fetchFalso, "uma lista vazia foi mandada pra porta").not.toHaveBeenCalled();
-    expect(emCampo("dias").getByRole("alert").textContent).toBe(NADA_ESCOLHIDO);
+    await waitFor(() => expect(fetchFalso).toHaveBeenCalled());
+    expect(corpoDe(fetchFalso)).toEqual({ slug: semHorario.slug, campo: "dias", naoSei: true });
+    expect(emCampo("dias").queryByRole("alert"), "Salvar sem dia marcado foi recusado com frase").toBeNull();
+  });
+
+  // E com os dias JÁ ausentes, nada marcado não muda nada: nem viagem (seria
+  // uma versão nova idêntica — ver `BotaoNaoSei`), nem recusa.
+  it("dias já ausentes: Salvar sem marcar nada não viaja e não recusa", () => {
+    const { fetchFalso } = comRota();
+    expect(comHorario.dias, "esta ficha ganhou dias — o caso deixou de ser medido").toBeUndefined();
+    render(<FichaInteira ficha={comHorario} />);
+    salvar("dias");
+    expect(fetchFalso, "uma gravação que não muda nada foi mandada pra porta").not.toHaveBeenCalled();
+    expect(emCampo("dias").queryByRole("alert")).toBeNull();
   });
 
   // 🔴 §4.4 do desenho: nada é pré-preenchido. Os dois ramos, porque uma opção
