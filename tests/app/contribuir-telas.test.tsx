@@ -6,6 +6,7 @@ import { PERGUNTAS } from "@/app/admin/novo/perguntas";
 import { NAO_TEM } from "@/app/admin/campos/BotaoNaoSei";
 import { BLOQUEADA, CLERK_FORA_AO_ABRIR, JA_CONFERIDO_AO_ABRIR, NOME_EXISTE_NA_CIDADE } from "@/lib/porta-da-pessoa";
 import { CORRIGIR_O_NOME } from "@/app/admin/AvisoDoPar";
+import { ROTAS } from "@/app/admin/novo/enderecos";
 import { conferirLugar, criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
 import { versaoAtual } from "@/lib/db";
 import { ETIQUETA_NAO_CONFERIDO } from "@/lib/origem";
@@ -172,7 +173,7 @@ describe("as perguntas na tela", () => {
   });
 
   // 🔴 I2(a) da revisão: a pergunta do rascunho dela grava pela rota DELA e
-  // leva às telas DELA — Próxima, Anterior, os saltos e o Desistir.
+  // leva às telas DELA — Próxima, Anterior e o Desistir.
   it("com slug: grava em /api/contribuir/rascunho, e todo link fica em /contribuir", async () => {
     const S = await rascunhoDe("comecado-cidade", { slug: "comecado-cidade" });
     const fetch = portasFalsas();
@@ -200,7 +201,8 @@ describe("as perguntas na tela", () => {
     expect(aviso.textContent).not.toContain("Pedra Mandada");
     expect(aviso.textContent).not.toContain("lista do painel");
     const link = [...aviso.querySelectorAll("a")].find((a) => a.textContent === CORRIGIR_O_NOME)!;
-    expect(link.getAttribute("href")).toBe(`/contribuir/novo?slug=${S}&p=1`);
+    expect(link.getAttribute("href")).toBe(ROTAS.contribuir.corrigir(S, 1));
+    expect(link.getAttribute("href"), "o corrigir volta à revisão").toContain("&volta=revisao");
     const perg = container.querySelector(`[data-testid="pergunta-trajeto.waypoints.0.nome"]`)!;
     expect(perg.compareDocumentPosition(aviso) & Node.DOCUMENT_POSITION_FOLLOWING, "o aviso antes da pergunta").toBeTruthy();
   });

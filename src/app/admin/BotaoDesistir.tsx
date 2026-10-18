@@ -6,7 +6,7 @@ import { ROTAS, type Onde } from "./novo/enderecos";
 /** DESISTIR DE UM LUGAR NOVO — apagar o RASCUNHO (Tarefa 15, 07/10: o João,
  *  olhando o painel no ar, *"ficou faltando o botão de cancelar"*; escolheu os
  *  dois cancelar, e este é o primeiro). Mora em DOIS lugares, o mesmo botão:
- *  em toda pergunta do `/admin/novo` (`FormularioDeLugar`, perto do aviso de
+ *  em toda pergunta do `/admin/novo` (`FormularioDeLugar`, no rodapé, depois do aviso de
  *  rascunho) e em cada item de "Começados, ainda fora do ar" (`ListaDeLugares`,
  *  ao lado do "publicar"). A tela do nome (`ComecarLugarNovo`) NÃO o
  *  tem: ali o rascunho ainda não nasceu, e não há nada pra apagar. A tela de

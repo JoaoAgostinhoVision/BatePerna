@@ -1,5 +1,5 @@
 "use client";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
 import BotaoDesistir from "./BotaoDesistir";
 import EditorFaixas from "./campos/EditorFaixas";
 import EditorBooleano from "./campos/EditorBooleano";
@@ -7,7 +7,7 @@ import EditorCoordenada from "./campos/EditorCoordenada";
 import EditorLista from "./campos/EditorLista";
 import EditorNumeroDeMotor from "./campos/EditorNumeroDeMotor";
 import EditorProsa from "./campos/EditorProsa";
-import { ERRO_GRAVAR, ERRO_REDE, PortaDoEditor } from "./campos/gravar";
+import { AvisoDeMudanca, ERRO_GRAVAR, ERRO_REDE, PortaDoEditor } from "./campos/gravar";
 import type { Editor, EspecieNaTela, PerguntaNaTela } from "./campos/tipos";
 import { ROTAS, enderecoDaPergunta, type Onde } from "./novo/enderecos";
 
@@ -63,8 +63,10 @@ import { ROTAS, enderecoDaPergunta, type Onde } from "./novo/enderecos";
  *     Na ÚLTIMA pergunta, o "Próxima" leva à tela de PUBLICAR (Tarefa 12, R3 da
  *     auditoria de 06/10): é o fim do questionário, e é por ali que o dono
  *     chega lá — a outra porta é o item do rascunho na lista do painel.
- *   - A lista de saltos tem um número por pergunta, marcado respondida ou sem
- *     resposta (no `aria-label`, e no desenho pela folha de estilo).
+ *   - (Até 17/10 havia ainda uma fileira de saltos, um número por pergunta. Saiu:
+ *     era uma fileira de portas por onde o texto digitado ia embora com um
+ *     toque, e quem quer revisar o todo tem a tela de revisão, antes de
+ *     publicar.)
  *   ⚠️ "Pulada" não fica guardada: no documento, pular e nunca responder são a
  *   mesma ausência, e na volta a pergunta aparece sem resposta de novo.
  *
@@ -75,6 +77,26 @@ import { ROTAS, enderecoDaPergunta, type Onde } from "./novo/enderecos";
  *  endereços `/admin/…` citados neste comentário são os da linha do painel. É
  *  uma STRING e não uma função de endereço porque a página que monta este
  *  componente é de servidor, e função não atravessa essa fronteira como prop.
+ *
+ *  🔴 NENHUM TOQUE PERDE TEXTO (17/10, Task 7). Sair desta pergunta sem gravar
+ *  jogava fora o que estava na caixa, e um "Próxima" discreto era a porta mais
+ *  fácil do painel. Todo editor avisa por `AvisoDeMudanca` (via `BotaoDesfazer`)
+ *  quando a tela difere do salvo; com algo não salvo, "Anterior", "Próxima",
+ *  "Voltar à revisão" e "Pular" pedem o SEGUNDO toque, no molde do
+ *  `BotaoDesistir` — o rótulo do toque vira `SEGUIR_SEM_SALVAR`, e só o segundo
+ *  navega. Sem nada não salvo, um toque, como sempre. O pedido é de UM controle
+ *  por vez e cai sozinho quando o Desfazer devolve a tela ao salvo.
+ *
+ *  🔴 A PERGUNTA VEM PRIMEIRO. A ordem é "Pergunta N de M" → a pergunta → o aviso
+ *  do par → a navegação → o aviso de rascunho → o Desistir. O que não é a
+ *  pergunta desce pro rodapé, em toda tela.
+ *
+ *  🔴 "CORRIGIR" VOLTA À REVISÃO. Com `voltaARevisao` (a URL traz
+ *  `&volta=revisao`, de `ROTAS[onde].corrigir`), gravar leva à REVISÃO pelo slug
+ *  que a porta devolveu (o do painel pode mudar com o ponto), o "Pular" leva à
+ *  revisão, e a navegação é só o `VOLTAR_A_REVISAO` — nada de Anterior nem
+ *  Próxima, porque quem veio corrigir uma pergunta não tem por que andar pelas
+ *  outras.
  *
  *  ⚠️ NENHUM TEXTO SOBRE UM LUGAR ESPECÍFICO mora aqui: as perguntas e os
  *  rótulos chegam por prop, e as palavras fixas abaixo servem a todo lugar. */
@@ -94,9 +116,11 @@ export const ANTERIOR = "Anterior";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const PROXIMA = "Próxima";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
-export const RESPONDIDA = "respondida";
-// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const SEM_RESPOSTA = "sem resposta";
+// PENDENTE: redação minha, o João ainda não leu
+export const SEGUIR_SEM_SALVAR = "Seguir sem salvar? O que você escreveu aqui some.";
+// PENDENTE: redação minha, o João ainda não leu
+export const VOLTAR_A_REVISAO = "Voltar à revisão";
 /** "Pergunta N de M". */
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const posicaoNaTela = (n: number, total: number): string => `Pergunta ${n} de ${total}`;
@@ -121,11 +145,20 @@ export function Pergunta({
   pergunta,
   slug,
   proxima,
+  podeSair,
+  pedindo = false,
 }: {
   pergunta: PerguntaNaTela;
   slug: string;
-  /** O endereço da próxima pergunta; `null` na última. */
+  /** Pra onde o "Pular" leva: a próxima pergunta, ou a revisão quando se veio
+   *  corrigir; `null` na última. */
   proxima: string | null;
+  /** O segundo toque do formulário (17/10): `true` = pode sair agora; `false` =
+   *  há texto não salvo, o pedido foi feito e o toque não sai. Ausente (a
+   *  edição de quem usa no lugar no ar) = sai sempre. */
+  podeSair?: () => boolean;
+  /** O "Pular" está pedindo o segundo toque: o rótulo vira `SEGUIR_SEM_SALVAR`. */
+  pedindo?: boolean;
 }) {
   const { especie, campo, texto, valor } = pergunta;
   const [pulada, setPulada] = useState(false);
@@ -137,6 +170,7 @@ export function Pergunta({
   const podePular = !campo.obrigatorio && valor === undefined;
 
   function pular(): void {
+    if (podeSair && !podeSair()) return;
     setPulada(true);
     if (proxima !== null) location.assign(proxima);
   }
@@ -152,7 +186,7 @@ export function Pergunta({
           <p className="adm-pergunta-pulada">{PULADA}</p>
         ) : (
           <button type="button" className="adm-pergunta-pular" onClick={pular}>
-            {PULAR}
+            {pedindo ? SEGUIR_SEM_SALVAR : PULAR}
           </button>
         ))}
     </section>
@@ -166,6 +200,7 @@ export default function FormularioDeLugar({
   respondidas,
   onde = "painel",
   aviso,
+  voltaARevisao = false,
 }: {
   slug: string;
   /** A pergunta da posição `posicao` — e só ela. */
@@ -182,8 +217,36 @@ export default function FormularioDeLugar({
    *  pela página de servidor; desenhado logo DEPOIS da pergunta, que fica no
    *  topo. Ausente quando nada trava o publicar. */
   aviso?: ReactNode;
+  /** Veio de um "Corrigir" (`&volta=revisao`): o seguir volta pra revisão. */
+  voltaARevisao?: boolean;
 }) {
   const rotas = ROTAS[onde];
+  // O segundo toque: `naoSalvo` vem dos editores (`AvisoDeMudanca`); `pedido` é
+  // o controle que já pediu — um por vez. Sem nada não salvo, o pedido não vale.
+  const [naoSalvo, setNaoSalvo] = useState(false);
+  const [pedido, setPedido] = useState<string | null>(null);
+  // 🔴 Voltar ao salvo (o Desfazer) DERRUBA o pedido: senão o texto digitado
+  // depois já encontraria o "segundo toque" feito, e o 1º toque sairia.
+  const avisarMudanca = useCallback((mudou: boolean): void => {
+    setNaoSalvo(mudou);
+    if (!mudou) setPedido(null);
+  }, []);
+  const pedindo = (id: string): boolean => naoSalvo && pedido === id;
+  /** `true` = pode sair; `false` = pediu o segundo toque e não sai. */
+  function podeSair(id: string): boolean {
+    if (!naoSalvo || pedido === id) return true;
+    setPedido(id);
+    return false;
+  }
+  /** O clique de um link de passo: sem nada não salvo, é o link de sempre; com,
+   *  o 1º toque não sai e o 2º navega. */
+  function aoTocarNoLink(id: string, href: string) {
+    return (e: MouseEvent<HTMLAnchorElement>): void => {
+      if (!naoSalvo) return;
+      e.preventDefault();
+      if (podeSair(id)) location.assign(href);
+    };
+  }
   const total = respondidas.length;
   const ir = (n: number): string => rotas.pergunta(slug, n);
   const proxima = posicao < total ? ir(posicao + 1) : null;
@@ -197,51 +260,52 @@ export default function FormularioDeLugar({
   // rascunho do João — pro `nome-cidade`, ou pra uma chave provisória quando o
   // par já é de outro (o de quem usa mora numa chave que não muda, Task 17).
   const destino = proxima === null ? posicao : posicao + 1;
+  const revisao = rotas.publicar(slug);
   const porta = {
     gravarEm: rotas.rascunhoApi,
     previa: false,
-    depoisDeGravar: (novo: string) => rotas.pergunta(novo, destino),
+    depoisDeGravar: (novo: string) => (voltaARevisao ? rotas.publicar(novo) : rotas.pergunta(novo, destino)),
     recarregarSe401: rotas.recarregarSe401,
     buscarEm: rotas.buscaApi,
   };
+  const passo = (id: string, href: string, rotulo: string, classe: string) => (
+    <a className={classe} href={href} onClick={aoTocarNoLink(id, href)}>
+      {pedindo(id) ? SEGUIR_SEM_SALVAR : rotulo}
+    </a>
+  );
   return (
     <PortaDoEditor.Provider value={porta}>
-      <section className="adm-novo" data-rascunho={slug}>
-        <p className="adm-novo-aviso">{AVISO_RASCUNHO}</p>
-        {/* Desistir (Tarefa 15): em TODA pergunta, porque este componente só
-            existe com o rascunho já nascido — a tela do nome é o
-            `ComecarLugarNovo`, sem ele. Apagado, volta à lista (a do painel, ou
-            a de quem usa — `ROTAS[onde].desistiu`). */}
-        <BotaoDesistir slug={slug} voltarAoPainel onde={onde} />
-        <p className="adm-novo-posicao">{posicaoNaTela(posicao, total)}</p>
-        <Pergunta key={pergunta.campo.caminho} pergunta={pergunta} slug={slug} proxima={proxima} />
-        {aviso}
-        <nav className="adm-novo-passos">
-          {posicao > 1 && (
-            <a className="adm-novo-passo" href={ir(posicao - 1)}>
-              {ANTERIOR}
-            </a>
-          )}
-          <a className="adm-novo-passo adm-novo-passo-proxima" href={proxima ?? rotas.publicar(slug)}>
-            {PROXIMA}
-          </a>
-        </nav>
-        <ol className="adm-novo-saltos" data-testid="saltos">
-          {respondidas.map((r, i) => (
-            <li key={i}>
-              <a
-                className={r ? "adm-novo-salto adm-novo-salto-respondida" : "adm-novo-salto"}
-                href={ir(i + 1)}
-               
-                aria-label={`${posicaoNaTela(i + 1, total)}: ${r ? RESPONDIDA : SEM_RESPOSTA}`}
-                aria-current={i + 1 === posicao ? "step" : undefined}
-              >
-                {i + 1}
-              </a>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <AvisoDeMudanca.Provider value={avisarMudanca}>
+        <section className="adm-novo" data-rascunho={slug}>
+          <p className="adm-novo-posicao">{posicaoNaTela(posicao, total)}</p>
+          <Pergunta
+            key={pergunta.campo.caminho}
+            pergunta={pergunta}
+            slug={slug}
+            proxima={voltaARevisao ? revisao : proxima}
+            podeSair={() => podeSair("pular")}
+            pedindo={pedindo("pular")}
+          />
+          {aviso}
+          <nav className="adm-novo-passos">
+            {voltaARevisao ? (
+              passo("revisao", revisao, VOLTAR_A_REVISAO, "adm-novo-passo adm-novo-passo-proxima")
+            ) : (
+              <>
+                {posicao > 1 && passo("anterior", ir(posicao - 1), ANTERIOR, "adm-novo-passo")}
+                {passo("proxima", proxima ?? revisao, PROXIMA, "adm-novo-passo adm-novo-passo-proxima")}
+              </>
+            )}
+          </nav>
+          <p className="adm-novo-aviso">{AVISO_RASCUNHO}</p>
+          {/* Desistir (Tarefa 15): em TODA pergunta, porque este componente só
+              existe com o rascunho já nascido — a tela do nome é o
+              `ComecarLugarNovo`, sem ele. Apagado, volta à lista (a do painel, ou
+              a de quem usa — `ROTAS[onde].desistiu`). Não pede o segundo toque
+              dos passos: ele já tem o seu, e é o que apaga tudo. */}
+          <BotaoDesistir slug={slug} voltarAoPainel onde={onde} />
+        </section>
+      </AvisoDeMudanca.Provider>
     </PortaDoEditor.Provider>
   );
 }

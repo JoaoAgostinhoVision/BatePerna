@@ -28,15 +28,15 @@ import {
   PROXIMA,
   PULADA,
   PULAR,
-  RESPONDIDA,
-  SEM_RESPOSTA,
+  SEGUIR_SEM_SALVAR,
+  VOLTAR_A_REVISAO,
   enderecoDaPergunta,
   posicaoNaTela,
 } from "@/app/admin/FormularioDeLugar";
-import { enderecoDePublicar } from "@/app/admin/novo/enderecos";
+import { ROTAS, enderecoDePublicar } from "@/app/admin/novo/enderecos";
 import EditorProsa from "@/app/admin/campos/EditorProsa";
 import { ERRO_REDE } from "@/app/admin/campos/gravar";
-import { CIDADE_DEPOIS_DE_SALVAR, HORA_VAZIA } from "@/app/admin/campos/palavras";
+import { CIDADE_DEPOIS_DE_SALVAR, DESFAZER, HORA_VAZIA } from "@/app/admin/campos/palavras";
 import { APROXIMAR, EM_CIDADE, MARQUE_NO_MAPA, VISTA_CIDADE_AMBIGUA, VISTA_SEM_CIDADE } from "@/app/admin/campos/EditorCoordenada";
 import { ESTADO_DO_APP } from "@/lib/lugares";
 import { vistaDoAcervo } from "@/lib/vista-do-mapa";
@@ -160,11 +160,12 @@ async function lugarNovo(): Promise<void> {
   expect(await criarRascunho(cliente, S, docComCidade(S, NOME, CIDADE), 1)).toBe(true);
 }
 
-async function paginaNovo(slug?: string, p?: string | string[]) {
+async function paginaNovo(slug?: string, p?: string | string[], volta?: string) {
   const { default: Novo } = await import("@/app/admin/novo/page");
-  const params: { slug?: string; p?: string | string[] } = {};
+  const params: { slug?: string; p?: string | string[]; volta?: string } = {};
   if (slug !== undefined) params.slug = slug;
   if (p !== undefined) params.p = p;
+  if (volta !== undefined) params.volta = volta;
   return render(await Novo({ searchParams: Promise.resolve(params) }));
 }
 
@@ -735,7 +736,7 @@ describe("/admin/novo — a posição mora na URL", () => {
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔴 R3: ANDAR SEM GRAVAR. "Anterior" e "Próxima" são LINKS — servem pra voltar
 // a uma resposta ou deixar uma obrigatória pra depois (rascunho é incompleto
-// por natureza). E a lista de saltos diz quais já têm resposta.
+// por natureza). (A lista de saltos saiu em 17/10.)
 describe("/admin/novo — andar entre as perguntas", () => {
   // 🔴 TAREFA 12 (R3 da auditoria de 06/10): na ÚLTIMA, o "Próxima" leva à tela
   // de PUBLICAR — é o fim do questionário. Até a 12, a última não tinha "Próxima".
@@ -772,27 +773,209 @@ describe("/admin/novo — andar entre as perguntas", () => {
     expect(fetchFalso).not.toHaveBeenCalled();
   });
 
-  it("a lista de saltos: uma por pergunta, cada uma marcada respondida ou sem resposta", async () => {
+  // 17/10 (Task 7, melhoria 5): a fileira de saltos foi apagada — era uma fileira de
+  // portas por onde o texto digitado ia embora. Fica "Pergunta N de M", lida.
+  it("não há mais fileira de saltos, só 'Pergunta N de M'", async () => {
     await lugarNovo();
-    await salvarRascunho(
-      cliente,
-      S,
-      JSON.stringify({ ...JSON.parse(docComCidade(S, NOME, CIDADE)), voz: "frase marcadora" }),
-      2,
-    );
     const total = esperadas().length;
     await paginaNovo(S, "4");
-    const saltos = within(screen.getByTestId("saltos")).getAllByRole("link");
-    expect(saltos).toHaveLength(total);
-    const respondidas = new Set([posDe("trajeto.waypoints.0.nome"), posDe("voz")]);
-    saltos.forEach((a, i) => {
-      const n = i + 1;
-      expect(a.getAttribute("href"), `salto ${n}`).toBe(enderecoDaPergunta(S, n));
-      expect(a.getAttribute("aria-label"), `salto ${n}`).toBe(
-        `${posicaoNaTela(n, total)}: ${respondidas.has(n) ? RESPONDIDA : SEM_RESPOSTA}`,
-      );
-      expect(a.getAttribute("aria-current"), `salto ${n}`).toBe(n === 4 ? "step" : null);
+    expect(screen.queryByTestId("saltos")).toBeNull();
+    expect(document.querySelector(".adm-novo-saltos, .adm-novo-salto"), "sobrou a fileira de saltos").toBeNull();
+    expect(screen.getByText(posicaoNaTela(4, total))).toBeTruthy();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 17/10 (Task 7, melhoria 1): NENHUM TOQUE PERDE TEXTO. Com algo não salvo na
+// tela, "Anterior", "Próxima", "Voltar à revisão" e "Pular" pedem o segundo
+// toque; sem nada não salvo, um toque só.
+describe("/admin/novo — o segundo toque de quem sai com texto não salvo", () => {
+  /** Um toque que o jsdom não segue: devolve se o APP impediu a navegação nativa
+   *  (o `preventDefault` do formulário, visto antes do nosso ouvinte). */
+  function toque(el: HTMLElement): boolean {
+    let impediu = false;
+    const ouvir = (e: Event): void => {
+      impediu = e.defaultPrevented;
+      e.preventDefault();
+    };
+    document.addEventListener("click", ouvir);
+    try {
+      fireEvent.click(el);
+    } finally {
+      document.removeEventListener("click", ouvir);
+    }
+    return impediu;
+  }
+  const digitar = (caminho: string, valor: string): void => {
+    fireEvent.change(within(pergunta(caminho)).getByRole("textbox"), { target: { value: valor } });
+  };
+
+  it("🔴 texto digitado e Próxima: o 1º toque não sai e pede; o 2º sai", async () => {
+    await lugarNovo();
+    const { assign } = await comRotaDeVerdade();
+    await telaDe("voz");
+    const n = posDe("voz");
+    digitar("voz", "texto marcador");
+    expect(toque(screen.getByRole("link", { name: PROXIMA })), "o 1º toque tinha de ser impedido").toBe(true);
+    expect(assign).not.toHaveBeenCalled();
+    expect(screen.queryByRole("link", { name: PROXIMA }), "o rótulo não mudou").toBeNull();
+    const pedido = screen.getByRole("link", { name: SEGUIR_SEM_SALVAR });
+    expect(toque(pedido)).toBe(true);
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(S, n + 1));
+    // o que ele digitou continua na caixa
+    expect(within(pergunta("voz")).getByDisplayValue("texto marcador")).toBeTruthy();
+  });
+
+  it("sem texto mudado, Próxima e Anterior saem num toque só", async () => {
+    await lugarNovo();
+    const { assign } = await comRotaDeVerdade();
+    await telaDe("voz");
+    expect(toque(screen.getByRole("link", { name: PROXIMA })), "pediu segundo toque sem motivo").toBe(false);
+    expect(toque(screen.getByRole("link", { name: ANTERIOR }))).toBe(false);
+    expect(screen.queryByRole("link", { name: SEGUIR_SEM_SALVAR })).toBeNull();
+    expect(assign).not.toHaveBeenCalled(); // o link nativo navega; o app não interfere
+  });
+
+  it("pular com texto não salvo pede o segundo toque", async () => {
+    await lugarNovo();
+    const { assign } = await comRotaDeVerdade();
+    await telaDe("secaRapido");
+    digitar("secaRapido", "texto marcador");
+    fireEvent.click(within(pergunta("secaRapido")).getByRole("button", { name: PULAR }));
+    expect(assign, "o 1º toque do Pular saiu").not.toHaveBeenCalled();
+    expect(within(pergunta("secaRapido")).queryByText(PULADA)).toBeNull();
+    fireEvent.click(within(pergunta("secaRapido")).getByRole("button", { name: SEGUIR_SEM_SALVAR }));
+    expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(S, posDe("secaRapido") + 1));
+  });
+
+  it("pular SEM texto mudado sai num toque só", async () => {
+    await lugarNovo();
+    const { assign } = await comRotaDeVerdade();
+    await telaDe("secaRapido");
+    fireEvent.click(within(pergunta("secaRapido")).getByRole("button", { name: PULAR }));
+    expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(S, posDe("secaRapido") + 1));
+  });
+
+  it("Anterior com o pin mexido e não salvo pede o segundo toque", async () => {
+    await lugarNovo();
+    const { assign } = await comRotaDeVerdade();
+    const P = "trajeto.waypoints.0.lat";
+    await telaDe(P);
+    // o mapa sem pin: o toque dele é a mudança
+    const mapa = within(pergunta(P)).getByTestId("mapa-escolher");
+    const RECT = { left: 10, top: 20, width: MAPA_LARGURA_PX / 2, height: MAPA_ALTURA_PX / 2 };
+    const dublar = (el: HTMLElement): void => {
+      el.getBoundingClientRect = () =>
+        ({ ...RECT, x: RECT.left, y: RECT.top, right: RECT.left + RECT.width, bottom: RECT.top + RECT.height, toJSON: () => ({}) }) as DOMRect;
+    };
+    dublar(mapa);
+    dublar(mapa.parentElement!);
+    const ponto = { clientX: RECT.left + 100, clientY: RECT.top + 60 };
+    fireEvent(mapa, new MouseEvent("pointerdown", { bubbles: true, cancelable: true, ...ponto }));
+    fireEvent(mapa, new MouseEvent("pointerup", { bubbles: true, cancelable: true, ...ponto }));
+    expect(toque(screen.getByRole("link", { name: ANTERIOR })), "o pin mexido saiu num toque").toBe(true);
+    expect(assign).not.toHaveBeenCalled();
+    expect(toque(screen.getByRole("link", { name: SEGUIR_SEM_SALVAR }))).toBe(true);
+    expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(S, posDe(P) - 1));
+  });
+
+  it("o pedido é de UM controle: pedir na Próxima e tocar na Anterior pede de novo", async () => {
+    await lugarNovo();
+    const { assign } = await comRotaDeVerdade();
+    await telaDe("voz");
+    digitar("voz", "texto marcador");
+    toque(screen.getByRole("link", { name: PROXIMA }));
+    toque(screen.getByRole("link", { name: ANTERIOR }));
+    expect(assign, "o pedido da Próxima valeu pra Anterior").not.toHaveBeenCalled();
+    expect(screen.getByRole("link", { name: PROXIMA }), "a Próxima ficou pedindo").toBeTruthy();
+  });
+
+  it("Desfazer tira o pedido: Próxima volta a sair num toque", async () => {
+    await lugarNovo();
+    const { assign } = await comRotaDeVerdade();
+    await telaDe("voz");
+    digitar("voz", "texto marcador");
+    toque(screen.getByRole("link", { name: PROXIMA }));
+    fireEvent.click(within(pergunta("voz")).getByRole("button", { name: DESFAZER }));
+    expect(screen.queryByRole("link", { name: SEGUIR_SEM_SALVAR })).toBeNull();
+    expect(toque(screen.getByRole("link", { name: PROXIMA })), "pediu depois do Desfazer").toBe(false);
+    // e o pedido antigo não vale pro texto digitado de novo
+    digitar("voz", "outro texto");
+    expect(toque(screen.getByRole("link", { name: PROXIMA })), "o pedido velho sobreviveu ao Desfazer").toBe(true);
+    expect(assign).not.toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 17/10 (Task 7, melhoria 5): a pergunta vem primeiro; o que não é ela desce.
+describe("/admin/novo — a ordem da tela", () => {
+  it("a pergunta vem primeiro; o aviso de rascunho e o Desistir, no fim", async () => {
+    await lugarNovo();
+    await porTodasAsTelas((n) => {
+      const perg = screen.getByTestId(/^pergunta-/);
+      const posicao = screen.getByText(posicaoNaTela(n, esperadas().length));
+      const aviso = screen.getByText(AVISO_RASCUNHO);
+      const passos = document.querySelector(".adm-novo-passos")!;
+      const desistir = screen.getByRole("button", { name: DESISTIR });
+      const depois = (x: Node, y: Node): boolean => !!(x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(depois(posicao, perg), `tela ${n}: a posição antes da pergunta`).toBe(true);
+      expect(depois(perg, passos), `tela ${n}: a navegação acima da pergunta`).toBe(true);
+      expect(depois(passos, aviso), `tela ${n}: o aviso de rascunho acima da navegação`).toBe(true);
+      expect(depois(aviso, desistir), `tela ${n}: o Desistir acima do aviso`).toBe(true);
     });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 17/10 (Task 7): "Corrigir" leva a UMA pergunta e o seguir volta à revisão.
+describe("/admin/novo — com volta=revisao", () => {
+  it("a navegação é só 'Voltar à revisão', que leva à revisão", async () => {
+    await lugarNovo();
+    await paginaNovo(S, "5", "revisao");
+    expect(screen.queryByRole("link", { name: ANTERIOR })).toBeNull();
+    expect(screen.queryByRole("link", { name: PROXIMA })).toBeNull();
+    expect(screen.getByRole("link", { name: VOLTAR_A_REVISAO }).getAttribute("href")).toBe(enderecoDePublicar(S));
+  });
+
+  it("sem volta (ou com outro valor), a navegação é a de sempre", async () => {
+    await lugarNovo();
+    for (const v of [undefined, "", "outra"]) {
+      await paginaNovo(S, "5", v);
+      expect(screen.getByRole("link", { name: PROXIMA }), JSON.stringify(v)).toBeTruthy();
+      expect(screen.queryByRole("link", { name: VOLTAR_A_REVISAO }), JSON.stringify(v)).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("o Pular leva à revisão", async () => {
+    await lugarNovo();
+    const { assign } = await comRotaDeVerdade();
+    await paginaNovo(S, String(posDe("secaRapido")), "revisao");
+    fireEvent.click(within(pergunta("secaRapido")).getByRole("button", { name: PULAR }));
+    expect(assign).toHaveBeenCalledWith(enderecoDePublicar(S));
+  });
+
+  it("o 'Voltar à revisão' também pede o segundo toque com texto não salvo", async () => {
+    await lugarNovo();
+    const { assign } = await comRotaDeVerdade();
+    await paginaNovo(S, String(posDe("voz")), "revisao");
+    fireEvent.change(within(pergunta("voz")).getByRole("textbox"), { target: { value: "texto marcador" } });
+    const parar = (e: Event) => e.preventDefault();
+    document.addEventListener("click", parar);
+    try {
+      fireEvent.click(screen.getByRole("link", { name: VOLTAR_A_REVISAO }));
+      expect(assign).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("link", { name: SEGUIR_SEM_SALVAR }));
+    } finally {
+      document.removeEventListener("click", parar);
+    }
+    expect(assign).toHaveBeenCalledWith(enderecoDePublicar(S));
+  });
+
+  it("a tabela: `corrigir` é a pergunta N com `&volta=revisao`, no painel e na dela", () => {
+    expect(ROTAS.painel.corrigir("a-b", 3)).toBe(`${ROTAS.painel.pergunta("a-b", 3)}&volta=revisao`);
+    expect(ROTAS.contribuir.corrigir("a-b", 3)).toBe(`${ROTAS.contribuir.pergunta("a-b", 3)}&volta=revisao`);
   });
 });
 
@@ -1025,6 +1208,26 @@ describe("/admin/novo — responder, sair e voltar", () => {
     expect(chamadas[0].corpo).toMatchObject({ slug: S, ponto: 0 });
     expect(await lerRascunho(cliente, S)).toBeNull();
     expect(JSON.parse((await lerRascunho(cliente, novo))!.doc).cidade).toBe("Cidade Marcador Dois");
+  });
+
+  // 17/10 (Task 7): quem veio de um "Corrigir" (`&volta=revisao`) volta à
+  // REVISÃO ao gravar — pelo slug que a porta DEVOLVEU: o ponto muda a cidade, e
+  // com ela a chave do rascunho do painel.
+  it("com volta=revisao, salvar leva à revisão pelo slug devolvido (o do painel pode mudar)", async () => {
+    await lugarNovo();
+    const doc = JSON.parse(docComCidade(S, NOME, CIDADE));
+    doc.trajeto.waypoints[0] = { ...doc.trajeto.waypoints[0], lat: -8.42, lng: -36.21 };
+    await salvarRascunho(cliente, S, JSON.stringify(doc), 2);
+    const { assign } = await comRotaDeVerdade();
+    const P = "trajeto.waypoints.0.lat";
+    await paginaNovo(S, String(posDe(P)), "revisao");
+    nominatimDeTeste.ponto = { cidade: "Cidade Marcador Dois" };
+    tocar(P, 200, 120);
+    fireEvent.click(salvarDe(P)!);
+    const novo = "lugar-marcador-um-cidade-marcador-dois";
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(enderecoDePublicar(novo)));
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(enderecoDePublicar(S), "a premissa: o endereço mudou").not.toBe(enderecoDePublicar(novo));
   });
 
   it("gravado, a pergunta volta com o pin no ponto dele, e sem buscar cidade nenhuma", async () => {
@@ -1424,7 +1627,8 @@ describe("/admin/novo — o aviso do par e a chave provisória", () => {
     expect(aviso, "a premissa: há aviso").not.toBeNull();
     expect(aviso.textContent).toContain(parDeLugar(nomeComCidade(NOME, CIDADE)));
     const link = within(aviso).getByRole("link", { name: CORRIGIR_O_NOME });
-    expect(link.getAttribute("href")).toBe(`/admin/novo?slug=${chave}&p=1`);
+    expect(link.getAttribute("href")).toBe(ROTAS.painel.corrigir(chave, 1));
+    expect(link.getAttribute("href"), "o corrigir volta à revisão").toContain("&volta=revisao");
     // A pergunta fica no topo (melhoria 5): o aviso vem DEPOIS dela.
     const perg = pergunta("trajeto.waypoints.0.nome");
     expect(perg.compareDocumentPosition(aviso) & Node.DOCUMENT_POSITION_FOLLOWING, "o aviso antes da pergunta").toBeTruthy();

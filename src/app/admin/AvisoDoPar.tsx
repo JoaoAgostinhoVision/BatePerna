@@ -6,7 +6,8 @@
  *  dela não nomeia ninguém (I3 de 07/10) — quem escolhe é a página.
  *
  *  `<p role="status">` e não um alerta: ela pode seguir respondendo, só o
- *  publicar fica travado. O link leva à pergunta do nome, onde se corrige. */
+ *  publicar fica travado. O link (`ROTAS[onde].corrigir`) leva à pergunta do nome, onde se corrige, e o
+ *  seguir de lá volta à revisão. */
 // PENDENTE: redação minha, o João ainda não leu
 export const CORRIGIR_O_NOME = "Corrigir o nome";
 

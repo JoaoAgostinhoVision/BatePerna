@@ -166,7 +166,7 @@ describe("/admin/novo — desistir do lugar novo", () => {
     expect(await lerRascunho(cliente, OUTRO), "apagou o rascunho de OUTRO lugar").not.toBeNull();
   });
 
-  it("o botão está em TODA pergunta, perto do aviso de rascunho", async () => {
+  it("o botão está em TODA pergunta, no rodapé, depois do aviso de rascunho", async () => {
     for (let n = 1; n <= ORDEM.length; n++) {
       const { container } = await paginaNovo(S, String(n));
       const aqui = formulario(container);

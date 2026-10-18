@@ -14,6 +14,10 @@ export type Onde = "painel" | "contribuir";
  *  cliente importam, porque quem a escolhe é uma página de SERVIDOR, e função
  *  não atravessa essa fronteira como prop — a página passa só a CHAVE (`onde`).
  *
+ *  `corrigir` (17/10, Task 7): a pergunta N com `&volta=revisao` — o "Corrigir"
+ *  da revisão e o do aviso do par levam a UMA pergunta, e o seguir dela volta
+ *  pra revisão (a tela de publicar), sem passar pelas outras.
+ *
  *  `recarregarSe401`: na tela de QUEM USA, 401 é a sessão do Clerk que venceu no
  *  meio; recarregar leva a página de servidor a pedir login, e o Clerk a devolve
  *  ao MESMO endereço. No painel do João fica `false`: lá o 401 continua sendo a
@@ -24,6 +28,7 @@ export const ROTAS = {
     buscaApi: "/api/admin/buscar-no-mapa",
     publicarApi: "/api/admin/publicar",
     pergunta: (slug: string, n: number) => `/admin/novo?slug=${e(slug)}&p=${n}`,
+    corrigir: (slug: string, n: number) => `/admin/novo?slug=${e(slug)}&p=${n}&volta=revisao`,
     publicar: (slug: string) => `/admin/novo/publicar?slug=${e(slug)}`,
     comecou: (slug: string) => `/admin/novo?slug=${e(slug)}`,
     publicou: (slug: string) => `/admin/${e(slug)}`,
@@ -35,6 +40,7 @@ export const ROTAS = {
     buscaApi: "/api/contribuir/buscar-no-mapa",
     publicarApi: "/api/contribuir/publicar",
     pergunta: (slug: string, n: number) => `/contribuir/novo?slug=${e(slug)}&p=${n}`,
+    corrigir: (slug: string, n: number) => `/contribuir/novo?slug=${e(slug)}&p=${n}&volta=revisao`,
     publicar: (slug: string) => `/contribuir/novo/publicar?slug=${e(slug)}`,
     comecou: (slug: string) => `/contribuir/novo?slug=${e(slug)}`,
     // Publicou: a pessoa vê o lugar como o público vê — com a marca.

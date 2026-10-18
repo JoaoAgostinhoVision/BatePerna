@@ -49,6 +49,15 @@ export const PortaDoEditor = createContext<{
   buscarEm: null,
 });
 
+/** O AVISO DE "TEM COISA NÃO SALVA NESTA TELA" (17/10, Task 7) — quem o ouve é
+ *  o `FormularioDeLugar`; quem o dá é o `BotaoDesfazer`, que TODO editor usa e
+ *  que já sabe, por `mudou`, se a tela difere do salvo. Um lugar só, em vez de
+ *  cada um dos sete editores avisar por conta própria.
+ *
+ *  `null` (o PADRÃO) = ninguém escutando: a `FichaInteira` não monta provedor, e
+ *  nada muda lá. */
+export const AvisoDeMudanca = createContext<((mudou: boolean) => void) | null>(null);
+
 /** A VERSÃO QUE A TELA ABRIU — a identidade do lugar que esta tela mostra
  *  (onda de fix 2 da Tarefa 11e, M6).
  *

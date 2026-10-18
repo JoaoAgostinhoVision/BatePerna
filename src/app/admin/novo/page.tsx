@@ -45,7 +45,7 @@ const ESTOUROU = Symbol("prazo do rascunho");
 export default async function Novo({
   searchParams,
 }: {
-  searchParams: Promise<{ slug?: string | string[]; p?: string | string[] }>;
+  searchParams: Promise<{ slug?: string | string[]; p?: string | string[]; volta?: string | string[] }>;
 }) {
   const cfg = lerConfigAdmin(process.env);
   if (!cfg.ligado) {
@@ -63,7 +63,7 @@ export default async function Novo({
     );
   }
 
-  const { slug, p } = await searchParams;
+  const { slug, p, volta } = await searchParams;
   if (typeof slug !== "string") {
     return (
       <main className="adm">
@@ -107,7 +107,7 @@ export default async function Novo({
   // de pergunta enquanto a trava existe; a frase é a do painel, que nomeia quem
   // ocupa. O link leva à pergunta do nome (posição 1).
   const trava = await travaDoPainel(r.doc, slug);
-  const aviso = trava === null ? undefined : <AvisoDoPar frase={trava} corrigir={ROTAS.painel.pergunta(slug, 1)} />;
+  const aviso = trava === null ? undefined : <AvisoDoPar frase={trava} corrigir={ROTAS.painel.corrigir(slug, 1)} />;
 
   return (
     <main className="adm">
@@ -119,6 +119,7 @@ export default async function Novo({
         pergunta={vista ? { ...pergunta, campo: { ...pergunta.campo, vista } } : pergunta}
         posicao={posicao}
         respondidas={respondidas}
+        voltaARevisao={volta === "revisao"}
       />
     </main>
   );

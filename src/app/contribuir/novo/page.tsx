@@ -28,10 +28,10 @@ const ESTOUROU = Symbol("prazo do rascunho dela");
  *  A porta é `quemNaTela` (Clerk), não a senha do painel. */
 export default async function NovoDaPessoa({
   searchParams,
-}: { searchParams: Promise<{ slug?: string | string[]; p?: string | string[] }> }) {
+}: { searchParams: Promise<{ slug?: string | string[]; p?: string | string[]; volta?: string | string[] }> }) {
   const quem = await quemNaTela();
   if ("frase" in quem) return <main className="adm"><p className="adm-erro">{quem.frase}</p></main>;
-  const { slug, p } = await searchParams;
+  const { slug, p, volta } = await searchParams;
   if (typeof slug !== "string") {
     return (
       <main className="adm">
@@ -59,7 +59,7 @@ export default async function NovoDaPessoa({
   // O aviso do par (17/10, Task 4): a frase DELA, que não nomeia o lugar que já
   // existe (I3 de 07/10); calculado a cada carga, depois da pergunta.
   const aviso = (await travaDaPessoa(r.doc))
-    ? <AvisoDoPar frase={NOME_EXISTE_NA_CIDADE} corrigir={ROTAS.contribuir.pergunta(slug, 1)} />
+    ? <AvisoDoPar frase={NOME_EXISTE_NA_CIDADE} corrigir={ROTAS.contribuir.corrigir(slug, 1)} />
     : undefined;
   return (
     <main className="adm">
@@ -71,6 +71,7 @@ export default async function NovoDaPessoa({
         posicao={posicao}
         respondidas={respondidas}
         onde="contribuir"
+        voltaARevisao={volta === "revisao"}
       />
     </main>
   );

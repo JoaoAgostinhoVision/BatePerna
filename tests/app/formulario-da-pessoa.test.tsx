@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
-import FormularioDeLugar, { ComecarLugarNovo } from "@/app/admin/FormularioDeLugar";
+import FormularioDeLugar, { ANTERIOR, ComecarLugarNovo, PROXIMA, VOLTAR_A_REVISAO } from "@/app/admin/FormularioDeLugar";
 import TelaDePublicar, { AVISO_PUBLICAR, AVISO_PUBLICAR_PESSOA, PUBLICAR } from "@/app/admin/TelaDePublicar";
 import BotaoDesistir, { DESISTIR, DESISTIR_MESMO } from "@/app/admin/BotaoDesistir";
 import { PortaDoEditor, usarGravacao } from "@/app/admin/campos/gravar";
@@ -113,9 +113,23 @@ describe("o formulário com onde='contribuir'", () => {
     expect(container.querySelector(".adm-novo-passo-proxima")?.getAttribute("href")).toBe("/contribuir/novo/publicar?slug=a-b");
   });
 
-  it("os saltos levam às perguntas DELA", () => {
-    const { container } = render(<FormularioDeLugar slug="a-b" pergunta={PERGUNTA} posicao={1} respondidas={[false, true]} onde="contribuir" />);
-    expect(container.querySelector('[data-testid="saltos"] a')?.getAttribute("href")).toBe("/contribuir/novo?slug=a-b&p=1");
+  it("o Anterior leva à pergunta DELA, e não há fileira de saltos", () => {
+    const { container, getByRole } = render(<FormularioDeLugar slug="a-b" pergunta={PERGUNTA} posicao={2} respondidas={[false, true]} onde="contribuir" />);
+    expect(getByRole("link", { name: ANTERIOR }).getAttribute("href")).toBe("/contribuir/novo?slug=a-b&p=1");
+    expect(container.querySelector('[data-testid="saltos"]')).toBeNull();
+  });
+
+  // 17/10 (Task 7): o "Corrigir" dela volta à revisão DELA.
+  it("com voltaARevisao, só o 'Voltar à revisão', que leva à revisão DELA; e salvar vai pra lá", async () => {
+    const { assign } = navegacaoFalsa();
+    const fetchFalso = vi.fn().mockResolvedValue(new Response(JSON.stringify({ slug: "c-d" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchFalso);
+    const { container, getByRole, queryByRole } = render(<FormularioDeLugar slug="a-b" pergunta={PERGUNTA} posicao={1} respondidas={[false, false]} onde="contribuir" voltaARevisao />);
+    expect(queryByRole("link", { name: PROXIMA })).toBeNull();
+    expect(getByRole("link", { name: VOLTAR_A_REVISAO }).getAttribute("href")).toBe("/contribuir/novo/publicar?slug=a-b");
+    fireEvent.change(container.querySelector("textarea")!, { target: { value: "Porque sim." } });
+    fireEvent.click(getByRole("button", { name: SALVAR }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/contribuir/novo/publicar?slug=c-d"));
   });
 
   // Além do brief: o `depoisDeGravar` do provedor também é da linha dela.

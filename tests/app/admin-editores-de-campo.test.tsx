@@ -36,8 +36,9 @@ import {
   PROXIMA,
   PULADA,
   PULAR,
-  RESPONDIDA,
+  SEGUIR_SEM_SALVAR,
   SEM_RESPOSTA,
+  VOLTAR_A_REVISAO,
 } from "@/app/admin/FormularioDeLugar";
 import { IR_PUBLICAR, LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
 import { TITULO_NAO_CONFERIDOS } from "@/app/admin/SecaoNaoConferidos";
@@ -1531,11 +1532,15 @@ describe("Os editores servem os três lugares", () => {
     COMECANDO,
     LUGAR_NOVO,
     TITULO_RASCUNHOS,
-    // Onda 2 da Tarefa 11: uma pergunta por vez — andar e os saltos.
+    // Onda 2 da Tarefa 11: uma pergunta por vez — andar. (`RESPONDIDA` saiu com a
+    // fileira de saltos, em 17/10; `SEM_RESPOSTA` fica, a revisão a usa.)
     ANTERIOR,
     PROXIMA,
-    RESPONDIDA,
     SEM_RESPOSTA,
+    // Task 7 (17/10): o segundo toque de quem sai com texto não salvo, e o passo
+    // único de quem veio corrigir. Só nascem no formulário de lugar novo.
+    SEGUIR_SEM_SALVAR,
+    VOLTAR_A_REVISAO,
     // Tarefa 11f: o mapa de pôr o pin anda, e nasce sem pin quando não há ponto.
     // Nas três fichas (todas com ponto) só o nome do + e do − está na tela em
     // repouso, e como `aria-label`, não como texto; a ajuda de aproximar só
