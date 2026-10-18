@@ -249,6 +249,9 @@ function problemasDasNovas(
  *    `trajeto.waypoints.0.lat` e mostra o RÓTULO dele, nunca a palavra. */
 const NAO_SAO_FRASE: Readonly<Record<string, readonly string[]>> = {
   "src/lib/campos-da-pessoa.ts": ["PONTO"],
+  // `USER_AGENT_DO_APP` = o cabeçalho que o servidor manda ao Nominatim (política
+  // de uso dele): nunca vai à tela de ninguém.
+  "src/lib/nominatim.ts": ["USER_AGENT_DO_APP"],
 };
 
 /** As constantes de texto exportadas que nasceram depois da BASE, em todo

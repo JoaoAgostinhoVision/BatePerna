@@ -4,6 +4,7 @@ import path from "node:path";
 import { createClient } from "@libsql/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { contarHoje, criarRascunho, gravarRegraPadrao, gravarVersao, insertConfirmacao, inserirAviso, listarRascunhos, trocarEndereco, upsertFreshness, versoesAtuais, avisoVigente } from "@/lib/db";
+import { guardarResposta, tomarVezDoNominatim } from "@/lib/db-nominatim";
 import { PESSOA_DE_TESTE, bancoVazio, semearAcervo, semearLugarDaPessoa, base } from "./banco";
 import { lugarMarcador } from "./lugar-marcador";
 
@@ -157,6 +158,9 @@ describe("semearAcervo deixa TODA tabela como a de um banco recém-semeado", () 
       args: [PESSOA_DE_TESTE, AGORA],
     });
     await gravarRegraPadrao(c, { janela_previsao_horas: 5, janela_passado_horas: 9, limiar_mm: 1, severidade: "espera" }, AGORA);
+    // As duas do Nominatim (17/10): uma resposta guardada e a vez gasta.
+    await guardarResposta(c, "ponto:-8.1,-35.2", "{}", AGORA);
+    await tomarVezDoNominatim(c, AGORA * 1000);
     const sujo = await retrato(c);
     expect(Object.keys(sujo)).toEqual(Object.keys(esperado));
     for (const t of Object.keys(esperado)) {
