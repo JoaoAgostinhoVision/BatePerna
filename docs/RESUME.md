@@ -19,7 +19,15 @@
    viram o slug do rascunho e não mudam; corrigir = trocar o endereço do rascunho e refazer a checagem nome+cidade
    (mexer o ponto também, porque a cidade sai dele — ponto 2). Chutes meus: após corrigir, volta à revisão; ponto como
    mapinha; vale pra `/admin/novo` e `/contribuir`.
-4. (próximos pontos dele aqui)
+   → 17/10: ele escolheu as **5 melhorias recomendadas** (Próxima não apaga texto; sem zoom no iPhone; rótulos das
+   opções; busca abre no zoom que vale + cidade embaixo do mapa; pergunta primeiro/Desistir no fim). Colisão
+   nome+cidade descoberta no ponto = **saída (b)** (dele): ponto grava, publicar trava. Desenho:
+   `docs/superpowers/specs/2026-10-17-cidade-do-ponto-e-revisao-design.md`. Ele disse "pode seguir" → plano.
+4. **Pontos turísticos do serviço de mapa aparecendo como "possíveis lugares pra ir"**, como trilhas mas SEM
+   informação (dele, 17/10). NÃO entra nesta rodada. 🔴 O Nominatim PROÍBE consulta sistemática ("searching for
+   complete lists"); extrair em lote seria Overpass API, com política própria — ler ANTES de desenhar (lição de 13/09).
+   E é questão de procedência: lugar sem nenhuma palavra de quem foi (ver `nao-inventar-fatos-de-roteiros`).
+5. (próximos pontos dele aqui)
 
 ## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 15/10: A RODADA "lugar de quem usa" ESTÁ NO AR (vence TUDO abaixo)
 
