@@ -126,8 +126,9 @@ export const posicaoNaTela = (n: number, total: number): string => `Pergunta ${n
  *  saem daqui como sempre saíram. */
 export { PULADA, SEM_RESPOSTA };
 
-/** O endereço da pergunta N mora em `./novo/enderecos` desde a Tarefa 12 (a
- *  página de publicar, de servidor, também o usa); continua saindo daqui. */
+/** O endereço da pergunta N mora em `./novo/enderecos` (`ROTAS.painel.pergunta`);
+ *  continua saindo daqui. A revisão e a página de publicar usam o `corrigir`
+ *  das `ROTAS`, não este. */
 export { enderecoDaPergunta };
 
 /** 🔴 `Record` POR ESPÉCIE: uma espécie nova no registro deixa este arquivo sem

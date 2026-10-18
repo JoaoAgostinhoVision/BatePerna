@@ -265,9 +265,9 @@ function problemasDasNovas(
  *  come o caso real que se parece com ela. Marcar uma destas `PENDENTE` poria
  *  no pacote de copy dele uma coisa que não é palavra pra ler. Cada nome daqui
  *  tem de EXISTIR no arquivo (caso abaixo), senão a exceção apodrece calada.
- *  - `PONTO` = "ponto": a CHAVE da pergunta do mapa na lista do que falta
- *    (`obrigatoriosDaPessoaFaltando`); a tela de publicar a troca pelo caminho
- *    `trajeto.waypoints.0.lat` e mostra o RÓTULO dele, nunca a palavra. */
+ *  - `PONTO` = "ponto": a CHAVE da pergunta do mapa na lista de obrigatórias
+ *    que faltam (`obrigatoriosDaPessoaFaltando`, a régua da porta); nunca vai à
+ *    tela — a revisão monta as linhas pelas perguntas e mostra o texto delas. */
 const NAO_SAO_FRASE: Readonly<Record<string, readonly string[]>> = {
   "src/lib/campos-da-pessoa.ts": ["PONTO"],
   // `USER_AGENT_DO_APP` = o cabeçalho que o servidor manda ao Nominatim (política

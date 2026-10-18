@@ -47,6 +47,7 @@ import { SALVAR_REGRA, VALE_PARA } from "@/app/admin/TelaDaRegraPadrao";
 import { CALIBRAR, CALIBRAR_AJUDA, FALTA_UM_DOS_QUATRO } from "@/app/admin/campos/EditorCalibrar";
 import { AVISO_PUBLICAR, AVISO_PUBLICAR_PESSOA, PUBLICANDO, PUBLICAR, TITULO_CALA } from "@/app/admin/TelaDePublicar";
 import { CORRIGIR, TITULO_REVISAO } from "@/app/admin/RevisaoDoLugar";
+import { MAPA_DO_PONTO } from "@/app/admin/MapinhaDoPonto";
 import {
   ALEM_DO_PROVEDOR,
   BLOQUEAR,
@@ -1567,6 +1568,7 @@ describe("Os editores servem os três lugares", () => {
     // Task 8 (17/10): a revisão antes de publicar. Só nasce na tela de publicar.
     TITULO_REVISAO,
     CORRIGIR,
+    MAPA_DO_PONTO,
     // Tarefa 15: os dois "cancelar". O "Desfazer" só existe com a tela diferente
     // do salvo; o "Desistir", no formulário e na lista de rascunhos — nenhuma em
     // repouso nas três fichas.

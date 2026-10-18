@@ -10,6 +10,9 @@ import { MAPA_ESCALA, MAPA_ZOOM_EDITOR, TILE_PX, tilesParaCaixa, urlTile, zoomDe
  *  Os tiles são os da vista (`tilesParaCaixa`), pedidos pelo navegador ao abrir
  *  a tela — nada de pré-carregar, a Tile Usage Policy do OSM. O crédito
  *  "© OpenStreetMap" é obrigação de licença (ODbL); não remover. */
+// PENDENTE: redação minha, o João ainda não leu
+export const MAPA_DO_PONTO = "Mapa do ponto marcado";
+
 const LARGURA_PX = 320;
 const ALTURA_PX = 140;
 
@@ -25,7 +28,7 @@ export default function MapinhaDoPonto({ lat, lng }: { lat: number; lng: number 
       <div
         className="adm-mapinha-tiles"
         role="img"
-        aria-label="Mapa do ponto marcado"
+        aria-label={MAPA_DO_PONTO}
         style={{ width: LARGURA_PX, height: ALTURA_PX }}
       >
         <div

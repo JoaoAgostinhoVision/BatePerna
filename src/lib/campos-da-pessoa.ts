@@ -32,8 +32,10 @@ const CIDADE = "cidade";
 
 export const OPCIONAIS_DA_PESSOA: ReadonlySet<string> = new Set(["avisos", "custo.valor", "horario", "dias"]);
 
-/** A pergunta do mapa, na lista do que falta. Não é caminho do documento: é o
- *  ponto 0 E a coordenada da chuva, juntos. */
+/** A pergunta do mapa, na lista de obrigatórias que faltam
+ *  (`obrigatoriosDaPessoaFaltando`, a régua da porta de publicar dela). Não é
+ *  caminho do documento: é o ponto 0 E a coordenada da chuva, juntos. A revisão
+ *  não a usa — ela monta as linhas pelas perguntas. */
 export const PONTO = "ponto";
 
 export function ehCampoDaPessoa(c: unknown): c is string {
