@@ -14,7 +14,9 @@ export default defineConfig({
     include: ["tests/**/*.test.{ts,tsx}"],
     environment: "jsdom",
     globals: true,
-    setupFiles: [],
+    // A suite nunca bate no Nominatim de verdade (politica de uso): o setup faz
+    // todo `fetch` pra ele estourar.
+    setupFiles: ["tests/setup-sem-rede.ts"],
     // Node 22+ ships an experimental built-in `localStorage` global that, when
     // no --localstorage-file is configured, shadows jsdom's window.localStorage
     // with a broken stub (no .clear/.setItem/etc). Disabling it lets jsdom's

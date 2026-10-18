@@ -1,0 +1,5 @@
+[
+  {"place_id":11,"display_name":"Lugar Marcador SC","lat":"-27.5","lon":"-48.5","address":{"state":"Santa Catarina"}},
+  {"place_id":12,"display_name":"Lugar Marcador PE","lat":"-8.1","lon":"-35.2","address":{"state":"Pernambuco"}},
+  {"place_id":13,"display_name":"Lugar Marcador BA","lat":"-12.9","lon":"-38.5","address":{"state":"Bahia"}}
+]

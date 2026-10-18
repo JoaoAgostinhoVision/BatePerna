@@ -137,6 +137,17 @@ export async function ensureSchema(client: Client): Promise<void> {
       REGRA_PADRAO_INICIAL.severidade,
     ],
   });
+  // 🔴 O NOMINATIM (spec de 17/10): duas tabelas que SOBRESCREVEM e não afirmam
+  // nada que foi à tela. `nominatim_respostas` é cache (JSON cru, 30 dias, a
+  // velha vira a nova); `nominatim_vez` é a linha única do limite de 1/s —
+  // `INSERT OR IGNORE`, como `regra_padrao`, pra semear de novo não zerar a vez.
+  // Sem elas todo ponto salvo responde "não consegui achar a cidade": rode
+  // `npm run semear` ANTES do deploy.
+  await client.execute(`CREATE TABLE IF NOT EXISTS nominatim_respostas (
+    chave TEXT PRIMARY KEY, resposta TEXT NOT NULL, em INTEGER NOT NULL)`);
+  await client.execute(`CREATE TABLE IF NOT EXISTS nominatim_vez (
+    id INTEGER PRIMARY KEY CHECK (id = 1), ultima_ms INTEGER NOT NULL)`);
+  await client.execute(`INSERT OR IGNORE INTO nominatim_vez (id, ultima_ms) VALUES (1, 0)`);
   await migrarColunaContribuidorDoRascunho(client);
 }
 
