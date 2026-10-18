@@ -13,7 +13,13 @@
    cache, atribuição "© OpenStreetMap". Testado 17/10: Pedra do Navio/Bom Jardim, Monte das Tabocas, reverse → Bom Jardim OK.
    Chutes meus, não aprovados: vale também pro `/admin/novo`; ponto sem cidade → pedir pra mexer o ponto; chave de
    cidade no reverse varia (town/city/village/municipality).
-3. (próximos pontos dele aqui)
+3. **Revisar tudo antes de publicar — DECIDIDO por ele:** *"queria revisar tudo antes de mandar, ou se errei poder
+   voltar para ajustar"*. A tela de publicar (`TelaDePublicar`, hoje só lista o que FALTA) vira revisão: todas as
+   respostas, cada uma com "Corrigir" → aquela pergunta. **O NOME também tem "Corrigir"** (dele) — hoje nome+cidade
+   viram o slug do rascunho e não mudam; corrigir = trocar o endereço do rascunho e refazer a checagem nome+cidade
+   (mexer o ponto também, porque a cidade sai dele — ponto 2). Chutes meus: após corrigir, volta à revisão; ponto como
+   mapinha; vale pra `/admin/novo` e `/contribuir`.
+4. (próximos pontos dele aqui)
 
 ## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 15/10: A RODADA "lugar de quem usa" ESTÁ NO AR (vence TUDO abaixo)
 
