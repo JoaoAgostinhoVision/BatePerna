@@ -5,9 +5,9 @@ import { DIAS, NOME_DO_DIA } from "./semana";
  *  a pessoa LÊ na lista. Módulo puro (sem zod, sem registro): desce pro servidor
  *  que monta o `CampoNaTela` e dali pro cliente como objeto raso. */
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Redação minha.
 export const ROTULO_GRATIS = "Grátis";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Redação minha.
 export const ROTULO_PAGO = "Pago";
 
 /** valor gravado → palavra da tela, ou `undefined` quando o campo não tem rótulos

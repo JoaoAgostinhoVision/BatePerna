@@ -10,9 +10,9 @@ import type { LinhaDaRevisao } from "./novo/revisao";
  *
  *  Obrigatória sem resposta é `falta` (destacada, com `SEM_RESPOSTA`); opcional
  *  sem resposta é `pulada` (`PULADA`). O ponto é mapinha, nunca número. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Redação minha.
 export const TITULO_REVISAO = "Confira tudo antes de publicar:";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Palavra dele de 17/10.
 export const CORRIGIR = "Corrigir";
 
 export default function RevisaoDoLugar({ linhas }: { linhas: readonly LinhaDaRevisao[] }) {

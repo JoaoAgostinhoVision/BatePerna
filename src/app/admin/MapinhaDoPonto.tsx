@@ -1,7 +1,7 @@
 import { MAPA_ESCALA, MAPA_ZOOM_EDITOR, TILE_PX, tilesParaCaixa, urlTile, zoomDeTiles } from "@/lib/mapa";
 
 /** O nome do mapinha pra quem lê a tela em voz alta (o `aria-label` do mosaico). */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Redação minha.
 export const MAPA_DO_PONTO = "Mapa do ponto marcado";
 
 const LARGURA_PX = 320;

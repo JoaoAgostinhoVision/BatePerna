@@ -45,7 +45,7 @@ export const NADA_PUBLICADO = "Nada foi publicado. Recarregue a página e tente 
  *  diz antes, quando sabe, O QUE impede o rascunho de se mudar
  *  (`travaDoPainel`); esta é a frase de quando nada impede mais (quem ocupava
  *  saiu depois do ponto): salvar de novo o leva ao endereço. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: proposta aprovada pelo João no pacote de copy em 2026-10-18.
 export const ENDERECO_AINDA_NAO_SAIU =
   "Nada foi publicado: o endereço deste lugar ainda não saiu do nome e da cidade. Corrija o nome e salve de novo.";
 

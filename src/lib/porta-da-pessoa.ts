@@ -76,7 +76,7 @@ export const NOME_JA_EM_USO =
  *  já é de um lugar no BatePerna. É AVISO, não recusa — ela segue respondendo, e
  *  o publicar é que trava (`NOME_JA_EM_USO`). Não nomeia ninguém (I3 de 07/10):
  *  a do painel nomeia quem ocupa, esta só diz que existe, como o 409. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Redação minha.
 export const NOME_EXISTE_NA_CIDADE =
   "Já existe no BatePerna um lugar com esse nome nessa cidade. Você pode seguir respondendo, mas pra publicar o nome precisa ser outro.";
 

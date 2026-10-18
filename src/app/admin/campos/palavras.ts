@@ -263,21 +263,21 @@ export const BLOQUEAR_MESMO = "Bloquear mesmo? Todos os lugares dessa pessoa sae
 export const DESBLOQUEAR = "Desbloquear";
 
 /** A BUSCA NO MAPA DO PONTO (17/10, Task 5): a caixa em cima do mapa do lugar
- *  novo. Ela só MOVE o mapa — nunca põe pin nem grava. Todas as frases abaixo
- *  são redação minha. */
-// PENDENTE: redação minha, o João ainda não leu
+ *  novo. Ela só MOVE o mapa — nunca põe pin nem grava. As frases abaixo são
+ *  redação minha, menos o `BUSCAR`, palavra dele de 17/10. */
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Palavra dele de 17/10.
 export const BUSCAR = "Buscar";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Redação minha.
 export const BUSCANDO = "Buscando…";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Redação minha.
 export const ROTULO_DA_BUSCA = "Cidade ou nome do lugar";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Redação minha.
 export const NENHUM_ACHADO = "Não achei nada com esse nome. Tente a cidade.";
 /** Mora aqui (e não na rota) porque `palavras.ts` é puro e as duas rotas da
  *  busca a importam: a falha do serviço e a rede caída dizem a mesma coisa. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Redação minha.
 export const BUSCA_NAO_SAIU = "Não consegui buscar agora. Tente de novo daqui a pouco, ou ache o lugar mexendo no mapa.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Redação minha.
 export const CIDADE_DEPOIS_DE_SALVAR = "A cidade sai do ponto quando você salvar.";
 
 /** A pergunta opcional sem resposta, e a obrigatória sem resposta. Moravam em

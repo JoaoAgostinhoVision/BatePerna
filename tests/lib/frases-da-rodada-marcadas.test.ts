@@ -113,19 +113,58 @@ const LIDAS_EM_13_10: Readonly<Record<string, readonly string[]>> = {
   "src/app/BarraNavegacao.tsx": ["MANDAR_UM_LUGAR"],
 };
 
+/** 🔴 A SEGUNDA LISTA DATADA (onda de copy de 18/10, rodada "cidade do ponto").
+ *  O João leu o pacote "Frases da cidade do ponto" (o banco do artifact,
+ *  coleção `respostas`) e marcou "Serve" nas 18 constantes `PENDENTE` da rodada
+ *  (a lista do relatório da Task 9). O `ENDERECO_AINDA_NAO_SAIU` entra com o
+ *  texto da PROPOSTA que ele escolheu; `BUSCAR` e `CORRIGIR` são palavra dele de
+ *  17/10. O molde é o da de 13/10, e cada data cerca a SUA lista: um nome desta
+ *  com a marca de 13/10 (ou o contrário) não é leitura dele — é recusado. */
+const LIDAS_EM_18 = "2026-10-18";
+const LIDAS_EM_18_10: Readonly<Record<string, readonly string[]>> = {
+  "src/app/admin/AvisoDoPar.tsx": ["CORRIGIR_O_NOME"],
+  "src/app/admin/campos/EditorCoordenada.tsx": ["EM_CIDADE"],
+  "src/app/admin/campos/palavras.ts": [
+    "BUSCAR", "BUSCANDO", "ROTULO_DA_BUSCA", "NENHUM_ACHADO", "BUSCA_NAO_SAIU", "CIDADE_DEPOIS_DE_SALVAR",
+  ],
+  "src/app/admin/FormularioDeLugar.tsx": ["SEGUIR_SEM_SALVAR", "VOLTAR_A_REVISAO"],
+  "src/app/admin/MapinhaDoPonto.tsx": ["MAPA_DO_PONTO"],
+  "src/app/admin/RevisaoDoLugar.tsx": ["TITULO_REVISAO", "CORRIGIR"],
+  "src/lib/porta-da-pessoa.ts": ["NOME_EXISTE_NA_CIDADE"],
+  "src/lib/porta-de-publicar.ts": ["ENDERECO_AINDA_NAO_SAIU"],
+  "src/lib/rascunho.ts": ["CIDADE_DO_PONTO_NAO_SAIU"],
+  "src/lib/rotulos-das-opcoes.ts": ["ROTULO_GRATIS", "ROTULO_PAGO"],
+};
+
+/** Uma leitura dele: a data e os nomes que ela libera NUM arquivo. */
+type Leitura = { data: string; nomes: readonly string[] };
+
+/** As listas datadas, cada uma com a sua data. Lista datada nova entra aqui. */
+const LISTAS_DATADAS: readonly { data: string; lista: Readonly<Record<string, readonly string[]>> }[] = [
+  { data: LIDAS_EM, lista: LIDAS_EM_13_10 },
+  { data: LIDAS_EM_18, lista: LIDAS_EM_18_10 },
+];
+
+/** As leituras que valem num arquivo (uma por lista datada que o cita). */
+function leiturasDe(arquivo: string): Leitura[] {
+  return LISTAS_DATADAS.flatMap(({ data, lista }) => (lista[arquivo] ? [{ data, nomes: lista[arquivo] }] : []));
+}
+
+const marcaDaData = (data: string) => new RegExp(`LIDA:.*${data}`);
+
 /** O que está errado na lista datada de UM arquivo: nome que não é constante
  *  de texto exportada dele, que já existia na base (então não precisava da
  *  lista), ou que não está `LIDA:` com a data da leitura. */
-function problemasDaLista(fonte: string, base: Set<string>, lidas: readonly string[]): string[] {
+function problemasDaLista(fonte: string, base: Set<string>, lidas: readonly string[], data: string = LIDAS_EM): string[] {
   const linhas = fonte.split(/\r?\n/);
   const frases = frasesExportadas(fonte);
   return lidas.flatMap((nome) => {
     const f = frases.find((x) => x.nome === nome);
-    if (f === undefined) return [`${nome}: está na lista de ${LIDAS_EM} e não é constante de texto exportada do arquivo`];
+    if (f === undefined) return [`${nome}: está na lista de ${data} e não é constante de texto exportada do arquivo`];
     if (base.has(nome)) return [`${nome}: já existia em ${BASE} — não é frase desta rodada`];
     const marca = marcaDe(linhas, f.linha);
-    if (marca !== "LIDA" || !comentariosDeCima(linhas, f.linha).some((l) => MARCA_DA_LEITURA.test(l))) {
-      return [`${nome}: está na lista de ${LIDAS_EM} e não está marcada LIDA com essa data`];
+    if (marca !== "LIDA" || !comentariosDeCima(linhas, f.linha).some((l) => marcaDaData(data).test(l))) {
+      return [`${nome}: está na lista de ${data} e não está marcada LIDA com essa data`];
     }
     return [];
   });
@@ -138,19 +177,23 @@ function problemasDaLista(fonte: string, base: Set<string>, lidas: readonly stri
  *  a afirmação mais forte do arquivo, e a suíte inteira ficava verde (medido
  *  pelo revisor). O I6 não alcança: ele só recusa LIDA em frase NOVA.
  *
- *  As linhas de UM arquivo onde a marca datada é legítima: o bloco de
- *  comentário de cada nome de `LIDAS_EM_13_10` dele, mais os alvos que não são
+ *  As linhas de UM arquivo onde a marca datada (de `data`) é legítima: o
+ *  bloco de comentário de cada nome da lista DESSA data no arquivo (os alvos
+ *  por nome valem só pra 13/10), mais os alvos que não são
  *  `export const` e são conferidos POR NOME nos casos do fim (as entradas de
  *  `FRASE_DA_PESSOA`, o `contribuidor` do histórico, a linha do título). Toda
  *  outra linha com `LIDA:` e a data é marca que ele não deu. */
-function linhasDaDataPermitidas(arquivo: string, linhas: string[]): Set<number> {
+function linhasDaDataPermitidas(arquivo: string, linhas: string[], data: string = LIDAS_EM): Set<number> {
   const ok = new Set<number>();
   const frases = frasesExportadas(linhas.join("\n"));
-  for (const nome of LIDAS_EM_13_10[arquivo] ?? []) {
+  const lista = LISTAS_DATADAS.find((l) => l.data === data)?.lista ?? {};
+  for (const nome of lista[arquivo] ?? []) {
     const f = frases.find((x) => x.nome === nome);
     if (f !== undefined) for (const j of indicesDeCima(linhas, f.linha)) ok.add(j);
   }
-  for (const i of alvosPorNome(arquivo, linhas)) ok.add(i);
+  // Os alvos conferidos por nome são todos da leitura de 13/10; a de 18/10 só
+  // tem `export const`.
+  if (data === LIDAS_EM) for (const i of alvosPorNome(arquivo, linhas)) ok.add(i);
   return ok;
 }
 
@@ -176,8 +219,8 @@ function alvosPorNome(arquivo: string, linhas: string[]): number[] {
 
 /** Toda linha de `src/` com `LIDA:` e a data da leitura, do GIT (os
  *  rastreados, e `--untracked` pros que ainda não entraram no índice). */
-function marcasDatadasEmSrc(): { arquivo: string; linha: number }[] {
-  const saida = execFileSync("git", ["grep", "-n", "--untracked", "-E", `LIDA:.*${LIDAS_EM}`, "--", "src"], { encoding: "utf8" });
+function marcasDatadasEmSrc(data: string = LIDAS_EM): { arquivo: string; linha: number }[] {
+  const saida = execFileSync("git", ["grep", "-n", "--untracked", "-E", `LIDA:.*${data}`, "--", "src"], { encoding: "utf8" });
   return saida.split(/\r?\n/).flatMap((l) => {
     const m = /^(.+?):(\d+):/.exec(l);
     return m ? [{ arquivo: m[1], linha: Number(m[2]) - 1 }] : [];
@@ -222,13 +265,15 @@ function nomesNaBase(arquivo: string): Set<string> {
  *  "pode seguir" (aprovar o DESENHO) nunca é "li e aprovei" a frase (memória
  *  "trava removida por quem escreveu"). Foi o `SECO_SEM_CARRO` do plano
  *  original, e o guarda de antes o aceitava. */
-function problemasDaMarca(fonte: string, base: Set<string>, lidas: readonly string[] = []): string[] {
+function problemasDaMarca(fonte: string, base: Set<string>, leituras: readonly Leitura[] = []): string[] {
   const linhas = fonte.split(/\r?\n/);
   return frasesExportadas(fonte).flatMap((f) => {
     const marca = marcaDe(linhas, f.linha);
     if (marca === null) return [`${f.nome}: sem marca`];
-    // A exceção da lista datada: só o nome dito, e só com a data na marca.
-    const lidaPorEle = lidas.includes(f.nome) && comentariosDeCima(linhas, f.linha).some((l) => MARCA_DA_LEITURA.test(l));
+    // A exceção das listas datadas: só o nome dito, e só com a data DA LISTA
+    // que o diz na marca (a data de outra leitura não serve).
+    const acima = comentariosDeCima(linhas, f.linha);
+    const lidaPorEle = leituras.some((l) => l.nomes.includes(f.nome) && acima.some((c) => marcaDaData(l.data).test(c)));
     if (marca === "LIDA" && !base.has(f.nome) && !lidaPorEle) {
       return [`${f.nome}: LIDA numa frase que não existia em ${BASE} — nasce PENDENTE`];
     }
@@ -255,11 +300,11 @@ function arquivosDaRodada(): string[] {
 /** Nos arquivos que JÁ existiam, frase antiga pode não ter marca nenhuma (é de
  *  antes da regra); o que a varredura cobra é a frase NOVA: nome que a base não
  *  exportava. Nova = `PENDENTE`, e `LIDA` nova é recusada como no I6 — fora
- *  da lista datada (`LIDAS_EM_13_10`), que é a única exceção. */
+ *  das listas datadas (`LISTAS_DATADAS`), que são a única exceção. */
 function problemasDasNovas(
-  fonte: string, base: Set<string>, naoSaoFrase: readonly string[] = [], lidas: readonly string[] = [],
+  fonte: string, base: Set<string>, naoSaoFrase: readonly string[] = [], leituras: readonly Leitura[] = [],
 ): string[] {
-  return problemasDaMarca(fonte, base, lidas).filter((p) => {
+  return problemasDaMarca(fonte, base, leituras).filter((p) => {
     const nome = p.slice(0, p.indexOf(":"));
     return !base.has(nome) && !naoSaoFrase.includes(nome);
   });
@@ -317,9 +362,9 @@ describe("toda frase nova desta rodada nasce marcada", () => {
     }
   });
 
-  it.each(ARQUIVOS)("%s: toda constante de texto exportada tem marca, e LIDA só em frase que já existia ou que ele leu em 13/10", (arquivo) => {
+  it.each(ARQUIVOS)("%s: toda constante de texto exportada tem marca, e LIDA só em frase que já existia ou que ele leu (13/10, 18/10)", (arquivo) => {
     const fonte = readFileSync(path.join(process.cwd(), arquivo), "utf8");
-    expect(problemasDaMarca(fonte, nomesNaBase(arquivo), LIDAS_EM_13_10[arquivo])).toEqual([]);
+    expect(problemasDaMarca(fonte, nomesNaBase(arquivo), leiturasDe(arquivo))).toEqual([]);
   });
 
   // 🔴 A LISTA DATADA NÃO APODRECE CALADA (Task 18): cada nome existe no
@@ -356,6 +401,31 @@ describe("toda frase nova desta rodada nasce marcada", () => {
     expect(marcas.length).toBe(53);
   });
 
+  // A lista de 18/10, no mesmo molde: não apodrece calada, e a data dela só
+  // vale no bloco de um nome dela.
+  it("a lista do que ele leu em 18/10: cada nome existe, é desta rodada, e está LIDA com a data", () => {
+    const problemas = Object.entries(LIDAS_EM_18_10).flatMap(([arquivo, nomes]) =>
+      problemasDaLista(readFileSync(path.join(process.cwd(), arquivo), "utf8"), nomesNaBase(arquivo), nomes, LIDAS_EM_18).map(
+        (p) => `${arquivo}: ${p}`,
+      ),
+    );
+    expect(problemas).toEqual([]);
+    // Não-vacuidade: as 18 constantes da lista da Task 9.
+    expect(Object.values(LIDAS_EM_18_10).flat().length).toBe(18);
+  });
+
+  it(`toda marca LIDA de ${LIDAS_EM_18} em src é de um nome da lista de 18/10`, () => {
+    const marcas = marcasDatadasEmSrc(LIDAS_EM_18);
+    const porArquivo = new Map<string, Set<number>>();
+    const fora = marcas.flatMap(({ arquivo, linha }) => {
+      if (!porArquivo.has(arquivo)) porArquivo.set(arquivo, linhasDaDataPermitidas(arquivo, ler(arquivo), LIDAS_EM_18));
+      return porArquivo.get(arquivo)!.has(linha) ? [] : [`${arquivo}:${linha + 1}: ${ler(arquivo)[linha].trim()}`];
+    });
+    expect(fora).toEqual([]);
+    // Não-vacuidade: uma marca por constante da lista, nenhuma outra.
+    expect(marcas.length).toBe(18);
+  });
+
   // A não-vacuidade da VARREDURA: ela tem de enumerar os arquivos que a lista
   // à mão não tem, e achar neles as frases que só ela vê. Se o `git diff`
   // voltasse vazio (base errada, git ausente), a varredura passaria calada —
@@ -378,9 +448,9 @@ describe("toda frase nova desta rodada nasce marcada", () => {
     }
   });
 
-  it("todo arquivo de src/ que mudou desde a base: toda constante de texto exportada NOVA nasce PENDENTE (fora da lista de 13/10)", () => {
+  it("todo arquivo de src/ que mudou desde a base: toda constante de texto exportada NOVA nasce PENDENTE (fora das listas datadas)", () => {
     const problemas = arquivosDaRodada().flatMap((a) =>
-      problemasDasNovas(readFileSync(path.join(process.cwd(), a), "utf8"), nomesNaBase(a), NAO_SAO_FRASE[a], LIDAS_EM_13_10[a]).map(
+      problemasDasNovas(readFileSync(path.join(process.cwd(), a), "utf8"), nomesNaBase(a), NAO_SAO_FRASE[a], leiturasDe(a)).map(
         (p) => `${a}: ${p}`,
       ),
     );
@@ -438,9 +508,29 @@ describe("toda frase nova desta rodada nasce marcada", () => {
       `// LIDA: o João marcou "Serve" no pacote de copy em ${LIDAS_EM}.\nexport const DA_LISTA = "x";\n` +
       `// LIDA: o João marcou "Serve" no pacote de copy em ${LIDAS_EM}.\nexport const FORA_DA_LISTA = "y";\n` +
       `// LIDA: aprovada\nexport const SEM_DATA = "z";\n`;
-    expect(problemasDaMarca(fonte, new Set(), ["DA_LISTA", "SEM_DATA"])).toEqual([
+    expect(problemasDaMarca(fonte, new Set(), [{ data: LIDAS_EM, nomes: ["DA_LISTA", "SEM_DATA"] }])).toEqual([
       `FORA_DA_LISTA: LIDA numa frase que não existia em ${BASE} — nasce PENDENTE`,
       `SEM_DATA: LIDA numa frase que não existia em ${BASE} — nasce PENDENTE`,
+    ]);
+  });
+
+  // Duas listas datadas (18/10): a data de uma não abre a porta pro nome da
+  // outra — cada leitura cerca os SEUS nomes.
+  it("controle das duas listas: a marca de 13/10 num nome de 18/10 (e o contrário) é achada", () => {
+    const fonte =
+      `// LIDA: o João marcou "Serve" no pacote de copy em ${LIDAS_EM}.\nexport const DE_18 = "x";\n` +
+      `// LIDA: o João marcou "Serve" no pacote de copy em ${LIDAS_EM_18}.\nexport const DE_13 = "y";\n` +
+      `// LIDA: o João marcou "Serve" no pacote de copy em ${LIDAS_EM_18}.\nexport const BOA_18 = "z";\n`;
+    const leituras = [
+      { data: LIDAS_EM, nomes: ["DE_13"] },
+      { data: LIDAS_EM_18, nomes: ["DE_18", "BOA_18"] },
+    ];
+    expect(problemasDaMarca(fonte, new Set(), leituras)).toEqual([
+      `DE_18: LIDA numa frase que não existia em ${BASE} — nasce PENDENTE`,
+      `DE_13: LIDA numa frase que não existia em ${BASE} — nasce PENDENTE`,
+    ]);
+    expect(problemasDaLista(fonte, new Set(), ["DE_18", "BOA_18"], LIDAS_EM_18)).toEqual([
+      `DE_18: está na lista de ${LIDAS_EM_18} e não está marcada LIDA com essa data`,
     ]);
   });
 
@@ -470,6 +560,18 @@ describe("toda frase nova desta rodada nasce marcada", () => {
     const ok = linhasDaDataPermitidas("src/app/admin/campos/palavras.ts", linhas);
     expect(ok.has(0)).toBe(true);
     expect(ok.has(2)).toBe(false);
+    // A cerca de 18/10: o `BUSCAR` (da lista de 18/10) é permitido nela, o
+    // `BLOQUEAR` (da de 13/10) não — e a de 13/10 não permite o `BUSCAR`.
+    const de18 = [
+      `// LIDA: o João marcou "Serve" no pacote de copy em ${LIDAS_EM_18}.`,
+      'export const BUSCAR = "Buscar";',
+      `// LIDA: o João marcou "Serve" no pacote de copy em ${LIDAS_EM_18}.`,
+      'export const BLOQUEAR = "Bloquear";',
+    ];
+    const ok18 = linhasDaDataPermitidas("src/app/admin/campos/palavras.ts", de18, LIDAS_EM_18);
+    expect(ok18.has(0)).toBe(true);
+    expect(ok18.has(2)).toBe(false);
+    expect(linhasDaDataPermitidas("src/app/admin/campos/palavras.ts", de18).has(0)).toBe(false);
   });
 
   // ⚠️ O brief media as entradas com `/^\s+"[a-z-]+": "/`, e duas das seis

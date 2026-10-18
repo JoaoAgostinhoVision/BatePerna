@@ -15,7 +15,7 @@
  *  tocava nele com texto na caixa o perdia). */
 import type { ReactNode } from "react";
 
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Redação minha.
 export const CORRIGIR_O_NOME = "Corrigir o nome";
 
 export default function AvisoDoPar({ frase, link }: { frase: string; link: ReactNode }) {

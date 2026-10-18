@@ -126,9 +126,9 @@ export const COMECANDO = "Começando…";
 export const ANTERIOR = "Anterior";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const PROXIMA = "Próxima";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Redação minha.
 export const SEGUIR_SEM_SALVAR = "Seguir sem salvar? O que você escreveu aqui some.";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Redação minha.
 export const VOLTAR_A_REVISAO = "Voltar à revisão";
 /** "Pergunta N de M". */
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.

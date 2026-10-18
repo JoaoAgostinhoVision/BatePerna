@@ -168,7 +168,7 @@ export const SEM_VISTA = "Sem mapa: não achei de onde começar.";
 
 /** 17/10: a cidade embaixo do mapa, nas telas de lugar novo (e na edição dela),
  *  enquanto o pin é o ponto salvo. É dela que sai o endereço do lugar. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Redação minha.
 export const EM_CIDADE = "Fica em:";
 
 /** Os nomes do + e do − pra quem lê a tela em voz alta (o glifo sozinho não é

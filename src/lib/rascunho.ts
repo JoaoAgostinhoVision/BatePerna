@@ -116,7 +116,7 @@ export const RASCUNHO_NAO_EXISTE_MAIS =
  *  de 1 consulta por segundo já tomada, ou o ponto sem município (no mar). Uma
  *  frase pras três — a saída é a mesma: tentar de novo, ou mexer o ponto. O
  *  ponto NÃO grava: num lugar novo, sem cidade não há endereço. 503. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-18. Redação minha.
 export const CIDADE_DO_PONTO_NAO_SAIU =
   "Nada foi gravado: não consegui achar a cidade deste ponto. Tente de novo daqui a pouco, ou mexa o ponto.";
 
