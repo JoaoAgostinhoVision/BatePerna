@@ -7,6 +7,7 @@ import { CAIXA_VAZIA, DESFAZER, HORA_VAZIA, NADA_ESCOLHIDO, NAO, REGRA_QUE_MENTE
 import type { CampoNaTela } from "@/app/admin/campos/tipos";
 import { MAPA_ALTURA_PX, MAPA_LARGURA_PX, MAPA_ZOOM_EDITOR } from "@/lib/mapa";
 import { PISOS } from "@/lib/piso";
+import { NOME_DO_DIA, type Dia } from "@/lib/semana";
 import { getAllFichas } from "@/lib/ficha";
 import type { Ficha } from "@/types/ficha";
 import { doisPontos } from "../ficha-de-tres-pontos";
@@ -222,7 +223,7 @@ describe("EditorLista (várias) — a diferença é de CONJUNTO, não de ordem d
       .getAllByRole("checkbox")
       .filter((b) => (b as HTMLInputElement).checked)
       .map((b) => (b as HTMLInputElement).value);
-  const alternar = (dia: string) => fireEvent.click(within(bloco("dias")).getByRole("checkbox", { name: dia }));
+  const alternar = (dia: string) => fireEvent.click(within(bloco("dias")).getByRole("checkbox", { name: NOME_DO_DIA[dia as Dia] }));
 
   it("desmarcar e marcar de novo o mesmo dia não é mudança; marcar outro é, e o Desfazer volta aos dias salvos", () => {
     const { fetchFalso } = comRota();

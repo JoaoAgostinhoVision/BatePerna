@@ -17,6 +17,7 @@ import EditorNumeroDeMotor from "./campos/EditorNumeroDeMotor";
 import EditorProsa from "./campos/EditorProsa";
 import EditorWaypoints from "./campos/EditorWaypoints";
 import BotaoTrocarEndereco from "./BotaoTrocarEndereco";
+import { rotulosDe } from "@/lib/rotulos-das-opcoes";
 import { ROTULO_ENDERECO, aindaDiz } from "@/lib/endereco";
 import type { CampoNaTela, Editor, VistaNaTela } from "./campos/tipos";
 
@@ -459,7 +460,9 @@ function Bloco({ ficha, campo, vistaSemPonto }: { ficha: Ficha; campo: CampoDaFi
     caminho: campo.caminho,
     rotulo: rotuloDe(campo.caminho),
     obrigatorio: campo.obrigatorio,
-    ...(campo.opcoes ? { opcoes: campo.opcoes, multiplo: multiploDe(campo.caminho) } : {}),
+    ...(campo.opcoes
+      ? { opcoes: campo.opcoes, multiplo: multiploDe(campo.caminho), ...(rotulosDe(campo.caminho) ? { rotulos: rotulosDe(campo.caminho) } : {}) }
+      : {}),
     ...(campo.especie === "coord" ? pontoDoTrajeto(ficha, campo.caminho) : {}),
   };
   // Sem ponto, a vista: o ponto 0 pra a chuva (sem rede), ou a que a página

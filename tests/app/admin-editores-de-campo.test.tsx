@@ -2,6 +2,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { DIAS, NOME_DO_DIA, type Dia } from "@/lib/semana";
+import { ROTULO_GRATIS, ROTULO_PAGO } from "@/lib/rotulos-das-opcoes";
 import ts from "typescript";
 import FichaInteira, { LISTA_MULTIPLA, moldeDe, multiploDe } from "@/app/admin/FichaInteira";
 import { NAO_SEI, NAO_TEM, TIRANDO } from "@/app/admin/campos/BotaoNaoSei";
@@ -523,12 +525,38 @@ describe("EditorLista — escolher, nunca digitar", () => {
     });
   });
 
+  // 17/10 (Task 6): a opção tem nome de gente, e o que se GRAVA continua o valor cru.
+  it("custo.tag mostra Grátis/Pago e grava gratis/pago", async () => {
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={semHorario} />);
+    const escolha = bloco("custo.tag").querySelector('[data-escolha="custo.tag"]') as HTMLSelectElement;
+    expect((within(escolha).getByRole("option", { name: ROTULO_GRATIS }) as HTMLOptionElement).value).toBe("gratis");
+    expect((within(escolha).getByRole("option", { name: ROTULO_PAGO }) as HTMLOptionElement).value).toBe("pago");
+    fireEvent.change(escolha, { target: { value: "gratis" } });
+    salvar("custo.tag");
+    await waitFor(() => expect(fetchFalso).toHaveBeenCalled());
+    expect(corpoDe(fetchFalso)).toEqual({ slug: semHorario.slug, campo: "custo.tag", valor: "gratis" });
+  });
+
+  it("dias mostram o nome do dia e gravam dom…sab na ordem do registro", async () => {
+    const { fetchFalso } = comRota();
+    render(<FichaInteira ficha={semHorario} />);
+    const caixas = emCampo("dias").getAllByRole("checkbox") as HTMLInputElement[];
+    expect(caixas.map((c) => c.value)).toEqual([...DIAS]);
+    for (const c of caixas) expect(c.closest("label")!.textContent, c.value).toBe(NOME_DO_DIA[c.value as Dia]);
+    for (const d of ["sab", "dom"]) fireEvent.click(emCampo("dias").getByRole("checkbox", { name: NOME_DO_DIA[d as Dia] }));
+    for (const d of ["sex", "seg"]) fireEvent.click(emCampo("dias").getByRole("checkbox", { name: NOME_DO_DIA[d as Dia] }));
+    salvar("dias");
+    await waitFor(() => expect(fetchFalso).toHaveBeenCalled());
+    expect(corpoDe(fetchFalso)).toEqual({ slug: semHorario.slug, campo: "dias", valor: ["seg", "sex"] });
+  });
+
   // 🔴 `dias` é a única lista de VÁRIOS, e uma escolha única ali TRANCARIA o
   // dono de gravar "sábado e domingo" — a verdade da ficha que está no banco.
   it("a lista de vários manda um ARRAY, e na ordem do registro — nunca a dos toques", async () => {
     const { fetchFalso } = comRota();
     render(<FichaInteira ficha={semHorario} />);
-    const caixa = (dia: string) => emCampo("dias").getByRole("checkbox", { name: dia });
+    const caixa = (dia: string) => emCampo("dias").getByRole("checkbox", { name: NOME_DO_DIA[dia as Dia] });
     // a ficha real tem sab e dom marcados; desmarca tudo e marca na ordem
     // INVERSA à do registro, pra a ordem da gravação não poder vir dos toques.
     for (const d of ["sab", "dom"]) fireEvent.click(caixa(d));
@@ -556,7 +584,7 @@ describe("EditorLista — escolher, nunca digitar", () => {
   it("nada escolhido NÃO grava — nem lista vazia, nem palavra vazia", () => {
     const { fetchFalso } = comRota();
     render(<FichaInteira ficha={semHorario} />);
-    for (const d of ["sab", "dom"]) fireEvent.click(emCampo("dias").getByRole("checkbox", { name: d }));
+    for (const d of ["sab", "dom"]) fireEvent.click(emCampo("dias").getByRole("checkbox", { name: NOME_DO_DIA[d as Dia] }));
     salvar("dias");
     expect(fetchFalso, "uma lista vazia foi mandada pra porta").not.toHaveBeenCalled();
     expect(emCampo("dias").getByRole("alert").textContent).toBe(NADA_ESCOLHIDO);
@@ -963,7 +991,7 @@ describe("O que ele escolheu não some em recusa nenhuma — nos quatro instrume
     for (const r of RECUSAS) {
       const { fetchFalso } = recusaEm(semHorario, r.fazer());
       const caixa = (dia: string): HTMLInputElement =>
-        emCampo("dias").getByRole("checkbox", { name: dia }) as HTMLInputElement;
+        emCampo("dias").getByRole("checkbox", { name: NOME_DO_DIA[dia as Dia] }) as HTMLInputElement;
       // desmarca o que o banco tem e marca outro, pra a asserção não poder
       // passar verde com o editor remontado do valor da ficha
       for (const d of semHorario.dias as readonly string[]) fireEvent.click(caixa(d));

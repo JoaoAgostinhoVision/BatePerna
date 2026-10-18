@@ -139,7 +139,7 @@
    formulário de aviso já usa. `min-height: 6rem` vem da `.adm-voz textarea`
    apagada: só grande o bastante pra caber um parágrafo, não escolha visual. */
 .adm-editor-caixa {
-  padding: .5rem; font-size: .95rem; border: 1px solid #999; border-radius: 8px;
+  padding: .5rem; font-size: 1rem; border: 1px solid #999; border-radius: 8px;
   min-height: 6rem;
 }
 /* 🔴 UMA REGRA POR CLASSE, SEM AGRUPAR POR VÍRGULA — e isso não é estilo: o
@@ -149,11 +149,14 @@
    SEM RÉGUA MEDÍVEL, e o guarda "toda classe que esta tela usa tem regra no
    admin.css" as acusou na primeira rodada desta tarefa. As declarações repetem;
    a alternativa era afrouxar o leitor, que é sempre pior. */
+/* 17/10: `font-size: 1rem` (16px) nas quatro caixas de responder — abaixo disso o
+   iPhone dá zoom sozinho ao tocar no campo. A linha de opção ganha `min-height:
+   44px`, o alvo de dedo dos botões de zoom do mapa. */
 /* De `.adm-rotulo textarea, .adm-rotulo select` — a mesma moldura de campo,
    agora sem o `min-height`, porque um seletor tem a altura de uma linha. */
-.adm-editor-escolha { padding: .5rem; font-size: .95rem; border: 1px solid #999; border-radius: 8px; }
+.adm-editor-escolha { padding: .5rem; font-size: 1rem; border: 1px solid #999; border-radius: 8px; }
 /* Idem: a mesma moldura de `.adm-rotulo textarea, .adm-rotulo select`. */
-.adm-editor-hora { padding: .5rem; font-size: .95rem; border: 1px solid #999; border-radius: 8px; }
+.adm-editor-hora { padding: .5rem; font-size: 1rem; border: 1px solid #999; border-radius: 8px; }
 /* Uma faixa do horário (Tarefa 11c): as duas caixas de hora lado a lado, com o
    `gap` de `.adm-campo`. */
 .adm-editor-faixa { display: flex; gap: .3rem; }
@@ -173,14 +176,14 @@
    linha; aqui é a caixa de marcar e a palavra dela. `gap: .4rem` é o passo
    entre o .3rem de `.adm-campo` e o .5rem de `.adm-ficha`, e é o espaço de um
    caractere entre o controle e a palavra. */
-.adm-editor-opcao { display: flex; align-items: center; gap: .4rem; font-size: .95rem; }
+.adm-editor-opcao { display: flex; align-items: center; gap: .4rem; font-size: .95rem; min-height: 44px; }
 /* O mesmo registro de "texto de apoio, menor e mais claro" de
    `.adm-campo-ausente`, `.adm-lista-rodape` e `.adm-vigente-meta`. */
 .adm-editor-ajuda { margin: 0; font-size: .85rem; color: #777; }
 /* Idem `.adm-editor-hora`: a mesma moldura de campo de uma linha, porque é o
    mesmo tipo de controle (um `<input>` nativo, não uma caixa de parágrafo). Sem
    agrupar por vírgula com ela, pela razão escrita no bloco acima. */
-.adm-editor-numero { padding: .5rem; font-size: .95rem; border: 1px solid #999; border-radius: 8px; }
+.adm-editor-numero { padding: .5rem; font-size: 1rem; border: 1px solid #999; border-radius: 8px; }
 /* A prévia é texto de apoio como `.adm-editor-ajuda`, com UMA diferença que não
    é estética: ela fica no DOM e VAZIA em repouso (é região `aria-live`), e sem
    `min-height` a linha apareceria e desapareceria empurrando o botão Salvar pra

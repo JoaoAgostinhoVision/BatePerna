@@ -53,6 +53,7 @@ const jaEscolhidas = (valor: unknown): readonly string[] => {
 
 export default function EditorLista({ campo, valor, slug }: PropsDoEditor) {
   const opcoes = campo.opcoes ?? [];
+  const palavra = (o: string): string => campo.rotulos?.[o] ?? o;
   const salvas = jaEscolhidas(valor);
   const [marcadas, setMarcadas] = useState<readonly string[]>(salvas);
   const gravacao = usarGravacao();
@@ -89,7 +90,7 @@ export default function EditorLista({ campo, valor, slug }: PropsDoEditor) {
                 checked={marcadas.includes(o)}
                 onChange={(e) => alternar(o, e.target.checked)}
               />
-              {o}
+              {palavra(o)}
             </label>
           ))}
         </fieldset>
@@ -106,7 +107,7 @@ export default function EditorLista({ campo, valor, slug }: PropsDoEditor) {
           {marcadas.length === 0 && <option value="" />}
           {opcoes.map((o) => (
             <option key={o} value={o}>
-              {o}
+              {palavra(o)}
             </option>
           ))}
         </select>

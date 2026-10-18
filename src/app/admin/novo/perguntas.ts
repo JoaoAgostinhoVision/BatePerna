@@ -1,4 +1,5 @@
 import { CAMPOS_DA_FICHA, lerCaminho, type CampoDaFicha } from "@/lib/campos-da-ficha";
+import { rotulosDe } from "@/lib/rotulos-das-opcoes";
 import { multiploDe, rotuloDe } from "../FichaInteira";
 import type { CampoNaTela, PerguntaNaTela } from "../campos/tipos";
 
@@ -191,12 +192,18 @@ function ehPar(v: unknown): v is { lat: number; lng: number } {
   return Number.isFinite(p.lat) && Number.isFinite(p.lng);
 }
 
+/** Os rótulos das opções, só quando o caminho tem (`rotulosDe`); sem, nada desce. */
+const rotulosNaTela = (caminho: string): Pick<CampoNaTela, "rotulos"> => {
+  const rotulos = rotulosDe(caminho);
+  return rotulos ? { rotulos } : {};
+};
+
 function naTela(c: CampoDaFicha, caminho: string, rascunho: unknown): CampoNaTela {
   const base: CampoNaTela = {
     caminho,
     rotulo: rotuloDe(caminho),
     obrigatorio: c.obrigatorio,
-    ...(c.opcoes ? { opcoes: c.opcoes, multiplo: multiploDe(caminho) } : {}),
+    ...(c.opcoes ? { opcoes: c.opcoes, multiplo: multiploDe(caminho), ...rotulosNaTela(caminho) } : {}),
   };
   if (c.especie === "coord") {
     // O ponto do trajeto já marcado desce com o índice e o par (o mapa põe o

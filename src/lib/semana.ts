@@ -53,7 +53,7 @@ export type Dia = (typeof DIAS)[number];
  *  do carimbo, que divide espaço com a palavra grande num celular de 375px. A
  *  forma longa não cabe, e "sex." abreviado seria uma terceira forma de escrever
  *  dia da semana no mesmo app. */
-const NOME: Record<Dia, string> = {
+export const NOME_DO_DIA: Record<Dia, string> = {
   dom: "domingo",
   seg: "segunda",
   ter: "terça",
@@ -119,7 +119,7 @@ const ORDEM_LEITURA: readonly Dia[] = [...DIAS.slice(1), DIAS[0]];
  *  `["sab","dom"]` são o mesmo fato, e duas fichas com o mesmo fato têm que
  *  produzir a mesma frase na tela. */
 export function rotuloDias(dias: readonly Dia[]): string {
-  const nomes = ORDEM_LEITURA.filter((d) => dias.includes(d)).map((d) => NOME[d]);
+  const nomes = ORDEM_LEITURA.filter((d) => dias.includes(d)).map((d) => NOME_DO_DIA[d]);
   if (nomes.length <= 1) return nomes[0] ?? "";
   return `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}`;
 }
@@ -138,7 +138,7 @@ export function rotuloProximoDia(dias: readonly Dia[], dia: number): string | nu
   const falta = diasAteAbrir(dias, dia);
   if (falta === null) return null;
   if (falta === 1) return "abre amanhã";
-  return `abre ${NOME[DIAS[(dia + falta) % 7]]}`;
+  return `abre ${NOME_DO_DIA[DIAS[(dia + falta) % 7]]}`;
 }
 
 /** O próximo dia aberto DEPOIS DE HOJE — pra quando hoje é dia de abrir, mas
@@ -156,7 +156,7 @@ export function rotuloDiaSeguinteAberto(dias: readonly Dia[], dia: number): stri
   if (falta === null) return null;
   if (falta === 0) return "abre amanhã";
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
-  return `abre ${NOME[DIAS[(amanha + falta) % 7]]}`;
+  return `abre ${NOME_DO_DIA[DIAS[(amanha + falta) % 7]]}`;
 }
 
 /** "Abre sábado e domingo." — a frase do motivo, na ficha.

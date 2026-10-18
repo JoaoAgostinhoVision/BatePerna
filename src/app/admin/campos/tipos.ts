@@ -37,6 +37,11 @@ export type CampoNaTela = {
    *  registro (dívida da Task 1, ver o docblock do `EditorLista`), e dizer
    *  "vêm de PISOS/DIAS/SEVERIDADES" sem essa ressalva era falso. */
   opcoes?: readonly string[];
+  /** Só pra espécie `lista`: a PALAVRA DA TELA de cada opção (valor gravado →
+   *  palavra). O que se grava continua sendo a opção crua (`gratis`, `sab`); só
+   *  o texto que ele lê muda. Montado no servidor (`rotulosDe`), nos dois lugares
+   *  que montam o `CampoNaTela`. Opção sem rótulo aqui aparece pelo valor cru. */
+  rotulos?: Readonly<Record<string, string>>;
   /** Só pra espécie `lista`: este campo guarda VÁRIAS opções (`dias`) ou uma
    *  (`piso`, `custo.tag`, `condicao.severidade`). Quem decide é
    *  `FichaInteira`, com guarda medido contra a porta de escrita. */

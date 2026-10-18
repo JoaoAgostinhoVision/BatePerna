@@ -18,7 +18,8 @@ import { CORRIGIR_O_NOME } from "@/app/admin/AvisoDoPar";
 const docComCidade = (slug: string, nome: string, cidade: string): string =>
   JSON.stringify({ ...JSON.parse(docDoLugarNovo(slug, nome)), cidade });
 import { rotuloDe } from "@/app/admin/FichaInteira";
-import { ORDEM, PERGUNTAS, camposQueSaoPergunta, escolherPosicao } from "@/app/admin/novo/perguntas";
+import { ORDEM, PERGUNTAS, camposQueSaoPergunta, escolherPosicao, montarPerguntas } from "@/app/admin/novo/perguntas";
+import { rotulosDe } from "@/lib/rotulos-das-opcoes";
 import { nominatimDeTeste } from "../nominatim";
 import {
   ANTERIOR,
@@ -49,7 +50,7 @@ import {
 } from "@/lib/mapa";
 import { IR_PUBLICAR, LUGAR_NOVO, TITULO_RASCUNHOS } from "@/app/admin/ListaDeLugares";
 import { DESISTIR } from "@/app/admin/BotaoDesistir";
-import { regraDe, semComentarios } from "../css";
+import { regraDe, semComentarios, valorDe } from "../css";
 import { bancoVazio, salvarRascunho, semearAcervo } from "../banco";
 
 /** O FORMULÁRIO DE LUGAR NOVO (Tarefa 11) — medido NA PÁGINA, contra o banco.
@@ -1454,5 +1455,30 @@ describe("/admin/novo — o aviso do par e a chave provisória", () => {
     expect(pergunta("trajeto.waypoints.0.nome")).toBeTruthy();
     expect(b.container.querySelector(`[data-rascunho="${comCidade}"]`), "a página montou o formulário da chave").not.toBeNull();
     expect(avisoDe(b.container)).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 17/10, TASK 6: o lugar novo fala a mesma língua da ficha no ar, e o iPhone não
+// dá zoom sozinho nas caixas de responder.
+describe("opção com nome de gente, e letra de 1rem", () => {
+  it("a pergunta de dias do lugar novo desce com os rótulos", () => {
+    const dias = montarPerguntas({}).find((q) => q.campo.caminho === "dias")!;
+    expect(dias.campo.rotulos).toEqual(rotulosDe("dias"));
+    expect(dias.campo.rotulos!.sab).toBe("sábado");
+    const custo = montarPerguntas({}).find((q) => q.campo.caminho === "custo.tag")!;
+    expect(custo.campo.rotulos).toEqual(rotulosDe("custo.tag"));
+  });
+
+  it("as caixas de responder têm letra de 1rem (sem zoom no iPhone)", () => {
+    const css = semComentarios("admin/admin.css");
+    for (const s of [".adm-editor-caixa", ".adm-editor-escolha", ".adm-editor-hora", ".adm-editor-numero", ".adm-busca-caixa"]) {
+      expect(valorDe(regraDe(css, s)!.join("\n"), "font-size"), s).toBe("1rem");
+    }
+  });
+
+  it("a linha de opção tem 44px de toque", () => {
+    const css = semComentarios("admin/admin.css");
+    expect(valorDe(regraDe(css, ".adm-editor-opcao")!.join("\n"), "min-height")).toBe("44px");
   });
 });

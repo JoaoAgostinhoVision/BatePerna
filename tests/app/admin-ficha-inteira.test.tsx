@@ -1,3 +1,4 @@
+import { NOME_DO_DIA, type Dia } from "@/lib/semana";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import FichaInteira, { ROTULOS, ROTULO_DO_PONTO, rotuloDe } from "@/app/admin/FichaInteira";
@@ -165,7 +166,7 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     const dias = within(screen.getByTestId("campo-dias"));
     for (const d of semHorario.dias!) {
       expect(
-        (dias.getByRole("checkbox", { name: d }) as HTMLInputElement).checked,
+        (dias.getByRole("checkbox", { name: NOME_DO_DIA[d as Dia] }) as HTMLInputElement).checked,
         `${d} está na ficha e não veio marcado`,
       ).toBe(true);
     }
