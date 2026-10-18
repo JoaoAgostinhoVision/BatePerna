@@ -1128,6 +1128,33 @@ describe("a cidade sai do ponto", () => {
     expect(await historico(c, S)).toEqual(h0);
   });
 
+  // `travaDoPainel` é a MESMA régua do ponto (`nomeNovo: false`): o gêmeo sem
+  // cidade é da tela do nome (§2.3.1) e não impede o rascunho de morar no
+  // `nome-cidade`. Com `nomeNovo: true` ali, a frase da chave provisória
+  // (no publicar) acusaria uma trava que o ponto não vê — e o ponto, de fato,
+  // leva o rascunho ao endereço. (O rascunho é gravado cru: o POST, esse sim,
+  // espera a cidade do gêmeo.) Medido: a régua trocada sobrevivia a toda a suíte.
+  it("a trava é a régua do ponto: o gêmeo sem cidade não trava, e o ponto leva ao nome-cidade", async () => {
+    await lugarMarcador("marcador-gemeo-sem-cidade", NOME);
+    const k = novaChaveDeRascunho();
+    const doc = JSON.stringify({ slug: k, modos: [], cidade: CIDADE, trajeto: { waypoints: [{ nome: NOME, lat: LAT, lng: LNG }] } });
+    await salvarRascunho(c, k, doc, AGORA - 10);
+    expect(await travaDoPainel(doc, k)).toBeNull();
+    const r = await marcarPonto(k);
+    expect(r.status, await r.clone().text()).toBe(200);
+    expect(await r.json()).toEqual({ slug: S });
+  });
+
+  // E o rascunho que JÁ mora no `nome-cidade` não é trava de si mesmo: o
+  // endereço é dele (`lerRascunho(S)` acha ELE). O publicar só pergunta a trava
+  // fora do `nome-cidade`, mas a função promete `null` quando nada impede — e
+  // quem a mostrar na tela do rascunho (Task 4) a chama em qualquer chave.
+  // Medido: sem o `destino === slug`, a suíte inteira passava.
+  it("o rascunho no próprio nome-cidade não trava a si mesmo", async () => {
+    expect((await criar(NOME)).status).toBe(201);
+    expect(await travaDoPainel((await lerRascunho(c, S))!.doc, S)).toBeNull();
+  });
+
   // M6: o rascunho já morava no `nome-cidade` (S), e o ponto corrigido cai numa
   // cidade onde o par é de outro. Ficar em S deixaria a chave dizendo a cidade
   // velha: ele vai pra uma provisória NOVA — e não pro nome-cidade novo.

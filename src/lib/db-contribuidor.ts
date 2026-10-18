@@ -111,8 +111,13 @@ const ENDERECO_LIVRE = `NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug
  *  ponto trouxe a cidade e o par e o endereço estavam livres; senão ele fica
  *  numa chave destas), nem antigo — e as portas que conferem "endereço
  *  livre de rascunho" (`criarRascunho`, `moverRascunho`, `trocarEndereco`)
- *  nunca esbarram num rascunho sem cidade. Anda na URL das telas (`?slug=`)
- *  sem mudar. Provado em `tests/api/rascunho-nao-ocupa.test.ts`. */
+ *  nunca esbarram num rascunho que não mora no endereço — sem cidade, ou (no
+ *  painel) com uma cidade cujo par ou endereço já é de outro. Anda na URL das
+ *  telas (`?slug=`): a dela, sem nunca mudar; a do painel, até o rascunho se
+ *  mudar pro endereço (ou pra uma chave destas nova, quando o ponto corrigido
+ *  torna falso o endereço onde ele morava). Provado em
+ *  `tests/api/rascunho-nao-ocupa.test.ts` e no "a cidade sai do ponto" de
+ *  `tests/api/route-admin-rascunho.test.ts`. */
 export function novaChaveDeRascunho(): string {
   return `rascunho_${randomUUID().replace(/-/g, "")}`;
 }

@@ -248,7 +248,8 @@ function exigirCampo(caminho: string): CampoDaFicha {
 function recusarVazio(caminho: string, valor: ValorDeCampo): void {
   const vazia = (v: unknown) => typeof v === "string" && v.trim() === "";
   // A cidade não tem "não sei" (M-N3 da re-revisão da 11b): a frase de baixo
-  // mandaria dizê-lo. A dela é a do POST.
+  // mandaria dizê-lo. A dela é a `CIDADE_VAZIA` (a do POST até 17/10, quando o
+  // lugar novo passou a nascer só do nome; hoje só a ficha no ar a recebe digitada).
   if (caminho === "cidade" && vazia(valor)) throw new Error(CIDADE_VAZIA);
   if (vazia(valor) || (Array.isArray(valor) && valor.some(vazia))) {
     // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
@@ -260,7 +261,10 @@ function recusarVazio(caminho: string, valor: ValorDeCampo): void {
  *  fix da Tarefa 11b, X3). O POST do lugar novo já a recusava; as portas de
  *  responder (o rascunho e a ficha no ar) a gravavam, e ela aparecia na tela
  *  pública — "Nome — -- · BatePerna" no título do link — e parava de separar
- *  dois lugares pelo par. A frase é a MESMA do POST. Chamada pelos dois
+ *  dois lugares pelo par. A frase é a que o POST usava (até 17/10: desde então
+ *  a cidade de um lugar novo sai do ponto, e a sem letra que viesse do
+ *  Nominatim é recusada na rota do rascunho, com `CIDADE_DO_PONTO_NAO_SAIU`).
+ *  Chamada pelos dois
  *  caminhos de escrita de folha (`aplicarCampo` e `validarFolha`). */
 function recusarCidadeSemLetra(caminho: string, valor: unknown): void {
   if (caminho === "cidade" && typeof valor === "string" && slugDoNome(valor) === "") {
