@@ -25,6 +25,11 @@ const ARQUIVOS = [
   "src/app/admin/TelaDaRegraPadrao.tsx",
   "src/app/admin/campos/EditorCalibrar.tsx",
   "src/app/BarraNavegacao.tsx",
+  // Cidade do ponto (17/10): módulos NOVOS com frase. Nestes, até a antiga precisa de marca.
+  "src/app/admin/AvisoDoPar.tsx",
+  "src/app/admin/RevisaoDoLugar.tsx",
+  "src/app/admin/MapinhaDoPonto.tsx",
+  "src/lib/rotulos-das-opcoes.ts",
 ];
 
 /** As constantes de texto exportadas: `export const NOME = "..."` ou
