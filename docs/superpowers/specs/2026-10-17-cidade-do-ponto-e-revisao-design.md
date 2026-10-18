@@ -111,6 +111,9 @@ ponto for gravado de novo.
   pergunta cidade junto; ali o ponto passa a regravar a cidade **sem travar**: se o reverse falhar, o ponto grava
   e a cidade de antes fica. Sem checagem nome+cidade ali (o endereço não muda). **(meu)** — a regra "sem cidade
   não grava" (§2.2) é só do lugar novo, onde a cidade ainda não existe.
+  > **Nota de 18/10 (decisão do João no pacote de frases, `d-cidade-no-ar`):** a frase "Sem checagem nome+cidade
+  > ali" deixou de valer. Quando o ponto muda a cidade de um lugar dela já no ar, o par é conferido; se colide, é
+  > 409 `NOME_JA_EM_USO` e nada grava, nem o ponto. Reverse que falha e mesma cidade seguem como acima.
 
 ---
 
