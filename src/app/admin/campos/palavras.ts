@@ -261,3 +261,21 @@ export const BLOQUEAR = "Bloquear quem mandou";
 export const BLOQUEAR_MESMO = "Bloquear mesmo? Todos os lugares dessa pessoa saem do ar, e ela não manda nem muda mais nada.";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13. (O texto é o da spec de 07/10, Parte 3.)
 export const DESBLOQUEAR = "Desbloquear";
+
+/** A BUSCA NO MAPA DO PONTO (17/10, Task 5): a caixa em cima do mapa do lugar
+ *  novo. Ela só MOVE o mapa — nunca põe pin nem grava. Todas as frases abaixo
+ *  são redação minha. */
+// PENDENTE: redação minha, o João ainda não leu
+export const BUSCAR = "Buscar";
+// PENDENTE: redação minha, o João ainda não leu
+export const BUSCANDO = "Buscando…";
+// PENDENTE: redação minha, o João ainda não leu
+export const ROTULO_DA_BUSCA = "Cidade ou nome do lugar";
+// PENDENTE: redação minha, o João ainda não leu
+export const NENHUM_ACHADO = "Não achei nada com esse nome. Tente a cidade.";
+/** Mora aqui (e não na rota) porque `palavras.ts` é puro e as duas rotas da
+ *  busca a importam: a falha do serviço e a rede caída dizem a mesma coisa. */
+// PENDENTE: redação minha, o João ainda não leu
+export const BUSCA_NAO_SAIU = "Não consegui buscar agora. Tente de novo daqui a pouco, ou ache o lugar mexendo no mapa.";
+// PENDENTE: redação minha, o João ainda não leu
+export const CIDADE_DEPOIS_DE_SALVAR = "A cidade sai do ponto quando você salvar.";

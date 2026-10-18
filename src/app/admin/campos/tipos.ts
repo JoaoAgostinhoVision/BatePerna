@@ -60,6 +60,11 @@ export type CampoNaTela = {
    *  fontes pra mesma pergunta. `condicao.coords` também não: lá o `valor` já É
    *  o par. */
   ponto?: { indice: number; lat: number; lng: number };
+  /** Só na linha `.lat` do ponto 0 das telas de LUGAR NOVO (e da edição dela):
+   *  a cidade que o documento tem (17/10 — ela sai do ponto, no servidor).
+   *  Com ela, o número embaixo do mapa dá lugar a "Fica em: <cidade>". Ausente
+   *  na `FichaInteira` do João, que confere o número contra o que sabe. */
+  cidade?: string;
 };
 
 /** Onde o mapa de pôr o pin começa quando não há ponto, e DE ONDE veio esse
@@ -70,7 +75,7 @@ export type CampoNaTela = {
 export type VistaNaTela = {
   centro: { lat: number; lng: number };
   z: number;
-  origem: "ponto" | "cidade" | "acervo" | "cidade-ambigua";
+  origem: "ponto" | "cidade" | "acervo" | "cidade-ambigua" | "cidade-nao-achada";
 };
 
 /** 🔴 `valor` É `unknown` DE PROPÓSITO. Ele vem do documento que está no banco,

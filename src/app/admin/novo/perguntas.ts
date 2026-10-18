@@ -205,9 +205,14 @@ function naTela(c: CampoDaFicha, caminho: string, rascunho: unknown): CampoNaTel
     // que ficavam aqui no lugar do mapa.
     const ponto = caminho.endsWith(".lat") ? lerCaminho(rascunho, caminho.split(".").slice(0, -1)) : undefined;
     const indice = Number(caminho.split(".").find((d) => /^\d+$/.test(d)));
+    // 17/10: a cidade do documento desce com o PONTO 0 (a linha `.lat`), pra o mapa
+    // dizer "Fica em: <cidade>" embaixo; sem cidade no documento, não desce nada.
+    const cidade = (rascunho as { cidade?: unknown } | null)?.cidade;
+    const daCidade = caminho === "trajeto.waypoints.0.lat" && typeof cidade === "string" && cidade !== "";
     return {
       ...base,
       ...(caminho.endsWith(".lat") && ehPar(ponto) ? { ponto: { indice, lat: ponto.lat, lng: ponto.lng } } : {}),
+      ...(daCidade ? { cidade } : {}),
     };
   }
   return base;

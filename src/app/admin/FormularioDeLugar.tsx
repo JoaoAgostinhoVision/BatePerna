@@ -202,6 +202,7 @@ export default function FormularioDeLugar({
     previa: false,
     depoisDeGravar: (novo: string) => rotas.pergunta(novo, destino),
     recarregarSe401: rotas.recarregarSe401,
+    buscarEm: rotas.buscaApi,
   };
   return (
     <PortaDoEditor.Provider value={porta}>

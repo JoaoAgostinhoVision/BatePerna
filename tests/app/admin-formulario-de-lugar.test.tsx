@@ -35,8 +35,8 @@ import {
 import { enderecoDePublicar } from "@/app/admin/novo/enderecos";
 import EditorProsa from "@/app/admin/campos/EditorProsa";
 import { ERRO_REDE } from "@/app/admin/campos/gravar";
-import { HORA_VAZIA } from "@/app/admin/campos/palavras";
-import { APROXIMAR, MARQUE_NO_MAPA, VISTA_CIDADE_AMBIGUA, VISTA_SEM_CIDADE } from "@/app/admin/campos/EditorCoordenada";
+import { CIDADE_DEPOIS_DE_SALVAR, HORA_VAZIA } from "@/app/admin/campos/palavras";
+import { APROXIMAR, EM_CIDADE, MARQUE_NO_MAPA, VISTA_CIDADE_AMBIGUA, VISTA_SEM_CIDADE } from "@/app/admin/campos/EditorCoordenada";
 import { ESTADO_DO_APP } from "@/lib/lugares";
 import { vistaDoAcervo } from "@/lib/vista-do-mapa";
 import {
@@ -488,7 +488,14 @@ describe("/admin/novo — as perguntas", () => {
     const conferidos = new Set<string>();
     await porTodasAsTelas((n, container) => {
       const [m] = naTela();
-      const caixas = [...container.querySelectorAll<HTMLInputElement>("input, textarea, select")];
+      // A caixa de BUSCA do mapa (`type=search`, 17/10) não é resposta: é ferramenta de achar
+      // o lugar, tem a regra dela abaixo (vazia, sem exemplo dentro).
+      const todas = [...container.querySelectorAll<HTMLInputElement>("input, textarea, select")];
+      const caixas = todas.filter((c) => c.type !== "search");
+      for (const busca of todas.filter((c) => c.type === "search")) {
+        expect(busca.value, `a busca da tela ${n} nasceu preenchida`).toBe("");
+        expect(busca.getAttribute("placeholder") ?? "", `placeholder na busca da tela ${n}`).toBe("");
+      }
       // A de mapa não tem caixa nenhuma (Tarefa 11f): o "nada pré-preenchido"
       // dela é o mapa SEM PIN e o número vazio.
       if (campoDe(m).especie === "coord") {
@@ -920,6 +927,11 @@ describe("/admin/novo — responder, sair e voltar", () => {
     fireEvent(mapa, new MouseEvent("pointerup", { bubbles: true, cancelable: true, ...p }));
   }
   const numero = (caminho: string): string => within(pergunta(caminho)).getByTestId("coord-atual").textContent ?? "";
+  /** ONDE o pin está, lido de `data-coord`. Desde 17/10 o texto embaixo do mapa de um
+   *  rascunho COM cidade (todos os daqui, que a semeiam) diz a cidade, não o número —
+   *  e estas provas medem onde o pin está, não o que a tela fala. */
+  const ondeEstaOPin = (caminho: string): string =>
+    within(pergunta(caminho)).getByTestId("coord-atual").getAttribute("data-coord") ?? "";
   const salvarDe = (caminho: string): HTMLButtonElement | null =>
     pergunta(caminho).querySelector<HTMLButtonElement>(`[data-salvar="${caminho}"]`);
   const zoomNaTela = (caminho: string): number =>
@@ -943,14 +955,16 @@ describe("/admin/novo — responder, sair e voltar", () => {
     expect(new URL(buscasDeCidade[0]).searchParams.get("name")).toBe(CIDADE);
     expect(zoomNaTela(P)).toBe(zoomDeTiles(MAPA_ZOOM));
     tocar(P, MAPA_LARGURA_PX / 2, MAPA_ALTURA_PX / 2);
-    expect(numero(P), "o centro da vista não é a cidade de Pernambuco").toBe(
+    expect(ondeEstaOPin(P), "o centro da vista não é a cidade de Pernambuco").toBe(
       `${seis(CIDADE_NO_MAPA.lat)}, ${seis(CIDADE_NO_MAPA.lng)}`,
     );
     // o ponto de verdade é outro toque, longe do centro
     tocar(P, 400, 40);
     const e = coordDaPosicao(400, 40, CIDADE_NO_MAPA, MAPA_ZOOM, MAPA_LARGURA_PX, MAPA_ALTURA_PX);
     const tocado = { lat: seis(e.lat), lng: seis(e.lng) };
-    expect(numero(P)).toBe(`${tocado.lat}, ${tocado.lng}`);
+    expect(ondeEstaOPin(P)).toBe(`${tocado.lat}, ${tocado.lng}`);
+    // o texto embaixo é o da cidade que sai do ponto — não o número
+    expect(numero(P)).toBe(CIDADE_DEPOIS_DE_SALVAR);
     // afastado (z11): o Salvar existe e está desligado (C1); clicar não manda nada
     expect(salvarDe(P)!.disabled).toBe(true);
     fireEvent.click(salvarDe(P)!);
@@ -960,13 +974,13 @@ describe("/admin/novo — responder, sair e voltar", () => {
     // (até a onda de fix este caso EXIGIA o contrário, e era o furo).
     for (let z = MAPA_ZOOM; z < MAPA_ZOOM_EDITOR; z++) fireEvent.click(within(pergunta(P)).getByRole("button", { name: APROXIMAR }));
     expect(zoomNaTela(P), "premissa: a vista chegou ao zoom do portão").toBe(zoomDeTiles(MAPA_ZOOM_EDITOR));
-    expect(numero(P), "aproximar mexeu no ponto").toBe(`${tocado.lat}, ${tocado.lng}`);
+    expect(ondeEstaOPin(P), "aproximar mexeu no ponto").toBe(`${tocado.lat}, ${tocado.lng}`);
     expect(salvarDe(P)!.disabled, "o toque do z11 ficou salvável só por aproximar").toBe(true);
     fireEvent.click(salvarDe(P)!);
     expect(chamadas).toHaveLength(0);
     // o ponto que se grava é um toque DE PERTO
     tocar(P, 200, 120);
-    const [lat, lng] = numero(P).split(", ").map(Number);
+    const [lat, lng] = ondeEstaOPin(P).split(", ").map(Number);
     const dePerto = { lat, lng };
     expect(dePerto, "o toque de perto não moveu o pin").not.toEqual(tocado);
     expect(salvarDe(P)!.disabled).toBe(false);
@@ -1021,7 +1035,8 @@ describe("/admin/novo — responder, sair e voltar", () => {
     await telaDe("trajeto.waypoints.0.lat");
     const P = "trajeto.waypoints.0.lat";
     expect(pergunta(P).querySelector("[data-pin]")).not.toBeNull();
-    expect(numero(P)).toBe("-8.42, -36.21");
+    expect(ondeEstaOPin(P)).toBe("-8.42, -36.21");
+    expect(numero(P), "o ponto salvo diz a cidade dele").toBe(`${EM_CIDADE} ${CIDADE}`);
     expect(zoomNaTela(P)).toBe(zoomDeTiles(MAPA_ZOOM_EDITOR));
     expect(salvarDe(P)!.disabled).toBe(false);
     expect(buscasDeCidade).toHaveLength(0);
@@ -1071,7 +1086,7 @@ describe("/admin/novo — responder, sair e voltar", () => {
       const quadro = vistaDoAcervo(acervo)!;
       expect(zoomNaTela(P)).toBe(zoomDeTiles(quadro.z));
       tocar(P, MAPA_LARGURA_PX / 2, MAPA_ALTURA_PX / 2);
-      expect(numero(P)).toBe(`${seis(quadro.centro.lat)}, ${seis(quadro.centro.lng)}`);
+      expect(ondeEstaOPin(P)).toBe(`${seis(quadro.centro.lat)}, ${seis(quadro.centro.lng)}`);
     });
   }
 

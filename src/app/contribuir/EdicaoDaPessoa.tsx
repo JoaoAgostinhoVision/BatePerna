@@ -10,7 +10,7 @@ import type { PerguntaNaTela } from "../admin/campos/tipos";
 export default function EdicaoDaPessoa({ slug, versaoId, perguntas }: { slug: string; versaoId: number; perguntas: PerguntaNaTela[] }) {
   return (
     <ComVersaoDaTela id={versaoId}>
-      <PortaDoEditor.Provider value={{ gravarEm: "/api/contribuir/lugar", previa: false, depoisDeGravar: null, recarregarSe401: true }}>
+      <PortaDoEditor.Provider value={{ gravarEm: "/api/contribuir/lugar", previa: false, depoisDeGravar: null, recarregarSe401: true, buscarEm: null }}>
         {perguntas.map((q) => <Pergunta key={q.campo.caminho} pergunta={q} slug={slug} proxima={null} />)}
       </PortaDoEditor.Provider>
     </ComVersaoDaTela>

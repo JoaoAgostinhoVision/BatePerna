@@ -36,11 +36,17 @@ export const PortaDoEditor = createContext<{
    *  recarrega, a página pede login e volta ao mesmo endereço. No painel do
    *  João fica `false`, e o 401 continua sendo "Não consegui salvar.". */
   recarregarSe401: boolean;
+  /** 17/10: a rota da BUSCA NO MAPA do ponto (`/api/admin/buscar-no-mapa` ou a
+   *  dela). `null` (o PADRÃO) = sem caixa de busca: a `FichaInteira` do João e
+   *  a edição de quem usa no lugar no ar não a montam. A caixa só nasce com a
+   *  rota E um mapa sem ponto salvo (`EditorCoordenada`). */
+  buscarEm: string | null;
 }>({
   gravarEm: "/api/admin/ficha",
   previa: true,
   depoisDeGravar: null,
   recarregarSe401: false,
+  buscarEm: null,
 });
 
 /** A VERSÃO QUE A TELA ABRIU — a identidade do lugar que esta tela mostra

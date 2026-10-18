@@ -242,13 +242,14 @@ describe("vistaDaCoordSemPonto — a ordem das fontes", () => {
     expect(f.coordsDoAcervo).not.toHaveBeenCalled();
   });
 
-  it("cidade não achada, serviço fora (503/estouro) ou sem cidade: o acervo", async () => {
+  it("cidade não achada, serviço fora (503/estouro) ou sem cidade: o acervo — e só a que foi procurada diz \"não achada\"", async () => {
     const acervo = vistaDoAcervo(ACERVO);
-    expect(await vistaDaCoordSemPonto(doc("Cidade Marcador"), "trajeto.waypoints.0.lat", fontes(async () => ({})))).toEqual(acervo);
+    const naoAchada = { ...acervo!, origem: "cidade-nao-achada" };
+    expect(await vistaDaCoordSemPonto(doc("Cidade Marcador"), "trajeto.waypoints.0.lat", fontes(async () => ({})))).toEqual(naoAchada);
     const fora = fontes(async () => {
       throw new Error("503");
     });
-    expect(await vistaDaCoordSemPonto(doc("Cidade Marcador"), "trajeto.waypoints.0.lat", fora)).toEqual(acervo);
+    expect(await vistaDaCoordSemPonto(doc("Cidade Marcador"), "trajeto.waypoints.0.lat", fora)).toEqual(naoAchada);
     const sem = fontes(async () => HOMONIMOS);
     expect(await vistaDaCoordSemPonto(doc(), "trajeto.waypoints.0.lat", sem)).toEqual(acervo);
     expect(sem.buscarCidade, "sem cidade não há o que buscar").not.toHaveBeenCalled();
@@ -369,9 +370,34 @@ describe("vistaDaCidade — a cidade ambígua não é \"não achei\"", () => {
     const v = await vistaDaCidade({ cidade: "Cidade Marcador" }, { buscarCidade: async () => duas, coordsDoAcervo: async () => ACERVO });
     expect(v).toEqual({ ...vistaDoAcervo(ACERVO)!, origem: "cidade-ambigua" });
   });
-  it("nenhuma: a vista do acervo, origem \"acervo\" (não achou)", async () => {
+  it("nenhuma: a vista do acervo, origem \"cidade-nao-achada\" (procurou e não achou)", async () => {
     const v = await vistaDaCidade({ cidade: "Cidade Marcador" }, { buscarCidade: async () => ({}), coordsDoAcervo: async () => ACERVO });
-    expect(v?.origem).toBe("acervo");
+    expect(v).toEqual({ ...vistaDoAcervo(ACERVO)!, origem: "cidade-nao-achada" });
+  });
+  it("o serviço de cidade fora do ar também é \"procurou e não achou\"", async () => {
+    const fora = async () => {
+      throw new Error("fora");
+    };
+    const v = await vistaDaCidade({ cidade: "Cidade Marcador" }, { buscarCidade: fora, coordsDoAcervo: async () => ACERVO });
+    expect(v?.origem).toBe("cidade-nao-achada");
+  });
+  // 17/10: o rascunho novo não tem cidade antes do ponto. Nada foi procurado, então a
+  // tela não pode dizer que não achou.
+  it("documento sem cidade: origem acervo, e nenhuma busca de cidade saiu", async () => {
+    const buscas: string[] = [];
+    const fontes = {
+      buscarCidade: async (c: string) => {
+        buscas.push(c);
+        return {};
+      },
+      coordsDoAcervo: async () => ACERVO,
+    };
+    for (const doc of [{}, { cidade: "" }, { cidade: "   " }, { cidade: 7 }]) {
+      const v = await vistaDaCidade(doc, fontes);
+      expect(v, JSON.stringify(doc)).toEqual(vistaDoAcervo(ACERVO));
+      expect(v?.origem).toBe("acervo");
+    }
+    expect(buscas).toEqual([]);
   });
   it("ambígua e acervo fora do ar: nenhuma vista", async () => {
     const duas = {
@@ -433,12 +459,15 @@ describe("FONTES_DE_PRODUCAO — a busca da cidade tem prazo, e resposta ruim ca
     );
     const v = await comLimite(vistaDaCidade({ cidade: "Cidade Marcador" }, fontes), 1_000);
     expect(v, "a busca pendurou: nenhum prazo abortou o fetch").not.toBe(PENDUROU);
-    expect(v).toEqual(vistaDoAcervo(ACERVO));
+    expect(v).toEqual({ ...vistaDoAcervo(ACERVO)!, origem: "cidade-nao-achada" });
     expect(timeout).toHaveBeenCalledWith(PRAZO_BUSCA_MS);
   });
 
   it("resposta que não é ok (503), mesmo com uma cidade boa no corpo: o acervo", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => Response.json(UMA, { status: 503 })));
-    expect(await vistaDaCidade({ cidade: "Cidade Marcador" }, fontes)).toEqual(vistaDoAcervo(ACERVO));
+    expect(await vistaDaCidade({ cidade: "Cidade Marcador" }, fontes)).toEqual({
+      ...vistaDoAcervo(ACERVO)!,
+      origem: "cidade-nao-achada",
+    });
   });
 });

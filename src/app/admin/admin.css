@@ -302,3 +302,21 @@
 .adm-origem p { margin: 0; }
 .adm-origem button { padding: .6rem; font-size: .95rem; border-radius: 8px; }
 .adm-quem { display: block; font-size: .85rem; color: #555; }
+
+/* A BUSCA NO MAPA DO PONTO (17/10, Task 5): a caixa em cima do mapa e a lista
+   dos achados. Mesma família do resto do editor: tamanho de dedo (44px) no
+   celular, texto de apoio nas frases, e a lista rola dentro de si mesma pra não
+   empurrar o mapa pra fora da tela. */
+.adm-busca { display: flex; flex-direction: column; gap: .4rem; }
+.adm-busca-form { display: flex; gap: .4rem; align-items: flex-end; }
+.adm-busca-rotulo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; color: #777; }
+.adm-busca-caixa { min-width: 0; min-height: 44px; padding: 0 .6rem; font: inherit; font-size: 1rem;
+  border: 1px solid #bbb; border-radius: 6px; background: #fff; color: inherit; }
+.adm-busca-botao { min-height: 44px; padding: 0 1rem; font: inherit; border: 1px solid #888; border-radius: 6px;
+  background: #f3f3f3; color: inherit; cursor: pointer; }
+.adm-busca-botao:disabled { opacity: .6; cursor: default; }
+.adm-busca-lista { list-style: none; margin: 0; padding: 0; max-height: 14rem; overflow-y: auto;
+  border: 1px solid #ddd; border-radius: 6px; }
+.adm-busca-lista li + li { border-top: 1px solid #eee; }
+.adm-busca-achado { display: block; width: 100%; min-height: 44px; padding: .5rem .6rem; text-align: left;
+  font: inherit; font-size: .9rem; border: 0; background: transparent; color: inherit; cursor: pointer; }

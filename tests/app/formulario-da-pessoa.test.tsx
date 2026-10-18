@@ -7,6 +7,9 @@ import { PortaDoEditor, usarGravacao } from "@/app/admin/campos/gravar";
 import { ROTAS, enderecoDaPergunta, enderecoDePublicar } from "@/app/admin/novo/enderecos";
 import type { PerguntaNaTela } from "@/app/admin/campos/tipos";
 import { SALVAR } from "@/app/admin/campos/palavras";
+import EdicaoDaPessoa from "@/app/contribuir/EdicaoDaPessoa";
+import { montarPerguntasDaPessoa } from "@/app/contribuir/perguntas";
+import { montarPerguntas } from "@/app/admin/novo/perguntas";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
@@ -30,6 +33,7 @@ describe("a tabela de endereços", () => {
     expect(ROTAS.painel.publicar("a-b")).toBe(enderecoDePublicar("a-b"));
     expect(ROTAS.painel.rascunhoApi).toBe("/api/admin/rascunho");
     expect(ROTAS.painel.recarregarSe401).toBe(false);
+    expect(ROTAS.painel.buscaApi).toBe("/api/admin/buscar-no-mapa");
   });
 
   it("a linha dela leva às rotas e telas DELA, e publicar leva à página pública", () => {
@@ -40,6 +44,66 @@ describe("a tabela de endereços", () => {
     expect(ROTAS.contribuir.publicou("a-b")).toBe("/a-b");
     expect(ROTAS.contribuir.desistiu).toBe("/contribuir");
     expect(ROTAS.contribuir.recarregarSe401).toBe(true);
+    expect(ROTAS.contribuir.buscaApi).toBe("/api/contribuir/buscar-no-mapa");
+  });
+});
+
+// 17/10, Task 5: a caixa de busca do mapa do ponto nasce em cada formulário e vai à
+// rota de QUEM A MONTOU — a dela nunca à do painel.
+describe("a busca no mapa, por quem usa o formulário", () => {
+  const DO_PONTO: PerguntaNaTela = {
+    especie: "coord",
+    campo: {
+      caminho: "trajeto.waypoints.0.lat",
+      rotulo: "Latitude",
+      obrigatorio: true,
+      vista: { centro: { lat: -8.5, lng: -36.5 }, z: 11, origem: "cidade" },
+    },
+    texto: "Onde fica o ponto?",
+    valor: undefined,
+  };
+  for (const [onde, rota] of [
+    ["painel", "/api/admin/buscar-no-mapa"],
+    ["contribuir", "/api/contribuir/buscar-no-mapa"],
+  ] as const) {
+    it(`${onde}: a busca sai pela rota ${rota}`, async () => {
+      const fetchFalso = vi.fn().mockResolvedValue(Response.json([]));
+      vi.stubGlobal("fetch", fetchFalso);
+      const { getByRole } = render(
+        <FormularioDeLugar slug="a-b" pergunta={DO_PONTO} posicao={1} respondidas={[false]} onde={onde} />,
+      );
+      fireEvent.change(getByRole("searchbox"), { target: { value: "Lugar Marcador" } });
+      fireEvent.submit(getByRole("searchbox").closest("form")!);
+      await waitFor(() => expect(fetchFalso).toHaveBeenCalledTimes(1));
+      expect(fetchFalso.mock.calls[0][0]).toBe(`${rota}?q=Lugar%20Marcador`);
+    });
+  }
+});
+
+// 17/10, Task 5: a cidade do documento desce com o PONTO 0 (a linha `.lat`), pra o mapa dizer
+// "Fica em:"; sem cidade no documento, nada desce. A edição dela no ar não monta a busca.
+describe("a cidade do documento desce com o ponto 0", () => {
+  const P0 = "trajeto.waypoints.0.lat";
+  const comCidade = { cidade: "Cidade Marcador Um", trajeto: { waypoints: [{ nome: "Lugar Marcador", lat: -8.1, lng: -35.2 }] } };
+  const daCidade = (qs: PerguntaNaTela[]) => qs.filter((q) => q.campo.cidade !== undefined).map((q) => q.campo.caminho);
+
+  it("só a linha `.lat` do ponto 0 recebe a cidade, no painel e na dela", () => {
+    expect(daCidade(montarPerguntas(comCidade))).toEqual([P0]);
+    expect(montarPerguntas(comCidade).find((q) => q.campo.caminho === P0)!.campo.cidade).toBe("Cidade Marcador Um");
+    expect(daCidade(montarPerguntasDaPessoa(comCidade))).toEqual([P0]);
+  });
+
+  it("documento sem cidade (ou com cidade vazia): ninguém recebe", () => {
+    for (const doc of [{}, { cidade: "" }, { cidade: 7 }, null]) {
+      expect(daCidade(montarPerguntas(doc)), JSON.stringify(doc)).toEqual([]);
+    }
+  });
+
+  it("a edição dela no ar: \"Fica em:\" e NENHUMA caixa de busca (a busca é do lugar novo)", () => {
+    const perguntas = montarPerguntasDaPessoa(comCidade);
+    const { container, queryByRole } = render(<EdicaoDaPessoa slug="a-b" versaoId={1} perguntas={perguntas} />);
+    expect(queryByRole("searchbox")).toBeNull();
+    expect(container.querySelector(`[data-editor="${P0}"] [data-testid="coord-atual"]`)?.textContent).toBe("Fica em: Cidade Marcador Um");
   });
 });
 
@@ -112,7 +176,7 @@ describe("401 — a sessão dela venceu no meio (Review Focus 4)", () => {
     const { reload } = navegacaoFalsa();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 401 })));
     const { getByRole } = render(
-      <PortaDoEditor.Provider value={{ gravarEm: "/api/contribuir/rascunho", previa: false, depoisDeGravar: null, recarregarSe401: true }}>
+      <PortaDoEditor.Provider value={{ gravarEm: "/api/contribuir/rascunho", previa: false, depoisDeGravar: null, recarregarSe401: true, buscarEm: "/api/contribuir/buscar-no-mapa" }}>
         <Gravador />
       </PortaDoEditor.Provider>,
     );

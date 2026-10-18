@@ -3,12 +3,20 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import FichaInteira, { precisaDeVista } from "@/app/admin/FichaInteira";
-import { ERRO_GRAVAR } from "@/app/admin/campos/gravar";
-import { SALVAR } from "@/app/admin/campos/palavras";
+import { ERRO_GRAVAR, PortaDoEditor } from "@/app/admin/campos/gravar";
 import {
+  BUSCAR,
+  BUSCA_NAO_SAIU,
+  CIDADE_DEPOIS_DE_SALVAR,
+  NENHUM_ACHADO,
+  ROTULO_DA_BUSCA,
+  SALVAR,
+} from "@/app/admin/campos/palavras";
+import EditorCoordenada, {
   AFASTAR,
   APROXIMAR,
   APROXIME_PRA_SALVAR,
+  EM_CIDADE,
   MARQUE_NO_MAPA,
   PIN_FORA_DA_VISTA,
   SEM_VISTA,
@@ -20,12 +28,15 @@ import type { VistaNaTela } from "@/app/admin/campos/tipos";
 import {
   GOTA_ACIMA_DA_PONTA_PX,
   MAPA_ALTURA_PX,
+  MAPA_ESCALA,
   MAPA_LARGURA_PX,
   MAPA_ZOOM_EDITOR,
   MAPA_ZOOM_EDITOR_MAX,
   MAPA_ZOOM_EDITOR_MIN,
   TILE_PX,
   coordDaPosicao,
+  tilesParaCaixa,
+  urlTile,
   zoomDeTiles,
 } from "@/lib/mapa";
 import { camposDaFicha } from "@/lib/campos-da-ficha";
@@ -966,7 +977,7 @@ describe("EditorCoordenada — coordenada que não é par finito", () => {
   // Medido no Chrome (375×667): com a ajuda EM CIMA do mapa, o primeiro toque a
   // apagava e o mapa subia ~45px debaixo do dedo. Toda ajuda mora embaixo dele.
   it("as ajudas que somem com o toque ficam DEPOIS do mapa — o mapa não pula quando elas somem", () => {
-    render(<FichaInteira ficha={semPonto0(semPar(FICHA))} vistaSemPonto={{ ...VISTA, origem: "acervo" }} />);
+    render(<FichaInteira ficha={semPonto0(semPar(FICHA))} vistaSemPonto={{ ...VISTA, origem: "cidade-nao-achada" }} />);
     const ajudas = [...bloco(PAR).querySelectorAll(".adm-editor-ajuda")];
     expect(ajudas.map((p) => p.textContent)).toEqual([VISTA_SEM_CIDADE, MARQUE_NO_MAPA]);
     for (const p of ajudas) {
@@ -976,7 +987,7 @@ describe("EditorCoordenada — coordenada que não é par finito", () => {
 
   it("a vista que caiu no acervo diz que não achou a cidade; a da cidade não diz nada disso", () => {
     const longe = semPonto0(semPar(FICHA));
-    const { unmount } = render(<FichaInteira ficha={longe} vistaSemPonto={{ ...VISTA, origem: "acervo" }} />);
+    const { unmount } = render(<FichaInteira ficha={longe} vistaSemPonto={{ ...VISTA, origem: "cidade-nao-achada" }} />);
     expect(within(bloco(PAR)).getByText(VISTA_SEM_CIDADE)).toBeTruthy();
     unmount();
     render(<FichaInteira ficha={longe} vistaSemPonto={VISTA} />);
@@ -1003,5 +1014,238 @@ describe("EditorCoordenada — o alvo do pin bate com o desenho dele", () => {
     const altura = Number(/height: ([\d.]+)px/.exec(regra)![1]);
     const topo = Number(/margin: -([\d.]+)px/.exec(regra)![1]);
     expect(GOTA_ACIMA_DA_PONTA_PX).toBeCloseTo(topo - altura / 2, 6);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 17/10, Task 5: A BUSCA NO MAPA DO PONTO. Ela só MOVE o mapa; o ponto continua
+// vindo do dedo de quem sabe. Renderiza o `EditorCoordenada` direto, dentro de
+// um provedor com `buscarEm` (a `FichaInteira` não monta provedor), num `div`
+// com o `data-testid` do bloco pra reaproveitar os ajudantes acima.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("EditorCoordenada — a busca no mapa (17/10)", () => {
+  const ROTA_BUSCA = "/api/admin/buscar-no-mapa";
+  /** Vista de MARCADOR, ABAIXO do zoom de pôr o pin (11 < 13): é o que separa
+   *  "escolher abre no zoom de pôr o pin" de "escolher mantém a vista". */
+  const VISTA_LONGE: VistaNaTela = { centro: { lat: -8.5, lng: -36.5 }, z: 11, origem: "cidade" };
+  const ACHADO = { nome: "Lugar Marcador Um, Cidade Marcador Um", lat: -8.1, lng: -35.2 };
+  const OUTRO_ACHADO = { nome: "Lugar Marcador Dois, Cidade Marcador Dois", lat: -8.3, lng: -35.4 };
+  const SALVO = { lat: -8.2, lng: -35.9 };
+
+  function montar(
+    p: { buscarEm?: string | null; recarregarSe401?: boolean; salvo?: { lat: number; lng: number }; cidade?: string } = {},
+  ): void {
+    const campo = {
+      caminho: LAT0,
+      rotulo: "Latitude",
+      obrigatorio: true,
+      vista: VISTA_LONGE,
+      ...(p.salvo ? { ponto: { indice: 0, ...p.salvo } } : {}),
+      ...(p.cidade !== undefined ? { cidade: p.cidade } : {}),
+    };
+    render(
+      <PortaDoEditor.Provider
+        value={{
+          gravarEm: "/api/admin/rascunho",
+          previa: false,
+          depoisDeGravar: null,
+          recarregarSe401: p.recarregarSe401 ?? false,
+          buscarEm: p.buscarEm === undefined ? ROTA_BUSCA : p.buscarEm,
+        }}
+      >
+        <div data-testid={`campo-${LAT0}`}>
+          <EditorCoordenada campo={campo} valor={undefined} slug="rascunho-marcador" />
+        </div>
+      </PortaDoEditor.Provider>,
+    );
+  }
+
+  const caixaDaBusca = (): HTMLInputElement => screen.getByRole("searchbox", { name: ROTULO_DA_BUSCA });
+  const querBuscar = (): HTMLElement => screen.getByRole("button", { name: BUSCAR });
+  const semCaixa = (): boolean => screen.queryByRole("searchbox") === null;
+  const putsDe = (f: ReturnType<typeof comRota>["fetchFalso"]) =>
+    (f.mock.calls as unknown as [string, { method?: string } | undefined][]).filter(([, i]) => i?.method === "PUT");
+  /** Os tiles que o mapa de `centro` em `z` desenha — a conta pura, escrita do
+   *  lado de fora do componente. */
+  const tilesEsperados = (centro: { lat: number; lng: number }, z: number): string[] =>
+    tilesParaCaixa(centro, zoomDeTiles(z), L * MAPA_ESCALA, A * MAPA_ESCALA).map(urlTile).sort();
+  const urlsDosTiles = (): string[] =>
+    [...mapaEm(LAT0)!.querySelectorAll("img")].map((i) => i.getAttribute("src")!).sort();
+
+  /** Digita e manda o formulário (o Enter). */
+  function buscar(q = "Lugar Marcador"): void {
+    fireEvent.change(caixaDaBusca(), { target: { value: q } });
+    fireEvent.submit(caixaDaBusca().closest("form")!);
+  }
+
+  it("digitar não busca: só o botão (ou o Enter) chama a rota, uma vez", async () => {
+    const { fetchFalso } = comRota(() => Promise.resolve(Response.json([ACHADO])));
+    montar();
+    fireEvent.change(caixaDaBusca(), { target: { value: "Lugar Marcador" } });
+    fireEvent.change(caixaDaBusca(), { target: { value: "Lugar Marcador Um" } });
+    fireEvent.change(caixaDaBusca(), { target: { value: "Lugar Marcador" } });
+    expect(fetchFalso).not.toHaveBeenCalled();
+    fireEvent.submit(caixaDaBusca().closest("form")!);
+    await screen.findByRole("button", { name: ACHADO.nome });
+    expect(fetchFalso).toHaveBeenCalledTimes(1);
+    expect(String(fetchFalso.mock.calls[0][0])).toBe("/api/admin/buscar-no-mapa?q=Lugar%20Marcador");
+  });
+
+  it("o botão é o submit do formulário: tocar nele busca, uma vez", async () => {
+    const { fetchFalso } = comRota(() => Promise.resolve(Response.json([ACHADO])));
+    montar();
+    expect(querBuscar().getAttribute("type")).toBe("submit");
+    expect(querBuscar().closest("form")).toBe(caixaDaBusca().closest("form"));
+    fireEvent.change(caixaDaBusca(), { target: { value: "Lugar Marcador" } });
+    fireEvent.click(querBuscar());
+    await screen.findByRole("button", { name: ACHADO.nome });
+    expect(fetchFalso).toHaveBeenCalledTimes(1);
+  });
+
+  it("caixa vazia ou só de espaços: não há viagem nenhuma", () => {
+    const { fetchFalso } = comRota();
+    montar();
+    for (const q of ["", "   "]) buscar(q);
+    expect(fetchFalso).not.toHaveBeenCalled();
+  });
+
+  it("🔴 escolher um achado move o mapa e NÃO grava ponto", async () => {
+    const { fetchFalso } = comRota(() => Promise.resolve(Response.json([ACHADO, OUTRO_ACHADO])));
+    montar();
+    expect(urlsDosTiles()).toEqual(tilesEsperados(VISTA_LONGE.centro, VISTA_LONGE.z));
+    buscar();
+    fireEvent.click(await screen.findByRole("button", { name: ACHADO.nome }));
+    const c = bloco(LAT0);
+    expect(c.querySelector("[data-pin]"), "a busca pôs um pin que ninguém tocou").toBeNull();
+    expect(c.querySelector("[data-salvar]"), "a busca ligou o Salvar").toBeNull();
+    expect(atualEm(LAT0)).toBe("");
+    expect(putsDe(fetchFalso)).toEqual([]);
+    // os tiles agora são do zoom de pôr o pin, em volta do achado:
+    expect(urlsDosTiles()).toEqual(tilesEsperados({ lat: ACHADO.lat, lng: ACHADO.lng }, MAPA_ZOOM_EDITOR));
+    // a lista some ao escolher
+    expect(screen.queryByRole("button", { name: OUTRO_ACHADO.nome })).toBeNull();
+  });
+
+  it("depois de escolher, um toque no mapa liga o Salvar (o zoom em que o toque vale)", async () => {
+    // O CONTROLE: sem escolher, o toque é de longe (z11) e o portão segura o Salvar.
+    comRota();
+    montar();
+    gesto(LAT0, naTela({ x: 300, y: 60 }));
+    expect(salvarEm(LAT0)!.disabled, "o toque de longe devia ficar preso pelo portão").toBe(true);
+    cleanup();
+
+    comRota(() => Promise.resolve(Response.json([ACHADO])));
+    montar();
+    buscar();
+    fireEvent.click(await screen.findByRole("button", { name: ACHADO.nome }));
+    expect(salvarEm(LAT0)).toBeNull();
+    gesto(LAT0, naTela({ x: 300, y: 60 }));
+    expect(salvarEm(LAT0)!.disabled, "o toque depois da busca não vale").toBe(false);
+    const e = coordDaPosicao(300, 60, { lat: ACHADO.lat, lng: ACHADO.lng }, MAPA_ZOOM_EDITOR, L, A);
+    expect(lido(LAT0).lat).toBeCloseTo(e.lat, 5);
+  });
+
+  it("sem achado: NENHUM_ACHADO; serviço fora ou rede caída: BUSCA_NAO_SAIU — frases diferentes", async () => {
+    expect(NENHUM_ACHADO).not.toBe(BUSCA_NAO_SAIU);
+    comRota(() => Promise.resolve(Response.json([])));
+    montar();
+    buscar();
+    expect(await screen.findByText(NENHUM_ACHADO)).toBeTruthy();
+    expect(screen.queryByText(BUSCA_NAO_SAIU)).toBeNull();
+    cleanup();
+
+    comRota(() => Promise.resolve(new Response(BUSCA_NAO_SAIU, { status: 503 })));
+    montar();
+    buscar();
+    expect(await screen.findByText(BUSCA_NAO_SAIU)).toBeTruthy();
+    expect(screen.queryByText(NENHUM_ACHADO)).toBeNull();
+    cleanup();
+
+    comRota(() => Promise.reject(new Error("sem rede")));
+    montar();
+    buscar();
+    expect(await screen.findByText(BUSCA_NAO_SAIU)).toBeTruthy();
+    expect(screen.queryByText(NENHUM_ACHADO)).toBeNull();
+  });
+
+  it("401 na busca dela recarrega a tela; no painel é a frase de falha", async () => {
+    const dela = comRota(() => Promise.resolve(new Response("", { status: 401 })));
+    montar({ recarregarSe401: true });
+    buscar();
+    await waitFor(() => expect(dela.reloadFalso).toHaveBeenCalledTimes(1));
+    expect(dela.fetchFalso).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    const painel = comRota(() => Promise.resolve(new Response("", { status: 401 })));
+    montar({ recarregarSe401: false });
+    buscar();
+    expect(await screen.findByText(BUSCA_NAO_SAIU)).toBeTruthy();
+    expect(painel.reloadFalso).not.toHaveBeenCalled();
+  });
+
+  it("a busca usa a rota que o provedor deu (a dela, não a do painel)", async () => {
+    const { fetchFalso } = comRota(() => Promise.resolve(Response.json([])));
+    montar({ buscarEm: "/api/contribuir/buscar-no-mapa" });
+    buscar("Lugar Marcador");
+    await screen.findByText(NENHUM_ACHADO);
+    expect(String(fetchFalso.mock.calls[0][0])).toBe("/api/contribuir/buscar-no-mapa?q=Lugar%20Marcador");
+  });
+
+  it("sem buscarEm (a FichaInteira), não há caixa", () => {
+    render(<FichaInteira ficha={FICHA} />);
+    expect(semCaixa()).toBe(true);
+    cleanup();
+    montar({ buscarEm: null });
+    expect(semCaixa()).toBe(true);
+    expect(screen.queryByRole("button", { name: BUSCAR })).toBeNull();
+  });
+
+  it("com ponto salvo, não há caixa", () => {
+    montar({ salvo: SALVO });
+    expect(semCaixa()).toBe(true);
+  });
+
+  it("depois de um toque (ainda sem ponto salvo), a caixa continua", () => {
+    comRota();
+    montar();
+    gesto(LAT0, naTela({ x: 300, y: 60 }));
+    expect(salvarEm(LAT0)).not.toBeNull();
+    expect(semCaixa()).toBe(false);
+  });
+
+  it("a cidade embaixo do mapa: Fica em: <cidade> com o pin salvo; a frase de salvar depois de mexer", () => {
+    comRota();
+    montar({ salvo: SALVO, cidade: "Cidade Marcador Um" });
+    expect(atualEm(LAT0)).toBe(`${EM_CIDADE} Cidade Marcador Um`);
+    expect(atualEm(LAT0)).not.toContain(String(SALVO.lat));
+    arrastar(LAT0);
+    expect(atualEm(LAT0)).toBe(CIDADE_DEPOIS_DE_SALVAR);
+  });
+
+  it("ponto novo numa tela com cidade: nada antes do toque, e a frase de salvar depois", () => {
+    comRota();
+    montar({ cidade: "Cidade Marcador Um" });
+    expect(atualEm(LAT0)).toBe("");
+    gesto(LAT0, naTela({ x: 300, y: 60 }));
+    expect(atualEm(LAT0)).toBe(CIDADE_DEPOIS_DE_SALVAR);
+  });
+
+  it("mapa sem cidade no documento (origem acervo): nenhuma frase de \"não achei\" — nada foi procurado", () => {
+    const sem = { ...FICHA, trajeto: { ...FICHA.trajeto, waypoints: [{ ...FICHA.trajeto.waypoints[0], lat: NaN }] } } as Ficha;
+    const torta = { ...sem, condicao: { ...sem.condicao, coords: { lat: NaN, lng: -36 } } } as Ficha;
+    render(<FichaInteira ficha={torta} vistaSemPonto={{ ...VISTA_LONGE, origem: "acervo" }} />);
+    expect(within(bloco(PAR)).queryByText(VISTA_SEM_CIDADE)).toBeNull();
+    expect(within(bloco(PAR)).getByText(MARQUE_NO_MAPA)).toBeTruthy();
+  });
+
+  it("sem campo.cidade, os números de hoje", () => {
+    comRota();
+    montar({ salvo: SALVO });
+    expect(atualEm(LAT0)).toBe(`${SALVO.lat}, ${SALVO.lng}`);
+    cleanup();
+    montar();
+    gesto(LAT0, naTela({ x: 300, y: 60 }));
+    expect(lido(LAT0)).toBeTruthy();
+    expect(atualEm(LAT0)).not.toBe(CIDADE_DEPOIS_DE_SALVAR);
   });
 });

@@ -118,17 +118,23 @@ o lugar teria com o valor novo — o mesmo padrão que o `PainelAdmin` já usa p
 O cálculo reusa o motor de verdade (`src/lib/runMotor.ts`), não uma cópia — cópia é a espécie de
 defeito que este projeto catalogou como "duas fontes pra mesma pergunta".
 
-### 3.2 O mapa: o pin se arrasta, e NÃO existe busca de endereço
+### 3.2 O mapa: o pin se arrasta, e a busca de endereço só move a câmera (nota de 17/10)
 
 🔴 **O mapa deste app não é biblioteca de mapa.** É mosaico de tiles estático, markup derivado de
 funções puras, **zero JS pra desenhar** (`src/app/MapaEstatico.tsx`, `src/lib/mapa.ts`). Arrastar pin
 exige o **inverso** de `posicaoNaCaixa`: pixel dentro da caixa → lat/lng. É componente novo e é o
 pedaço mais caro desta rodada.
 
-🔴 **E não tem busca de endereço, de propósito.** A mesma busca externa que já ajudou este projeto
+🔴 **E a busca de endereço nunca traz o ponto, de propósito** (até 17/10 não havia busca nenhuma). A mesma busca externa que já ajudou este projeto
 errou um preço pela metade e ofereceu a coordenada de **outra cachoeira a 5 km**. Coordenada entra
 por pin arrastado à mão, sobre o mapa, por quem sabe onde o lugar fica. *Ver a memória
 `nao-inventar-fatos-de-roteiros`.*
+
+> **Nota de 17/10 (rodada "cidade do ponto"): a regra mudou, o motivo fica.** A busca existe desde
+> 17/10 e **só MOVE o mapa**: uma caixa em cima do mapa do lugar novo (Nominatim, só com o botão
+> Buscar), que leva a câmera ao achado no zoom de pôr o pin. Escolher um achado **não põe pin, não
+> liga o Salvar, não grava nada** — o ponto continua vindo do dedo de quem sabe. O motivo de 26/09
+> (a cachoeira a 5 km) continua valendo, e é exatamente por ele que a busca nunca vira coordenada.
 
 ⚠️ **Tiles são de terceiro e têm política de uso.** O uso aqui é uma pessoa, ocasional, dentro do
 padrão de navegação — não é o caso que a política proíbe (o que ela proíbe é download em massa, e
@@ -298,7 +304,7 @@ celular, com o dedo no meio de uma edição. Elas dizem **o que está incoerente
 | **R3** | **`modos` fica no schema e sai do formulário** (criar grava `[]`) | Se errada, o formulário deixa de perguntar algo que ele queria responder. Matar o campo é **subtração** e exige a palavra dele — nunca minha |
 | **R4** | **A senha fica no Vercel** | Se errada, ele continua precisando de mim para trocar a senha. Ficar sem chave fora do painel é pior: perder o segredo tranca o app |
 | **R5** | **Coerência vira porta de produção** (§5), em vez de "migrar os guardas pro banco" | Se errada, gastamos uma tarefa extraindo regra que poderia ter ficado em teste. Se **não** fizermos, todo lugar criado do celular nasce sem a auditoria que os três de hoje têm — e essa é a linha vermelha |
-| **R6** | **Sem busca de endereço no mapa** (§3.2) | Se errada, arrastar pin é mais trabalhoso que digitar um nome. É o trabalho certo: coordenada errada põe o app mandando gente pro lugar errado |
+| **R6** | **A busca de endereço no mapa só move a câmera, nunca grava o ponto** (§3.2; até 17/10 não havia busca nenhuma) | Se errada, arrastar pin é mais trabalhoso que digitar um nome. É o trabalho certo: coordenada errada põe o app mandando gente pro lugar errado |
 | **R7** | **`waypoints[0]` continua sendo "o lugar"** em home, mapa, ordem e distância (§6) | Se errada, a home mostraria o nome de uma etapa do caminho em vez do nome do destino |
 | **R8** | **Zero mudança na tela pública** além da cadeia e do filtro de ocultos | Se errada, perdemos a chance de arrumar algo de passagem. É de propósito: uma rodada, uma mudança de natureza |
 

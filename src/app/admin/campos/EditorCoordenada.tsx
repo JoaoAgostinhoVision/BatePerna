@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useLayoutEffect, useReducer, useRef, useState, type PointerEvent } from "react";
+import { useContext, useEffect, useLayoutEffect, useReducer, useRef, useState, type PointerEvent } from "react";
 import {
   GOTA_ACIMA_DA_PONTA_PX,
   MAPA_ALTURA_PX,
@@ -18,8 +18,9 @@ import {
   zoomDeTiles,
 } from "@/lib/mapa";
 import BotaoDesfazer from "./BotaoDesfazer";
-import { usarGravacao } from "./gravar";
-import { SALVANDO, SALVAR } from "./palavras";
+import BuscaNoMapa from "./BuscaNoMapa";
+import { PortaDoEditor, usarGravacao } from "./gravar";
+import { CIDADE_DEPOIS_DE_SALVAR, SALVANDO, SALVAR } from "./palavras";
 import type { CampoNaTela, PropsDoEditor, VistaNaTela } from "./tipos";
 
 /** O MAPA DE PÔR O PIN — o instrumento da espécie `coord` (Task 8, 2026-10-01;
@@ -85,10 +86,15 @@ import type { CampoNaTela, PropsDoEditor, VistaNaTela } from "./tipos";
  *  🔴 ARRASTAR NÃO GRAVA, NEM MEXER NA VISTA. Só o Salvar manda pra porta — o
  *  dono confere o número embaixo contra o que sabe antes.
  *
- *  🔴 NÃO EXISTE BUSCA DE ENDEREÇO, e não é esquecimento (spec §3.2): busca
- *  traria de fora um ponto que ninguém conferiu. A cidade que o servidor busca
- *  é só onde a câmera começa (`src/lib/vista-do-mapa.ts`). Nem GPS: o dono
- *  bloqueia localização por padrão.
+ *  🔴 A BUSCA EXISTE DESDE 17/10 E SÓ MOVE O MAPA (spec §3.2, nota de 17/10):
+ *  a caixa em cima do mapa (`BuscaNoMapa`, só nas telas de lugar novo, sem
+ *  ponto salvo) leva a câmera ao achado, e o PONTO continua vindo do dedo de
+ *  quem sabe — escolher um achado não põe pin, não liga o Salvar, não grava.
+ *  O motivo de 26/09 fica (busca traria de fora um ponto que ninguém
+ *  conferiu: a cachoeira a 5 km da cidade); a regra é que mudou, de "não há
+ *  busca" pra "a busca só move a câmera". A cidade que o servidor busca pra
+ *  vista é só onde a câmera começa (`src/lib/vista-do-mapa.ts`). Nem GPS: o
+ *  dono bloqueia localização por padrão.
  *
  *  🔴 PIXEL DE TELA NÃO É PIXEL DE LAYOUT. O pin é posicionado em pixels de
  *  layout da caixa (`MAPA_LARGURA_PX` × `MAPA_ALTURA_PX`, no zoom da VISTA), e o
@@ -162,6 +168,11 @@ export const SEM_VISTA = "Sem mapa: não achei de onde começar.";
 
 /** Os nomes do + e do − pra quem lê a tela em voz alta (o glifo sozinho não é
  *  nome). Os glifos "+" e "−" são o desenho do botão. */
+/** 17/10: a cidade embaixo do mapa, nas telas de lugar novo (e na edição dela),
+ *  enquanto o pin é o ponto salvo. É dela que sai o endereço do lugar. */
+// PENDENTE: redação minha, o João ainda não leu
+export const EM_CIDADE = "Fica em:";
+
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const APROXIMAR = "Aproximar o mapa";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
@@ -486,6 +497,7 @@ function ComMapa({
   const [pinAVista, setPinAVista] = useState(true);
   const [vista, setVista] = useState<Vista>({ centro: vistaInicial.centro, z: vistaInicial.z });
   const { erro, salvando, gravar, limparErro } = usarGravacao();
+  const { buscarEm, recarregarSe401 } = useContext(PortaDoEditor);
   const ajudaDoPortao = portaoDoSalvar({ zDoPin, zDaVista: vista.z, pinAVista });
 
   function mover(par: Par, zDoGesto: number): void {
@@ -502,6 +514,25 @@ function ComMapa({
     limparErro();
   }
 
+  // 🔴 A busca só MOVE a câmera, no zoom em que o toque vale (`MAPA_ZOOM_EDITOR`):
+  // nunca `setAtual`, nunca `setZDoPin`. Quem põe o pin é o dedo.
+  function irPara(centro: Par): void {
+    setVista({ centro, z: MAPA_ZOOM_EDITOR });
+  }
+
+  // O que o número embaixo do mapa diz. Com `campo.cidade` (as telas de lugar
+  // novo), a CIDADE do ponto salvo — ou a frase de que ela sai quando salvar,
+  // se o pin mudou ou é novo; sem ela (a `FichaInteira` do João), os números,
+  // que é onde ele os confere contra o que sabe.
+  const textoDaCoord =
+    atual === null
+      ? ""
+      : campo.cidade === undefined
+        ? `${atual.lat}, ${atual.lng}`
+        : mudou
+          ? CIDADE_DEPOIS_DE_SALVAR
+          : `${EM_CIDADE} ${campo.cidade}`;
+
   function salvar(par: Par): void {
     if (indice !== null) {
       void gravar({ slug, ponto: indice, lat: par.lat, lng: par.lng });
@@ -512,14 +543,25 @@ function ComMapa({
 
   return (
     <div className="adm-editor" data-editor={campo.caminho}>
+      {/* A busca fica enquanto a pergunta não tem ponto SALVO, mesmo depois de um toque. */}
+      {buscarEm !== null && inicial === null && (
+        <BuscaNoMapa buscarEm={buscarEm} recarregarSe401={recarregarSe401} aoEscolher={irPara} />
+      )}
       <MapaDoPin vista={vista} atual={atual} aoMover={mover} aoMudarVista={setVista} aoVerPin={setPinAVista} />
-      <p className="adm-editor-coord" data-testid="coord-atual" aria-live="polite">
-        {atual ? `${atual.lat}, ${atual.lng}` : ""}
+      {/* `data-coord` guarda o par SEMPRE, mesmo quando o texto diz a cidade: é por
+          ele que a prova confere ONDE o pin está sem depender do que a tela fala. */}
+      <p
+        className="adm-editor-coord"
+        data-testid="coord-atual"
+        data-coord={atual ? `${atual.lat}, ${atual.lng}` : ""}
+        aria-live="polite"
+      >
+        {textoDaCoord}
       </p>
       {/* 🔴 AS AJUDAS MORAM EMBAIXO DO MAPA, nunca em cima: elas somem com o
           primeiro toque, e uma linha que some EM CIMA do mapa o faria pular
           ~45px pra cima debaixo do dedo dele (medido no Chrome em 375×667). */}
-      {atual === null && vistaInicial.origem === "acervo" && <p className="adm-editor-ajuda">{VISTA_SEM_CIDADE}</p>}
+      {atual === null && vistaInicial.origem === "cidade-nao-achada" && <p className="adm-editor-ajuda">{VISTA_SEM_CIDADE}</p>}
       {atual === null && vistaInicial.origem === "cidade-ambigua" && (
         <p className="adm-editor-ajuda">{VISTA_CIDADE_AMBIGUA}</p>
       )}

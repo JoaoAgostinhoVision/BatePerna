@@ -15,6 +15,7 @@ import {
   AFASTAR,
   APROXIMAR,
   APROXIME_PRA_SALVAR,
+  EM_CIDADE,
   MARQUE_NO_MAPA,
   PIN_FORA_DA_VISTA,
   SEM_VISTA,
@@ -70,6 +71,12 @@ import {
   SALVAR,
   SIM,
   TITULO_REGRA_PADRAO,
+  BUSCAR,
+  BUSCANDO,
+  BUSCA_NAO_SAIU,
+  CIDADE_DEPOIS_DE_SALVAR,
+  NENHUM_ACHADO,
+  ROTULO_DA_BUSCA,
 } from "@/app/admin/campos/palavras";
 import {
   CAMPOS_DA_FICHA,
@@ -1552,6 +1559,16 @@ describe("Os editores servem os três lugares", () => {
     // Task 4 (17/10): o link do aviso de nome que já existe na cidade. Só nasce
     // numa pergunta cujo par colide com um lugar — nenhuma das três fichas.
     CORRIGIR_O_NOME,
+    // Task 5 (17/10): a caixa de busca em cima do mapa do ponto e a cidade
+    // embaixo dele. Só existem nas telas de lugar novo (sem ponto salvo) — nenhuma
+    // das três fichas, que não montam o provedor da busca.
+    BUSCAR,
+    BUSCANDO,
+    ROTULO_DA_BUSCA,
+    NENHUM_ACHADO,
+    BUSCA_NAO_SAIU,
+    CIDADE_DEPOIS_DE_SALVAR,
+    EM_CIDADE,
   ];
 
   /** As que aparecem EM REPOUSO nas três fichas — as outras só existem

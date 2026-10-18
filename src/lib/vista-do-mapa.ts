@@ -36,11 +36,25 @@ import {
  *      achei", que seria falso;
  *   3. o ACERVO no ar → o enquadramento das coordenadas dos lugares publicados,
  *      o mesmo quadro da home, com o zoom entre `MAPA_ZOOM_EDITOR_MIN` e
- *      `MAPA_ZOOM`. Dado do BANCO: nenhuma coordenada mora neste código;
+ *      `MAPA_ZOOM`. Dado do BANCO: nenhuma coordenada mora neste código. A origem
+ *      diz POR QUE caiu aqui: `cidade-nao-achada` quando o documento tinha
+ *      cidade e ela não saiu; `acervo` quando o documento nem tem cidade
+ *      (o rascunho novo, antes do ponto) — e só a primeira faz a tela dizer
+ *      "não achei";
  *   4. nada → `null`, e a tela diz que não há mapa (acervo vazio é impossível
  *      hoje, mas tem ramo, e não um número inventado). */
 
-export type VistaDoMapa = { centro: Coord; z: number; origem: "ponto" | "cidade" | "acervo" | "cidade-ambigua" };
+/** `acervo`: o documento NÃO TEM cidade (nada foi procurado); `cidade-ambigua`:
+ *  a cidade foi achada mais de uma vez; `cidade-nao-achada`: o documento TEM
+ *  cidade, procurou e não achou (ou o serviço estava fora) — só esta última
+ *  faz a tela dizer "não achei". Desde 17/10 o rascunho novo não tem cidade
+ *  antes do ponto, e sem esta distinção toda pergunta do ponto diria que não
+ *  achou uma cidade que ninguém procurou. */
+export type VistaDoMapa = {
+  centro: Coord;
+  z: number;
+  origem: "ponto" | "cidade" | "acervo" | "cidade-ambigua" | "cidade-nao-achada";
+};
 
 /** Caixa, acento e espaço não contam: "cidade  marcador" é "Cidade Márcador". */
 function normalizar(s: string): string {
@@ -170,9 +184,10 @@ export async function vistaDaCoordSemPonto(
 export async function vistaDaCidade(doc: unknown, fontes: FontesDaVista): Promise<VistaDoMapa | null> {
   const d = comoDoc(doc);
   let ambigua = false;
-  if (typeof d.cidade === "string" && d.cidade.trim() !== "") {
+  const cidade = typeof d.cidade === "string" && d.cidade.trim() !== "" ? d.cidade : null;
+  if (cidade !== null) {
     try {
-      const c = cidadeNoEstado(await fontes.buscarCidade(d.cidade), d.cidade);
+      const c = cidadeNoEstado(await fontes.buscarCidade(cidade), cidade);
       if (c === "ambigua") ambigua = true;
       else if (c) return { centro: c, z: MAPA_ZOOM, origem: "cidade" };
     } catch {
@@ -181,7 +196,8 @@ export async function vistaDaCidade(doc: unknown, fontes: FontesDaVista): Promis
   }
   try {
     const v = vistaDoAcervo(await fontes.coordsDoAcervo());
-    return v && ambigua ? { ...v, origem: "cidade-ambigua" } : v;
+    if (v && ambigua) return { ...v, origem: "cidade-ambigua" };
+    return v && cidade !== null ? { ...v, origem: "cidade-nao-achada" } : v;
   } catch {
     return null;
   }

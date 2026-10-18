@@ -21,6 +21,7 @@ export type Onde = "painel" | "contribuir";
 export const ROTAS = {
   painel: {
     rascunhoApi: "/api/admin/rascunho",
+    buscaApi: "/api/admin/buscar-no-mapa",
     publicarApi: "/api/admin/publicar",
     pergunta: (slug: string, n: number) => `/admin/novo?slug=${e(slug)}&p=${n}`,
     publicar: (slug: string) => `/admin/novo/publicar?slug=${e(slug)}`,
@@ -31,6 +32,7 @@ export const ROTAS = {
   },
   contribuir: {
     rascunhoApi: "/api/contribuir/rascunho",
+    buscaApi: "/api/contribuir/buscar-no-mapa",
     publicarApi: "/api/contribuir/publicar",
     pergunta: (slug: string, n: number) => `/contribuir/novo?slug=${e(slug)}&p=${n}`,
     publicar: (slug: string) => `/contribuir/novo/publicar?slug=${e(slug)}`,

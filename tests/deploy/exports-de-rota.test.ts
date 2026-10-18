@@ -87,6 +87,16 @@ describe("o que um route handler pode exportar", () => {
     expect(rotas.length).toBeGreaterThan(0);
   });
 
+  // 17/10 (Task 5): o enumerador lê do disco; este controle prova que ele ALCANÇOU as duas
+  // rotas novas da busca no mapa (e que elas exportam só GET e `dynamic`).
+  it("as duas rotas da busca no mapa foram lidas, e só exportam o que devem", () => {
+    for (const dir of ["admin", "contribuir"]) {
+      const arquivo = rotas.find((r) => r.split(path.sep).join("/").endsWith(`api/${dir}/buscar-no-mapa/route.ts`));
+      expect(arquivo, `o enumerador não alcançou api/${dir}/buscar-no-mapa`).toBeDefined();
+      expect(nomesExportados(readFileSync(arquivo!, "utf8")).sort()).toEqual(["GET", "dynamic"]);
+    }
+  });
+
   for (const arquivo of rotas) {
     const curto = path.relative(process.cwd(), arquivo);
     it(`${curto} só exporta o que o Next aceita`, () => {
