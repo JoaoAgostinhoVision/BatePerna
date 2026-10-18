@@ -4,8 +4,8 @@ import { getClient, lugarDoDono, versoesAtuais } from "@/lib/db";
 import { estaBloqueado, gravarEdicaoDaPessoa } from "@/lib/db-contribuidor";
 import { LUGAR_MUDOU_DE_ENDERECO, baseIdValido } from "@/lib/endereco";
 import { cidadeDoPonto } from "@/lib/nominatim-servico";
-import { colisaoDaMudanca } from "@/lib/par-de-lugar";
-import { slugDoNome } from "@/lib/rascunho";
+import { CAMPO_DA_CIDADE, colisaoDaMudanca } from "@/lib/par-de-lugar";
+import { cidadeDoDoc, slugDoNome } from "@/lib/rascunho";
 import { violacaoIntroduzidaInteira } from "@/lib/porta-de-coerencia";
 import { BLOQUEADA, JA_CONFERIDO, NOME_JA_EM_USO, fraseDaPessoa, portaDaPessoa } from "@/lib/porta-da-pessoa";
 
@@ -30,7 +30,8 @@ function recusar400(erro: unknown): Response {
  *  DELA (404 se não é dela, nunca revelando que existe; 409 `JA_CONFERIDO`) →
  *  o par (409 `NOME_JA_EM_USO`, pela colisão ESTRUTURADA — I3) → o documento
  *  novo pelas formas de escrita (400) → a cidade do ponto, se o corpo é um
- *  ponto (o reverse fora não recusa: a cidade de antes fica) → a coerência por diferença (409, na
+ *  ponto (o reverse fora não recusa: a cidade de antes fica; a cidade que MUDA
+ *  confere o par — 409 `NOME_JA_EM_USO`, nada gravado, 18/10) → a coerência por diferença (409, na
  *  frase DELA, aberta por "Nada foi gravado" — o lugar está publicado, I2 da
  *  revisão final) → o banco.
  *
@@ -103,13 +104,24 @@ export async function PUT(req: Request): Promise<Response> {
   // ela marcou, no lugar no ar como no rascunho. Só DEPOIS de a folha aceitar a
   // coordenada (`mudar`, acima — `1e999` vira `Infinity` e é 400 sem consultar
   // ninguém) e depois do 404/409 do lugar (o reverse tem limite de 1/s, e só
-  // quem pode gravar o gasta). Diferente do rascunho, ali o ponto NÃO trava:
-  // reverse fora (ou sem município) e o ponto grava com a cidade de antes — o
-  // lugar já está no ar e tem cidade. Sem conferir o par: a cidade que vem do
-  // mapa não é uma palavra que ela escolheu pra escapar de nada.
+  // quem pode gravar o gasta). Diferente do rascunho, ali o reverse fora NÃO
+  // trava: sem cidade (fora, ou sem município) o ponto grava com a cidade de
+  // antes — o lugar já está no ar e tem cidade, e o par não muda.
+  // 🔴 A CIDADE QUE MUDA CONFERE O PAR (decisão `d-cidade-no-ar` do João, onda
+  // de copy de 18/10): com a mesma régua da edição manual da cidade
+  // (`colisaoDaMudanca` com `CAMPO_DA_CIDADE`, contra LUGAR só, o próprio
+  // `slug` de fora). Colidiu: 409 `NOME_JA_EM_USO` e NADA grava, nem o ponto —
+  // o ponto numa cidade e a cidade de outra deixariam o lugar mentindo onde
+  // fica; a frase já diz o que fazer (trocar o nome). A cidade que fica a
+  // mesma (pela normalização do endereço) não confere: o ponto não criou par
+  // novo nenhum.
   if (trazPonto) {
     const achou = await cidadeDoPonto(lat as number, lng as number);
     if (!("falha" in achou) && slugDoNome(achou.cidade) !== "") {
+      const mudou = slugDoNome(achou.cidade) !== slugDoNome(cidadeDoDoc(lugar.versao.doc) ?? "");
+      if (mudou && (await colisaoDaMudanca(lugar.versao.doc, slug, CAMPO_DA_CIDADE, achou.cidade, "pessoa")) !== null) {
+        return new Response(NOME_JA_EM_USO, { status: 409, headers: TEXTO });
+      }
       try {
         novo = aplicarCampo(novo, "cidade", achou.cidade);
       } catch (erro) {
