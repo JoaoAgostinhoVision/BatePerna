@@ -5,11 +5,13 @@ import { COOKIE_ADMIN } from "@/lib/admin-guarda";
 import { DURACAO_SESSAO_S, criarSessao } from "@/lib/admin-sessao";
 import { criarRascunho, gravarVersao, lerAcervoComOrigem, lerRascunho, publicarRascunho, versaoAtual } from "@/lib/db";
 import { NOME_JA_EM_USO } from "@/lib/porta-da-pessoa";
-import { enderecoDeLugar, slugDoNome } from "@/lib/rascunho";
+import { travaDoPainel } from "@/lib/par-de-lugar";
+import { ehChaveDeRascunho, enderecoDeLugar, slugDoNome } from "@/lib/rascunho";
 import { ROTAS } from "@/app/admin/novo/enderecos";
 import type { QuemContribui } from "@/lib/contribuidor-sessao";
 import { clienteQueIntercala, rascunhoNoBanco, salvarRascunho, semearAcervo } from "../banco";
 import { lugarMarcador } from "../lugar-marcador";
+import { nominatimDeTeste } from "../nominatim";
 import { rascunhoCompleto } from "../rascunho-completo";
 import { OUTRA, PESSOA, sessao } from "../sessao-da-pessoa";
 
@@ -24,6 +26,9 @@ import { OUTRA, PESSOA, sessao } from "../sessao-da-pessoa";
 
 vi.mock("@/lib/contribuidor-sessao", async () => (await import("../sessao-da-pessoa")).moduloFalso);
 vi.mock("@/lib/db", async (io) => ({ ...(await io<typeof import("@/lib/db")>()), getClient: () => cli }));
+// 🔴 A suíte nunca bate no Nominatim (spec §7): o ponto 0 das duas portas
+// pergunta a cidade ao dublê.
+vi.mock("@/lib/nominatim-servico", async () => (await import("../nominatim")).dubleDoNominatim());
 
 const SENHA = "s".repeat(MIN_SENHA);
 const SEGREDO = "segredo-de-assinatura-do-teste-nao-ocupa";
@@ -46,6 +51,8 @@ beforeEach(async () => {
   await semearAcervo(c);
   sessao.atual = PESSOA;
   sessao.fora = false;
+  nominatimDeTeste.pontos.length = 0;
+  nominatimDeTeste.buscas.length = 0;
   vi.stubEnv("ADMIN_SENHA", SENHA);
   vi.stubEnv("ADMIN_SEGREDO", SEGREDO);
   vi.resetModules();
@@ -76,44 +83,52 @@ const json = (url: string, metodo: string, corpo: unknown, comCookie = false) =>
     body: JSON.stringify(corpo),
   });
 
-/** 17/10: o lugar nasce só do nome, e a cidade chega pelo PUT de campo `cidade`
- *  (até a Task 3, que a tira do ponto). Ela começa um lugar pela rota dela e
- *  devolve a CHAVE do rascunho e a resposta do PUT da cidade — é no PUT que o
- *  PAR e o ENDEREÇO se conferem agora. */
-async function comecarSemConferir(quem: QuemContribui, nome: string, cidade: string): Promise<{ chave: string; cidade: Response }> {
+/** O ponto 0, marcado com o Nominatim (dublado) dizendo que ele cai em `cidade`. */
+const ponto = (slug: string, cidade: string) => {
+  nominatimDeTeste.ponto = { cidade };
+  return { slug, ponto: 0, lat: -8.31, lng: -35.97 };
+};
+
+/** 17/10: o lugar nasce só do nome, e a cidade sai do PONTO. Ela começa um
+ *  lugar pela rota dela e devolve a CHAVE do rascunho e a resposta do PUT do
+ *  ponto — que GRAVA sempre (a saída (b)): o PAR e o ENDEREÇO se conferem no
+ *  publicar dela. */
+async function comecarSemConferir(quem: QuemContribui, nome: string, cidade: string): Promise<{ chave: string; ponto: Response }> {
   sessao.atual = quem;
   const res = await dela.POST(json("http://x/api/contribuir/rascunho", "POST", { nome }));
   expect(res.status, await res.clone().text()).toBe(201);
   const chave = ((await res.json()) as { slug: string }).slug;
-  return { chave, cidade: await dela.PUT(json("http://x/api/contribuir/rascunho", "PUT", { slug: chave, campo: "cidade", valor: cidade })) };
+  return { chave, ponto: await dela.PUT(json("http://x/api/contribuir/rascunho", "PUT", ponto(chave, cidade))) };
 }
 
 /** Ela começa um lugar pela rota dela; devolve a CHAVE do rascunho. */
 async function comecar(quem: QuemContribui, nome: string, cidade: string): Promise<string> {
-  const { chave, cidade: res } = await comecarSemConferir(quem, nome, cidade);
+  const { chave, ponto: res } = await comecarSemConferir(quem, nome, cidade);
   expect(res.status, await res.clone().text()).toBe(200);
   return chave;
 }
 
-/** O João cria um lugar novo pelo painel: o nome, e a cidade pelo PUT (o
- *  rascunho muda de chave provisória pro endereço). Devolve a resposta do PUT
- *  quando ele recusa, e a do POST quando é o POST que recusa. */
+/** O João cria um lugar novo pelo painel: o nome, e o ponto (de onde sai a
+ *  cidade). Devolve a resposta do PUT do ponto — `{slug}` com o endereço quando
+ *  o rascunho se mudou pra ele, ou com a chave provisória quando o par ou o
+ *  endereço já é de outro (a saída (b)) —, ou a do POST quando é o POST que
+ *  recusa. */
 async function painelCria(nome: string, cidade: string): Promise<Response> {
   const res = await painel.POST(json("http://x/api/admin/rascunho", "POST", { nome }, true));
   if (res.status !== 201) return res;
   const { slug: chave } = (await res.clone().json()) as { slug: string };
-  return painel.PUT(json("http://x/api/admin/rascunho", "PUT", { slug: chave, campo: "cidade", valor: cidade }, true));
+  return painel.PUT(json("http://x/api/admin/rascunho", "PUT", ponto(chave, cidade), true));
 }
 
 /** Ela responde as obrigatórias dela, pela rota dela (a promessa é só dela: a
- *  coerência recusa texto emprestado de outro lugar). */
+ *  coerência recusa texto emprestado de outro lugar). O ponto já foi no
+ *  `comecar` (é dele que a cidade sai). */
 async function completar(quem: QuemContribui, chave: string): Promise<void> {
   sessao.atual = quem;
   for (const corpo of [
     { slug: chave, campo: "promessa", valor: `A promessa de ${quem.id}, com as palavras dela.` },
     { slug: chave, campo: "acesso", valor: "De carro." },
     { slug: chave, campo: "custo.tag", valor: "gratis" },
-    { slug: chave, ponto: 0, lat: -8.31, lng: -35.97 },
   ]) {
     const res = await dela.PUT(json("http://x/api/contribuir/rascunho", "PUT", corpo));
     expect(res.status, await res.clone().text()).toBe(200);
@@ -228,12 +243,16 @@ describe("o João e ela, no mesmo par", () => {
   });
 
   // Pro João, o rascunho DELE continua contando (a lista dele): a colisão
-  // João × João é a de hoje.
-  it("o João começa o par de um rascunho DELE: a frase de hoje, 'continue por ele, na lista do painel'", async () => {
-    expect((await painelCria(NOME_J, CIDADE_J)).status).toBe(200);
+  // João × João é a de hoje — e desde 17/10 ela não recusa o ponto (a saída
+  // (b)): o segundo fica numa chave provisória, e o que a tela diz é a frase de
+  // hoje.
+  it("o João começa o par de um rascunho DELE: fica na provisória, com a frase de hoje, 'continue por ele, na lista do painel'", async () => {
+    expect(await (await painelCria(NOME_J, CIDADE_J)).json()).toEqual({ slug: X });
     const res = await painelCria(NOME_J, CIDADE_J);
-    expect(res.status).toBe(409);
-    expect(await res.text()).toMatch(/lista do painel/);
+    expect(res.status, await res.clone().text()).toBe(200);
+    const { slug } = (await res.json()) as { slug: string };
+    expect(ehChaveDeRascunho(slug), slug).toBe(true);
+    expect(await travaDoPainel((await lerRascunho(c, slug))!.doc, slug)).toMatch(/lista do painel/);
   });
 
   it("o João troca o endereço de um lugar pra um endereço que só um rascunho DELA usaria: não é recusado", async () => {
@@ -251,27 +270,38 @@ describe("o João e ela, no mesmo par", () => {
   });
 });
 
-describe("o que ainda recusa cedo: lugar que existe", () => {
+// 🔴 17/10 (a saída (b) do João): o lugar que existe não recusa mais o PONTO
+// dela — o ponto e a cidade gravam —; quem recusa é o PUBLICAR, com a frase
+// dela. Cedo, só o renomear (o último caso).
+describe("o que ainda recusa: lugar que existe", () => {
   // O endereço do lugar escondido NÃO é o que o par dela daria: a recusa só
-  // pode vir da colisão pelo PAR, e não do endereço no statement.
-  it("o par de um lugar ESCONDIDO: recusada quando a cidade chega, com a frase dela", async () => {
+  // pode vir da colisão pelo PAR, e não do endereço no batch.
+  it("o par de um lugar ESCONDIDO: o ponto grava; o publicar recusa, com a frase dela", async () => {
     const H = "pedra-escondida-endereco-de-antes";
     await gravarVersao(c, H, JSON.stringify(lugarMarcador(H, "Pedra Escondida", "Cidade Teste")), "painel", AGORA - 100, true);
-    const { chave, cidade: res } = await comecarSemConferir(PESSOA, "Pedra Escondida", "Cidade Teste");
-    expect(res.status).toBe(409);
-    expect(await res.text()).toBe(NOME_JA_EM_USO);
+    const { chave, ponto: res } = await comecarSemConferir(PESSOA, "Pedra Escondida", "Cidade Teste");
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(JSON.parse((await rascunhoNoBanco(c, chave))!.doc).cidade, "a cidade do ponto gravou").toBe("Cidade Teste");
+    await completar(PESSOA, chave);
+    const pub = await publicar(PESSOA, chave);
+    expect(pub.status).toBe(409);
+    expect(await pub.text()).toBe(NOME_JA_EM_USO);
     expect((await c.execute("SELECT COUNT(*) AS n FROM ficha_rascunhos")).rows[0].n).toBe(1);
-    expect(JSON.parse((await rascunhoNoBanco(c, chave))!.doc).cidade, "o rascunho fica sem cidade").toBeUndefined();
+    expect(await versoesEm(slugDoNome("Pedra Escondida Cidade Teste"))).toBe(0);
   });
 
-  it("o ENDEREÇO de um lugar, de par diferente: recusada quando a cidade chega, com a frase dela", async () => {
+  it("o ENDEREÇO de um lugar, de par diferente: o ponto grava; o publicar recusa, com a frase dela", async () => {
     const A = "lugar-marcador-outra-marcadora";
     await gravarVersao(c, A, JSON.stringify(lugarMarcador(A, "Lugar Marcador", "Outra Marcadora")), "painel", AGORA - 100);
-    const { chave, cidade: res } = await comecarSemConferir(PESSOA, "Lugar Marcador Outra", "Marcadora");
-    expect(res.status).toBe(409);
-    expect(await res.text()).toBe(NOME_JA_EM_USO);
+    const { chave, ponto: res } = await comecarSemConferir(PESSOA, "Lugar Marcador Outra", "Marcadora");
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(JSON.parse((await rascunhoNoBanco(c, chave))!.doc)).toMatchObject({ slug: A, cidade: "Marcadora" });
+    await completar(PESSOA, chave);
+    const pub = await publicar(PESSOA, chave);
+    expect(pub.status).toBe(409);
+    expect(await pub.text()).toBe(NOME_JA_EM_USO);
+    expect(await versoesEm(A)).toBe(1);
     expect((await c.execute("SELECT COUNT(*) AS n FROM ficha_rascunhos")).rows[0].n).toBe(1);
-    expect(JSON.parse((await rascunhoNoBanco(c, chave))!.doc).cidade, "o rascunho fica sem cidade").toBeUndefined();
   });
 
   it("renomear o rascunho dela pro par de um lugar escondido: recusada, e o nome fica", async () => {

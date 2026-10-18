@@ -8,19 +8,27 @@ import { fichaSchema } from "@/types/ficha";
  *  obrigatórios é desta lista, não do registro: o registro diz o que o lugar
  *  do JOÃO exige.
  *
- *  O que NÃO está aqui a pessoa não escreve — e a página cala (Task 4). */
+ *  O que NÃO está aqui a pessoa não escreve — e a página cala (Task 4).
+ *
+ *  🔴 A CIDADE SAIU DAQUI EM 17/10: ela não a escreve à mão — nem no lugar novo,
+ *  nem no lugar no ar. A cidade sai do ponto que ela marca (o servidor pergunta
+ *  o município ao Nominatim). Continua sendo dela no documento
+ *  (`chavesForaDaPessoa` a aceita) e obrigatória pra publicar
+ *  (`obrigatoriosDaPessoaFaltando` a confere à parte). */
 export const CAMPOS_DA_PESSOA: readonly string[] = [
   "trajeto.waypoints.0.nome", // 1. nome
-  "cidade", //                   2. cidade
-  //                             3. o ponto no mapa — `PONTO`, gravado à parte
-  "promessa", //                 4. o que é, em uma frase
-  "acesso", //                   5. como se chega
-  "avisos", //                   6. o que pode dar errado (opcional)
-  "custo.tag", //                7. custa ou é grátis
+  //                             2. o ponto no mapa — `PONTO`, gravado à parte (e a cidade sai dele)
+  "promessa", //                 3. o que é, em uma frase
+  "acesso", //                   4. como se chega
+  "avisos", //                   5. o que pode dar errado (opcional)
+  "custo.tag", //                6. custa ou é grátis
   "custo.valor", //                 … e quanto (opcional)
-  "horario", //                  8. horário (opcional)
+  "horario", //                  7. horário (opcional)
   "dias", //                        e dias (opcional)
 ];
+
+/** A cidade: dela no documento, nunca escrita por ela (ver acima). */
+const CIDADE = "cidade";
 
 export const OPCIONAIS_DA_PESSOA: ReadonlySet<string> = new Set(["avisos", "custo.valor", "horario", "dias"]);
 
@@ -71,11 +79,12 @@ export function textoAcimaDoTeto(v: unknown): boolean {
   return false;
 }
 
-/** Algum campo DA LISTA DELA, no documento, passa do teto? Só os campos dela:
- *  o `slug` sai do nome E da cidade juntos e pode passar sem que nenhuma
- *  resposta passe. */
+/** Algum campo DA LISTA DELA, no documento, passa do teto? Só os campos dela
+ *  e a cidade (que já foi dela de escrever, e um rascunho de antes de 17/10
+ *  pode tê-la digitada): o `slug` sai do nome E da cidade juntos e pode passar
+ *  sem que nenhuma resposta passe. */
 export function campoDelaAcimaDoTeto(doc: unknown): boolean {
-  return CAMPOS_DA_PESSOA.some((c) => textoAcimaDoTeto(lerCaminho(doc, c.split("."))));
+  return [...CAMPOS_DA_PESSOA, CIDADE].some((c) => textoAcimaDoTeto(lerCaminho(doc, c.split("."))));
 }
 
 /** O "não sei" DELA: só nos opcionais da lista dela (`avisos` inclusive, que
@@ -110,10 +119,13 @@ export function tirarCampoDaPessoa(doc: string, caminho: string): string {
   return JSON.stringify(fichaSchema.parse(JSON.parse(tirarDoRascunhoDaPessoa(doc, caminho))));
 }
 
-const OBRIGATORIOS = CAMPOS_DA_PESSOA.filter((c) => !OPCIONAIS_DA_PESSOA.has(c));
+/** O que ela tem de responder, e a cidade — que ela não escreve (sai do
+ *  ponto), mas sem a qual não há endereço. */
+const OBRIGATORIOS = [...CAMPOS_DA_PESSOA.filter((c) => !OPCIONAIS_DA_PESSOA.has(c)), CIDADE];
 
-/** O que falta pra publicar, pela lista DELA. O ponto falta enquanto o ponto 0
- *  ou a coordenada da chuva não tiverem lat E lng. */
+/** O que falta pra publicar, pela lista DELA, e a `cidade` (que vem do ponto:
+ *  quem a mostra na tela leva à pergunta do ponto). O ponto falta enquanto o
+ *  ponto 0 ou a coordenada da chuva não tiverem lat E lng. */
 export function obrigatoriosDaPessoaFaltando(doc: unknown): string[] {
   const faltam = OBRIGATORIOS.filter((c) => lerCaminho(doc, c.split(".")) === undefined);
   const temPar = (p: unknown) =>

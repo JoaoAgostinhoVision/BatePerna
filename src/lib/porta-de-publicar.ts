@@ -38,6 +38,16 @@ export const JA_PUBLICADO_OU_OCUPADO =
   "Nada foi publicado agora: este endereço já é de um lugar do app, e o rascunho não está mais aqui. Se você tocou duas vezes, o lugar foi publicado no primeiro toque: confira na lista do painel.";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
 export const NADA_PUBLICADO = "Nada foi publicado. Recarregue a página e tente de novo.";
+/** 🔴 O RASCUNHO DO PAINEL QUE NÃO MORA NO `nome-cidade` dele (17/10): numa
+ *  chave provisória (`rascunho_<hex>`), ou num endereço que o ponto tornou
+ *  falso. Nunca vai ao ar assim — o endereço do lugar no ar é a chave dele, e
+ *  um lugar em `/rascunho_…` seria um endereço que nada no app produz. A rota
+ *  diz antes, quando sabe, O QUE impede o rascunho de se mudar
+ *  (`travaDoPainel`); esta é a frase de quando nada impede mais (quem ocupava
+ *  saiu depois do ponto): salvar de novo o leva ao endereço. */
+// PENDENTE: redação minha, o João ainda não leu
+export const ENDERECO_AINDA_NAO_SAIU =
+  "Nada foi publicado: o endereço deste lugar ainda não saiu do nome e da cidade. Corrija o nome e salve de novo.";
 
 /** Os campos OBRIGATÓRIOS do registro que `doc` não responde (12-I1), pelo
  *  caminho — o molde `[]` conferido em CADA ponto do trajeto que o documento

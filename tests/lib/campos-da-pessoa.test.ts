@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  CAMPOS_DA_PESSOA, OPCIONAIS_DA_PESSOA, PONTO, SEM_NAO_SEI, chavesForaDaPessoa, ehCampoDaPessoa, obrigatoriosDaPessoaFaltando,
+  CAMPOS_DA_PESSOA, OPCIONAIS_DA_PESSOA, PONTO, SEM_NAO_SEI, campoDelaAcimaDoTeto, chavesForaDaPessoa, ehCampoDaPessoa,
+  obrigatoriosDaPessoaFaltando,
   TETO_DO_TEXTO, TEXTO_LONGO_DEMAIS, TEXTO_LONGO_DEMAIS_NO_PUBLICAR, pontoDaPessoa, pontoNoRascunhoDaPessoa,
   textoAcimaDoTeto, tirarCampoDaPessoa, tirarDoRascunhoDaPessoa,
 } from "@/lib/campos-da-pessoa";
@@ -39,9 +40,11 @@ describe("o teto do texto dela", () => {
 });
 
 describe("a lista dela", () => {
-  it("são exatamente os campos das oito perguntas da spec (o ponto mora à parte)", () => {
+  // 🔴 17/10: a `cidade` saiu da lista — ela não a escreve, nem no lugar novo
+  // nem no lugar no ar; a cidade sai do ponto que ela marca.
+  it("são exatamente os campos das perguntas da spec (o ponto mora à parte, e a cidade sai dele)", () => {
     expect([...CAMPOS_DA_PESSOA].sort()).toEqual(
-      ["acesso", "avisos", "cidade", "custo.tag", "custo.valor", "dias", "horario", "promessa", "trajeto.waypoints.0.nome"],
+      ["acesso", "avisos", "custo.tag", "custo.valor", "dias", "horario", "promessa", "trajeto.waypoints.0.nome"],
     );
   });
 
@@ -54,7 +57,7 @@ describe("a lista dela", () => {
   });
 
   it.each(["voz", "premio", "rotulo_escaneio", "condicao.regra.limiar_mm", "condicao.severidade", "condicao.coords",
-    "discriminador.como_ler", "custo.curto", "piso", "secaRapido", "carroComum", "trajeto.waypoints.1.nome", "slug", 42])(
+    "discriminador.como_ler", "custo.curto", "piso", "secaRapido", "carroComum", "trajeto.waypoints.1.nome", "slug", "cidade", 42])(
     "`%s` não é campo dela",
     (c) => expect(ehCampoDaPessoa(c)).toBe(false),
   );
@@ -96,6 +99,23 @@ describe("o que falta, e o que sobra", () => {
 
   it("falta cada obrigatório, e o ponto conta como um", () => {
     expect(obrigatoriosDaPessoaFaltando(JSON.parse(NOVO)).sort()).toEqual(["acesso", "custo.tag", PONTO, "promessa"].sort());
+  });
+
+  // 🔴 17/10: a cidade não é campo que ela escreve, mas sem ela não há
+  // endereço — ela falta pra publicar mesmo fora da lista (a tela leva à
+  // pergunta do ponto, de onde ela sai).
+  it("a cidade falta pra publicar mesmo fora da lista que ela escreve", () => {
+    const { cidade: _cidade, ...semCidade } = COMPLETO;
+    expect(obrigatoriosDaPessoaFaltando(semCidade)).toContain("cidade");
+    expect(obrigatoriosDaPessoaFaltando(semCidade)).toEqual(["cidade"]);
+  });
+
+  // E continua sendo dela no documento: a porta de publicar não a acusa de
+  // sobra, e o teto a confere (um rascunho de antes de 17/10 a tem digitada).
+  it("a cidade não sobra, e o teto a confere", () => {
+    expect(chavesForaDaPessoa(COMPLETO)).toEqual([]);
+    expect(campoDelaAcimaDoTeto({ ...COMPLETO, cidade: "a".repeat(2001) })).toBe(true);
+    expect(campoDelaAcimaDoTeto(COMPLETO)).toBe(false);
   });
 
   it("ponto sem a coordenada da chuva (ou vice-versa) ainda falta", () => {

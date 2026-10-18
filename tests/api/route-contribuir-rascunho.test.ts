@@ -4,12 +4,16 @@ import { gravarVersao } from "@/lib/db";
 import { contribuidorPorId, criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
 import { SEM_NAO_SEI, TEXTO_LONGO_DEMAIS } from "@/lib/campos-da-pessoa";
 import { BLOQUEADA, CLERK_FORA, CLERK_FORA_AO_ABRIR, NOME_JA_EM_USO, RASCUNHO_DELA_SUMIU } from "@/lib/porta-da-pessoa";
-import { CIDADE_SEM_LETRA, CIDADE_VAZIA, NOME_SEM_LETRA, NOME_VAZIO, ehChaveDeRascunho } from "@/lib/rascunho";
+import { CIDADE_DO_PONTO_NAO_SAIU, NOME_SEM_LETRA, NOME_VAZIO, ehChaveDeRascunho } from "@/lib/rascunho";
 import { clienteQueIntercala, rascunhoNoBanco, semearAcervo } from "../banco";
+import { nominatimDeTeste } from "../nominatim";
 import { OUTRA, PESSOA, sessao } from "../sessao-da-pessoa";
 
 vi.mock("@/lib/contribuidor-sessao", async () => (await import("../sessao-da-pessoa")).moduloFalso);
 vi.mock("@/lib/db", async (io) => ({ ...(await io<typeof import("@/lib/db")>()), getClient: () => cli }));
+// 🔴 A suíte nunca bate no Nominatim (spec §7): o ponto 0 pergunta a cidade ao
+// dublê (estado em `globalThis`, como o do Clerk).
+vi.mock("@/lib/nominatim-servico", async () => (await import("../nominatim")).dubleDoNominatim());
 
 const AGORA = 1_758_300_000;
 let c: Client;
@@ -25,6 +29,9 @@ beforeEach(async () => {
   await semearAcervo(c);
   sessao.atual = PESSOA;
   sessao.fora = false;
+  nominatimDeTeste.ponto = { cidade: "Cidade Teste" };
+  nominatimDeTeste.pontos.length = 0;
+  nominatimDeTeste.buscas.length = 0;
   vi.resetModules();
   rota = await import("@/app/api/contribuir/rascunho/route");
 });
@@ -38,14 +45,21 @@ const SLUG = "pedra-mandada-cidade-teste";
 let CHAVE: string;
 const docDe = async (chave = CHAVE) => JSON.parse((await rascunhoNoBanco(c, chave))!.doc);
 const total = async () => Number((await c.execute("SELECT COUNT(*) AS n FROM ficha_rascunhos")).rows[0].n);
-/** 17/10: o lugar nasce só do nome (`POST {nome}`); a cidade chega pelo PUT de
- *  campo `cidade` até a Task 3 (que a tira do ponto). Os casos que partem de um
- *  rascunho "com cidade" começam por aqui, pelo caminho de verdade. */
+/** O ponto que ela marca no mapa, e o PUT dele com o Nominatim (dublado)
+ *  dizendo que ele cai em `cidade` — é por ele que a cidade chega (17/10). */
+const PONTO = { ponto: 0, lat: -8.31, lng: -35.97 } as const;
+function marcarPonto(slug: string, cidade = "Cidade Teste"): Promise<Response> {
+  nominatimDeTeste.ponto = { cidade };
+  return rota.PUT(pedido("PUT", { slug, ...PONTO }));
+}
+/** 17/10: o lugar nasce só do nome (`POST {nome}`), e a cidade sai do PONTO.
+ *  Os casos que partem de um rascunho "com cidade" começam por aqui, pelo
+ *  caminho de verdade. */
 async function comecar(): Promise<void> {
   const res = await rota.POST(pedido("POST", { nome: "Pedra Mandada" }));
   expect(res.status, await res.clone().text()).toBe(201);
   CHAVE = ((await res.json()) as { slug: string }).slug;
-  const cid = await rota.PUT(pedido("PUT", { slug: CHAVE, campo: "cidade", valor: "Cidade Teste" }));
+  const cid = await marcarPonto(CHAVE);
   expect(cid.status, await cid.clone().text()).toBe(200);
 }
 /** Um rascunho de OUTRA pessoa (ou dela), direto no banco; devolve a chave. */
@@ -53,6 +67,22 @@ async function deOutra(endereco: string, doc: unknown, dono = OUTRA.id): Promise
   const chave = await criarRascunhoDaPessoa(c, endereco, JSON.stringify(doc), AGORA, dono);
   expect(chave, "a premissa: o rascunho nasceu").not.toBeNull();
   return chave!;
+}
+
+/** Ela responde as obrigatórias que faltam e toca em publicar, pela rota de
+ *  verdade dela — é lá que o par e o endereço se conferem desde 17/10. */
+async function publicarDela(chave: string): Promise<Response> {
+  for (const corpo of [
+    { campo: "promessa", valor: "Uma promessa marcadora, só deste rascunho." },
+    { campo: "acesso", valor: "De carro." },
+    { campo: "custo.tag", valor: "gratis" },
+  ]) {
+    const r = await rota.PUT(pedido("PUT", { slug: chave, ...corpo }));
+    expect(r.status, await r.clone().text()).toBe(200);
+  }
+  const publicar = await import("@/app/api/contribuir/publicar/route");
+  const atualizadoEm = (await rascunhoNoBanco(c, chave))!.atualizado_em;
+  return publicar.POST(new Request("http://x/api/contribuir/publicar", { method: "POST", body: JSON.stringify({ slug: chave, atualizadoEm }) }));
 }
 
 describe("a porta: sessão, Clerk, bloqueio", () => {
@@ -145,7 +175,10 @@ describe("POST — começar", () => {
   it("201 com a CHAVE (nunca o endereço), o endereço do nome e da cidade no documento, e o rascunho nasce DELA e sem nada a mais", async () => {
     await comecar();
     expect(CHAVE).not.toBe(SLUG);
-    expect(await docDe()).toEqual({ slug: SLUG, modos: [], cidade: "Cidade Teste", trajeto: { waypoints: [{ nome: "Pedra Mandada" }] } });
+    expect(await docDe()).toEqual({
+      slug: SLUG, modos: [], cidade: "Cidade Teste",
+      trajeto: { waypoints: [{ nome: "Pedra Mandada", lat: -8.31, lng: -35.97 }] }, condicao: { coords: { lat: -8.31, lng: -35.97 } },
+    });
     expect((await rascunhoNoBanco(c, CHAVE))?.contribuidor).toBe(PESSOA.id);
     expect(await rascunhoNoBanco(c, SLUG), "nada mora no endereço").toBeNull();
   });
@@ -198,40 +231,49 @@ describe("POST — começar", () => {
     const dela = await deOutra(outro, { slug: outro, modos: [], cidade: "Cidade Marcador", trajeto: { waypoints: [{ nome: "Lugar Marcador" }] } });
     const res = await rota.POST(pedido("POST", { nome: "Lugar Marcador Cidade" }));
     expect(res.status, await res.clone().text()).toBe(201);
-    // o endereço só se confere quando a cidade chega (o PUT)
+    // o endereço só existe quando a cidade chega (o ponto)
     const { slug } = (await res.json()) as { slug: string };
-    const cid = await rota.PUT(pedido("PUT", { slug, campo: "cidade", valor: "Marcador" }));
+    const cid = await marcarPonto(slug, "Marcador");
     expect(cid.status, await cid.clone().text()).toBe(200);
     expect((await rascunhoNoBanco(c, dela))?.contribuidor).toBe(OUTRA.id);
   });
 
-  // I3: o ENDEREÇO de um LUGAR (nome diferente, mesmo endereço — a fronteira
-  // entre o nome e a cidade que anda) responde a frase dela, nunca a do painel
-  // (`enderecoDeLugar` nomearia o lugar). Quem recusa é o statement.
-  it("o endereço de um LUGAR, de nome diferente: 409 com a frase dela, e nada nasce", async () => {
+  // 🔴 §2.3.0 DELA (a saída (b) do João, 17/10): o ENDEREÇO de um LUGAR (nome
+  // diferente, mesmo endereço — a fronteira entre o nome e a cidade que anda)
+  // NÃO recusa o ponto: o ponto e a cidade gravam, e quem recusa é o PUBLICAR
+  // dela, com a frase dela (nunca `enderecoDeLugar`, que nomearia o lugar).
+  // Até 17/10 o PUT da cidade recusava com 409 no statement (`ENDERECO_LIVRE`).
+  it("§2.3.0 dela: colisão no ponto grava; o publicar dela responde NOME_JA_EM_USO", async () => {
     const outro = "lugar-marcador-cidade-marcador";
     await gravarVersao(c, outro, JSON.stringify({ slug: outro, modos: [], cidade: "Cidade Marcador", trajeto: { waypoints: [{ nome: "Lugar Marcador" }] } }), "painel", AGORA - 5);
     const nasceu = await rota.POST(pedido("POST", { nome: "Lugar Marcador Cidade" }));
     expect(nasceu.status).toBe(201);
     const { slug } = (await nasceu.json()) as { slug: string };
-    const antes = await docDe(slug);
-    const res = await rota.PUT(pedido("PUT", { slug, campo: "cidade", valor: "Marcador" }));
-    expect(res.status).toBe(409);
-    expect(await res.text()).toBe(NOME_JA_EM_USO);
-    expect(await docDe(slug), "o rascunho fica como estava").toEqual(antes);
+    const res = await marcarPonto(slug, "Marcador");
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await res.json()).toEqual({ slug });
+    expect(await docDe(slug)).toMatchObject({ slug: outro, cidade: "Marcador", trajeto: { waypoints: [{ lat: -8.31, lng: -35.97 }] } });
+    // e o publicar dela trava
+    const publicou = await publicarDela(slug);
+    expect(publicou.status).toBe(409);
+    expect(await publicou.text()).toBe(NOME_JA_EM_USO);
     expect(await total()).toBe(1);
   });
 
-  // Ruling de produto da pré-auditoria: endereço antigo de outro lugar não é dela.
-  it("um endereço antigo de um lugar do João: 409 com a frase dela, nada nasce, e o link velho continua", async () => {
+  // Ruling de produto da pré-auditoria: endereço antigo de outro lugar não é
+  // dela — e desde 17/10 é o publicar que o diz, não o ponto.
+  it("um endereço antigo de um lugar do João: o ponto grava; o publicar responde a frase dela, e o link velho continua", async () => {
     await c.execute({ sql: "INSERT INTO enderecos_antigos (velho, novo, em) VALUES (?, 'rampa-do-pepe', ?)", args: [SLUG, AGORA] });
     const nasceu = await rota.POST(pedido("POST", { nome: "Pedra Mandada" }));
     expect(nasceu.status).toBe(201);
     const { slug } = (await nasceu.json()) as { slug: string };
-    const res = await rota.PUT(pedido("PUT", { slug, campo: "cidade", valor: "Cidade Teste" }));
-    expect(res.status).toBe(409);
-    expect(await res.text()).toBe(NOME_JA_EM_USO);
-    expect((await docDe(slug)).cidade, "o rascunho fica sem cidade").toBeUndefined();
+    const res = await marcarPonto(slug);
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect((await docDe(slug)).cidade).toBe("Cidade Teste");
+    const publicou = await publicarDela(slug);
+    expect(publicou.status).toBe(409);
+    expect(await publicou.text()).toBe(NOME_JA_EM_USO);
+    expect((await c.execute({ sql: "SELECT novo FROM enderecos_antigos WHERE velho = ?", args: [SLUG] })).rows[0]?.novo).toBe("rampa-do-pepe");
     expect(await total()).toBe(1);
   });
 
@@ -274,11 +316,43 @@ describe("PUT — responder", () => {
     },
   );
 
-  it("o ponto grava o ponto 0 E a coordenada da chuva", async () => {
-    expect((await rota.PUT(pedido("PUT", { slug: CHAVE, ponto: 0, lat: -8.31, lng: -35.97 }))).status).toBe(200);
+  it("o ponto dela grava ponto, chuva, cidade e o slug de dentro nome-cidade", async () => {
+    nominatimDeTeste.pontos.length = 0;
+    nominatimDeTeste.ponto = { cidade: "Outra Cidade" };
+    const res = await rota.PUT(pedido("PUT", { slug: CHAVE, ponto: 0, lat: -8.4, lng: -35.9 }));
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await res.json(), "a chave dela não anda").toEqual({ slug: CHAVE });
     const d = await docDe();
-    expect(d.trajeto.waypoints[0]).toMatchObject({ lat: -8.31, lng: -35.97 });
-    expect(d.condicao.coords).toEqual({ lat: -8.31, lng: -35.97 });
+    expect(d.trajeto.waypoints[0]).toMatchObject({ lat: -8.4, lng: -35.9 });
+    expect(d.condicao.coords).toEqual({ lat: -8.4, lng: -35.9 });
+    expect(d.cidade).toBe("Outra Cidade");
+    expect(d.slug).toBe("pedra-mandada-outra-cidade");
+    expect(nominatimDeTeste.pontos).toEqual([{ lat: -8.4, lng: -35.9 }]);
+  });
+
+  it.each(["fora", "limite", "sem-municipio"])("cidade que não sai (%s): 503, nada gravado", async (falha) => {
+    nominatimDeTeste.ponto = { falha };
+    const antes = await rascunhoNoBanco(c, CHAVE);
+    const res = await rota.PUT(pedido("PUT", { slug: CHAVE, ponto: 0, lat: -8.4, lng: -35.9 }));
+    expect([res.status, await res.text()]).toEqual([503, CIDADE_DO_PONTO_NAO_SAIU]);
+    expect(await rascunhoNoBanco(c, CHAVE)).toEqual(antes);
+  });
+
+  it("a cidade do reverse sem letra nem número: 503, nada gravado", async () => {
+    const antes = await rascunhoNoBanco(c, CHAVE);
+    const res = await marcarPonto(CHAVE, "--");
+    expect([res.status, await res.text()]).toEqual([503, CIDADE_DO_PONTO_NAO_SAIU]);
+    expect(await rascunhoNoBanco(c, CHAVE)).toEqual(antes);
+  });
+
+  // `1e999` chega do `JSON.parse` como `Infinity`: barrado antes do Nominatim.
+  it("coordenada que não é finita: 400, e o Nominatim não é consultado", async () => {
+    nominatimDeTeste.pontos.length = 0;
+    const antes = await docDe();
+    const res = await rota.PUT(new Request("http://x/api/contribuir/rascunho", { method: "PUT", body: `{"slug":"${CHAVE}","ponto":0,"lat":1e999,"lng":-35}` }));
+    expect(res.status).toBe(400);
+    expect(nominatimDeTeste.pontos).toEqual([]);
+    expect(await docDe()).toEqual(antes);
   });
 
   it("ponto que não é o 0: 400 (trajeto de mais de um ponto está fora)", async () => {
@@ -306,8 +380,8 @@ describe("PUT — responder", () => {
     expect(await total()).toBe(1);
   });
 
-  it("trocar a cidade também: o endereço de dentro acompanha", async () => {
-    expect((await rota.PUT(pedido("PUT", { slug: CHAVE, campo: "cidade", valor: "Outra Cidade" }))).status).toBe(200);
+  it("corrigir o ponto pra outra cidade também: o endereço de dentro acompanha", async () => {
+    expect((await marcarPonto(CHAVE, "Outra Cidade")).status).toBe(200);
     expect((await docDe()).slug).toBe("pedra-mandada-outra-cidade");
   });
 
@@ -423,8 +497,10 @@ describe("GET e DELETE", () => {
 // espaços passaria lá como resposta e sairia em branco na tela. E a cidade: o
 // endereço que sai do par dela (no documento, e no publicar) só tem o hífen do
 // meio — e nunca é o nome de uma tela do app (`SLUGS_RESERVADOS`) — se NENHUMA
-// porta dela deixar o rascunho sem cidade com letra. Estes casos são essa
-// prova, porta a porta (POST, PUT de valor, "não sei"). (Até a Task 17 eram
+// porta dela deixar o rascunho sem cidade com letra. Desde 17/10 ela não
+// escreve a cidade (o PUT de campo `cidade` é 400 mudo), e a do ponto sem letra
+// é 503 (casos do "PUT — responder"). Estes casos são essa prova, porta a porta
+// (POST, PUT de valor, "não sei"). (Até a Task 17 eram
 // também a prova de que o ramo `semCidade` de `colisaoDoPar` nunca era de um
 // rascunho dela; desde ela, rascunho dela nem entra na colisão.)
 describe("o texto dela entra aparado, e cidade vazia não chega ao rascunho dela", () => {
@@ -463,7 +539,7 @@ describe("o texto dela entra aparado, e cidade vazia não chega ao rascunho dela
       expect((await docDe()).slug).toBe("pedra-nova-cidade-teste");
     });
 
-    it.each(["promessa", "acesso", "avisos", "custo.valor", "trajeto.waypoints.0.nome", "cidade"].flatMap((campo) =>
+    it.each(["promessa", "acesso", "avisos", "custo.valor", "trajeto.waypoints.0.nome"].flatMap((campo) =>
       ["", "   ", " \t\n "].map((valor) => [campo, valor] as const),
     ))("`%s` = %j: 400, e o rascunho não muda", async (campo, valor) => {
       const antes = await docDe();
@@ -471,19 +547,23 @@ describe("o texto dela entra aparado, e cidade vazia não chega ao rascunho dela
       expect(await docDe()).toEqual(antes);
     });
 
-    it("cidade vazia, só de espaços, sem letra, ou 'não sei': recusada, e a cidade dela continua", async () => {
-      for (const [corpo, frase] of [
-        [{ campo: "cidade", valor: "" }, CIDADE_VAZIA],
-        [{ campo: "cidade", valor: "   " }, CIDADE_VAZIA],
-        [{ campo: "cidade", valor: "--" }, CIDADE_SEM_LETRA],
-      ] as const) {
+    // 🔴 17/10: a cidade SAI DO PONTO — ela não é campo dela. Qualquer PUT de
+    // campo `cidade` (com valor, vazio, sem letra, ou "não sei") é 400 MUDO,
+    // antes de ler o banco, e a cidade dela continua a do ponto. (Até 17/10
+    // eram 400 com `CIDADE_VAZIA`/`CIDADE_SEM_LETRA`/`SEM_NAO_SEI`.)
+    it("PUT do campo cidade é 400 mudo, nada gravado", async () => {
+      const antes = await docDe();
+      for (const corpo of [
+        { campo: "cidade", valor: "Outra Cidade" },
+        { campo: "cidade", valor: "" },
+        { campo: "cidade", valor: "--" },
+        { campo: "cidade", naoSei: true },
+      ]) {
         const res = await rota.PUT(pedido("PUT", { slug: CHAVE, ...corpo }));
         expect(res.status, JSON.stringify(corpo)).toBe(400);
-        expect(await res.text(), JSON.stringify(corpo)).toBe(frase);
+        expect(await res.text(), JSON.stringify(corpo)).toBe("");
       }
-      const naoSei = await rota.PUT(pedido("PUT", { slug: CHAVE, campo: "cidade", naoSei: true }));
-      expect(naoSei.status).toBe(400);
-      expect(await naoSei.text()).toBe(SEM_NAO_SEI);
+      expect(await docDe()).toEqual(antes);
       expect((await docDe()).cidade).toBe("Cidade Teste");
     });
   });
@@ -501,16 +581,16 @@ describe("PUT — o par de um rascunho de outra pessoa não recusa", () => {
   });
 
   it("renomear pro nome do outro, estando na cidade dele: grava, e o dele fica", async () => {
-    expect((await rota.PUT(pedido("PUT", { slug: CHAVE, campo: "cidade", valor: "Outra Cidade" }))).status).toBe(200);
+    expect((await marcarPonto(CHAVE, "Outra Cidade")).status).toBe(200);
     const res = await rota.PUT(pedido("PUT", { slug: CHAVE, campo: "trajeto.waypoints.0.nome", valor: "Pedra Dela" }));
     expect(res.status, await res.clone().text()).toBe(200);
     expect((await docDe()).slug).toBe("pedra-dela-outra-cidade");
     expect((await rascunhoNoBanco(c, dela))?.contribuidor).toBe(OUTRA.id);
   });
 
-  it("mudar a cidade pro par do outro: grava, e o dele fica", async () => {
+  it("corrigir o ponto pro par do outro: grava, e o dele fica", async () => {
     expect((await rota.PUT(pedido("PUT", { slug: CHAVE, campo: "trajeto.waypoints.0.nome", valor: "Pedra Dela" }))).status).toBe(200);
-    const res = await rota.PUT(pedido("PUT", { slug: CHAVE, campo: "cidade", valor: "Outra Cidade" }));
+    const res = await marcarPonto(CHAVE, "Outra Cidade");
     expect(res.status, await res.clone().text()).toBe(200);
     expect((await docDe()).cidade).toBe("Outra Cidade");
     expect((await rascunhoNoBanco(c, dela))?.contribuidor).toBe(OUTRA.id);
@@ -582,7 +662,8 @@ describe("o bloqueio que chega entre a porta e a gravação", () => {
 });
 
 // 🔴 M6 DA REVISÃO FINAL: o teto de 2000 caracteres por campo que ela escreve,
-// na porta — no começar (nome e cidade) e no responder (todo campo de texto).
+// na porta — no começar (o nome) e no responder (todo campo de texto dela; a
+// cidade sai do ponto desde 17/10, e não é campo dela).
 describe("o teto do texto dela", () => {
   const longo = (n: number) => "a".repeat(n);
 
@@ -595,7 +676,7 @@ describe("o teto do texto dela", () => {
     expect((await rota.POST(pedido("POST", corpo(2000)))).status).toBe(201);
   });
 
-  it.each(["promessa", "acesso", "avisos", "custo.valor", "trajeto.waypoints.0.nome", "cidade"])(
+  it.each(["promessa", "acesso", "avisos", "custo.valor", "trajeto.waypoints.0.nome"])(
     "PUT `%s`: 2000 grava; 2001 é 400 com a frase, e o rascunho não muda",
     async (campo) => {
       await comecar();
@@ -629,7 +710,7 @@ describe("dois rascunhos dela com o mesmo nome e cidade", () => {
     const primeira = CHAVE;
     const segunda = await rota.POST(pedido("POST", { nome: "Pedra Segunda" }));
     expect(segunda.status).toBe(201);
-    const cidade = await rota.PUT(pedido("PUT", { slug: ((await segunda.json()) as { slug: string }).slug, campo: "cidade", valor: "Cidade Teste" }));
+    const cidade = await marcarPonto(((await segunda.json()) as { slug: string }).slug);
     expect(cidade.status).toBe(200);
     const res = await rota.PUT(pedido("PUT", { slug: primeira, campo: "trajeto.waypoints.0.nome", valor: "Pedra Segunda" }));
     expect(res.status, await res.clone().text()).toBe(200);

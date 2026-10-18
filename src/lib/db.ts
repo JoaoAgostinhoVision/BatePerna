@@ -783,9 +783,11 @@ export async function criarRascunho(client: Client, slug: string, doc: string, a
  *  de um rascunho ou de um lugar, ou quando não há rascunho em `de`.
  *
  *  🔴 POR QUE EXISTE (onda de fix 2 da Tarefa 11b): o endereço de um RASCUNHO
- *  acompanha o nome e a cidade dele até publicar — ainda não há link
- *  circulando, e o endereço velho seria o de um par que não é mais o dele, que
- *  a Tarefa 12 publicaria.
+ *  acompanha o nome e a cidade do PONTO dele até publicar (desde 17/10 a
+ *  cidade sai do ponto 0) — ainda não há link circulando, e o endereço velho
+ *  seria o de um par que não é mais o dele, que a Tarefa 12 publicaria. Também
+ *  leva o rascunho a uma chave provisória (`rascunho_<hex>`), quando o ponto
+ *  diz um par que já é de outro (a saída (b), na rota do rascunho).
  *
  *  🔴 E É UM `UPDATE` SÓ, nunca "criar o novo e apagar o velho" (uma janela com
  *  DOIS rascunhos do mesmo lugar) nem "apagar e criar" (uma janela com nenhum):

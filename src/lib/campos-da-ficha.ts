@@ -63,6 +63,13 @@ export type CampoDaFicha = {
   obrigatorio: boolean;
   grupo: GrupoDaFicha;
   opcoes?: readonly string[];
+  /** 🔴 O valor SAI DO PONTO, não de uma pergunta (17/10): num lugar NOVO a
+   *  cidade é a do município do ponto 0, que o servidor pergunta ao Nominatim
+   *  quando o ponto é gravado. Só a entrada `cidade` tem. `camposQueSaoPergunta`
+   *  a tira das perguntas por ESTA propriedade; a ficha inteira do lugar
+   *  publicado continua com a caixa (é a válvula pra quando o município do
+   *  Nominatim não é o nome certo — spec §2.4). */
+  saiDoPonto?: true;
 };
 
 export type ValorDeCampo =
@@ -97,8 +104,9 @@ export const CAMPOS_DA_FICHA: readonly CampoDaFicha[] = [
   // 🔴 A CIDADE (Tarefa 11b) abre o grupo: é o que separa dois lugares de mesmo
   // nome. `obrigatorio: true` aqui e opcional no schema — a divergência é
   // declarada, com o motivo, em `OBRIGATORIO_SO_NO_REGISTRO` no teste deste
-  // registro. Obrigatória quer dizer: sem "não sei", e o lugar novo nasce com ela.
-  { caminho: "cidade", especie: "prosa", obrigatorio: true, grupo: "chegar" },
+  // registro. Obrigatória quer dizer: sem "não sei", e não se publica sem ela.
+  // Desde 17/10 o lugar novo não a pergunta: ela chega com o ponto (`saiDoPonto`).
+  { caminho: "cidade", especie: "prosa", obrigatorio: true, grupo: "chegar", saiDoPonto: true },
   // O molde: `[]` é "qualquer índice". `nome`/`lat`/`lng` são obrigatórios
   // DENTRO do waypoint; `nota` não é.
   { caminho: "trajeto.waypoints[].nome", especie: "prosa", obrigatorio: true, grupo: "chegar" },

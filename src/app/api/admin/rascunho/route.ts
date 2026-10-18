@@ -17,15 +17,24 @@ import {
   regravarRascunho,
 } from "@/lib/db";
 import { novaChaveDeRascunho } from "@/lib/db-contribuidor";
-import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, parDaMudanca, parOcupado, quemOcupaNoPainel } from "@/lib/par-de-lugar";
+import { cidadeDoPonto } from "@/lib/nominatim-servico";
 import {
-  CIDADE_VAZIA,
+  CAMPO_DA_CIDADE,
+  CAMPO_DO_NOME,
+  colisaoDoPar,
+  parDaMudanca,
+  parOcupado,
+  quemOcupaNoPainel,
+} from "@/lib/par-de-lugar";
+import {
+  CIDADE_DO_PONTO_NAO_SAIU,
   NOME_SEM_LETRA,
   NOME_VAZIO,
   RASCUNHO_NAO_EXISTE_MAIS,
   cidadeDoDoc,
   docDoLugarNovo,
   docNoEndereco,
+  ehChaveDeRascunho,
   nomeDoRascunho,
   slugDoNome,
 } from "@/lib/rascunho";
@@ -54,11 +63,18 @@ const SEM_CACHE = { "cache-control": "no-store" } as const;
  *     (`src/app/api/admin/ficha/route.ts`), mutuamente exclusivas:
  *       `{slug, campo, valor}` · `{slug, campo, naoSei: true}` ·
  *       `{slug, ponto, lat, lng}`.
- *     Renomear (`trajeto.waypoints.0.nome`) e mudar a `cidade` passam pela
- *     colisão de PAR (`parDaMudanca`) — e, quando o documento JÁ TEM cidade, o
- *     endereço do rascunho ACOMPANHA os dois (`moverRascunho`): a resposta é
- *     `{slug}` com o endereço de agora. Sem cidade no documento, renomear só
- *     regrava: a chave não anda;
+ *     🔴 A `cidade` NÃO É CAMPO DESTA PORTA (17/10): `{campo: "cidade"}` é 400
+ *     mudo. Ela SAI DO PONTO — gravar o ponto 0 pergunta ao Nominatim o
+ *     município dele (`pontoComCidade`): não saiu, 503
+ *     `CIDADE_DO_PONTO_NAO_SAIU` e nada grava; saiu, o ponto e a cidade gravam
+ *     SEMPRE, e o rascunho se muda pro `nome-cidade` quando o par e o endereço
+ *     estão livres, ou fica numa chave provisória (a saída (b) do João, spec
+ *     §2.3.0 — o publicar recusa essa chave). Renomear
+ *     (`trajeto.waypoints.0.nome`) passa pela colisão de PAR
+ *     (`parDaMudanca`, 409) — e, quando o documento JÁ TEM cidade, o endereço
+ *     do rascunho ACOMPANHA o nome (`moverRascunho`, 409 se ocupado). Nos
+ *     dois, a resposta é `{slug}` com a chave de agora. Sem cidade no
+ *     documento, renomear só regrava: a chave não anda;
  *     a coordenada do ponto só entra como PAR (a terceira forma).
  *     A terceira existe pra o editor de coordenada servir aqui SEM MUDAR: ele
  *     grava o ponto do trajeto inteiro, num corpo só, por essa forma.
@@ -158,12 +174,18 @@ export async function PUT(req: Request): Promise<Response> {
 
   let mudar: (doc: string) => string;
   if (trazPonto) {
+    // 🔴 FINITOS, ANTES DE TUDO: o `JSON.parse` vira `1e999` em `Infinity`, que
+    // é `number`. A folha também o recusaria, mas o ponto 0 pergunta a cidade
+    // ao Nominatim (`cidadeDoPonto`, que não confere a coordenada) — e nada
+    // que não é um ponto do planeta chega a ele.
     if (
       typeof ponto !== "number" ||
       !Number.isInteger(ponto) ||
       ponto < 0 ||
       typeof lat !== "number" ||
-      typeof lng !== "number"
+      typeof lng !== "number" ||
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng)
     ) {
       return new Response("", { status: 400, headers: TEXTO });
     }
@@ -175,8 +197,11 @@ export async function PUT(req: Request): Promise<Response> {
     const trazNaoSei = "naoSei" in corpo;
     if (trazValor === trazNaoSei) return new Response("", { status: 400, headers: TEXTO });
     if (trazNaoSei && naoSei !== true) return new Response("", { status: 400, headers: TEXTO });
-    // A lista branca do registro: `slug` e `modos` não são perguntas.
-    if (typeof campo !== "string" || campoPorCaminho(campo) === undefined) {
+    // A lista branca do registro: `slug` e `modos` não são perguntas — e o que
+    // SAI DO PONTO também não (17/10: a cidade chega com o ponto 0, nunca por
+    // aqui). 400 mudo, como todo campo que a tela não pergunta.
+    const entrada = typeof campo === "string" ? campoPorCaminho(campo) : undefined;
+    if (typeof campo !== "string" || entrada === undefined || entrada.saiDoPonto) {
       return new Response("", { status: 400, headers: TEXTO });
     }
     mudar = (doc) => (trazNaoSei ? tirarDoRascunho(doc, campo) : aplicarNoRascunho(doc, campo, valor as ValorDeCampo));
@@ -188,11 +213,10 @@ export async function PUT(req: Request): Promise<Response> {
   const atual = await lerRascunho(getClient(), slug);
   if (atual === null) return new Response("", { status: 400, headers: TEXTO });
 
-  // Renomear, ou mudar a cidade, passa pelo PAR (11b-M3) — a função é a mesma
-  // da ficha no ar, e desde 17/10 é aqui que o par de verdade se confere: o POST
-  // nasce sem cidade e só vê o gêmeo. Valor que não é texto segue adiante e é
-  // recusado pela folha. Mudar só a cidade nunca esbarra no gêmeo sem cidade
-  // (Y1 da onda de fix 2): ver `parOcupado`.
+  // Renomear passa pelo PAR (11b-M3) — a função é a mesma da ficha no ar; o
+  // POST nasce sem cidade e só vê o gêmeo. Valor que não é texto segue adiante
+  // e é recusado pela folha. (O ponto não passa aqui: a colisão dele é a saída
+  // (b), em `pontoComCidade`.)
   const doPar = await parDaMudanca(atual.doc, slug, campo, valor);
   if (doPar !== null) return new Response(doPar, { status: 409, headers: TEXTO });
 
@@ -204,38 +228,44 @@ export async function PUT(req: Request): Promise<Response> {
   }
   const agora = Math.floor(Date.now() / 1000);
 
-  // 🔴 O ENDEREÇO DO RASCUNHO ACOMPANHA O NOME E A CIDADE (onda de fix 2 da 11b,
-  // Y2 — o I-N2 da re-revisão). Congelado, um rascunho corrigido de cidade
-  // continuava no endereço da cidade errada: o lugar real daquela cidade não
-  // nascia mais (a frase mandava "mudar um pouco o nome" dele), e a Tarefa 12
-  // publicaria com aquele endereço. Rascunho não tem link circulando; o lugar
-  // NO AR, esse sim, guarda o endereço com que nasceu (a porta da ficha nunca
-  // muda endereço). A troca de chave é UMA consulta (`moverRascunho`), recusada
-  // quando o endereço novo já é de outro — e a resposta devolve o endereço de
-  // AGORA, que é por onde o formulário segue.
-  // O nome com letra vale sempre; o resto só quando o documento JÁ TEM cidade:
-  // antes do ponto, renomear só regrava (a chave provisória não anda, e nada
-  // pede cidade).
-  if (trazCampo && (campo === CAMPO_DO_NOME || campo === CAMPO_DA_CIDADE)) {
+  // 🔴 SÓ O PONTO 0 PERGUNTA A CIDADE (17/10): é ele que é o lugar. Os outros
+  // pontos do trajeto e o `condicao.coords` gravam sem consultar ninguém.
+  if (trazPonto && ponto === 0) return pontoComCidade(slug, novoDoc, lat as number, lng as number, agora);
+
+  // 🔴 O ENDEREÇO DO RASCUNHO ACOMPANHA O NOME (onda de fix 2 da 11b, Y2 — o
+  // I-N2 da re-revisão). Congelado, um rascunho renomeado continuava no
+  // endereço do par velho: o lugar real daquele par não nascia mais, e a
+  // Tarefa 12 publicaria com aquele endereço. Rascunho não tem link
+  // circulando; o lugar NO AR, esse sim, guarda o endereço com que nasceu (a
+  // porta da ficha nunca muda endereço). A troca de chave é UMA consulta
+  // (`moverRascunho`), recusada quando o endereço novo já é de outro — e a
+  // resposta devolve o endereço de AGORA, que é por onde o formulário segue.
+  // Renomear COM cidade segue a régua de sempre: destino ocupado é 409 com
+  // quem ocupa, e o texto fica na caixa — é a pessoa escolhendo o nome; só o
+  // PONTO tem a saída (b). O nome com letra vale sempre; o endereço só quando
+  // o documento JÁ TEM cidade: antes do ponto, renomear só regrava (a chave
+  // provisória não anda).
+  if (trazCampo && campo === CAMPO_DO_NOME) {
     if (slugDoNome(nomeDoRascunho(novoDoc, "")) === "") return new Response(NOME_SEM_LETRA, { status: 400, headers: TEXTO });
-  }
-  if (trazCampo && (campo === CAMPO_DO_NOME || campo === CAMPO_DA_CIDADE) && cidadeDoDoc(novoDoc) !== undefined) {
+    const cidade = cidadeDoDoc(novoDoc);
     // As duas metades com letra: é o hífen no meio que nunca deixa o endereço
-    // cair numa tela do app.
-    if (slugDoNome(cidadeDoDoc(novoDoc) ?? "") === "") return new Response(CIDADE_VAZIA, { status: 400, headers: TEXTO });
-    const destino = slugDoNome(`${nomeDoRascunho(novoDoc, "")} ${cidadeDoDoc(novoDoc)}`);
-    if (destino !== slug) {
-      if (await moverRascunho(getClient(), slug, destino, docNoEndereco(novoDoc, destino), agora)) {
-        return Response.json({ slug: destino }, { headers: SEM_CACHE });
+    // cair numa tela do app. (Cidade sem letra só existe num rascunho gravado
+    // antes de as portas a recusarem; renomeá-lo só regrava.)
+    if (cidade !== undefined && slugDoNome(cidade) !== "") {
+      const destino = slugDoNome(`${nomeDoRascunho(novoDoc, "")} ${cidade}`);
+      if (destino !== slug) {
+        if (await moverRascunho(getClient(), slug, destino, docNoEndereco(novoDoc, destino), agora)) {
+          return Response.json({ slug: destino }, { headers: SEM_CACHE });
+        }
+        // A recusa pode ser do ORIGEM, não do destino (M4 da revisão da Tarefa
+        // 12): entre a leitura lá em cima e o `moverRascunho`, o rascunho foi
+        // publicado, apagado ou movido noutra aba. Nomear "quem ocupa" o destino
+        // seria falso — ele pode estar livre.
+        if ((await lerRascunho(getClient(), slug)) === null) {
+          return new Response(RASCUNHO_NAO_EXISTE_MAIS, { status: 409, headers: TEXTO });
+        }
+        return new Response(await quemOcupaNoPainel(destino), { status: 409, headers: TEXTO });
       }
-      // A recusa pode ser do ORIGEM, não do destino (M4 da revisão da Tarefa
-      // 12): entre a leitura lá em cima e o `moverRascunho`, o rascunho foi
-      // publicado, apagado ou movido noutra aba. Nomear "quem ocupa" o destino
-      // seria falso — ele pode estar livre.
-      if ((await lerRascunho(getClient(), slug)) === null) {
-        return new Response(RASCUNHO_NAO_EXISTE_MAIS, { status: 409, headers: TEXTO });
-      }
-      return new Response(await quemOcupaNoPainel(destino), { status: 409, headers: TEXTO });
     }
   }
   // 🔴 `UPDATE`, NUNCA UPSERT (Tarefa 12, I1 da auditoria de 06/10): entre a
@@ -247,6 +277,69 @@ export async function PUT(req: Request): Promise<Response> {
     return new Response(RASCUNHO_NAO_EXISTE_MAIS, { status: 409, headers: TEXTO });
   }
   return Response.json({ slug }, { headers: SEM_CACHE });
+}
+
+/** 🔴 O PONTO 0 E A CIDADE QUE SAI DELE (17/10) — `comPonto` é o documento com
+ *  o ponto já escrito (e conferido pela folha), `slug` a chave de agora.
+ *
+ *  Na ordem, e cada passo é da spec:
+ *   1. a cidade, pelo Nominatim (`cidadeDoPonto`). Não saiu — fora do ar, a vez
+ *      de 1/s já tomada, ponto sem município, ou um nome sem letra que nunca
+ *      faria um endereço — é 503 `CIDADE_DO_PONTO_NAO_SAIU` e NADA grava
+ *      (§2.2: sem cidade não há endereço, e não há caixa de digitar);
+ *   2. a cidade entra no documento;
+ *   3. o PAR (o nome nessa cidade) pela régua de `colisaoDoPar`, com
+ *      `nomeNovo: false` — o gêmeo sem cidade é da tela do nome (§2.3.1);
+ *   4. 🔴 A SAÍDA (b) DO JOÃO (§2.3.0): o ponto e a cidade GRAVAM sempre. Par
+ *      livre: o rascunho se muda pro `nome-cidade` (`moverRascunho`, uma
+ *      consulta, que recusa o endereço que já é de outro — um lugar de outro
+ *      par na fronteira que anda, ou outro rascunho dele). Par que colide: NEM
+ *      TENTA o `nome-cidade` — ele não pode ser deste rascunho enquanto o par
+ *      for de outro. Colidiu ou foi recusado: o rascunho FICA, e "ficar" quer
+ *      dizer manter a invariante — **a chave de um rascunho do painel é o
+ *      `nome-cidade` do documento, ou uma chave provisória**: já numa
+ *      provisória (ou no `nome-cidade` que continua verdadeiro) regrava ali; num
+ *      `nome-cidade` que o ponto tornou falso (corrigido pra outra cidade)
+ *      muda pra uma provisória nova. A tela diz o porquê por `travaDoPainel`,
+ *      e o publicar recusa toda chave que não é o `nome-cidade`.
+ *  O rascunho que sumiu no meio (publicado, apagado, movido noutra aba) é 409
+ *  `RASCUNHO_NAO_EXISTE_MAIS`, como em todo PUT. A resposta é `{slug}` com a
+ *  chave de AGORA, que é por onde o formulário segue. Função da rota, não
+ *  exportada: um arquivo de rota do Next só exporta os métodos. */
+async function pontoComCidade(slug: string, comPonto: string, lat: number, lng: number, agora: number): Promise<Response> {
+  const achou = await cidadeDoPonto(lat, lng);
+  if ("falha" in achou || slugDoNome(achou.cidade) === "") {
+    return new Response(CIDADE_DO_PONTO_NAO_SAIU, { status: 503, headers: TEXTO });
+  }
+  let novoDoc: string;
+  try {
+    novoDoc = aplicarNoRascunho(comPonto, CAMPO_DA_CIDADE, achou.cidade);
+  } catch (erro) {
+    return recusar400(erro);
+  }
+  const sumiu = () => new Response(RASCUNHO_NAO_EXISTE_MAIS, { status: 409, headers: TEXTO });
+  const nome = nomeDoRascunho(novoDoc, "");
+  // Sem nome com letra (só um rascunho gravado por fora das portas) não há
+  // `nome-cidade`: o rascunho fica.
+  const destino = slugDoNome(nome) === "" ? null : slugDoNome(`${nome} ${achou.cidade}`);
+  const colidiu =
+    destino === null ||
+    (await colisaoDoPar(nome, achou.cidade, { exceto: slug, nomeNovo: false, quem: "joao" })) !== null;
+
+  if (!colidiu && destino !== slug) {
+    if (await moverRascunho(getClient(), slug, destino, docNoEndereco(novoDoc, destino), agora)) {
+      return Response.json({ slug: destino }, { headers: SEM_CACHE });
+    }
+    if ((await lerRascunho(getClient(), slug)) === null) return sumiu();
+  }
+  // FICAR.
+  if (ehChaveDeRascunho(slug) || slug === destino) {
+    if (!(await regravarRascunho(getClient(), slug, docNoEndereco(novoDoc, slug), agora))) return sumiu();
+    return Response.json({ slug }, { headers: SEM_CACHE });
+  }
+  const provisoria = novaChaveDeRascunho();
+  if (!(await moverRascunho(getClient(), slug, provisoria, docNoEndereco(novoDoc, provisoria), agora))) return sumiu();
+  return Response.json({ slug: provisoria }, { headers: SEM_CACHE });
 }
 
 export async function GET(req: Request): Promise<Response> {

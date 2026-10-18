@@ -188,8 +188,9 @@ export default function FormularioDeLugar({
   // no celular. E o `<a>` faz o mesmo que o `location.assign` do Salvar: a
   // página inteira relida do banco — uma navegação só, nos dois caminhos.
   // 🔴 O endereço vem da RESPOSTA da porta (ver `PortaDoEditor`): corrigir o
-  // nome ou a cidade muda o endereço do rascunho do João (o de quem usa mora
-  // numa chave que não muda, Task 17).
+  // nome, ou o ponto (de onde a cidade sai desde 17/10), muda o endereço do
+  // rascunho do João — pro `nome-cidade`, ou pra uma chave provisória quando o
+  // par já é de outro (o de quem usa mora numa chave que não muda, Task 17).
   const destino = proxima === null ? posicao : posicao + 1;
   const porta = {
     gravarEm: rotas.rascunhoApi,

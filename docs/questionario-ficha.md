@@ -48,19 +48,28 @@ no topo de cada cartão na home.
 
 <!-- PENDENTE: redação minha, o João ainda não leu (Tarefa 11b e a onda de fix dela, 2026-10-04) -->
 
-(A cidade é da ficha inteira, não do ponto — ela mora aqui, logo depois do nome,
-porque é a pergunta que vem junto com ele.)
+(A cidade é da ficha inteira — ela mora aqui, logo depois do nome, porque é ela que
+separa dois lugares de mesmo nome.)
 
-**Pergunta:** em que cidade fica esse lugar?
+**Num lugar NOVO, a cidade não se pergunta (17/10):** ela sai do ponto que você marca
+no mapa. Quando o ponto é gravado, o app pergunta ao Nominatim (o serviço de endereços
+do OpenStreetMap) em que município ele cai, e grava esse município como a cidade. Se
+não der pra achar a cidade (o serviço fora do ar, ou o ponto no mar), o ponto não
+grava, e a tela pede pra tentar de novo ou mexer o ponto. Mexer o ponto depois refaz a
+cidade. No painel de um lugar já publicado, a cidade continua corrigível à mão — é o
+caminho pra quando o município do Nominatim não for o nome certo.
 
 **Por que importa:** dois lugares podem ter o mesmo nome, e às vezes o que separa um
 do outro é só a cidade. Ela aparece embaixo do nome no cartão da home, junto do título
 da ficha, na lista do acervo e no título do link compartilhado; e entra no endereço
 de um lugar NOVO (a cidade vai depois do nome, sempre — mesmo quando o nome já
 termina com ela).
-Mudar a cidade depois não muda o endereço — link que já circula continua valendo.
+Mudar a cidade de um lugar já publicado não muda o endereço — link que já circula
+continua valendo.
 Enquanto um lugar não tem a cidade respondida, o painel não deixa começar outro com o
 mesmo nome: só você sabe se é o mesmo lugar, então ele pede a cidade daquele primeiro.
+Se o ponto cair numa cidade onde esse nome já existe, o ponto e a cidade gravam do
+mesmo jeito, e o que fica travado é o publicar, até o nome mudar.
 
 **Exemplo:** nenhum, de propósito. As três fichas que já existiam quando esta pergunta
 entrou (04/10) vieram sem a cidade, e ela não é deduzida do nome nem do endereço —

@@ -17,7 +17,8 @@ import { docDoLugarNovo, ehChaveDeRascunho } from "@/lib/rascunho";
 const docComCidade = (slug: string, nome: string, cidade: string): string =>
   JSON.stringify({ ...JSON.parse(docDoLugarNovo(slug, nome)), cidade });
 import { rotuloDe } from "@/app/admin/FichaInteira";
-import { ORDEM, PERGUNTAS, escolherPosicao } from "@/app/admin/novo/perguntas";
+import { ORDEM, PERGUNTAS, camposQueSaoPergunta, escolherPosicao } from "@/app/admin/novo/perguntas";
+import { nominatimDeTeste } from "../nominatim";
 import {
   ANTERIOR,
   AVISO_RASCUNHO,
@@ -89,6 +90,9 @@ vi.mock("@/lib/db", async (real) => ({
   ...(await real<typeof import("@/lib/db")>()),
   getClient: vi.fn(() => cliente),
 }));
+// 🔴 A suíte nunca bate no Nominatim (spec §7): o ponto 0 que a tela grava pela
+// rota de verdade pergunta a cidade ao dublê.
+vi.mock("@/lib/nominatim-servico", async () => (await import("../nominatim")).dubleDoNominatim());
 
 let token: string;
 
@@ -121,6 +125,9 @@ function geocodingFalso(url: string): Response {
 }
 
 beforeEach(async () => {
+  nominatimDeTeste.ponto = { cidade: CIDADE };
+  nominatimDeTeste.pontos.length = 0;
+  nominatimDeTeste.buscas.length = 0;
   buscasDeCidade = [];
   respostaDaCidade = () => Response.json(GEOCODING);
   vi.stubGlobal(
@@ -185,9 +192,11 @@ async function porTodasAsTelas(fn: (n: number, container: HTMLElement) => void |
   return total;
 }
 
-/** QUAIS PERGUNTAS, lidas do REGISTRO — e não da lista da página. */
+/** QUAIS PERGUNTAS, lidas do REGISTRO — e não da lista da página. Por
+ *  PROPRIEDADE do registro: a metade `.lng` mora na `.lat`, e o que sai do
+ *  ponto (`saiDoPonto`, a cidade, 17/10) não é pergunta. */
 function esperadas(): CampoDaFicha[] {
-  return CAMPOS_DA_FICHA.filter((c) => !(c.especie === "coord" && c.caminho.endsWith("[].lng")));
+  return CAMPOS_DA_FICHA.filter((c) => !c.saiDoPonto && !(c.especie === "coord" && c.caminho.endsWith("[].lng")));
 }
 const concreto = (molde: string): string => molde.replace("[]", ".0");
 
@@ -356,6 +365,20 @@ describe("/admin/novo — as perguntas", () => {
     }
   });
 
+  // 🔴 17/10: a cidade sai do ponto (`saiDoPonto` no registro) — não é pergunta
+  // —, e o ponto passa a ser a 2ª, logo depois do nome. A cidade continua no
+  // registro, obrigatória (não se publica sem ela).
+  it("a cidade não é pergunta, e o ponto é a 2ª", () => {
+    expect(ORDEM[1]).toBe("trajeto.waypoints.0.lat");
+    expect(ORDEM).not.toContain("cidade");
+    expect(camposQueSaoPergunta().map((c) => c.caminho)).not.toContain("cidade");
+    expect(CAMPOS_DA_FICHA.find((c) => c.caminho === "cidade"), "a premissa: a cidade está no registro").toMatchObject({
+      obrigatorio: true,
+      saiDoPonto: true,
+    });
+    expect(PERGUNTAS.cidade, "a pergunta da cidade foi apagada").toBeUndefined();
+  });
+
   // A lista à mão da ordem é vigiada pelo registro, nas duas direções.
   it("ORDEM é exatamente o conjunto de perguntas do registro", () => {
     expect([...ORDEM].sort()).toEqual(esperadas().map((c) => concreto(c.caminho)).sort());
@@ -458,9 +481,9 @@ describe("/admin/novo — as perguntas", () => {
   it("nenhum campo vem com resposta de exemplo dentro da caixa", async () => {
     await lugarNovo();
     let lidas = 0;
-    // O nome e a cidade são o que ELE digitou ao criar (Tarefa 11b) — e são
-    // exatamente isso, nada além.
-    const DIGITADOS: Record<string, string> = { "trajeto.waypoints.0.nome": NOME, cidade: CIDADE };
+    // O nome é o que ELE digitou ao criar — e é exatamente isso, nada além. (A
+    // cidade do rascunho não é pergunta desde 17/10: sai do ponto.)
+    const DIGITADOS: Record<string, string> = { "trajeto.waypoints.0.nome": NOME };
     const conferidos = new Set<string>();
     await porTodasAsTelas((n, container) => {
       const [m] = naTela();
@@ -661,16 +684,16 @@ describe("/admin/novo — a posição mora na URL", () => {
   it("na página: p torto cai na 1ª sem resposta; p válido é obedecido", async () => {
     await lugarNovo();
     const total = esperadas().length;
-    // o nome e a cidade já estão respondidos (é deles que o rascunho nasce): a
-    // 1ª sem resposta é a 3ª
-    expect(ORDEM.slice(0, 2), "a premissa: as duas primeiras são o nome e a cidade").toEqual([
+    // o nome já está respondido (é dele que o rascunho nasce; a cidade não é
+    // pergunta desde 17/10): a 1ª sem resposta é a 2ª, o ponto
+    expect(ORDEM.slice(0, 2), "a premissa: as duas primeiras são o nome e o ponto").toEqual([
       "trajeto.waypoints.0.nome",
-      "cidade",
+      "trajeto.waypoints.0.lat",
     ]);
     for (const p of [undefined, "", "abc", "0", "-2", String(total + 1), "1.5", ["3", "4"]]) {
       await paginaNovo(S, p);
-      expect(naTela(), JSON.stringify(p)).toEqual([ORDEM[2]]);
-      expect(screen.getByText(posicaoNaTela(3, total)), JSON.stringify(p)).toBeTruthy();
+      expect(naTela(), JSON.stringify(p)).toEqual([ORDEM[1]]);
+      expect(screen.getByText(posicaoNaTela(2, total)), JSON.stringify(p)).toBeTruthy();
       cleanup();
     }
     await paginaNovo(S, "5");
@@ -694,8 +717,9 @@ describe("/admin/novo — a posição mora na URL", () => {
     const params = new URL(href, "http://x").searchParams;
     expect(params.get("p"), "a premissa: o link da lista não leva posição").toBeNull();
     await paginaNovo(params.get("slug")!);
-    expect(naTela()).toEqual([ORDEM[3]]);
-    expect(screen.getByText(posicaoNaTela(4, esperadas().length))).toBeTruthy();
+    // o nome e o ponto respondidos: a 3ª
+    expect(naTela()).toEqual([ORDEM[2]]);
+    expect(screen.getByText(posicaoNaTela(3, esperadas().length))).toBeTruthy();
   });
 });
 
@@ -751,7 +775,7 @@ describe("/admin/novo — andar entre as perguntas", () => {
     await paginaNovo(S, "4");
     const saltos = within(screen.getByTestId("saltos")).getAllByRole("link");
     expect(saltos).toHaveLength(total);
-    const respondidas = new Set([posDe("trajeto.waypoints.0.nome"), posDe("cidade"), posDe("voz")]);
+    const respondidas = new Set([posDe("trajeto.waypoints.0.nome"), posDe("voz")]);
     saltos.forEach((a, i) => {
       const n = i + 1;
       expect(a.getAttribute("href"), `salto ${n}`).toBe(enderecoDaPergunta(S, n));
@@ -791,23 +815,6 @@ describe("/admin/novo — responder, sair e voltar", () => {
     expect(within(pergunta("voz")).getByDisplayValue("o chao firma em dois dias")).toBeTruthy();
   });
 
-  // 🔴 Y2 DA ONDA DE FIX 2 DA 11b: corrigir a cidade (ou o nome) muda o
-  // endereço do rascunho, e a próxima pergunta é a do endereço DEVOLVIDO pela
-  // porta — nunca a do slug velho, que já não existe.
-  it("corrigir a cidade: vai pra próxima pergunta no endereço NOVO, que a porta devolveu", async () => {
-    await lugarNovo();
-    const { chamadas, reload, assign } = await comRotaDeVerdade();
-    await telaDe("cidade");
-    fireEvent.change(within(pergunta("cidade")).getByRole("textbox"), { target: { value: "Cidade Marcador Dois" } });
-    fireEvent.click(pergunta("cidade").querySelector('[data-salvar="cidade"]')!);
-    const novo = "lugar-marcador-um-cidade-marcador-dois";
-    await waitFor(() => expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(novo, posDe("cidade") + 1)));
-    expect(assign).toHaveBeenCalledTimes(1);
-    expect(reload).not.toHaveBeenCalled();
-    expect(chamadas[0].corpo).toEqual({ slug: S, campo: "cidade", valor: "Cidade Marcador Dois" });
-    expect(await lerRascunho(cliente, S)).toBeNull();
-    expect(JSON.parse((await lerRascunho(cliente, novo))!.doc).cidade).toBe("Cidade Marcador Dois");
-  });
 
   it("gravar na ÚLTIMA pergunta: fica na última", async () => {
     await lugarNovo();
@@ -966,10 +973,42 @@ describe("/admin/novo — responder, sair e voltar", () => {
     await waitFor(() => expect(chamadas).toHaveLength(1));
     expect(chamadas[0].corpo).toEqual({ slug: S, ponto: 0, ...dePerto });
     expect(dePerto, "gravou o centro da vista").not.toEqual(CIDADE_NO_MAPA);
-    await waitFor(() => expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(S, posDe(P) + 1)));
+    // 17/10: o ponto traz a cidade (o Nominatim dublado diz `CIDADE`), e o
+    // rascunho — que este arquivo semeia em `S`, o endereço do nome sozinho —
+    // se muda pro `nome-cidade`; a próxima pergunta é a do endereço devolvido.
+    const aqui = "lugar-marcador-um-cidade-marcador-um";
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(aqui, posDe(P) + 1)));
+    expect(nominatimDeTeste.pontos).toEqual([dePerto]);
     // e o rascunho tem o ponto DELE
-    const doc = JSON.parse((await lerRascunho(cliente, S))!.doc);
+    const doc = JSON.parse((await lerRascunho(cliente, aqui))!.doc);
     expect({ lat: doc.trajeto.waypoints[0].lat, lng: doc.trajeto.waypoints[0].lng }).toEqual(dePerto);
+  });
+
+  // 🔴 Y2 DA ONDA DE FIX 2 DA 11b: corrigir a cidade (ou o nome) muda o
+  // endereço do rascunho, e a próxima pergunta é a do endereço DEVOLVIDO pela
+  // porta — nunca a do slug velho, que já não existe. Desde 17/10 corrigir a
+  // cidade é mexer o PONTO: o Nominatim (dublado) diz que o ponto novo cai em
+  // outra cidade.
+  it("corrigir o ponto pra outra cidade: vai pra próxima pergunta no endereço NOVO, que a porta devolveu", async () => {
+    await lugarNovo();
+    const doc = JSON.parse(docComCidade(S, NOME, CIDADE));
+    doc.trajeto.waypoints[0] = { ...doc.trajeto.waypoints[0], lat: -8.42, lng: -36.21 };
+    await salvarRascunho(cliente, S, JSON.stringify(doc), 2);
+    const { chamadas, reload, assign } = await comRotaDeVerdade();
+    const P = "trajeto.waypoints.0.lat";
+    await telaDe(P);
+    nominatimDeTeste.ponto = { cidade: "Cidade Marcador Dois" };
+    tocar(P, 200, 120);
+    expect(salvarDe(P)!.disabled).toBe(false);
+    fireEvent.click(salvarDe(P)!);
+    const novo = "lugar-marcador-um-cidade-marcador-dois";
+    expect(S, "a premissa: o rascunho sai de onde estava").not.toBe(novo);
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(novo, posDe(P) + 1)));
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(reload).not.toHaveBeenCalled();
+    expect(chamadas[0].corpo).toMatchObject({ slug: S, ponto: 0 });
+    expect(await lerRascunho(cliente, S)).toBeNull();
+    expect(JSON.parse((await lerRascunho(cliente, novo))!.doc).cidade).toBe("Cidade Marcador Dois");
   });
 
   it("gravado, a pergunta volta com o pin no ponto dele, e sem buscar cidade nenhuma", async () => {

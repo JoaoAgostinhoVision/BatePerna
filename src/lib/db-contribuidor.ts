@@ -107,8 +107,9 @@ const ENDERECO_LIVRE = `NOT EXISTS (SELECT 1 FROM ficha_versoes WHERE ficha_slug
  *  O formato é `rascunho_` + 32 dígitos hexadecimais (`ehChaveDeRascunho`). O
  *  `_` é o ponto: todo endereço sai de `slugDoNome` (só `[a-z0-9-]`) ou da
  *  semente (o mesmo formato), então a chave nunca coincide com um endereço —
- *  nem de lugar, nem de rascunho que já tem cidade (cuja chave, no painel,
- *  passa a ser o endereço), nem antigo — e as portas que conferem "endereço
+ *  nem de lugar, nem de rascunho do painel que já se mudou pro endereço (o
+ *  ponto trouxe a cidade e o par e o endereço estavam livres; senão ele fica
+ *  numa chave destas), nem antigo — e as portas que conferem "endereço
  *  livre de rascunho" (`criarRascunho`, `moverRascunho`, `trocarEndereco`)
  *  nunca esbarram num rascunho sem cidade. Anda na URL das telas (`?slug=`)
  *  sem mudar. Provado em `tests/api/rascunho-nao-ocupa.test.ts`. */
@@ -217,10 +218,11 @@ export async function rascunhosDaPessoa(client: Client, id: string): Promise<Ras
 
 /** A régua de `regravarRascunho` (UPDATE, nunca upsert; `atualizado_em` cresce
  *  estritamente), e só no rascunho DELA, livre. A chave NUNCA muda (Task 17):
- *  renomear, ou mudar a cidade, é regravar o documento — e aí quem chama passa
- *  o `endereco` que o par novo daria, e ele tem de estar livre de lugar e de
- *  endereço antigo (`ENDERECO_LIVRE`, o aviso cedo). `null` = qualquer outro
- *  campo, sem conferir endereço. */
+ *  renomear é regravar o documento — e aí quem chama passa o `endereco` que o
+ *  par novo daria, e ele tem de estar livre de lugar e de endereço antigo
+ *  (`ENDERECO_LIVRE`, o aviso cedo). `null` = qualquer outro campo, sem
+ *  conferir endereço — inclusive o PONTO, de onde a cidade sai desde 17/10: ele
+ *  grava sempre, e quem confere o par e o endereço é o publicar dela. */
 export async function regravarRascunhoDaPessoa(
   client: Client, chave: string, doc: string, agora: number, id: string, endereco: string | null = null,
 ): Promise<boolean> {

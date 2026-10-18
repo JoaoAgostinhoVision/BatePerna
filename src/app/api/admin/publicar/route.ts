@@ -1,16 +1,17 @@
 import { lerConfigAdmin } from "@/lib/admin-config";
 import { avisarDesligado, sessaoValida, tokenDoCookie } from "@/lib/admin-guarda";
 import { getClient, lerRascunho, publicarRascunho, versaoAtual, versoesAtuais } from "@/lib/db";
-import { parOcupado } from "@/lib/par-de-lugar";
+import { parOcupado, travaDoPainel } from "@/lib/par-de-lugar";
 import { violacaoIntroduzida } from "@/lib/porta-de-coerencia";
 import {
+  ENDERECO_AINDA_NAO_SAIU,
   JA_PUBLICADO_OU_OCUPADO,
   NADA_PUBLICADO,
   RASCUNHO_MUDOU,
   RASCUNHO_SUMIU,
   prepararPublicacao,
 } from "@/lib/porta-de-publicar";
-import { cidadeDoDoc, enderecoDeLugar, nomeComCidade, nomeDoRascunho } from "@/lib/rascunho";
+import { cidadeDoDoc, enderecoDeLugar, nomeComCidade, nomeDoRascunho, slugDoNome } from "@/lib/rascunho";
 
 export const dynamic = "force-dynamic";
 
@@ -44,9 +45,10 @@ async function porQueRecusou(slug: string, atualizadoEm: number): Promise<string
  *
  *  🔴 A ORDEM: config (404) → sessão (401) → corpo (400) → o rascunho que a tela
  *  leu (409) → o DOCUMENTO (`prepararPublicacao`: obrigatórios do registro,
- *  horário, schema, `slug` de dentro — 400 com frase) → o PAR (nome, cidade)
- *  (409) → a COERÊNCIA (409) → o banco (`publicarRascunho`: 409 se o endereço
- *  já é de um lugar ou o rascunho mudou no meio). Toda recusa deixa o banco
+ *  horário, schema, `slug` de dentro — 400 com frase) → a CHAVE é o
+ *  `nome-cidade` (409) → o PAR (nome, cidade) (409) → a COERÊNCIA (409) → o
+ *  banco (`publicarRascunho`: 409 se o endereço já é de um lugar ou o
+ *  rascunho mudou no meio). Toda recusa deixa o banco
  *  como estava: o rascunho continua lá.
  *
  *  🔴 A COLISÃO DE ENDEREÇO TEM UMA PORTA SÓ, e ela é o `NOT EXISTS` do 1º passo
@@ -106,7 +108,21 @@ export async function POST(req: Request): Promise<Response> {
   if ("frase" in preparo) return recusa(400, preparo.frase);
   const { doc } = preparo;
 
-  const doPar = await parOcupado(nomeDoRascunho(doc, ""), cidadeDoDoc(doc) ?? "", { exceto: slug, nomeNovo: true });
+  // 🔴 A CHAVE TEM DE SER O `nome-cidade` DO DOCUMENTO (17/10, Review Focus 4).
+  // O rascunho do painel nasce numa chave provisória (`rascunho_<hex>`) e só se
+  // muda pro endereço quando o ponto traz a cidade e o par e o endereço estão
+  // livres; senão FICA na provisória (a saída (b), `PUT` do rascunho). Publicar
+  // dali poria no ar um lugar em `/rascunho_…`, um endereço que nada no app
+  // produz — e o `prepararPublicacao` não vê, porque o `slug` de dentro
+  // acompanha a chave. A frase diz o que impede (`travaDoPainel`), ou, se nada
+  // impede mais, que o endereço ainda não saiu. A `cidade` está lá: ela é
+  // obrigatória, e `prepararPublicacao` já conferiu.
+  const nome = nomeDoRascunho(doc, "");
+  if (slug !== slugDoNome(`${nome} ${cidadeDoDoc(doc) ?? ""}`)) {
+    return recusa(409, (await travaDoPainel(doc, slug)) ?? ENDERECO_AINDA_NAO_SAIU);
+  }
+
+  const doPar = await parOcupado(nome, cidadeDoDoc(doc) ?? "", { exceto: slug, nomeNovo: true });
   if (doPar !== null) return recusa(409, doPar);
 
   const versoes = await versoesAtuais(getClient(), { incluirOcultos: true });

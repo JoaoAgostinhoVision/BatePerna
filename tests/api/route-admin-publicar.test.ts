@@ -22,7 +22,9 @@ import {
   upsertFreshness,
   versaoAtual,
 } from "@/lib/db";
+import { novaChaveDeRascunho } from "@/lib/db-contribuidor";
 import {
+  ENDERECO_AINDA_NAO_SAIU,
   FALTA_OBRIGATORIO,
   FORMA_ERRADA,
   JA_PUBLICADO_OU_OCUPADO,
@@ -36,6 +38,7 @@ import { RASCUNHO_NAO_EXISTE_MAIS, enderecoDeLugar, gemeoSemCidade, nomeComCidad
 import { type Ficha, fichaSchema } from "@/types/ficha";
 import { base, clienteQueIntercala, salvarRascunho, semearAcervo } from "../banco";
 import { lugarMarcador } from "../lugar-marcador";
+import { nominatimDeTeste } from "../nominatim";
 import { rascunhoCompleto } from "../rascunho-completo";
 
 /** A PORTA DE PUBLICAR (Tarefa 12): `POST /api/admin/publicar {slug, atualizadoEm}`.
@@ -84,12 +87,18 @@ vi.mock("@/lib/db", async (io) => {
   const mod = await io<typeof import("@/lib/db")>();
   return { ...mod, getClient: () => daRota };
 });
+// 🔴 A suíte nunca bate no Nominatim (spec §7): o PUT do ponto 0 do rascunho
+// pergunta a cidade ao dublê.
+vi.mock("@/lib/nominatim-servico", async () => (await import("../nominatim")).dubleDoNominatim());
 
 beforeEach(async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(AGORA * 1000);
   c = createClient({ url: ":memory:" });
   daRota = c;
+  nominatimDeTeste.ponto = { cidade: CIDADE };
+  nominatimDeTeste.pontos.length = 0;
+  nominatimDeTeste.buscas.length = 0;
   await ensureSchema(c);
   await semearAcervo(c);
   // I3: a versão mais nova do banco é a de um lugar ESCONDIDO.
@@ -454,28 +463,39 @@ describe("POST /api/admin/publicar — publicar de verdade", () => {
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔴 A COLISÃO DE ENDEREÇO TEM UMA PORTA SÓ: o `NOT EXISTS` do 1º passo do batch,
 // sem filtro de `oculto` (G1, I4).
+// 🔴 17/10: a porta da CHAVE (o rascunho do painel só publica do `nome-cidade`
+// dele) vem antes do batch, então o rascunho destes casos mora em `S` — o
+// `nome-cidade` de `NOME` em `CIDADE` — e quem ocupa `S` é um lugar de OUTRO
+// par (gravado cru, sem a porta que o recusaria). Até 17/10 o rascunho
+// morava no endereço do lugar do acervo, e a porta da chave o recusaria antes
+// de o batch ser medido.
 describe("POST /api/admin/publicar — o endereço já ocupado", () => {
-  it("slug que já existe no acervo: 409 com a frase de quem ocupa, e o lugar antigo fica intacto", async () => {
-    const pedra = (await versaoAtual(c, OUTRO))!;
-    await guardar({ ...rascunhoCompleto(OUTRO, NOME, CIDADE) }, OUTRO);
-    const res = await publicar({ slug: OUTRO, atualizadoEm: ATUALIZADO });
+  const OCUPANTE = "Lugar Marcador Ocupante";
+  const DO_OCUPANTE = "Cidade Marcador Ocupante";
+
+  it("endereço que já é de um lugar: 409 com a frase de quem ocupa, e o lugar antigo fica intacto", async () => {
+    await gravarVersao(c, S, JSON.stringify(lugarMarcador(S, OCUPANTE, DO_OCUPANTE)), "painel", AGORA - 300);
+    const antes = await historico(c, S);
+    await guardar(completo());
+    const res = await publicarS();
     expect(res.status).toBe(409);
-    const doc = JSON.parse(pedra.doc) as Ficha;
-    expect(await res.text()).toBe(enderecoDeLugar(nomeComCidade(doc.trajeto.waypoints[0].nome, doc.cidade)));
-    expect(await historico(c, OUTRO)).toEqual([pedra]);
-    expect(await lerRascunho(c, OUTRO)).not.toBeNull();
+    expect(await res.text()).toBe(enderecoDeLugar(nomeComCidade(OCUPANTE, DO_OCUPANTE)));
+    expect(await historico(c, S)).toEqual(antes);
+    expect(await lerRascunho(c, S)).not.toBeNull();
   });
 
-  // 🔴 G1 — o mais grave: a leitura PÚBLICA não vê o escondido.
+  // 🔴 G1 — o mais grave: a leitura PÚBLICA não vê o escondido. (O lugar tem
+  // versões VISÍVEIS mais antigas, como a Rampa que a fixture esconde.)
   it("endereço de um lugar ESCONDIDO: 409, o histórico dele intacto, e ele continua escondido", async () => {
-    const rampa = "rampa-do-pepe";
-    const antes = await historico(c, rampa);
-    expect(antes[0].oculto, "a premissa: a Rampa está escondida").toBe(true);
-    await guardar(rascunhoCompleto(rampa, NOME, CIDADE), rampa);
-    expect((await publicar({ slug: rampa, atualizadoEm: ATUALIZADO })).status).toBe(409);
-    expect(await historico(c, rampa)).toEqual(antes);
-    expect((await versaoAtual(c, rampa))!.oculto).toBe(true);
-    expect(await lerRascunho(c, rampa)).not.toBeNull();
+    await gravarVersao(c, S, JSON.stringify(lugarMarcador(S, OCUPANTE, DO_OCUPANTE)), "painel", AGORA - 300);
+    await esconder(S, AGORA - 200);
+    const antes = await historico(c, S);
+    expect(antes.map((v) => v.oculto), "a premissa: escondido, com uma versão visível antes").toEqual([true, false]);
+    await guardar(completo());
+    expect((await publicarS()).status).toBe(409);
+    expect(await historico(c, S)).toEqual(antes);
+    expect((await versaoAtual(c, S))!.oculto).toBe(true);
+    expect(await lerRascunho(c, S)).not.toBeNull();
   });
 
   // 🔴 M6, medido: `AND oculto <> 1` dentro do `NOT EXISTS` SOBREVIVIA ao caso de
@@ -484,14 +504,13 @@ describe("POST /api/admin/publicar — o endereço já ocupado", () => {
   // ÚNICA versão é oculta: nenhuma porta de hoje o produz (gravado cru aqui), e a
   // porta do banco não pode depender disso.
   it("endereço de um lugar cuja única versão é ESCONDIDA: 409, nada muda nele", async () => {
-    const so = "lugar-marcador-so-escondido";
-    await gravarVersao(c, so, JSON.stringify(lugarMarcador(so, "Lugar Marcador Só Escondido", "Cidade Marcador Escondida")), "painel", AGORA - 300, true);
-    const antes = await historico(c, so);
+    await gravarVersao(c, S, JSON.stringify(lugarMarcador(S, "Lugar Marcador Só Escondido", "Cidade Marcador Escondida")), "painel", AGORA - 300, true);
+    const antes = await historico(c, S);
     expect(antes.map((v) => v.oculto), "a premissa: uma versão, oculta").toEqual([true]);
-    await guardar(rascunhoCompleto(so, NOME, CIDADE), so);
-    expect((await publicar({ slug: so, atualizadoEm: ATUALIZADO })).status).toBe(409);
-    expect(await historico(c, so)).toEqual(antes);
-    expect(await lerRascunho(c, so)).not.toBeNull();
+    await guardar(completo());
+    expect((await publicarS()).status).toBe(409);
+    expect(await historico(c, S)).toEqual(antes);
+    expect(await lerRascunho(c, S)).not.toBeNull();
   });
 
   // 🔴 A CORRIDA (I4, 12-N2): um lugar nasce em S DEPOIS de a rota ler tudo e
@@ -511,6 +530,46 @@ describe("POST /api/admin/publicar — o endereço já ocupado", () => {
     expect(h).toHaveLength(1);
     expect(h[0].doc).toBe(intruso);
     expect((await lerRascunho(c, S))?.atualizado_em).toBe(ATUALIZADO);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 17/10 (Review Focus 4 da rodada): A CHAVE TEM DE SER O `nome-cidade`. O
+// rascunho do painel nasce numa chave provisória, e fica nela quando o ponto
+// diz um par (ou um endereço) que já é de outro — a saída (b). Aberto pela
+// lista do painel e pelo "publicar" de lá, ele chega aqui com a chave
+// provisória; e nunca vai ao ar em `/rascunho_…`.
+describe("POST /api/admin/publicar — a chave tem de ser o nome-cidade", () => {
+  it("chave provisória nunca vai ao ar: 409 com a frase da trava, nada em ficha_versoes", async () => {
+    const gemeo = "lugar-marcador-gemeo";
+    await gravarVersao(c, gemeo, JSON.stringify(lugarMarcador(gemeo, NOME, CIDADE)), "painel", AGORA - 300);
+    const k = novaChaveDeRascunho();
+    await guardar(rascunhoCompleto(k, NOME, CIDADE), k);
+    const antes = await outros();
+    const res = await publicar({ slug: k, atualizadoEm: ATUALIZADO });
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(parDeLugar(nomeComCidade(NOME, CIDADE)));
+    expect(await historico(c, k)).toEqual([]);
+    expect(await historico(c, S)).toEqual([]);
+    expect((await lerRascunho(c, k))?.atualizado_em).toBe(ATUALIZADO);
+    expect(await outros()).toEqual(antes);
+  });
+
+  // O ocupante saiu depois do ponto (apagado, ou noutro endereço): nada impede
+  // mais, e a chave ainda não andou — a frase é a de "ainda não saiu". Vale
+  // também pra uma chave `nome-cidade` que não é a do documento.
+  it("chave provisória sem trava nenhuma: 409 ENDERECO_AINDA_NAO_SAIU", async () => {
+    for (const k of [novaChaveDeRascunho(), "lugar-marcador-publicar-cidade-marcador-velha"]) {
+      await guardar(rascunhoCompleto(k, NOME, CIDADE), k);
+      const res = await publicar({ slug: k, atualizadoEm: ATUALIZADO });
+      expect(res.status, k).toBe(409);
+      expect(await res.text(), k).toBe(ENDERECO_AINDA_NAO_SAIU);
+      expect(await historico(c, k), k).toEqual([]);
+      expect((await lerRascunho(c, k))?.atualizado_em, k).toBe(ATUALIZADO);
+      // Um de cada vez: o rascunho dele com o mesmo par seria a trava do próximo.
+      await c.execute({ sql: "DELETE FROM ficha_rascunhos WHERE slug = ?", args: [k] });
+    }
+    expect(await historico(c, S)).toEqual([]);
   });
 });
 
@@ -582,9 +641,10 @@ describe("POST /api/admin/publicar — a identidade do rascunho", () => {
   });
 
   // 🔴 M4 da revisão da Tarefa 12: o mesmo atraso, num PUT que muda a CIDADE (e
-  // por isso o endereço): `moverRascunho` recusa porque o ORIGEM sumiu, e a
-  // frase de "quem ocupa" o destino — livre — seria falsa.
-  it("um PUT de cidade atrasado, depois de publicar: 409 com a frase do rascunho que não existe mais", async () => {
+  // por isso o endereço) — desde 17/10, o PUT do PONTO, de onde a cidade sai:
+  // `moverRascunho` recusa porque o ORIGEM sumiu, e a frase de "quem ocupa" o
+  // destino — livre — seria falsa.
+  it("um PUT do ponto atrasado, que muda a cidade, depois de publicar: 409 com a frase do rascunho que não existe mais", async () => {
     await guardar(completo());
     const noAr = JSON.stringify(fichaSchema.parse(completo()));
     const g = clienteQueIntercala(c, /^(UPDATE|INSERT INTO) ficha_rascunhos\b/, async () => {
@@ -592,11 +652,12 @@ describe("POST /api/admin/publicar — a identidade do rascunho", () => {
     });
     daRota = g.cliente;
     const destino = "lugar-marcador-publicar-cidade-marcador-mudada";
+    nominatimDeTeste.ponto = { cidade: "Cidade Marcador Mudada" };
     const res = await rotaRascunho.PUT(
       new Request("http://x/api/admin/rascunho", {
         method: "PUT",
         headers: { cookie: `${COOKIE_ADMIN}=${cookieBom}` },
-        body: JSON.stringify({ slug: S, campo: "cidade", valor: "Cidade Marcador Mudada" }),
+        body: JSON.stringify({ slug: S, ponto: 0, lat: -8.2, lng: -35.3 }),
       }),
     );
     expect(g.disparos(), "o dublê nunca disparou: nada foi intercalado").toBe(1);

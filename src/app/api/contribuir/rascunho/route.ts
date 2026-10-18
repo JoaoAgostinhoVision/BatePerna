@@ -7,10 +7,11 @@ import {
   apagarRascunhoDaPessoa, criarRascunhoDaPessoa, estaBloqueado, lerRascunhoDaPessoa, rascunhosDaPessoa,
   regravarRascunhoDaPessoa,
 } from "@/lib/db-contribuidor";
+import { cidadeDoPonto } from "@/lib/nominatim-servico";
 import { CAMPO_DA_CIDADE, CAMPO_DO_NOME, colisaoDaMudanca, colisaoDoPar } from "@/lib/par-de-lugar";
 import { BLOQUEADA, NOME_JA_EM_USO, RASCUNHO_DELA_SUMIU, portaDaPessoa } from "@/lib/porta-da-pessoa";
 import {
-  CIDADE_VAZIA, NOME_SEM_LETRA, NOME_VAZIO, cidadeDoDoc, docDoLugarNovo,
+  CIDADE_DO_PONTO_NAO_SAIU, NOME_SEM_LETRA, NOME_VAZIO, cidadeDoDoc, docDoLugarNovo,
   docNoEndereco, nomeDoRascunho, slugDoNome,
 } from "@/lib/rascunho";
 
@@ -54,9 +55,10 @@ const bloqueada = (): Response => new Response(BLOQUEADA, { status: 403, headers
  *
  *  🔴 Task 17 (decisão do João de 13/10, "Nenhum ocupa"): nenhum rascunho
  *  recusa — nem dela, nem de outra pessoa, nem do João. O que ainda recusa AQUI,
- *  cedo, é o que já existe: o gêmeo sem cidade de um LUGAR (o par e o endereço
- *  só se conferem quando a cidade chega, no PUT) — um aviso útil; o publicar
- *  confere de novo.
+ *  cedo, é o que já existe: o gêmeo sem cidade de um LUGAR — um aviso útil; o
+ *  publicar confere de novo. O par e o endereço só existem depois que a cidade
+ *  chega com o ponto, e quem os confere é o PUBLICAR dela (o ponto grava
+ *  sempre); cedo, só o renomear de depois do ponto (`PUT`).
  *
  *  🔴 I3 da pré-auditoria: TODA colisão responde `NOME_JA_EM_USO`. A rota lê a
  *  colisão ESTRUTURADA (`colisaoDoPar`) e nunca diz QUEM ocupa: nada do painel
@@ -87,7 +89,13 @@ export async function POST(req: Request): Promise<Response> {
 
 /** RESPONDER uma pergunta dela. Três corpos, mutuamente exclusivos:
  *  `{slug, campo, valor}`, `{slug, campo, naoSei: true}`, `{slug, ponto: 0, lat, lng}`.
- *  🔴 Campo fora da lista dela é 400 ANTES de ler o banco (Review Focus 1). */
+ *  🔴 Campo fora da lista dela é 400 ANTES de ler o banco (Review Focus 1) — e
+ *  a `cidade` está fora dela desde 17/10: ela SAI DO PONTO. Gravar o ponto
+ *  pergunta ao Nominatim o município dele: não saiu, 503
+ *  `CIDADE_DO_PONTO_NAO_SAIU` e nada grava; saiu, o ponto, a chuva e a cidade
+ *  gravam SEMPRE, e o `slug` de dentro vira o `nome-cidade` — sem conferir
+ *  endereço nenhum: a colisão do par é do PUBLICAR dela, que já recusa par e
+ *  endereço (a saída (b) do João, spec §2.3.0). A chave não anda. */
 export async function PUT(req: Request): Promise<Response> {
   const agora = agoraS();
   const porta = await portaDaPessoa(agora, "gravar");
@@ -101,9 +109,7 @@ export async function PUT(req: Request): Promise<Response> {
   // texto como chegou). A página pública só confere se HÁ texto, então espaço
   // nas pontas iria pra tela, e o nome aparado é o que a colisão e o endereço
   // leem. Só de espaços vira `""`, e quem a recusa é a folha (`recusarVazio`,
-  // em `campos-da-ficha.ts`, com `CIDADE_VAZIA` pra cidade) — uma porta só,
-  // não duas em série. É isto que deixa a cidade dela, quando chega, SEMPRE
-  // com letra: o endereço que sai do par dela tem sempre o hífen do meio.
+  // em `campos-da-ficha.ts`) — uma porta só, não duas em série.
   const valor = typeof corpo.valor === "string" ? corpo.valor.trim() : corpo.valor;
   const trazCampo = "campo" in corpo || "valor" in corpo || "naoSei" in corpo;
   const trazPonto = "ponto" in corpo || "lat" in corpo || "lng" in corpo;
@@ -111,7 +117,11 @@ export async function PUT(req: Request): Promise<Response> {
 
   let mudar: (doc: string) => string;
   if (trazPonto) {
-    if (ponto !== 0 || typeof lat !== "number" || typeof lng !== "number") return new Response("", { status: 400, headers: TEXTO });
+    // Finitos: `1e999` chega como `Infinity`, e nada que não é um ponto do
+    // planeta vai ao Nominatim (`cidadeDoPonto` não confere a coordenada).
+    if (ponto !== 0 || typeof lat !== "number" || typeof lng !== "number" || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return new Response("", { status: 400, headers: TEXTO });
+    }
     mudar = (doc) => pontoNoRascunhoDaPessoa(doc, lat, lng);
   } else {
     const trazValor = "valor" in corpo;
@@ -135,21 +145,41 @@ export async function PUT(req: Request): Promise<Response> {
     return recusar400(erro);
   }
 
-  // 🔴 RENOMEAR, OU MUDAR A CIDADE, É REGRAVAR O DOCUMENTO (Task 17): a chave
-  // não anda. O `slug` de dentro acompanha o par (o endereço onde o lugar
-  // nasceria), e ele tem de estar livre de LUGAR e de endereço antigo — o aviso
-  // cedo, no mesmo UPDATE (`regravarRascunhoDaPessoa` com `endereco`).
-  // O endereço só entra quando o documento JÁ TEM cidade: antes do ponto,
-  // renomear só regrava (nada de `CIDADE_VAZIA`, nem endereço a conferir). O
-  // nome com letra vale sempre.
-  let endereco: string | null = null;
-  if (trazCampo && (campo === CAMPO_DO_NOME || campo === CAMPO_DA_CIDADE)) {
-    if (slugDoNome(nomeDoRascunho(novoDoc, "")) === "") return new Response(NOME_SEM_LETRA, { status: 400, headers: TEXTO });
+  // 🔴 O PONTO E A CIDADE QUE SAI DELE (17/10). A pergunta ao Nominatim vem
+  // DEPOIS de a folha aceitar o ponto: coordenada fora do planeta é 400 sem
+  // consultar ninguém.
+  if (trazPonto) {
+    const achou = await cidadeDoPonto(lat as number, lng as number);
+    if ("falha" in achou || slugDoNome(achou.cidade) === "") {
+      return new Response(CIDADE_DO_PONTO_NAO_SAIU, { status: 503, headers: TEXTO });
+    }
+    try {
+      novoDoc = aplicarNoRascunho(novoDoc, CAMPO_DA_CIDADE, achou.cidade);
+    } catch (erro) {
+      return recusar400(erro);
+    }
   }
-  if (trazCampo && (campo === CAMPO_DO_NOME || campo === CAMPO_DA_CIDADE) && cidadeDoDoc(novoDoc) !== undefined) {
-    if (slugDoNome(cidadeDoDoc(novoDoc) ?? "") === "") return new Response(CIDADE_VAZIA, { status: 400, headers: TEXTO });
-    endereco = slugDoNome(`${nomeDoRascunho(novoDoc, "")} ${cidadeDoDoc(novoDoc)}`);
-    novoDoc = docNoEndereco(novoDoc, endereco);
+
+  // 🔴 RENOMEAR É REGRAVAR O DOCUMENTO (Task 17): a chave não anda. O `slug` de
+  // dentro acompanha o par (o endereço onde o lugar nasceria). No RENOMEAR ele
+  // tem de estar livre de LUGAR e de endereço antigo — o aviso cedo, no mesmo
+  // UPDATE (`regravarRascunhoDaPessoa` com `endereco`): é ela escolhendo o
+  // nome, e a recusa deixa o texto na caixa. No PONTO, não (`endereco` fica
+  // `null`): o ponto grava sempre. O endereço só entra quando o documento JÁ
+  // TEM cidade com letra: antes do ponto, renomear só regrava. O nome com
+  // letra vale sempre.
+  let endereco: string | null = null;
+  const cidade = cidadeDoDoc(novoDoc);
+  const comEndereco = cidade !== undefined && slugDoNome(cidade) !== "";
+  if (trazCampo && campo === CAMPO_DO_NOME) {
+    if (slugDoNome(nomeDoRascunho(novoDoc, "")) === "") return new Response(NOME_SEM_LETRA, { status: 400, headers: TEXTO });
+    if (comEndereco) {
+      endereco = slugDoNome(`${nomeDoRascunho(novoDoc, "")} ${cidade}`);
+      novoDoc = docNoEndereco(novoDoc, endereco);
+    }
+  }
+  if (trazPonto && comEndereco && slugDoNome(nomeDoRascunho(novoDoc, "")) !== "") {
+    novoDoc = docNoEndereco(novoDoc, slugDoNome(`${nomeDoRascunho(novoDoc, "")} ${cidade}`));
   }
   if (!(await regravarRascunhoDaPessoa(getClient(), slug, novoDoc, agora, id, endereco))) {
     if (await estaBloqueado(getClient(), id)) return bloqueada();

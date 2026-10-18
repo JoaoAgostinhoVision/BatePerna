@@ -139,6 +139,28 @@ export async function quemOcupaNoPainel(endereco: string): Promise<string> {
   return enderecoDeRascunho(nomeComCidade(nomeDoRascunho(doc, endereco), cidadeDoDoc(doc)));
 }
 
+/** 🔴 O QUE IMPEDE O RASCUNHO DO PAINEL DE MORAR NO `nome-cidade` DELE — a
+ *  frase do painel, ou `null` quando nada impede (17/10, a saída (b) do João).
+ *  Gravar o ponto grava sempre o ponto e a cidade; quando o par (o nome nessa
+ *  cidade) já é de outro, ou o endereço que sairia já é de outro, o rascunho
+ *  fica numa chave provisória, e é ESTA função que diz por quê — a mesma
+ *  régua do ponto: o par com `nomeNovo: false` (o gêmeo sem cidade é da tela
+ *  do nome, spec §2.3.1), e o endereço pelas duas tabelas que `moverRascunho`
+ *  confere, com a frase de `quemOcupaNoPainel`. Sem nome ou sem cidade com
+ *  letra não há `nome-cidade` a impedir: `null`. `slug` é a chave de agora do
+ *  rascunho, fora da comparação. */
+export async function travaDoPainel(doc: string, slug: string): Promise<string | null> {
+  const nome = nomeDoRascunho(doc, "");
+  const cidade = cidadeDoDoc(doc) ?? "";
+  if (slugDoNome(nome) === "" || slugDoNome(cidade) === "") return null;
+  const doPar = await parOcupado(nome, cidade, { exceto: slug, nomeNovo: false });
+  if (doPar !== null) return doPar;
+  const destino = slugDoNome(`${nome} ${cidade}`);
+  if (destino === slug) return null;
+  const ocupado = (await versaoAtual(getClient(), destino)) !== null || (await lerRascunho(getClient(), destino)) !== null;
+  return ocupado ? quemOcupaNoPainel(destino) : null;
+}
+
 /** A FRASE DO PAINEL pra uma colisão. */
 export function fraseDoPainel(c: Colisao): string {
   if (c.semCidade) return gemeoSemCidade(c.quem);
@@ -192,12 +214,13 @@ export async function colisaoDaMudanca(
 }
 
 /** O PAR DE UMA MUDANÇA — o que os dois PUTs (rascunho e ficha no ar) chamam
- *  antes de gravar. Renomear, ou mudar a cidade, é a porta onde o par de um
- *  lugar novo se confere (o POST nasce só do nome, sem cidade): um lugar não
- *  pode virar o par de outro (11b-M3, e X4 da onda de fix). O par novo é o valor que chega e a
- *  outra metade como está no documento `atual` do próprio `slug`, que fica de
- *  fora da comparação. Qualquer outro campo, ou valor que não é texto (a folha
- *  o recusa depois): `null`. */
+ *  antes de gravar. Renomear (nos dois), ou mudar a cidade (só na ficha no
+ *  ar: no rascunho a cidade sai do ponto, e o par dele se confere ali, pela
+ *  saída (b) — `pontoComCidade` na rota do rascunho), passa por aqui: um lugar
+ *  não pode virar o par de outro (11b-M3, e X4 da onda de fix). O par novo é o
+ *  valor que chega e a outra metade como está no documento `atual` do próprio
+ *  `slug`, que fica de fora da comparação. Qualquer outro campo, ou valor que
+ *  não é texto (a folha o recusa depois): `null`. */
 export async function parDaMudanca(atual: string, slug: string, campo: unknown, valor: unknown): Promise<string | null> {
   const c = await colisaoDaMudanca(atual, slug, campo, valor, "joao");
   return c === null ? null : fraseDoPainel(c);

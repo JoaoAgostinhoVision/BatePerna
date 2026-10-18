@@ -57,9 +57,10 @@ function portasFalsas() {
 }
 
 describe("as perguntas dela", () => {
-  it("são a lista dela, na ordem da spec, e o mapa no 3º lugar", () => {
+  // 🔴 17/10: a cidade saiu (ela sai do ponto), e o mapa subiu pro 2º lugar.
+  it("são a lista dela, na ordem da spec, e o mapa no 2º lugar", () => {
     expect(ORDEM_DA_PESSOA).toEqual([
-      "trajeto.waypoints.0.nome", "cidade", "trajeto.waypoints.0.lat", "promessa", "acesso", "avisos",
+      "trajeto.waypoints.0.nome", "trajeto.waypoints.0.lat", "promessa", "acesso", "avisos",
       "custo.tag", "custo.valor", "horario", "dias",
     ]);
     for (const c of CAMPOS_DA_PESSOA) expect(ORDEM_DA_PESSOA, c).toContain(c);
@@ -223,6 +224,27 @@ describe("publicar o dela", () => {
     }));
     expect(faltam.map((a) => ({ texto: a.textContent, href: a.getAttribute("href") }))).toEqual(esperado);
     expect(container.querySelector("a[href*='/admin']")).toBeNull();
+  });
+
+  // 🔴 17/10: a cidade não é pergunta dela — sai do ponto. Quando ela falta (um
+  // rascunho com o ponto gravado antes de a cidade sair dele), o caminho é a
+  // pergunta do PONTO, na posição 2; e faltando os dois, é uma linha só.
+  it("a falta da cidade, na tela de publicar dela, leva à pergunta do ponto (posição 2)", async () => {
+    const completo = {
+      slug: SO_NOME, modos: [], promessa: "Uma promessa marcadora.", acesso: "De carro.", custo: { tag: "gratis" },
+      trajeto: { waypoints: [{ nome: "Só Nome", lat: -8.3, lng: -35.9 }] }, condicao: { coords: { lat: -8.3, lng: -35.9 } },
+    };
+    const doPonto = { texto: PERGUNTAS["trajeto.waypoints.0.lat"], href: "" };
+    for (const doc of [completo, { ...completo, trajeto: { waypoints: [{ nome: "Só Nome" }] }, condicao: {} }]) {
+      const chave = await rascunhoDe(SO_NOME, doc);
+      const { container, unmount } = render(await Publicar({ searchParams: Promise.resolve({ slug: chave }) }));
+      const faltam = [...container.querySelectorAll('[data-testid="falta"] a')];
+      expect(ORDEM_DA_PESSOA.indexOf("trajeto.waypoints.0.lat") + 1, "a premissa: o ponto é a 2ª").toBe(2);
+      expect(faltam.map((a) => ({ texto: a.textContent, href: a.getAttribute("href") }))).toEqual([
+        { ...doPonto, href: `/contribuir/novo?slug=${chave}&p=2` },
+      ]);
+      unmount();
+    }
   });
 
   it("o rascunho de OUTRA pessoa é 404", async () => {

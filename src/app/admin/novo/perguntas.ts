@@ -49,8 +49,6 @@ import type { CampoNaTela, PerguntaNaTela } from "../campos/tipos";
 export const PERGUNTAS: Readonly<Record<string, string>> = {
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   "trajeto.waypoints.0.nome": "Como você chama esse lugar, do jeito que chamaria conversando com alguém que já foi?",
-  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha (Tarefa 11b).
-  cidade: "Em que cidade fica esse lugar?",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   "trajeto.waypoints.0.lat": "Qual é a latitude e a longitude desse ponto?",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
@@ -122,7 +120,9 @@ export const PERGUNTAS: Readonly<Record<string, string>> = {
 };
 
 /** A ORDEM DA TELA: a do questionário, pelo caminho concreto (o molde do
- *  registro com o ponto `0`).
+ *  registro com o ponto `0`). Desde 17/10 o ponto é a 2ª: a cidade não é mais
+ *  pergunta (ela sai do ponto, `saiDoPonto` no registro), e a pergunta dela,
+ *  "Em que cidade fica esse lugar?", foi apagada daqui junto.
  *
  *  Os três campos que o questionário não pergunta por si (os dois números da
  *  regra que dividem a pergunta do primeiro, e a `condicao.severidade`) vão
@@ -134,7 +134,6 @@ export const PERGUNTAS: Readonly<Record<string, string>> = {
  *  ponto `0`). */
 export const ORDEM: readonly string[] = [
   "trajeto.waypoints.0.nome",
-  "cidade",
   "trajeto.waypoints.0.lat",
   "trajeto.waypoints.0.nota",
   "promessa",
@@ -163,18 +162,22 @@ export const ORDEM: readonly string[] = [
   "dias",
 ];
 
-/** QUAIS ENTRADAS DO REGISTRO SÃO PERGUNTA — derivado do registro, com a única
- *  dobra que a tela faz, e por propriedade do registro, nunca por nome: a
- *  METADE `.lng` de um ponto do trajeto mora na pergunta da `.lat`, como na
- *  ficha inteira — o questionário pergunta "a latitude e a longitude" numa
- *  frase só, e o editor de mapa grava o ponto INTEIRO num corpo só.
+/** QUAIS ENTRADAS DO REGISTRO SÃO PERGUNTA — derivado do registro, por
+ *  propriedade do registro, nunca por nome, com duas saídas:
+ *   - a única dobra que a tela faz: a METADE `.lng` de um ponto do trajeto mora
+ *     na pergunta da `.lat`, como na ficha inteira — o questionário pergunta "a
+ *     latitude e a longitude" numa frase só, e o editor de mapa grava o ponto
+ *     INTEIRO num corpo só;
+ *   - o que SAI DO PONTO (`saiDoPonto`, 17/10): a cidade, que o servidor tira do
+ *     ponto 0 marcado no mapa. Ela continua obrigatória no registro (não se
+ *     publica sem ela); só deixa de ser pergunta.
  *
  *  ⚠️ Até a Tarefa 11d havia uma segunda dobra: as folhas do bloco `horario`
  *  moravam dentro da pergunta do bloco (E2). O horário virou UMA entrada (a
  *  lista de faixas, 11c) com UM instrumento (11d), e a dobra saiu.
  *  O molde `[]` continua aqui; quem o troca pelo índice `0` é `noPonto0`. */
 export function camposQueSaoPergunta(): CampoDaFicha[] {
-  return CAMPOS_DA_FICHA.filter((c) => !(c.especie === "coord" && c.caminho.endsWith("[].lng")));
+  return CAMPOS_DA_FICHA.filter((c) => !c.saiDoPonto && !(c.especie === "coord" && c.caminho.endsWith("[].lng")));
 }
 
 /** O molde com o índice do único ponto que um lugar novo tem: o `0`, que é o

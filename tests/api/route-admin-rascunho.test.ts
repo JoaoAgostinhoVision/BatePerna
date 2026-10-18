@@ -16,11 +16,12 @@ import {
   versaoAtual,
   versoesAtuais,
 } from "@/lib/db";
+import { travaDoPainel } from "@/lib/par-de-lugar";
 import {
-  CIDADE_SEM_LETRA,
-  CIDADE_VAZIA,
+  CIDADE_DO_PONTO_NAO_SAIU,
   NOME_SEM_LETRA,
   NOME_VAZIO,
+  RASCUNHO_NAO_EXISTE_MAIS,
   SLUGS_RESERVADOS,
   ehChaveDeRascunho,
   enderecoDeLugar,
@@ -32,7 +33,9 @@ import {
 } from "@/lib/rascunho";
 import type { Ficha } from "@/types/ficha";
 import { criarRascunhoDaPessoa, novaChaveDeRascunho } from "@/lib/db-contribuidor";
-import { PESSOA_DE_TESTE, rascunhoNoBanco, salvarRascunho, semearAcervo } from "../banco";
+import { PESSOA_DE_TESTE, clienteQueIntercala, rascunhoNoBanco, salvarRascunho, semearAcervo } from "../banco";
+import { nominatimDeTeste } from "../nominatim";
+import { rascunhoCompleto } from "../rascunho-completo";
 
 /** A PORTA DO RASCUNHO (Tarefa 11): `/api/admin/rascunho`.
  *
@@ -57,21 +60,31 @@ const OUTRA_CIDADE = "Cidade Marcador Dois";
 const S = "lugar-marcador-um-cidade-marcador-um";
 
 let c: Client;
+/** O cliente que a ROTA vê — `c`, ou um que intercala (os casos de corrida). */
+let cli: Client;
 let acervo: Ficha[];
 let cookieBom: string;
 let rota: typeof import("@/app/api/admin/rascunho/route");
 
 vi.mock("@/lib/db", async (io) => {
   const mod = await io<typeof import("@/lib/db")>();
-  return { ...mod, getClient: () => c };
+  return { ...mod, getClient: () => cli };
 });
+// 🔴 A suíte nunca bate no Nominatim (spec §7): o ponto 0 pergunta a cidade ao
+// dublê, que diz `nominatimDeTeste.ponto` e anota cada pergunta em `.pontos`.
+vi.mock("@/lib/nominatim-servico", async () => (await import("../nominatim")).dubleDoNominatim());
 
 beforeEach(async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(AGORA * 1000);
   c = createClient({ url: ":memory:" });
+  cli = c;
   await ensureSchema(c);
   acervo = await semearAcervo(c);
+  // O estado do dublê mora em `globalThis` e nunca renasce: zerado a cada caso.
+  nominatimDeTeste.ponto = { cidade: CIDADE };
+  nominatimDeTeste.pontos.length = 0;
+  nominatimDeTeste.buscas.length = 0;
   vi.stubEnv("ADMIN_SENHA", SENHA);
   vi.stubEnv("ADMIN_SEGREDO", SEGREDO);
   vi.resetModules();
@@ -98,26 +111,53 @@ function pedido(metodo: string, corpo: unknown, cookie?: string, busca = ""): Re
 // foi assim que os dois casos de 401 nasceram, VERMELHOS contra uma rota certa
 // (201 e 200 onde se esperava 401) — o defeito era do teste, não da porta.
 
-/** 🔴 17/10: o lugar nasce SÓ do nome (`POST {nome}`, numa chave provisória) e a
- *  cidade só chega pelo PUT de campo `cidade` — até a Task 3 (a cidade sai do
- *  ponto) esse PUT é o único caminho, e é ele que leva o rascunho ao endereço
- *  nome + cidade. `criar` faz os dois passos, pra os casos de PAR e de ENDEREÇO
- *  (que agora moram no PUT) continuarem medindo a mesma coisa. Se o POST recusa,
- *  devolve a recusa dele; se o PUT recusa, apaga o rascunho provisório e devolve
- *  a recusa do PUT (os casos que dizem "nada nasce" olham o banco); se tudo
- *  passa, devolve 201 com o endereço, como o POST de antes. */
+/** O ponto marcado no mapa (o ponto 0, de onde sai a cidade). */
+const LAT = -8.1;
+const LNG = -35.2;
+const mudar = (corpo: unknown, cookie: string | null = cookieBom) => rota.PUT(pedido("PUT", corpo, cookie ?? undefined));
+/** O PUT do ponto 0, com o Nominatim (dublado) dizendo que ele cai em `cidade`. */
+function marcarPonto(slug: string, cidade: string = CIDADE, cookie: string | null = cookieBom): Promise<Response> {
+  nominatimDeTeste.ponto = { cidade };
+  return mudar({ slug, ponto: 0, lat: LAT, lng: LNG }, cookie);
+}
+/** A chave provisória do rascunho que o `POST {nome}` fez nascer. */
+async function nascer(nome: string): Promise<string> {
+  const r = await rota.POST(pedido("POST", { nome }, cookieBom));
+  expect(r.status, await r.clone().text()).toBe(201);
+  return ((await r.json()) as { slug: string }).slug;
+}
+
+/** 🔴 O LUGAR NOVO POR INTEIRO, como a tela o faz desde 17/10: o `POST {nome}`
+ *  (numa chave provisória) e o PONTO 0, de onde sai a cidade (`marcarPonto`,
+ *  com o Nominatim dublado dizendo `cidade`). É o ponto que leva o rascunho ao
+ *  endereço nome + cidade, e é nele que o PAR e o ENDEREÇO se conferem.
+ *
+ *  ⚠️ O PONTO NÃO RECUSA COLISÃO (a saída (b) do João, spec §2.3.0): o ponto e
+ *  a cidade gravam, e o rascunho FICA na chave provisória. `criar` traduz esse
+ *  "ficou" no que a tela e o publicar diriam — 409 com a frase de
+ *  `travaDoPainel` — e apaga o provisório, pra os casos de PAR e de ENDEREÇO
+ *  continuarem medindo QUEM bloqueia e que nada nasce no endereço. Que o ponto
+ *  GRAVA e que o publicar TRAVA, em si, é medido em "a cidade sai do ponto".
+ *  Se o POST recusa, devolve a recusa dele; se o PUT recusa, apaga o
+ *  provisório e devolve a recusa do PUT; se o rascunho chega ao endereço,
+ *  devolve 201 com ele, como o POST de antes. */
 async function criar(nome: string, cidade: string = CIDADE, cookie: string | null = cookieBom): Promise<Response> {
   const nasceu = await rota.POST(pedido("POST", { nome }, cookie ?? undefined));
   if (nasceu.status !== 201) return nasceu;
   const { slug: chave } = (await nasceu.clone().json()) as { slug: string };
-  const res = await rota.PUT(pedido("PUT", { slug: chave, campo: "cidade", valor: cidade }, cookie ?? undefined));
+  const res = await marcarPonto(chave, cidade, cookie);
   if (res.status !== 200) {
     await apagarRascunho(c, chave);
     return res;
   }
-  return Response.json(await res.json(), { status: 201 });
+  const { slug } = (await res.json()) as { slug: string };
+  if (ehChaveDeRascunho(slug)) {
+    const trava = await travaDoPainel((await lerRascunho(c, slug))!.doc, slug);
+    await apagarRascunho(c, slug);
+    return new Response(trava ?? "", { status: 409 });
+  }
+  return Response.json({ slug }, { status: 201 });
 }
-const mudar = (corpo: unknown, cookie: string | null = cookieBom) => rota.PUT(pedido("PUT", corpo, cookie ?? undefined));
 /** O documento do rascunho que o POST {nome} fez nascer. */
 async function docDoPost(nome: string): Promise<Record<string, unknown>> {
   const r = await rota.POST(pedido("POST", { nome }, cookieBom));
@@ -202,7 +242,8 @@ describe("POST — o lugar novo nasce", () => {
   // slug que nunca existiu — `null` → `"{}"` → passava com QUALQUER código.
   // Aqui o rascunho nasce PELO CAMINHO REAL, com o acervo inteiro no banco (de
   // onde uma cópia poderia vir), e o documento é medido INTEIRO: só o que o dono
-  // disse (o nome e a cidade), a identidade (`slug`) e o `modos: []` da R3.
+  // disse (o nome — desde 17/10 a cidade só chega com o ponto), a identidade
+  // (`slug`) e o `modos: []` da R3.
   it("rascunho novo nasce VAZIO — não herda de lugar nenhum", async () => {
     expect(acervo.length, "a premissa: há lugares no banco de onde copiar").toBeGreaterThan(1);
     const doc = await docDoPost(NOME);
@@ -395,18 +436,17 @@ describe("POST — o lugar novo nasce", () => {
     }
   });
 
-  it("nome ou cidade em branco, ou sem letra nem número: 400 com a frase de cada um", async () => {
-    for (const [nome, cidade, frase] of [
-      ["", CIDADE, NOME_VAZIO],
-      ["   ", CIDADE, NOME_VAZIO],
-      ["!!! ---", CIDADE, NOME_SEM_LETRA],
-      [NOME, "", CIDADE_VAZIA],
-      [NOME, "   ", CIDADE_VAZIA],
-      [NOME, "--", CIDADE_SEM_LETRA],
+  // (A cidade não se digita desde 17/10: a que vem sem letra do Nominatim é o
+  // caso "a cidade do reverse sem letra", em "a cidade sai do ponto".)
+  it("nome em branco, ou sem letra nem número: 400 com a frase de cada um", async () => {
+    for (const [nome, frase] of [
+      ["", NOME_VAZIO],
+      ["   ", NOME_VAZIO],
+      ["!!! ---", NOME_SEM_LETRA],
     ] as const) {
-      const res = await criar(nome, cidade);
-      expect(res.status, JSON.stringify([nome, cidade])).toBe(400);
-      expect(await res.text(), JSON.stringify([nome, cidade])).toBe(frase);
+      const res = await criar(nome);
+      expect(res.status, nome).toBe(400);
+      expect(await res.text(), nome).toBe(frase);
     }
     expect(await listarRascunhos(c)).toEqual([]);
   });
@@ -563,6 +603,22 @@ describe("PUT — responder uma pergunta", () => {
     ]) {
       expect((await mudar(corpo)).status, JSON.stringify(corpo)).toBe(400);
     }
+  });
+
+  // 🔴 `cidadeDoPonto` não confere a coordenada (Task 1): `1e999` chega do
+  // `JSON.parse` como `Infinity`, que é `number`, e a porta o barra ANTES de
+  // perguntar ao Nominatim. Corpo cru: o `JSON.stringify` não escreve Infinity.
+  it("coordenada que não é finita: 400, e o Nominatim não é consultado", async () => {
+    const antes = (await lerRascunho(c, S))!.doc;
+    nominatimDeTeste.pontos.length = 0;
+    for (const corpo of [`{"slug":"${S}","ponto":0,"lat":1e999,"lng":-35}`, `{"slug":"${S}","ponto":0,"lat":-8,"lng":-1e999}`]) {
+      const res = await rota.PUT(
+        new Request("http://x/api/admin/rascunho", { method: "PUT", headers: { cookie: `${COOKIE_ADMIN}=${cookieBom}` }, body: corpo }),
+      );
+      expect(res.status, corpo).toBe(400);
+    }
+    expect(nominatimDeTeste.pontos).toEqual([]);
+    expect((await lerRascunho(c, S))!.doc).toBe(antes);
   });
 
   it("sem cookie: 401, e o rascunho não muda", async () => {
@@ -770,10 +826,11 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
   // 🔴 Y2 DA ONDA DE FIX 2, O CENÁRIO DO BRIEF: ele começa um lugar numa cidade,
   // percebe que era outra e corrige. O rascunho passa a morar no endereço da
   // cidade certa (o documento diz o mesmo endereço), e o lugar da primeira
-  // cidade — outro lugar, de mesmo nome — nasce depois.
-  it("criar em Cidade Marcador Um, corrigir pra Cidade Marcador Dois: o rascunho muda de endereço, e o de Um nasce depois", async () => {
+  // cidade — outro lugar, de mesmo nome — nasce depois. Desde 17/10 corrigir a
+  // cidade é corrigir o PONTO (§2.3): o ponto novo cai em Cidade Marcador Dois.
+  it("corrigir o ponto pra outra cidade: a chave anda pro nome-cidade novo, e o de Um nasce depois", async () => {
     expect((await criar(NOME, CIDADE)).status).toBe(201);
-    const res = await mudar({ slug: S, campo: "cidade", valor: OUTRA_CIDADE });
+    const res = await marcarPonto(S, OUTRA_CIDADE);
     expect(res.status, await res.clone().text()).toBe(200);
     const novo = "lugar-marcador-um-cidade-marcador-dois";
     expect(await res.json()).toEqual({ slug: novo });
@@ -795,7 +852,7 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
   it("mudar nome ou cidade pra um endereço que já é de outro: 409 nomeando quem ocupa, e o rascunho não sai do lugar", async () => {
     expect((await criar(NOME, CIDADE)).status).toBe(201);
     const marcador = "lugar-marcador-um-marcador";
-    const r1 = await mudar({ slug: S, campo: "cidade", valor: "Marcador" });
+    const r1 = await marcarPonto(S, "Marcador");
     expect(await r1.json()).toEqual({ slug: marcador });
 
     // contra um RASCUNHO: "Lugar Marcador" em "Cidade Marcador"
@@ -846,9 +903,11 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
     expect(await semLetra.text()).toBe(NOME_SEM_LETRA);
   });
 
-  // 🔴 11b-M3: renomear, ou mudar a cidade, de um rascunho passa pelo MESMO par.
-  // E o endereço do rascunho ACOMPANHA os dois (onda de fix 2, Y2): ainda não
-  // há link circulando, e o endereço velho seria o de um par que não é o dele.
+  // 🔴 11b-M3: renomear um rascunho passa pelo MESMO par (409). Mudar a cidade
+  // é marcar o ponto (17/10), e a colisão ali é a saída (b) ("a cidade sai do
+  // ponto"). E o endereço do rascunho ACOMPANHA os dois (onda de fix 2, Y2):
+  // ainda não há link circulando, e o endereço velho seria o de um par que não
+  // é o dele.
   describe("PUT do nome e da cidade do rascunho", () => {
     const CAMPO_NOME = "trajeto.waypoints.0.nome";
     beforeEach(async () => {
@@ -861,15 +920,6 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
       const res = await mudar({ slug: S, campo: CAMPO_NOME, valor: "lugar marcador DOIS" });
       expect(res.status).toBe(409);
       expect(await res.text()).toBe(parDeLugar(`${OUTRO_NOME} (${CIDADE})`));
-      expect((await lerRascunho(c, S))!.doc).toBe(antes);
-    });
-
-    it("mudar a cidade pra a de um lugar no ar de mesmo nome: 409, o rascunho não muda", async () => {
-      await lugarMarcador(OUTRO_SLUG, NOME, OUTRA_CIDADE);
-      const antes = (await lerRascunho(c, S))!.doc;
-      const res = await mudar({ slug: S, campo: "cidade", valor: "cidade marcador DOIS" });
-      expect(res.status).toBe(409);
-      expect(await res.text()).toBe(parDeLugar(`${NOME} (${OUTRA_CIDADE})`));
       expect((await lerRascunho(c, S))!.doc).toBe(antes);
     });
 
@@ -902,43 +952,46 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
     it("renomear pro PRÓPRIO nome, pro de um lugar de OUTRA cidade, ou pra um livre: 200, e o endereço acompanha", async () => {
       await lugarMarcador(OUTRO_SLUG, OUTRO_NOME, OUTRA_CIDADE);
       let aqui = S;
+      // `"ponto"`: o ponto 0 de novo, caindo na cidade `valor` (17/10: a cidade
+      // sai do ponto).
       const passo = async (campo: string, valor: string, esperado: string) => {
-        const res = await mudar({ slug: aqui, campo, valor });
+        const res = campo === "ponto" ? await marcarPonto(aqui, valor) : await mudar({ slug: aqui, campo, valor });
         expect(res.status, `${campo}=${valor}: ${await res.clone().text()}`).toBe(200);
         expect(await res.json(), `${campo}=${valor}`).toEqual({ slug: esperado });
         aqui = esperado;
         expect((await listarRascunhos(c)).map((r) => r.slug), `${campo}=${valor}`).toEqual([esperado]);
         expect((await docDe(esperado)).slug, `${campo}=${valor}`).toBe(esperado);
       };
-      await passo("cidade", "CIDADE marcador um", S);
+      await passo("ponto", "CIDADE marcador um", S);
       await passo(CAMPO_NOME, "Lugar Marcador UM", S);
       await passo(CAMPO_NOME, OUTRO_NOME, "lugar-marcador-dois-cidade-marcador-um");
       await passo(CAMPO_NOME, "Nome Marcador Livre", "nome-marcador-livre-cidade-marcador-um");
       expect(((await docDe(aqui)).trajeto as { waypoints: { nome: string }[] }).waypoints[0].nome).toBe(
         "Nome Marcador Livre",
       );
-      await passo("cidade", "Cidade Marcador Cinco", "nome-marcador-livre-cidade-marcador-cinco");
+      await passo("ponto", "Cidade Marcador Cinco", "nome-marcador-livre-cidade-marcador-cinco");
       expect((await docDe(aqui)).cidade).toBe("Cidade Marcador Cinco");
     });
 
-    // A cidade é obrigatória: não tem "não sei", nem no rascunho.
-    it("'não sei' na cidade: 400 com frase, e ela fica", async () => {
-      const res = await mudar({ slug: S, campo: "cidade", naoSei: true });
-      expect(res.status).toBe(400);
-      expect(await res.text()).toBe(CIDADE_VAZIA);
-      expect((await docDe(S)).cidade).toBe(CIDADE);
-    });
-
-    // 🔴 X3 DA ONDA DE FIX: a cidade sem letra nem número é recusada aqui com a
-    // MESMA frase do POST. Antes entrava, e o rascunho parava de colidir por par.
-    it("cidade sem letra nem número: 400 com a frase do POST, e ela fica", async () => {
+    // 🔴 17/10: a cidade SAI DO PONTO, e não é campo desta porta — nem valor,
+    // nem "não sei", nem vazia. 400 MUDO (como todo campo que a tela não
+    // pergunta), e nada grava. (Até 17/10 o "não sei" daqui era 400 com
+    // `CIDADE_VAZIA`, e o "--" com `CIDADE_SEM_LETRA`: as duas frases ficam pra
+    // ficha no ar, onde a cidade ainda se corrige à mão.)
+    it("PUT do campo cidade é 400, nada gravado", async () => {
       const antes = (await lerRascunho(c, S))!.doc;
-      for (const valor of ["--", " ... ", "—"]) {
-        const res = await mudar({ slug: S, campo: "cidade", valor });
-        expect(res.status, valor).toBe(400);
-        expect(await res.text(), valor).toBe(CIDADE_SEM_LETRA);
+      for (const corpo of [
+        { slug: S, campo: "cidade", valor: OUTRA_CIDADE },
+        { slug: S, campo: "cidade", valor: "--" },
+        { slug: S, campo: "cidade", valor: "" },
+        { slug: S, campo: "cidade", naoSei: true },
+      ]) {
+        const res = await mudar(corpo);
+        expect(res.status, JSON.stringify(corpo)).toBe(400);
+        expect(await res.text(), JSON.stringify(corpo)).toBe("");
       }
       expect((await lerRascunho(c, S))!.doc).toBe(antes);
+      expect(await listarRascunhos(c)).toHaveLength(1);
     });
 
     // 🔴 X2 no PUT: renomear o rascunho pro nome de um lugar SEM cidade espera a
@@ -953,13 +1006,14 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
     });
 
     // 🔴 I-N1 DA RE-REVISÃO (Y1 da onda de fix 2): a espera do gêmeo é de quando
-    // o NOME nasce ou muda. Responder a CIDADE nunca esbarra nela — só no par —,
+    // o NOME nasce ou muda. Responder a CIDADE (desde 17/10, marcar o ponto)
+    // nunca esbarra nela — só no par —,
     // nem reescrever o mesmo nome noutra grafia. Aqui o estado de antes (um lugar
     // de mesmo nome e sem cidade, gravado direto no banco) já existe, e o
     // rascunho ainda recebe a cidade e a grafia nova.
     it("com um gêmeo SEM cidade já no banco: mudar a cidade, e o nome noutra grafia, passam (200)", async () => {
       await lugarMarcador(OUTRO_SLUG, NOME);
-      const r1 = await mudar({ slug: S, campo: "cidade", valor: OUTRA_CIDADE });
+      const r1 = await marcarPonto(S, OUTRA_CIDADE);
       expect(r1.status, await r1.clone().text()).toBe(200);
       const aqui = ((await r1.json()) as { slug: string }).slug;
       expect((await docDe(aqui)).cidade).toBe(OUTRA_CIDADE);
@@ -973,6 +1027,174 @@ describe("o PAR (nome, cidade) colide, e o endereço também (Tarefa 11b)", () =
       expect(r4.status).toBe(409);
       expect(await r4.text()).toBe(gemeoSemCidade(NOME));
     });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 17/10 — A CIDADE SAI DO PONTO. Gravar o ponto 0 pergunta ao
+// Nominatim (aqui, o dublê) o município dele; não saiu, 503 e nada grava. Saiu:
+// o ponto e a cidade GRAVAM SEMPRE, e o rascunho se muda pro `nome-cidade`
+// quando o par e o endereço estão livres — senão FICA numa chave provisória
+// (a saída (b) do João, spec §2.3.0), e o publicar trava. A invariante que
+// cada caso mede: a chave de um rascunho do painel é o `nome-cidade` do
+// documento, ou uma chave provisória.
+describe("a cidade sai do ponto", () => {
+  it("o ponto grava a cidade do reverse e o rascunho se muda pro nome-cidade", async () => {
+    const k = await nascer(NOME);
+    const r = await mudar({ slug: k, ponto: 0, lat: -8.1, lng: -35.2 });
+    expect(r.status, await r.clone().text()).toBe(200);
+    expect(await r.json()).toEqual({ slug: S });
+    expect(await lerRascunho(c, k)).toBeNull();
+    expect(await docDe(S)).toMatchObject({ slug: S, cidade: CIDADE, trajeto: { waypoints: [{ nome: NOME, lat: -8.1, lng: -35.2 }] } });
+    expect(nominatimDeTeste.pontos).toEqual([{ lat: -8.1, lng: -35.2 }]);
+  });
+
+  it.each(["fora", "limite", "sem-municipio"])("cidade que não sai (%s): 503 com a frase, NADA gravado", async (falha) => {
+    const k = await nascer(NOME);
+    nominatimDeTeste.ponto = { falha };
+    const antes = await lerRascunho(c, k);
+    const r = await mudar({ slug: k, ponto: 0, lat: -8.1, lng: -35.2 });
+    expect([r.status, await r.text()]).toEqual([503, CIDADE_DO_PONTO_NAO_SAIU]);
+    expect(await lerRascunho(c, k)).toEqual(antes);
+    expect(await listarRascunhos(c)).toHaveLength(1);
+  });
+
+  // Uma cidade sem letra nem número não faria endereço (o hífen do meio). O
+  // `municipioDaResposta` só devolve texto com conteúdo, mas "--" é conteúdo:
+  // é a mesma recusa da cidade que não saiu.
+  it("a cidade do reverse sem letra nem número: 503 com a frase, NADA gravado", async () => {
+    const k = await nascer(NOME);
+    const antes = await lerRascunho(c, k);
+    const r = await marcarPonto(k, "--");
+    expect([r.status, await r.text()]).toEqual([503, CIDADE_DO_PONTO_NAO_SAIU]);
+    expect(await lerRascunho(c, k)).toEqual(antes);
+  });
+
+  // M5: o lugar de MESMO par mora num endereço que NÃO é `S` (o do nome
+  // sozinho), então `S` está LIVRE — só a regra "colidiu, nem tenta o
+  // nome-cidade" deixa o rascunho na provisória.
+  it("§2.3.0 colisão no ponto: o PONTO e a CIDADE gravam, na chave provisória", async () => {
+    await lugarMarcador(slugDoNome(NOME), NOME, CIDADE);
+    expect(await versaoAtual(c, S), "a premissa: S está livre").toBeNull();
+    const k = await nascer(NOME);
+    const r = await marcarPonto(k);
+    expect(r.status, await r.clone().text()).toBe(200);
+    expect(await r.json()).toEqual({ slug: k });
+    expect(await docDe(k)).toMatchObject({ slug: k, cidade: CIDADE, trajeto: { waypoints: [{ nome: NOME, lat: LAT, lng: LNG }] } });
+    expect(await lerRascunho(c, S), "o rascunho foi pro nome-cidade de um par que é de outro").toBeNull();
+    expect(await travaDoPainel((await lerRascunho(c, k))!.doc, k)).toBe(parDeLugar(`${NOME} (${CIDADE})`));
+  });
+
+  // A outra metade da saída (b): o publicar recusa a chave provisória, com a
+  // frase do que impede, e nada vai ao ar.
+  it("§2.3.0 colisão no ponto: e o PUBLICAR trava", async () => {
+    await lugarMarcador(slugDoNome(NOME), NOME, CIDADE);
+    const k = await nascer(NOME);
+    expect((await marcarPonto(k)).status).toBe(200);
+    const doPonto = await docDe(k);
+    await salvarRascunho(
+      c,
+      k,
+      JSON.stringify({ ...rascunhoCompleto(k, NOME, CIDADE), trajeto: doPonto.trajeto, cidade: doPonto.cidade, slug: k }),
+      AGORA,
+    );
+    const atualizadoEm = (await lerRascunho(c, k))!.atualizado_em;
+    const publicar = await import("@/app/api/admin/publicar/route");
+    const res = await publicar.POST(
+      new Request("http://x/api/admin/publicar", {
+        method: "POST",
+        headers: { cookie: `${COOKIE_ADMIN}=${cookieBom}` },
+        body: JSON.stringify({ slug: k, atualizadoEm }),
+      }),
+    );
+    expect(res.status).toBe(409);
+    expect(await res.text()).toBe(parDeLugar(`${NOME} (${CIDADE})`));
+    expect(await historico(c, k)).toEqual([]);
+    expect(await historico(c, S)).toEqual([]);
+    expect((await lerRascunho(c, k))?.atualizado_em).toBe(atualizadoEm);
+  });
+
+  // A fronteira entre o nome e a cidade que anda: o par é OUTRO, e o endereço
+  // que sairia já é de um lugar. `moverRascunho` recusa, e o rascunho fica.
+  it("endereço de um lugar de OUTRO par (a fronteira): o ponto grava e fica na provisória", async () => {
+    await lugarMarcador(S, "Lugar Marcador Um Cidade", "Marcador Um");
+    const h0 = await historico(c, S);
+    const k = await nascer(NOME);
+    const r = await marcarPonto(k);
+    expect(r.status, await r.clone().text()).toBe(200);
+    expect(await r.json()).toEqual({ slug: k });
+    expect((await docDe(k)).cidade).toBe(CIDADE);
+    expect(await travaDoPainel((await lerRascunho(c, k))!.doc, k)).toBe(enderecoDeLugar("Lugar Marcador Um Cidade (Marcador Um)"));
+    expect(await historico(c, S)).toEqual(h0);
+  });
+
+  // M6: o rascunho já morava no `nome-cidade` (S), e o ponto corrigido cai numa
+  // cidade onde o par é de outro. Ficar em S deixaria a chave dizendo a cidade
+  // velha: ele vai pra uma provisória NOVA — e não pro nome-cidade novo.
+  it("corrigir o ponto pra uma cidade onde o par colide: sai do nome-cidade velho pra uma provisória", async () => {
+    expect((await criar(NOME)).status).toBe(201);
+    await lugarMarcador("marcador-par-noutra-cidade", NOME, OUTRA_CIDADE);
+    const r = await marcarPonto(S, OUTRA_CIDADE);
+    expect(r.status, await r.clone().text()).toBe(200);
+    const { slug: nova } = (await r.json()) as { slug: string };
+    expect(ehChaveDeRascunho(nova), nova).toBe(true);
+    expect(await lerRascunho(c, S)).toBeNull();
+    expect(await lerRascunho(c, "lugar-marcador-um-cidade-marcador-dois")).toBeNull();
+    expect(await docDe(nova)).toMatchObject({ slug: nova, cidade: OUTRA_CIDADE });
+    expect(await listarRascunhos(c)).toHaveLength(1);
+  });
+
+  // §2.3.2: o rascunho nascido do jeito antigo (cidade digitada, chave
+  // nome-cidade). Gravar o ponto refaz a cidade, e a chave anda junto.
+  it("§2.3.2 rascunho antigo (cidade digitada, chave nome-cidade): o ponto refaz a cidade", async () => {
+    const velho = "lugar-marcador-um-cidade-marcador-velha";
+    await salvarRascunho(c, velho, JSON.stringify({ slug: velho, modos: [], cidade: "Cidade Marcador Velha", trajeto: { waypoints: [{ nome: NOME }] } }), AGORA - 10);
+    const r = await marcarPonto(velho);
+    expect(r.status, await r.clone().text()).toBe(200);
+    expect(await r.json()).toEqual({ slug: S });
+    expect(await lerRascunho(c, velho)).toBeNull();
+    expect(await docDe(S)).toMatchObject({ slug: S, cidade: CIDADE, trajeto: { waypoints: [{ nome: NOME, lat: LAT, lng: LNG }] } });
+  });
+
+  // Review Focus 1: o duplo toque no Salvar com o pin mexido — o segundo cai no
+  // limite de 1/s. Nada grava, e o primeiro fica como estava.
+  it("o segundo ponto no mesmo segundo (limite): 503 e o primeiro intacto", async () => {
+    const k = await nascer(NOME);
+    expect(await (await marcarPonto(k)).json()).toEqual({ slug: S });
+    const primeiro = await lerRascunho(c, S);
+    nominatimDeTeste.ponto = { falha: "limite" };
+    const r = await mudar({ slug: S, ponto: 0, lat: -8.2, lng: -35.3 });
+    expect([r.status, await r.text()]).toEqual([503, CIDADE_DO_PONTO_NAO_SAIU]);
+    expect(await lerRascunho(c, S)).toEqual(primeiro);
+    expect(await listarRascunhos(c)).toHaveLength(1);
+  });
+
+  // M10: só o ponto 0 é o lugar. A coordenada da chuva e um ponto a mais do
+  // trajeto gravam sem perguntar a cidade a ninguém.
+  it("o condicao.coords não consulta o reverse", async () => {
+    const k = await nascer(NOME);
+    expect((await mudar({ slug: k, campo: "condicao.coords", valor: { lat: -8.1, lng: -35.2 } })).status).toBe(200);
+    const dois = "marcador-rascunho-de-dois-pontos";
+    await salvarRascunho(c, dois, JSON.stringify({ slug: dois, modos: [], trajeto: { waypoints: [{ nome: NOME }, { nome: "Ponto Marcador Dois" }] } }), AGORA);
+    const p1 = await mudar({ slug: dois, ponto: 1, lat: -8.3, lng: -35.4 });
+    expect(p1.status, await p1.clone().text()).toBe(200);
+    expect(nominatimDeTeste.pontos).toEqual([]);
+    expect(await docDe(k)).not.toHaveProperty("cidade");
+    expect(await docDe(dois)).not.toHaveProperty("cidade");
+  });
+
+  // Entre a leitura e a mudança de chave, o rascunho foi publicado, apagado ou
+  // movido noutra aba: 409 com a frase, e nenhum rascunho renasce.
+  it("o rascunho que sumiu no meio do ponto: 409 RASCUNHO_NAO_EXISTE_MAIS, nada renasce", async () => {
+    const k = await nascer(NOME);
+    const corrida = clienteQueIntercala(c, /^UPDATE ficha_rascunhos/, async () => {
+      await apagarRascunho(c, k);
+    });
+    cli = corrida.cliente;
+    const r = await marcarPonto(k);
+    expect(corrida.disparos(), "o dublê não disparou: o teste mediu o vazio").toBe(1);
+    expect([r.status, await r.text()]).toEqual([409, RASCUNHO_NAO_EXISTE_MAIS]);
+    expect(await listarRascunhos(c)).toEqual([]);
   });
 });
 

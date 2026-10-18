@@ -19,10 +19,12 @@ import {
   enderecoOcupadoPorLugar,
   enderecoOcupadoPorRascunho,
 } from "@/lib/endereco";
-import { enderecoDeLugar } from "@/lib/rascunho";
+import { travaDoPainel } from "@/lib/par-de-lugar";
+import { ehChaveDeRascunho, enderecoDeLugar } from "@/lib/rascunho";
 import { criarRascunhoDaPessoa } from "@/lib/db-contribuidor";
 import { PESSOA_DE_TESTE, rascunhoNoBanco, semearAcervo, base, comBaseAtual } from "../banco";
 import { lugarMarcador } from "../lugar-marcador";
+import { nominatimDeTeste } from "../nominatim";
 
 // Molde: `tests/api/route-admin-visibilidade.test.ts` — `Request` à mão, sessão
 // de verdade, acervo do BANCO. 🔴 ASSERÇÃO DUPLA: o código da resposta E o banco.
@@ -58,7 +60,13 @@ vi.mock("@/lib/db", async (io) => {
   };
 });
 
+// 🔴 A suíte nunca bate no Nominatim (spec §7): o ponto 0 do rascunho pergunta
+// a cidade ao dublê.
+vi.mock("@/lib/nominatim-servico", async () => (await import("../nominatim")).dubleDoNominatim());
+
 beforeEach(async () => {
+  nominatimDeTeste.pontos.length = 0;
+  nominatimDeTeste.buscas.length = 0;
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(AGORA * 1000);
   c = createClient({ url: ":memory:" });
@@ -297,23 +305,29 @@ describe("o cenário dele: retomar o endereço velho", () => {
   it("antes da troca o lugar novo esbarra no endereço; depois, nasce nele, e o velho segue levando ao lugar corrigido", async () => {
     const { POST: criar, PUT: responder } = await import("@/app/api/admin/rascunho/route");
     const cabecas = { cookie: `${COOKIE_ADMIN}=${cookieBom}` };
-    // 17/10: o lugar nasce só do nome; a cidade chega pelo PUT (até a Task 3),
-    // e é nele que o endereço se confere. Devolve a resposta do PUT.
-    const novoLugar = async () => {
-      const nasceu = await criar(new Request("http://x/api/admin/rascunho", { method: "POST", headers: cabecas, body: JSON.stringify({ nome: "Lugar Marcador" }) }));
-      expect(nasceu.status).toBe(201);
-      const { slug } = (await nasceu.json()) as { slug: string };
-      return responder(new Request("http://x/api/admin/rascunho", { method: "PUT", headers: cabecas, body: JSON.stringify({ slug, campo: "cidade", valor: "Bom Marcador" }) }));
-    };
+    // 17/10: o lugar nasce só do nome, e a cidade sai do PONTO (o Nominatim
+    // dublado diz "Bom Marcador"): é nele que o endereço se confere.
+    nominatimDeTeste.ponto = { cidade: "Bom Marcador" };
+    const marcarPonto = (slug: string) =>
+      responder(new Request("http://x/api/admin/rascunho", { method: "PUT", headers: cabecas, body: JSON.stringify({ slug, ponto: 0, lat: -8.1, lng: -35.2 }) }));
+    const nasceu = await criar(new Request("http://x/api/admin/rascunho", { method: "POST", headers: cabecas, body: JSON.stringify({ nome: "Lugar Marcador" }) }));
+    expect(nasceu.status).toBe(201);
+    const { slug: chave } = (await nasceu.json()) as { slug: string };
 
-    const antes = await novoLugar();
-    expect(antes.status, "o endereço ainda é do lugar corrigido").toBe(409);
-    // A frase diz a saída que agora existe (M7): trocar o endereço do outro.
-    expect(await antes.text()).toBe(enderecoDeLugar("Lugar Marcador (Outra Marcadora)"));
+    // O endereço ainda é do lugar corrigido: o ponto grava (a saída (b)) e o
+    // rascunho fica na chave provisória — e o que a tela diz é a saída que
+    // agora existe (M7): trocar o endereço do outro.
+    const antes = await marcarPonto(chave);
+    expect(antes.status, await antes.clone().text()).toBe(200);
+    expect(await antes.json(), "o endereço ainda é do lugar corrigido").toEqual({ slug: chave });
+    expect(ehChaveDeRascunho(chave)).toBe(true);
+    const doc = (await rascunhoNoBanco(c, chave))!.doc;
+    expect(await travaDoPainel(doc, chave)).toBe(enderecoDeLugar("Lugar Marcador (Outra Marcadora)"));
 
     expect((await POST(pedido({ slug: A }))).status).toBe(200);
 
-    const depois = await novoLugar();
+    // Depois da troca, o mesmo rascunho, com o ponto salvo de novo, se muda pro endereço.
+    const depois = await marcarPonto(chave);
     expect(depois.status, await depois.clone().text()).toBe(200);
     expect(await depois.json()).toEqual({ slug: A });
     // Enquanto é rascunho, o endereço velho continua levando ao lugar corrigido.

@@ -111,6 +111,15 @@ export const enderecoDeRascunho = (quem: string): string =>
 export const RASCUNHO_NAO_EXISTE_MAIS =
   "Nada foi gravado: este rascunho não está mais neste endereço. Ele foi publicado, apagado, ou mudou de nome ou de cidade: volte pela lista do painel.";
 
+/** A recusa dos dois PUTs do ponto (painel e quem usa) quando o servidor não
+ *  conseguiu a cidade do ponto 0 pelo Nominatim (spec §2.2): fora do ar, a vez
+ *  de 1 consulta por segundo já tomada, ou o ponto sem município (no mar). Uma
+ *  frase pras três — a saída é a mesma: tentar de novo, ou mexer o ponto. O
+ *  ponto NÃO grava: num lugar novo, sem cidade não há endereço. 503. */
+// PENDENTE: redação minha, o João ainda não leu
+export const CIDADE_DO_PONTO_NAO_SAIU =
+  "Nada foi gravado: não consegui achar a cidade deste ponto. Tente de novo daqui a pouco, ou mexa o ponto.";
+
 /** O DOCUMENTO COM QUE UM RASCUNHO NASCE — e é tudo o que ele tem.
  *
  *  🔴 NADA É PRÉ-PREENCHIDO (spec §4.4): nenhum campo vem de outro lugar, de
@@ -139,9 +148,10 @@ export function ehChaveDeRascunho(slug: string): boolean {
 }
 
 /** O documento de um rascunho com o `slug` de dentro trocado pelo endereço
- *  novo — o endereço do rascunho acompanha o nome e a cidade (onda de fix 2 da
- *  11b), e o documento não pode dizer um endereço e morar noutro. A chave
- *  continua onde estava (o espalhamento mantém a ordem). */
+ *  novo — o endereço do rascunho acompanha o nome e a cidade do PONTO (onda de
+ *  fix 2 da 11b; desde 17/10 a cidade sai do ponto), e o documento não pode
+ *  dizer um endereço e morar noutro. A chave continua onde estava (o
+ *  espalhamento mantém a ordem). */
 export function docNoEndereco(doc: string, slug: string): string {
   return JSON.stringify({ ...(JSON.parse(doc) as Record<string, unknown>), slug });
 }
@@ -166,8 +176,9 @@ export function nomeDoRascunho(doc: string, slug: string): string {
 /** A CIDADE de qualquer documento de lugar, ou `undefined` — documento que não
  *  abre, ou sem cidade. Ausente é silêncio: os lugares que nasceram antes da
  *  Tarefa 11b não têm cidade até o dono respondê-la. (Cidade EM BRANCO não
- *  chega a documento nenhum: o POST e a caixa vazia de toda porta de escrita a
- *  recusam antes — por isso não há ramo pra ela aqui.) */
+ *  chega a documento nenhum: a porta do ponto, de onde ela sai desde 17/10, e
+ *  a caixa vazia de toda porta de escrita a recusam antes — por isso não há
+ *  ramo pra ela aqui.) */
 export function cidadeDoDoc(doc: string): string | undefined {
   try {
     const cidade = (JSON.parse(doc) as { cidade?: unknown }).cidade;
