@@ -2,7 +2,28 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 18/10, NOITE: "cidade do ponto" NO AR (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 18/10, MADRUGADA: rodada "horário por dia" NO MEIO (vence TUDO abaixo)
+
+**Onde está:** branch `horario-por-dia` (NÃO mergeada, NÃO no ar). Pedido dele: *"as vezes a hora de abertura pode
+mudar dependendo do dia"* → opção 1 (grupos de dias), *"exija menos do usuário"*, desenho direto sem perguntas.
+Spec `docs/superpowers/specs/2026-10-18-horario-por-dia-design.md`, plano `docs/superpowers/plans/2026-10-18-horario-por-dia.md`.
+**Execução SDD — o livro de bordo manda:** `.superpowers/sdd/2026-10-18-horario-por-dia/progress.md` (rulings, quais
+tarefas estão `complete`, achados menores carregados). Tarefas 1, 2 (combinada: T2+T4+schema+pergunta+questionário) e
+3 COMPLETAS e revisadas. **A T5 reduzida (`task-5c-brief.md`: revisão mostra os grupos; sem `horario` o editor vira
+uma linha PENDENTE; "Seis respostas" → sete) estava com um agente quando a sessão fechou** — conferir `git log` e
+`task-5c-report.md`: com commit e relato, segue pra revisão; sem, re-despachar. Depois: T6 (tela pública: ticket com
+`linhasDoHorario`, pílula com marca curta PENDENTE, cartões com `horarioPorDia` no `aberturaDaFicha`) → revisão final
+→ **pacote de frases** (todas as PENDENTE da rodada: 13 `GRUPO_*`, `TIRE_O_HORARIO_POR_DIA_ANTES`, "Grupo", "+ outro
+grupo", "Tirar este grupo", "Os dias com outro horário", a pergunta, a seção do questionário, a linha da T5, a marca
+da pílula) → deploy SÓ com o ok dele (`npm run semear` antes de `vercel --prod --yes`) → merge no `main`.
+
+**Já no ar nesta noite (main = `8edaa9e`, GitHub em `5247a46`; main local à frente, sem push):** dias em branco = todo
+dia (`4554310`); o botão não religa enquanto a página recarrega + trava da PÁGINA inteira (`6719d70`, `8edaa9e`) —
+`dpl_91h7m5…`. O "Conferi" do Pedra do Tendo (Teixeira) ele conseguiu depois de recarregar.
+**Falta dele:** o teste logado no celular da "cidade do ponto" (lista abaixo). **Ele pediu:** ir sugerindo melhorias
+no fim de cada entrega (memória `joao-quer-sugestoes-de-melhoria`).
+
+## (anterior) 18/10, NOITE: "cidade do ponto" NO AR
 
 Ele disse *"pode sim"*. Feito: `npm run semear` (tabelas `nominatim_respostas` e `nominatim_vez` conferidas no Turso) →
 `vercel --prod --yes` = `dpl_CgGx4gHyAyZaHQqM5hkokht4R1qL` (código `a8beed3`, branch `cidade-do-ponto`). `conferir-no-ar`:
