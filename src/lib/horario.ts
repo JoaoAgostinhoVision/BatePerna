@@ -47,8 +47,11 @@ export const HHMM = /^\d{2}:\d{2}$/;
  *  fonte pro mesmo fato, então ele é IMPORTADO. */
 import { OFFSET_RECIFE_S } from "./validade";
 import {
+  DIAS,
+  diasAteAbrir,
   fechadoNoDia,
   rotuloDiaSeguinteAberto,
+  rotuloDias,
   rotuloProximoDia,
   rotuloSemana,
   diaDaSemanaRecife,
@@ -175,7 +178,26 @@ export type Agora = { minutos: number; dia: number; epochS: number };
  *  independentes: hora sem dia (Pedra Furada, Véu de Noiva), dia sem hora
  *  (Rampa do Pepê), os dois, ou nenhum. Ver o topo de `semana.ts` pra saber por
  *  que `dias` não mora dentro de `horario`. */
-export type Abertura = { horario?: Horario; dias?: readonly Dia[] };
+export type Abertura = { horario?: Horario; dias?: readonly Dia[]; porDia?: readonly GrupoDeHorario[] };
+
+/** 🔴 UM GRUPO DE DIAS COM OUTRO HORÁRIO (18/10): "sábado e domingo, 7h–12h" num
+ *  lugar que abre 8h–17h nos outros dias. `horario` e `dias` ficam EXATAMENTE
+ *  como são; o grupo só descreve a DIFERENÇA. Ver o desenho em
+ *  `docs/superpowers/specs/2026-10-18-horario-por-dia-design.md`.
+ *
+ *  ⚠️ LIMITE HONESTO: faixa que atravessa a meia-noite (20h–02h) segue a regra
+ *  de sempre — é lida com o horário do dia CORRENTE. A madrugada de sábado não
+ *  "pertence" à sexta; nenhum lugar do acervo precisa disso ainda. */
+export type GrupoDeHorario = { dias: readonly Dia[]; faixas: Horario };
+
+/** O horário DO DIA `dia` (0 = domingo … 6 = sábado): as faixas do grupo que
+ *  contém esse dia, senão o `horario` de sempre. 🔴 Toda leitura de hora passa
+ *  por aqui — `fechadoAgora`, `rotuloAbertura`, `rotuloFaixa` —, senão uma tela
+ *  diria a hora de um dia usando a de outro. */
+export function horarioDoDia(abertura: Abertura, dia: number): Horario | undefined {
+  const grupo = abertura.porDia?.find((g) => g.dias.includes(DIAS[dia]));
+  return grupo ? grupo.faixas : abertura.horario;
+}
 
 /** "17:30" → 1050. Aceita só o formato que o schema deixa entrar. */
 export function minutosDeHHMM(hhmm: string): number {
@@ -266,7 +288,7 @@ function primeiraDoDia(horario: Horario): Faixa {
 export function fechadoAgora(abertura: Abertura | undefined, agora: Agora | null): boolean {
   if (!abertura || agora === null) return false;
   return (
-    fechadoNoDia(abertura.dias, agora.dia) || fechadoNaHora(abertura.horario, agora.minutos)
+    fechadoNoDia(abertura.dias, agora.dia) || fechadoNaHora(horarioDoDia(abertura, agora.dia), agora.minutos)
   );
 }
 
@@ -335,14 +357,23 @@ export function rotuloAbertura(abertura: Abertura, agora: Agora): string | null 
   if (abertura.dias && fechadoNoDia(abertura.dias, agora.dia)) {
     return rotuloProximoDia(abertura.dias, agora.dia);
   }
-  if (abertura.horario && fechadoNaHora(abertura.horario, agora.minutos)) {
-    const hoje = proximaAberturaHoje(abertura.horario, agora.minutos);
+  // 🔴 O horário de HOJE decide se fechou e quando reabre hoje; o do PRÓXIMO dia
+  // aberto decide a hora do "abre amanhã" — com grupos são faixas diferentes.
+  const deHoje = horarioDoDia(abertura, agora.dia);
+  if (deHoje && fechadoNaHora(deHoje, agora.minutos)) {
+    const hoje = proximaAberturaHoje(deHoje, agora.minutos);
     if (hoje) return `abre às ${rotuloHora(hoje.abre)}`;
     // 🔴 O "amanhã" OLHA `dias` desde a 11c (11c-I5): domingo 18h, num lugar de
     // sábado e domingo, "abre amanhã" era mentira — segunda está fechado.
     const dia = abertura.dias ? rotuloDiaSeguinteAberto(abertura.dias, agora.dia) : "abre amanhã";
+    if (dia === null) return null;
+    const amanha = (agora.dia + 1) % 7;
+    const proximo = abertura.dias ? (amanha + (diasAteAbrir(abertura.dias, amanha) ?? 0)) % 7 : amanha;
+    const dele = horarioDoDia(abertura, proximo);
+    // Sem faixas no dia que abre, o app CALA em vez de usar as de outro dia.
+    if (!dele || dele.length === 0) return null;
     // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha — o dia pelo nome + a hora.
-    return dia === null ? null : `${dia} às ${rotuloHora(primeiraDoDia(abertura.horario).abre)}`;
+    return `${dia} às ${rotuloHora(primeiraDoDia(dele).abre)}`;
   }
   return null;
 }
@@ -352,10 +383,11 @@ export function rotuloAbertura(abertura: Abertura, agora: Agora): string | null 
  *  fatos diferentes, e esconder um deles faria a pessoa planejar pela metade.
  *
  *  ⚠️ Sem substantivo de propósito: não diz o que fecha. Ver o topo do arquivo. */
-export function rotuloFaixa(abertura: Abertura): string {
+export function rotuloFaixa(abertura: Abertura, dia?: number): string {
   const partes: string[] = [];
   if (abertura.dias?.length) partes.push(rotuloSemana(abertura.dias));
-  const faixas = abertura.horario ?? [];
+  // Com o dia, as faixas DELE (grupo ou base); sem o dia, o base, como sempre.
+  const faixas = (dia === undefined ? abertura.horario : horarioDoDia(abertura, dia)) ?? [];
   if (faixas.length === 1) {
     partes.push(`Fecha às ${rotuloHora(faixas[0].fecha)}, abre às ${rotuloHora(faixas[0].abre)}.`);
   } else if (faixas.length > 1) {
@@ -379,6 +411,106 @@ export function rotuloFaixa(abertura: Abertura): string {
  *
  *  Recebe a ficha estruturalmente, e não o tipo `Ficha`, pra este módulo
  *  continuar sem zod — mesmo motivo escrito no topo. */
-export function aberturaDaFicha(f: { horario?: Horario; dias?: readonly Dia[] }): Abertura {
-  return { horario: f.horario, dias: f.dias };
+export function aberturaDaFicha(f: {
+  horario?: Horario;
+  dias?: readonly Dia[];
+  horarioPorDia?: readonly GrupoDeHorario[];
+}): Abertura {
+  return { horario: f.horario, dias: f.dias, porDia: f.horarioPorDia };
+}
+
+/** As linhas do horário na ficha quando há grupos: a do horário de sempre (os
+ *  dias abertos MENOS os dos grupos) e uma por grupo, cada uma com os dias por
+ *  extenso e as horas. Sem `horarioPorDia`: `[]` — a ficha segue como sempre.
+ *
+ *  Só a leitura; nenhuma tela a usa ainda. */
+export function linhasDoHorario(f: {
+  horario?: Horario;
+  dias?: readonly Dia[];
+  horarioPorDia?: readonly GrupoDeHorario[];
+}): { dias: string; faixas: string }[] {
+  const grupos = f.horarioPorDia;
+  if (!grupos || grupos.length === 0) return [];
+  const dosGrupos = new Set<Dia>(grupos.flatMap((g) => g.dias));
+  const abertos = (f.dias ?? DIAS).filter((d) => !dosGrupos.has(d));
+  const linhas: { dias: string; faixas: string }[] = [];
+  if (f.horario && abertos.length > 0) {
+    linhas.push({ dias: rotuloDias(abertos), faixas: rotuloFaixaCurta(f.horario) });
+  }
+  for (const g of grupos) linhas.push({ dias: rotuloDias(g.dias), faixas: rotuloFaixaCurta(g.faixas) });
+  return linhas;
+}
+
+/** 🔴 AS FRASES DA RECUSA DOS GRUPOS (18/10). Uma por causa, DIFERENTES entre si:
+ *  nenhuma frase serve a duas causas. */
+// PENDENTE: redação minha, o João ainda não leu
+export const GRUPO_NAO_E_LISTA = "o horário diferente é uma lista de grupos, cada um com os dias e as horas";
+// PENDENTE: redação minha, o João ainda não leu
+export const GRUPO_LISTA_VAZIA = 'o horário diferente precisa de pelo menos um grupo: se nenhum dia é diferente, use "não tem"';
+// PENDENTE: redação minha, o João ainda não leu
+export const GRUPO_MAIS_DE_TRES = "o horário diferente cabe em até 3 grupos de dias";
+// PENDENTE: redação minha, o João ainda não leu
+export const GRUPO_SEM_HORARIO = "sem o horário de sempre não dá pra dizer o que é diferente: ponha primeiro o horário";
+// PENDENTE: redação minha, o João ainda não leu
+export const GRUPO_MAL_FORMADO = "cada grupo do horário diferente tem os dias e as horas";
+// PENDENTE: redação minha, o João ainda não leu
+export const GRUPO_SEM_DIA = "cada grupo do horário diferente precisa de pelo menos um dia";
+// PENDENTE: redação minha, o João ainda não leu
+export const GRUPO_DIA_DESCONHECIDO = "um dia do horário diferente não é um dia da semana";
+// PENDENTE: redação minha, o João ainda não leu
+export const GRUPO_SEM_FAIXA = "cada grupo do horário diferente precisa de pelo menos uma faixa de horas";
+// PENDENTE: redação minha, o João ainda não leu
+export const GRUPO_DIA_REPETIDO = "um mesmo dia não pode estar em dois grupos do horário diferente";
+// PENDENTE: redação minha, o João ainda não leu
+export const GRUPO_DIA_FECHADO = "um grupo do horário diferente tem um dia em que o lugar não abre";
+// PENDENTE: redação minha, o João ainda não leu
+export const GRUPO_COBRE_TUDO = "os grupos cobrem todos os dias em que o lugar abre: o horário de sempre nunca valeria, então mude o horário de sempre";
+// PENDENTE: redação minha, o João ainda não leu
+export const GRUPO_IGUAL_AO_HORARIO = "um grupo tem as mesmas horas do horário de sempre, então não é diferente";
+
+/** A regra de escrita de `horarioPorDia` — função pura, chamada pelas portas de
+ *  ESCRITA (não pelo schema de leitura, pela razão de `problemaDasFaixas`).
+ *  `null` = válido; senão, a frase da recusa. `doc` é o documento onde o campo
+ *  vai morar (precisa do `horario` e dos `dias`).
+ *
+ *  A ordem das checagens é a da pergunta que o dono precisa responder primeiro:
+ *  forma, horário-base, cada grupo, entre grupos, contra o lugar. */
+export function problemaDosGrupos(
+  grupos: unknown,
+  doc: { horario?: unknown; dias?: unknown },
+): string | null {
+  if (!Array.isArray(grupos)) return GRUPO_NAO_E_LISTA;
+  if (grupos.length === 0) return GRUPO_LISTA_VAZIA;
+  if (grupos.length > 3) return GRUPO_MAIS_DE_TRES;
+  const base = faixasDe(doc.horario);
+  if (base === undefined) return GRUPO_SEM_HORARIO;
+
+  const vistos = new Set<string>();
+  for (const g of grupos as unknown[]) {
+    if (typeof g !== "object" || g === null || Array.isArray(g)) return GRUPO_MAL_FORMADO;
+    const { dias, faixas } = g as Record<string, unknown>;
+    if (!Array.isArray(dias) || dias.length === 0) return GRUPO_SEM_DIA;
+    if (dias.some((d) => !(DIAS as readonly unknown[]).includes(d))) return GRUPO_DIA_DESCONHECIDO;
+    if (!Array.isArray(faixas) || faixas.length === 0) return GRUPO_SEM_FAIXA;
+    const dasFaixas = problemaDasFaixas(faixas);
+    if (dasFaixas !== null) return dasFaixas;
+    for (const d of dias as string[]) {
+      if (vistos.has(d)) return GRUPO_DIA_REPETIDO;
+      vistos.add(d);
+    }
+  }
+
+  const abertos: readonly string[] = Array.isArray(doc.dias) ? (doc.dias as string[]) : DIAS;
+  if ([...vistos].some((d) => !abertos.includes(d))) return GRUPO_DIA_FECHADO;
+  if (abertos.every((d) => vistos.has(d))) return GRUPO_COBRE_TUDO;
+
+  const igual = (a: Faixa[], b: Faixa[]) => {
+    const x = naOrdemDoDia(a);
+    const y = naOrdemDoDia(b);
+    return x.length === y.length && x.every((f, i) => f.abre === y[i].abre && f.fecha === y[i].fecha);
+  };
+  for (const g of grupos as { faixas: Faixa[] }[]) {
+    if (igual(g.faixas, base)) return GRUPO_IGUAL_AO_HORARIO;
+  }
+  return null;
 }

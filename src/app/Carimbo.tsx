@@ -295,6 +295,7 @@ export default function Carimbo({
           secaRapido,
           piso,
           calendarioFechou ? abertura : undefined,
+          agora?.dia,
         )}
       </p>
       {/* 🔴 SEM MEIA-LINHA DA REGRA PADRÃO (onda de copy de 13/10): havia uma
@@ -405,6 +406,8 @@ function motivo(
    *  `undefined` em qualquer outro caso. Não é a `abertura` da ficha, e o nome
    *  é diferente de propósito: ver o bloco 🔴 do ramo `fechado` logo abaixo. */
   aberturaQueFechou?: Abertura,
+  /** O dia de agora (0–6): com horário por dia, a frase diz as horas DELE. */
+  diaDeAgora?: number,
 ) {
   // Primeiro de todos, pela mesma razão que `fechado` ganha em `faseDe`: com o
   // lugar fechado, contar da chuva é responder a pergunta errada. E a frase diz
@@ -423,7 +426,7 @@ function motivo(
   // verdadeiro é o que o DONO escreveu, e quem o desenha é o `AvisoDoDono`.
   // Incompleto é o lado certo pra errar; falso nunca é.
   if (fase === "fechado") {
-    return aberturaQueFechou ? <>{rotuloFaixa(aberturaQueFechou)}</> : null;
+    return aberturaQueFechou ? <>{rotuloFaixa(aberturaQueFechou, diaDeAgora)}</> : null;
   }
   if (fase === "conferindo") {
     return sintoma === "venceu" ? (

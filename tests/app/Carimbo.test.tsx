@@ -783,6 +783,20 @@ describe("Carimbo — a hora, e não só a chuva", () => {
     expect(container.querySelector(".decision")?.getAttribute("data-fase")).toBe("fechado");
   });
 
+  // 🔴 HORÁRIO POR DIA (18/10): sábado 13h num lugar de 8h–17h que no sábado
+  // fecha às 12h. A frase do motivo diz as horas do SÁBADO, não as da semana.
+  it("sábado 13h com grupo de sábado: o motivo diz as horas do sábado", () => {
+    const ms = Date.UTC(2027, 0, 16, 13 + 3, 0); // sábado
+    vi.setSystemTime(ms);
+    const abertura = {
+      horario: PEDRA,
+      porDia: [{ dias: ["sab" as const], faixas: [{ abre: "07:00", fecha: "12:00" }] }],
+    };
+    const { container } = montar({ abertura, calculadoEm: ms / 1000 });
+    expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+    expect(container.querySelector(".reason")?.textContent).toBe("Fecha às 12h, abre às 7h.");
+  });
+
   // O outro lado da mesma moeda, e ele não é redundante: "amanhã" e "hoje" são
   // a diferença entre perder o dia e só esperar.
   it("4h da manhã: fechado também, mas abre HOJE", () => {
