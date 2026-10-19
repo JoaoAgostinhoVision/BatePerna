@@ -293,20 +293,6 @@ export const fichaSchema = z.object({
   // Montado a partir de `DIAS`, nunca uma lista repetida aqui — e a ORDEM
   // daquele array e o indice de `Date.getUTCDay()`. Ver `src/lib/semana.ts`.
   dias: z.array(z.enum(DIAS)).min(1).optional(),
-  // O HORÁRIO DIFERENTE EM ALGUNS DIAS (18/10): até 3 grupos de dias com outras
-  // horas ("sáb e dom 7h–12h" num lugar que abre 8h–17h). `horario` e `dias`
-  // ficam como estão; o grupo só descreve a diferença. Quem lê é
-  // `horarioDoDia` (`horario.ts`).
-  //
-  // ⚠️ AQUI SÓ MORA A FORMA, pelo mesmo motivo do `horario` logo acima: as regras
-  // (dia repetido, dia que o lugar não abre, grupo igual ao base, sem `horario`)
-  // são de ESCRITA, em `problemaDosGrupos` — regra de leitura que um documento
-  // gravado não cumpra derrubaria a home.
-  horarioPorDia: z
-    .array(z.object({ dias: z.array(z.enum(DIAS)).min(1), faixas: z.array(faixaSchema).min(1).max(3) }))
-    .min(1)
-    .max(3)
-    .optional(),
 });
 
 export type Waypoint = z.infer<typeof waypointSchema>;
