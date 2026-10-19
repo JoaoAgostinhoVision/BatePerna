@@ -8,6 +8,10 @@ Ele disse *"pode sim"*. Feito: `npm run semear` (tabelas `nominatim_respostas` e
 `vercel --prod --yes` = `dpl_CgGx4gHyAyZaHQqM5hkokht4R1qL` (código `a8beed3`, branch `cidade-do-ponto`). `conferir-no-ar`:
 home + 3 fichas 200; as 2 rotas de busca 401 sem sessão (controle irmão 404); bundle tem as frases novas e 0 de "Em que cidade".
 Sem navegador nesta sessão: camada 3 NÃO feita.
+**Depois, no mesmo 18/10:** ele achou um bug — a pergunta dos dias manda "deixe sem resposta se abre todo dia", e o Salvar
+recusava a lista vazia ("Escolha uma das opções."). Conserto `4554310` (`EditorLista`: nada marcado na lista de vários
+opcional = tira a chave via `naoSei`; já ausente = não grava). Ele disse *"pode"*: semear → `vercel --prod --yes` =
+`dpl_8kAVL8Y5voHn1xGwyfcFimGF1YP9` (subiu 2× o mesmo código, inofensivo); o chunk servido tem o ramo novo.
 **NÃO provado (exige login, fica com ELE no celular):** buscar no mapa; salvar ponto e ver "Fica em: <cidade>"; a revisão com
 Corrigir; "Seguir sem salvar"; mandar um lugar pela /contribuir até publicar; o mapinha a 375 px.
 → Próximo: o teste dele no celular → merge de `painel-completo` e `cidade-do-ponto` no `main` (perguntado, sem resposta) →
