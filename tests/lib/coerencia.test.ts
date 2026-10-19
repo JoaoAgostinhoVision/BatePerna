@@ -732,6 +732,61 @@ describe("violacoesDoAcervo", () => {
     expect(v[0].frase).toContain("o horário da ficha diz 16:00");
   });
 
+  // 🔴 O HORÁRIO POR DIA (18/10). As três regras da hora passaram a olhar o
+  // `horario` E as faixas de cada grupo de `horarioPorDia`. Sem isto, uma faixa
+  // que atravessa a meia-noite dentro de um grupo passava sem o aviso que o
+  // `horario` de sempre exige, e a prosa "fecha às 12h" de um lugar com grupo
+  // até as 12h era acusada como divergente.
+  it("faixa invertida só DENTRO de um grupo é acusada, com a frase da noite", () => {
+    const f = rampa();
+    f.horario = [{ abre: "08:00", fecha: "17:00" }];
+    f.horarioPorDia = [{ dias: ["sab"], faixas: [{ abre: "20:00", fecha: "02:00" }] }];
+    const v = violacoesDoAcervo([f]).filter((x) => x.regra === "horario-invertido-sem-aviso");
+    expect(v.length, "a faixa invertida do grupo passou batida").toBe(1);
+    expect(v[0].frase).toContain("abre às 20:00 e fecha às 02:00");
+    expect(v[0].frase).toContain("noite toda");
+  });
+
+  it("faixa invertida num grupo, com a travessia dita na prosa, cala", () => {
+    const f = rampa();
+    f.horario = [{ abre: "08:00", fecha: "17:00" }];
+    f.horarioPorDia = [{ dias: ["sab"], faixas: [{ abre: "20:00", fecha: "02:00" }] }];
+    f.avisos = `${f.avisos} No sábado a festa vai pela noite.`;
+    expect(violacoesDoAcervo([f]).map((x) => x.regra)).not.toContain("horario-invertido-sem-aviso");
+  });
+
+  it("grupos com faixas normais não acusam horário invertido", () => {
+    const f = rampa();
+    f.horario = [{ abre: "08:00", fecha: "17:00" }];
+    f.horarioPorDia = [{ dias: ["sab", "dom"], faixas: [{ abre: "07:00", fecha: "12:00" }] }];
+    expect(violacoesDoAcervo([f]).map((x) => x.regra)).not.toContain("horario-invertido-sem-aviso");
+  });
+
+  it("com grupo, a prosa pode citar o fechamento do grupo; hora que não fecha nada é acusada", () => {
+    const f = rampa();
+    f.horario = [{ abre: "08:00", fecha: "17:00" }];
+    f.horarioPorDia = [{ dias: ["sab", "dom"], faixas: [{ abre: "07:00", fecha: "12:00" }] }];
+    f.avisos = `${f.avisos} O lugar fecha às 12h.`;
+    expect(violacoesDoAcervo([f]).map((x) => x.regra), "12h fecha o grupo e foi acusada").not.toContain(
+      "prosa-bate-com-hora-de-fechar",
+    );
+    const fora = rampa();
+    fora.horario = [{ abre: "08:00", fecha: "17:00" }];
+    fora.horarioPorDia = [{ dias: ["sab", "dom"], faixas: [{ abre: "07:00", fecha: "12:00" }] }];
+    fora.avisos = `${fora.avisos} O lugar fecha às 13h.`;
+    expect(
+      violacoesDoAcervo([fora]).filter((x) => x.regra === "prosa-bate-com-hora-de-fechar").length,
+      "13h não fecha nada e passou",
+    ).toBe(1);
+  });
+
+  it("a prosa que cita a hora de fechar do grupo, sem o horário de sempre, não é 'sem campo'", () => {
+    const f = rampa(); // a Rampa não tem `horario`
+    f.horarioPorDia = [{ dias: ["sab"], faixas: [{ abre: "07:00", fecha: "12:00" }] }];
+    f.avisos = `${f.avisos} O lugar fecha às 12h.`;
+    expect(violacoesDoAcervo([f]).map((x) => x.regra)).not.toContain("hora-de-fechar-sem-campo");
+  });
+
   it("um minuto de faixa já é faixa normal, e passa calado", () => {
     const f = rampa();
     f.horario = [{ abre: "08:00", fecha: "08:01" }];

@@ -126,6 +126,16 @@ const prosaDe = (f: Ficha) =>
   [f.voz, f.acesso, f.avisos, f.promessa, f.premio, f.condicao.regra_texto,
     f.discriminador?.como_ler].join(" \n ").toLowerCase();
 
+/** 🔴 TODAS AS FAIXAS QUE A FICHA DIZ, de todos os dias (18/10): as do `horario` de
+ *  sempre e as de cada grupo de `horarioPorDia`. As regras da hora comparam a
+ *  prosa e a travessia da meia-noite com ELAS, não só com o `horario` — senão a
+ *  faixa de um grupo ficava fora do alcance de regra nenhuma. Sem horário e sem
+ *  grupo: lista vazia (ausente é silêncio). */
+const faixasDaFicha = (f: Ficha) => [
+  ...(f.horario ?? []),
+  ...(f.horarioPorDia ?? []).flatMap((g) => g.faixas),
+];
+
 /** O nome do lugar como o dono o escreveu (`waypoints[0]`, O LUGAR), nunca o slug — e a cidade entre
  *  parênteses quando há (Tarefa 11b): dois lugares de mesmo nome compararem-se dizia "X e X". Sem cidade,
  *  só o nome. A `cidade` NÃO entra em `TEXTOS_QUE_DISTINGUEM`: dois lugares na mesma cidade são o normal. */
@@ -403,8 +413,9 @@ const TABELA: readonly Regra[] = [
     regra: "horario-invertido-sem-aviso",
     achar: (fichas) =>
       fichas.flatMap((f) => {
-        if (!f.horario) return []; // ausente é silêncio: ficha sem horário nunca fecha
-        const faixa = f.horario.find((x) => x.abre >= x.fecha) ?? f.horario[0]; // HH:MM: o texto ordena
+        const faixas = faixasDaFicha(f);
+        if (faixas.length === 0) return []; // ausente é silêncio: ficha sem horário nunca fecha
+        const faixa = faixas.find((x) => x.abre >= x.fecha) ?? faixas[0]; // HH:MM: o texto ordena
         const [[ah, am], [fh, fm]] = [faixa.abre, faixa.fecha].map((x) => x.split(":").map(Number));
         const abre = ah * 60 + am;
         const fecha = fh * 60 + fm;
@@ -433,7 +444,7 @@ const TABELA: readonly Regra[] = [
     achar: (fichas) =>
       fichas.flatMap((f) => {
         const citada = /fecha (?:às|as) (\d{1,2})\s*h/i.exec(prosaDe(f));
-        if (!citada || f.horario) return [];
+        if (!citada || faixasDaFicha(f).length > 0) return [];
         return [{
           slug: f.slug,
           // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
@@ -454,14 +465,15 @@ const TABELA: readonly Regra[] = [
     achar: (fichas) =>
       fichas.flatMap((f) => {
         const citada = /fecha (?:às|as) (\d{1,2})\s*h/i.exec(prosaDe(f));
-        if (!citada || !f.horario) return []; // sem campo, quem acusa é a regra de cima
-        if (f.horario.some((x) => Number(citada[1]) === Number(x.fecha.split(":")[0]))) return [];
+        const faixas = faixasDaFicha(f);
+        if (!citada || faixas.length === 0) return []; // sem campo, quem acusa é a regra de cima
+        if (faixas.some((x) => Number(citada[1]) === Number(x.fecha.split(":")[0]))) return [];
         return [{
           slug: f.slug,
           // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
           frase:
             `O texto de ${nomeDe(f)} diz que fecha às ${citada[1]}h e o horário da ficha diz ` +
-            `${f.horario[f.horario.length - 1].fecha}. As duas frases aparecem na mesma tela.`,
+            `${(f.horario ?? faixas)[(f.horario ?? faixas).length - 1].fecha}. As duas frases aparecem na mesma tela.`,
         }];
       }),
   },
