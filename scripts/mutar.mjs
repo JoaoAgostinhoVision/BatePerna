@@ -420,7 +420,7 @@ let MUTACOES = [
     titulo: "violacoesDoAcervo devolve [] sempre",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 668, fim: 668,
+      inicio: 680, fim: 680,
       espera: '  return TABELA.flatMap((r) => r.achar(fichas).map((a) => ({ regra: r.regra, ...a })));',
       novo: '  return [];',
     }],
@@ -435,7 +435,7 @@ let MUTACOES = [
     titulo: "desliga a regra do chip (chip-bate-com-preco)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 201, fim: 204,
+      inicio: 211, fim: 214,
       espera: [
         '    regra: "chip-bate-com-preco",',
         '    achar: (fichas) =>',
@@ -459,7 +459,7 @@ let MUTACOES = [
     titulo: "a regra do piso ignora a prosa",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 370, fim: 370,
+      inicio: 380, fim: 380,
       espera: '        if (estranhos.length === 0) return [];',
       novo: '        if (true) return []; // mutacao M3: regra do piso ignora a prosa',
     }],
@@ -470,7 +470,7 @@ let MUTACOES = [
     titulo: "`frase` passa a ser `regra`",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 668, fim: 668,
+      inicio: 680, fim: 680,
       espera: '  return TABELA.flatMap((r) => r.achar(fichas).map((a) => ({ regra: r.regra, ...a })));',
       novo: '  return TABELA.flatMap((r) => r.achar(fichas).map((a) => ({ regra: r.regra, ...a, frase: r.regra })));',
     }],
@@ -481,7 +481,7 @@ let MUTACOES = [
     titulo: "frase emprestada compara a ficha consigo mesma",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 289, fim: 289,
+      inicio: 299, fim: 299,
       espera: '        const k = f.secaRapido.trim().toLowerCase();',
       novo: '        const k = f.slug; // mutacao M5: chave por ficha, nunca agrupa com outra',
     }],
@@ -492,7 +492,7 @@ let MUTACOES = [
     titulo: "frase emprestada acusa o grupo inteiro (inclusive o 1º)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 293, fim: 293,
+      inicio: 303, fim: 303,
       espera: '        grupo.slice(1).map((f) => ({',
       novo: '        grupo.map((f) => ({ // mutacao M5b: acusa o grupo inteiro, inclusive o 1º',
     }],
@@ -503,7 +503,7 @@ let MUTACOES = [
     titulo: "desliga a regra do preço legível (preco-legivel-no-custo)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 165, fim: 168,
+      inicio: 175, fim: 178,
       espera: [
         '    regra: "preco-legivel-no-custo",',
         '    achar: (fichas) =>',
@@ -527,7 +527,7 @@ let MUTACOES = [
     titulo: "a regra dos dias devolve [] (dia-repetido-ou-inventado)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 544, fim: 547,
+      inicio: 556, fim: 559,
       espera: [
         '    regra: "dia-repetido-ou-inventado",',
         '    achar: (fichas) =>',
@@ -551,7 +551,7 @@ let MUTACOES = [
     titulo: "desliga o exame do limiar_mm",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 524, fim: 524,
+      inicio: 536, fim: 536,
       espera: '        if (!(r.limiar_mm > 0)) {',
       novo: '        if (false) { // mutacao M8: exame do limiar_mm desligado',
     }],
@@ -562,8 +562,8 @@ let MUTACOES = [
     titulo: "prosa-bate-com-hora-de-fechar nunca dispara",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 457, fim: 457,
-      espera: '        if (!citada || !f.horario) return []; // sem campo, quem acusa é a regra de cima',
+      inicio: 469, fim: 469,
+      espera: '        if (!citada || faixas.length === 0) return []; // sem campo, quem acusa é a regra de cima',
       novo: '        if (true) return []; // sem campo, quem acusa é a regra de cima (mutacao M9)',
     }],
     mata: [
@@ -576,7 +576,7 @@ let MUTACOES = [
     titulo: "desliga o exame do nome de dia inventado",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 558, fim: 558,
+      inicio: 570, fim: 570,
       espera: '        const inventados = f.dias.filter((d) => !DIAS.includes(d));',
       novo: '        const inventados = []; // mutacao M10: exame do dia inventado desligado',
     }],
@@ -587,7 +587,7 @@ let MUTACOES = [
     titulo: "desliga o exame do janela_passado_horas",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 486, fim: 486,
+      inicio: 498, fim: 498,
       espera: '        if (!(r.janela_passado_horas >= 0)) {',
       novo: '        if (false) { // mutacao M11: exame do janela_passado_horas desligado',
     }],
@@ -598,7 +598,7 @@ let MUTACOES = [
     titulo: "tira rotulo_escaneio dos textos que distinguem",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 150, fim: 150,
+      inicio: 160, fim: 160,
       espera: '  { campo: "rotulo_escaneio", rotulo: "a etiqueta" },',
       novo: null,
     }],
@@ -612,7 +612,7 @@ let MUTACOES = [
     titulo: "arranca a válvula de escape do horário invertido",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 412, fim: 412,
+      inicio: 423, fim: 423,
       espera: '        if (/noite|madrugada|24 ?h|vinte e quatro/.test(prosaDe(f))) return [];',
       novo: null,
     }],
@@ -623,7 +623,7 @@ let MUTACOES = [
     titulo: "tira voz dos textos que distinguem",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 147, fim: 147,
+      inicio: 157, fim: 157,
       espera: '  { campo: "voz", rotulo: "a voz" },',
       novo: null,
     }],
@@ -637,7 +637,7 @@ let MUTACOES = [
     titulo: "arranca o !custo.curto do preço legível",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 165, fim: 168,
+      inicio: 175, fim: 178,
       espera: [
         '    regra: "preco-legivel-no-custo",',
         '    achar: (fichas) =>',
@@ -660,7 +660,7 @@ let MUTACOES = [
     titulo: "restaura o `?? \"\"` e arranca a guarda do piso ausente",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 364, fim: 369,
+      inicio: 374, fim: 379,
       espera: [
         '        if (!f.piso) return []; // ausente é silêncio: ele não declarou piso nenhum',
         '        const prosa = prosaDe(f);',
@@ -684,7 +684,7 @@ let MUTACOES = [
     titulo: "arranca o guarda do secaRapido ausente",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 288, fim: 289,
+      inicio: 298, fim: 299,
       espera: [
         '        if (!f.secaRapido) continue; // ausente é silêncio: o carimbo termina antes',
         '        const k = f.secaRapido.trim().toLowerCase();',
@@ -698,7 +698,7 @@ let MUTACOES = [
     titulo: "acrescenta `acesso` aos textos que distinguem",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 146, fim: 151,
+      inicio: 156, fim: 161,
       espera: [
         'const TEXTOS_QUE_DISTINGUEM = [',
         '  { campo: "voz", rotulo: "a voz" },',
@@ -727,7 +727,7 @@ let MUTACOES = [
     titulo: "arranca o `tag !== \"pago\"` (preco-legivel-no-custo)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 165, fim: 168,
+      inicio: 175, fim: 178,
       espera: [
         '    regra: "preco-legivel-no-custo",',
         '    achar: (fichas) =>',
@@ -748,7 +748,7 @@ let MUTACOES = [
     titulo: "as regras 1 e 2 (preco/chip) deixam de ser exclusivas",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 206, fim: 208,
+      inicio: 216, fim: 218,
       espera: [
         '        if (!noValor) return []; // quem acusa isto é a regra de cima',
         '        const noCurto = f.custo.curto.match(PRECO)?.[0];',
@@ -766,7 +766,7 @@ let MUTACOES = [
     titulo: "`palavras <= 4` → `<= 5`",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 247, fim: 247,
+      inicio: 257, fim: 257,
       espera: '        if (palavras <= 4) return [];',
       novo: '        if (palavras <= 5) return []; // mutacao N6',
     }],
@@ -777,7 +777,7 @@ let MUTACOES = [
     titulo: "`abre < fecha` → `<=`",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 411, fim: 411,
+      inicio: 422, fim: 422,
       espera: '        if (abre < fecha) return [];',
       novo: '        if (abre <= fecha) return []; // mutacao N7',
     }],
@@ -789,12 +789,12 @@ let MUTACOES = [
     arquivo: COERENCIA,
     edicoes: [
       {
-        inicio: 435, fim: 435,
+        inicio: 446, fim: 446,
         espera: '        const citada = /fecha (?:às|as) (\\d{1,2})\\s*h/i.exec(prosaDe(f));',
         novo: '        const citada = /fecha às (\\d{1,2})\\s*h/i.exec(prosaDe(f)); // mutacao N8',
       },
       {
-        inicio: 456, fim: 456,
+        inicio: 467, fim: 467,
         espera: '        const citada = /fecha (?:às|as) (\\d{1,2})\\s*h/i.exec(prosaDe(f));',
         novo: '        const citada = /fecha às (\\d{1,2})\\s*h/i.exec(prosaDe(f)); // mutacao N8',
       },
@@ -806,7 +806,7 @@ let MUTACOES = [
     titulo: "reverte a frase do dia inventado pra 'não é dia da semana'",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 569, fim: 572,
+      inicio: 581, fim: 584,
       espera: [
         '            frase:',
         '              `${nomeDe(f)} tem ${inventados.map((d) => `"${d}"`).join(", ")} na lista de dias, ` +',
@@ -826,7 +826,7 @@ let MUTACOES = [
     titulo: "reverte a frase da semana inteira pra 'deixe a lista vazia'",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 601, fim: 603,
+      inicio: 613, fim: 615,
       espera: [
         '          frase:',
         '            `${nomeDe(f)} declara os sete dias da semana, o que é o mesmo que não declarar dia ` +',
@@ -845,7 +845,7 @@ let MUTACOES = [
     titulo: "colapsa a bifurcação do horário invertido (sempre 24h)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 415, fim: 415,
+      inicio: 426, fim: 426,
       espera: '          frase: abre === fecha',
       novo: '          frase: true // mutacao N11: colapsa a bifurcacao (sempre 24h)',
     }],
@@ -870,7 +870,7 @@ let MUTACOES = [
     titulo: "sempre a frase das 24h (horário invertido)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 415, fim: 415,
+      inicio: 426, fim: 426,
       espera: '          frase: abre === fecha',
       novo: '          frase: true // mutacao B1a: sempre a frase das 24h',
     }],
@@ -881,7 +881,7 @@ let MUTACOES = [
     titulo: "sempre a frase da noite (horário invertido)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 415, fim: 415,
+      inicio: 426, fim: 426,
       espera: '          frase: abre === fecha',
       novo: '          frase: false // mutacao B1b: sempre a frase da noite',
     }],
@@ -892,7 +892,7 @@ let MUTACOES = [
     titulo: "sempre o ramo ilegível do custo (preco-legivel-no-custo)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 178, fim: 178,
+      inicio: 188, fim: 188,
       espera: '          frase: f.custo.valor',
       novo: '          frase: true // mutacao B2a: sempre o ramo ilegivel',
     }],
@@ -907,7 +907,7 @@ let MUTACOES = [
     titulo: "sempre o ramo ausente do custo (preco-legivel-no-custo)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 178, fim: 178,
+      inicio: 188, fim: 188,
       espera: '          frase: f.custo.valor',
       novo: '          frase: false // mutacao B2b: sempre o ramo ausente',
     }],
@@ -922,7 +922,7 @@ let MUTACOES = [
     titulo: "sempre o ramo com número do chip (chip-bate-com-preco)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 215, fim: 215,
+      inicio: 225, fim: 225,
       espera: '          frase: noCurto',
       novo: '          frase: true // mutacao B3a: sempre o ramo com numero',
     }],
@@ -937,7 +937,7 @@ let MUTACOES = [
     titulo: "sempre o ramo sem número do chip (chip-bate-com-preco)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 215, fim: 215,
+      inicio: 225, fim: 225,
       espera: '          frase: noCurto',
       novo: '          frase: false // mutacao B3b: sempre o ramo sem numero',
     }],
@@ -959,7 +959,7 @@ let MUTACOES = [
     titulo: "desliga o teto da previsão (janela-dentro-do-provedor)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 632, fim: 632,
+      inicio: 644, fim: 644,
       espera: '        if (r.janela_previsao_horas > TETO_PREVISAO_HORAS) {',
       novo: '        if (false) { // mutacao T1: teto da previsao desligado',
     }],
@@ -973,7 +973,7 @@ let MUTACOES = [
     titulo: "desliga o teto do passado (janela-dentro-do-provedor)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 642, fim: 642,
+      inicio: 654, fim: 654,
       espera: '        if (r.janela_passado_horas > TETO_PASSADO_HORAS) {',
       novo: '        if (false) { // mutacao T2: teto do passado desligado',
     }],
@@ -984,7 +984,7 @@ let MUTACOES = [
     titulo: "borda do teto da previsão: `>` vira `>=` (recusa o teto exato)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 632, fim: 632,
+      inicio: 644, fim: 644,
       espera: '        if (r.janela_previsao_horas > TETO_PREVISAO_HORAS) {',
       novo: '        if (r.janela_previsao_horas >= TETO_PREVISAO_HORAS) { // mutacao T3',
     }],
@@ -995,7 +995,7 @@ let MUTACOES = [
     titulo: "borda do teto do passado: `>` vira `>=` (recusa o teto exato)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 642, fim: 642,
+      inicio: 654, fim: 654,
       espera: '        if (r.janela_passado_horas > TETO_PASSADO_HORAS) {',
       novo: '        if (r.janela_passado_horas >= TETO_PASSADO_HORAS) { // mutacao T4',
     }],
@@ -1006,7 +1006,7 @@ let MUTACOES = [
     titulo: "a previsão zero volta a ser recusada",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 515, fim: 515,
+      inicio: 527, fim: 527,
       espera: '        if (!(r.janela_previsao_horas >= 0)) {',
       novo: '        if (!(r.janela_previsao_horas > 0)) { // mutacao Z1: recusa a previsao zero',
     }],
@@ -1020,7 +1020,7 @@ let MUTACOES = [
     titulo: "o passado zero volta a ser recusado",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 486, fim: 486,
+      inicio: 498, fim: 498,
       espera: '        if (!(r.janela_passado_horas >= 0)) {',
       novo: '        if (!(r.janela_passado_horas > 0)) { // mutacao Z2: recusa o passado zero',
     }],
@@ -1031,7 +1031,7 @@ let MUTACOES = [
     titulo: "o par 0/0 (a regra que nunca fecha) passa",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 499, fim: 499,
+      inicio: 511, fim: 511,
       espera: '        if (r.janela_passado_horas === 0 && !(r.janela_previsao_horas > 0)) {',
       novo: '        if (false) { // mutacao Z3: o par 0/0 passa',
     }],
@@ -1046,7 +1046,7 @@ let MUTACOES = [
     titulo: "o par só acusa com a previsão EXATAMENTE zero (esquece a negativa)",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 499, fim: 499,
+      inicio: 511, fim: 511,
       espera: '        if (r.janela_passado_horas === 0 && !(r.janela_previsao_horas > 0)) {',
       novo: '        if (r.janela_passado_horas === 0 && r.janela_previsao_horas === 0) { // mutacao Z4',
     }],
@@ -1223,7 +1223,7 @@ let CONTROLES = [
     titulo: "CONTROLE: mutação que morre de verdade, com `mata` FANTASMA",
     arquivo: COERENCIA,
     edicoes: [{
-      inicio: 668, fim: 668,
+      inicio: 680, fim: 680,
       espera: "  return TABELA.flatMap((r) => r.achar(fichas).map((a) => ({ regra: r.regra, ...a })));",
       novo: "  return [];",
     }],
@@ -1549,13 +1549,13 @@ const CONTROLES_ESPERADOS = {
 };
 
 const AUTOTESTES_ESPERADOS = {
-  "mata-frouxo": "1|[PORTAO:ESPECIFICIDADE]|mata=\"a\"|args=[]|troca=668-668→\"  return [];\"|campos=(nenhum)",
-  "mata-fantasma": "1|[PORTAO:ESPECIFICIDADE]|mata=\"ESTE TESTE NUNCA EXISTIU\"|args=[]|troca=668-668→\"  return [];\"|campos=(nenhum)",
-  "mata-ausente": "1|[PORTAO:SEM-MATA]|mata=(sem entrada)|args=[]|troca=668-668→\"  return [];\"|campos=(nenhum)",
-  "campo-de-controle": "1|[PORTAO:CAMPOS-DE-CONTROLE]|mata=\"a\"|args=[]|troca=668-668→\"  return [];\"|campos=own:mataFantasmaDeProposito",
-  "piso-por-entrada": "1|[PORTAO:CAMPOS-DE-CONTROLE]|mata=\"cada uma das 14 regras dispara na quebra escrita pra ela\"|args=[]|troca=668-668→\"  return [];\"|campos=own:piso,own:arquivosDeTeste",
-  "mata-lista-vazia": "1|[PORTAO:SEM-MATA]|mata=[]|args=[]|troca=668-668→\"  return [];\"|campos=(nenhum)",
-  "campo-de-controle-herdado": "1|[PORTAO:CAMPOS-DE-CONTROLE]|mata=\"o chip que não bate com o preço é pego\"|args=[]|troca=668-668→\"  return [];\"|campos=proto:piso",
+  "mata-frouxo": "1|[PORTAO:ESPECIFICIDADE]|mata=\"a\"|args=[]|troca=680-680→\"  return [];\"|campos=(nenhum)",
+  "mata-fantasma": "1|[PORTAO:ESPECIFICIDADE]|mata=\"ESTE TESTE NUNCA EXISTIU\"|args=[]|troca=680-680→\"  return [];\"|campos=(nenhum)",
+  "mata-ausente": "1|[PORTAO:SEM-MATA]|mata=(sem entrada)|args=[]|troca=680-680→\"  return [];\"|campos=(nenhum)",
+  "campo-de-controle": "1|[PORTAO:CAMPOS-DE-CONTROLE]|mata=\"a\"|args=[]|troca=680-680→\"  return [];\"|campos=own:mataFantasmaDeProposito",
+  "piso-por-entrada": "1|[PORTAO:CAMPOS-DE-CONTROLE]|mata=\"cada uma das 14 regras dispara na quebra escrita pra ela\"|args=[]|troca=680-680→\"  return [];\"|campos=own:piso,own:arquivosDeTeste",
+  "mata-lista-vazia": "1|[PORTAO:SEM-MATA]|mata=[]|args=[]|troca=680-680→\"  return [];\"|campos=(nenhum)",
+  "campo-de-controle-herdado": "1|[PORTAO:CAMPOS-DE-CONTROLE]|mata=\"o chip que não bate com o preço é pego\"|args=[]|troca=680-680→\"  return [];\"|campos=proto:piso",
   "inventario-mutacoes": "1|[PORTAO:INVENTARIO]|mata=(sem entrada)|args=[\"--sabotar=mutacoes\"]|troca=(sem entrada)|campos=(sem entrada)",
   "inventario-controles": "1|[PORTAO:INVENTARIO]|mata=(sem entrada)|args=[\"--sabotar=controles\"]|troca=(sem entrada)|campos=(sem entrada)",
   "inventario-autotestes": "1|[PORTAO:INVENTARIO]|mata=(sem entrada)|args=[\"--sabotar=autotestes\"]|troca=(sem entrada)|campos=(sem entrada)",
@@ -1564,7 +1564,7 @@ const AUTOTESTES_ESPERADOS = {
   "veredito-sem-diff": "2|[VEREDITO:CATEGORIA-DE-FALHA]|mata=\"o chip que não bate com o preço é pego\"|args=[]|troca=1-1→\"import { PISOS } from \\\"@/lib/piso\\\";\"|campos=(nenhum)",
   "veredito-sem-medicao": "2|[VEREDITO:CATEGORIA-DE-FALHA]|mata=\"o chip que não bate com o preço é pego\"|args=[]|troca=1-1→\"import { PISOS } from \\\"@/lib/piso\\\"; ((((\"|campos=(nenhum)",
   "guarda-de-fora": "1|[PORTAO:GUARDA-DE-FORA]|mata=(sem entrada)|args=[\"--sabotar=guarda\"]|troca=(sem entrada)|campos=(sem entrada)",
-  "veredito-mata-mente": "2|[VEREDITO:MATA-NAO-MORREU]|mata=\"a ficha sozinha, com a frase dela mesma, não é acusada de emprestar\"|args=[]|troca=668-668→\"  return [];\"|campos=(nenhum)",
+  "veredito-mata-mente": "2|[VEREDITO:MATA-NAO-MORREU]|mata=\"a ficha sozinha, com a frase dela mesma, não é acusada de emprestar\"|args=[]|troca=680-680→\"  return [];\"|campos=(nenhum)",
 };
 
 /** 🔴 A SEXTA SABOTAGEM, e ela é a razão desta lista existir: `MUTACOES` era a
@@ -1583,48 +1583,48 @@ const AUTOTESTES_ESPERADOS = {
  *  última camada de dado deste arquivo. Apagar uma entrada bate aqui; trocar o
  *  teste que ela declara matar também. */
 const MUTACOES_ESPERADAS = {
-  "M1": "src/lib/coerencia.ts@668-668→\"  return [];\" · o chip que não bate com o preço é pego + um nome de dia que não existe é pego, mesmo sem repetição nenhuma + a janela de chuva é conferida nos TRÊS números, um a um",
-  "M2": "src/lib/coerencia.ts@201-204→\"    regra: \\\"chip-bate-com-preco\\\",\\n    achar: (fichas) =>\\n      fichas.flatMap((f) => {\\n        if (true) return []; // ausente é silêncio (mutacao M2: regra desligada)\" · cada uma das 14 regras dispara na quebra escrita pra ela + o chip que não bate com o preço é pego",
-  "M3": "src/lib/coerencia.ts@370-370→\"        if (true) return []; // mutacao M3: regra do piso ignora a prosa\" · a prosa que nomeia piso diferente do campo é pega",
-  "M4": "src/lib/coerencia.ts@668-668→\"  return TABELA.flatMap((r) => r.achar(fichas).map((a) => ({ regra: r.regra, ...a, frase: r.regra })));\" · a frase da violação nomeia o lugar e não é o identificador da regra",
-  "M5": "src/lib/coerencia.ts@289-289→\"        const k = f.slug; // mutacao M5: chave por ficha, nunca agrupa com outra\" · uma ficha que empresta a frase de outra é pega",
-  "M5b": "src/lib/coerencia.ts@293-293→\"        grupo.map((f) => ({ // mutacao M5b: acusa o grupo inteiro, inclusive o 1º\" · a ficha sozinha, com a frase dela mesma, não é acusada de emprestar",
-  "M6": "src/lib/coerencia.ts@165-168→\"    regra: \\\"preco-legivel-no-custo\\\",\\n    achar: (fichas) =>\\n      fichas.flatMap((f) => {\\n        if (true) return []; // mutacao M6: regra desligada\" · cada uma das 14 regras dispara na quebra escrita pra ela + custo sem preço legível dá UM erro, não dois",
-  "M7": "src/lib/coerencia.ts@544-547→\"    regra: \\\"dia-repetido-ou-inventado\\\",\\n    achar: (fichas) =>\\n      fichas.flatMap((f) => {\\n        if (true) return []; // mutacao M7: regra desligada\" · cada uma das 14 regras dispara na quebra escrita pra ela + um nome de dia que não existe é pego, mesmo sem repetição nenhuma",
-  "M8": "src/lib/coerencia.ts@524-524→\"        if (false) { // mutacao M8: exame do limiar_mm desligado\" · a janela de chuva é conferida nos TRÊS números, um a um",
-  "M9": "src/lib/coerencia.ts@457-457→\"        if (true) return []; // sem campo, quem acusa é a regra de cima (mutacao M9)\" · cada uma das 14 regras dispara na quebra escrita pra ela + a hora citada na prosa é lida com acento e sem acento",
-  "M10": "src/lib/coerencia.ts@558-558→\"        const inventados = []; // mutacao M10: exame do dia inventado desligado\" · um nome de dia que não existe é pego, mesmo sem repetição nenhuma",
-  "M11": "src/lib/coerencia.ts@486-486→\"        if (false) { // mutacao M11: exame do janela_passado_horas desligado\" · a janela de chuva é conferida nos TRÊS números, um a um",
-  "M12": "src/lib/coerencia.ts@150-150→null · os QUATRO textos que distinguem um lugar do outro são conferidos, um a um + a lista dos textos que distinguem tem EXATAMENTE quatro campos",
-  "M13": "src/lib/coerencia.ts@412-412→null · a travessia da noite DITA na ficha passa — a regra exige o aviso, não proíbe o horário",
-  "M14": "src/lib/coerencia.ts@147-147→null · os QUATRO textos que distinguem um lugar do outro são conferidos, um a um + a lista dos textos que distinguem tem EXATAMENTE quatro campos",
-  "M15": "src/lib/coerencia.ts@165-168→\"    regra: \\\"preco-legivel-no-custo\\\",\\n    achar: (fichas) =>\\n      fichas.flatMap((f) => {\\n        if (f.custo.tag !== \\\"pago\\\") return []; // mutacao M15: sem exigir custo.curto\" · ficha paga SEM chip é silêncio, não violação",
-  "N1": "src/lib/coerencia.ts@364-369→\"        const prosa = prosaDe(f);\\n        // \\\"asfalto-esburacado\\\" e \\\"asfalto-tapete\\\" aparecem em prosa como duas\\n        // palavras; o valor do enum é hifenizado. Comparo pelo primeiro termo.\\n        const citados = PISOS.filter((p) => prosa.includes(p.split(\\\"-\\\")[0]));\\n        const estranhos = citados.filter((p) => p.split(\\\"-\\\")[0] !== (f.piso ?? \\\"\\\").split(\\\"-\\\")[0]); // mutacao N1\" · ficha SEM piso é silêncio, mesmo com a prosa nomeando um piso",
-  "N2": "src/lib/coerencia.ts@288-289→\"        const k = (f.secaRapido ?? \\\"\\\").trim().toLowerCase(); // mutacao N2: guarda removida\" · duas fichas SEM secaRapido não emprestam frase uma da outra",
-  "N3": "src/lib/coerencia.ts@146-151→\"const TEXTOS_QUE_DISTINGUEM = [\\n  { campo: \\\"voz\\\", rotulo: \\\"a voz\\\" },\\n  { campo: \\\"promessa\\\", rotulo: \\\"a promessa\\\" },\\n  { campo: \\\"premio\\\", rotulo: \\\"o prêmio\\\" },\\n  { campo: \\\"rotulo_escaneio\\\", rotulo: \\\"a etiqueta\\\" },\\n  { campo: \\\"acesso\\\", rotulo: \\\"o acesso\\\" }, // mutacao N3\\n] as const;\" · a lista dos textos que distinguem tem EXATAMENTE quatro campos + campo de prosa fora da lista pode ser igual em duas fichas",
-  "N4": "src/lib/coerencia.ts@165-168→\"    regra: \\\"preco-legivel-no-custo\\\",\\n    achar: (fichas) =>\\n      fichas.flatMap((f) => {\\n        if (!f.custo.curto) return []; // mutacao N4: sem exigir tag pago\" · ficha grátis não é medida por regra de custo nenhuma",
-  "N5": "src/lib/coerencia.ts@206-208→\"        const noCurto = f.custo.curto.match(PRECO)?.[0]; // mutacao N5: guarda de exclusividade removida\\n        if (noCurto?.replace(/\\\\s/g, \\\"\\\") === (noValor ?? \\\"\\\").replace(/\\\\s/g, \\\"\\\")) return [];\" · custo sem preço legível dá UM erro, não dois",
-  "N6": "src/lib/coerencia.ts@247-247→\"        if (palavras <= 5) return []; // mutacao N6\" · o chip cabe com 4 palavras e não cabe com 5",
-  "N7": "src/lib/coerencia.ts@411-411→\"        if (abre <= fecha) return []; // mutacao N7\" · horário igual em abre e fecha é acusado, e a frase fala de 24 horas",
-  "N8": "src/lib/coerencia.ts@435-435→\"        const citada = /fecha às (\\\\d{1,2})\\\\s*h/i.exec(prosaDe(f)); // mutacao N8\"; 456-456→\"        const citada = /fecha às (\\\\d{1,2})\\\\s*h/i.exec(prosaDe(f)); // mutacao N8\" · a hora citada na prosa é lida com acento e sem acento",
-  "N9": "src/lib/coerencia.ts@569-572→\"            frase:\\n              `${nomeDe(f)} tem ${inventados.map((d) => `\\\"${d}\\\"`).join(\\\", \\\")} na lista de dias, ` +\\n              \\\"e isso não é dia da semana.\\\", // mutacao N9: reverte a correcao da grafia\" · a frase do dia não reconhecido fala de GRAFIA e mostra os sete dias",
-  "N10": "src/lib/coerencia.ts@601-603→\"          frase:\\n            `${nomeDe(f)} declara os sete dias da semana, o que é o mesmo que não declarar dia ` +\\n            \\\"nenhum. Deixe a lista de dias vazia: o app só fala de dia quando o lugar folga em algum.\\\", // mutacao N10\" · a frase da semana inteira não manda esvaziar a lista, porque o schema recusa",
-  "N11": "src/lib/coerencia.ts@415-415→\"          frase: true // mutacao N11: colapsa a bifurcacao (sempre 24h)\" · a ficha genuinamente invertida recebe a frase da noite, não a das 24 horas",
+  "M1": "src/lib/coerencia.ts@680-680→\"  return [];\" · o chip que não bate com o preço é pego + um nome de dia que não existe é pego, mesmo sem repetição nenhuma + a janela de chuva é conferida nos TRÊS números, um a um",
+  "M2": "src/lib/coerencia.ts@211-214→\"    regra: \\\"chip-bate-com-preco\\\",\\n    achar: (fichas) =>\\n      fichas.flatMap((f) => {\\n        if (true) return []; // ausente é silêncio (mutacao M2: regra desligada)\" · cada uma das 14 regras dispara na quebra escrita pra ela + o chip que não bate com o preço é pego",
+  "M3": "src/lib/coerencia.ts@380-380→\"        if (true) return []; // mutacao M3: regra do piso ignora a prosa\" · a prosa que nomeia piso diferente do campo é pega",
+  "M4": "src/lib/coerencia.ts@680-680→\"  return TABELA.flatMap((r) => r.achar(fichas).map((a) => ({ regra: r.regra, ...a, frase: r.regra })));\" · a frase da violação nomeia o lugar e não é o identificador da regra",
+  "M5": "src/lib/coerencia.ts@299-299→\"        const k = f.slug; // mutacao M5: chave por ficha, nunca agrupa com outra\" · uma ficha que empresta a frase de outra é pega",
+  "M5b": "src/lib/coerencia.ts@303-303→\"        grupo.map((f) => ({ // mutacao M5b: acusa o grupo inteiro, inclusive o 1º\" · a ficha sozinha, com a frase dela mesma, não é acusada de emprestar",
+  "M6": "src/lib/coerencia.ts@175-178→\"    regra: \\\"preco-legivel-no-custo\\\",\\n    achar: (fichas) =>\\n      fichas.flatMap((f) => {\\n        if (true) return []; // mutacao M6: regra desligada\" · cada uma das 14 regras dispara na quebra escrita pra ela + custo sem preço legível dá UM erro, não dois",
+  "M7": "src/lib/coerencia.ts@556-559→\"    regra: \\\"dia-repetido-ou-inventado\\\",\\n    achar: (fichas) =>\\n      fichas.flatMap((f) => {\\n        if (true) return []; // mutacao M7: regra desligada\" · cada uma das 14 regras dispara na quebra escrita pra ela + um nome de dia que não existe é pego, mesmo sem repetição nenhuma",
+  "M8": "src/lib/coerencia.ts@536-536→\"        if (false) { // mutacao M8: exame do limiar_mm desligado\" · a janela de chuva é conferida nos TRÊS números, um a um",
+  "M9": "src/lib/coerencia.ts@469-469→\"        if (true) return []; // sem campo, quem acusa é a regra de cima (mutacao M9)\" · cada uma das 14 regras dispara na quebra escrita pra ela + a hora citada na prosa é lida com acento e sem acento",
+  "M10": "src/lib/coerencia.ts@570-570→\"        const inventados = []; // mutacao M10: exame do dia inventado desligado\" · um nome de dia que não existe é pego, mesmo sem repetição nenhuma",
+  "M11": "src/lib/coerencia.ts@498-498→\"        if (false) { // mutacao M11: exame do janela_passado_horas desligado\" · a janela de chuva é conferida nos TRÊS números, um a um",
+  "M12": "src/lib/coerencia.ts@160-160→null · os QUATRO textos que distinguem um lugar do outro são conferidos, um a um + a lista dos textos que distinguem tem EXATAMENTE quatro campos",
+  "M13": "src/lib/coerencia.ts@423-423→null · a travessia da noite DITA na ficha passa — a regra exige o aviso, não proíbe o horário",
+  "M14": "src/lib/coerencia.ts@157-157→null · os QUATRO textos que distinguem um lugar do outro são conferidos, um a um + a lista dos textos que distinguem tem EXATAMENTE quatro campos",
+  "M15": "src/lib/coerencia.ts@175-178→\"    regra: \\\"preco-legivel-no-custo\\\",\\n    achar: (fichas) =>\\n      fichas.flatMap((f) => {\\n        if (f.custo.tag !== \\\"pago\\\") return []; // mutacao M15: sem exigir custo.curto\" · ficha paga SEM chip é silêncio, não violação",
+  "N1": "src/lib/coerencia.ts@374-379→\"        const prosa = prosaDe(f);\\n        // \\\"asfalto-esburacado\\\" e \\\"asfalto-tapete\\\" aparecem em prosa como duas\\n        // palavras; o valor do enum é hifenizado. Comparo pelo primeiro termo.\\n        const citados = PISOS.filter((p) => prosa.includes(p.split(\\\"-\\\")[0]));\\n        const estranhos = citados.filter((p) => p.split(\\\"-\\\")[0] !== (f.piso ?? \\\"\\\").split(\\\"-\\\")[0]); // mutacao N1\" · ficha SEM piso é silêncio, mesmo com a prosa nomeando um piso",
+  "N2": "src/lib/coerencia.ts@298-299→\"        const k = (f.secaRapido ?? \\\"\\\").trim().toLowerCase(); // mutacao N2: guarda removida\" · duas fichas SEM secaRapido não emprestam frase uma da outra",
+  "N3": "src/lib/coerencia.ts@156-161→\"const TEXTOS_QUE_DISTINGUEM = [\\n  { campo: \\\"voz\\\", rotulo: \\\"a voz\\\" },\\n  { campo: \\\"promessa\\\", rotulo: \\\"a promessa\\\" },\\n  { campo: \\\"premio\\\", rotulo: \\\"o prêmio\\\" },\\n  { campo: \\\"rotulo_escaneio\\\", rotulo: \\\"a etiqueta\\\" },\\n  { campo: \\\"acesso\\\", rotulo: \\\"o acesso\\\" }, // mutacao N3\\n] as const;\" · a lista dos textos que distinguem tem EXATAMENTE quatro campos + campo de prosa fora da lista pode ser igual em duas fichas",
+  "N4": "src/lib/coerencia.ts@175-178→\"    regra: \\\"preco-legivel-no-custo\\\",\\n    achar: (fichas) =>\\n      fichas.flatMap((f) => {\\n        if (!f.custo.curto) return []; // mutacao N4: sem exigir tag pago\" · ficha grátis não é medida por regra de custo nenhuma",
+  "N5": "src/lib/coerencia.ts@216-218→\"        const noCurto = f.custo.curto.match(PRECO)?.[0]; // mutacao N5: guarda de exclusividade removida\\n        if (noCurto?.replace(/\\\\s/g, \\\"\\\") === (noValor ?? \\\"\\\").replace(/\\\\s/g, \\\"\\\")) return [];\" · custo sem preço legível dá UM erro, não dois",
+  "N6": "src/lib/coerencia.ts@257-257→\"        if (palavras <= 5) return []; // mutacao N6\" · o chip cabe com 4 palavras e não cabe com 5",
+  "N7": "src/lib/coerencia.ts@422-422→\"        if (abre <= fecha) return []; // mutacao N7\" · horário igual em abre e fecha é acusado, e a frase fala de 24 horas",
+  "N8": "src/lib/coerencia.ts@446-446→\"        const citada = /fecha às (\\\\d{1,2})\\\\s*h/i.exec(prosaDe(f)); // mutacao N8\"; 467-467→\"        const citada = /fecha às (\\\\d{1,2})\\\\s*h/i.exec(prosaDe(f)); // mutacao N8\" · a hora citada na prosa é lida com acento e sem acento",
+  "N9": "src/lib/coerencia.ts@581-584→\"            frase:\\n              `${nomeDe(f)} tem ${inventados.map((d) => `\\\"${d}\\\"`).join(\\\", \\\")} na lista de dias, ` +\\n              \\\"e isso não é dia da semana.\\\", // mutacao N9: reverte a correcao da grafia\" · a frase do dia não reconhecido fala de GRAFIA e mostra os sete dias",
+  "N10": "src/lib/coerencia.ts@613-615→\"          frase:\\n            `${nomeDe(f)} declara os sete dias da semana, o que é o mesmo que não declarar dia ` +\\n            \\\"nenhum. Deixe a lista de dias vazia: o app só fala de dia quando o lugar folga em algum.\\\", // mutacao N10\" · a frase da semana inteira não manda esvaziar a lista, porque o schema recusa",
+  "N11": "src/lib/coerencia.ts@426-426→\"          frase: true // mutacao N11: colapsa a bifurcacao (sempre 24h)\" · a ficha genuinamente invertida recebe a frase da noite, não a das 24 horas",
   "N12": "src/app/[slug]/page.tsx@130-130→\"  const precoCurto = ficha.custo.valor?.match(/R\\\\$\\\\s?\\\\d+(?:[.,]\\\\d{2})?/)?.[0] ?? \\\"Pago\\\"; // mutacao N12\" · o texto do regex de preço aparece UMA vez só em todo o src/ + a página continua montando o chip a partir do PRECO importado",
-  "B1a": "src/lib/coerencia.ts@415-415→\"          frase: true // mutacao B1a: sempre a frase das 24h\" · a ficha genuinamente invertida recebe a frase da noite, não a das 24 horas",
-  "B1b": "src/lib/coerencia.ts@415-415→\"          frase: false // mutacao B1b: sempre a frase da noite\" · horário igual em abre e fecha é acusado, e a frase fala de 24 horas",
-  "B2a": "src/lib/coerencia.ts@178-178→\"          frase: true // mutacao B2a: sempre o ramo ilegivel\" · custo completo AUSENTE recebe a frase do campo vazio",
-  "B2b": "src/lib/coerencia.ts@178-178→\"          frase: false // mutacao B2b: sempre o ramo ausente\" · custo completo ILEGÍVEL mostra por extenso o que ele escreveu",
-  "B3a": "src/lib/coerencia.ts@215-215→\"          frase: true // mutacao B3a: sempre o ramo com numero\" · chip SEM número recebe a frase de não mostrar preço nenhum",
-  "B3b": "src/lib/coerencia.ts@215-215→\"          frase: false // mutacao B3b: sempre o ramo sem numero\" · chip com número DIVERGENTE mostra os dois preços lado a lado",
-  "T1": "src/lib/coerencia.ts@632-632→\"        if (false) { // mutacao T1: teto da previsao desligado\" · cada uma das 14 regras dispara na quebra escrita pra ela + a janela é conferida contra o teto do provedor, nas DUAS janelas, um a um",
-  "T2": "src/lib/coerencia.ts@642-642→\"        if (false) { // mutacao T2: teto do passado desligado\" · a janela é conferida contra o teto do provedor, nas DUAS janelas, um a um",
-  "T3": "src/lib/coerencia.ts@632-632→\"        if (r.janela_previsao_horas >= TETO_PREVISAO_HORAS) { // mutacao T3\" · a janela é conferida contra o teto do provedor, nas DUAS janelas, um a um",
-  "T4": "src/lib/coerencia.ts@642-642→\"        if (r.janela_passado_horas >= TETO_PASSADO_HORAS) { // mutacao T4\" · a janela é conferida contra o teto do provedor, nas DUAS janelas, um a um",
-  "Z1": "src/lib/coerencia.ts@515-515→\"        if (!(r.janela_previsao_horas > 0)) { // mutacao Z1: recusa a previsao zero\" · previsão ZERO sozinha não é violação: a regra ainda fecha pelo passado + previsão 0 E passado 0: violação, com a frase de que o lugar nunca fecha",
-  "Z2": "src/lib/coerencia.ts@486-486→\"        if (!(r.janela_passado_horas > 0)) { // mutacao Z2: recusa o passado zero\" · passado ZERO sozinho não é violação: a regra ainda fecha pela previsão",
-  "Z3": "src/lib/coerencia.ts@499-499→\"        if (false) { // mutacao Z3: o par 0/0 passa\" · cada uma das 14 regras dispara na quebra escrita pra ela + janela de chuva zerada é pega + previsão 0 E passado 0: violação, com a frase de que o lugar nunca fecha",
-  "Z4": "src/lib/coerencia.ts@499-499→\"        if (r.janela_passado_horas === 0 && r.janela_previsao_horas === 0) { // mutacao Z4\" · passado 0 E previsão negativa: as duas frases, a do par e a do negativo",
+  "B1a": "src/lib/coerencia.ts@426-426→\"          frase: true // mutacao B1a: sempre a frase das 24h\" · a ficha genuinamente invertida recebe a frase da noite, não a das 24 horas",
+  "B1b": "src/lib/coerencia.ts@426-426→\"          frase: false // mutacao B1b: sempre a frase da noite\" · horário igual em abre e fecha é acusado, e a frase fala de 24 horas",
+  "B2a": "src/lib/coerencia.ts@188-188→\"          frase: true // mutacao B2a: sempre o ramo ilegivel\" · custo completo AUSENTE recebe a frase do campo vazio",
+  "B2b": "src/lib/coerencia.ts@188-188→\"          frase: false // mutacao B2b: sempre o ramo ausente\" · custo completo ILEGÍVEL mostra por extenso o que ele escreveu",
+  "B3a": "src/lib/coerencia.ts@225-225→\"          frase: true // mutacao B3a: sempre o ramo com numero\" · chip SEM número recebe a frase de não mostrar preço nenhum",
+  "B3b": "src/lib/coerencia.ts@225-225→\"          frase: false // mutacao B3b: sempre o ramo sem numero\" · chip com número DIVERGENTE mostra os dois preços lado a lado",
+  "T1": "src/lib/coerencia.ts@644-644→\"        if (false) { // mutacao T1: teto da previsao desligado\" · cada uma das 14 regras dispara na quebra escrita pra ela + a janela é conferida contra o teto do provedor, nas DUAS janelas, um a um",
+  "T2": "src/lib/coerencia.ts@654-654→\"        if (false) { // mutacao T2: teto do passado desligado\" · a janela é conferida contra o teto do provedor, nas DUAS janelas, um a um",
+  "T3": "src/lib/coerencia.ts@644-644→\"        if (r.janela_previsao_horas >= TETO_PREVISAO_HORAS) { // mutacao T3\" · a janela é conferida contra o teto do provedor, nas DUAS janelas, um a um",
+  "T4": "src/lib/coerencia.ts@654-654→\"        if (r.janela_passado_horas >= TETO_PASSADO_HORAS) { // mutacao T4\" · a janela é conferida contra o teto do provedor, nas DUAS janelas, um a um",
+  "Z1": "src/lib/coerencia.ts@527-527→\"        if (!(r.janela_previsao_horas > 0)) { // mutacao Z1: recusa a previsao zero\" · previsão ZERO sozinha não é violação: a regra ainda fecha pelo passado + previsão 0 E passado 0: violação, com a frase de que o lugar nunca fecha",
+  "Z2": "src/lib/coerencia.ts@498-498→\"        if (!(r.janela_passado_horas > 0)) { // mutacao Z2: recusa o passado zero\" · passado ZERO sozinho não é violação: a regra ainda fecha pela previsão",
+  "Z3": "src/lib/coerencia.ts@511-511→\"        if (false) { // mutacao Z3: o par 0/0 passa\" · cada uma das 14 regras dispara na quebra escrita pra ela + janela de chuva zerada é pega + previsão 0 E passado 0: violação, com a frase de que o lugar nunca fecha",
+  "Z4": "src/lib/coerencia.ts@511-511→\"        if (r.janela_passado_horas === 0 && r.janela_previsao_horas === 0) { // mutacao Z4\" · passado 0 E previsão negativa: as duas frases, a do par e a do negativo",
 };
 
 /** Confere um enumerador contra a lista escrita à mão: mesmos nomes, mesma
@@ -1718,7 +1718,7 @@ function recusarEntradasSemMata(entradas) {
 /** A edição que todos os autotestes usam: a mesma de M1, que existe e aplica.
  *  O que se mede aqui não é a mutação — é o PORTÃO que roda antes dela. */
 const EDICAO_DE_AUTOTESTE = [{
-  inicio: 668, fim: 668,
+  inicio: 680, fim: 680,
   espera: "  return TABELA.flatMap((r) => r.achar(fichas).map((a) => ({ regra: r.regra, ...a })));",
   novo: "  return [];",
 }];
