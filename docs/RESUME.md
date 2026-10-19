@@ -9,9 +9,7 @@ mudar dependendo do dia"* → opção 1 (grupos de dias), *"exija menos do usuá
 Spec `docs/superpowers/specs/2026-10-18-horario-por-dia-design.md`, plano `docs/superpowers/plans/2026-10-18-horario-por-dia.md`.
 **Execução SDD — o livro de bordo manda:** `.superpowers/sdd/2026-10-18-horario-por-dia/progress.md` (rulings, quais
 tarefas estão `complete`, achados menores carregados). Tarefas 1, 2 (combinada: T2+T4+schema+pergunta+questionário) e
-3 COMPLETAS e revisadas. **A T5 reduzida (`task-5c-brief.md`: revisão mostra os grupos; sem `horario` o editor vira
-uma linha PENDENTE; "Seis respostas" → sete) estava com um agente quando a sessão fechou** — conferir `git log` e
-`task-5c-report.md`: com commit e relato, segue pra revisão; sem, re-despachar. Depois: T6 (tela pública: ticket com
+3 COMPLETAS e revisadas. **A T5 reduzida (`task-5c-brief.md`) foi IMPLEMENTADA (`0a566b8`, 3302/3302, portões verdes) mas NÃO REVISADA** — próximo passo: pacote de revisão `4d454e7..0a566b8` e o revisor. Depois: T6 (tela pública: ticket com
 `linhasDoHorario`, pílula com marca curta PENDENTE, cartões com `horarioPorDia` no `aberturaDaFicha`) → revisão final
 → **pacote de frases** (todas as PENDENTE da rodada: 13 `GRUPO_*`, `TIRE_O_HORARIO_POR_DIA_ANTES`, "Grupo", "+ outro
 grupo", "Tirar este grupo", "Os dias com outro horário", a pergunta, a seção do questionário, a linha da T5, a marca
