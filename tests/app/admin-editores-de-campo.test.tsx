@@ -25,7 +25,7 @@ import {
   VISTA_CIDADE_AMBIGUA,
   VISTA_SEM_CIDADE,
 } from "@/app/admin/campos/EditorCoordenada";
-import { ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
+import { ComVersaoDaTela, ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
 import { DESISTIR, DESISTIR_MESMO, ERRO_DESISTIR } from "@/app/admin/BotaoDesistir";
 import { CORRIGIR_O_NOME } from "@/app/admin/AvisoDoPar";
 import {
@@ -217,6 +217,27 @@ describe("EditorProsa — a caixa de texto (absorveu o `EditorDeVoz`)", () => {
     const botao = bloco("voz").querySelector<HTMLButtonElement>('[data-salvar="voz"]')!;
     expect(botao.disabled).toBe(true);
     expect(botao.textContent).toContain("Salvando…");
+  });
+
+  // 🔴 O CASO DE VERDADE de 18/10 foi em OUTRO campo: salvou o piso e, com a
+  // página recarregando, tocou em salvar o "carro comum". Cada editor tem o seu
+  // `salvando`, então travar só o botão que salvou não alcança o vizinho. Com a
+  // página inteira (`ComVersaoDaTela`, que o painel monta), nenhuma gravação sai
+  // depois que uma navegação começou.
+  it("com a página saindo, OUTRO campo não grava — a trava é da página, não do botão", async () => {
+    const { fetchFalso, reloadFalso } = comRota();
+    render(
+      <ComVersaoDaTela id={7}>
+        <FichaInteira ficha={semHorario} />
+      </ComVersaoDaTela>,
+    );
+    digitar("voz", "a serra firmou de novo");
+    salvar("voz");
+    await waitFor(() => expect(reloadFalso).toHaveBeenCalledTimes(1));
+    digitar("promessa", "outra coisa");
+    salvar("promessa");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(fetchFalso, "um segundo campo gravou com a página já saindo").toHaveBeenCalledTimes(1);
   });
 
   it("um campo ANINHADO grava no caminho aninhado, não na chave do primeiro nível", async () => {

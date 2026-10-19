@@ -1,5 +1,5 @@
 "use client";
-import { createContext, createElement, useContext, useState, type ReactNode } from "react";
+import { createContext, createElement, useContext, useRef, useState, type ReactNode } from "react";
 
 /** PRA ONDE OS EDITORES GRAVAM — e se o número de motor pede prévia (Tarefa 11).
  *
@@ -90,8 +90,23 @@ export const VersaoDaTela = createContext<number | null>(null);
 /** O provedor, como componente — a página do painel é de servidor e não pode
  *  montar `VersaoDaTela.Provider` direto. */
 export function ComVersaoDaTela({ id, children }: { id: number; children: ReactNode }) {
-  return createElement(VersaoDaTela.Provider, { value: id }, children);
+  const saindo = useRef(false);
+  return createElement(
+    PaginaSaindo.Provider,
+    { value: saindo },
+    createElement(VersaoDaTela.Provider, { value: id }, children),
+  );
 }
+
+/** 🔴 A PÁGINA ESTÁ SAINDO — uma marca só pra TODOS os editores da tela (18/10).
+ *  O `saindo` de cada `usarGravacao` trava o botão que salvou, mas cada editor
+ *  tem o seu: no caso medido em produção o segundo toque foi em OUTRO campo (o
+ *  piso salvou, e com a página recarregando o "carro comum" gravou por cima de
+ *  uma tela que o servidor já tinha lido). Quem monta é o `ComVersaoDaTela` (a
+ *  página do lugar no painel e a edição de quem usa); sem provedor, `null`, e
+ *  vale só a trava do botão — um objeto padrão compartilhado seria estado de
+ *  módulo, que vazaria de uma tela (ou de um teste) pra outra. */
+export const PaginaSaindo = createContext<{ current: boolean } | null>(null);
 
 /** O corpo com o `baseId` da tela, quando a tela tem um. A única forma de juntar
  *  os dois — as seis portas do painel o usam (a sexta, o "Conferi" da
@@ -173,22 +188,28 @@ export function usarGravacao(): Gravacao {
   const [salvando, setSalvando] = useState(false);
   const { gravarEm, depoisDeGravar, recarregarSe401 } = useContext(PortaDoEditor);
   const baseId = useContext(VersaoDaTela);
+  const pagina = useContext(PaginaSaindo);
 
   async function gravar(corpo: Record<string, unknown>): Promise<void> {
-    if (salvando) return;
+    if (salvando || pagina?.current) return;
     setErro(null);
     setSalvando(true);
     let saindo = false;
+    // O botão (`saindo`) e a página inteira (`PaginaSaindo`) — ver o docblock dela.
+    const sair = (): void => {
+      saindo = true;
+      if (pagina) pagina.current = true;
+    };
     try {
       const r = await fetch(gravarEm, { method: "PUT", body: JSON.stringify(comBase(corpo, baseId)) });
-      if (r.status === 401 && recarregarSe401) { saindo = true; location.reload(); return; }
+      if (r.status === 401 && recarregarSe401) { sair(); location.reload(); return; }
       if (r.ok) {
         if (depoisDeGravar === null) {
-          saindo = true;
+          sair();
           location.reload();
         } else {
           const proxima = depoisDeGravar(((await r.json()) as { slug: string }).slug);
-          saindo = true;
+          sair();
           location.assign(proxima);
         }
         return;
