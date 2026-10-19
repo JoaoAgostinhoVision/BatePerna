@@ -131,24 +131,32 @@ describe("problemaDosGrupos: a regra de escrita", () => {
     ).toBeNull();
   });
 
-  const casos: [string, unknown, { horario?: unknown; dias?: unknown }][] = [
-    ["grupo sem dia", [{ dias: [], faixas: F }], doc],
-    ["grupo sem faixa", [{ dias: ["sab"], faixas: [] }], doc],
-    ["faixa inválida", [{ dias: ["sab"], faixas: [{ abre: "7h", fecha: "12:00" }] }], doc],
-    ["mesmo dia em dois grupos", [{ dias: ["sab"], faixas: F }, { dias: ["sab", "dom"], faixas: [{ abre: "09:00", fecha: "10:00" }] }], doc],
-    ["dia fora de dias", [{ dias: ["seg"], faixas: F }], { ...doc, dias: ["sab", "dom"] }],
-    ["sem horario", L.porDia, {}],
-    ["grupo cobre todos os dias abertos", [{ dias: ["sab", "dom"], faixas: F }], { ...doc, dias: ["sab", "dom"] }],
-    ["faixas iguais às do horario", [{ dias: ["sab"], faixas: [{ abre: "08:00", fecha: "17:00" }] }], doc],
-    ["mais de 3 grupos", ["seg", "ter", "qua", "qui"].map((d) => ({ dias: [d], faixas: F })), doc],
-    ["não-lista", "sab", doc],
-    ["lista vazia", [], doc],
+  // 🔴 CADA CASO DIZ A FRASE QUE ESPERA (fix carregado da revisão da T1): só
+  // "é string" deixava sobreviver a causa errada — arrancar a checagem do dia
+  // desconhecido caía na frase do dia fechado, recusado igual, e verde.
+  const casos: [string, unknown, { horario?: unknown; dias?: unknown }, string | null][] = [
+    ["grupo sem dia", [{ dias: [], faixas: F }], doc, horario.GRUPO_SEM_DIA],
+    ["grupo sem faixa", [{ dias: ["sab"], faixas: [] }], doc, horario.GRUPO_SEM_FAIXA],
+    ["faixa inválida", [{ dias: ["sab"], faixas: [{ abre: "7h", fecha: "12:00" }] }], doc, null],
+    ["mesmo dia em dois grupos", [{ dias: ["sab"], faixas: F }, { dias: ["sab", "dom"], faixas: [{ abre: "09:00", fecha: "10:00" }] }], doc, horario.GRUPO_DIA_REPETIDO],
+    ["mesmo dia duas vezes NO MESMO grupo", [{ dias: ["sab", "sab"], faixas: F }], doc, horario.GRUPO_DIA_REPETIDO_NO_GRUPO],
+    ["dia fora de dias", [{ dias: ["seg"], faixas: F }], { ...doc, dias: ["sab", "dom"] }, horario.GRUPO_DIA_FECHADO],
+    ["sem horario", L.porDia, {}, horario.GRUPO_SEM_HORARIO],
+    ["grupo cobre todos os dias abertos", [{ dias: ["sab", "dom"], faixas: F }], { ...doc, dias: ["sab", "dom"] }, horario.GRUPO_COBRE_TUDO],
+    ["faixas iguais às do horario", [{ dias: ["sab"], faixas: [{ abre: "08:00", fecha: "17:00" }] }], doc, horario.GRUPO_IGUAL_AO_HORARIO],
+    ["mais de 3 grupos", ["seg", "ter", "qua", "qui"].map((d) => ({ dias: [d], faixas: F })), doc, horario.GRUPO_MAIS_DE_TRES],
+    ["não-lista", "sab", doc, horario.GRUPO_NAO_E_LISTA],
+    ["lista vazia", [], doc, horario.GRUPO_LISTA_VAZIA],
+    ["grupo que não é objeto", [null], doc, horario.GRUPO_MAL_FORMADO],
+    ["dia que não é da semana", [{ dias: ["xyz"], faixas: F }], doc, horario.GRUPO_DIA_DESCONHECIDO],
   ];
 
-  it.each(casos)("recusa com frase: %s", (_n, grupos, d) => {
+  it.each(casos)("recusa com a frase DA CAUSA: %s", (_n, grupos, d, esperada) => {
     const p = problemaDosGrupos(grupos, d);
     expect(typeof p).toBe("string");
     expect((p as string).length).toBeGreaterThan(0);
+    // `null` = a frase vem de `problemaDasFaixas` (caso próprio, abaixo).
+    if (esperada !== null) expect(p).toBe(esperada);
   });
 
   it("grupo com os 7 dias (sem dias no lugar) é recusado com a MESMA frase do que cobre todos os abertos", () => {
@@ -170,6 +178,17 @@ describe("problemaDosGrupos: a regra de escrita", () => {
 
   it("as frases são constantes exportadas (GRUPO_*), uma por causa própria", () => {
     const nomes = Object.keys(horario).filter((k) => k.startsWith("GRUPO_"));
-    expect(nomes.length).toBeGreaterThanOrEqual(9);
+    // EXATO (fix carregado da revisão da T1): `>= 9` com 12 deixava sumir três.
+    // 13 = as 12 da T1 + `GRUPO_DIA_REPETIDO_NO_GRUPO` (T2), e cada uma é a
+    // frase esperada de um caso de `casos` acima.
+    expect(nomes.sort()).toEqual(
+      [
+        "GRUPO_COBRE_TUDO", "GRUPO_DIA_DESCONHECIDO", "GRUPO_DIA_FECHADO", "GRUPO_DIA_REPETIDO",
+        "GRUPO_DIA_REPETIDO_NO_GRUPO", "GRUPO_IGUAL_AO_HORARIO", "GRUPO_LISTA_VAZIA", "GRUPO_MAIS_DE_TRES",
+        "GRUPO_MAL_FORMADO", "GRUPO_NAO_E_LISTA", "GRUPO_SEM_DIA", "GRUPO_SEM_FAIXA", "GRUPO_SEM_HORARIO",
+      ],
+    );
+    const esperadas = new Set(casos.map(([, , , e]) => e).filter((e) => e !== null));
+    for (const n of nomes) expect(esperadas.has((horario as Record<string, unknown>)[n] as string), n).toBe(true);
   });
 });

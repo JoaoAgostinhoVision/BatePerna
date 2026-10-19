@@ -461,6 +461,13 @@ export const GRUPO_DIA_DESCONHECIDO = "um dia do horário diferente não é um d
 export const GRUPO_SEM_FAIXA = "cada grupo do horário diferente precisa de pelo menos uma faixa de horas";
 // PENDENTE: redação minha, o João ainda não leu
 export const GRUPO_DIA_REPETIDO = "um mesmo dia não pode estar em dois grupos do horário diferente";
+/** O mesmo dia DUAS VEZES num grupo só (T2, da revisão da T1): caía na frase
+ *  de cima, que fala de "dois grupos" com um grupo só na tela — causa errada. A
+ *  tela não produz isto (caixas de marcar); a porta pode receber. Recusa, e não
+ *  tira a repetição calada: um corpo assim é defeito de quem mandou, e
+ *  consertá-lo em silêncio esconderia o defeito. */
+// PENDENTE: redação minha, o João ainda não leu
+export const GRUPO_DIA_REPETIDO_NO_GRUPO = "um grupo do horário diferente tem o mesmo dia duas vezes";
 // PENDENTE: redação minha, o João ainda não leu
 export const GRUPO_DIA_FECHADO = "um grupo do horário diferente tem um dia em que o lugar não abre";
 // PENDENTE: redação minha, o João ainda não leu
@@ -491,6 +498,7 @@ export function problemaDosGrupos(
     const { dias, faixas } = g as Record<string, unknown>;
     if (!Array.isArray(dias) || dias.length === 0) return GRUPO_SEM_DIA;
     if (dias.some((d) => !(DIAS as readonly unknown[]).includes(d))) return GRUPO_DIA_DESCONHECIDO;
+    if (new Set(dias).size !== dias.length) return GRUPO_DIA_REPETIDO_NO_GRUPO;
     if (!Array.isArray(faixas) || faixas.length === 0) return GRUPO_SEM_FAIXA;
     const dasFaixas = problemaDasFaixas(faixas);
     if (dasFaixas !== null) return dasFaixas;
