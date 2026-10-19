@@ -37,16 +37,19 @@ export default function EditorCalibrar({ slug, rotulos }: { slug: string; rotulo
     }
     setErro(null);
     setIndo(true);
+    // Só o sucesso liga (ver `usarGravacao`, em `campos/gravar.ts`): o `finally` não
+    // pode religar o botão com a página saindo.
+    let saindo = false;
     try {
       const regra = { janela_previsao_horas: Number(prev), janela_passado_horas: Number(pass), limiar_mm: Number(limiar), severidade };
       const r = await fetch("/api/admin/calibrar", { method: "POST", body: JSON.stringify(comBase({ slug, regra }, baseId)) });
-      if (r.ok) { location.reload(); return; }
+      if (r.ok) { saindo = true; location.reload(); return; }
       const frase = (await r.text()).trim();
       setErro(frase === "" ? ERRO_GRAVAR : frase);
     } catch {
       setErro(ERRO_REDE);
     } finally {
-      setIndo(false);
+      if (!saindo) setIndo(false);
     }
   }
 

@@ -40,6 +40,9 @@ export default function TelaDaRegraPadrao({ atual, rotulos }: { atual: RegraPadr
     }
     setErro(null);
     setIndo(true);
+    // Só o sucesso liga (ver `usarGravacao`, em `campos/gravar.ts`): o `finally` não
+    // pode religar o botão com a página saindo.
+    let saindo = false;
     try {
       const corpo = {
         janela_previsao_horas: Number(prev),
@@ -48,13 +51,13 @@ export default function TelaDaRegraPadrao({ atual, rotulos }: { atual: RegraPadr
         severidade,
       };
       const r = await fetch("/api/admin/regra-padrao", { method: "PUT", body: JSON.stringify(corpo) });
-      if (r.ok) { location.reload(); return; }
+      if (r.ok) { saindo = true; location.reload(); return; }
       const frase = (await r.text()).trim();
       setErro(frase === "" ? ERRO_GRAVAR : frase);
     } catch {
       setErro(ERRO_REDE);
     } finally {
-      setIndo(false);
+      if (!saindo) setIndo(false);
     }
   }
 

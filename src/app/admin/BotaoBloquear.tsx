@@ -22,15 +22,20 @@ export default function BotaoBloquear({ contribuidor, bloqueado }: { contribuido
     emVoo.current = true;
     setErro(null);
     setIndo(true);
+    // Só o sucesso liga (ver `usarGravacao`, em `campos/gravar.ts`): o `finally` não
+    // pode religar o botão com a página saindo.
+    let saindo = false;
     try {
       const r = await fetch("/api/admin/contribuidor", { method: "POST", body: JSON.stringify({ id: contribuidor, bloquear: !bloqueado }) });
-      if (r.ok) { location.reload(); return; }
+      if (r.ok) { saindo = true; location.reload(); return; }
       setErro(ERRO_GRAVAR);
     } catch {
       setErro(ERRO_REDE);
     } finally {
-      emVoo.current = false;
-      setIndo(false);
+      if (!saindo) {
+        emVoo.current = false;
+        setIndo(false);
+      }
     }
   }
 

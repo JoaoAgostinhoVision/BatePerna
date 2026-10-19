@@ -35,12 +35,15 @@ export default function BotaoVisibilidade({ slug, oculto }: Props) {
     if (indo) return;
     setErro(null);
     setIndo(true);
+    // Só o sucesso liga (ver `usarGravacao`, em `campos/gravar.ts`): o `finally` não
+    // pode religar o botão com a página saindo.
+    let saindo = false;
     try {
       const r = await fetch("/api/admin/visibilidade", {
         method: "POST",
         body: JSON.stringify(comBase({ slug, oculto: !oculto }, baseId)),
       });
-      if (r.ok) { location.reload(); return; }
+      if (r.ok) { saindo = true; location.reload(); return; }
       // O 409 com frase é a porta dizendo que o lugar mudou de endereço no meio
       // (onda de fix da 11e): a frase dela diz o que fazer.
       const frase = r.status === 409 ? (await r.text()).trim() : "";
@@ -48,7 +51,7 @@ export default function BotaoVisibilidade({ slug, oculto }: Props) {
     } catch {
       setErro(ERRO_REDE);
     } finally {
-      setIndo(false);
+      if (!saindo) setIndo(false);
     }
   }
 

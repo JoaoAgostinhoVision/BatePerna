@@ -14,17 +14,20 @@ export default function CaixaDeSenha() {
     e.preventDefault();
     setErro(null);
     setIndo(true);
+    // Só o sucesso liga (ver `usarGravacao`, em `campos/gravar.ts`): o `finally` não
+    // pode religar o botão com a página saindo.
+    let saindo = false;
     try {
       const r = await fetch("/api/admin/entrar", {
         method: "POST",
         body: JSON.stringify({ senha }),
       });
-      if (r.ok) { location.reload(); return; }
+      if (r.ok) { saindo = true; location.reload(); return; }
       setErro(r.status === 404 ? "O painel não está configurado." : "Senha não confere.");
     } catch {
       setErro("Sem rede.");
     } finally {
-      setIndo(false);
+      if (!saindo) setIndo(false);
     }
   }
 

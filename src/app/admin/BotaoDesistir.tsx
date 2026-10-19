@@ -87,14 +87,19 @@ export default function BotaoDesistir({
     emVoo.current = true;
     setErro(null);
     setIndo(true);
+    // Só o sucesso liga (ver `usarGravacao`, em `campos/gravar.ts`): o `finally` não
+    // pode religar o botão com a página saindo.
+    let saindo = false;
     try {
       const r = await fetch(ROTAS[onde].rascunhoApi, { method: "DELETE", body: JSON.stringify({ slug }) });
       if (r.ok) {
+        saindo = true;
         if (voltarAoPainel) location.assign(ROTAS[onde].desistiu);
         else location.reload();
         return;
       }
       if (r.status === 401 && ROTAS[onde].recarregarSe401) {
+        saindo = true;
         location.reload();
         return;
       }
@@ -102,8 +107,10 @@ export default function BotaoDesistir({
     } catch {
       setErro(ERRO_REDE);
     } finally {
-      emVoo.current = false;
-      setIndo(false);
+      if (!saindo) {
+        emVoo.current = false;
+        setIndo(false);
+      }
     }
   }
 

@@ -51,6 +51,23 @@ describe("a caixa da origem, no lugar", () => {
     expect(JSON.parse(init.body)).toEqual({ slug: UM.slug, baseId: 77 });
   });
 
+  // 🔴 18/10, medido em produção: o `finally` religava o botão DEPOIS do
+  // `location.reload()`, enquanto a página seguinte ainda carregava.
+  it("depois do 200 o botão segue desligado: a página está saindo, não voltando", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ slug: UM.slug }), { status: 200 })));
+    const recarregar = vi.fn();
+    vi.stubGlobal("location", { ...window.location, reload: recarregar });
+    const { getByRole } = render(
+      <CaixaDaOrigem slug={UM.slug} quem={null} email={null} mandadoEm={UM.mandadoEm} conferido={false} contribuidor="user_x" bloqueado={false} />,
+    );
+    fireEvent.click(getByRole("button", { name: CONFERI }));
+    fireEvent.click(getByRole("button", { name: CONFERI_MESMO }));
+    await waitFor(() => expect(recarregar).toHaveBeenCalledTimes(1));
+    // dá a vez aos `finally`/renders pendentes antes de medir
+    await new Promise((r) => setTimeout(r, 0));
+    expect((getByRole("button", { name: CONFERI_MESMO }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   // Desde a Task 15 a caixa tem o "Bloquear quem mandou" em TODO estado
   // (bloquear esconde os conferidos também): o que some com o lugar conferido
   // é só o "Conferi".

@@ -101,6 +101,9 @@ export default function PainelAdmin({ ficha, leitura, agora, aviso, avisoErro = 
     const texto = form.texto.trim();
     if (texto === "" || form.enviando) return;
     atualizar({ enviando: true, erro: null });
+    // Só o sucesso liga (ver `usarGravacao`, em `campos/gravar.ts`): o `finally` não
+    // pode religar o botão com a página saindo.
+    let saindo = false;
     try {
       const r = await fetch("/api/admin/aviso", {
         method: "POST",
@@ -108,7 +111,7 @@ export default function PainelAdmin({ ficha, leitura, agora, aviso, avisoErro = 
           comBase({ slug: ficha.slug, texto, efeito: form.efeito, venceEm: agora + form.prazoSegundos }, baseId),
         ),
       });
-      if (r.ok) { location.reload(); return; }
+      if (r.ok) { saindo = true; location.reload(); return; }
       // O 409 com frase é a porta dizendo que o lugar mudou de endereço no meio
       // (onda de fix da 11e): a frase dela diz o que fazer.
       const frase = r.status === 409 ? (await r.text()).trim() : "";
@@ -116,20 +119,21 @@ export default function PainelAdmin({ ficha, leitura, agora, aviso, avisoErro = 
     } catch {
       atualizar({ erro: "Sem rede." });
     } finally {
-      atualizar({ enviando: false });
+      if (!saindo) atualizar({ enviando: false });
     }
   }
 
   async function tirar(id: number) {
     atualizar({ enviando: true, erro: null });
+    let saindo = false;
     try {
       const r = await fetch(`/api/admin/aviso?id=${id}`, { method: "DELETE" });
-      if (r.ok) { location.reload(); return; }
+      if (r.ok) { saindo = true; location.reload(); return; }
       atualizar({ erro: "Não consegui tirar o aviso." });
     } catch {
       atualizar({ erro: "Sem rede." });
     } finally {
-      atualizar({ enviando: false });
+      if (!saindo) atualizar({ enviando: false });
     }
   }
 

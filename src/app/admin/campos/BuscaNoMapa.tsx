@@ -59,9 +59,13 @@ export default function BuscaNoMapa({
     setBuscando(true);
     setFrase(null);
     setAchados([]);
+    // Só o sucesso liga (ver `usarGravacao`, em `campos/gravar.ts`): o `finally` não
+    // pode religar o botão com a página saindo.
+    let saindo = false;
     try {
       const r = await fetch(`${buscarEm}?q=${encodeURIComponent(texto)}`);
       if (r.status === 401 && recarregarSe401) {
+        saindo = true;
         location.reload();
         return;
       }
@@ -76,7 +80,7 @@ export default function BuscaNoMapa({
     } catch {
       setFrase(BUSCA_NAO_SAIU);
     } finally {
-      setBuscando(false);
+      if (!saindo) setBuscando(false);
     }
   }
 

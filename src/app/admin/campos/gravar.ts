@@ -128,7 +128,17 @@ export function comBase(corpo: Record<string, unknown>, baseId: number | null): 
  *  ⚠️ A ÚNICA EXCEÇÃO (07/10) é o 401 na tela de QUEM USA (`recarregarSe401`):
  *  a sessão do Clerk venceu, nada foi gravado, e a tela recarrega pra a página
  *  pedir login — o que estava na caixa se perde ali. No painel do João a
- *  exceção não existe. */
+ *  exceção não existe.
+ *
+ *  🔴 O BOTÃO NÃO RELIGA ENQUANTO A PÁGINA SAI (18/10, medido em produção).
+ *  `location.reload()` não para o script: o `finally` rodava depois do `return`
+ *  do sucesso e religava o botão com a página seguinte ainda carregando. O João
+ *  salvou o piso e, no recarregamento, tocou em salvar "carro comum": a segunda
+ *  gravação entrou DEPOIS de o servidor ter lido a página nova, a tela ficou
+ *  mais velha que o banco, e o "Conferi" recusou com 409. O molde é o da
+ *  `TelaDePublicar`: `saindo = true` imediatamente antes de cada navegação que
+ *  encerra o fluxo, e o `finally` só desliga o "em voo" se NÃO está saindo. Todo
+ *  `try/finally` que navega, no painel, segue isto — e há guarda em `tests/`. */
 
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Vinha do `EditorDeVoz` já marcado.
 export const ERRO_GRAVAR = "Não consegui salvar.";
@@ -168,12 +178,19 @@ export function usarGravacao(): Gravacao {
     if (salvando) return;
     setErro(null);
     setSalvando(true);
+    let saindo = false;
     try {
       const r = await fetch(gravarEm, { method: "PUT", body: JSON.stringify(comBase(corpo, baseId)) });
-      if (r.status === 401 && recarregarSe401) { location.reload(); return; }
+      if (r.status === 401 && recarregarSe401) { saindo = true; location.reload(); return; }
       if (r.ok) {
-        if (depoisDeGravar === null) location.reload();
-        else location.assign(depoisDeGravar(((await r.json()) as { slug: string }).slug));
+        if (depoisDeGravar === null) {
+          saindo = true;
+          location.reload();
+        } else {
+          const proxima = depoisDeGravar(((await r.json()) as { slug: string }).slug);
+          saindo = true;
+          location.assign(proxima);
+        }
         return;
       }
       const frase = (await r.text()).trim();
@@ -181,7 +198,7 @@ export function usarGravacao(): Gravacao {
     } catch {
       setErro(ERRO_REDE);
     } finally {
-      setSalvando(false);
+      if (!saindo) setSalvando(false);
     }
   }
 

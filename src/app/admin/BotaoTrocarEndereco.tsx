@@ -32,10 +32,15 @@ export default function BotaoTrocarEndereco({ slug, sugerido }: { slug: string; 
     }
     setErro(null);
     setIndo(true);
+    // Só o sucesso liga (ver `usarGravacao`, em `campos/gravar.ts`): o `finally` não
+    // pode religar o botão com a página saindo.
+    let saindo = false;
     try {
       const r = await fetch("/api/admin/endereco", { method: "POST", body: JSON.stringify(comBase({ slug }, baseId)) });
       if (r.ok) {
-        location.assign(`/admin/${((await r.json()) as { slug: string }).slug}`);
+        const destino = `/admin/${((await r.json()) as { slug: string }).slug}`;
+        saindo = true;
+        location.assign(destino);
         return;
       }
       const frase = (await r.text()).trim();
@@ -43,7 +48,7 @@ export default function BotaoTrocarEndereco({ slug, sugerido }: { slug: string; 
     } catch {
       setErro(ERRO_REDE);
     } finally {
-      setIndo(false);
+      if (!saindo) setIndo(false);
     }
   }
 

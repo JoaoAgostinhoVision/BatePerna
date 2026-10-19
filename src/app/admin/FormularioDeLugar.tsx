@@ -361,14 +361,19 @@ export function ComecarLugarNovo({
     if (indo) return;
     setErro(null);
     setIndo(true);
+    // Só o sucesso liga (ver `usarGravacao`, em `campos/gravar.ts`): o `finally` não
+    // pode religar o botão com a página saindo.
+    let saindo = false;
     try {
       const r = await fetch(ROTAS[onde].rascunhoApi, { method: "POST", body: JSON.stringify({ nome }) });
       if (r.ok) {
         const { slug } = (await r.json()) as { slug: string };
+        saindo = true;
         location.assign(ROTAS[onde].comecou(slug));
         return;
       }
       if (r.status === 401 && ROTAS[onde].recarregarSe401) {
+        saindo = true;
         location.reload();
         return;
       }
@@ -377,7 +382,7 @@ export function ComecarLugarNovo({
     } catch {
       setErro(ERRO_REDE);
     } finally {
-      setIndo(false);
+      if (!saindo) setIndo(false);
     }
   }
 

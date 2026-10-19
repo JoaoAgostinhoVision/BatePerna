@@ -205,6 +205,20 @@ describe("EditorProsa — a caixa de texto (absorveu o `EditorDeVoz`)", () => {
     await waitFor(() => expect(reloadFalso).toHaveBeenCalledTimes(1));
   });
 
+  // 🔴 18/10, medido em produção: o `finally` religava o botão DEPOIS do
+  // `location.reload()`, e um segundo Salvar entrou com a tela já velha.
+  it("depois do 200 o botão segue desligado e dizendo 'Salvando…': a página está saindo", async () => {
+    const { reloadFalso } = comRota();
+    render(<FichaInteira ficha={semHorario} />);
+    digitar("voz", "a serra firmou de novo");
+    salvar("voz");
+    await waitFor(() => expect(reloadFalso).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 0));
+    const botao = bloco("voz").querySelector<HTMLButtonElement>('[data-salvar="voz"]')!;
+    expect(botao.disabled).toBe(true);
+    expect(botao.textContent).toContain("Salvando…");
+  });
+
   it("um campo ANINHADO grava no caminho aninhado, não na chave do primeiro nível", async () => {
     const { fetchFalso } = comRota();
     render(<FichaInteira ficha={semHorario} />);

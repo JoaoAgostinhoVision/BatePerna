@@ -85,12 +85,15 @@ export default function HistoricoDaFicha({ versoes }: Props) {
     if (voltando != null) return;
     setErro(null);
     setVoltando(versaoId);
+    // Só o sucesso liga (ver `usarGravacao`, em `campos/gravar.ts`): o `finally` não
+    // pode religar o botão com a página saindo.
+    let saindo = false;
     try {
       const r = await fetch("/api/admin/ficha", {
         method: "PUT",
         body: JSON.stringify(comBase({ slug, versaoId }, baseId)),
       });
-      if (r.ok) { location.reload(); return; }
+      if (r.ok) { saindo = true; location.reload(); return; }
       // O 409 com frase (o lugar mudou de endereço no meio, onda de fix da 11e;
       // ou o par de outro lugar) diz o que fazer; sem frase, a nossa.
       const frase = r.status === 409 ? (await r.text()).trim() : "";
@@ -98,7 +101,7 @@ export default function HistoricoDaFicha({ versoes }: Props) {
     } catch {
       setErro(ERRO_VOLTAR);
     } finally {
-      setVoltando(null);
+      if (!saindo) setVoltando(null);
     }
   }
 

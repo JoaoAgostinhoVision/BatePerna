@@ -96,7 +96,8 @@ describe("HistoricoDaFicha", () => {
     let liberar!: () => void;
     const pendurado = new Promise<Response>((ok) => { liberar = () => ok(Response.json({ id: 3 })); });
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(pendurado));
-    vi.stubGlobal("location", { ...window.location, reload: vi.fn() });
+    const recarregar = vi.fn();
+    vi.stubGlobal("location", { ...window.location, reload: recarregar });
 
     const { container } = render(<HistoricoDaFicha versoes={VERSOES} />);
     fireEvent.click(container.querySelector('button[data-abrir-versao="1"]')!);
@@ -107,7 +108,11 @@ describe("HistoricoDaFicha", () => {
     expect(botao.disabled).toBe(true);
 
     liberar();
-    await waitFor(() => expect(botao.disabled).toBe(false));
+    // 18/10: no 200 a página SAI — o botão segue desligado (não religa com a
+    // página seguinte ainda carregando).
+    await waitFor(() => expect(recarregar).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(botao.disabled).toBe(true);
   });
 
   it("resposta que não é ok mostra a mensagem de erro ao voltar", async () => {

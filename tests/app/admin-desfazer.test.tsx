@@ -200,18 +200,36 @@ describe.each(CASOS)("$nome — o Desfazer", (c) => {
 
   it("salvar X, mudar pra Y, desfazer: volta a X, o salvo de AGORA — não ao de antes do Salvar", async () => {
     const { fetchFalso, reloadFalso } = comRota();
-    const { rerender } = render(<FichaInteira ficha={c.ficha} />);
+    const { unmount } = render(<FichaInteira ficha={c.ficha} />);
     c.mudar(c.x);
     salvarEm(c.caminho);
     await waitFor(() => expect(reloadFalso).toHaveBeenCalledTimes(1));
     expect(fetchFalso).toHaveBeenCalledTimes(1);
-    // O banco agora diz X: a prop nova chega ao MESMO editor montado.
-    rerender(<FichaInteira ficha={c.fichaCom(c.x)} />);
+    // 18/10: depois do 200 o editor fica em "salvando" — a página está SAINDO, e
+    // o botão não religa (ver `usarGravacao`). O que acontece de verdade é a
+    // página nova nascer do banco, que agora diz X: tela NOVA, não a mesma.
+    unmount();
+    render(<FichaInteira ficha={c.fichaCom(c.x)} />);
     expect(desfazerEm(bloco(c.caminho)), "com a tela igual ao salvo novo, nada a desfazer").toBeNull();
     c.mudar(c.y);
     desfazer(bloco(c.caminho));
     expect(c.ler()).toBe(c.x);
     expect(fetchFalso, "o Desfazer gravou").toHaveBeenCalledTimes(1);
+  });
+
+  // O "salvo" é a prop de AGORA, e não uma cópia da montagem — o caso mais
+  // exigente, sem Salvar no meio: a prop nova chega ao MESMO editor montado
+  // (como num `router.refresh()`), e o Desfazer volta a ela.
+  it("a prop nova no mesmo editor montado vira o salvo: mudar pra Y e desfazer volta a X", () => {
+    const { fetchFalso } = comRota();
+    const { rerender } = render(<FichaInteira ficha={c.ficha} />);
+    c.mudar(c.x);
+    rerender(<FichaInteira ficha={c.fichaCom(c.x)} />);
+    expect(desfazerEm(bloco(c.caminho)), "com a tela igual ao salvo novo, nada a desfazer").toBeNull();
+    c.mudar(c.y);
+    desfazer(bloco(c.caminho));
+    expect(c.ler()).toBe(c.x);
+    expect(fetchFalso).not.toHaveBeenCalled();
   });
 });
 
@@ -501,12 +519,15 @@ describe("EditorCoordenada — o pin volta ao ponto salvo", () => {
 
   it("salvar P1, tocar P2, desfazer: volta a P1, o salvo de AGORA", async () => {
     const { fetchFalso, reloadFalso } = comRota();
-    const { rerender } = render(<FichaInteira ficha={RAMPA} />);
+    const { unmount } = render(<FichaInteira ficha={RAMPA} />);
     tocarNoMapa(bloco(PAR), L / 2 + 60, A / 2 - 30);
     const p1 = coordEm(bloco(PAR));
     salvarEm(PAR);
     await waitFor(() => expect(reloadFalso).toHaveBeenCalledTimes(1));
-    rerender(<FichaInteira ficha={{ ...RAMPA, condicao: { ...RAMPA.condicao, coords: parDe(p1) } }} />);
+    // 18/10: a página SAI depois do 200 (o editor segue em "salvando"); a nova
+    // nasce do banco, que agora diz P1 — tela nova, não a mesma.
+    unmount();
+    render(<FichaInteira ficha={{ ...RAMPA, condicao: { ...RAMPA.condicao, coords: parDe(p1) } }} />);
     expect(desfazerEm(bloco(PAR))).toBeNull();
     tocarNoMapa(bloco(PAR), L / 2 - 50, A / 2 + 20);
     expect(coordEm(bloco(PAR))).not.toBe(p1);
