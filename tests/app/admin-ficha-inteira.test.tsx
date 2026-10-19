@@ -44,8 +44,9 @@ const comHorario = exigir("pedra-furada-de-venturosa");
  *  25 + 4 = 29 blocos, e uma de 2 waypoints daria 33. (Era 30 até a Tarefa
  *  11b, 2026-10-04: a `cidade` entrou no registro, 31; e na 11c, no mesmo dia,
  *  `horario.abre` e `horario.fecha` saíram — o horário virou UMA entrada, a
- *  lista de faixas.) */
-const BLOCOS_DE_UM_WAYPOINT = 29;
+ *  lista de faixas.) E 30 desde 18/10: o horário diferente em alguns dias
+ *  (`horarioPorDia`) entrou no registro — 26 que não são molde + 4. */
+const BLOCOS_DE_UM_WAYPOINT = 30;
 
 /** A ORDEM DOS SEIS GRUPOS, cravada à mão: ela é contrato desta tela (é a
  *  ordem em que o dono lê a ficha, a mesma da §3 do desenho), e o componente a
@@ -104,8 +105,8 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     for (const i of [0, 1, 2]) {
       expect(screen.getByTestId(`campo-trajeto.waypoints.${i}.nome`), `waypoint ${i}`).toBeTruthy();
     }
-    // 25 fixos + 3 × 4 folhas de waypoint.
-    expect(testidsDe(container, "campo-")).toHaveLength(25 + 12);
+    // 26 fixos (25 até 17/10 + `horarioPorDia`) + 3 × 4 folhas de waypoint.
+    expect(testidsDe(container, "campo-")).toHaveLength(26 + 12);
   });
 
   // 🔴 Sem isto, um componente que renderiza uma caixa vazia passa no teste de
@@ -225,8 +226,9 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     // Task 6.
     expect(cheio.textContent).not.toMatch(/ainda sem dados/i);
 
-    // 🔴 2, cravado e com motivo: nesta ficha falta exatamente o `horario` (uma
-    // entrada só desde a Tarefa 11c) — e a `cidade`, que NENHUMA ficha real
+    // 🔴 3, cravado e com motivo: nesta ficha falta exatamente o `horario` (uma
+    // entrada só desde a Tarefa 11c), o horário diferente em alguns dias
+    // (`horarioPorDia`, 18/10 — nenhuma ficha real o tem) — e a `cidade`, que NENHUMA ficha real
     // tem até o João respondê-la pelo painel (Tarefa 11b: obrigatória no
     // registro, e ninguém a preenche por ele). Todo o resto do registro está
     // preenchido (piso, carroComum, dias, secaRapido, custo.valor,
@@ -234,7 +236,7 @@ describe("FichaInteira — a ficha inteira, em grupos", () => {
     const marcados = [...container.querySelectorAll("[data-ausente]")].map(
       (e) => e.getAttribute("data-testid")!,
     );
-    expect(marcados.sort()).toEqual(["campo-cidade", "campo-horario"]);
+    expect(marcados.sort()).toEqual(["campo-cidade", "campo-horario", "campo-horarioPorDia"]);
   });
 
   // 🔴 `false` NÃO É SILÊNCIO. `carroComum: false` é uma AFIRMAÇÃO ("não
@@ -465,6 +467,11 @@ describe("FichaInteira — os guardas do que cresce: rótulo e CSS", () => {
     // Tarefa 15) na medição: a faixa a mais deixa o horário diferente do salvo.
     // Sem mudança nenhuma ele não existe, e a regra dele pareceria morta.
     for (const b of maisFaixa) fireEvent.click(b);
+    // 🔴 E O HORÁRIO DIFERENTE COM DOIS GRUPOS (18/10): o "tirar este grupo" só
+    // existe com dois ou mais, e nenhuma ficha do acervo tem grupo nenhum.
+    const maisGrupo = container.querySelectorAll<HTMLButtonElement>("[data-mais-grupo]");
+    expect(maisGrupo.length, "nenhum '+ outro grupo' na tela: o toque abaixo não aconteceria").toBeGreaterThan(0);
+    for (const b of maisGrupo) fireEvent.click(b);
     const classes = [...new Set([...container.querySelectorAll("[class]")].flatMap((e) => [...e.classList]))];
     expect(classes.length, "nenhuma classe foi lida: o teste ficaria oco").toBeGreaterThan(0);
     for (const c of classes) {

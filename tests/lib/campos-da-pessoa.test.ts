@@ -44,7 +44,8 @@ describe("a lista dela", () => {
   // nem no lugar no ar; a cidade sai do ponto que ela marca.
   it("são exatamente os campos das perguntas dela: os da spec de 07/10 menos a cidade, que sai do ponto (e o ponto mora à parte)", () => {
     expect([...CAMPOS_DA_PESSOA].sort()).toEqual(
-      ["acesso", "avisos", "custo.tag", "custo.valor", "dias", "horario", "promessa", "trajeto.waypoints.0.nome"],
+      // + `horarioPorDia` (18/10): o horário diferente em alguns dias, opcional como os outros dois do horário.
+      ["acesso", "avisos", "custo.tag", "custo.valor", "dias", "horario", "horarioPorDia", "promessa", "trajeto.waypoints.0.nome"],
     );
   });
 

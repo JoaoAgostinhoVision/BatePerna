@@ -22,7 +22,13 @@ function sem(caminho: string, doc: Record<string, unknown> = completo()): Record
   return copia;
 }
 
-const OPCIONAIS = CAMPOS_DA_FICHA.filter((c) => !c.obrigatorio).map((c) => c.caminho.replace("[]", ".0"));
+/** 🔴 O OPCIONAL CUJA AUSÊNCIA NÃO CALA NADA, por NOME (18/10): sem o horário
+ *  diferente, o horário de sempre vale todo dia — nada fica sem dizer. Fora da
+ *  completude de baixo, e com caso próprio provando que ausente não dá frase. */
+const AUSENCIA_NAO_CALA = new Set(["horarioPorDia"]);
+const OPCIONAIS = CAMPOS_DA_FICHA.filter((c) => !c.obrigatorio)
+  .map((c) => c.caminho.replace("[]", ".0"))
+  .filter((c) => !AUSENCIA_NAO_CALA.has(c));
 
 /** Tem cara de caminho de campo, não de português: só letras sem acento,
  *  dígitos, `_`, ponto e colchetes (`custo.valor`, `trajeto.waypoints[0].nota`). */
@@ -83,6 +89,16 @@ describe("oQueOAppCala", () => {
       expect(vistas.has(frase), `${caminho} repete a frase de ${vistas.get(frase)}`).toBe(false);
       vistas.set(frase, caminho);
     }
+  });
+
+  // A exceção não é fantasma: é opcional no registro, e ausente (o rascunho
+  // completo não a tem) não dá frase nenhuma.
+  it("sem o horário diferente em alguns dias, nada é calado", () => {
+    for (const c of AUSENCIA_NAO_CALA) {
+      expect(CAMPOS_DA_FICHA.find((x) => x.caminho === c)?.obrigatorio, c).toBe(false);
+      expect(completo()[c], `${c}: a premissa — o rascunho completo não o tem`).toBeUndefined();
+    }
+    expect(oQueOAppCala(completo())).toEqual([]);
   });
 
   // 🔴 O INVERSO (I6): num lugar GRÁTIS, o valor e o chip não existem — a

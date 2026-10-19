@@ -4,12 +4,13 @@ import type { PerguntaNaTela } from "../admin/campos/tipos";
 
 /** A ORDEM DA SPEC (07/10, Parte 1), SEM A CIDADE: a spec diz nome, cidade, o
  *  ponto no mapa, o que é, como se chega, o que pode dar errado, custa ou é
- *  grátis (+ quanto), horário e dias. Desde 17/10 a cidade não é pergunta — sai
- *  do ponto — e o mapa subiu pro lugar dela, o 2º. A pergunta do mapa é a do
- *  ponto 0 — grava o ponto, a chuva e a cidade juntos. */
+ *  grátis (+ quanto), horário e dias — e, desde 18/10, o horário diferente em
+ *  alguns dias, logo depois dos dias, como no painel. Desde 17/10 a cidade não
+ *  é pergunta — sai do ponto — e o mapa subiu pro lugar dela, o 2º. A pergunta
+ *  do mapa é a do ponto 0 — grava o ponto, a chuva e a cidade juntos. */
 export const ORDEM_DA_PESSOA: readonly string[] = [
   "trajeto.waypoints.0.nome", "trajeto.waypoints.0.lat", "promessa", "acesso", "avisos",
-  "custo.tag", "custo.valor", "horario", "dias",
+  "custo.tag", "custo.valor", "horario", "dias", "horarioPorDia",
 ];
 
 /** As perguntas DELA: as do painel (mesmo texto, mesmo instrumento), só as da

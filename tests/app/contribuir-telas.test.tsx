@@ -81,16 +81,19 @@ describe("as perguntas dela", () => {
   it("são a lista dela, na ordem da spec de 07/10 sem a cidade (que sai do ponto desde 17/10), e o mapa no 2º lugar", () => {
     expect(ORDEM_DA_PESSOA).toEqual([
       "trajeto.waypoints.0.nome", "trajeto.waypoints.0.lat", "promessa", "acesso", "avisos",
-      "custo.tag", "custo.valor", "horario", "dias",
+      // 18/10: e o horário diferente em alguns dias, logo depois dos dias, como no painel.
+      "custo.tag", "custo.valor", "horario", "dias", "horarioPorDia",
     ]);
     for (const c of CAMPOS_DA_PESSOA) expect(ORDEM_DA_PESSOA, c).toContain(c);
   });
 
-  it("cada texto é a pergunta do painel, já lida — nenhuma redação nova", () => {
+  // ⚠️ "já lida" valia até 18/10: a do horário diferente em alguns dias é a do
+  // painel, e ainda PENDENTE lá. O que este caso prova é que não há redação só dela.
+  it("cada texto é a pergunta do painel — nenhuma redação só dela", () => {
     for (const q of montarPerguntasDaPessoa({})) expect(q.texto, q.campo.caminho).toBe(PERGUNTAS[q.campo.caminho]);
   });
 
-  it("obrigatoriedade é a DELA: avisos, valor, horário e dias podem ficar sem resposta", () => {
+  it("obrigatoriedade é a DELA: avisos, valor, horário, dias e o horário diferente podem ficar sem resposta", () => {
     for (const q of montarPerguntasDaPessoa({})) {
       expect(q.campo.obrigatorio, q.campo.caminho).toBe(!OPCIONAIS_DA_PESSOA.has(q.campo.caminho));
     }

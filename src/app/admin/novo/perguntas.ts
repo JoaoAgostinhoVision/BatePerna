@@ -1,6 +1,6 @@
 import { CAMPOS_DA_FICHA, lerCaminho, type CampoDaFicha } from "@/lib/campos-da-ficha";
 import { rotulosDe } from "@/lib/rotulos-das-opcoes";
-import { multiploDe, rotuloDe } from "../FichaInteira";
+import { diasDosGrupos, multiploDe, rotuloDe } from "../FichaInteira";
 import type { CampoNaTela, PerguntaNaTela } from "../campos/tipos";
 
 /** AS PERGUNTAS DO LUGAR NOVO (Tarefa 11) — e este arquivo é de SERVIDOR.
@@ -118,6 +118,8 @@ export const PERGUNTAS: Readonly<Record<string, string>> = {
   horario: "Esse lugar tem hora pra abrir e pra fechar? Se tiver, que horas?",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   dias: "Esse lugar abre todo dia, ou tem dia que não abre? Se tiver, em que dias ele abre?",
+  // PENDENTE: redação minha, o João ainda não leu. Do questionário (seção nova de 18/10, também PENDENTE).
+  horarioPorDia: "Algum dia esse lugar abre ou fecha em outra hora? Se tiver, quais dias e que horas?",
 };
 
 /** A ORDEM DA TELA: a do questionário, pelo caminho concreto (o molde do
@@ -161,6 +163,7 @@ export const ORDEM: readonly string[] = [
   "carroComum",
   "horario",
   "dias",
+  "horarioPorDia",
 ];
 
 /** QUAIS ENTRADAS DO REGISTRO SÃO PERGUNTA — derivado do registro, por
@@ -205,6 +208,9 @@ function naTela(c: CampoDaFicha, caminho: string, rascunho: unknown): CampoNaTel
     obrigatorio: c.obrigatorio,
     ...(c.opcoes ? { opcoes: c.opcoes, multiplo: multiploDe(caminho), ...rotulosNaTela(caminho) } : {}),
   };
+  // Os grupos do horário diferente: as caixas de dia são os dias em que ESTE
+  // rascunho abre (os `dias` que ele já respondeu, que vêm antes na ordem).
+  if (c.especie === "grupos") return { ...base, ...diasDosGrupos(rascunho) };
   if (c.especie === "coord") {
     // O ponto do trajeto já marcado desce com o índice e o par (o mapa põe o
     // pin nele). Sem ponto, o mapa nasce SEM PIN, na vista que a PÁGINA busca

@@ -5,7 +5,7 @@ import type { Violacao } from "@/lib/coerencia";
 import { getClient } from "@/lib/db";
 import { estaBloqueado, registrarContribuidor } from "@/lib/db-contribuidor";
 import { lerContribuidor, type QuemContribui } from "@/lib/contribuidor-sessao";
-import { faixasDe, problemaDasFaixas } from "@/lib/horario";
+import { faixasDe, problemaDasFaixas, problemaDosGrupos } from "@/lib/horario";
 import { FORMA_ERRADA, RASCUNHO_ILEGIVEL, SLUG_DE_DENTRO } from "@/lib/porta-de-publicar";
 import { fichaSchema } from "@/types/ficha";
 
@@ -216,6 +216,13 @@ export function prepararPublicacaoDaPessoa(texto: string, slug: string): { doc: 
   if (obrigatoriosDaPessoaFaltando(doc).length > 0) return { frase: FALTA_DA_PESSOA };
   if ("horario" in doc) {
     const problema = problemaDasFaixas(faixasDe((doc as { horario: unknown }).horario));
+    if (problema !== null) return { frase: problema };
+  }
+  // 🔴 OS GRUPOS PELA REGRA DE ESCRITA (18/10), pela razão do horário logo
+  // acima: o schema só confere a forma, e o rascunho pode ter sido gravado antes
+  // de uma regra existir (ou mudado por um caminho que não as portas do campo).
+  if ("horarioPorDia" in doc) {
+    const problema = problemaDosGrupos((doc as { horarioPorDia: unknown }).horarioPorDia, doc as { horario?: unknown; dias?: unknown });
     if (problema !== null) return { frase: problema };
   }
   const lido = fichaSchema.safeParse(doc);

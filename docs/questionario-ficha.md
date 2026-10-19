@@ -471,6 +471,8 @@ não sabe que aquele lugar folga, então não inventa uma folga.
 ⚠️ **Este campo é independente do `horario`, de propósito.** Um lugar pode ter dia
 sem hora (a Rampa: ninguém sabe a que horas ela abre), hora sem dia (a Pedra Furada),
 os dois, ou nenhum. Não é preciso inventar um horário pra poder declarar o sábado.
+Se em algum dia o lugar abre ou fecha em outra hora, isso é a pergunta seguinte
+(`horarioPorDia`).
 
 ⚠️ **Se o lugar fechou de vez, isto não é o campo.** Uma lista vazia seria uma regra
 que fecha todos os dias; quem diz "fechou de vez" é a ficha sair do acervo.
@@ -483,6 +485,30 @@ que fecha todos os dias; quem diz "fechou de vez" é a ficha sair do acervo.
 você em 2026-09-11 (*"pode atualizar a hora pela internet"*). É o primeiro campo do
 acervo cuja fonte não é a sua boca, e está registrado em
 `docs/pesquisa-externa-2026-09-11.md`. Se estiver errado, quem manda é você.
+
+---
+
+## O horário diferente em alguns dias — `horarioPorDia`
+
+<!-- PENDENTE: redação minha, o João ainda não leu (rodada "horário diferente em alguns dias", 2026-10-18). -->
+
+**Pergunta:** algum dia esse lugar abre ou fecha em outra hora? Se tiver, quais dias e que horas?
+
+**Por que importa:** o carimbo olha a hora de HOJE. Num lugar que abre 8h na semana e
+7h no sábado, um horário só erra num dos dois dias: diz *"Pode ir"* com o lugar
+fechado, ou *"Fechado agora"* com ele aberto. Respondido, cada dia passa a ter a hora
+dele — no carimbo, na ficha e no cartão.
+
+**Se não tiver, não responda:** sem resposta, o horário de sempre (`horario`) vale em
+todo dia que o lugar abre, como sempre foi. Quem tem diferença descreve **só a
+diferença**: os dias que mudam e as horas deles. Cabem até três grupos de dias.
+
+⚠️ **Só depois do horário de sempre.** Um grupo diz "diferente" do horário de sempre,
+então sem ele a pergunta não vale. E um grupo não pode ter um dia em que o lugar não
+abre, nem cobrir todos os dias abertos (aí o certo é mudar o horário de sempre).
+
+**Exemplo (um lugar que não existe):** horário `08:00–17:00`, e um grupo
+`sábado e domingo: 07:00–12:00`.
 
 ---
 

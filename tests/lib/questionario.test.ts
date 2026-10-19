@@ -90,6 +90,28 @@ function blocoDoRotulo(secao: string, rotulo: string): string {
 
 const perguntaDe = (campo: string) => blocoDoRotulo(secaoDoCampo(campo), "Pergunta:");
 
+describe("o horário diferente em alguns dias (18/10)", () => {
+  it("tem seção própria, marcada PENDENTE, com a pergunta exata", () => {
+    const secao = secaoDoCampo("horarioPorDia");
+    expect(secao).toMatch(/<!-- PENDENTE: redação minha, o João ainda não leu .*2026-10-18.* -->/);
+    expect(plano(perguntaDe("horarioPorDia"))).toContain(
+      "algum dia esse lugar abre ou fecha em outra hora? Se tiver, quais dias e que horas?",
+    );
+  });
+
+  it("vem logo depois da seção dos dias, que aponta pra ela e continua independente do horário", () => {
+    const dias = DOC.search(/^## .*`dias`\s*$/m);
+    const grupos = DOC.search(/^## .*`horarioPorDia`\s*$/m);
+    expect(dias).toBeGreaterThan(-1);
+    expect(grupos).toBeGreaterThan(dias);
+    // nenhuma seção no meio
+    expect(DOC.slice(dias + 3, grupos)).not.toMatch(/^## /m);
+    const secaoDias = plano(secaoDoCampo("dias"));
+    expect(secaoDias).toContain("Este campo é independente do `horario`, de propósito.");
+    expect(secaoDias).toContain("(`horarioPorDia`)");
+  });
+});
+
 describe("o questionário cobre a ficha inteira", () => {
   // ⚠️ ESTE TESTE GARANTE MENOS DO QUE O NOME PROMETE: ele checa MENÇÃO ao
   // nome do campo, não pergunta. Enquanto `esforco` e `duracao` ainda estavam

@@ -1,4 +1,6 @@
-import { aplicarCampo, aplicarNoRascunho, gravarPonto, gravarPontoNoRascunho, lerCaminho } from "@/lib/campos-da-ficha";
+import {
+  aplicarCampo, aplicarNoRascunho, gravarPonto, gravarPontoNoRascunho, lerCaminho, recusarTirarHorarioComGrupos,
+} from "@/lib/campos-da-ficha";
 import { fichaSchema } from "@/types/ficha";
 
 /** AS PERGUNTAS DE QUEM USA O APP (spec de 07/10, Parte 1) — a lista FECHADA
@@ -25,12 +27,13 @@ export const CAMPOS_DA_PESSOA: readonly string[] = [
   "custo.valor", //                 … e quanto (opcional)
   "horario", //                  7. horário (opcional)
   "dias", //                        e dias (opcional)
+  "horarioPorDia", //               e o horário diferente em alguns dias (opcional, 18/10)
 ];
 
 /** A cidade: dela no documento, nunca escrita por ela (ver acima). */
 const CIDADE = "cidade";
 
-export const OPCIONAIS_DA_PESSOA: ReadonlySet<string> = new Set(["avisos", "custo.valor", "horario", "dias"]);
+export const OPCIONAIS_DA_PESSOA: ReadonlySet<string> = new Set(["avisos", "custo.valor", "horario", "dias", "horarioPorDia"]);
 
 /** A pergunta do mapa, na lista de obrigatórias que faltam
  *  (`obrigatoriosDaPessoaFaltando`, a régua da porta de publicar dela). Não é
@@ -94,6 +97,9 @@ export function campoDelaAcimaDoTeto(doc: unknown): boolean {
 export function tirarDoRascunhoDaPessoa(doc: string, caminho: string): string {
   if (!OPCIONAIS_DA_PESSOA.has(caminho)) throw new Error(SEM_NAO_SEI);
   const atual = JSON.parse(doc) as Record<string, unknown>;
+  // O horário de sempre não sai com grupos presentes (18/10) — a mesma recusa
+  // da porta do João; o "não tem" dela vem por aqui, não por `removerCampo`.
+  recusarTirarHorarioComGrupos(atual, caminho);
   if (caminho === "custo.valor") {
     const custo = atual.custo as Record<string, unknown> | undefined;
     if (custo) {
@@ -145,7 +151,7 @@ export function chavesForaDaPessoa(doc: unknown): string[] {
   if (typeof doc !== "object" || doc === null || Array.isArray(doc)) return ["(documento)"];
   const d = doc as Record<string, unknown>;
   const sobra: string[] = [];
-  const PERMITIDAS = new Set(["slug", "modos", "cidade", "promessa", "acesso", "avisos", "trajeto", "condicao", "custo", "horario", "dias"]);
+  const PERMITIDAS = new Set(["slug", "modos", "cidade", "promessa", "acesso", "avisos", "trajeto", "condicao", "custo", "horario", "dias", "horarioPorDia"]);
   for (const k of Object.keys(d)) if (!PERMITIDAS.has(k)) sobra.push(k);
   const sobraEm = (onde: string, obj: unknown, permitidas: readonly string[]) => {
     if (typeof obj !== "object" || obj === null) return;

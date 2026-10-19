@@ -2,8 +2,9 @@
 import { useState } from "react";
 import BotaoDesfazer from "./BotaoDesfazer";
 import BotaoNaoSei from "./BotaoNaoSei";
+import CaixasDeFaixas, { FAIXA_VAZIA, ehFaixa, mesmasFaixas, naOrdemDoDia, temCaixaVazia, type Faixa } from "./CaixasDeFaixas";
 import { usarGravacao } from "./gravar";
-import { HORAS_JUNTAS, HORA_VAZIA, MAIS_FAIXA, SALVANDO, SALVAR, TIRAR_FAIXA } from "./palavras";
+import { HORAS_JUNTAS, HORA_VAZIA, SALVANDO, SALVAR } from "./palavras";
 import type { PropsDoEditor } from "./tipos";
 
 /** O HORÁRIO INTEIRO — a lista de 1 a 3 faixas (Tarefa 11c), editada como
@@ -37,28 +38,11 @@ import type { PropsDoEditor } from "./tipos";
  *  (ver o topo de `tipos.ts`); o valor chega `unknown` e é estreitado aqui.
  *
  *  O "Desfazer" (Tarefa 15) volta a LISTA inteira ao `valor` de AGORA (a prop):
- *  as horas, e também as faixas acrescentadas ou tiradas sem Salvar. Não grava. */
-
-type Faixa = { abre: string; fecha: string };
-
-/** O teto da lista — o mesmo de `problemaDasFaixas`. Repetido aqui (e não
- *  importado de `@/lib/horario`) pela regra do topo; a porta é a garantia. */
-const MAXIMO = 3;
-
-/** O nome de cada caixa pra quem lê a tela em voz alta. São os rótulos que
- *  `horario.abre`/`horario.fecha` tinham em `FichaInteira` até a 11c, quando as
- *  duas folhas deixaram de ser campos; vieram pra cá com o marcador. */
-const HORA_DE: Record<keyof Faixa, string> = {
-  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
-  abre: "A hora de abrir",
-  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
-  fecha: "A hora de fechar",
-};
-
-const ehFaixa = (v: unknown): v is Faixa =>
-  typeof v === "object" && v !== null && typeof (v as Faixa).abre === "string" && typeof (v as Faixa).fecha === "string";
-
-const VAZIA: Faixa = { abre: "", fecha: "" };
+ *  as horas, e também as faixas acrescentadas ou tiradas sem Salvar. Não grava.
+ *
+ *  🔴 AS CAIXAS MORAM EM `CaixasDeFaixas` DESDE 18/10: o horário diferente em
+ *  alguns dias (`EditorGrupos`) usa as mesmas, em cada grupo. Aqui ficam o estado,
+ *  o Salvar, o Desfazer e o "não tem". */
 
 /** O que o documento tem — a LISTA de faixas — e uma faixa vazia quando não
  *  tem nada legível.
@@ -71,7 +55,7 @@ const VAZIA: Faixa = { abre: "", fecha: "" };
  *  se um dia chegar, cai na faixa vazia, como qualquer valor ilegível. */
 function faixasDoValor(valor: unknown): Faixa[] {
   if (Array.isArray(valor) && valor.length > 0 && valor.every(ehFaixa)) return valor.map((f) => ({ ...f }));
-  return [{ ...VAZIA }];
+  return [{ ...FAIXA_VAZIA }];
 }
 
 export default function EditorFaixas({ campo, valor, slug }: PropsDoEditor) {
@@ -81,68 +65,23 @@ export default function EditorFaixas({ campo, valor, slug }: PropsDoEditor) {
   // Hora por hora, e não `JSON.stringify`: o documento pode trazer as chaves em
   // outra ordem, e isso não é mudança que ele fez.
   const salvas = faixasDoValor(valor);
-  const mudou =
-    faixas.length !== salvas.length || faixas.some((f, i) => f.abre !== salvas[i].abre || f.fecha !== salvas[i].fecha);
-
-  function mudar(i: number, chave: keyof Faixa, hora: string): void {
-    setFaixas((antes) => antes.map((f, j) => (j === i ? { ...f, [chave]: hora } : f)));
-  }
+  const mudou = !mesmasFaixas(faixas, salvas);
 
   function salvar(): void {
-    if (faixas.some((f) => f.abre === "" || f.fecha === "")) {
+    if (temCaixaVazia(faixas)) {
       recusarAqui(HORA_VAZIA);
       return;
     }
-    // 🔴 NA ORDEM DO DIA (M-1 da revisão da 11d): "+ outra faixa" põe a nova no
-    // FIM, e a porta recusa lista fora de ordem. Ordenar pelo `abre` não muda o
-    // que ele quis — a tela pública sempre diz as faixas na ordem do dia. "HH:MM"
-    // ordena como texto. A porta continua recusando lista fora de ordem que
-    // chegue por outro caminho.
-    const naOrdem = [...faixas].sort((a, b) => (a.abre < b.abre ? -1 : a.abre > b.abre ? 1 : 0));
-    void gravar({ slug, campo: campo.caminho, valor: naOrdem });
+    // Na ordem do dia (ver `naOrdemDoDia`). A porta continua recusando lista
+    // fora de ordem que chegue por outro caminho.
+    void gravar({ slug, campo: campo.caminho, valor: naOrdemDoDia(faixas) });
   }
 
   return (
     <div className="adm-editor" data-editor={campo.caminho}>
       {/* Sem horário, a ajuda de que as duas horas de uma faixa entram juntas. */}
       {valor === undefined && <p className="adm-editor-ajuda">{HORAS_JUNTAS}</p>}
-      {faixas.map((f, i) => (
-        <div key={i} className="adm-editor-faixa" data-faixa={i}>
-          {(["abre", "fecha"] as const).map((chave) => (
-            <input
-              key={chave}
-              type="time"
-              className="adm-editor-hora"
-              aria-label={faixas.length > 1 ? `${HORA_DE[chave]} ${i + 1}` : HORA_DE[chave]}
-              data-hora={`${campo.caminho}.${i}.${chave}`}
-              value={f[chave]}
-              onChange={(e) => mudar(i, chave, e.target.value)}
-            />
-          ))}
-          {faixas.length > 1 && (
-            <button
-              type="button"
-              className="adm-editor-tirar-faixa"
-              data-tirar-faixa={i}
-              disabled={salvando}
-              onClick={() => setFaixas((antes) => antes.filter((_, j) => j !== i))}
-            >
-              {TIRAR_FAIXA}
-            </button>
-          )}
-        </div>
-      ))}
-      {faixas.length < MAXIMO && (
-        <button
-          type="button"
-          className="adm-editor-mais-faixa"
-          data-mais-faixa=""
-          disabled={salvando}
-          onClick={() => setFaixas((antes) => [...antes, { ...VAZIA }])}
-        >
-          {MAIS_FAIXA}
-        </button>
-      )}
+      <CaixasDeFaixas faixas={faixas} mudar={setFaixas} prefixo={campo.caminho} salvando={salvando} />
       <button
         type="button"
         className="adm-editor-salvar"

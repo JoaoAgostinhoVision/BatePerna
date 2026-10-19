@@ -81,6 +81,11 @@ export function respostaNaTela(p: PerguntaNaTela): string | null {
     }
     case "coord":
       return null;
+    // ⚠️ O HORÁRIO DIFERENTE EM ALGUNS DIAS (18/10) ainda não tem linha na
+    // revisão: a linha por grupo é da Task 5 desta rodada. Até lá, aparece como
+    // sem resposta.
+    case "grupos":
+      return null;
   }
 }
 

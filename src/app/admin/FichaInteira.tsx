@@ -10,6 +10,7 @@ import { vistaNoPonto0 } from "@/lib/vista-do-mapa";
 import type { Ficha } from "@/types/ficha";
 import EditorCalibrar from "./campos/EditorCalibrar";
 import EditorFaixas from "./campos/EditorFaixas";
+import EditorGrupos from "./campos/EditorGrupos";
 import EditorBooleano from "./campos/EditorBooleano";
 import EditorCoordenada from "./campos/EditorCoordenada";
 import EditorLista from "./campos/EditorLista";
@@ -18,6 +19,7 @@ import EditorProsa from "./campos/EditorProsa";
 import EditorWaypoints from "./campos/EditorWaypoints";
 import BotaoTrocarEndereco from "./BotaoTrocarEndereco";
 import { rotulosDe } from "@/lib/rotulos-das-opcoes";
+import { DIAS } from "@/lib/semana";
 import { ROTULO_ENDERECO, aindaDiz } from "@/lib/endereco";
 import type { CampoNaTela, Editor, VistaNaTela } from "./campos/tipos";
 
@@ -196,6 +198,8 @@ export const ROTULOS: Record<string, string> = {
   horario: "Este lugar tem hora pra abrir e pra fechar?",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   dias: "Os dias da semana em que abre",
+  // PENDENTE: redação minha, o João ainda não leu
+  horarioPorDia: "Os dias com outro horário",
 
   // — o que a chuva faz aqui —
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
@@ -398,7 +402,27 @@ const INSTRUMENTO: Record<EspecieCampo, Editor> = {
   // que o dono confere). As DUAS formas da espécie (o par e as metades de um
   // ponto) estão no docblock do `EditorCoordenada`.
   coord: EditorCoordenada,
+  // O horário diferente em alguns dias (18/10): a lista de grupos, cada um com
+  // as caixas de dia (as do `EditorLista` de vários) e as faixas (as do
+  // `EditorFaixas`), e UM Salvar.
+  grupos: EditorGrupos,
 };
+
+/** 🔴 OS DIAS QUE OS GRUPOS DO HORÁRIO DIFERENTE OFERECEM (18/10): os dias em que
+ *  o lugar ABRE — os `dias` do documento, ou os sete quando ele abre todo dia —,
+ *  na ordem de `DIAS`, com o nome de cada um (o mesmo `rotulosDe("dias")` da
+ *  pergunta dos dias). Decidido AQUI, no servidor, e entregue em
+ *  `campo.opcoes`, como a `vista` do mapa: o editor é de cliente e não conhece
+ *  o documento. Usado pelos dois que montam o `CampoNaTela` — esta tela e as
+ *  perguntas do lugar novo (`novo/perguntas.ts`, que serve também quem usa).
+ *
+ *  Documento é dado: `dias` que não é lista conta como todo dia (o mesmo que
+ *  `problemaDosGrupos` faz), e um valor que não é dia não entra. */
+export function diasDosGrupos(doc: unknown): Pick<CampoNaTela, "opcoes" | "rotulos"> {
+  const dias = (doc as { dias?: unknown } | null)?.dias;
+  const abertos = Array.isArray(dias) ? DIAS.filter((d) => dias.includes(d)) : [...DIAS];
+  return { opcoes: abertos, rotulos: rotulosDe("dias") };
+}
 
 /** O ÍNDICE e o PAR de um ponto do trajeto, pra a linha `.lat` dele — e só pra ela.
  *
@@ -464,6 +488,7 @@ function Bloco({ ficha, campo, vistaSemPonto }: { ficha: Ficha; campo: CampoDaFi
       ? { opcoes: campo.opcoes, multiplo: multiploDe(campo.caminho), ...(rotulosDe(campo.caminho) ? { rotulos: rotulosDe(campo.caminho) } : {}) }
       : {}),
     ...(campo.especie === "coord" ? pontoDoTrajeto(ficha, campo.caminho) : {}),
+    ...(campo.especie === "grupos" ? diasDosGrupos(ficha) : {}),
   };
   // Sem ponto, a vista: o ponto 0 pra a chuva (sem rede), ou a que a página
   // buscou pela cidade. Só vista — o mapa nasce sem pin.

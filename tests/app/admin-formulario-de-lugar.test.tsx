@@ -264,6 +264,11 @@ function docTodoRespondido(horario: readonly { abre: string; fecha: string }[] =
     custo: { tag: "pago", valor: "Valor marcador", curto: "Curto marcador" },
     horario,
     dias: ["sab", "dom"],
+    // 18/10: o horário diferente em alguns dias — um grupo de UM dos dois dias
+    // abertos (cobrir os dois seria recusado: o horário de sempre nunca valeria),
+    // com horas que não são as do `horario`. DOMINGO, e não sábado: o ponta a
+    // ponta abaixo mede o horário de sempre num sábado às 11h.
+    horarioPorDia: [{ dias: ["dom"], faixas: [{ abre: "07:00", fecha: "12:00" }] }],
   });
 }
 
@@ -1013,12 +1018,23 @@ describe("/admin/novo — responder, sair e voltar", () => {
 
   it("gravar na ÚLTIMA pergunta: fica na última", async () => {
     await lugarNovo();
+    // 18/10: a última é o horário diferente em alguns dias, que só vale com o
+    // horário de sempre já respondido (a porta recusa grupo sem ele).
+    await salvarRascunho(
+      cliente,
+      S,
+      JSON.stringify({ ...JSON.parse(docComCidade(S, NOME, CIDADE)), horario: [{ abre: "08:00", fecha: "17:00" }] }),
+      2,
+    );
     const { chamadas, reload, assign } = await comRotaDeVerdade();
     const ultima = ORDEM[ORDEM.length - 1];
+    expect(ultima, "a premissa: a última é a dos grupos").toBe("horarioPorDia");
     const total = esperadas().length;
     expect(posDe(ultima)).toBe(total);
     await telaDe(ultima);
     fireEvent.click(within(pergunta(ultima)).getAllByRole("checkbox")[0]);
+    fireEvent.change(pergunta(ultima).querySelector(`[data-hora="${ultima}.0.faixas.0.abre"]`)!, { target: { value: "07:00" } });
+    fireEvent.change(pergunta(ultima).querySelector(`[data-hora="${ultima}.0.faixas.0.fecha"]`)!, { target: { value: "12:00" } });
     fireEvent.click(pergunta(ultima).querySelector(`[data-salvar="${ultima}"]`)!);
     await waitFor(() => expect(assign).toHaveBeenCalledWith(enderecoDaPergunta(S, total)));
     expect(chamadas).toHaveLength(1);

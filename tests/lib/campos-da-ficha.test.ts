@@ -26,11 +26,27 @@ const FORA_DE_PROPOSITO = new Set([
 ]);
 
 // Uma entrada do registro que NÃO é folha do schema: ela edita o SUBGALHO
-// inteiro de uma vez. Só o mapa faz isso, e por desenho — o pin arrastado
-// devolve o par, nunca uma metade. O valor é o conjunto EXATO de folhas que a
-// entrada engole: se o schema ganhar uma terceira folha ali dentro (altitude,
-// precisão), este teste fica vermelho em vez de a folha nova nascer invisível.
-const EDITADOS_INTEIROS = new Map<string, readonly string[]>([["condicao.coords", ["lat", "lng"]]]);
+// inteiro de uma vez. O mapa faz isso por desenho — o pin arrastado devolve o
+// par, nunca uma metade. O valor é o conjunto EXATO de folhas que a entrada
+// engole, e a ESPÉCIE que a engole: se o schema ganhar uma terceira folha ali
+// dentro (altitude, precisão), este teste fica vermelho em vez de a folha nova
+// nascer invisível.
+//
+// 🔴 E DESDE 18/10 OS GRUPOS DO HORÁRIO DIFERENTE (`horarioPorDia`): uma LISTA
+// de objetos, que a varredura vira molde (`horarioPorDia[].dias`, e as duas
+// horas das faixas de dentro). Nenhuma dessas folhas é campo sozinha — os dias
+// de um grupo e as horas dele só fazem sentido juntos, e a regra
+// (`problemaDosGrupos`) compara grupos entre si — então a entrada é a lista
+// inteira, com a espécie que a grava de uma vez. As folhas ficam EXATAS aqui.
+const EDITADOS_INTEIROS = new Map<string, { folhas: readonly string[]; especie: string }>([
+  ["condicao.coords", { folhas: ["lat", "lng"], especie: "coord" }],
+  ["horarioPorDia", { folhas: ["[].dias", "[].faixas[].abre", "[].faixas[].fecha"], especie: "grupos" }],
+]);
+
+/** A folha `f` mora DENTRO da entrada-inteira `raiz`: um degrau abaixo
+ *  (`raiz.x`) ou dentro do molde da lista (`raiz[]…`). Nunca só o prefixo do
+ *  texto — `horarioPorDiaX` não é de `horarioPorDia`. */
+const dentroDe = (f: string, raiz: string): boolean => f.startsWith(`${raiz}.`) || f.startsWith(`${raiz}[]`);
 
 // 🔴 A ÚNICA DIVERGÊNCIA DECLARADA ENTRE A COLUNA `obrigatorio` E O SCHEMA
 // (Tarefa 11b, 2026-10-04, 11b-I1 da auditoria do plano). Cada chave aqui é
@@ -153,7 +169,7 @@ const BLOCOS_DO_SCHEMA = blocosOpcionaisDoSchema(fichaSchema, "", []);
 const NO_REGISTRO = new Set(CAMPOS_DA_FICHA.map((c) => c.caminho));
 
 function engolidaPorEntradaInteira(folha: string): boolean {
-  for (const raiz of EDITADOS_INTEIROS.keys()) if (folha.startsWith(`${raiz}.`)) return true;
+  for (const raiz of EDITADOS_INTEIROS.keys()) if (dentroDe(folha, raiz)) return true;
   return false;
 }
 
@@ -173,7 +189,9 @@ describe("a varredura do schema, antes de ela guardar coisa nenhuma", () => {
     expect(FOLHAS).not.toContain("condicao"); // nó interno não é folha
     expect(FOLHAS).not.toContain("trajeto.waypoints"); // idem
     expect(FOLHAS).toContain("horario"); // a lista de faixas é UMA folha (Tarefa 11c)
-    expect(FOLHAS).toHaveLength(33);
+    // 36 = as 33 de até 17/10 + as 3 dos grupos do horário diferente (18/10):
+    // `horarioPorDia[].dias`, `horarioPorDia[].faixas[].abre` e `.fecha`.
+    expect(FOLHAS).toHaveLength(36);
   });
 
   it("nenhuma folha repetida, e nenhuma vazia", () => {
@@ -234,11 +252,11 @@ describe("o registro cobre o schema", () => {
     expect(fantasmas, "entrada do registro que não corresponde a nada no schema").toEqual([]);
   });
 
-  it("toda entrada-inteira engole EXATAMENTE as folhas declaradas, e é do mapa", () => {
-    for (const [raiz, esperadas] of EDITADOS_INTEIROS) {
-      const dentro = FOLHAS.filter((f) => f.startsWith(`${raiz}.`)).map((f) => f.slice(raiz.length + 1));
-      expect(dentro.sort(), raiz).toEqual([...esperadas].sort());
-      expect(campoPorCaminho(raiz)?.especie, raiz).toBe("coord");
+  it("toda entrada-inteira engole EXATAMENTE as folhas declaradas, com a espécie declarada", () => {
+    for (const [raiz, { folhas, especie }] of EDITADOS_INTEIROS) {
+      const dentro = FOLHAS.filter((f) => dentroDe(f, raiz)).map((f) => f.slice(raiz.length).replace(/^\./, ""));
+      expect(dentro.sort(), raiz).toEqual([...folhas].sort());
+      expect(campoPorCaminho(raiz)?.especie, raiz).toBe(especie);
     }
   });
 
@@ -351,9 +369,9 @@ describe("o registro cobre o schema", () => {
 
   it("o registro não está vazio nem é só a voz — senão os guardas acima passam ocos", () => {
     expect(CAMPOS_DA_FICHA.length).toBeGreaterThan(12);
-    // 6, e não as 8 que o tipo declara: `hora` e `bloco` ficaram sem entrada
-    // na 11c (o horário virou `faixas`) e só existem até a 11d contrair a tela.
-    expect(new Set(CAMPOS_DA_FICHA.map((c) => c.especie)).size).toBe(6);
+    // 7: as 6 de até 17/10 (`hora` e `bloco` saíram na 11c/11d) + `grupos`, o
+    // horário diferente em alguns dias (18/10).
+    expect(new Set(CAMPOS_DA_FICHA.map((c) => c.especie)).size).toBe(7);
     expect(new Set(CAMPOS_DA_FICHA.map((c) => c.grupo)).size).toBe(6);
   });
 

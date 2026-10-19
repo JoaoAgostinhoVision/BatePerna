@@ -26,6 +26,7 @@ import {
   VISTA_SEM_CIDADE,
 } from "@/app/admin/campos/EditorCoordenada";
 import { ComVersaoDaTela, ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
+import { MAIS_GRUPO, TIRAR_GRUPO, TITULO_DO_GRUPO } from "@/app/admin/campos/EditorGrupos";
 import { DESISTIR, DESISTIR_MESMO, ERRO_DESISTIR } from "@/app/admin/BotaoDesistir";
 import { CORRIGIR_O_NOME } from "@/app/admin/AvisoDoPar";
 import {
@@ -1312,21 +1313,24 @@ describe("Os guardas do que cresce — registro × instrumento", () => {
   // 🔴 O GUARDA DO `EditorBloco` E DO `EditorHora` MUDOU DE PERGUNTA DUAS
   // VEZES. Na 11c, "nenhuma entrada é `bloco` nem `hora`" (as duas tinham ficado
   // sem entrada); na 11d as duas espécies SAÍRAM DO TIPO, junto com os dois
-  // editores — e a pergunta vira: o registro usa exatamente as seis espécies que
-  // têm instrumento, e o horário é a única `faixas`. Uma espécie nova no tipo
+  // editores — e a pergunta vira: o registro usa exatamente as espécies que
+  // têm instrumento, e o horário é a única `faixas` (18/10: e o horário
+  // diferente em alguns dias é a única `grupos`). Uma espécie nova no tipo
   // não compila sem instrumento (os `Record` da `FichaInteira` e do
   // `FormularioDeLugar`); este caso pega a espécie do tipo que o registro
   // deixou de usar — instrumento morto.
-  it("o registro usa as seis espécies do tipo, e o horário é a única `faixas`", () => {
+  it("o registro usa as sete espécies do tipo, o horário é a única `faixas` e o horário diferente a única `grupos`", () => {
     expect([...new Set(CAMPOS_DA_FICHA.map((c) => c.especie))].sort()).toEqual([
       "booleano",
       "coord",
       "faixas",
+      "grupos",
       "lista",
       "numero",
       "prosa",
     ]);
     expect(CAMPOS_DA_FICHA.filter((c) => c.especie === "faixas").map((c) => c.caminho)).toEqual(["horario"]);
+    expect(CAMPOS_DA_FICHA.filter((c) => c.especie === "grupos").map((c) => c.caminho)).toEqual(["horarioPorDia"]);
   });
 });
 
@@ -1548,6 +1552,12 @@ describe("Os editores servem os três lugares", () => {
     // duas ou mais — nenhuma ficha do acervo tem.
     MAIS_FAIXA,
     TIRAR_FAIXA,
+    // 18/10: as do horário diferente em alguns dias. O título e o "+ outro
+    // grupo" aparecem em repouso (o editor nasce com um grupo vazio); o "tirar",
+    // só com dois grupos ou mais.
+    TITULO_DO_GRUPO,
+    MAIS_GRUPO,
+    TIRAR_GRUPO,
     // As do número de motor (Task 7; na onda de conserto 1, 2026-10-01,
     // `SEM_LEITURA` foi apagada e nasceram `JANELA_NEGATIVA` e
     // `ALEM_DO_PROVEDOR`; na onda 2, `JANELA_PASSADO_NEGATIVA`). Nenhuma aparece

@@ -3,7 +3,7 @@ import { PISOS } from "@/lib/piso";
 import { CIDADE_SEM_LETRA, CIDADE_VAZIA, slugDoNome } from "@/lib/rascunho";
 import { SEVERIDADES } from "@/lib/severidade";
 import { DIAS } from "@/lib/semana";
-import { problemaDasFaixas, type Faixa } from "@/lib/horario";
+import { problemaDasFaixas, problemaDosGrupos, type Faixa, type GrupoDeHorario } from "@/lib/horario";
 import { fichaSchema, type Ficha } from "@/types/ficha";
 
 /** A ESPINHA DO PAINEL: um registro declarado de campos, e uma porta só que
@@ -45,8 +45,14 @@ import { fichaSchema, type Ficha } from "@/types/ficha";
  *    de propósito, porque o schema as declara diferentes: `condicao.coords` é
  *    o PAR (`{lat, lng}`) e `trajeto.waypoints[].lat`/`.lng` são as METADES
  *    (números soltos). Quem grava não precisa distinguir — o
- *    `fichaSchema.parse` da porta recusa a forma errada no caminho errado. */
-export type EspecieCampo = "prosa" | "lista" | "booleano" | "numero" | "coord" | "faixas";
+ *    `fichaSchema.parse` da porta recusa a forma errada no caminho errado.
+ *  - `grupos` — o HORÁRIO DIFERENTE EM ALGUNS DIAS (18/10): uma lista de 1 a 3
+ *    grupos `{dias, faixas}`, gravada de uma vez, como `faixas` — a gravação
+ *    SUBSTITUI a lista. As regras são de `problemaDosGrupos`, em `horario.ts`, e
+ *    precisam do documento (o `horario` e os `dias` dele): por isso a porta as
+ *    roda contra o documento JÁ com a mudança, e roda de novo quando `horario`
+ *    ou `dias` mudam com grupos presentes. O "não tem" tira a chave. */
+export type EspecieCampo = "prosa" | "lista" | "booleano" | "numero" | "coord" | "faixas" | "grupos";
 
 /** O bloco em que o campo aparece na tela do painel. Os nomes seguem os blocos
  *  que a ficha pública já tem (`src/app/[slug]/page.tsx`): `acesso`, `avisos`,
@@ -78,7 +84,8 @@ export type ValorDeCampo =
   | boolean
   | readonly string[]
   | { lat: number; lng: number }
-  | readonly Faixa[];
+  | readonly Faixa[]
+  | readonly GrupoDeHorario[];
 
 /** A marca de "qualquer índice" dentro de um caminho. */
 const MOLDE = "[]";
@@ -135,6 +142,11 @@ export const CAMPOS_DA_FICHA: readonly CampoDaFicha[] = [
   // NUNCA fecha. A régua tem que ser alcançável do celular.
   { caminho: "horario", especie: "faixas", obrigatorio: false, grupo: "quando" },
   { caminho: "dias", especie: "lista", obrigatorio: false, grupo: "quando", opcoes: DIAS },
+  // 🔴 O HORÁRIO DIFERENTE EM ALGUNS DIAS (18/10): logo depois de `dias`, que é
+  // a ordem da pergunta (o horário de sempre, os dias, e só então a diferença).
+  // Sem `opcoes` no registro — os dias que a tela oferece são os ABERTOS deste
+  // lugar, e quem os filtra é o servidor que monta o `CampoNaTela`.
+  { caminho: "horarioPorDia", especie: "grupos", obrigatorio: false, grupo: "quando" },
 
   // — o que a chuva faz aqui —
   { caminho: "condicao.coords", especie: "coord", obrigatorio: true, grupo: "condicao" },
@@ -413,6 +425,55 @@ function conferirFaixas(valor: unknown): Faixa[] {
   return (valor as Faixa[]).map(({ abre, fecha }) => ({ abre, fecha }));
 }
 
+/** 🔴 OS GRUPOS ENTRAM INTEIROS, E SUBSTITUEM O QUE HAVIA (18/10). A conferência
+ *  é a de `problemaDosGrupos` contra o documento ONDE eles vão morar (`doc`, com
+ *  o `horario` e os `dias` dele), e estoura `Error` com a frase dela. Devolve a
+ *  lista NORMALIZADA: cada grupo só com `dias` e `faixas` (a chave a mais some,
+ *  como em `conferirFaixas` — o rascunho não passa pelo schema), os dias na
+ *  ordem de `DIAS` (dom→sab, a ordem com que `rotuloDias` lê a semana) e as
+ *  faixas só com as duas horas. As faixas já estão na ordem do dia: a regra
+ *  (`problemaDasFaixas`) recusa lista fora de ordem. */
+function conferirGrupos(valor: unknown, doc: { horario?: unknown; dias?: unknown }): GrupoDeHorario[] {
+  const problema = problemaDosGrupos(valor, doc);
+  if (problema !== null) throw new Error(problema);
+  return (valor as GrupoDeHorario[]).map((g) => ({
+    dias: DIAS.filter((d) => g.dias.includes(d)),
+    faixas: g.faixas.map(({ abre, fecha }) => ({ abre, fecha })),
+  }));
+}
+
+/** 🔴 TIRAR O HORÁRIO DE SEMPRE COM GRUPOS PRESENTES (18/10, decisão da spec
+ *  §3): os grupos dizem "diferente" DO horário de sempre — sem ele, sobraria um
+ *  "diferente" órfão, que a leitura usaria como o horário daqueles dias e
+ *  calaria nos outros. A porta recusa e pede a ordem certa. Uma frase só pra
+ *  ficha no ar, rascunho e as duas portas da pessoa. */
+// PENDENTE: redação minha, o João ainda não leu
+export const TIRE_O_HORARIO_POR_DIA_ANTES =
+  "tire primeiro o horário diferente de alguns dias: sem o horário de sempre, não dá pra dizer o que é diferente";
+
+/** A recusa de cima, pra quem tira uma chave de um documento: estoura se o
+ *  caminho é `horario` e o documento tem grupos. Exportada pra porta da pessoa
+ *  (`campos-da-pessoa.ts`), que tira a chave pelo caminho dela. */
+export function recusarTirarHorarioComGrupos(doc: unknown, caminho: string): void {
+  if (caminho !== "horario") return;
+  if (typeof doc === "object" && doc !== null && "horarioPorDia" in doc) {
+    throw new Error(TIRE_O_HORARIO_POR_DIA_ANTES);
+  }
+}
+
+/** 🔴 MUDAR `dias` OU `horario` COM GRUPOS PRESENTES (18/10): a regra dos grupos
+ *  depende dos dois — `dias` que deixa de ter o sábado deixa o grupo de sábado
+ *  num dia fechado; `horario` que vira 7h–12h deixa o grupo de 7h–12h igual a
+ *  ele. Roda sobre o documento JÁ com a mudança, e recusa com a frase da regra.
+ *  Sem grupos não faz nada: o lugar de um horário só não muda em nada. */
+function conferirGruposDepoisDe(caminho: string, novo: unknown): void {
+  if (caminho !== "horario" && caminho !== "dias") return;
+  if (typeof novo !== "object" || novo === null || !("horarioPorDia" in novo)) return;
+  const doc = novo as { horario?: unknown; dias?: unknown; horarioPorDia?: unknown };
+  const problema = problemaDosGrupos(doc.horarioPorDia, doc);
+  if (problema !== null) throw new Error(problema);
+}
+
 /** 🔴 OS BLOCOS QUE NASCEM NA FICHA NO AR (07/10). O `escrever` recusa degrau
  *  ausente (o comentário de lá conta por quê: um objeto de UMA folha nunca
  *  passava no schema). O `discriminador` mudou isso: desde 07/10 ele e as três
@@ -432,18 +493,28 @@ const BLOCOS_QUE_NASCEM: ReadonlySet<string> = new Set(["discriminador"]);
 export function aplicarCampo(docAtual: string, caminho: string, valor: ValorDeCampo): string {
   const campo = exigirCampo(caminho);
 
+  if (campo.especie === "grupos") {
+    const atual = fichaSchema.parse(JSON.parse(docAtual));
+    const grupos = conferirGrupos(valor, atual);
+    return JSON.stringify(fichaSchema.parse(escrever(atual, caminho.split("."), grupos, false)));
+  }
+
   if (campo.especie === "faixas") {
     const faixas = conferirFaixas(valor);
     const atual = fichaSchema.parse(JSON.parse(docAtual));
-    return JSON.stringify(fichaSchema.parse(escrever(atual, caminho.split("."), faixas, false)));
+    const novo = fichaSchema.parse(escrever(atual, caminho.split("."), faixas, false));
+    conferirGruposDepoisDe(caminho, novo);
+    return JSON.stringify(novo);
   }
 
   recusarVazio(caminho, valor);
   recusarCidadeSemLetra(caminho, valor);
   const atual = fichaSchema.parse(JSON.parse(docAtual));
-  return JSON.stringify(
-    fichaSchema.parse(escrever(atual, caminho.split("."), valor, false, BLOCOS_QUE_NASCEM.has(caminho.split(".")[0]))),
+  const novo = fichaSchema.parse(
+    escrever(atual, caminho.split("."), valor, false, BLOCOS_QUE_NASCEM.has(caminho.split(".")[0])),
   );
+  conferirGruposDepoisDe(caminho, novo);
+  return JSON.stringify(novo);
 }
 
 /** Grava a COORDENADA INTEIRA de um ponto do trajeto — `lat` e `lng` juntas,
@@ -557,7 +628,10 @@ export function tirarEtapa(docAtual: string, indice: number): string {
 export function removerCampo(docAtual: string, caminho: string): string {
   recusarNaoSeiObrigatorio(caminho);
   const atual = fichaSchema.parse(JSON.parse(docAtual));
-  return JSON.stringify(fichaSchema.parse(escrever(atual, caminho.split("."), undefined, true)));
+  recusarTirarHorarioComGrupos(atual, caminho);
+  const novo = fichaSchema.parse(escrever(atual, caminho.split("."), undefined, true));
+  conferirGruposDepoisDe(caminho, novo);
+  return JSON.stringify(novo);
 }
 
 /** A recusa do "não sei" num campo obrigatório — uma frase só, pra ficha no ar
@@ -620,18 +694,29 @@ export function aplicarNoRascunho(docAtual: string, caminho: string, valor: Valo
     throw new Error("a coordenada do ponto entra inteira: a latitude e a longitude juntas, no mesmo Salvar");
   }
   const atual = abrirRascunho(docAtual);
+  if (campo.especie === "grupos") {
+    return JSON.stringify(escrever(atual, caminho.split("."), conferirGrupos(valor, atual), false, true));
+  }
   if (campo.especie === "faixas") {
-    return JSON.stringify(escrever(atual, caminho.split("."), conferirFaixas(valor), false, true));
+    const novo = escrever(atual, caminho.split("."), conferirFaixas(valor), false, true);
+    conferirGruposDepoisDe(caminho, novo);
+    return JSON.stringify(novo);
   }
 
   validarFolha(caminho, valor);
-  return JSON.stringify(escrever(atual, caminho.split("."), valor, false, true));
+  const novo = escrever(atual, caminho.split("."), valor, false, true);
+  conferirGruposDepoisDe(caminho, novo);
+  return JSON.stringify(novo);
 }
 
 /** `removerCampo` sobre o rascunho: o "não sei", que tira a resposta. */
 export function tirarDoRascunho(docAtual: string, caminho: string): string {
   recusarNaoSeiObrigatorio(caminho);
-  return JSON.stringify(escrever(abrirRascunho(docAtual), caminho.split("."), undefined, true));
+  const atual = abrirRascunho(docAtual);
+  recusarTirarHorarioComGrupos(atual, caminho);
+  const novo = escrever(atual, caminho.split("."), undefined, true);
+  conferirGruposDepoisDe(caminho, novo);
+  return JSON.stringify(novo);
 }
 
 /** `gravarPonto` sobre o rascunho: a coordenada INTEIRA do ponto, as duas

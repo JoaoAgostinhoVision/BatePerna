@@ -28,6 +28,13 @@ import { CAMPOS_DA_FICHA, lerCaminho } from "@/lib/campos-da-ficha";
  *  uma frase sobre UM tipo de lugar num componente que serve todos. */
 const SO_SE_PAGO = new Set(["custo.valor", "custo.curto"]);
 
+/** 🔴 O OPCIONAL CUJA AUSÊNCIA NÃO CALA NADA (18/10): o horário diferente em
+ *  alguns dias. Sem ele, o horário de sempre vale em todo dia aberto — que é o
+ *  caso comum, e o app continua dizendo a hora de cada dia. Uma frase de "o app
+ *  cala" aqui afirmaria um silêncio que não existe (e iria pra tela de todo
+ *  lugar novo de um horário só). */
+const AUSENCIA_NAO_CALA = new Set(["horarioPorDia"]);
+
 /** As frases, pelo caminho CONCRETO.
  *
  *  🔴 SEIS SÃO DO QUESTIONÁRIO (`docs/questionario-ficha.md`, "O que acontece
@@ -86,6 +93,7 @@ export function oQueOAppCala(doc: unknown): string[] {
     if (campo.obrigatorio) continue;
     const caminho = campo.caminho.replace("[]", ".0");
     if (SO_SE_PAGO.has(caminho) && !pago) continue;
+    if (AUSENCIA_NAO_CALA.has(caminho)) continue;
     if (lerCaminho(doc, caminho.split(".")) !== undefined) continue;
     frases.push(FRASES[caminho] ?? caminho);
   }

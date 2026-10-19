@@ -35,12 +35,18 @@ export type CampoNaTela = {
    *  PROP — o editor não conhece módulo de vocabulário nenhum. Três delas vêm
    *  de `PISOS`/`DIAS`/`SEVERIDADES`; `custo.tag` tem a lista LITERAL no
    *  registro (dívida da Task 1, ver o docblock do `EditorLista`), e dizer
-   *  "vêm de PISOS/DIAS/SEVERIDADES" sem essa ressalva era falso. */
+   *  "vêm de PISOS/DIAS/SEVERIDADES" sem essa ressalva era falso.
+   *
+   *  🔴 E NA ESPÉCIE `grupos` (18/10): os dias que as caixas de cada grupo
+   *  oferecem — os dias em que o lugar ABRE, já filtrados pelo servidor a partir
+   *  dos `dias` do documento (`diasDosGrupos`, em `FichaInteira`), na ordem de
+   *  `DIAS`. O registro não declara `opcoes` pra ela: depende do documento. */
   opcoes?: readonly string[];
-  /** Só pra espécie `lista`: a PALAVRA DA TELA de cada opção (valor gravado →
-   *  palavra). O que se grava continua sendo a opção crua (`gratis`, `sab`); só
-   *  o texto que ele lê muda. Montado no servidor (`rotulosDe`), nos dois lugares
-   *  que montam o `CampoNaTela`. Opção sem rótulo aqui aparece pelo valor cru. */
+  /** Só pra espécie `lista` (e, desde 18/10, `grupos`: os nomes dos dias): a
+   *  PALAVRA DA TELA de cada opção (valor gravado → palavra). O que se grava
+   *  continua sendo a opção crua (`gratis`, `sab`); só o texto que ele lê muda.
+   *  Montado no servidor (`rotulosDe`), nos dois lugares que montam o
+   *  `CampoNaTela`. Opção sem rótulo aqui aparece pelo valor cru. */
   rotulos?: Readonly<Record<string, string>>;
   /** Só pra espécie `lista`: este campo guarda VÁRIAS opções (`dias`) ou uma
    *  (`piso`, `custo.tag`, `condicao.severidade`). Quem decide é
@@ -100,7 +106,7 @@ export type Editor = (props: PropsDoEditor) => ReactElement;
  *  `CampoNaTela` (ver o docblock do topo). Quem monta a `PerguntaNaTela` é o
  *  servidor, a partir do `CampoDaFicha` — e uma espécie nova no registro que
  *  não esteja aqui deixa AQUELE arquivo sem compilar. */
-export type EspecieNaTela = "prosa" | "lista" | "booleano" | "numero" | "coord" | "faixas";
+export type EspecieNaTela = "prosa" | "lista" | "booleano" | "numero" | "coord" | "faixas" | "grupos";
 
 /** UMA PERGUNTA DO FORMULÁRIO DE LUGAR NOVO (Tarefa 11) — o contrato entre a
  *  página de servidor (`/admin/novo`, que lê o registro e o questionário) e o

@@ -3,6 +3,7 @@ import { useCallback, useState, type FormEvent, type MouseEvent } from "react";
 import AvisoDoPar, { CORRIGIR_O_NOME } from "./AvisoDoPar";
 import BotaoDesistir from "./BotaoDesistir";
 import EditorFaixas from "./campos/EditorFaixas";
+import EditorGrupos from "./campos/EditorGrupos";
 import EditorBooleano from "./campos/EditorBooleano";
 import EditorCoordenada from "./campos/EditorCoordenada";
 import EditorLista from "./campos/EditorLista";
@@ -153,6 +154,7 @@ export const INSTRUMENTO: Record<EspecieNaTela, Editor> = {
   numero: EditorNumeroDeMotor,
   faixas: EditorFaixas,
   coord: EditorCoordenada,
+  grupos: EditorGrupos,
 };
 
 export function Pergunta({
