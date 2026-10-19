@@ -228,14 +228,14 @@ describe("o harness de mutação do coerencia.ts", () => {
     expect(new Set(substancias).size).toBe(42);
     // 🔴 42 de 42 (eram 34 de 34) desde que a TROCA entrou na substância — e aqui vai a parte
     // desconfortável, medida: `N11` e `B1a` são a MESMA mutação semântica
-    // (colapsam a bifurcação na linha 415, as duas escrevendo `frase: true`), e
+    // (colapsam a bifurcação na linha 426, as duas escrevendo `frase: true`), e
     // o que as distingue nesta contagem é só o COMENTÁRIO dentro do `novo`. Ou
     // seja: 34 distintas aqui NÃO significa 34 trocas distintas no módulo — são
     // 33, como o docblock do harness diz. A distinção da 34ª é cosmética, está
     // escrita, e é melhor assim do que uma contagem que parece semântica e não é.
     // (Com as 8 da onda de conserto 2: 42 distintas aqui, 41 trocas no módulo.)
-    const na410 = mutacoes.filter((m) => m.afirma.includes("@415-415") && m.afirma.includes("frase: true"));
-    expect([...na410.map((m) => m.id)].sort()).toEqual(["B1a", "N11"]);
+    const na426 = mutacoes.filter((m) => m.afirma.includes("@426-426") && m.afirma.includes("frase: true"));
+    expect([...na426.map((m) => m.id)].sort()).toEqual(["B1a", "N11"]);
   });
 
   it("as 42 mutações mutam os arquivos que dizem mutar — 41 no módulo, 1 na página", () => {
