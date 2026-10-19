@@ -35,6 +35,7 @@ import {
 } from "@/app/admin/FormularioDeLugar";
 import { ROTAS, enderecoDePublicar } from "@/app/admin/novo/enderecos";
 import EditorProsa from "@/app/admin/campos/EditorProsa";
+import { RESPONDA_O_HORARIO_PRIMEIRO } from "@/app/admin/campos/EditorGrupos";
 import { ERRO_REDE } from "@/app/admin/campos/gravar";
 import { CIDADE_DEPOIS_DE_SALVAR, DESFAZER, HORA_VAZIA } from "@/app/admin/campos/palavras";
 import { APROXIMAR, EM_CIDADE, MARQUE_NO_MAPA, VISTA_CIDADE_AMBIGUA, VISTA_SEM_CIDADE } from "@/app/admin/campos/EditorCoordenada";
@@ -304,7 +305,9 @@ describe("/admin/novo — as perguntas", () => {
       // 🔴 UM SALVAR POR TELA (Tarefa 11d): a lacuna que deixou o I-B passar. E
       // NENHUM na de mapa sem ponto (Tarefa 11f, M4): ali o Salvar só nasce
       // com o toque dele — antes, ele gravaria o centro da vista.
-      const salvares = campoDe(aqui[0]).especie === "coord" ? 0 : 1;
+      // E NENHUM no horário diferente de um rascunho SEM o horário de sempre
+      // (T5c): ali vai só a linha que pede o horário primeiro.
+      const salvares = campoDe(aqui[0]).especie === "coord" || aqui[0] === "horarioPorDia" ? 0 : 1;
       expect(
         document.querySelectorAll("[data-salvar]"),
         `a tela ${n} (${aqui[0]}) não tem ${salvares} Salvar`,
@@ -510,6 +513,14 @@ describe("/admin/novo — as perguntas", () => {
         expect(within(pergunta(m)).getByTestId("mapa-escolher")).toBeTruthy();
         expect(pergunta(m).querySelector("[data-pin]"), `pin que ninguém pôs em ${m}`).toBeNull();
         expect(within(pergunta(m)).getByTestId("coord-atual").textContent).toBe("");
+        lidas++;
+        return;
+      }
+      // O horário diferente, num rascunho sem horário de sempre, também não tem
+      // caixa (T5c): é a linha. A tela COM horário tem editor e cai no laço abaixo.
+      if (m === "horarioPorDia") {
+        expect(caixas, `a tela ${n} (${m}) tem caixa sem o horário de sempre`).toHaveLength(0);
+        expect(pergunta(m).textContent).toContain(RESPONDA_O_HORARIO_PRIMEIRO);
         lidas++;
         return;
       }

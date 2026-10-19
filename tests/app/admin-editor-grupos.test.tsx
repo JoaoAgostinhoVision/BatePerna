@@ -4,7 +4,8 @@ import FichaInteira from "@/app/admin/FichaInteira";
 import { ORDEM, PERGUNTAS, montarPerguntas } from "@/app/admin/novo/perguntas";
 import { montarPerguntasDaPessoa } from "@/app/contribuir/perguntas";
 import { rotulosDe } from "@/lib/rotulos-das-opcoes";
-import { MAIS_GRUPO, TIRAR_GRUPO, TITULO_DO_GRUPO } from "@/app/admin/campos/EditorGrupos";
+import { MAIS_GRUPO, RESPONDA_O_HORARIO_PRIMEIRO, TIRAR_GRUPO, TITULO_DO_GRUPO } from "@/app/admin/campos/EditorGrupos";
+import FormularioDeLugar, { PROXIMA, PULAR } from "@/app/admin/FormularioDeLugar";
 import { NAO_TEM } from "@/app/admin/campos/BotaoNaoSei";
 import { AvisoDeMudanca } from "@/app/admin/campos/gravar";
 import { DESFAZER, HORA_VAZIA, SALVAR } from "@/app/admin/campos/palavras";
@@ -273,5 +274,78 @@ describe("a pergunta no lugar novo e na tela de quem usa", () => {
     expect(q.texto).toBe(PERGUNTAS.horarioPorDia);
     expect(q.campo.obrigatorio).toBe(false);
     expect(q.campo.opcoes).toEqual(["dom", "sab"]);
+  });
+});
+
+// 🔴 SEM O HORÁRIO DE SEMPRE, NADA DE EDITOR (T5c, spec §6: "exija menos do
+// usuário"): um grupo é "diferente" do horário de sempre, e sem ele o Salvar
+// só recusaria com `GRUPO_SEM_HORARIO`. No lugar das caixas, uma linha curta.
+describe("sem horário, a linha no lugar do editor", () => {
+  const RAMPA = ACERVO.find((f) => f.slug === "rampa-do-pepe");
+  if (!RAMPA || RAMPA.horario !== undefined || RAMPA.horarioPorDia !== undefined) {
+    throw new Error("a premissa mudou: a Rampa não tinha horário nem horário diferente");
+  }
+  const grupos0 = (doc: unknown) => montarPerguntas(doc).find((q) => q.campo.caminho === CAMPO)!;
+  const SEM_HORARIO_NO_FORM = (q: { campo: { semHorario?: boolean } }) => q.campo.semHorario === true;
+
+  it("a ficha sem horário: a linha, sem caixas, sem Salvar, sem '+ outro grupo'", () => {
+    render(<FichaInteira ficha={RAMPA} />);
+    expect(bloco().textContent).toContain(RESPONDA_O_HORARIO_PRIMEIRO);
+    expect(bloco().querySelectorAll("input, button")).toHaveLength(0);
+    expect(grupos()).toBe(0);
+  });
+
+  it("a ficha com horário: o editor, e a linha não aparece", () => {
+    render(<FichaInteira ficha={PEDRA} />);
+    expect(bloco().textContent).not.toContain(RESPONDA_O_HORARIO_PRIMEIRO);
+    expect(grupos()).toBe(1);
+    expect(botao(`[data-salvar="${CAMPO}"]`)).not.toBeNull();
+  });
+
+  // Dado gravado não se esconde: as portas já recusam criar este estado, mas um
+  // documento pode chegar assim.
+  it("tem horário diferente e perdeu o horário: o editor aparece, com o que está gravado", () => {
+    render(<FichaInteira ficha={{ ...RAMPA, horarioPorDia: SALVOS }} />);
+    expect(bloco().textContent).not.toContain(RESPONDA_O_HORARIO_PRIMEIRO);
+    expect(grupos()).toBe(1);
+    expect(caixaDeDia(0, "dom").checked).toBe(true);
+  });
+
+  it("o lugar novo, painel e quem usa: o servidor manda `semHorario` só quando falta o horário", () => {
+    const sem = { slug: "x" };
+    const com = { slug: "x", horario: [{ abre: "08:00", fecha: "17:00" }] };
+    const pelaPessoa = (doc: object) => montarPerguntasDaPessoa(doc).find((q) => q.campo.caminho === CAMPO)!;
+    expect(SEM_HORARIO_NO_FORM(grupos0(sem)), "painel, sem horário").toBe(true);
+    expect(SEM_HORARIO_NO_FORM(grupos0(com)), "painel, com horário").toBe(false);
+    expect(SEM_HORARIO_NO_FORM(pelaPessoa(sem)), "quem usa, sem horário").toBe(true);
+    expect(SEM_HORARIO_NO_FORM(pelaPessoa(com)), "quem usa, com horário").toBe(false);
+    expect(SEM_HORARIO_NO_FORM(grupos0({ ...sem, horarioPorDia: SALVOS })), "dado gravado não se esconde").toBe(false);
+  });
+
+  it("no formulário do lugar novo: a linha no lugar do editor, e Pular e Próxima seguem", () => {
+    for (const onde of ["painel", "contribuir"] as const) {
+      cleanup();
+      const montar = onde === "painel" ? montarPerguntas : montarPerguntasDaPessoa;
+      const todas = montar({ slug: "x" });
+      const pergunta = todas.find((q) => q.campo.caminho === CAMPO)!;
+      const { container, getByRole } = render(
+        <FormularioDeLugar slug="x" pergunta={pergunta} posicao={todas.length} respondidas={todas.map(() => false)} onde={onde} />,
+      );
+      expect(container.textContent, onde).toContain(RESPONDA_O_HORARIO_PRIMEIRO);
+      expect(container.querySelectorAll('input[type="checkbox"]'), onde).toHaveLength(0);
+      expect(container.querySelector(`[data-salvar="${CAMPO}"]`), onde).toBeNull();
+      expect(getByRole("button", { name: PULAR }), onde).toBeTruthy();
+      expect(getByRole("link", { name: PROXIMA }), onde).toBeTruthy();
+    }
+  });
+
+  it("no formulário do lugar novo COM horário: o editor", () => {
+    const todas = montarPerguntas({ slug: "x", horario: [{ abre: "08:00", fecha: "17:00" }] });
+    const pergunta = todas.find((q) => q.campo.caminho === CAMPO)!;
+    const { container } = render(
+      <FormularioDeLugar slug="x" pergunta={pergunta} posicao={todas.length} respondidas={todas.map(() => false)} />,
+    );
+    expect(container.textContent).not.toContain(RESPONDA_O_HORARIO_PRIMEIRO);
+    expect(container.querySelector(`[data-salvar="${CAMPO}"]`)).not.toBeNull();
   });
 });

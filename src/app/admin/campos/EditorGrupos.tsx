@@ -46,6 +46,10 @@ export const MAIS_GRUPO = "+ outro grupo";
 // PENDENTE: redação minha, o João ainda não leu
 export const TIRAR_GRUPO = "Tirar este grupo";
 
+/** No lugar do editor, quando o lugar não tem o horário de sempre (T5c). */
+// PENDENTE: redação minha, o João ainda não leu
+export const RESPONDA_O_HORARIO_PRIMEIRO = "Responda primeiro o horário de sempre; aqui entram só os dias que fogem dele.";
+
 type Grupo = { dias: string[]; faixas: Faixa[] };
 
 /** O teto da lista — o mesmo de `problemaDosGrupos`. Repetido aqui (e não
@@ -81,7 +85,22 @@ const mesmosDias = (a: readonly string[], b: readonly string[]): boolean =>
 const mesmosGrupos = (a: readonly Grupo[], b: readonly Grupo[]): boolean =>
   a.length === b.length && a.every((g, i) => mesmosDias(g.dias, b[i].dias) && mesmasFaixas(g.faixas, b[i].faixas));
 
-export default function EditorGrupos({ campo, valor, slug }: PropsDoEditor) {
+/** 🔴 SEM O HORÁRIO DE SEMPRE, SÓ A LINHA (T5c, spec §6: "exija menos do
+ *  usuário"). Um grupo é diferente DO horário de sempre; sem ele, as caixas só
+ *  levariam a uma recusa no Salvar. O servidor diz (`campo.semHorario`), e o
+ *  corpo do editor nem monta — por isso é uma casca: os hooks moram no `Corpo`. */
+export default function EditorGrupos(props: PropsDoEditor) {
+  if (props.campo.semHorario) {
+    return (
+      <p className="adm-editor-sem-horario" data-editor={props.campo.caminho}>
+        {RESPONDA_O_HORARIO_PRIMEIRO}
+      </p>
+    );
+  }
+  return <CorpoDosGrupos {...props} />;
+}
+
+function CorpoDosGrupos({ campo, valor, slug }: PropsDoEditor) {
   const opcoes = campo.opcoes ?? [];
   const palavra = (d: string): string => campo.rotulos?.[d] ?? d;
   const [grupos, setGrupos] = useState<Grupo[]>(() => gruposDoValor(valor));

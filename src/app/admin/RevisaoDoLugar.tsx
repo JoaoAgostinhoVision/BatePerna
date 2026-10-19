@@ -26,9 +26,13 @@ export default function RevisaoDoLugar({ linhas }: { linhas: readonly LinhaDaRev
             {l.ponto ? (
               <MapinhaDoPonto lat={l.ponto.lat} lng={l.ponto.lng} />
             ) : (
-              <p className="adm-revisao-resposta">
-                {l.resposta ?? (l.estado === "falta" ? SEM_RESPOSTA : PULADA)}
-              </p>
+              // Uma resposta pode ter várias linhas (o horário diferente: um grupo
+              // por linha); cada uma ganha o seu parágrafo.
+              (l.resposta ?? (l.estado === "falta" ? SEM_RESPOSTA : PULADA)).split("\n").map((t, i) => (
+                <p key={i} className="adm-revisao-resposta">
+                  {t}
+                </p>
+              ))
             )}
             {l.aviso && (
               <p className="adm-aviso-par" role="status">

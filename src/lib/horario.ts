@@ -419,11 +419,19 @@ export function aberturaDaFicha(f: {
   return { horario: f.horario, dias: f.dias, porDia: f.horarioPorDia };
 }
 
+/** As linhas SÓ DOS GRUPOS do horário diferente: uma por grupo, com os dias por
+ *  extenso e as horas. Sem `horarioPorDia`: `[]`. É a fonte única do rótulo de
+ *  um grupo — `linhasDoHorario` (a ficha) e a revisão antes de publicar (que já
+ *  mostra o horário de sempre na pergunta dele) leem daqui. */
+export function linhasDosGrupos(f: {
+  horarioPorDia?: readonly GrupoDeHorario[];
+}): { dias: string; faixas: string }[] {
+  return (f.horarioPorDia ?? []).map((g) => ({ dias: rotuloDias(g.dias), faixas: rotuloFaixaCurta(g.faixas) }));
+}
+
 /** As linhas do horário na ficha quando há grupos: a do horário de sempre (os
  *  dias abertos MENOS os dos grupos) e uma por grupo, cada uma com os dias por
- *  extenso e as horas. Sem `horarioPorDia`: `[]` — a ficha segue como sempre.
- *
- *  Só a leitura; nenhuma tela a usa ainda. */
+ *  extenso e as horas. Sem `horarioPorDia`: `[]` — a ficha segue como sempre. */
 export function linhasDoHorario(f: {
   horario?: Horario;
   dias?: readonly Dia[];
@@ -437,8 +445,7 @@ export function linhasDoHorario(f: {
   if (f.horario && abertos.length > 0) {
     linhas.push({ dias: rotuloDias(abertos), faixas: rotuloFaixaCurta(f.horario) });
   }
-  for (const g of grupos) linhas.push({ dias: rotuloDias(g.dias), faixas: rotuloFaixaCurta(g.faixas) });
-  return linhas;
+  return [...linhas, ...linhasDosGrupos(f)];
 }
 
 /** 🔴 AS FRASES DA RECUSA DOS GRUPOS (18/10). Uma por causa, DIFERENTES entre si:

@@ -6,6 +6,7 @@ import type { PerguntaNaTela } from "@/app/admin/campos/tipos";
 import { rotuloDe } from "@/app/admin/FichaInteira";
 import { ORDEM, montarPerguntas } from "@/app/admin/novo/perguntas";
 import { montarRevisao, respostaNaTela, type LinhaDaRevisao } from "@/app/admin/novo/revisao";
+import { linhasDosGrupos } from "@/lib/horario";
 import { rascunhoCompleto } from "../rascunho-completo";
 
 /** A REVISÃO ANTES DE PUBLICAR (17/10, Task 8) — o dado (`montarRevisao`) e o
@@ -73,6 +74,40 @@ describe("montarRevisao — o dado", () => {
   it("lista sem a pergunta do ponto estoura (a cidade ficaria sem linha)", () => {
     const sem2 = montarPerguntas(DOC).filter((p) => p.campo.caminho !== "trajeto.waypoints.0.lat");
     expect(() => montarRevisao(sem2, DOC, O)).toThrow(/a linha da cidade/);
+  });
+});
+
+describe("o horário diferente em alguns dias na revisão (18/10)", () => {
+  // Sem `dias` o lugar abre todo dia; os dois grupos não cobrem tudo.
+  const GRUPOS = [
+    { dias: ["sab", "dom"], faixas: [{ abre: "07:00", fecha: "12:00" }] },
+    { dias: ["sex"], faixas: [{ abre: "08:00", fecha: "20:00" }] },
+  ];
+  const comGrupos = { ...sem("dias"), horarioPorDia: GRUPOS };
+
+  it("uma linha por grupo: os dias por extenso e as faixas, pela mesma função da ficha", () => {
+    const linha = linhasDe(comGrupos).find((x) => x.caminho === "horarioPorDia")!;
+    expect(linha.estado).toBe("respondida");
+    const esperado = linhasDosGrupos({ horarioPorDia: GRUPOS as never }).map((g) => `${g.dias}: ${g.faixas}`);
+    expect(esperado, "a premissa: dois grupos, duas linhas").toHaveLength(2);
+    expect(linha.resposta).toBe(esperado.join("\n"));
+    // O texto exato, escrito à mão: quem muda a função muda aqui de propósito.
+    expect(esperado).toEqual(["sábado e domingo: 7h–12h", "sexta: 8h–20h"]);
+  });
+
+  it("na tela: cada grupo numa linha só dele, e o horário de sempre não repete aqui", () => {
+    const { linha } = desenhar(linhasDe(comGrupos));
+    const el = linha("horarioPorDia");
+    const respostas = [...el.querySelectorAll(".adm-revisao-resposta")].map((p) => p.textContent);
+    expect(respostas).toEqual(["sábado e domingo: 7h–12h", "sexta: 8h–20h"]);
+    expect(el.textContent).not.toContain(PULADA);
+  });
+
+  it("sem resposta: pulada, como as outras opcionais", () => {
+    const linha = linhasDe().find((x) => x.caminho === "horarioPorDia")!;
+    expect(linha.estado).toBe("pulada");
+    expect(linha.resposta).toBeNull();
+    expect(desenhar(linhasDe()).linha("horarioPorDia").textContent).toContain(PULADA);
   });
 });
 

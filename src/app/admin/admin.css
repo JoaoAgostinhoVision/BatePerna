@@ -179,6 +179,9 @@
    `.adm-editor-mais-faixa`/`.adm-editor-tirar-faixa`, sem valor novo. */
 .adm-editor-mais-grupo { padding: .6rem; font-size: .95rem; border-radius: 8px; }
 .adm-editor-tirar-grupo { padding: .6rem; font-size: .95rem; border-radius: 8px; }
+/* No lugar do editor, quando falta o horário de sempre (T5c): só a linha, no
+   registro de texto de apoio dos editores. */
+.adm-editor-sem-horario { margin: 0; font-size: .9rem; }
 /* Grid de `.adm-porta` com o `gap: .3rem` de `.adm-campo`, e `border: 0`/
    `padding: 0`/`margin: 0` só pra tirar a moldura que o navegador põe em
    `<fieldset>` por default — o cartão do grupo já é a moldura desta tela. */

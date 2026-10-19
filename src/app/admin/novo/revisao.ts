@@ -1,4 +1,4 @@
-import { faixasDe, rotuloFaixaCurta } from "@/lib/horario";
+import { faixasDe, linhasDosGrupos, rotuloFaixaCurta, type GrupoDeHorario } from "@/lib/horario";
 import type { PerguntaNaTela } from "../campos/tipos";
 import { rotuloDe } from "../FichaInteira";
 import { NAO, SIM } from "../campos/palavras";
@@ -59,6 +59,14 @@ function pontoDe(p: PerguntaNaTela): { lat: number; lng: number } | null {
  *
  *  Lista pelo RÓTULO (`campo.rotulos`: Grátis, Pago, os nomes dos dias), nunca
  *  pelo valor cru; opção sem rótulo aparece pelo cru. */
+/** Um grupo que dá pra escrever: dias que são lista de texto e faixas que são
+ *  faixas de verdade (`faixasDe`). Forma torta fica de fora, nunca estoura. */
+function ehGrupoLegivel(g: unknown): g is GrupoDeHorario {
+  if (typeof g !== "object" || g === null) return false;
+  const { dias, faixas } = g as { dias?: unknown; faixas?: unknown };
+  return Array.isArray(dias) && dias.length > 0 && dias.every((d) => typeof d === "string") && (faixasDe(faixas)?.length ?? 0) > 0;
+}
+
 export function respostaNaTela(p: PerguntaNaTela): string | null {
   const v = p.valor;
   switch (p.especie) {
@@ -81,11 +89,18 @@ export function respostaNaTela(p: PerguntaNaTela): string | null {
     }
     case "coord":
       return null;
-    // ⚠️ O HORÁRIO DIFERENTE EM ALGUNS DIAS (18/10) ainda não tem linha na
-    // revisão: a linha por grupo é da Task 5 desta rodada. Até lá, aparece como
+    // O HORÁRIO DIFERENTE EM ALGUNS DIAS (18/10): uma linha por grupo — os dias
+    // por extenso e as horas —, juntas por quebra de linha (o componente
+    // desenha cada uma num parágrafo). Pela MESMA função da ficha
+    // (`linhasDosGrupos`); o horário de sempre não repete: já é a pergunta dele.
+    // Grupo que não é grupo (documento é dado) não entra; sobrando nenhum, é
     // sem resposta.
-    case "grupos":
-      return null;
+    case "grupos": {
+      if (!Array.isArray(v)) return null;
+      const grupos = v.filter(ehGrupoLegivel);
+      if (grupos.length === 0) return null;
+      return linhasDosGrupos({ horarioPorDia: grupos }).map((l) => `${l.dias}: ${l.faixas}`).join("\n");
+    }
   }
 }
 

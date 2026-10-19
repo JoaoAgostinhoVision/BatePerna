@@ -521,8 +521,8 @@ recusa carregar em vez de mostrar algo quebrado. Depois de validado, a ficha nov
 aparece sozinha na home (agrupada por "hoje dá" ou "hoje não dá", junto com o pin no
 mapa) e no acervo em `/trilhas` — sem precisar mexer em mais nada.
 
-**Seis respostas são opcionais**, e pular qualquer uma delas não impede a ficha de
-carregar. A régua é a mesma nas seis — são **fato de roteiro**, quem responde é quem
+**Sete respostas são opcionais**, e pular qualquer uma delas não impede a ficha de
+carregar. Seis delas têm a mesma régua — são **fato de roteiro**, quem responde é quem
 conhece o lugar, e onde falta o dado **o app cala em vez de inventar**:
 
 - `piso` — sem ele, a ficha não mostra a linha do chão da via, e o carimbo não diz o
@@ -538,6 +538,9 @@ conhece o lugar, e onde falta o dado **o app cala em vez de inventar**:
   aquele lugar folga, então não afirma que folgou.
 - `custo.curto` — numa ficha paga sem ele, o chip do topo mostra **só o preço**, e o
   app não diz onde se paga.
+
+A sétima, `horarioPorDia` (o horário diferente em alguns dias), é a exceção: sem ela o
+horário de sempre vale em todo dia que o lugar abre, então **o app não cala nada**.
 
 **Nota pra quem mantém o schema:** três perguntas antigas saíram deste questionário —
 esforco (quão puxada é, pensando no corpo de quem vai) e duracao (quanto tempo dura,

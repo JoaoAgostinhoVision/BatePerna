@@ -144,7 +144,7 @@ describe("oQueOAppCala", () => {
     const doc = readFileSync(path.join(process.cwd(), "docs", "questionario-ficha.md"), "utf8")
       .replace(/\r\n/g, "\n")
       .replace(/\*\*/g, "");
-    const listaDoDoc = doc.slice(doc.indexOf("Seis respostas são opcionais"), doc.indexOf("Nota pra quem mantém o schema"));
+    const listaDoDoc = doc.slice(doc.indexOf("Sete respostas são opcionais"), doc.indexOf("Nota pra quem mantém o schema"));
     expect(listaDoDoc.length, "a premissa: a lista dos opcionais foi achada no questionário").toBeGreaterThan(200);
     const corrido = listaDoDoc.replace(/\s*\n\s*/g, " ");
     const naoCobertos = new Set(["trajeto.waypoints.0.nota", "custo.valor"]);

@@ -42,6 +42,11 @@ export type CampoNaTela = {
    *  dos `dias` do documento (`diasDosGrupos`, em `FichaInteira`), na ordem de
    *  `DIAS`. O registro não declara `opcoes` pra ela: depende do documento. */
   opcoes?: readonly string[];
+  /** Só pra espécie `grupos` (T5c, 18/10): o documento NÃO tem o horário de
+   *  sempre nem horário diferente gravado — então o editor não aparece, e no lugar
+   *  dele vai uma linha pedindo o horário primeiro. Decidido no servidor
+   *  (`diasDosGrupos`), que lê o documento; ausente = tem horário (o editor). */
+  semHorario?: boolean;
   /** Só pra espécie `lista` (e, desde 18/10, `grupos`: os nomes dos dias): a
    *  PALAVRA DA TELA de cada opção (valor gravado → palavra). O que se grava
    *  continua sendo a opção crua (`gratis`, `sab`); só o texto que ele lê muda.

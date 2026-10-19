@@ -26,7 +26,7 @@ import {
   VISTA_SEM_CIDADE,
 } from "@/app/admin/campos/EditorCoordenada";
 import { ComVersaoDaTela, ERRO_GRAVAR, ERRO_REDE } from "@/app/admin/campos/gravar";
-import { MAIS_GRUPO, TIRAR_GRUPO, TITULO_DO_GRUPO } from "@/app/admin/campos/EditorGrupos";
+import { MAIS_GRUPO, RESPONDA_O_HORARIO_PRIMEIRO, TIRAR_GRUPO, TITULO_DO_GRUPO } from "@/app/admin/campos/EditorGrupos";
 import { DESISTIR, DESISTIR_MESMO, ERRO_DESISTIR } from "@/app/admin/BotaoDesistir";
 import { CORRIGIR_O_NOME } from "@/app/admin/AvisoDoPar";
 import {
@@ -1558,6 +1558,9 @@ describe("Os editores servem os três lugares", () => {
     TITULO_DO_GRUPO,
     MAIS_GRUPO,
     TIRAR_GRUPO,
+    // T5c: a linha que ocupa o lugar do editor quando falta o horário de sempre
+    // — aparece na Rampa, e nas fichas com o `horario` forçado a ausente.
+    RESPONDA_O_HORARIO_PRIMEIRO,
     // As do número de motor (Task 7; na onda de conserto 1, 2026-10-01,
     // `SEM_LEITURA` foi apagada e nasceram `JANELA_NEGATIVA` e
     // `ALEM_DO_PROVEDOR`; na onda 2, `JANELA_PASSADO_NEGATIVA`). Nenhuma aparece
@@ -1853,7 +1856,10 @@ describe("Os editores servem os três lugares", () => {
       const mapa = new Map<string, string>();
       for (const e of container.querySelectorAll("[data-editor]")) {
         const caminho = e.getAttribute("data-editor")!;
-        const estado = e.closest("[data-ausente]") === null ? "cheio" : "ausente";
+        // T5c: o horário diferente SEM o horário de sempre é a linha, não o editor —
+        // outro estado do mesmo campo, com texto próprio.
+        const semHorario = e.classList.contains("adm-editor-sem-horario") ? "+sem-horario" : "";
+        const estado = (e.closest("[data-ausente]") === null ? "cheio" : "ausente") + semHorario;
         const botoes = [...e.querySelectorAll("button")].map((b) => b.textContent).join("|");
         const rotulos = [...e.querySelectorAll("[aria-label]")]
           .map((x) => x.getAttribute("aria-label"))

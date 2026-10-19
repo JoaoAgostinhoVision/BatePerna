@@ -416,12 +416,19 @@ const INSTRUMENTO: Record<EspecieCampo, Editor> = {
  *  o documento. Usado pelos dois que montam o `CampoNaTela` — esta tela e as
  *  perguntas do lugar novo (`novo/perguntas.ts`, que serve também quem usa).
  *
+ *  E `semHorario` (T5c): o documento sem horário de sempre e sem horário
+ *  diferente — o editor não aparece, e a linha dele ocupa o lugar.
+ *
  *  Documento é dado: `dias` que não é lista conta como todo dia (o mesmo que
  *  `problemaDosGrupos` faz), e um valor que não é dia não entra. */
-export function diasDosGrupos(doc: unknown): Pick<CampoNaTela, "opcoes" | "rotulos"> {
-  const dias = (doc as { dias?: unknown } | null)?.dias;
+export function diasDosGrupos(doc: unknown): Pick<CampoNaTela, "opcoes" | "rotulos" | "semHorario"> {
+  const { dias, horario, horarioPorDia } = (doc ?? {}) as { dias?: unknown; horario?: unknown; horarioPorDia?: unknown };
   const abertos = Array.isArray(dias) ? DIAS.filter((d) => dias.includes(d)) : [...DIAS];
-  return { opcoes: abertos, rotulos: rotulosDe("dias") };
+  // Sem o horário de sempre, o grupo não teria do que ser diferente (e o Salvar
+  // só recusaria com `GRUPO_SEM_HORARIO`): o editor cede a vez a uma linha. Mas
+  // dado gravado não se esconde — com `horarioPorDia` no documento, o editor fica.
+  const semHorario = (horario === undefined || horario === null) && (horarioPorDia === undefined || horarioPorDia === null);
+  return { opcoes: abertos, rotulos: rotulosDe("dias"), ...(semHorario ? { semHorario: true } : {}) };
 }
 
 /** O ÍNDICE e o PAR de um ponto do trajeto, pra a linha `.lat` dele — e só pra ela.
