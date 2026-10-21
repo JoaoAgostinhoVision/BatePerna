@@ -2,7 +2,20 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 20/10: "horário por dia" com o CÓDIGO FECHADO, esperando o PACOTE DE FRASES (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 20/10, NOITE: "horário por dia" NO AR e MERGEADA (vence TUDO abaixo)
+
+Ele respondeu o pacote inteiro (20 Serve, 3 decisões aceitas; no chat: aplicar as 2 propostas do questionário) e disse
+*"Pode subir e juntar"*. Onda de copy `3813e71` (26 PENDENTE da rodada → LIDA 2026-10-20; as 19 PENDENTE de antes
+intactas, conferido linha a linha), revisada limpa; 3324/3324, tsc, build, mutar 42/0/0. `npm run semear` (nada novo) →
+`vercel --prod --yes` = `dpl_8hbT3R1dHNmRxTWJGNWJF1jWp85k`, alias bateperna.vercel.app. `conferir-no-ar`: home + 3
+fichas 200, sem `hora-do-dia`; chunk servido tem "outros dias, outra hora" (controle negativo 0); /contribuir 307.
+`main` = `3813e71` (fast-forward), **pushado** no GitHub. Livro de bordo SDD apagado (história no git).
+**NÃO provado (exige login ou um lugar com o campo, fica com ELE no celular):** o bloco "Os dias com outro horário" no
+painel; pôr um grupo num lugar e ver a ficha com uma linha por dia, a pílula "(outros dias, outra hora)" e o carimbo
+certo no dia diferente. Também segue pendente o teste logado da "cidade do ponto" (lista abaixo).
+→ Próximo: o teste dele no celular → pacote pequeno (o 409 do ponto do lugar no ar) → rodada do `d-401` → pontos 1 e 4.
+
+## (anterior) 20/10: "horário por dia" com o CÓDIGO FECHADO, esperando o PACOTE DE FRASES
 
 Branch `horario-por-dia`, código em `d23ac63` (NÃO mergeada, NÃO no ar). T5 e T6 revisadas; revisão final da branch
 (opus): 0 C, 2 I (carimbo misturando a semana com as horas de um dia; 3 montagens sem PENDENTE) → onda única de fix
