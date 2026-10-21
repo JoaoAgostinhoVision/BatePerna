@@ -7,7 +7,7 @@ import { rotuloPiso } from "@/lib/piso";
 import { vozDaFicha } from "@/lib/severidade";
 import { faseDe } from "@/lib/carimbo-fase";
 import { fechadoPeloDono } from "@/lib/aviso";
-import { aberturaDaFicha, rotuloFaixaCurta } from "@/lib/horario";
+import { aberturaDaFicha, linhasDoHorario, rotuloFaixaCurta } from "@/lib/horario";
 import { rotuloDias } from "@/lib/semana";
 import { ETIQUETA_NAO_CONFERIDO, FAIXA_NAO_CONFERIDO } from "@/lib/origem";
 import { notFound, redirect } from "next/navigation";
@@ -197,6 +197,12 @@ export default async function Ficha({
   // do lugar. É fato PERMANENTE, e fato permanente mora no ticket, junto do
   // preço e da hora — que é onde ele decidiu que as duas coisas brilham.
   const faixaDias = ficha.dias?.length ? rotuloDias(ficha.dias) : null;
+  // 🔴 COM GRUPOS (18/10), as linhas de `linhasDoHorario` entram NO LUGAR do fato
+  // único de hora e do de dias: um "8h–17h" solto ao lado de "7h–12h no sábado"
+  // seria o app dizendo duas horas pro mesmo dia. Sem grupos a lista é `[]` e
+  // nada muda — o ticket das três fichas do acervo segue igual.
+  const linhasHora = linhasDoHorario(ficha);
+  const comGrupos = linhasHora.length > 0;
 
   // Ressalva: negrito na primeira oração (até o travessão).
   const [ressalvaLead, ...ressalvaResto] = (ficha.condicao.ressalva_proxy ?? "").split("—");
@@ -450,15 +456,25 @@ export default async function Ficha({
             não `valor` — prender o horário ao preço o esconderia justamente na
             ficha grátis cujo portão fecha às 17h. Sem nenhum dos dois, a linha
             inteira não é desenhada: o app cala, como em todo campo opcional. */}
-        {(ficha.custo.valor || faixaHorario || faixaDias) && (
+        {(ficha.custo.valor || faixaHorario || faixaDias || comGrupos) && (
           <div className="ticket" data-nivel="b">
             {ficha.custo.valor && (
               <span className="tk">
                 <span className="price">{precoCurto}</span> {restoCusto}
               </span>
             )}
-            {faixaDias && <span className="tk dias">{faixaDias}</span>}
-            {faixaHorario && <span className="tk hora">{faixaHorario}</span>}
+            {comGrupos
+              ? linhasHora.map((l) => (
+                  <span className="tk" data-linha="hora-do-dia" key={l.dias}>
+                    <span className="dias">{l.dias}</span> <span className="hora">{l.faixas}</span>
+                  </span>
+                ))
+              : (
+                <>
+                  {faixaDias && <span className="tk dias">{faixaDias}</span>}
+                  {faixaHorario && <span className="tk hora">{faixaHorario}</span>}
+                </>
+              )}
           </div>
         )}
 

@@ -370,3 +370,36 @@ describe("o selo do cartão, com o dono e o calendário fechando juntos", () => 
     ).toBe("");
   });
 });
+
+// 🔴 O SÁBADO DE 12h30 (18/10): o lugar abre 8h–17h na semana e 7h–12h no fim de
+// semana. O cartão lê a `abertura` da ficha por `aberturaDaFicha`; se o
+// `horarioPorDia` não chegar lá, o selo diz "Pode ir" às 12h30 com o portão
+// fechado. Ficha sintética (a Rampa real não tem grupos).
+describe("o selo do cartão lê o horário DO DIA", () => {
+  const SABADO_S = Date.UTC(2027, 0, 16, 15, 30) / 1000; // sábado, 12h30 em Recife
+  const QUARTA_S = Date.UTC(2027, 0, 13, 15, 30) / 1000; // quarta, 12h30 em Recife
+  const { dias: _d, ...rampaSemDias } = ficha;
+  const comGrupos = {
+    ...rampaSemDias,
+    horario: [{ abre: "08:00", fecha: "17:00" }],
+    horarioPorDia: [{ dias: ["sab" as const, "dom" as const], faixas: [{ abre: "07:00", fecha: "12:00" }] }],
+  };
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it("sábado 12h30: Fechado agora, mesmo com o horário de sempre indo até 17h", () => {
+    vi.setSystemTime(SABADO_S * 1000);
+    const { container } = render(
+      <CartaoTrilha ficha={comGrupos} inicial={{ ...leitura, calculadoEm: SABADO_S }} agora={agoraRecife(SABADO_S)} />,
+    );
+    expect(container.querySelector(".selo .w")?.textContent).toBe("Fechado agora");
+  });
+
+  it("controle: quarta 12h30 o mesmo lugar está aberto (o base vale)", () => {
+    vi.setSystemTime(QUARTA_S * 1000);
+    const { container } = render(
+      <CartaoTrilha ficha={comGrupos} inicial={{ ...leitura, calculadoEm: QUARTA_S }} agora={agoraRecife(QUARTA_S)} />,
+    );
+    expect(container.querySelector(".selo .w")?.textContent).not.toBe("Fechado agora");
+  });
+});

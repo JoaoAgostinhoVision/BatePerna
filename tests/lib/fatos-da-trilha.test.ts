@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { fatosDaTrilha, type TrilhaCompacta } from "@/lib/fatos-da-trilha";
+import { fatosDaTrilha, MARCA_OUTROS_DIAS, type TrilhaCompacta } from "@/lib/fatos-da-trilha";
 
 /** 🔴 O DEFEITO QUE ESTE ARQUIVO TRANCA (2026-09-11). A montagem da linha
  *  "· barro · R$ 5 · sábado e domingo" morava DENTRO do `CartaoTrilha`, e
@@ -153,5 +153,35 @@ describe("as duas telas leem a MESMA montagem", () => {
         expect(src.includes(campo), `${nome} voltou a montar "${campo}" por conta própria`).toBe(false);
       }
     }
+  });
+});
+
+// 🔴 O HORÁRIO POR DIA NA PÍLULA (18/10). A pílula do horário NÃO lista os
+// grupos: diz o horário de sempre e leva a marca curta de que há mais.
+describe("a pílula do horário com horário por dia", () => {
+  const COM: TrilhaCompacta = {
+    ...BASE,
+    horario: [{ abre: "08:00", fecha: "17:00" }],
+    horarioPorDia: [{ dias: ["sab", "dom"], faixas: [{ abre: "07:00", fecha: "12:00" }] }],
+  };
+
+  it("com grupos: o horário de sempre + a marca curta, e nada dos grupos", () => {
+    const t = textos(COM, { comAbertura: true });
+    expect(t).toEqual([`8h–17h (${MARCA_OUTROS_DIAS})`]);
+    expect(t.join(" ")).not.toContain("7h–12h");
+  });
+
+  it("sem grupos: igual a hoje, sem marca", () => {
+    const { horarioPorDia: _g, ...sem } = COM;
+    expect(textos(sem, { comAbertura: true })).toEqual(["8h–17h"]);
+  });
+
+  it("no cartão (sem comAbertura) a pílula de hora não aparece, com ou sem grupos", () => {
+    expect(textos(COM)).toEqual([]);
+  });
+
+  it("a marca é curta e a pílula segue Nível B", () => {
+    expect(MARCA_OUTROS_DIAS.length).toBeLessThanOrEqual(30);
+    expect(niveis(COM, { comAbertura: true })).toEqual(["b"]);
   });
 });

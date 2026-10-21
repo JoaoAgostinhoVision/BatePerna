@@ -32,7 +32,7 @@ vi.mock("@/lib/carimbo-estado", async (real) => ({
 // nada no bloco de baixo lê ou compara essa string —, então a diferença não
 // separa as duas versões. O teste que usava `COM_FATOS` foi apagado junto —
 // ver a nota abaixo.
-const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS, COM_CIDADE } = vi.hoisted(() => {
+const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS, COM_CIDADE, COM_GRUPOS } = vi.hoisted(() => {
   const base = {
     slug: "morro-de-teste",
     modos: ["contemplativo"],
@@ -88,6 +88,13 @@ const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS, COM_CIDADE } = vi.hoi
     },
     // A CIDADE (Tarefa 11b) — um nome-marcador, nunca uma cidade real.
     COM_CIDADE: { ...base, slug: "morro-com-cidade", cidade: "Cidade Marcador Um" },
+    // O HORÁRIO POR DIA (18/10): 8h–17h na semana, 7h–12h no fim de semana.
+    COM_GRUPOS: {
+      ...base,
+      slug: "morro-com-grupos",
+      horario: [{ abre: "08:00", fecha: "17:00" }],
+      horarioPorDia: [{ dias: ["sab", "dom"], faixas: [{ abre: "07:00", fecha: "12:00" }] }],
+    },
   };
 });
 
@@ -99,7 +106,7 @@ vi.mock("@/lib/ficha", async (real) => {
   const mod = await real<typeof import("@/lib/ficha")>();
   // Como a leitura do público as entregaria: do João, conferidas (`doJoao`).
   const { doJoao } = await import("../no-ar");
-  const sinteticas = ([SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS, COM_CIDADE] as unknown as TipoFicha[]).map(doJoao);
+  const sinteticas = ([SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS, COM_CIDADE, COM_GRUPOS] as unknown as TipoFicha[]).map(doJoao);
   return {
     ...mod,
     getFicha: async (slug: string) =>
@@ -919,6 +926,40 @@ describe("a página mostra a versão de AGORA, não a do repositório", () => {
       // append-only, nada é apagado.
       cleanup();
       await gravarEdicao(banco, antes, {});
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔴 O HORÁRIO POR DIA NO TÍQUETE (18/10). Com grupos, as linhas de
+// `linhasDoHorario` entram NO LUGAR do fato único de hora e do de dias — um
+// "8h–17h" solto ao lado de "7h–12h" no fim de semana seria duas horas pro
+// mesmo dia. Sem grupos nada muda: o tíquete do acervo é o de sempre.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("o tíquete com o horário por dia", () => {
+  it("com grupos: uma linha pro horário de sempre e uma pro grupo, cada uma com dias e horas", async () => {
+    const { container } = await abrir("morro-com-grupos");
+    const linhas = [...container.querySelectorAll<HTMLElement>('.ticket [data-linha="hora-do-dia"]')];
+    expect(linhas.map((l) => [l.querySelector(".dias")?.textContent, l.querySelector(".hora")?.textContent])).toEqual([
+      ["segunda, terça, quarta, quinta e sexta", "8h–17h"],
+      ["sábado e domingo", "7h–12h"],
+    ]);
+  });
+
+  it("com grupos: o fato único de hora e o de dias saem — nenhuma segunda hora solta no tíquete", async () => {
+    const { container } = await abrir("morro-com-grupos");
+    // Só as horas DAS LINHAS: o "8h–17h" aparece uma vez, dentro da linha dele.
+    expect(container.querySelectorAll(".ticket .hora")).toHaveLength(2);
+    expect(container.querySelectorAll(".ticket .dias")).toHaveLength(2);
+    expect(container.querySelectorAll(".ticket > .tk.hora, .ticket > .tk.dias")).toHaveLength(0);
+  });
+
+  it("sem grupos o tíquete não ganha linha por dia — as fichas do acervo seguem iguais", async () => {
+    for (const f of acervoDoBanco) {
+      expect(f.horarioPorDia, `${f.slug} ganhou horarioPorDia: o acervo deixou de ser o controle`).toBeUndefined();
+      const { container } = await abrir(f.slug);
+      expect(container.querySelector('[data-linha="hora-do-dia"]'), f.slug).toBeNull();
+      cleanup();
     }
   });
 });

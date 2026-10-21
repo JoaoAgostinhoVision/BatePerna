@@ -1,7 +1,7 @@
 import { coordDaDistancia, distanciaKm, formatarDistanciaCurta, type Coord } from "./geo";
 import { rotuloPiso, type Piso } from "./piso";
 import { rotuloDias, type Dia } from "./semana";
-import { rotuloFaixaCurta, type Horario } from "./horario";
+import { rotuloFaixaCurta, type GrupoDeHorario, type Horario } from "./horario";
 
 /** OS FATOS COMPACTOS DE UMA TRILHA — a linha "· barro · R$ 5 · sábado e
  *  domingo" que o cartão da home e a lista do acervo desenham.
@@ -24,6 +24,13 @@ import { rotuloFaixaCurta, type Horario } from "./horario";
  *  Puro de propósito, sem zod e sem `node:fs`: `CartaoTrilha` é client
  *  component e lê este módulo direto. Mesma razão que já exilou `piso.ts`. */
 
+/** A marca curta que a pílula do horário leva quando o lugar tem outro horário
+ *  em alguns dias. A pílula NÃO lista os grupos (não cabe numa linha do
+ *  celular): ela diz o horário de sempre e avisa que há mais; os dias de cada
+ *  hora moram na ficha. */
+// PENDENTE: redação minha, o João ainda não leu
+export const MARCA_OUTROS_DIAS = "outros dias, outra hora";
+
 export type Fato = { texto: string; nivel?: "b" };
 
 /** O que uma tela precisa saber pra montar a linha. Estrutural, e não a `Ficha`
@@ -33,6 +40,7 @@ export type TrilhaCompacta = {
   custo: { tag: "gratis" | "pago"; valor?: string };
   horario?: Horario;
   dias?: readonly Dia[];
+  horarioPorDia?: readonly GrupoDeHorario[];
   trajeto: { waypoints: readonly { lat: number; lng: number }[] };
 };
 
@@ -87,7 +95,12 @@ export function fatosDaTrilha(
       ? { texto: rotuloDias(t.dias), nivel: "b" as const }
       : null,
     comAbertura && t.horario
-      ? { texto: rotuloFaixaCurta(t.horario), nivel: "b" as const }
+      ? {
+          texto: t.horarioPorDia?.length
+            ? `${rotuloFaixaCurta(t.horario)} (${MARCA_OUTROS_DIAS})`
+            : rotuloFaixaCurta(t.horario),
+          nivel: "b" as const,
+        }
       : null,
   ];
   return partes.filter((p): p is Fato => p !== null);
