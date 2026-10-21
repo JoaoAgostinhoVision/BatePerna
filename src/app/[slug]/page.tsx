@@ -464,7 +464,7 @@ export default async function Ficha({
               </span>
             )}
             {comGrupos
-              // PENDENTE: redação minha, o João ainda não leu — a linha do ticket por grupo: os dias e as horas ("sábado e domingo 7h–12h")
+              // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha. É a linha do ticket por grupo: os dias e as horas ("sábado e domingo 7h–12h")
               ? linhasHora.map((l) => (
                   <span className="tk" data-linha="hora-do-dia" key={l.dias}>
                     <span className="dias">{l.dias}</span> <span className="hora">{l.faixas}</span>

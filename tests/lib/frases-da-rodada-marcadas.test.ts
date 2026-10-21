@@ -33,11 +33,11 @@ const ARQUIVOS = [
 ];
 
 /** As constantes de texto exportadas: `export const NOME = "..."` ou
- *  `` `...` `` (uma linha, ou a abertura de uma de várias). */
+ *  `` `...` `` (uma linha, ou a abertura de uma de várias). Aspas simples também: uma frase com aspas duplas dentro (`GRUPO_LISTA_VAZIA`) as usa, e o regex só de `"` e crase não a via. */
 function frasesExportadas(fonte: string): { nome: string; linha: number }[] {
   const linhas = fonte.split(/\r?\n/);
   return linhas.flatMap((l, i) => {
-    const m = /^export const ([A-Z][A-Z0-9_]*)\s*(?::\s*string\s*)?=\s*(["`]|$)/.exec(l);
+    const m = /^export const ([A-Z][A-Z0-9_]*)\s*(?::\s*string\s*)?=\s*(["'`]|$)/.exec(l);
     return m ? [{ nome: m[1], linha: i }] : [];
   });
 }
@@ -136,6 +136,36 @@ const LIDAS_EM_18_10: Readonly<Record<string, readonly string[]>> = {
   "src/lib/rotulos-das-opcoes.ts": ["ROTULO_GRATIS", "ROTULO_PAGO"],
 };
 
+/** 🔴 A TERCEIRA LISTA DATADA (onda de copy de 20/10, rodada "horário por dia").
+ *  O João leu o pacote "Frases do horário por dia" (o banco do artifact, coleção
+ *  `respostas`) e marcou "Serve" em todas. São as 19 constantes de texto
+ *  exportadas que a rodada criou; as frases que NÃO são `export const` (o
+ *  título do campo, a pergunta, as três montagens e o rótulo da caixa de hora)
+ *  são conferidas POR NOME em `ALVOS_LIDOS_EM_20_10`, no fim. O molde é o das
+ *  outras duas, e cada data cerca a SUA lista. */
+const LIDAS_EM_20 = "2026-10-20";
+const LIDAS_EM_20_10: Readonly<Record<string, readonly string[]>> = {
+  "src/lib/horario.ts": [
+    "GRUPO_NAO_E_LISTA", "GRUPO_LISTA_VAZIA", "GRUPO_MAIS_DE_TRES", "GRUPO_SEM_HORARIO", "GRUPO_MAL_FORMADO",
+    "GRUPO_SEM_DIA", "GRUPO_DIA_DESCONHECIDO", "GRUPO_SEM_FAIXA", "GRUPO_DIA_REPETIDO", "GRUPO_DIA_REPETIDO_NO_GRUPO",
+    "GRUPO_DIA_FECHADO", "GRUPO_COBRE_TUDO", "GRUPO_IGUAL_AO_HORARIO",
+  ],
+  "src/lib/campos-da-ficha.ts": ["TIRE_O_HORARIO_POR_DIA_ANTES"],
+  "src/lib/fatos-da-trilha.ts": ["MARCA_OUTROS_DIAS"],
+  "src/app/admin/campos/EditorGrupos.tsx": ["TITULO_DO_GRUPO", "MAIS_GRUPO", "TIRAR_GRUPO", "RESPONDA_O_HORARIO_PRIMEIRO"],
+};
+
+/** As frases de 20/10 que não são `export const`: arquivo, a âncora (UMA linha) e
+ *  o que ela é. A marca é o bloco de comentário colado em cima da âncora. */
+const ALVOS_LIDOS_EM_20_10: readonly (readonly [string, RegExp, string])[] = [
+  ["src/app/admin/FichaInteira.tsx", /^\s+horarioPorDia: "Os dias com outro horário",$/, "o título do campo"],
+  ["src/app/admin/novo/perguntas.ts", /^\s+horarioPorDia: "Algum dia esse lugar abre ou fecha em outra hora\?/, "a pergunta"],
+  ["src/app/[slug]/page.tsx", /^\s+\? linhasHora\.map\(\(l\) => \($/, "a linha do ticket por grupo"],
+  ["src/app/admin/novo/revisao.ts", /^\s+return linhasDosGrupos\(.*`\$\{l\.dias\}: \$\{l\.faixas\}`/, "a linha da revisão por grupo"],
+  ["src/lib/fatos-da-trilha.ts", /^\s+\? `\$\{rotuloFaixaCurta\(t\.horario\)\} \(\$\{MARCA_OUTROS_DIAS\}\)`$/, "a pílula montada"],
+  ["src/app/admin/campos/CaixasDeFaixas.tsx", /^\s+aria-label=\{nome === undefined \? daCaixa : /, "o nome da caixa de hora com o do grupo"],
+];
+
 /** Uma leitura dele: a data e os nomes que ela libera NUM arquivo. */
 type Leitura = { data: string; nomes: readonly string[] };
 
@@ -143,6 +173,7 @@ type Leitura = { data: string; nomes: readonly string[] };
 const LISTAS_DATADAS: readonly { data: string; lista: Readonly<Record<string, readonly string[]>> }[] = [
   { data: LIDAS_EM, lista: LIDAS_EM_13_10 },
   { data: LIDAS_EM_18, lista: LIDAS_EM_18_10 },
+  { data: LIDAS_EM_20, lista: LIDAS_EM_20_10 },
 ];
 
 /** As leituras que valem num arquivo (uma por lista datada que o cita). */
@@ -191,9 +222,16 @@ function linhasDaDataPermitidas(arquivo: string, linhas: string[], data: string 
     const f = frases.find((x) => x.nome === nome);
     if (f !== undefined) for (const j of indicesDeCima(linhas, f.linha)) ok.add(j);
   }
-  // Os alvos conferidos por nome são todos da leitura de 13/10; a de 18/10 só
-  // tem `export const`.
+  // Os alvos conferidos por nome: os de 13/10 (`alvosPorNome`) e os de 20/10
+  // (`ALVOS_LIDOS_EM_20_10`); a de 18/10 só tem `export const`.
   if (data === LIDAS_EM) for (const i of alvosPorNome(arquivo, linhas)) ok.add(i);
+  // Os de 20/10: o bloco de comentário colado em cima de cada âncora.
+  if (data === LIDAS_EM_20) {
+    for (const [a, ancora] of ALVOS_LIDOS_EM_20_10) {
+      if (a !== arquivo) continue;
+      linhas.forEach((l, i) => { if (ancora.test(l)) for (const j of indicesDeCima(linhas, i)) ok.add(j); });
+    }
+  }
   return ok;
 }
 
@@ -611,20 +649,55 @@ describe("toda frase nova desta rodada nasce marcada", () => {
   });
 
   // 🔴 AS MONTAGENS DE TELA DO HORÁRIO POR DIA (revisão final da rodada, I2,
-  // 20/10): não são `export const`, então o varredor de cima não as vê — e a
+  // 20/10; o João leu e marcou "Serve" no mesmo dia, então hoje são LIDA): não são `export const`, então o varredor de cima não as vê — e a
   // revisão achou as três sem marca. Conferidas POR NOME, como as de cima:
   // cada âncora acha UMA linha, e o bloco de comentário colado em cima dela
-  // (a mesma régua de `marcaDe`) diz `PENDENTE`. Não é varredura: montagem
+  // (a mesma régua de `marcaDe`) diz `LIDA:` com a data de 20/10. Não é varredura: montagem
   // nova fora desta lista continua dependendo de quem revisa.
   it.each([
     ["src/app/[slug]/page.tsx", /^\s+\? linhasHora\.map\(\(l\) => \($/],
     ["src/app/admin/novo/revisao.ts", /^\s+return linhasDosGrupos\(.*`\$\{l\.dias\}: \$\{l\.faixas\}`/],
     ["src/lib/fatos-da-trilha.ts", /^\s+\? `\$\{rotuloFaixaCurta\(t\.horario\)\} \(\$\{MARCA_OUTROS_DIAS\}\)`$/],
-  ] as const)("%s: a montagem %s nasce PENDENTE", (arquivo, alvo) => {
+  ] as const)("%s: a montagem %s tem a LIDA de 20/10", (arquivo, alvo) => {
     const linhas = ler(arquivo);
     const achadas = linhas.flatMap((l, i) => (alvo.test(l) ? [i] : []));
     expect(achadas, "a montagem existe, numa linha só").toHaveLength(1);
-    expect(marcaDe(linhas, achadas[0])).toBe("PENDENTE");
+    expect(marcaDe(linhas, achadas[0])).toBe("LIDA");
+    expect(comentariosDeCima(linhas, achadas[0]).some((l) => marcaDaData(LIDAS_EM_20).test(l))).toBe(true);
+  });
+
+  // A lista de 20/10, no mesmo molde das outras: não apodrece calada, a data só
+  // vale no bloco de um nome dela ou de um alvo dela, e nenhuma PENDENTE da
+  // rodada sobrou nos alvos nomeados.
+  it("a lista do que ele leu em 20/10: cada nome existe, é desta rodada, e está LIDA com a data", () => {
+    const problemas = Object.entries(LIDAS_EM_20_10).flatMap(([arquivo, nomes]) =>
+      problemasDaLista(readFileSync(path.join(process.cwd(), arquivo), "utf8"), nomesNaBase(arquivo), nomes, LIDAS_EM_20).map(
+        (p) => `${arquivo}: ${p}`,
+      ),
+    );
+    expect(problemas).toEqual([]);
+    // Não-vacuidade: as 19 constantes de texto exportadas da rodada.
+    expect(Object.values(LIDAS_EM_20_10).flat().length).toBe(19);
+  });
+
+  it(`toda marca LIDA de ${LIDAS_EM_20} em src é de um nome da lista de 20/10 ou de um alvo dela`, () => {
+    const marcas = marcasDatadasEmSrc(LIDAS_EM_20);
+    const porArquivo = new Map<string, Set<number>>();
+    const fora = marcas.flatMap(({ arquivo, linha }) => {
+      if (!porArquivo.has(arquivo)) porArquivo.set(arquivo, linhasDaDataPermitidas(arquivo, ler(arquivo), LIDAS_EM_20));
+      return porArquivo.get(arquivo)!.has(linha) ? [] : [`${arquivo}:${linha + 1}: ${ler(arquivo)[linha].trim()}`];
+    });
+    expect(fora).toEqual([]);
+    // Não-vacuidade: uma marca por constante da lista (19) e uma por alvo (6).
+    expect(marcas.length).toBe(19 + ALVOS_LIDOS_EM_20_10.length);
+  });
+
+  it.each(ALVOS_LIDOS_EM_20_10)("%s: %s — o alvo existe, numa linha só, com a LIDA de 20/10 e sem PENDENTE", (arquivo, alvo) => {
+    const linhas = ler(arquivo);
+    const achadas = linhas.flatMap((l, i) => (alvo.test(l) ? [i] : []));
+    expect(achadas, "o alvo existe, numa linha só").toHaveLength(1);
+    expect(marcaDe(linhas, achadas[0])).toBe("LIDA");
+    expect(comentariosDeCima(linhas, achadas[0]).some((l) => marcaDaData(LIDAS_EM_20).test(l))).toBe(true);
   });
 
   // Task 18: só a parte que era PENDENTE trocou — o LIDA de 07/10 do formato

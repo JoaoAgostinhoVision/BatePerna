@@ -91,9 +91,10 @@ function blocoDoRotulo(secao: string, rotulo: string): string {
 const perguntaDe = (campo: string) => blocoDoRotulo(secaoDoCampo(campo), "Pergunta:");
 
 describe("o horário diferente em alguns dias (18/10)", () => {
-  it("tem seção própria, marcada PENDENTE, com a pergunta exata", () => {
+  it("tem seção própria, marcada LIDA (ele leu em 20/10), com a pergunta exata", () => {
     const secao = secaoDoCampo("horarioPorDia");
-    expect(secao).toMatch(/<!-- PENDENTE: redação minha, o João ainda não leu .*2026-10-18.* -->/);
+    expect(secao).not.toMatch(/PENDENTE/);
+    expect(secao).toMatch(/<!-- LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha .*2026-10-18.* -->/);
     expect(plano(perguntaDe("horarioPorDia"))).toContain(
       "algum dia esse lugar abre ou fecha em outra hora? Se tiver, quais dias e que horas?",
     );

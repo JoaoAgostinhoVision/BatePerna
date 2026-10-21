@@ -490,14 +490,14 @@ acervo cuja fonte não é a sua boca, e está registrado em
 
 ## O horário diferente em alguns dias — `horarioPorDia`
 
-<!-- PENDENTE: redação minha, o João ainda não leu (rodada "horário diferente em alguns dias", 2026-10-18). -->
+<!-- LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha (rodada "horário diferente em alguns dias", 2026-10-18). -->
 
 **Pergunta:** algum dia esse lugar abre ou fecha em outra hora? Se tiver, quais dias e que horas?
 
 **Por que importa:** o carimbo olha a hora de HOJE. Num lugar que abre 8h na semana e
 7h no sábado, um horário só erra num dos dois dias: diz *"Pode ir"* com o lugar
 fechado, ou *"Fechado agora"* com ele aberto. Respondido, cada dia passa a ter a hora
-dele — no carimbo, na ficha e no cartão.
+dele no carimbo e na ficha; o cartão avisa que tem dia com outra hora.
 
 **Se não tiver, não responda:** sem resposta, o horário de sempre (`horario`) vale em
 todo dia que o lugar abre, como sempre foi. Quem tem diferença descreve **só a
@@ -521,8 +521,8 @@ recusa carregar em vez de mostrar algo quebrado. Depois de validado, a ficha nov
 aparece sozinha na home (agrupada por "hoje dá" ou "hoje não dá", junto com o pin no
 mapa) e no acervo em `/trilhas` — sem precisar mexer em mais nada.
 
-**Sete respostas são opcionais**, e pular qualquer uma delas não impede a ficha de
-carregar. Seis delas têm a mesma régua — são **fato de roteiro**, quem responde é quem
+**Estas respostas são opcionais**, e pular qualquer uma delas não impede a ficha de
+carregar. Quase todas têm a mesma régua — são **fato de roteiro**, quem responde é quem
 conhece o lugar, e onde falta o dado **o app cala em vez de inventar**:
 
 - `piso` — sem ele, a ficha não mostra a linha do chão da via, e o carimbo não diz o
@@ -539,7 +539,7 @@ conhece o lugar, e onde falta o dado **o app cala em vez de inventar**:
 - `custo.curto` — numa ficha paga sem ele, o chip do topo mostra **só o preço**, e o
   app não diz onde se paga.
 
-A sétima, `horarioPorDia` (o horário diferente em alguns dias), é a exceção: sem ela o
+A exceção é `horarioPorDia` (o horário diferente em alguns dias): sem ela o
 horário de sempre vale em todo dia que o lugar abre, então **o app não cala nada**.
 
 **Nota pra quem mantém o schema:** três perguntas antigas saíram deste questionário —

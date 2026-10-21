@@ -118,7 +118,7 @@ export const PERGUNTAS: Readonly<Record<string, string>> = {
   horario: "Esse lugar tem hora pra abrir e pra fechar? Se tiver, que horas?",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Do questionário, que ele leu; primeira vez numa tela.
   dias: "Esse lugar abre todo dia, ou tem dia que não abre? Se tiver, em que dias ele abre?",
-  // PENDENTE: redação minha, o João ainda não leu. Do questionário (seção nova de 18/10, também PENDENTE).
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha. Do questionário (seção nova de 18/10), que ele também leu.
   horarioPorDia: "Algum dia esse lugar abre ou fecha em outra hora? Se tiver, quais dias e que horas?",
 };
 

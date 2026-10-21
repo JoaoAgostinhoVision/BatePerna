@@ -88,7 +88,7 @@ describe("as perguntas dela", () => {
   });
 
   // ⚠️ "já lida" valia até 18/10: a do horário diferente em alguns dias é a do
-  // painel, e ainda PENDENTE lá. O que este caso prova é que não há redação só dela.
+  // painel, que ele leu em 20/10. O que este caso prova é que não há redação só dela.
   it("cada texto é a pergunta do painel — nenhuma redação só dela", () => {
     for (const q of montarPerguntasDaPessoa({})) expect(q.texto, q.campo.caminho).toBe(PERGUNTAS[q.campo.caminho]);
   });

@@ -198,7 +198,7 @@ export const ROTULOS: Record<string, string> = {
   horario: "Este lugar tem hora pra abrir e pra fechar?",
   // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-07. Redação minha.
   dias: "Os dias da semana em que abre",
-  // PENDENTE: redação minha, o João ainda não leu
+  // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
   horarioPorDia: "Os dias com outro horário",
 
   // — o que a chuva faz aqui —

@@ -86,7 +86,7 @@ export default function CaixasDeFaixas({
                 key={chave}
                 type="time"
                 className="adm-editor-hora"
-                // PENDENTE: redação minha, o João ainda não leu — o " · " entre o nome do grupo e o da caixa (18/10).
+                // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha. É o " · " entre o nome do grupo e o da caixa (18/10).
                 aria-label={nome === undefined ? daCaixa : `${nome} · ${daCaixa}`}
                 data-hora={`${prefixo}.${i}.${chave}`}
                 value={f[chave]}

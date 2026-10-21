@@ -447,7 +447,7 @@ function conferirGrupos(valor: unknown, doc: { horario?: unknown; dias?: unknown
  *  "diferente" órfão, que a leitura usaria como o horário daqueles dias e
  *  calaria nos outros. A porta recusa e pede a ordem certa. Uma frase só pra
  *  ficha no ar, rascunho e as duas portas da pessoa. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const TIRE_O_HORARIO_POR_DIA_ANTES =
   "tire primeiro o horário diferente de alguns dias: sem o horário de sempre, não dá pra dizer o que é diferente";
 

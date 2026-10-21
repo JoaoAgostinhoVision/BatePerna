@@ -461,36 +461,36 @@ export function linhasDoHorario(f: {
 
 /** 🔴 AS FRASES DA RECUSA DOS GRUPOS (18/10). Uma por causa, DIFERENTES entre si:
  *  nenhuma frase serve a duas causas. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const GRUPO_NAO_E_LISTA = "o horário diferente é uma lista de grupos, cada um com os dias e as horas";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const GRUPO_LISTA_VAZIA = 'o horário diferente precisa de pelo menos um grupo: se nenhum dia é diferente, use "não tem"';
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const GRUPO_MAIS_DE_TRES = "o horário diferente cabe em até 3 grupos de dias";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const GRUPO_SEM_HORARIO = "sem o horário de sempre não dá pra dizer o que é diferente: ponha primeiro o horário";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const GRUPO_MAL_FORMADO = "cada grupo do horário diferente tem os dias e as horas";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const GRUPO_SEM_DIA = "cada grupo do horário diferente precisa de pelo menos um dia";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const GRUPO_DIA_DESCONHECIDO = "um dia do horário diferente não é um dia da semana";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const GRUPO_SEM_FAIXA = "cada grupo do horário diferente precisa de pelo menos uma faixa de horas";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const GRUPO_DIA_REPETIDO = "um mesmo dia não pode estar em dois grupos do horário diferente";
 /** O mesmo dia DUAS VEZES num grupo só (T2, da revisão da T1): caía na frase
  *  de cima, que fala de "dois grupos" com um grupo só na tela — causa errada. A
  *  tela não produz isto (caixas de marcar); a porta pode receber. Recusa, e não
  *  tira a repetição calada: um corpo assim é defeito de quem mandou, e
  *  consertá-lo em silêncio esconderia o defeito. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const GRUPO_DIA_REPETIDO_NO_GRUPO = "um grupo do horário diferente tem o mesmo dia duas vezes";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const GRUPO_DIA_FECHADO = "um grupo do horário diferente tem um dia em que o lugar não abre";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const GRUPO_COBRE_TUDO = "os grupos cobrem todos os dias em que o lugar abre: o horário de sempre nunca valeria, então mude o horário de sempre";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const GRUPO_IGUAL_AO_HORARIO = "um grupo tem as mesmas horas do horário de sempre, então não é diferente";
 
 /** A regra de escrita de `horarioPorDia` — função pura, chamada pelas portas de

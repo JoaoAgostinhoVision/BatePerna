@@ -28,7 +28,7 @@ import { rotuloFaixaCurta, type GrupoDeHorario, type Horario } from "./horario";
  *  em alguns dias. A pílula NÃO lista os grupos (não cabe numa linha do
  *  celular): ela diz o horário de sempre e avisa que há mais; os dias de cada
  *  hora moram na ficha. */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const MARCA_OUTROS_DIAS = "outros dias, outra hora";
 
 export type Fato = { texto: string; nivel?: "b" };
@@ -97,7 +97,7 @@ export function fatosDaTrilha(
     comAbertura && t.horario
       ? {
           texto: t.horarioPorDia?.length
-            // PENDENTE: redação minha, o João ainda não leu — a pílula montada: o horário de sempre e a marca entre parênteses
+            // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha. É a pílula montada: o horário de sempre e a marca entre parênteses
             ? `${rotuloFaixaCurta(t.horario)} (${MARCA_OUTROS_DIAS})`
             : rotuloFaixaCurta(t.horario),
           nivel: "b" as const,

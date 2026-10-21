@@ -99,7 +99,7 @@ export function respostaNaTela(p: PerguntaNaTela): string | null {
       if (!Array.isArray(v)) return null;
       const grupos = v.filter(ehGrupoLegivel);
       if (grupos.length === 0) return null;
-      // PENDENTE: redação minha, o João ainda não leu — a linha da revisão por grupo, "dias: horas"
+      // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha. É a linha da revisão por grupo, "dias: horas"
       return linhasDosGrupos({ horarioPorDia: grupos }).map((l) => `${l.dias}: ${l.faixas}`).join("\n");
     }
   }

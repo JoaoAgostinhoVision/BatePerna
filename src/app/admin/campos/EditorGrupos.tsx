@@ -39,15 +39,15 @@ import type { PropsDoEditor } from "./tipos";
  *  marcar de novo o mesmo dia não é mudança: a comparação dos dias é de CONJUNTO. */
 
 /** O título de cada grupo, com o número dele contado de 1 ("Grupo 1"). */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const TITULO_DO_GRUPO = "Grupo";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const MAIS_GRUPO = "+ outro grupo";
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const TIRAR_GRUPO = "Tirar este grupo";
 
 /** No lugar do editor, quando o lugar não tem o horário de sempre (T5c). */
-// PENDENTE: redação minha, o João ainda não leu
+// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-20. Redação minha.
 export const RESPONDA_O_HORARIO_PRIMEIRO = "Responda primeiro o horário de sempre; aqui entram só os dias que fogem dele.";
 
 type Grupo = { dias: string[]; faixas: Faixa[] };
