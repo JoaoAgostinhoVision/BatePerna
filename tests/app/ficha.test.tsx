@@ -89,10 +89,15 @@ const { SEM_FATOS, SO_PISO, PAGO_SEM_CURTO, PAGO_CENTAVOS, COM_CIDADE, COM_GRUPO
     // A CIDADE (Tarefa 11b) — um nome-marcador, nunca uma cidade real.
     COM_CIDADE: { ...base, slug: "morro-com-cidade", cidade: "Cidade Marcador Um" },
     // O HORÁRIO POR DIA (18/10): 8h–17h na semana, 7h–12h no fim de semana.
+    // 🔴 COM `dias` (revisão final, 20/10): fechado na segunda. Sem ele o fato
+    // solto de dias nem existia, e manter o `.tk.dias` junto das linhas por
+    // grupo passava verde — a regra "as linhas entram NO LUGAR do fato de dias"
+    // ficava sem trava.
     COM_GRUPOS: {
       ...base,
       slug: "morro-com-grupos",
       horario: [{ abre: "08:00", fecha: "17:00" }],
+      dias: ["ter", "qua", "qui", "sex", "sab", "dom"],
       horarioPorDia: [{ dias: ["sab", "dom"], faixas: [{ abre: "07:00", fecha: "12:00" }] }],
     },
   };
@@ -941,7 +946,7 @@ describe("o tíquete com o horário por dia", () => {
     const { container } = await abrir("morro-com-grupos");
     const linhas = [...container.querySelectorAll<HTMLElement>('.ticket [data-linha="hora-do-dia"]')];
     expect(linhas.map((l) => [l.querySelector(".dias")?.textContent, l.querySelector(".hora")?.textContent])).toEqual([
-      ["segunda, terça, quarta, quinta e sexta", "8h–17h"],
+      ["terça, quarta, quinta e sexta", "8h–17h"],
       ["sábado e domingo", "7h–12h"],
     ]);
   });

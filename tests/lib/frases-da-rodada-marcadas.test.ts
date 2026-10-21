@@ -610,6 +610,23 @@ describe("toda frase nova desta rodada nasce marcada", () => {
     expect(linhas[i - 1]).toMatch(MARCA_DA_LEITURA);
   });
 
+  // 🔴 AS MONTAGENS DE TELA DO HORÁRIO POR DIA (revisão final da rodada, I2,
+  // 20/10): não são `export const`, então o varredor de cima não as vê — e a
+  // revisão achou as três sem marca. Conferidas POR NOME, como as de cima:
+  // cada âncora acha UMA linha, e o bloco de comentário colado em cima dela
+  // (a mesma régua de `marcaDe`) diz `PENDENTE`. Não é varredura: montagem
+  // nova fora desta lista continua dependendo de quem revisa.
+  it.each([
+    ["src/app/[slug]/page.tsx", /^\s+\? linhasHora\.map\(\(l\) => \($/],
+    ["src/app/admin/novo/revisao.ts", /^\s+return linhasDosGrupos\(.*`\$\{l\.dias\}: \$\{l\.faixas\}`/],
+    ["src/lib/fatos-da-trilha.ts", /^\s+\? `\$\{rotuloFaixaCurta\(t\.horario\)\} \(\$\{MARCA_OUTROS_DIAS\}\)`$/],
+  ] as const)("%s: a montagem %s nasce PENDENTE", (arquivo, alvo) => {
+    const linhas = ler(arquivo);
+    const achadas = linhas.flatMap((l, i) => (alvo.test(l) ? [i] : []));
+    expect(achadas, "a montagem existe, numa linha só").toHaveLength(1);
+    expect(marcaDe(linhas, achadas[0])).toBe("PENDENTE");
+  });
+
   // Task 18: só a parte que era PENDENTE trocou — o LIDA de 07/10 do formato
   // fica, e o ` · não conferido` ganha o LIDA datado de 13/10, na mesma linha.
   it(`o título do link (generateMetadata): o \` · não conferido\` tem LIDA de ${LIDAS_EM} na própria linha, depois do LIDA antigo`, () => {

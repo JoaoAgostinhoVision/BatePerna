@@ -97,6 +97,7 @@ export function fatosDaTrilha(
     comAbertura && t.horario
       ? {
           texto: t.horarioPorDia?.length
+            // PENDENTE: redação minha, o João ainda não leu — a pílula montada: o horário de sempre e a marca entre parênteses
             ? `${rotuloFaixaCurta(t.horario)} (${MARCA_OUTROS_DIAS})`
             : rotuloFaixaCurta(t.horario),
           nivel: "b" as const,

@@ -381,11 +381,22 @@ export function rotuloAbertura(abertura: Abertura, agora: Agora): string | null 
 /** "Fecha às 17h, abre às 5h." · "Abre sábado e domingo." — a frase do motivo,
  *  na ficha. Com os dois eixos declarados, as duas frases saem juntas: são
  *  fatos diferentes, e esconder um deles faria a pessoa planejar pela metade.
+ *  Com grupos e o dia, não: as horas de um dia ao lado da semana inteira
+ *  afirmariam pros outros dias a hora deste — ver o bloco 🔴 de dentro.
  *
  *  ⚠️ Sem substantivo de propósito: não diz o que fecha. Ver o topo do arquivo. */
 export function rotuloFaixa(abertura: Abertura, dia?: number): string {
   const partes: string[] = [];
-  if (abertura.dias?.length) partes.push(rotuloSemana(abertura.dias));
+  // 🔴 Com grupos e o dia, a semana e as horas de UM dia não andam juntas
+  // (revisão final, I1): "Abre sexta, sábado e domingo. Fecha às 17h, abre às
+  // 8h." afirma pro sábado a hora da sexta. O conserto é SUBTRAÇÃO, sem frase
+  // nova: fechado pelo dia, só a semana; aberto hoje, só as horas de hoje.
+  // Sem grupos, nada muda — semana e horas valem pra todos os dias.
+  if (dia !== undefined && abertura.porDia?.length && abertura.dias?.length) {
+    if (fechadoNoDia(abertura.dias, dia)) return rotuloSemana(abertura.dias);
+  } else if (abertura.dias?.length) {
+    partes.push(rotuloSemana(abertura.dias));
+  }
   // Com o dia, as faixas DELE (grupo ou base); sem o dia, o base, como sempre.
   const faixas = (dia === undefined ? abertura.horario : horarioDoDia(abertura, dia)) ?? [];
   if (faixas.length === 1) {

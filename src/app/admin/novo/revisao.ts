@@ -53,12 +53,6 @@ function pontoDe(p: PerguntaNaTela): { lat: number; lng: number } | null {
   return ehPar(p.valor) ? { lat: p.valor.lat, lng: p.valor.lng } : null;
 }
 
-/** A resposta de uma pergunta como o dono a lê, ou `null` quando não há (ou é
- *  coordenada, que é mapinha e não texto). Documento é dado: forma que a espécie
- *  não espera conta como sem resposta, nunca estoura.
- *
- *  Lista pelo RÓTULO (`campo.rotulos`: Grátis, Pago, os nomes dos dias), nunca
- *  pelo valor cru; opção sem rótulo aparece pelo cru. */
 /** Um grupo que dá pra escrever: dias que são lista de texto e faixas que são
  *  faixas de verdade (`faixasDe`). Forma torta fica de fora, nunca estoura. */
 function ehGrupoLegivel(g: unknown): g is GrupoDeHorario {
@@ -67,6 +61,12 @@ function ehGrupoLegivel(g: unknown): g is GrupoDeHorario {
   return Array.isArray(dias) && dias.length > 0 && dias.every((d) => typeof d === "string") && (faixasDe(faixas)?.length ?? 0) > 0;
 }
 
+/** A resposta de uma pergunta como o dono a lê, ou `null` quando não há (ou é
+ *  coordenada, que é mapinha e não texto). Documento é dado: forma que a espécie
+ *  não espera conta como sem resposta, nunca estoura.
+ *
+ *  Lista pelo RÓTULO (`campo.rotulos`: Grátis, Pago, os nomes dos dias), nunca
+ *  pelo valor cru; opção sem rótulo aparece pelo cru. */
 export function respostaNaTela(p: PerguntaNaTela): string | null {
   const v = p.valor;
   switch (p.especie) {
@@ -99,6 +99,7 @@ export function respostaNaTela(p: PerguntaNaTela): string | null {
       if (!Array.isArray(v)) return null;
       const grupos = v.filter(ehGrupoLegivel);
       if (grupos.length === 0) return null;
+      // PENDENTE: redação minha, o João ainda não leu — a linha da revisão por grupo, "dias: horas"
       return linhasDosGrupos({ horarioPorDia: grupos }).map((l) => `${l.dias}: ${l.faixas}`).join("\n");
     }
   }

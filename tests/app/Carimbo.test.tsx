@@ -797,6 +797,35 @@ describe("Carimbo — a hora, e não só a chuva", () => {
     expect(container.querySelector(".reason")?.textContent).toBe("Fecha às 12h, abre às 7h.");
   });
 
+  // 🔴 REVISÃO FINAL, I1 (20/10): com `dias` + grupos, o motivo juntava a semana
+  // inteira com as horas de UM dia — "Abre sexta, sábado e domingo. Fecha às
+  // 17h, abre às 8h." numa quinta é falso pro sábado (7h–12h), e no sábado 13h
+  // "… Fecha às 12h, abre às 7h." é falso pra sexta e domingo. Subtração: fechado
+  // pelo dia, só a semana; aberto hoje, só as horas de hoje.
+  describe("com dias E grupo, o motivo não mistura a semana com as horas de um dia", () => {
+    const abertura = {
+      horario: [{ abre: "08:00", fecha: "17:00" }],
+      dias: ["sex" as const, "sab" as const, "dom" as const],
+      porDia: [{ dias: ["sab" as const], faixas: [{ abre: "07:00", fecha: "12:00" }] }],
+    };
+
+    it("quinta 10h (fechado pelo dia): só a semana", () => {
+      const ms = Date.UTC(2027, 0, 14, 10 + 3, 0); // quinta
+      vi.setSystemTime(ms);
+      const { container } = montar({ abertura, calculadoEm: ms / 1000 });
+      expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+      expect(container.querySelector(".reason")?.textContent).toBe("Abre sexta, sábado e domingo.");
+    });
+
+    it("sábado 13h (fechado pela hora): só as horas do sábado", () => {
+      const ms = Date.UTC(2027, 0, 16, 13 + 3, 0); // sábado
+      vi.setSystemTime(ms);
+      const { container } = montar({ abertura, calculadoEm: ms / 1000 });
+      expect(container.querySelector(".mark")?.textContent).toBe("Fechado agora");
+      expect(container.querySelector(".reason")?.textContent).toBe("Fecha às 12h, abre às 7h.");
+    });
+  });
+
   // O outro lado da mesma moeda, e ele não é redundante: "amanhã" e "hoje" são
   // a diferença entre perder o dia e só esperar.
   it("4h da manhã: fechado também, mas abre HOJE", () => {
