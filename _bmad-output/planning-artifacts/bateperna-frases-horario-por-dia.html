@@ -1,0 +1,233 @@
+<title>Frases do horário por dia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* Layout: uma coluna de leitura pro celular; cartão por frase, três toques, telas em dobras. */
+:root{
+  --bg:#eef1ec; --surface:#fbfcf9; --ink:#1d2621; --muted:#5b665f; --line:#d3d9d2;
+  --accent:#2f5d50; --accent-ink:#ffffff; --warn-bg:#fbefd6; --warn-ink:#7a4a05;
+  --ok:#2f6b3a; --change:#8a4b12; --doubt:#3c4f8f;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --read:"Source Serif 4",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a17; --surface:#1c2420; --ink:#e4ebe6; --muted:#9aa8a0; --line:#2e3a34;
+  --accent:#7fb5a3; --accent-ink:#0f1a16; --warn-bg:#3a2c12; --warn-ink:#f0c879;
+  --ok:#8fd39c; --change:#f0a868; --doubt:#a9b8f0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a17; --surface:#1c2420; --ink:#e4ebe6; --muted:#9aa8a0; --line:#2e3a34;
+  --accent:#7fb5a3; --accent-ink:#0f1a16; --warn-bg:#3a2c12; --warn-ink:#f0c879;
+  --ok:#8fd39c; --change:#f0a868; --doubt:#a9b8f0; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--display)}
+.wrap{max-width:680px;margin:0 auto;padding-inline:16px;padding-block:20px 80px;display:flex;flex-direction:column;gap:20px}
+h1{font:700 1.7rem/1.15 var(--display);margin:0;text-wrap:balance}
+.lede{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:2;background:var(--bg);padding-block:10px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line)}
+.prog{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums;font-size:.9rem;color:var(--muted)}
+.prog b{color:var(--ink)}
+.track{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.fill{height:100%;background:var(--accent);width:0;transition:width .3s}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font:500 .85rem var(--display);padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.aviso{font-size:.9rem;padding:10px 12px;background:var(--warn-bg);color:var(--warn-ink);border-radius:8px}
+h2{font:700 1.15rem/1.25 var(--display);margin:0}
+.secao{display:flex;flex-direction:column;gap:12px}
+details.tela>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding-block:12px;border-top:2px solid var(--ink)}
+details.tela>summary::-webkit-details-marker{display:none}
+.tela-nome{font:700 1.05rem/1.3 var(--display);min-width:0}
+.tela-conta{font:400 .85rem var(--mono);color:var(--muted);white-space:nowrap}
+.lista{display:flex;flex-direction:column;gap:12px;padding-bottom:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card[data-v="serve"]{border-left:4px solid var(--ok)}
+.card[data-v="muda"]{border-left:4px solid var(--change)}
+.card[data-v="duvida"]{border-left:4px solid var(--doubt)}
+.quando{font-size:.8rem;letter-spacing:.02em;color:var(--muted)}
+.frase{font:400 1.12rem/1.45 var(--read);margin:0;overflow-wrap:anywhere}
+.alerta{font-size:.88rem;padding:8px 10px;background:var(--warn-bg);color:var(--warn-ink);border-radius:6px}
+.alerta b{font-weight:700}
+.origem{font-size:.8rem;color:var(--muted);overflow-wrap:anywhere}
+.origem code{font:400 .75rem var(--mono)}
+.acoes{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:500 .9rem var(--display);padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;min-height:40px}
+.btn[aria-pressed="true"].serve{background:var(--ok);color:var(--surface);border-color:var(--ok)}
+.btn[aria-pressed="true"].muda{background:var(--change);color:var(--surface);border-color:var(--change)}
+.btn[aria-pressed="true"].duvida{background:var(--doubt);color:var(--surface);border-color:var(--doubt)}
+.btn.prim{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:focus-visible,.chip:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+textarea{width:100%;box-sizing:border-box;min-height:80px;font:400 1rem/1.4 var(--read);padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.editor{display:flex;flex-direction:column;gap:8px}
+.salvo{font-size:.8rem;color:var(--muted)}
+.perg{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.perg p{margin:0;font:400 1.02rem/1.45 var(--read)}
+.ops{display:flex;flex-direction:column;gap:8px}
+.ops .btn{text-align:left}
+.ops .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+@media (prefers-reduced-motion: reduce){.fill{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Frases do horário por dia</h1>
+    <p class="lede">Todo texto novo da rodada "horário por dia" (18/10), por tela, como está no código hoje. Nada disso foi ao ar. Toque <b>Serve</b>, <b>Mudar</b> (escreva como deve ficar) ou <b>Dúvida</b>. As com faixa amarela têm uma dúvida minha e, quando dá, uma proposta: comece por elas. Antes, três coisas que eu decidi sem você.</p>
+  </header>
+
+  <div class="bar">
+    <div class="prog"><span><b id="lidas">0</b> de <b id="total">0</b> respondidas</span><span id="alertas-conta"></span></div>
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <div class="chips" role="group" aria-label="Filtro">
+      <button class="chip" data-f="alerta" aria-pressed="true">Com alerta</button>
+      <button class="chip" data-f="faltam" aria-pressed="false">Sem resposta</button>
+      <button class="chip" data-f="todas" aria-pressed="false">Todas</button>
+    </div>
+  </div>
+
+  <p class="aviso" id="sem-banco" hidden>Esta visualização não consegue guardar suas respostas. Abra pelo link do claude.ai, logado.</p>
+
+  <section class="secao" aria-labelledby="h-decisoes">
+    <h2 id="h-decisoes">Três decisões antes das frases</h2>
+    <div id="perguntas" class="secao"></div>
+  </section>
+
+  <section class="secao" aria-labelledby="h-frases">
+    <h2 id="h-frases">As frases</h2>
+    <div id="telas"></div>
+  </section>
+</div>
+
+<script id="dados" type="application/json">{"telas": [{"tela": "A pergunta nova (painel e quem usa)", "frases": [{"id": "h-pergunta", "q": "A pergunta que vem logo depois da dos dias, no lugar novo (seu e de quem usa). Pode pular: sem resposta, o horário de sempre vale todo dia que o lugar abre.", "t": "Algum dia esse lugar abre ou fecha em outra hora? Se tiver, quais dias e que horas?", "o": "redação do Claude, a partir da sua fala de 18/10 (\"as vezes a hora de abertura pode mudar dependendo do dia\")", "w": "src/app/admin/novo/perguntas.ts:122", "a": null}, {"id": "h-bloco", "q": "Título do bloco novo no painel de cada lugar (a ficha inteira), embaixo do horário e dos dias. Aparece também nos três lugares que já estão no ar, vazio.", "t": "Os dias com outro horário", "o": "redação do Claude", "w": "src/app/admin/FichaInteira.tsx:202", "a": "Este bloco aparece no painel da Véu de Noiva, da Pedra Furada e da Rampa, vazio. As telas públicas dos três não mudam em nada. Se preferir que o bloco só apareça quando você tocar em algo, diga em Mudar."}, {"id": "h-grupo", "q": "Nome de cada grupo dentro do bloco (fica \"Grupo 1\", \"Grupo 2\"…). Cada grupo tem os dias marcados e as horas.", "t": "Grupo", "o": "redação do Claude", "w": "src/app/admin/campos/EditorGrupos.tsx:43", "a": null}, {"id": "h-maisgrupo", "q": "Botão embaixo do último grupo (some no terceiro: cabem até três)", "t": "+ outro grupo", "o": "redação do Claude", "w": "src/app/admin/campos/EditorGrupos.tsx:45", "a": null}, {"id": "h-tirargrupo", "q": "Link em cada grupo, pra apagar aquele grupo", "t": "Tirar este grupo", "o": "redação do Claude", "w": "src/app/admin/campos/EditorGrupos.tsx:47", "a": null}, {"id": "h-respondaantes", "q": "No lugar do editor, quando o lugar ainda não tem o horário de sempre (a Rampa, ou um lugar novo que pulou o horário). Sem caixas, sem Salvar: só esta linha.", "t": "Responda primeiro o horário de sempre; aqui entram só os dias que fogem dele.", "o": "redação do Claude", "w": "src/app/admin/campos/EditorGrupos.tsx:51", "a": "Decidi esconder o editor nesse caso pra não deixar a pessoa preencher tudo e só no Salvar ouvir que não pode (\"exija menos do usuário\"). Se preferir mostrar o editor sempre, diga em Mudar."}]}, {"tela": "Recusas ao Salvar (painel e quem usa, a mesma frase nas duas)", "frases": [{"id": "h-semdia", "q": "Ao Salvar, um grupo sem nenhum dia marcado", "t": "cada grupo do horário diferente precisa de pelo menos um dia", "o": "redação do Claude", "w": "src/lib/horario.ts:475", "a": null}, {"id": "h-semfaixa", "q": "Ao Salvar, um grupo sem as horas", "t": "cada grupo do horário diferente precisa de pelo menos uma faixa de horas", "o": "redação do Claude", "w": "src/lib/horario.ts:479", "a": null}, {"id": "h-diarepetido", "q": "Ao Salvar, o mesmo dia marcado em dois grupos", "t": "um mesmo dia não pode estar em dois grupos do horário diferente", "o": "redação do Claude", "w": "src/lib/horario.ts:481", "a": null}, {"id": "h-diafechado", "q": "Ao Salvar, um grupo com um dia em que o lugar não abre (pela pergunta dos dias)", "t": "um grupo do horário diferente tem um dia em que o lugar não abre", "o": "redação do Claude", "w": "src/lib/horario.ts:490", "a": null}, {"id": "h-cobretudo", "q": "Ao Salvar, quando os grupos cobrem todos os dias em que o lugar abre", "t": "os grupos cobrem todos os dias em que o lugar abre: o horário de sempre nunca valeria, então mude o horário de sempre", "o": "redação do Claude", "w": "src/lib/horario.ts:492", "a": null}, {"id": "h-igual", "q": "Ao Salvar, um grupo com as mesmas horas do horário de sempre", "t": "um grupo tem as mesmas horas do horário de sempre, então não é diferente", "o": "redação do Claude", "w": "src/lib/horario.ts:494", "a": null}, {"id": "h-semhorario", "q": "Ao Salvar grupos num lugar sem o horário de sempre (com a linha de cima, a tela não deixa chegar aqui; só se algo chegar torto)", "t": "sem o horário de sempre não dá pra dizer o que é diferente: ponha primeiro o horário", "o": "redação do Claude", "w": "src/lib/horario.ts:471", "a": null}, {"id": "h-tireantes", "q": "Ao apagar o horário de sempre (ou mudar os dias) de um lugar que tem grupos", "t": "tire primeiro o horário diferente de alguns dias: sem o horário de sempre, não dá pra dizer o que é diferente", "o": "redação do Claude", "w": "src/lib/campos-da-ficha.ts:451", "a": null}, {"id": "h-raras", "q": "Seis recusas que a tela não produz (as caixas não deixam), só aparecem se algo chegar torto por fora. Uma por causa, todas diferentes.", "t": "o horário diferente é uma lista de grupos, cada um com os dias e as horas · o horário diferente precisa de pelo menos um grupo: se nenhum dia é diferente, use \"não tem\" · o horário diferente cabe em até 3 grupos de dias · cada grupo do horário diferente tem os dias e as horas · um dia do horário diferente não é um dia da semana · um grupo do horário diferente tem o mesmo dia duas vezes", "o": "redação do Claude", "w": "src/lib/horario.ts:465-477, 488", "a": null}]}, {"tela": "A revisão antes de publicar (painel e quem usa)", "frases": [{"id": "h-revisao", "q": "Na linha da pergunta nova, uma linha por grupo: os dias por extenso, dois-pontos, as horas. O horário de sempre já aparece na linha dele.", "t": "sábado e domingo: 7h–12h", "o": "redação do Claude", "w": "src/app/admin/novo/revisao.ts:103", "a": null}]}, {"tela": "A ficha e o cartão (o que todo mundo vê)", "frases": [{"id": "h-ticket", "q": "No ticket da ficha, no lugar da linha da hora e da linha dos dias: uma linha pro horário de sempre (os dias que sobram) e uma por grupo. Sem grupos, a ficha fica como hoje.", "t": "terça, quarta, quinta e sexta  8h–17h\nsábado e domingo  7h–12h", "o": "redação do Claude", "w": "src/app/[slug]/page.tsx:469", "a": null}, {"id": "h-pilula", "q": "A pílula da hora na lista do acervo, quando o lugar tem grupos. Não lista os grupos, só avisa que tem. Sem grupos, igual a hoje. O cartão da home não tem pílula de hora.", "t": "8h–17h (outros dias, outra hora)", "o": "redação do Claude", "w": "src/lib/fatos-da-trilha.ts:32 e :101", "a": "Ao lado dela continua a pílula dos dias em que o lugar abre (ex.: \"terça a domingo\"), que é verdade mas lida junto pode parecer que 8h–17h vale pra todos. O ticket da ficha não tem esse problema."}]}, {"tela": "O documento do questionário", "frases": [{"id": "h-docsecao", "q": "docs/questionario-ficha.md, a seção nova \"O horário diferente em alguns dias\" (pergunta, por que importa, se não tiver, só depois do horário de sempre, exemplo)", "t": "O carimbo olha a hora de HOJE. Num lugar que abre 8h na semana e 7h no sábado, um horário só erra num dos dois dias: diz \"Pode ir\" com o lugar fechado, ou \"Fechado agora\" com ele aberto. Respondido, cada dia passa a ter a hora dele — no carimbo, na ficha e no cartão. … Quem tem diferença descreve só a diferença: os dias que mudam e as horas deles. Cabem até três grupos de dias.", "o": "redação do Claude", "w": "docs/questionario-ficha.md (seção horarioPorDia)", "a": "\"e no cartão\" promete mais do que o cartão faz: a pílula só diz \"outros dias, outra hora\", não a hora de cada dia. Proposta: \"…cada dia passa a ter a hora dele no carimbo e na ficha; o cartão avisa que tem dia com outra hora.\""}, {"id": "h-docopcionais", "q": "docs/questionario-ficha.md, a frase que você já leu, mudada nesta rodada (era \"Seis respostas são opcionais… A régua é a mesma nas seis\")", "t": "Sete respostas são opcionais, e pular qualquer uma delas não impede a ficha de carregar. Seis delas têm a mesma régua — são fato de roteiro… A sétima, horarioPorDia, é a exceção: sem ela o horário de sempre vale em todo dia que o lugar abre, então o app não cala nada.", "o": "frase sua já lida, mudada pelo Claude", "w": "docs/questionario-ficha.md:524", "a": "A conta já estava errada antes da rodada: o app tem 9 respostas opcionais (a nota do ponto e o valor do custo ficaram de fora). Proposta: tirar o número — \"Estas respostas são opcionais…\" — em vez de corrigir pra nove."}]}], "total": 20, "perguntas": [{"id": "d-duas-horas", "t": "1. Duas horas de abrir no mesmo carimbo. Num sábado 13h de um lugar que abre 8h–17h e no sábado 7h–12h, o carimbo diz \"Fechado agora · abre amanhã às 8h\" e, embaixo, \"Fecha às 12h, abre às 7h.\" (a hora de hoje). As duas são verdade, mas lidas juntas confundem.", "ops": ["Serve assim", "Tirar a linha de baixo quando o lugar tem grupos"]}, {"id": "d-semana-some", "t": "2. A semana sai do carimbo num lugar com grupos. Pra não dizer \"Abre sexta, sábado e domingo. Fecha às 17h\" num sábado que fecha às 12h, num dia aberto o carimbo mostra só as horas de hoje, sem a lista dos dias. A semana continua no ticket da ficha. Sem grupos, nada muda.", "ops": ["Aceito assim", "Quero a semana de volta, de outro jeito"]}, {"id": "d-invertido", "t": "3. Uma frase que você já leu ficou meio torta. Quando a hora de fechar vem antes da de abrir, quem usa lê: \"Nada foi publicado: no horário, a hora de fechar não vem depois da de abrir…\". Agora a hora invertida pode estar num grupo, e a frase aponta \"o horário\" (o de sempre).", "ops": ["Serve assim", "Mudar pra \"no horário (o de sempre ou o de algum dia)\""]}]}</script>
+<script>
+(function(){
+  const D = JSON.parse(document.getElementById("dados").textContent);
+  const resp = {};            // id -> {v, texto}
+  let filtro = "alerta";
+  let db = null;
+  let local = {};
+  try { local = JSON.parse(localStorage.getItem("bp-frases-cidade-do-ponto") || "{}"); } catch (e) {}
+  Object.assign(resp, local);
+
+  const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const todas = D.telas.flatMap(t => t.frases);
+  const nAlertas = todas.filter(f => f.a).length;
+  document.getElementById("total").textContent = D.total;
+  document.getElementById("alertas-conta").textContent = nAlertas + " com alerta";
+
+  function progresso(){
+    const n = todas.filter(f => resp[f.id] && resp[f.id].v).length;
+    document.getElementById("lidas").textContent = n;
+    document.getElementById("fill").style.width = (100 * n / D.total) + "%";
+  }
+
+  async function gravar(id, corpo){
+    resp[id] = corpo;
+    try { local[id] = corpo; localStorage.setItem("bp-frases-cidade-do-ponto", JSON.stringify(local)); } catch (e) {}
+    progresso();
+    if (!db) return false;
+    try { await db.doc("respostas/" + id).set(Object.assign({ em: Date.now() }, corpo)); return true; }
+    catch (e) { return false; }
+  }
+
+  function cartao(f){
+    const c = el("article", "card"); c.dataset.id = f.id;
+    c.appendChild(el("div", "quando", f.q));
+    c.appendChild(el("p", "frase", f.t));
+    if (f.a) { const a = el("div", "alerta"); const b = el("b", null, "Alerta: "); a.append(b, document.createTextNode(f.a)); c.appendChild(a); }
+    const o = el("div", "origem"); o.append(document.createTextNode("Origem: " + f.o + " · ")); o.appendChild(el("code", null, f.w)); c.appendChild(o);
+    const acoes = el("div", "acoes");
+    const botoes = {};
+    [["serve","Serve"],["muda","Mudar"],["duvida","Dúvida"]].forEach(([v, rot]) => {
+      const b = el("button", "btn " + v, rot); b.type = "button"; b.setAttribute("aria-pressed", "false");
+      b.addEventListener("click", () => escolher(v)); botoes[v] = b; acoes.appendChild(b);
+    });
+    c.appendChild(acoes);
+    const ed = el("div", "editor"); ed.hidden = true;
+    const ta = document.createElement("textarea"); ta.id = "ta-" + f.id;
+    const salvar = el("button", "btn prim", "Guardar"); salvar.type = "button";
+    const st = el("div", "salvo");
+    ed.append(ta, salvar, st); c.appendChild(ed);
+
+    function pintar(){
+      const r = resp[f.id] || {};
+      c.dataset.v = r.v || "";
+      for (const v in botoes) botoes[v].setAttribute("aria-pressed", String(r.v === v));
+      ed.hidden = !(r.v === "muda" || r.v === "duvida");
+      if (document.activeElement !== ta) ta.value = r.texto != null ? r.texto : (r.v === "muda" ? f.t : "");
+      ta.placeholder = r.v === "duvida" ? "Qual é a dúvida?" : "Como a frase deve ficar";
+    }
+    async function escolher(v){
+      const atual = resp[f.id] || {};
+      const corpo = { v, texto: v === "serve" ? null : (atual.v === v ? atual.texto : (v === "muda" ? f.t : "")) };
+      resp[f.id] = corpo; pintar();
+      const ok = await gravar(f.id, corpo);
+      st.textContent = ok ? "" : (db ? "Não consegui guardar agora. Tente de novo." : "");
+      if (v !== "serve") ta.focus();
+    }
+    salvar.addEventListener("click", async () => {
+      const corpo = { v: (resp[f.id] || {}).v || "muda", texto: ta.value };
+      const ok = await gravar(f.id, corpo);
+      st.textContent = ok ? "Guardado." : (db ? "Não consegui guardar agora. Tente de novo." : "Guardado só neste aparelho.");
+    });
+    c._pintar = pintar; pintar();
+    return c;
+  }
+
+  const cards = [];
+  function montar(){
+    const raiz = document.getElementById("telas");
+    D.telas.forEach((t, i) => {
+      const d = el("details", "tela"); d.open = true;
+      const s = el("summary"); const nome = el("span", "tela-nome", t.tela); const conta = el("span", "tela-conta");
+      s.append(nome, conta); d.appendChild(s);
+      const lista = el("div", "lista");
+      t.frases.forEach(f => { const c = cartao(f); c._f = f; cards.push(c); lista.appendChild(c); });
+      d.appendChild(lista); d._conta = conta; d._t = t; raiz.appendChild(d);
+    });
+    const pr = document.getElementById("perguntas");
+    D.perguntas.forEach(q => {
+      const b = el("div", "perg"); b.appendChild(el("p", null, q.t));
+      const ops = el("div", "ops"); const bs = [];
+      q.ops.forEach((op, i) => {
+        const x = el("button", "btn", op); x.type = "button"; x.setAttribute("aria-pressed", "false");
+        x.addEventListener("click", async () => { await gravar(q.id, { v: "escolha", texto: op }); pintarQ(); });
+        bs.push(x); ops.appendChild(x);
+      });
+      function pintarQ(){ const r = resp[q.id]; bs.forEach((x, i) => x.setAttribute("aria-pressed", String(!!r && r.texto === q.ops[i]))); }
+      b.appendChild(ops); b._pintar = pintarQ; pintarQ(); pr.appendChild(b); cards.push(b);
+    });
+  }
+
+  function aplicarFiltro(){
+    cards.forEach(c => {
+      if (!c._f) return;
+      const r = resp[c._f.id];
+      c.hidden = filtro === "alerta" ? !c._f.a : filtro === "faltam" ? !!(r && r.v) : false;
+    });
+    document.querySelectorAll("details.tela").forEach(d => {
+      const vis = d._t.frases.filter(f => { const r = resp[f.id]; return filtro === "alerta" ? f.a : filtro === "faltam" ? !(r && r.v) : true; }).length;
+      const feitas = d._t.frases.filter(f => resp[f.id] && resp[f.id].v).length;
+      d._conta.textContent = feitas + "/" + d._t.frases.length;
+      d.hidden = vis === 0;
+    });
+  }
+
+  document.querySelectorAll(".chip").forEach(ch => ch.addEventListener("click", () => {
+    filtro = ch.dataset.f;
+    document.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", String(x === ch)));
+    aplicarFiltro();
+  }));
+
+  montar(); progresso(); aplicarFiltro();
+
+  const repintar = () => { cards.forEach(c => c._pintar && c._pintar()); progresso(); aplicarFiltro(); };
+  const usar = window.claude && window.claude.use ? window.claude.use("db") : Promise.resolve(null);
+  usar.then(d => {
+    if (!d) { document.getElementById("sem-banco").hidden = false; return; }
+    db = d;
+    db.collection("respostas").onSnapshot(snap => {
+      snap.docs.forEach(doc => { const x = doc.data(); if (x) resp[doc.id] = { v: x.v, texto: x.texto }; });
+      repintar();
+    }, () => {});
+  }).catch(() => { document.getElementById("sem-banco").hidden = false; });
+})();
+</script>

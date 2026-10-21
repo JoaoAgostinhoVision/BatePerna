@@ -2,7 +2,18 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 18/10, MADRUGADA: rodada "horário por dia" NO MEIO (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 20/10: "horário por dia" com o CÓDIGO FECHADO, esperando o PACOTE DE FRASES (vence TUDO abaixo)
+
+Branch `horario-por-dia`, código em `d23ac63` (NÃO mergeada, NÃO no ar). T5 e T6 revisadas; revisão final da branch
+(opus): 0 C, 2 I (carimbo misturando a semana com as horas de um dia; 3 montagens sem PENDENTE) → onda única de fix
+`d23ac63` → re-revisão: tudo ADDRESSED. Portões em `d23ac63`: 3316/3316, tsc 0, build 0, mutar 42/0/0.
+**Pacote de frases publicado:** https://claude.ai/artifact/CfQ6dYp2L5qV7s3AmWVBhn (fonte
+`_bmad-output/planning-artifacts/bateperna-frases-horario-por-dia.html`; 20 frases, 5 alertas, 3 decisões; coletor =
+coleção `respostas`). → **Próximo:** ler as respostas dele (`ArtifactData list respostas`) → onda de copy (tirar
+PENDENTE → LIDA só do que ele marcou Serve) → revisão → com o ok dele: `npm run semear` → `vercel --prod --yes` →
+`conferir-no-ar` → merge no `main`. Livro de bordo SDD: `.superpowers/sdd/2026-10-18-horario-por-dia/progress.md`.
+
+## (anterior) 18/10, MADRUGADA: rodada "horário por dia" NO MEIO
 
 **Onde está:** branch `horario-por-dia` (NÃO mergeada, NÃO no ar). Pedido dele: *"as vezes a hora de abertura pode
 mudar dependendo do dia"* → opção 1 (grupos de dias), *"exija menos do usuário"*, desenho direto sem perguntas.
