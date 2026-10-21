@@ -2,7 +2,22 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 20/10, NOITE: "horário por dia" NO AR e MERGEADA (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 20/10, FIM: ele mandou seguir com "o 409 do ponto" (vence TUDO abaixo)
+
+Ele disse *"pode seguir com o 409 do ponto"* e logo parou (*"quero continuar próxima sessão"*). Nada construído; `main` =
+`e5ed138` + este docs, árvore limpa. **O que já levantei (só leitura):** o 409 em si JÁ EXISTE e está no ar
+(`d-cidade-no-ar`, nota de 18/10 na spec `2026-10-17-cidade-do-ponto-e-revisao-design.md` §2.4): quando quem usa mexe
+o ponto de um lugar dela JÁ NO AR e a cidade muda pra uma onde o nome já existe, `src/app/api/contribuir/lugar/route.ts`
+~l.113-124 devolve 409 `NOME_JA_EM_USO` e nada grava, nem o ponto. Sobra o "pacote pequeno":
+1. **A frase fala de NOME, e ela mexeu no PONTO:** `NOME_JA_EM_USO` (`src/lib/porta-da-pessoa.ts:72`, LIDA 13/10) diz
+   "este nome, ou o endereço que sairia dele, já é de outro lugar… Use um nome que diferencie" — não diz que foi a
+   cidade nova do ponto. Provável: frase própria pro caso do ponto (PENDENTE → pacote pra ele; `tres-redacoes`).
+2. **O questionário não conta esse caso:** `docs/questionario-ficha.md` ~l.54-72 (seção da cidade) só descreve o lugar
+   NOVO ("o ponto e a cidade gravam do mesmo jeito, e o que fica travado é o publicar"); falta o lugar no ar.
+→ Primeiro passo: brainstorming curto (superpowers) com ele se precisar decidir algo; senão desenho direto → frase em
+três redações → implementar (TDD, portões: vitest, tsc, build, mutar 42/0/0) → pacote → deploy com o ok dele.
+
+## (anterior) 20/10, NOITE: "horário por dia" NO AR e MERGEADA
 
 Ele respondeu o pacote inteiro (20 Serve, 3 decisões aceitas; no chat: aplicar as 2 propostas do questionário) e disse
 *"Pode subir e juntar"*. Onda de copy `3813e71` (26 PENDENTE da rodada → LIDA 2026-10-20; as 19 PENDENTE de antes
