@@ -7,7 +7,7 @@ import { cidadeDoPonto } from "@/lib/nominatim-servico";
 import { CAMPO_DA_CIDADE, colisaoDaMudanca } from "@/lib/par-de-lugar";
 import { cidadeDoDoc, slugDoNome } from "@/lib/rascunho";
 import { violacaoIntroduzidaInteira } from "@/lib/porta-de-coerencia";
-import { BLOQUEADA, JA_CONFERIDO, NOME_JA_EM_USO, fraseDaPessoa, portaDaPessoa } from "@/lib/porta-da-pessoa";
+import { BLOQUEADA, JA_CONFERIDO, NOME_JA_EM_USO_NO_AR, PONTO_CAI_EM_NOME_EM_USO, fraseDaPessoa, portaDaPessoa } from "@/lib/porta-da-pessoa";
 
 export const dynamic = "force-dynamic";
 
@@ -28,10 +28,10 @@ function recusar400(erro: unknown): Response {
  *  A ORDEM: a porta da pessoa (503/401/403, ANTES de qualquer leitura — a
  *  pessoa bloqueada nunca ouve uma frase de colisão) → corpo (400) → o lugar
  *  DELA (404 se não é dela, nunca revelando que existe; 409 `JA_CONFERIDO`) →
- *  o par (409 `NOME_JA_EM_USO`, pela colisão ESTRUTURADA — I3) → o documento
+ *  o par (409 `NOME_JA_EM_USO_NO_AR`, pela colisão ESTRUTURADA — I3) → o documento
  *  novo pelas formas de escrita (400) → a cidade do ponto, se o corpo é um
  *  ponto (o reverse fora não recusa: a cidade de antes fica; a cidade que MUDA
- *  confere o par — 409 `NOME_JA_EM_USO`, nada gravado, 18/10) → a coerência por diferença (409, na
+ *  confere o par — 409 `PONTO_CAI_EM_NOME_EM_USO`, nada gravado, 18/10) → a coerência por diferença (409, na
  *  frase DELA, aberta por "Nada foi gravado" — o lugar está publicado, I2 da
  *  revisão final) → o banco.
  *
@@ -91,7 +91,7 @@ export async function PUT(req: Request): Promise<Response> {
   // painel, que nomeia quem ocupa. O próprio `slug` fica de fora. Contra LUGAR
   // só: rascunho nenhum ocupa o par dela (Task 17, decisão do João de 13/10).
   if ((await colisaoDaMudanca(lugar.versao.doc, slug, campo, valor, "pessoa")) !== null) {
-    return new Response(NOME_JA_EM_USO, { status: 409, headers: TEXTO });
+    return new Response(NOME_JA_EM_USO_NO_AR, { status: 409, headers: TEXTO });
   }
 
   let novo: string;
@@ -110,9 +110,10 @@ export async function PUT(req: Request): Promise<Response> {
   // 🔴 A CIDADE QUE MUDA CONFERE O PAR (decisão `d-cidade-no-ar` do João, onda
   // de copy de 18/10): com a mesma régua da edição manual da cidade
   // (`colisaoDaMudanca` com `CAMPO_DA_CIDADE`, contra LUGAR só, o próprio
-  // `slug` de fora). Colidiu: 409 `NOME_JA_EM_USO` e NADA grava, nem o ponto —
-  // o ponto numa cidade e a cidade de outra deixariam o lugar mentindo onde
-  // fica; a frase já diz o que fazer (trocar o nome). A cidade que fica a
+  // `slug` de fora). Colidiu: 409 `PONTO_CAI_EM_NOME_EM_USO` e NADA grava, nem
+  // o ponto — o ponto numa cidade e a cidade de outra deixariam o lugar
+  // mentindo onde fica; a frase diz as duas saídas (mexer o ponto ou trocar o
+  // nome, escolha do João de 21/10). A cidade que fica a
   // mesma (pela normalização do endereço) não confere: o ponto não criou par
   // novo nenhum.
   if (trazPonto) {
@@ -120,7 +121,7 @@ export async function PUT(req: Request): Promise<Response> {
     if (!("falha" in achou) && slugDoNome(achou.cidade) !== "") {
       const mudou = slugDoNome(achou.cidade) !== slugDoNome(cidadeDoDoc(lugar.versao.doc) ?? "");
       if (mudou && (await colisaoDaMudanca(lugar.versao.doc, slug, CAMPO_DA_CIDADE, achou.cidade, "pessoa")) !== null) {
-        return new Response(NOME_JA_EM_USO, { status: 409, headers: TEXTO });
+        return new Response(PONTO_CAI_EM_NOME_EM_USO, { status: 409, headers: TEXTO });
       }
       try {
         novo = aplicarCampo(novo, "cidade", achou.cidade);

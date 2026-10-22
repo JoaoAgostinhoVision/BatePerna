@@ -2,7 +2,7 @@ import { createClient, type Client } from "@libsql/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { gravarVersao, historico, versaoAtual } from "@/lib/db";
 import { conferirLugar } from "@/lib/db-contribuidor";
-import { BLOQUEADA, CLERK_FORA, JA_CONFERIDO, NOME_JA_EM_USO, fraseDaPessoa } from "@/lib/porta-da-pessoa";
+import { BLOQUEADA, CLERK_FORA, JA_CONFERIDO, NOME_JA_EM_USO_NO_AR, PONTO_CAI_EM_NOME_EM_USO, fraseDaPessoa } from "@/lib/porta-da-pessoa";
 import { TEXTO_LONGO_DEMAIS } from "@/lib/campos-da-pessoa";
 import { clienteQueIntercala, semearAcervo, semearLugarDaPessoa } from "../banco";
 import { nominatimDeTeste } from "../nominatim";
@@ -101,16 +101,18 @@ describe("PUT /api/contribuir/lugar", () => {
 
   // 🔴 A DECISÃO `d-cidade-no-ar` (onda de copy de 18/10): quando o ponto MUDA
   // a cidade do lugar no ar dela, o par (o nome nessa cidade nova) é conferido
-  // como na edição manual da cidade. Colidiu: 409 `NOME_JA_EM_USO` e NADA
+  // como na edição manual da cidade. Colidiu: 409 e NADA
   // gravado — nem o ponto (ruling do controlador: o ponto numa cidade e a
   // cidade de outra deixariam o lugar mentindo onde fica).
-  it("o ponto que leva a cidade pra um par ocupado: 409 NOME_JA_EM_USO, nem o ponto nem a cidade gravam", async () => {
+  // Frase própria desde 21/10 (escolha do João): ela mexeu no PONTO, e a de
+  // nome (`NOME_JA_EM_USO`) não contava isso.
+  it("o ponto que leva a cidade pra um par ocupado: 409 com a frase do ponto, nem o ponto nem a cidade gravam", async () => {
     await semearLugarDaPessoa(c, { nome: "Pedra Mandada", cidade: "Cidade Marcador Ocupada", contribuidor: OUTRA.id });
     nominatimDeTeste.ponto = { cidade: "Cidade Marcador Ocupada" };
     const antes = (await versaoAtual(c, SLUG))!;
     const res = await PUT(pedido({ slug: SLUG, baseId: antes.id, ponto: 0, lat: -8.4, lng: -36.0 }));
     expect(res.status).toBe(409);
-    expect(await res.text()).toBe(NOME_JA_EM_USO);
+    expect(await res.text()).toBe(PONTO_CAI_EM_NOME_EM_USO);
     expect(nominatimDeTeste.pontos, "a premissa: o reverse foi chamado").toHaveLength(1);
     expect(await versoes()).toBe(1);
     const depois = (await versaoAtual(c, SLUG))!;
@@ -195,7 +197,9 @@ describe("PUT /api/contribuir/lugar", () => {
   it("renomear pro nome de um lugar do João: 409 com a frase dela, nada gravado", async () => {
     const res = await PUT(pedido({ slug: SLUG, baseId: await base(), campo: "trajeto.waypoints.0.nome", valor: "Rampa do Pepê" }));
     expect(res.status).toBe(409);
-    expect(await res.text()).toBe(NOME_JA_EM_USO);
+    // Desde 21/10 (escolha do João): sem "o endereço que sairia dele" — o
+    // endereço do lugar no ar nunca muda.
+    expect(await res.text()).toBe(NOME_JA_EM_USO_NO_AR);
     expect(await versoes()).toBe(1);
   });
 

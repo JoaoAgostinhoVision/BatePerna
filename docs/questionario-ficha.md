@@ -68,8 +68,15 @@ Mudar a cidade de um lugar já publicado não muda o endereço — link que já 
 continua valendo.
 Enquanto um lugar publicado não tem a cidade respondida, o painel não deixa começar outro com o
 mesmo nome: só você sabe se é o mesmo lugar, então ele pede a cidade daquele primeiro.
-Se o ponto cair numa cidade onde esse nome já existe, o ponto e a cidade gravam do
-mesmo jeito, e o que fica travado é o publicar, até o nome mudar.
+Num lugar novo, se o ponto cair numa cidade onde esse nome já existe, o ponto e a
+cidade gravam do mesmo jeito, e o que fica travado é o publicar, até o nome mudar.
+
+<!-- LIDA: o João escolheu este parágrafo no chat, lendo-o por extenso, em 2026-10-21. Redação minha. -->
+
+Num lugar já publicado que quem mandou edita, mexer o ponto também refaz a cidade (se
+o Nominatim não responder, o ponto grava e a cidade de antes fica). Se a cidade nova
+já tiver um lugar com esse nome, nada grava, nem o ponto. Quem mandou não corrige a
+cidade à mão; só você, pelo painel, onde mexer o ponto não muda a cidade.
 
 **Exemplo:** nenhum, de propósito. As três fichas que já existiam quando esta pergunta
 entrou (04/10) vieram sem a cidade, e ela não é deduzida do nome nem do endereço —

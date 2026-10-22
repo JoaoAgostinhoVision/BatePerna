@@ -166,6 +166,13 @@ const ALVOS_LIDOS_EM_20_10: readonly (readonly [string, RegExp, string])[] = [
   ["src/app/admin/campos/CaixasDeFaixas.tsx", /^\s+aria-label=\{nome === undefined \? daCaixa : /, "o nome da caixa de hora com o do grupo"],
 ];
 
+/** 🔴 A QUARTA LISTA DATADA (21/10, pacote pequeno "o 409 do ponto"). O João
+ *  leu as duas frases por extenso no chat e as escolheu. Só `export const`. */
+const LIDAS_EM_21 = "2026-10-21";
+const LIDAS_EM_21_10: Readonly<Record<string, readonly string[]>> = {
+  "src/lib/porta-da-pessoa.ts": ["NOME_JA_EM_USO_NO_AR", "PONTO_CAI_EM_NOME_EM_USO"],
+};
+
 /** Uma leitura dele: a data e os nomes que ela libera NUM arquivo. */
 type Leitura = { data: string; nomes: readonly string[] };
 
@@ -174,6 +181,7 @@ const LISTAS_DATADAS: readonly { data: string; lista: Readonly<Record<string, re
   { data: LIDAS_EM, lista: LIDAS_EM_13_10 },
   { data: LIDAS_EM_18, lista: LIDAS_EM_18_10 },
   { data: LIDAS_EM_20, lista: LIDAS_EM_20_10 },
+  { data: LIDAS_EM_21, lista: LIDAS_EM_21_10 },
 ];
 
 /** As leituras que valem num arquivo (uma por lista datada que o cita). */
@@ -690,6 +698,30 @@ describe("toda frase nova desta rodada nasce marcada", () => {
     expect(fora).toEqual([]);
     // Não-vacuidade: uma marca por constante da lista (19) e uma por alvo (6).
     expect(marcas.length).toBe(19 + ALVOS_LIDOS_EM_20_10.length);
+  });
+
+  // A lista de 21/10, no mesmo molde: não apodrece calada, e a data dela só
+  // vale no bloco de um nome dela.
+  it("a lista do que ele leu em 21/10: cada nome existe, é desta rodada, e está LIDA com a data", () => {
+    const problemas = Object.entries(LIDAS_EM_21_10).flatMap(([arquivo, nomes]) =>
+      problemasDaLista(readFileSync(path.join(process.cwd(), arquivo), "utf8"), nomesNaBase(arquivo), nomes, LIDAS_EM_21).map(
+        (p) => `${arquivo}: ${p}`,
+      ),
+    );
+    expect(problemas).toEqual([]);
+    expect(Object.values(LIDAS_EM_21_10).flat().length).toBe(2);
+  });
+
+  it(`toda marca LIDA de ${LIDAS_EM_21} em src é de um nome da lista de 21/10`, () => {
+    const marcas = marcasDatadasEmSrc(LIDAS_EM_21);
+    const porArquivo = new Map<string, Set<number>>();
+    const fora = marcas.flatMap(({ arquivo, linha }) => {
+      if (!porArquivo.has(arquivo)) porArquivo.set(arquivo, linhasDaDataPermitidas(arquivo, ler(arquivo), LIDAS_EM_21));
+      return porArquivo.get(arquivo)!.has(linha) ? [] : [`${arquivo}:${linha + 1}: ${ler(arquivo)[linha].trim()}`];
+    });
+    expect(fora).toEqual([]);
+    // Não-vacuidade: uma marca por constante da lista.
+    expect(marcas.length).toBe(2);
   });
 
   it.each(ALVOS_LIDOS_EM_20_10)("%s: %s — o alvo existe, numa linha só, com a LIDA de 20/10 e sem PENDENTE", (arquivo, alvo) => {

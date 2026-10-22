@@ -72,6 +72,19 @@ export const RASCUNHO_DELA_SUMIU =
 export const NOME_JA_EM_USO =
   "Nada foi gravado: este nome, ou o endereço que sairia dele, já é de outro lugar no BatePerna. Use um nome que diferencie, como fazem por lá.";
 
+/** 🔴 AS IRMÃS DO LUGAR NO AR (21/10, pacote pequeno "o 409 do ponto"): na
+ *  edição dela de um lugar JÁ NO AR, o endereço nunca muda, e "o endereço que
+ *  sairia dele" mandava pensar numa causa impossível. Duas frases próprias,
+ *  ainda sem nomear quem ocupa (I3): uma pra quando ela troca o NOME, outra pra
+ *  quando ela mexe o PONTO e a cidade nova é que bate (`d-cidade-no-ar`). A de
+ *  cima segue no rascunho e no publicar, onde o endereço sai do nome. */
+// LIDA: o João escolheu esta frase no chat, lendo-a por extenso, em 2026-10-21. A frase de 13/10 sem o trecho do endereço.
+export const NOME_JA_EM_USO_NO_AR =
+  "Nada foi gravado: este nome já é de outro lugar no BatePerna. Use um nome que diferencie, como fazem por lá.";
+// LIDA: o João escolheu esta frase no chat, lendo-a por extenso, em 2026-10-21. Montagem minha de frases que ele já tinha lido.
+export const PONTO_CAI_EM_NOME_EM_USO =
+  "Nada foi gravado: o ponto cai numa cidade onde esse nome já existe. Mexa o ponto ou use um nome que diferencie, como fazem por lá.";
+
 /** 🔴 O AVISO DELA, nas perguntas (17/10, Task 4): o par (o nome nessa cidade)
  *  já é de um lugar no BatePerna. É AVISO, não recusa — ela segue respondendo, e
  *  o publicar é que trava (`NOME_JA_EM_USO`). Não nomeia ninguém (I3 de 07/10):
