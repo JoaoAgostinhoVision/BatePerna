@@ -2,7 +2,20 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 20/10, FIM: ele mandou seguir com "o 409 do ponto" (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 21/10: "o 409 do ponto" FEITO na branch, esperando o ok do deploy (vence TUDO abaixo)
+
+Branch `ponto-409-frase`, código `b36fc3e` (NÃO mergeada, NÃO no ar). Ele escolheu no chat, lendo as frases inteiras
+(as três que eu recomendei): `PONTO_CAI_EM_NOME_EM_USO` ("Nada foi gravado: o ponto cai numa cidade onde esse nome já
+existe. Mexa o ponto ou use um nome que diferencie, como fazem por lá.") pro 409 do ponto, e `NOME_JA_EM_USO_NO_AR` (a
+de 13/10 sem "ou o endereço que sairia dele") pro 409 de trocar o nome. As duas ficam em `src/lib/porta-da-pessoa.ts`, as duas
+LIDA 2026-10-21, e a quarta lista datada está no guarda. Questionário: "Num lugar novo," + parágrafo do lugar no ar (LIDA 21/10).
+Portões: 3329/3329, tsc, build, mutar 42/0/0. Sabotei o guarda (data trocada; data numa frase alheia) e a rota (frases
+trocadas): todas as sabotagens ficaram vermelhas.
+→ Com o ok dele: `npm run semear` → `vercel --prod --yes` → `conferir-no-ar` (o chunk/rota tem "o ponto cai numa
+cidade") → merge fast-forward no `main` → push. **Ainda solto:** o "Desfazer" ao lado do erro do ponto segue PENDENTE
+(`palavras.ts`); questionário l.~74 ("As três fichas… vieram sem a cidade") pode estar velho, não conferido.
+
+## (anterior) 20/10, FIM: ele mandou seguir com "o 409 do ponto"
 
 Ele disse *"pode seguir com o 409 do ponto"* e logo parou (*"quero continuar próxima sessão"*). Nada construído; `main` =
 `e5ed138` + este docs, árvore limpa. **O que já levantei (só leitura):** o 409 em si JÁ EXISTE e está no ar
