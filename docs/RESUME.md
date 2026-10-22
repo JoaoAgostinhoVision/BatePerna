@@ -2,7 +2,17 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 21/10: "o 409 do ponto" FEITO na branch, esperando o ok do deploy (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 21/10, NOITE: "o 409 do ponto" NO AR e MERGEADO (vence TUDO abaixo)
+
+Ele disse *"pode subir e juntar"*. `npm run semear` (nada novo) → `vercel --prod --yes` = `dpl_FXpZSHAhPYd6R954ka3gUgWsAhyE`,
+alias conferido. `conferir-no-ar`: home + 3 fichas 200; PUT /api/contribuir/lugar 401 sem sessão (irmã 404). A frase só
+sai num 409 logado: **NÃO provada no ar** (nenhum chunk cliente a importa). `main` = `9d28928`, pushado; branch apagada.
+**Falta dele, no celular logado:** trocar o nome de um lugar no ar por um nome que já existe, e mexer o ponto pra uma cidade
+onde o nome já existe (mais os testes logados pendentes de "cidade do ponto" e "horário por dia", abaixo).
+→ Próximo: as 3 sugestões que ofereci (cidade nova dentro do erro do ponto; ler o "Desfazer"; conferir a linha "As
+três fichas… vieram sem a cidade") → rodada do `d-401` → pontos 1 e 4 dele.
+
+## (anterior) 21/10: "o 409 do ponto" FEITO na branch
 
 Branch `ponto-409-frase`, código `b36fc3e` (NÃO mergeada, NÃO no ar). Ele escolheu no chat, lendo as frases inteiras
 (as três que eu recomendei): `PONTO_CAI_EM_NOME_EM_USO` ("Nada foi gravado: o ponto cai numa cidade onde esse nome já
