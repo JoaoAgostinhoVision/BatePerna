@@ -2,7 +2,17 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, TARDE: rodada `d-401` FEITA na branch, esperando o ok do deploy (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, NOITE: rodada `d-401` NO AR e MERGEADA (vence TUDO abaixo)
+
+Ele disse *"pode subir e juntar"*. Semear (nada novo) → `vercel --prod --yes` (1ª tentativa "fetch failed", nada subiu;
+2ª ok) = `dpl_9MA9Gvar44ASZuriyqH2jdeMysuY`. `conferir-no-ar`: alias ok; home + 3 fichas + /admin/login 200; /contribuir e
+/contribuir/novo 307 pro Clerk; o chunk do admin (servido sem login) tem a frase nova, a chave `bateperna:texto-guardado:`
+e a classe (controle positivo 1, negativo 0). NÃO provado: o comportamento com login vencido de verdade (fica com ELE).
+`main` = `38285ba` + este docs, pushado; branch apagada.
+→ Próximo: os testes logados dele no celular (lista abaixo) → ponto 1 (perfil próprio: falta ele dizer o que a pessoa
+vê/faz) → ponto 4 (pontos turísticos do mapa; ler a política do Overpass antes).
+
+## (anterior) 25/10, TARDE: rodada `d-401` FEITA na branch
 
 Desenho aprovado no chat ("yup"): na tela de QUEM USA, o Salvar que volta 401 guarda no aparelho (`localStorage`, sem
 prazo — "pode esperar") o texto da caixa de texto e o nome do 1º passo; depois do login volta à mesma caixa com o aviso
