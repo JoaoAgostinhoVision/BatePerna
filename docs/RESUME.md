@@ -2,7 +2,20 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, NOITE: rodada `d-401` NO AR e MERGEADA (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, NOITE: telas de "mandar um lugar" no VISUAL DO APP, na branch, esperando o ok do deploy (vence TUDO abaixo)
+
+Ele: *"a parte do usuário manda não tá legal… design simples nada a ver com o app"* e *"faça de acordo com o design do
+sistema, não tem para que tanto arrudeio"*. Feito na branch `mandar-no-visual-do-app` (`c1a9008`): o `layout.tsx` de
+/contribuir põe as telas dela na moldura do app (`.bp.bp-manda` › `.screen`, `Appbar` em cima, `BarraNavegacao` sem item
+aceso embaixo — `aqui` virou opcional); `src/app/contribuir/contribuir.css` repinta as peças `adm-*` só ali, com os
+tokens do `ficha.css` (serif nos títulos/perguntas, pílulas terracota, cartões, recados em caixa). Painel do João
+inalterado (teste trava: toda regra começa com `.bp-manda`, e só `#fff` de cor solta). Conferido numa prévia estática
+renderizada com os componentes reais, a 375 px, claro e escuro (o 1º defeito — o botão principal sem texto pela cor de
+link — foi achado ali e consertado). Portões: 3347/3347, tsc, build, mutar 42/0/0.
+→ Com o ok dele: semear → `vercel --prod --yes` → `conferir-no-ar` → merge ff no `main` → push. O teste de verdade é
+ele logado no celular.
+
+## (anterior) 25/10, NOITE: rodada `d-401` NO AR e MERGEADA
 
 Ele disse *"pode subir e juntar"*. Semear (nada novo) → `vercel --prod --yes` (1ª tentativa "fetch failed", nada subiu;
 2ª ok) = `dpl_9MA9Gvar44ASZuriyqH2jdeMysuY`. `conferir-no-ar`: alias ok; home + 3 fichas + /admin/login 200; /contribuir e
