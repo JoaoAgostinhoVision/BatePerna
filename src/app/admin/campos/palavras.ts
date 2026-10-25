@@ -232,7 +232,7 @@ export const DE_VOLTA_AO_AR = "de volta ao ar";
  *  `fetch`, nenhuma confirmação (o que se perde é só o que ainda não foi
  *  salvo, e está na tela de quem toca). Só aparece quando a tela difere do
  *  salvo. Uma palavra pros sete editores, pelo motivo do topo deste arquivo. */
-// PENDENTE: redação minha (Tarefa 15, 07/10). Ele aprovou o DESENHO no chat ("pode fazer assim"), não leu a palavra.
+// LIDA: o João marcou "Serve" no chat em 2026-10-25. Redação minha (Tarefa 15, 07/10).
 export const DESFAZER = "Desfazer";
 
 /** O 409 do "Conferi" (`POST /api/admin/conferir`, Task 6 da rodada de 07/10).

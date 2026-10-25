@@ -2,7 +2,15 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 21/10, NOITE: "o 409 do ponto" NO AR e MERGEADO (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10: as 3 sugestões do 409 FECHADAS (vence TUDO abaixo)
+
+Ele respondeu no chat: **"Desfazer" serve** (`DESFAZER` em `palavras.ts` PENDENTE → LIDA 2026-10-25; só comentário, sem
+deploy); **cidade nova no erro do ponto: deixar como está**. Conferi no banco (só leitura): as 3 fichas antigas seguem
+**sem cidade**, então a linha "As três fichas… vieram sem a cidade" do questionário segue verdadeira. Suíte 3329/3329.
+**Falta dele, no celular logado:** os testes listados abaixo (409 do ponto e do nome, "cidade do ponto", "horário por dia").
+→ Próximo: rodada do `d-401` → pontos 1 (perfil próprio) e 4 (pontos turísticos do mapa; ler a política do Overpass antes).
+
+## (anterior) 21/10, NOITE: "o 409 do ponto" NO AR e MERGEADO
 
 Ele disse *"pode subir e juntar"*. `npm run semear` (nada novo) → `vercel --prod --yes` = `dpl_FXpZSHAhPYd6R954ka3gUgWsAhyE`,
 alias conferido. `conferir-no-ar`: home + 3 fichas 200; PUT /api/contribuir/lugar 401 sem sessão (irmã 404). A frase só
