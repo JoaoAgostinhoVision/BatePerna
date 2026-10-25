@@ -2,7 +2,16 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, NOITE: telas de "mandar um lugar" no VISUAL DO APP, na branch, esperando o ok do deploy (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, FIM: "mandar um lugar" no VISUAL DO APP, NO AR e MERGEADO (vence TUDO abaixo)
+
+Ele disse *"vá simbora"*. `vercel --prod --yes` = `dpl_5cZREh3bXLnY7NfxnYu5va1Ls62v`. `conferir-no-ar`: alias ok; home,
+/trilhas e 3 fichas 200 (404 de controle); a barra da home mantém `aria-current` em Hoje; /contribuir e /contribuir/novo 307
+pro Clerk; a folha nova servida (`78221856…css`, 90× `.bp-manda`, idêntica ao build local; públicas 0). NÃO provado: as
+telas montadas logado (fica com ELE no celular). `main` = `1a2ce69` + este docs, pushado; branch apagada.
+→ Próximo: o teste dele logado (agora também o visual) → sugestões abertas: acender o item "mandar" na barra; barrinha de
+progresso no lugar de "Pergunta N de M" → ponto 1 (perfil) → ponto 4 (pontos turísticos; Overpass antes).
+
+## (anterior) 25/10, NOITE: telas de "mandar um lugar" no VISUAL DO APP, na branch
 
 Ele: *"a parte do usuário manda não tá legal… design simples nada a ver com o app"* e *"faça de acordo com o design do
 sistema, não tem para que tanto arrudeio"*. Feito na branch `mandar-no-visual-do-app` (`c1a9008`): o `layout.tsx` de
