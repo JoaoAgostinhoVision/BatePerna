@@ -10,3 +10,18 @@ describe("a frase que o João escolheu em 25/10, ao pé da letra", () => {
     expect(TEXTO_GUARDADO).toBe("Nada foi gravado ainda: o que você escreveu aqui entra quando você salvar.");
   });
 });
+
+describe("as palavras do perfil que o João leu em 25/10, ao pé da letra", () => {
+  it.each([
+    ["TITULO_VOCE", "Você"],
+    ["TITULO_FUI", "Onde você já foi"],
+    ["FUI_VAZIO", "Quando você tocar “✓ Fui” na ficha de um lugar, ele aparece aqui."],
+    ["FOI_EM", "foi em"],
+  ] as const)("%s", async (nome, texto) => {
+    const palavras = (await import("@/app/contribuir/palavras")) as Record<string, string>;
+    expect(palavras[nome]).toBe(texto);
+  });
+  it("ITEM_VOCE", async () => {
+    expect((await import("@/app/BarraNavegacao")).ITEM_VOCE).toBe("Você");
+  });
+});

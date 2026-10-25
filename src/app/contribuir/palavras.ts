@@ -19,13 +19,13 @@ export const TITULO_MANDAR = "Mandar um lugar";
 /** O PERFIL DELA (25/10, desenho aprovado pelo João: "a personalização do
  *  usuário, que aparece os locais que ele já foi"). A área de quem manda virou
  *  a área DELA: em cima, onde ela já foi; embaixo, o que ela mandou. */
-// PENDENTE: redação minha (25/10), esperando a leitura do João.
+// LIDA: o João marcou "Servem todas" no chat em 2026-10-25, lendo-as por extenso. Redação minha.
 export const TITULO_VOCE = "Você";
-// PENDENTE: redação minha (25/10), esperando a leitura do João.
+// LIDA: o João marcou "Servem todas" no chat em 2026-10-25, lendo-as por extenso. Redação minha.
 export const TITULO_FUI = "Onde você já foi";
 /** Sem nenhuma ida: diz como uma ida entra aqui (o "✓ Fui" da ficha). */
-// PENDENTE: redação minha (25/10), esperando a leitura do João.
+// LIDA: o João marcou "Servem todas" no chat em 2026-10-25, lendo-as por extenso. Redação minha.
 export const FUI_VAZIO = "Quando você tocar “✓ Fui” na ficha de um lugar, ele aparece aqui.";
 /** Antes do dia da ida mais nova, no cartão: "foi em 19/10/2025". */
-// PENDENTE: redação minha (25/10), esperando a leitura do João.
+// LIDA: o João marcou "Servem todas" no chat em 2026-10-25, lendo-as por extenso. Redação minha.
 export const FOI_EM = "foi em";

@@ -14,7 +14,7 @@
 /** O terceiro item leva à área DELA (`/contribuir`). Até 25/10 chamava-se
  *  "+ mandar um lugar" (LIDA 13/10); com o perfil (onde ela já foi, o que ela
  *  mandou) a área deixou de ser só de mandar, e o item virou "Você". */
-// PENDENTE: redação minha (25/10), esperando a leitura do João.
+// LIDA: o João marcou "Servem todas" no chat em 2026-10-25, lendo-as por extenso. Redação minha.
 export const ITEM_VOCE = "Você";
 
 /** `aqui` ausente = nenhuma seção acesa: as telas de quem manda um lugar
