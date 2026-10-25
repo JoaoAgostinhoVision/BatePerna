@@ -2,7 +2,19 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10: as 3 sugestões do 409 FECHADAS (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, TARDE: rodada `d-401` FEITA na branch, esperando o ok do deploy (vence TUDO abaixo)
+
+Desenho aprovado no chat ("yup"): na tela de QUEM USA, o Salvar que volta 401 guarda no aparelho (`localStorage`, sem
+prazo — "pode esperar") o texto da caixa de texto e o nome do 1º passo; depois do login volta à mesma caixa com o aviso
+`TEXTO_GUARDADO` ("Nada foi gravado ainda: o que você escreveu aqui entra quando você salvar.", escolhida por ele, LIDA
+25/10). Sai ao salvar, no Desfazer e no "Seguir sem salvar" (a frase LIDA diz que some). Só texto escrito (decisão
+minha); painel do João inalterado. Branch `guardar-texto-401`, `ed65858`. Módulo novo `src/app/admin/campos/texto-guardado.ts`;
+testes `tests/app/texto-guardado-401.test.tsx` (12). Portões: 3344/3344, tsc, build, mutar 42/0/0; 9 sabotagens do
+código + 2 do guarda, todas vermelhas. Sem revisor separado nesta rodada.
+→ Com o ok dele: `npm run semear` → `vercel --prod --yes` → `conferir-no-ar` (o chunk de /contribuir tem "entra quando
+você salvar") → merge fast-forward no `main` → push. Depois: pontos 1 (perfil) e 4 (pontos turísticos; Overpass antes).
+
+## (anterior) 25/10: as 3 sugestões do 409 FECHADAS
 
 Ele respondeu no chat: **"Desfazer" serve** (`DESFAZER` em `palavras.ts` PENDENTE → LIDA 2026-10-25; só comentário, sem
 deploy); **cidade nova no erro do ponto: deixar como está**. Conferi no banco (só leitura): as 3 fichas antigas seguem
