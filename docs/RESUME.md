@@ -2,7 +2,19 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, FIM: "mandar um lugar" no VISUAL DO APP, NO AR e MERGEADO (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, MADRUGADA: PERFIL "Onde você já foi" FEITO na branch, esperando o ok do deploy (vence TUDO abaixo)
+
+Ponto 1 dele, agora dito: *"a personalização do usuário, que aparece os locais que ele já foi"*. Escolheu "do login".
+Desenho aprovado ("yup"): o "✓ Fui" da ficha pública (sem Clerk, de propósito) ANOTA no aparelho onde/quando
+(`src/lib/fui-no-aparelho.ts`); a área dela, logada, leva pra conta (`SobeOsFuis` → `POST /api/contribuir/fui` → tabela
+`fui_da_pessoa`, uma linha por pessoa+lugar com a ida mais nova; lugar escondido some da lista). `/contribuir` virou
+"Você": título, botão de mandar (I5: 1º link), "Onde você já foi" (cartões com "foi em dd/mm/aaaa"), depois "Os lugares
+que você mandou". Item da barra virou "👤 Você" (saiu `MANDAR_UM_LUGAR` da lista de 13/10: 45→44). Palavras: 5 LIDA
+25/10 ("Servem todas"). Branch `perfil-onde-ja-fui`. Portões: 3381/3381, tsc, build, mutar 42/0/0; 6 sabotagens vermelhas.
+🔴 Deploy PRECISA de `npm run semear` antes (cria `fui_da_pessoa`).
+→ Com o ok dele: semear → `vercel --prod --yes` → `conferir-no-ar` → merge ff → push.
+
+## (anterior) 25/10, FIM: "mandar um lugar" no VISUAL DO APP, NO AR e MERGEADO
 
 Ele disse *"vá simbora"*. `vercel --prod --yes` = `dpl_5cZREh3bXLnY7NfxnYu5va1Ls62v`. `conferir-no-ar`: alias ok; home,
 /trilhas e 3 fichas 200 (404 de controle); a barra da home mantém `aria-current` em Hoje; /contribuir e /contribuir/novo 307
