@@ -2,7 +2,18 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, MADRUGADA: PERFIL "Onde você já foi" FEITO na branch, esperando o ok do deploy (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, FIM DO DIA: PERFIL "Onde você já foi" NO AR e MERGEADO (vence TUDO abaixo)
+
+Ele disse *"pode subir e juntar"*. Semear (tabela `fui_da_pessoa` conferida no Turso) → `vercel --prod --yes` (1ª
+"fetch failed", 2ª ok) = `dpl_HEozMjcPyGXbJos4962dZdZJKkRa`. `conferir-no-ar`: alias ok; home, /trilhas, 3 fichas 200;
+barra "🧭 Hoje 🗺️ Trilhas 👤 Você" (0× "mandar um lugar"), aria-current certo; /contribuir 307 pro Clerk; `POST
+/api/contribuir/fui` 401 sem sessão, GET 405, irmã 404; chunk da ficha tem `bp:fui-no-aparelho:v1` (+ controle). NÃO
+provado: o fluxo logado (tocar Fui → abrir "Você" no mesmo celular). `main` = `81e1d78` + este docs, pushado.
+→ Próximo: o teste dele no celular (Fui → Você; e os antigos) → sugestões abertas: "Você já foi a N lugares";
+guardar o chão de cada ida; acender "Você" na barra (hoje nenhum item acende ali); barrinha de progresso das
+perguntas → ponto 4 (pontos turísticos; Overpass antes).
+
+## (anterior) 25/10, MADRUGADA: PERFIL "Onde você já foi" FEITO na branch
 
 Ponto 1 dele, agora dito: *"a personalização do usuário, que aparece os locais que ele já foi"*. Escolheu "do login".
 Desenho aprovado ("yup"): o "✓ Fui" da ficha pública (sem Clerk, de propósito) ANOTA no aparelho onde/quando
