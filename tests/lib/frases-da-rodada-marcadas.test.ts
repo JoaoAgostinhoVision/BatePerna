@@ -369,6 +369,9 @@ const NAO_SAO_FRASE: Readonly<Record<string, readonly string[]>> = {
   // `USER_AGENT_DO_APP` = o cabeçalho que o servidor manda ao Nominatim (política
   // de uso dele): nunca vai à tela de ninguém.
   "src/lib/nominatim.ts": ["USER_AGENT_DO_APP"],
+  // `CHAVE_DO_NOME_NOVO` = a chave do `localStorage` do nome guardado no 401
+  // (rodada `d-401`, 25/10): nunca vai à tela de ninguém.
+  "src/app/admin/campos/texto-guardado.ts": ["CHAVE_DO_NOME_NOVO"],
 };
 
 /** As constantes de texto exportadas que nasceram depois da BASE, em todo

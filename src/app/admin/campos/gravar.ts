@@ -1,5 +1,6 @@
 "use client";
 import { createContext, createElement, useContext, useRef, useState, type ReactNode } from "react";
+import { chaveDoTexto, esquecerTexto, guardarTexto } from "./texto-guardado";
 
 /** PRA ONDE OS EDITORES GRAVAM — e se o número de motor pede prévia (Tarefa 11).
  *
@@ -183,6 +184,11 @@ export type Gravacao = {
   limparErro: () => void;
 };
 
+/** A chave do texto guardado desta caixa, quando o corpo é de UM campo. */
+function chaveDoCorpo(corpo: Record<string, unknown>): string | null {
+  return typeof corpo.slug === "string" && typeof corpo.campo === "string" ? chaveDoTexto(corpo.slug, corpo.campo) : null;
+}
+
 export function usarGravacao(): Gravacao {
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -202,8 +208,18 @@ export function usarGravacao(): Gravacao {
     };
     try {
       const r = await fetch(gravarEm, { method: "PUT", body: JSON.stringify(comBase(corpo, baseId)) });
-      if (r.status === 401 && recarregarSe401) { sair(); location.reload(); return; }
+      if (r.status === 401 && recarregarSe401) {
+        // `d-401` (25/10): o texto escrito fica no aparelho antes de a tela sair.
+        const chave = chaveDoCorpo(corpo);
+        if (chave !== null && typeof corpo.valor === "string") guardarTexto(chave, corpo.valor);
+        sair();
+        location.reload();
+        return;
+      }
       if (r.ok) {
+        // Gravou: o que estava guardado desta caixa já está no banco.
+        const chave = chaveDoCorpo(corpo);
+        if (chave !== null) esquecerTexto(chave);
         if (depoisDeGravar === null) {
           sair();
           location.reload();

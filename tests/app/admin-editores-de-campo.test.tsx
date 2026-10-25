@@ -58,6 +58,7 @@ import {
   DE_VOLTA_AO_AR,
   DESBLOQUEAR,
   DESFAZER,
+  TEXTO_GUARDADO,
   ESCONDER,
   ESCONDIDO,
   HORA_VAZIA,
@@ -1639,6 +1640,9 @@ describe("Os editores servem os três lugares", () => {
     // do salvo; o "Desistir", no formulário e na lista de rascunhos — nenhuma em
     // repouso nas três fichas.
     DESFAZER,
+    // Rodada `d-401` (25/10): o aviso do texto que voltou do aparelho depois do
+    // login. Só existe com algo guardado — nenhum nas três fichas.
+    TEXTO_GUARDADO,
     DESISTIR,
     DESISTIR_MESMO,
     ERRO_DESISTIR,

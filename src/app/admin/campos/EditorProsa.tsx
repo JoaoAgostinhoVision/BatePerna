@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import BotaoDesfazer from "./BotaoDesfazer";
 import BotaoNaoSei from "./BotaoNaoSei";
-import { usarGravacao } from "./gravar";
-import { CAIXA_VAZIA, SALVANDO, SALVAR } from "./palavras";
+import { PortaDoEditor, usarGravacao } from "./gravar";
+import { CAIXA_VAZIA, SALVANDO, SALVAR, TEXTO_GUARDADO } from "./palavras";
+import { chaveDoTexto, esquecerTexto, lerTexto } from "./texto-guardado";
 import type { PropsDoEditor } from "./tipos";
 
 /** A CAIXA DE TEXTO — o instrumento da espécie `prosa` (16 dos 30 campos do
@@ -26,12 +27,35 @@ import type { PropsDoEditor } from "./tipos";
  *  vem da prop `valor`, e o rótulo vem do registro pela prop `campo.rotulo`.
  *
  *  O "Desfazer" (Tarefa 15) volta a caixa ao `valor` de AGORA — a prop, não a
- *  caixa da montagem — e tira a recusa da tela; não grava nada. */
+ *  caixa da montagem — e tira a recusa da tela; não grava nada.
+ *
+ *  🔴 O TEXTO QUE VOLTOU (rodada `d-401`, 25/10): na tela DELA, o texto que o
+ *  401 guardou no aparelho (`./texto-guardado`) volta à caixa DEPOIS da
+ *  montagem — no servidor não há aparelho, e ler antes daria uma tela no
+ *  servidor e outra no celular — com o aviso `TEXTO_GUARDADO`. O "Desfazer"
+ *  também o esquece; o Salvar que dá certo o esquece em `./gravar`. */
 export default function EditorProsa({ campo, valor, slug }: PropsDoEditor) {
   const salvo = typeof valor === "string" ? valor : "";
   const [texto, setTexto] = useState(salvo);
   const gravacao = usarGravacao();
   const { erro, salvando, gravar, recusarAqui, limparErro } = gravacao;
+  const { recarregarSe401 } = useContext(PortaDoEditor);
+  const [voltou, setVoltou] = useState(false);
+  const chave = chaveDoTexto(slug, campo.caminho);
+
+  useEffect(() => {
+    if (!recarregarSe401) return;
+    const guardado = lerTexto(chave);
+    if (guardado === null) return;
+    if (guardado === salvo) {
+      esquecerTexto(chave);
+      return;
+    }
+    setTexto(guardado);
+    setVoltou(true);
+    // Só na montagem: depois dela, a caixa é de quem digita.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function salvar(): void {
     // `trim()` pra casar com a porta, que conta só-espaços como vazia.
@@ -69,9 +93,12 @@ export default function EditorProsa({ campo, valor, slug }: PropsDoEditor) {
         aoDesfazer={() => {
           setTexto(salvo);
           limparErro();
+          esquecerTexto(chave);
+          setVoltou(false);
         }}
       />
       <BotaoNaoSei campo={campo} valor={valor} slug={slug} gravacao={gravacao} />
+      {voltou && <p className="adm-texto-guardado">{TEXTO_GUARDADO}</p>}
       {erro && (
         <p className="adm-erro" role="alert">
           {erro}

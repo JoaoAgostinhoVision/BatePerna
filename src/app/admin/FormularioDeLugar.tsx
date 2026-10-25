@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useState, type FormEvent, type MouseEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent, type MouseEvent } from "react";
 import AvisoDoPar, { CORRIGIR_O_NOME } from "./AvisoDoPar";
 import BotaoDesistir from "./BotaoDesistir";
 import EditorFaixas from "./campos/EditorFaixas";
@@ -10,7 +10,8 @@ import EditorLista from "./campos/EditorLista";
 import EditorNumeroDeMotor from "./campos/EditorNumeroDeMotor";
 import EditorProsa from "./campos/EditorProsa";
 import { AvisoDeMudanca, ERRO_GRAVAR, ERRO_REDE, PortaDoEditor } from "./campos/gravar";
-import { PULADA, SEM_RESPOSTA } from "./campos/palavras";
+import { PULADA, SEM_RESPOSTA, TEXTO_GUARDADO } from "./campos/palavras";
+import { CHAVE_DO_NOME_NOVO, chaveDoTexto, esquecerTexto, guardarTexto, lerTexto } from "./campos/texto-guardado";
 import type { Editor, EspecieNaTela, PerguntaNaTela } from "./campos/tipos";
 import { ROTAS, enderecoDaPergunta, type Onde } from "./novo/enderecos";
 
@@ -252,7 +253,13 @@ export default function FormularioDeLugar({
   const pedindo = (id: string): boolean => naoSalvo && pedido === id;
   /** `true` = pode sair; `false` = pediu o segundo toque e não sai. */
   function podeSair(id: string): boolean {
-    if (!naoSalvo || pedido === id) return true;
+    if (!naoSalvo) return true;
+    if (pedido === id) {
+      // 🔴 "O que você escreveu aqui some" (`SEGUIR_SEM_SALVAR`, LIDA): some
+      // também do aparelho (`d-401`, 25/10) — senão ele voltaria à caixa.
+      esquecerTexto(chaveDoTexto(slug, pergunta.campo.caminho));
+      return true;
+    }
     setPedido(id);
     return false;
   }
@@ -357,6 +364,16 @@ export function ComecarLugarNovo({
   const [nome, setNome] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [indo, setIndo] = useState(false);
+  // `d-401` (25/10): o nome que o 401 guardou volta DEPOIS da montagem, só na
+  // tela dela, com o aviso (ver `EditorProsa`).
+  const [voltou, setVoltou] = useState(false);
+  useEffect(() => {
+    if (!ROTAS[onde].recarregarSe401) return;
+    const guardado = lerTexto(CHAVE_DO_NOME_NOVO);
+    if (guardado === null || guardado === "") return;
+    setNome(guardado);
+    setVoltou(true);
+  }, [onde]);
 
   async function comecar(e: FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
@@ -370,11 +387,13 @@ export function ComecarLugarNovo({
       const r = await fetch(ROTAS[onde].rascunhoApi, { method: "POST", body: JSON.stringify({ nome }) });
       if (r.ok) {
         const { slug } = (await r.json()) as { slug: string };
+        esquecerTexto(CHAVE_DO_NOME_NOVO);
         saindo = true;
         location.assign(ROTAS[onde].comecou(slug));
         return;
       }
       if (r.status === 401 && ROTAS[onde].recarregarSe401) {
+        guardarTexto(CHAVE_DO_NOME_NOVO, nome);
         saindo = true;
         location.reload();
         return;
@@ -397,6 +416,7 @@ export function ComecarLugarNovo({
       <button type="submit" disabled={indo}>
         {indo ? COMECANDO : COMECAR}
       </button>
+      {voltou && <p className="adm-texto-guardado">{TEXTO_GUARDADO}</p>}
       {erro && (
         <p className="adm-erro" role="alert">
           {erro}
