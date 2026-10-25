@@ -238,9 +238,9 @@ export const DESFAZER = "Desfazer";
 /** O AVISO DO TEXTO QUE VOLTOU (rodada `d-401`, 25/10): o login dela venceu
  *  no meio, a tela recarregou, e o texto que estava na caixa voltou do
  *  aparelho — ainda não salvo (`./texto-guardado`). O João pediu o aviso ("é
- *  bom avisar"); a frase ele escolhe entre três redações. */
-// PENDENTE: redação provisória minha (25/10), esperando a escolha do João.
-export const TEXTO_GUARDADO = "Este texto voltou, mas ainda não foi salvo.";
+ *  bom avisar"); a frase ele escolheu entre três redações. */
+// LIDA: o João escolheu esta frase no chat, lendo-a por extenso, em 2026-10-25. Montagem minha de frases que ele já tinha lido.
+export const TEXTO_GUARDADO = "Nada foi gravado ainda: o que você escreveu aqui entra quando você salvar.";
 
 /** O 409 do "Conferi" (`POST /api/admin/conferir`, Task 6 da rodada de 07/10).
  *  Mora aqui, e não na rota, porque arquivo de rota do Next não exporta nada

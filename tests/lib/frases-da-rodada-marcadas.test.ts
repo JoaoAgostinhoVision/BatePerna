@@ -173,6 +173,17 @@ const LIDAS_EM_21_10: Readonly<Record<string, readonly string[]>> = {
   "src/lib/porta-da-pessoa.ts": ["NOME_JA_EM_USO_NO_AR", "PONTO_CAI_EM_NOME_EM_USO"],
 };
 
+/** 🔴 A QUINTA LISTA DATADA (25/10, rodada `d-401`). O João escolheu a frase
+ *  do aviso no chat, lendo-a por extenso. No mesmo dia ele marcou "Serve" no
+ *  `DESFAZER`, que é ANTIGO (07/10) e por isso não cabe numa lista de frases
+ *  novas: a marca dele é conferida à parte, no caso de 25/10 lá embaixo. */
+const LIDAS_EM_25 = "2026-10-25";
+const LIDAS_EM_25_10: Readonly<Record<string, readonly string[]>> = {
+  "src/app/admin/campos/palavras.ts": ["TEXTO_GUARDADO"],
+};
+/** As frases ANTIGAS que ele leu em 25/10: arquivo e nome. */
+const ANTIGAS_LIDAS_EM_25_10: readonly (readonly [string, string])[] = [["src/app/admin/campos/palavras.ts", "DESFAZER"]];
+
 /** Uma leitura dele: a data e os nomes que ela libera NUM arquivo. */
 type Leitura = { data: string; nomes: readonly string[] };
 
@@ -182,6 +193,7 @@ const LISTAS_DATADAS: readonly { data: string; lista: Readonly<Record<string, re
   { data: LIDAS_EM_18, lista: LIDAS_EM_18_10 },
   { data: LIDAS_EM_20, lista: LIDAS_EM_20_10 },
   { data: LIDAS_EM_21, lista: LIDAS_EM_21_10 },
+  { data: LIDAS_EM_25, lista: LIDAS_EM_25_10 },
 ];
 
 /** As leituras que valem num arquivo (uma por lista datada que o cita). */
@@ -724,6 +736,37 @@ describe("toda frase nova desta rodada nasce marcada", () => {
     });
     expect(fora).toEqual([]);
     // Não-vacuidade: uma marca por constante da lista.
+    expect(marcas.length).toBe(2);
+  });
+
+  // A lista de 25/10, no mesmo molde, mais a frase antiga que ele leu no dia.
+  it("a lista do que ele leu em 25/10: cada nome existe, é desta rodada, e está LIDA com a data", () => {
+    const problemas = Object.entries(LIDAS_EM_25_10).flatMap(([arquivo, nomes]) =>
+      problemasDaLista(readFileSync(path.join(process.cwd(), arquivo), "utf8"), nomesNaBase(arquivo), nomes, LIDAS_EM_25).map(
+        (p) => `${arquivo}: ${p}`,
+      ),
+    );
+    expect(problemas).toEqual([]);
+    expect(Object.values(LIDAS_EM_25_10).flat().length).toBe(1);
+  });
+
+  it(`toda marca LIDA de ${LIDAS_EM_25} em src é de um nome da lista de 25/10 ou de uma frase antiga que ele leu nesse dia`, () => {
+    const marcas = marcasDatadasEmSrc(LIDAS_EM_25);
+    const porArquivo = new Map<string, Set<number>>();
+    const fora = marcas.flatMap(({ arquivo, linha }) => {
+      if (!porArquivo.has(arquivo)) {
+        const ok = linhasDaDataPermitidas(arquivo, ler(arquivo), LIDAS_EM_25);
+        const frases = frasesExportadas(ler(arquivo).join("\n"));
+        for (const [a, nome] of ANTIGAS_LIDAS_EM_25_10) {
+          const f = a === arquivo ? frases.find((x) => x.nome === nome) : undefined;
+          if (f !== undefined) for (const j of indicesDeCima(ler(arquivo), f.linha)) ok.add(j);
+        }
+        porArquivo.set(arquivo, ok);
+      }
+      return porArquivo.get(arquivo)!.has(linha) ? [] : [`${arquivo}:${linha + 1}: ${ler(arquivo)[linha].trim()}`];
+    });
+    expect(fora).toEqual([]);
+    // Não-vacuidade: a frase nova e a antiga.
     expect(marcas.length).toBe(2);
   });
 
