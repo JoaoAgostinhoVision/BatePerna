@@ -14,7 +14,10 @@
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13. (O texto é o da spec de 07/10, Parte 1.)
 export const MANDAR_UM_LUGAR = "+ mandar um lugar";
 
-export default function BarraNavegacao({ aqui }: { aqui: "hoje" | "trilhas" }) {
+/** `aqui` ausente = nenhuma seção acesa: as telas de quem manda um lugar
+ *  (25/10) mostram a barra, mas não são "Hoje" nem "Trilhas", e o item de
+ *  mandar continua sem `aria-current` (não é seção). */
+export default function BarraNavegacao({ aqui }: { aqui?: "hoje" | "trilhas" }) {
   const destinos = [
     { chave: "hoje", href: "/", ic: "🧭", rotulo: "Hoje" },
     { chave: "trilhas", href: "/trilhas", ic: "🗺️", rotulo: "Trilhas" },

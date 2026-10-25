@@ -1,4 +1,9 @@
 import type { ReactNode } from "react";
+import Appbar from "../Appbar";
+import BarraNavegacao from "../BarraNavegacao";
+import "../ficha.css";
+import "../home.css";
+import "./contribuir.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { clerkConfigurado } from "@/lib/clerk-configurado";
 
@@ -23,8 +28,25 @@ import { clerkConfigurado } from "@/lib/clerk-configurado";
  *  frase do Clerk fora. A decisão é a MESMA do middleware (`clerkConfigurado`).
  *
  *  ⚠️ A renovação em si não tem prova aqui: só se mede com chave de verdade, no
- *  ar (conferir-no-ar, depois do deploy). */
+ *  ar (conferir-no-ar, depois do deploy).
+ *
+ *  🔴 A MOLDURA DO APP (25/10, pedido do João: "faça de acordo com o design do
+ *  sistema"). As telas dela usavam o visual cru do painel (`admin.css`), que
+ *  "não tem nada a ver com o app". Agora moram na MESMA moldura das telas
+ *  públicas — `.bp` › `.screen`, com a marca em cima e a barra embaixo — e
+ *  `./contribuir.css` repinta as peças do formulário com os tokens do
+ *  `ficha.css`. O painel do João não passa por aqui e não muda.
+ *  `div`, não `main`: cada página já desenha o seu `<main className="adm">`. */
 export default function LayoutDeQuemContribui({ children }: { children: ReactNode }) {
-  if (!clerkConfigurado()) return children;
-  return <ClerkProvider>{children}</ClerkProvider>;
+  const tela = (
+    <div className="bp bp-manda">
+      <div className="screen">
+        <Appbar />
+        {children}
+        <BarraNavegacao />
+      </div>
+    </div>
+  );
+  if (!clerkConfigurado()) return tela;
+  return <ClerkProvider>{tela}</ClerkProvider>;
 }

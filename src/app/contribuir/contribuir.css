@@ -1,0 +1,177 @@
+/* src/app/contribuir/contribuir.css — as telas de QUEM MANDA UM LUGAR com a cara
+   do app (25/10, pedido do João: "faça de acordo com o design do sistema").
+
+   As peças do formulário são as MESMAS do painel (`admin.css`, classes `adm-*`),
+   e o painel continua com o visual dele. Aqui elas são repintadas só dentro da
+   moldura `.bp-manda` (o layout de /contribuir), com os tokens do `ficha.css`:
+   papel, tinta, a terracota do `--accent`, a serif dos títulos e a letra de
+   máquina dos rótulos. Nenhuma cor solta: tudo é token, e o escuro vem de graça.
+
+   🔴 ESPECIFICIDADE, NÃO ORDEM: cada página importa o `admin.css` DEPOIS deste
+   arquivo (o layout carrega antes), então toda regra daqui começa com
+   `.bp-manda` e ganha pelo peso (duas classes contra uma), nunca pela posição. */
+
+/* ---- a folha ---- */
+.bp-manda .adm {
+  max-width: none; margin: 0;
+  padding: 1.2rem 1.2rem calc(var(--barra-h) + env(safe-area-inset-bottom) + 1.4rem);
+  font-family: var(--sans); color: var(--ink);
+  display: flex; flex-direction: column; gap: 1rem;
+}
+.bp-manda .adm h1 {
+  font-family: var(--serif); font-weight: 600; font-size: 1.75rem; line-height: 1.1;
+  letter-spacing: -.01em; margin: .2rem 0 0; text-wrap: balance;
+}
+/* Link solto na cor do app. Uma classe só (0,1,1): toda peça com classe própria
+   (o botão cheio, o nome do lugar) ganha desta por peso. */
+.bp-manda a { color: var(--accent); }
+
+/* Os rótulos de seção: a letra de máquina, em caixa alta, como o `.grupo-k`. */
+.bp-manda .adm-rascunhos-titulo,
+.bp-manda .adm-novo-posicao,
+.bp-manda .adm-publicar-titulo {
+  font-family: var(--type); font-size: .68rem; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-faint); margin: 0;
+}
+
+/* Texto de apoio. */
+.bp-manda .adm-novo-aviso,
+.bp-manda .adm-publicar-aviso,
+.bp-manda .adm-editor-ajuda,
+.bp-manda .adm-editor-previsao,
+.bp-manda .adm-editor-coord,
+.bp-manda .adm-pergunta-pulada,
+.bp-manda .adm-campo-ausente {
+  color: var(--ink-soft); font-size: .88rem;
+}
+
+/* ---- os botões: a pílula do app ----
+   O principal (Salvar, Começar, Publicar, o link de mandar um lugar novo) é a
+   terracota cheia; os de apoio (Desfazer, Não sei, Pular, Desistir, os de
+   faixa e grupo) são a pílula vazada do "✓ Fui". Alvo de 44px em todos. */
+.bp-manda .adm-novo-link,
+.bp-manda .adm-editor-salvar,
+.bp-manda .adm-porta button,
+.bp-manda .adm-publicar button[type="submit"],
+.bp-manda .adm-publicar > button {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: .65rem 1.3rem; border-radius: 99px;
+  background: var(--accent); color: #fff; border: 1px solid var(--accent);
+  font: inherit; font-weight: 700; text-decoration: none; cursor: pointer;
+}
+.bp-manda .adm-novo-link { margin: 0; align-self: stretch; }
+.bp-manda .adm-editor-salvar:disabled,
+.bp-manda .adm-porta button:disabled,
+.bp-manda .adm-publicar button:disabled { opacity: .55; cursor: default; }
+
+.bp-manda .adm-editor-desfazer,
+.bp-manda .adm-editor-nao-sei,
+.bp-manda .adm-pergunta-pular,
+.bp-manda .adm-editor-mais-faixa,
+.bp-manda .adm-editor-tirar-faixa,
+.bp-manda .adm-editor-mais-grupo,
+.bp-manda .adm-editor-tirar-grupo,
+.bp-manda .adm-rascunho-desistir,
+.bp-manda .adm-busca-botao,
+.bp-manda .adm-revisao-corrigir,
+.bp-manda .adm-novo-passo {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: .55rem 1.1rem; border-radius: 99px;
+  background: var(--screen); color: var(--ink-soft); border: 1px solid var(--line);
+  font: inherit; font-weight: 650; text-decoration: none; cursor: pointer;
+}
+.bp-manda .adm-novo-passo-proxima { color: var(--accent); border-color: var(--accent); }
+.bp-manda button:active,
+.bp-manda .adm-novo-link:active,
+.bp-manda .adm-novo-passo:active { opacity: .7; }
+
+/* ---- os campos: papel claro com o fio do app ---- */
+.bp-manda .adm-editor-caixa,
+.bp-manda .adm-editor-escolha,
+.bp-manda .adm-editor-hora,
+.bp-manda .adm-editor-numero,
+.bp-manda .adm-busca-caixa,
+.bp-manda .adm-porta input,
+.bp-manda .adm-rotulo textarea,
+.bp-manda .adm-rotulo select {
+  font: inherit; font-size: 1rem; color: var(--ink);
+  background: var(--screen); border: 1px solid var(--line); border-radius: 12px;
+  padding: .7rem .8rem;
+}
+.bp-manda .adm-editor-caixa { min-height: 6.5rem; }
+.bp-manda .adm-editor-caixa:focus,
+.bp-manda .adm-editor-escolha:focus,
+.bp-manda .adm-editor-hora:focus,
+.bp-manda .adm-editor-numero:focus,
+.bp-manda .adm-busca-caixa:focus,
+.bp-manda .adm-porta input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 1px;
+  border-color: var(--accent);
+}
+.bp-manda .adm-editor-opcao input { accent-color: var(--accent); width: 1.15rem; height: 1.15rem; }
+.bp-manda .adm-rotulo { font-size: .95rem; color: var(--ink); }
+
+/* O editor: linha de botões que quebra, em vez de empilhar cada um. */
+.bp-manda .adm-editor { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.bp-manda .adm-editor > :not(button) { flex-basis: 100%; }
+
+/* ---- a pergunta: o cartão do app ---- */
+.bp-manda .adm-novo,
+.bp-manda .adm-publicar { gap: 1rem; }
+.bp-manda .adm-pergunta,
+.bp-manda .adm-revisao-linha,
+.bp-manda .adm-item {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: var(--shadow-card);
+}
+.bp-manda .adm-pergunta { padding: 1.1rem 1rem 1rem; gap: .8rem; }
+.bp-manda .adm-pergunta-texto {
+  font-family: var(--serif); font-size: 1.3rem; font-weight: 600; line-height: 1.22;
+  color: var(--ink); text-wrap: pretty;
+}
+.bp-manda .adm-novo-passos { gap: .6rem; }
+
+/* ---- a lista de lugares dela: os cartões da home ---- */
+.bp-manda .adm-lista { gap: .55rem; }
+.bp-manda .adm-item { padding: .2rem .9rem .75rem; display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .6rem; }
+.bp-manda .adm-item-link { flex: 1 1 100%; padding: .6rem 0 0; color: inherit; }
+.bp-manda .adm-item-nome { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; line-height: 1.15; }
+.bp-manda .adm-item-cidade { font-family: var(--type); font-size: .72rem; font-weight: 600; color: var(--ink-faint); margin-top: .2rem; }
+.bp-manda .adm-item-marca,
+.bp-manda .adm-marca-escondido {
+  font-size: 11px; letter-spacing: .02em; padding: 1px 7px; border: 1px dashed currentColor;
+  border-radius: 999px; color: var(--ink-soft); text-align: left;
+}
+.bp-manda .adm-item > a:not(.adm-item-link) { font-weight: 650; margin-left: auto; }
+.bp-manda .adm-rascunhos { gap: .55rem; margin-top: .4rem; }
+
+/* ---- a revisão antes de publicar ---- */
+.bp-manda .adm-revisao-linha { padding: .85rem 1rem; }
+/* A pergunta da revisão é frase inteira (às vezes três linhas): texto de
+   apoio, e não o rótulo de máquina, que cansaria lido em caixa alta. */
+.bp-manda .adm-revisao-pergunta { margin: 0; font-size: .85rem; color: var(--ink-soft); }
+.bp-manda .adm-revisao-resposta { font-size: 1.02rem; font-weight: 600; color: var(--ink); }
+.bp-manda .adm-revisao-linha[data-estado="falta"] { border-color: var(--stop-line); background: var(--stop-bg); }
+.bp-manda .adm-revisao-linha[data-estado="falta"] .adm-revisao-resposta { color: var(--stop-ink); }
+.bp-manda .adm-revisao-linha[data-estado="pulada"] .adm-revisao-resposta { color: var(--ink-faint); }
+.bp-manda .adm-publicar-nome { font-family: var(--serif); font-size: 1.3rem; font-weight: 600; }
+
+/* ---- recados ---- */
+.bp-manda .adm-erro,
+.bp-manda .adm-aviso-par {
+  margin: 0; padding: .65rem .85rem; border-radius: 12px; font-size: .92rem;
+  color: var(--stop-ink); background: var(--stop-bg); border: 1px solid var(--stop-line);
+}
+.bp-manda .adm-texto-guardado {
+  margin: 0; padding: .65rem .85rem; border-radius: 12px; font-size: .92rem;
+  color: var(--ink-soft); background: var(--rain-bg); border: 1px solid color-mix(in srgb, var(--rain) 22%, transparent);
+}
+
+/* ---- o mapa e a busca ---- */
+.bp-manda .adm-editor-mapa,
+.bp-manda .adm-mapinha { border-radius: 14px; border: 1px solid var(--line); background: var(--surface-2); }
+.bp-manda .adm-editor-mapa-zoom-botao { border-color: var(--line); background: color-mix(in srgb, var(--screen) 92%, transparent); color: var(--ink); border-radius: 10px; }
+.bp-manda .adm-busca-rotulo { color: var(--ink-soft); }
+.bp-manda .adm-busca-lista { background: var(--screen); border: 1px solid var(--line); border-radius: 12px; }
+.bp-manda .adm-busca-lista li + li { border-top-color: var(--line); }
+.bp-manda .adm-busca-achado { background: none; border: 0; color: var(--ink); font: inherit; }
