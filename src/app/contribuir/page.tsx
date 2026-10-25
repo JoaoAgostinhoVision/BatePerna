@@ -1,12 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getClient } from "@/lib/db";
-import { lugaresDaPessoa, rascunhosDaPessoa } from "@/lib/db-contribuidor";
+import { fuiDaPessoa, lugaresDaPessoa, rascunhosDaPessoa } from "@/lib/db-contribuidor";
 import { ETIQUETA_NAO_CONFERIDO } from "@/lib/origem";
 import { cidadeDoDoc, nomeDoRascunho } from "@/lib/rascunho";
 import { ESCONDIDO } from "../admin/campos/palavras";
 import { TITULO_RASCUNHOS } from "../admin/ListaDeLugares";
-import { CONFERIDO, MANDAR_UM_LUGAR_NOVO, MUDAR, TITULO_MEUS } from "./palavras";
+import { CONFERIDO, FOI_EM, FUI_VAZIO, MANDAR_UM_LUGAR_NOVO, MUDAR, TITULO_FUI, TITULO_MEUS, TITULO_VOCE } from "./palavras";
+import SobeOsFuis from "./SobeOsFuis";
 import { quemNaTela } from "./sessao";
 import "../admin/admin.css";
 
@@ -22,19 +23,48 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
  *
  *  Fora da varredura da marca (Task 5) de propósito: não é superfície pública
  *  — exige login, e é dela sobre os lugares DELA. */
+/** O dia da ida, em Recife, só números: 19/10/2025. */
+const diaDaIda = (s: number): string =>
+  new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Recife", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(s * 1000));
+
 export default async function MeusLugares() {
   const quem = await quemNaTela();
   if ("frase" in quem) return <main className="adm"><p className="adm-erro">{quem.frase}</p></main>;
-  const [lugares, rascunhos] = await Promise.all([
+  const [lugares, rascunhos, idas] = await Promise.all([
     lugaresDaPessoa(getClient(), quem.pessoa.id),
     rascunhosDaPessoa(getClient(), quem.pessoa.id),
+    fuiDaPessoa(getClient(), quem.pessoa.id),
   ]);
   return (
     <main className="adm">
-      <h1>{TITULO_MEUS}</h1>
+      <h1>{TITULO_VOCE}</h1>
       {/* 🔴 I5: o PRIMEIRO link da tela. A barra traz a pessoa pra cá, e é
           daqui que se manda um lugar novo — com ou sem lugares na lista. */}
       <Link href="/contribuir/novo" className="adm-novo-link">{MANDAR_UM_LUGAR_NOVO}</Link>
+      {/* O PERFIL DELA (25/10): onde ela já foi, pelo "✓ Fui" anotado no
+          aparelho e levado pra conta pelo `SobeOsFuis`. */}
+      <SobeOsFuis />
+      <section className="adm-rascunhos adm-fui" data-testid="onde-ja-foi">
+        <h2 className="adm-rascunhos-titulo">{TITULO_FUI}</h2>
+        {idas.length === 0 ? (
+          <p className="adm-novo-aviso">{FUI_VAZIO}</p>
+        ) : (
+          <ul className="adm-lista">
+            {idas.map((i) => (
+              <li key={i.slug} className="adm-item" data-fui={i.slug}>
+                <a href={`/${i.slug}`} className="adm-item-link">
+                  <span className="adm-item-nome">
+                    {nomeDoRascunho(i.doc, i.slug)}
+                    {cidadeDoDoc(i.doc) && <span className="adm-item-cidade">{cidadeDoDoc(i.doc)}</span>}
+                  </span>
+                </a>
+                <span className="adm-fui-quando">{FOI_EM} {diaDaIda(i.em)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <h2 className="adm-rascunhos-titulo">{TITULO_MEUS}</h2>
       {lugares.length > 0 && (
         <ul className="adm-lista" data-testid="meus-lugares">
           {lugares.map((l) => (

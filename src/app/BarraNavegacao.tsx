@@ -11,8 +11,11 @@
  *  E desde 07/10 um terceiro item, que não é seção: a lista de quem manda um
  *  lugar (`/contribuir`), de onde ela manda um novo. */
 
-// LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13. (O texto é o da spec de 07/10, Parte 1.)
-export const MANDAR_UM_LUGAR = "+ mandar um lugar";
+/** O terceiro item leva à área DELA (`/contribuir`). Até 25/10 chamava-se
+ *  "+ mandar um lugar" (LIDA 13/10); com o perfil (onde ela já foi, o que ela
+ *  mandou) a área deixou de ser só de mandar, e o item virou "Você". */
+// PENDENTE: redação minha (25/10), esperando a leitura do João.
+export const ITEM_VOCE = "Você";
 
 /** `aqui` ausente = nenhuma seção acesa: as telas de quem manda um lugar
  *  (25/10) mostram a barra, mas não são "Hoje" nem "Trilhas", e o item de
@@ -39,7 +42,10 @@ export default function BarraNavegacao({ aqui }: { aqui?: "hoje" | "trilhas" }) 
       {/* Link comum, sem `aria-current`: não é uma "seção" do app (sem sessão,
           o Clerk pede login — spec, Parte 1). Leva à LISTA dela, que tem o
           "+ mandar um lugar novo" no topo (I5 da pré-auditoria). */}
-      <a className="barra-item barra-mandar" href="/contribuir">{MANDAR_UM_LUGAR}</a>
+      <a className="barra-item barra-mandar" href="/contribuir">
+        <span className="ic" aria-hidden="true">👤</span>
+        {ITEM_VOCE}
+      </a>
     </nav>
   );
 }

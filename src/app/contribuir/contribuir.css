@@ -144,6 +144,8 @@
 }
 .bp-manda .adm-item > a:not(.adm-item-link) { font-weight: 650; margin-left: auto; }
 .bp-manda .adm-rascunhos { gap: .55rem; margin-top: .4rem; }
+/* O dia da ida, no cartão de "Onde você já foi": a letra de máquina da cidade. */
+.bp-manda .adm-fui-quando { font-family: var(--type); font-size: .7rem; font-weight: 600; color: var(--ink-faint); }
 
 /* ---- a revisão antes de publicar ---- */
 .bp-manda .adm-revisao-linha { padding: .85rem 1rem; }

@@ -101,6 +101,8 @@ export async function semearAcervo(client: Client): Promise<Ficha[]> {
   // de volta ao valor inicial — teste que mexeu na regra não atravessa.
   await client.execute("DELETE FROM origem_do_lugar");
   await client.execute("DELETE FROM contribuidores");
+  // E onde cada pessoa já foi (25/10, o perfil dela).
+  await client.execute("DELETE FROM fui_da_pessoa");
   // E as duas do Nominatim (17/10): a resposta guardada some, e a linha da vez
   // volta a 0 (ela é semeada, não apagada) — teste que gastou a vez não deixa o
   // seguinte cair no limite de 1/s.

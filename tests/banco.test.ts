@@ -161,6 +161,8 @@ describe("semearAcervo deixa TODA tabela como a de um banco recém-semeado", () 
     // As duas do Nominatim (17/10): uma resposta guardada e a vez gasta.
     await guardarResposta(c, "ponto:-8.1,-35.2", "{}", AGORA);
     await tomarVezDoNominatim(c, AGORA * 1000);
+    // Onde a pessoa já foi (25/10).
+    await c.execute({ sql: `INSERT INTO fui_da_pessoa (pessoa, lugar, em) VALUES (?, 1, ?)`, args: [PESSOA_DE_TESTE, AGORA] });
     const sujo = await retrato(c);
     expect(Object.keys(sujo)).toEqual(Object.keys(esperado));
     for (const t of Object.keys(esperado)) {

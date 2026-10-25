@@ -115,6 +115,14 @@ export async function ensureSchema(client: Client): Promise<void> {
   await client.execute(`CREATE TABLE IF NOT EXISTS origem_do_lugar (
     lugar INTEGER PRIMARY KEY, contribuidor TEXT NOT NULL,
     conferido INTEGER NOT NULL DEFAULT 0, conferido_em INTEGER)`);
+  // 🔴 ONDE CADA PESSOA JÁ FOI (25/10, o perfil dela): uma linha por pessoa e
+  // lugar (a IDENTIDADE, que anda com ele na troca de endereço), com a ida
+  // mais nova em `em` (segundos). Vem do "✓ Fui" anotado no aparelho e levado
+  // pela área dela (`/api/contribuir/fui`). É memória DELA: nunca vai a tela
+  // pública nem ao placar, que segue anônimo em `confirmacoes`.
+  await client.execute(`CREATE TABLE IF NOT EXISTS fui_da_pessoa (
+    pessoa TEXT NOT NULL, lugar INTEGER NOT NULL, em INTEGER NOT NULL,
+    PRIMARY KEY (pessoa, lugar))`);
   // Quem contribui. Nome e e-mail SÓ pro painel dele — nunca pra tela pública.
   await client.execute(`CREATE TABLE IF NOT EXISTS contribuidores (
     id TEXT PRIMARY KEY, nome TEXT, email TEXT,

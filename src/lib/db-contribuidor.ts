@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Client } from "@libsql/client";
-import type { Rascunho } from "@/lib/db";
+import { enderecoDoLugar, enderecoNovoDe, identidadeDoLugar, type Rascunho } from "@/lib/db";
 import type { QuemContribui } from "@/lib/contribuidor-sessao";
 
 /** O BANCO DE QUEM USA O APP, e dos atos do João sobre o que essa pessoa mandou
@@ -295,4 +295,61 @@ export async function lugaresDaPessoa(client: Client, id: string): Promise<Lugar
   return r.rows.map((l) => ({
     slug: String(l.slug), doc: String(l.doc), oculto: Number(l.oculto) === 1, conferido: Number(l.conferido) === 1,
   }));
+}
+
+/** UMA IDA DELA, como o aparelho manda (`FuiNoAparelho`, em segundos aqui). */
+export type IdaDaPessoa = { slug: string; lugar?: number; em: number };
+/** Antes disto não havia "✓ Fui" anotado no aparelho: hora mais velha é lixo. */
+export const FUI_MAIS_ANTIGO = 1_760_000_000 - 365 * 24 * 60 * 60;
+
+/** A identidade do lugar de uma ida: a que veio, se é de um lugar no ar; senão
+ *  a do endereço (o de agora, ou um antigo que leva a ele). `null` = ignorar. */
+async function lugarDaIda(client: Client, ida: IdaDaPessoa): Promise<number | null> {
+  if (ida.lugar !== undefined) return (await enderecoDoLugar(client, ida.lugar)) === null ? null : ida.lugar;
+  const aqui = await identidadeDoLugar(client, ida.slug);
+  const lugar = aqui ?? (await (async () => {
+    const novo = await enderecoNovoDe(client, ida.slug);
+    return novo === null ? null : identidadeDoLugar(client, novo);
+  })());
+  return lugar !== null && (await enderecoDoLugar(client, lugar)) !== null ? lugar : null;
+}
+
+/** GRAVA AS IDAS DELA NA CONTA (25/10). Lugar que não existe ou não está no ar
+ *  é ignorado sem derrubar os outros; hora do futuro vira `agora`, hora velha
+ *  demais é ignorada. Uma linha por pessoa e lugar, com a ida MAIS NOVA — a
+ *  mais velha que chegar depois não a apaga. Devolve quantas gravou. */
+export async function gravarFuiDaPessoa(
+  client: Client, pessoa: string, idas: readonly IdaDaPessoa[], agora: number,
+): Promise<number> {
+  let gravados = 0;
+  for (const ida of idas) {
+    if (ida.em < FUI_MAIS_ANTIGO) continue;
+    const lugar = await lugarDaIda(client, ida);
+    if (lugar === null) continue;
+    await client.execute({
+      sql: `INSERT INTO fui_da_pessoa (pessoa, lugar, em) VALUES (?, ?, ?)
+              ON CONFLICT (pessoa, lugar) DO UPDATE SET em = MAX(em, excluded.em)`,
+      args: [pessoa, lugar, Math.min(ida.em, agora)],
+    });
+    gravados++;
+  }
+  return gravados;
+}
+
+export type FuiDaPessoa = { slug: string; doc: string; em: number };
+
+/** ONDE ELA JÁ FOI, da ida mais nova pra mais velha: o lugar onde mora AGORA e
+ *  o documento vigente. Lugar escondido sai da lista (e volta se for mostrado). */
+export async function fuiDaPessoa(client: Client, pessoa: string): Promise<FuiDaPessoa[]> {
+  const r = await client.execute({
+    sql: `SELECT v.ficha_slug AS slug, v.doc, f.em
+            FROM fui_da_pessoa f
+            JOIN ficha_versoes v
+              ON v.id = (SELECT MAX(j.id) FROM ficha_versoes j
+                          WHERE j.ficha_slug = (SELECT p.ficha_slug FROM ficha_versoes p WHERE p.id = f.lugar))
+           WHERE f.pessoa = ? AND v.oculto <> 1
+           ORDER BY f.em DESC, f.lugar DESC`,
+    args: [pessoa],
+  });
+  return r.rows.map((l) => ({ slug: String(l.slug), doc: String(l.doc), em: Number(l.em) }));
 }

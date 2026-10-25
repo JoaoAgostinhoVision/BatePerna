@@ -467,3 +467,49 @@ describe("editar o dela no ar", () => {
     await expect(Editar({ params: Promise.resolve({ slug: "rampa-do-pepe" }) })).rejects.toThrow("NEXT_NOT_FOUND");
   });
 });
+
+// 25/10 (o perfil dela, desenho aprovado pelo João): a área dela mostra onde
+// ela já foi — as idas que o "✓ Fui" anotou no aparelho e a área levou pra
+// conta. O link de mandar continua o PRIMEIRO da tela (I5).
+const { gravarFuiDaPessoa } = await import("@/lib/db-contribuidor");
+const { identidadeDoLugar } = await import("@/lib/db");
+const { TITULO_FUI, FUI_VAZIO, TITULO_VOCE, TITULO_MEUS } = await import("@/app/contribuir/palavras");
+
+describe("Você: onde ela já foi", () => {
+  // O banco é um só pro arquivo: as idas de um caso não podem sobrar no outro.
+  beforeEach(async () => { await banco.execute("DELETE FROM fui_da_pessoa"); });
+
+  it("as idas dela, da mais nova pra mais velha, cada uma levando à ficha, com o dia", async () => {
+    const rampa = (await identidadeDoLugar(banco, "rampa-do-pepe"))!;
+    const veu = (await identidadeDoLugar(banco, "veu-de-noiva-de-bonito"))!;
+    await gravarFuiDaPessoa(banco, PESSOA.id, [
+      { slug: "rampa-do-pepe", lugar: rampa, em: 1_760_400_000 },
+      { slug: "veu-de-noiva-de-bonito", lugar: veu, em: 1_760_900_000 },
+    ], 1_761_000_000);
+    const { container } = render(await Meus());
+    expect(container.querySelector("h1")?.textContent).toBe(TITULO_VOCE);
+    const secao = container.querySelector('[data-testid="onde-ja-foi"]')!;
+    expect(secao.querySelector("h2")?.textContent).toBe(TITULO_FUI);
+    const links = [...secao.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+    expect(links).toEqual(["/veu-de-noiva-de-bonito", "/rampa-do-pepe"]);
+    // 1_760_900_000 = 19/10/2025 em Recife.
+    expect(secao.querySelector('[data-fui="veu-de-noiva-de-bonito"]')?.textContent).toContain("19/10/2025");
+    expect(container.querySelector("main a")?.getAttribute("href"), "I5: o primeiro link é o de mandar").toBe("/contribuir/novo");
+    expect(container.textContent).toContain(TITULO_MEUS);
+  });
+
+  it("sem nenhuma ida: a seção diz como uma ida entra aqui", async () => {
+    sessao.atual = OUTRA;
+    const { container } = render(await Meus());
+    const secao = container.querySelector('[data-testid="onde-ja-foi"]')!;
+    expect(secao.textContent).toContain(FUI_VAZIO);
+    expect(secao.querySelector("a")).toBeNull();
+  });
+
+  it("as idas de OUTRA pessoa não aparecem", async () => {
+    const rampa = (await identidadeDoLugar(banco, "rampa-do-pepe"))!;
+    await gravarFuiDaPessoa(banco, OUTRA.id, [{ slug: "rampa-do-pepe", lugar: rampa, em: 1_760_400_000 }], 1_761_000_000);
+    const { container } = render(await Meus());
+    expect(container.querySelector('[data-testid="onde-ja-foi"] a')).toBeNull();
+  });
+});

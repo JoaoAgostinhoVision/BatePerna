@@ -4,7 +4,7 @@
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const TITULO_MEUS = "Os lugares que você mandou";
 /** O link do TOPO de "Meus lugares", pras perguntas. Palavra DIFERENTE do item
- *  da barra (`MANDAR_UM_LUGAR`, "+ mandar um lugar", que leva a esta lista): a
+ *  da barra (`ITEM_VOCE`, que leva a esta tela; até 25/10 "+ mandar um lugar"): a
  *  mesma palavra em duas fontes, levando a dois lugares, era o M10 da
  *  pré-auditoria. */
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
@@ -15,3 +15,17 @@ export const CONFERIDO = "conferido pelo BatePerna";
 export const MUDAR = "mudar";
 // LIDA: o João marcou "Serve" no pacote de copy em 2026-10-13.
 export const TITULO_MANDAR = "Mandar um lugar";
+
+/** O PERFIL DELA (25/10, desenho aprovado pelo João: "a personalização do
+ *  usuário, que aparece os locais que ele já foi"). A área de quem manda virou
+ *  a área DELA: em cima, onde ela já foi; embaixo, o que ela mandou. */
+// PENDENTE: redação minha (25/10), esperando a leitura do João.
+export const TITULO_VOCE = "Você";
+// PENDENTE: redação minha (25/10), esperando a leitura do João.
+export const TITULO_FUI = "Onde você já foi";
+/** Sem nenhuma ida: diz como uma ida entra aqui (o "✓ Fui" da ficha). */
+// PENDENTE: redação minha (25/10), esperando a leitura do João.
+export const FUI_VAZIO = "Quando você tocar “✓ Fui” na ficha de um lugar, ele aparece aqui.";
+/** Antes do dia da ida mais nova, no cartão: "foi em 19/10/2025". */
+// PENDENTE: redação minha (25/10), esperando a leitura do João.
+export const FOI_EM = "foi em";

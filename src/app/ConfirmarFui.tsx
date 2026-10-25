@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { diaRecife, guardar, pendentes, relatosDaPagina, remover, type Relato } from "@/lib/fila-relato";
+import { anotarFui } from "@/lib/fui-no-aparelho";
 
 /** O "✓ Fui": ele volta do passeio e conta como estava. É a alça de confiança do
  *  app — o único dado que não vem de satélite.
@@ -181,6 +182,9 @@ export default function ConfirmarFui({
 
   async function enviar(tipo: "seco" | "barro") {
     setFase("enviando");
+    // O perfil dela (25/10): o aparelho anota onde e quando ela foi, ANTES da
+    // rede — ela foi, com sinal ou sem. A área dela leva isto pra conta.
+    anotarFui(lugar === null ? { slug, em: Date.now() } : { slug, lugar, em: Date.now() });
     const dia = diaRecife(Date.now());
     const relato: Relato = lugar === null ? { slug, tipo, dia } : { slug, tipo, dia, lugar };
     let r: Response | null;

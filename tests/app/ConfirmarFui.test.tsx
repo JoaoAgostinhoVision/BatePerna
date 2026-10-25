@@ -675,3 +675,22 @@ describe("a tela e as duas chaves da fila", () => {
     expect(localStorage.getItem(CHAVE_FILA_VELHA)).toBeNull();
   });
 });
+
+// 25/10 (o perfil dela): o toque no "Fui" também ANOTA no aparelho onde e
+// quando — é isso que a área dela leva pra conta. Anota mesmo sem rede: ela foi.
+describe("o Fui anota no aparelho", () => {
+  it("com a identidade do lugar, e mesmo quando o envio falha", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_760_000_000_000);
+    let i = 0;
+    vi.stubGlobal("fetch", vi.fn(() => (i++ === 0
+      ? Promise.resolve({ ok: true, json: () => Promise.resolve({ foram: 0, barro: 0 }) })
+      : Promise.reject(new Error("sem sinal")))));
+    render(<ConfirmarFui slug="rampa-do-pepe" lugar={7} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Fui/ }));
+    expect((await import("@/lib/fui-no-aparelho")).lerFuis()).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: /Deu pra ir/ }));
+    // Anotou no toque, antes da rede; e a rede caiu depois, sem desfazer nada.
+    await waitFor(() => expect(i).toBe(2));
+    expect((await import("@/lib/fui-no-aparelho")).lerFuis()).toEqual([{ slug: "rampa-do-pepe", lugar: 7, em: 1_760_000_000_000 }]);
+  });
+});

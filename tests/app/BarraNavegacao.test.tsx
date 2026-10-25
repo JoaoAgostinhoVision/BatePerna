@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { render, cleanup } from "@testing-library/react";
-import BarraNavegacao, { MANDAR_UM_LUGAR } from "@/app/BarraNavegacao";
+import BarraNavegacao, { ITEM_VOCE } from "@/app/BarraNavegacao";
 import { paddingLado, regraDe, semComentarios, valorDe } from "../css";
 
 afterEach(() => { cleanup(); });
@@ -42,7 +42,7 @@ describe("BarraNavegacao", () => {
   it("a entrada de quem quer mandar um lugar leva à lista dela, /contribuir", () => {
     const { container } = render(<BarraNavegacao aqui="hoje" />);
     const a = container.querySelector('a[href="/contribuir"]');
-    expect(a?.textContent).toContain(MANDAR_UM_LUGAR);
+    expect(a?.textContent).toContain(ITEM_VOCE);
     expect(container.querySelector('a[href="/contribuir/novo"]')).toBeNull();
   });
 

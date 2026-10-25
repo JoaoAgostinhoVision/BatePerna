@@ -110,7 +110,6 @@ const LIDAS_EM_13_10: Readonly<Record<string, readonly string[]>> = {
   "src/app/admin/campos/EditorCalibrar.tsx": ["CALIBRAR", "CALIBRAR_AJUDA", "FALTA_UM_DOS_QUATRO"],
   "src/app/admin/campos/palavras.ts": ["TITULO_REGRA_PADRAO", "NAO_CONFERIU", "BLOQUEAR", "BLOQUEAR_MESMO", "DESBLOQUEAR"],
   "src/app/admin/TelaDePublicar.tsx": ["AVISO_PUBLICAR_PESSOA"],
-  "src/app/BarraNavegacao.tsx": ["MANDAR_UM_LUGAR"],
 };
 
 /** 🔴 A SEGUNDA LISTA DATADA (onda de copy de 18/10, rodada "cidade do ponto").
@@ -384,6 +383,9 @@ const NAO_SAO_FRASE: Readonly<Record<string, readonly string[]>> = {
   // `CHAVE_DO_NOME_NOVO` = a chave do `localStorage` do nome guardado no 401
   // (rodada `d-401`, 25/10): nunca vai à tela de ninguém.
   "src/app/admin/campos/texto-guardado.ts": ["CHAVE_DO_NOME_NOVO"],
+  // `CHAVE_FUI` = a chave do `localStorage` das idas anotadas no aparelho
+  // (25/10, o perfil dela): nunca vai à tela de ninguém.
+  "src/lib/fui-no-aparelho.ts": ["CHAVE_FUI"],
 };
 
 /** As constantes de texto exportadas que nasceram depois da BASE, em todo
@@ -441,7 +443,8 @@ describe("toda frase nova desta rodada nasce marcada", () => {
     expect(problemas).toEqual([]);
     // Não-vacuidade: a lista é a rodada inteira, menos as frases que não são
     // `export const` (conferidas por nome no fim do arquivo).
-    expect(Object.values(LIDAS_EM_13_10).flat().length).toBe(45);
+    // 44: o `MANDAR_UM_LUGAR` saiu em 25/10 (o item da barra virou "Você").
+    expect(Object.values(LIDAS_EM_13_10).flat().length).toBe(44);
   });
 
   // 🔴 I2 DA REVISÃO DA TASK 18: o outro sentido da cerca — a data exige nome
@@ -456,10 +459,10 @@ describe("toda frase nova desta rodada nasce marcada", () => {
       return porArquivo.get(arquivo)!.has(linha) ? [] : [`${arquivo}:${linha + 1}: ${ler(arquivo)[linha].trim()}`];
     });
     expect(fora).toEqual([]);
-    // Não-vacuidade: 45 da lista + 6 de `FRASE_DA_PESSOA` + o `contribuidor`
-    // + o título = 53 linhas em 13/10. Se o `git grep` voltasse vazio, a cerca
+    // Não-vacuidade: 44 da lista + 6 de `FRASE_DA_PESSOA` + o `contribuidor`
+    // + o título = 52 linhas em 13/10 (53 até o `MANDAR_UM_LUGAR` sair, 25/10). Se o `git grep` voltasse vazio, a cerca
     // passaria calada.
-    expect(marcas.length).toBe(53);
+    expect(marcas.length).toBe(52);
   });
 
   // A lista de 18/10, no mesmo molde: não apodrece calada, e a data dela só
