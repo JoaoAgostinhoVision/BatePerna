@@ -2,7 +2,22 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, FIM DO DIA: PERFIL "Onde você já foi" NO AR e MERGEADO (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, NOITE: ESTUDO "uso e dinheiro" PUBLICADO, esperando as respostas dele (vence TUDO abaixo)
+
+Ele pediu: *"use os agentes para tentar fazer que esse app fique mais utilizável… e estudado como eu posso ganhar
+dinheiro… arroche o nó"*. Quatro agentes em paralelo (só leitura): jornada de uso, técnica/PWA/acesso, mercado, produto.
+Síntese publicada: https://claude.ai/artifact/1QiEmvycynnGtNunCVZDo7 (fonte
+`_bmad-output/planning-artifacts/bateperna-rumo-uso-e-dinheiro.html`). Achados-chave: 🔴 login no ar é a instância DE
+DESENVOLVIMENTO do Clerk (inglês, "Development mode", outra marca); 🔴 "✓ Fui" sem sinal mostra erro mas guardou na fila
+(`ConfirmarFui.tsx` ~l.220/247); `--ink-faint` 2,91:1; alvos 32px ("escolher onde estou", "Filtrar"); ficha sem volta
+pro Hoje; selo "Pode ir" antes de "Fechado agora" à noite; sem página offline; 3 fichas curadas sem cidade no banco.
+Banco: 9 Fui em 83 dias, 1 logado, 2 mandados, zero medição de visitas. 🔴 Open-Meteo grátis é NÃO COMERCIAL (assinatura/
+anúncio = comercial; ~US$29/mês); doação Pix é permitida. Ordem recomendada: (1) consertos de confiança; (2) números no
+painel; (3) Pix "Apoie" + e-mail Open-Meteo; (4) compartilhar ficha + canal; (5) adensar um roteiro (Bonito–São Benedito
+do Sul–Buíque, verba Sebrae) → piloto; (6) condutores, "No caminho".
+→ Esperando ele responder as 5 perguntas do fim da página. O passo 1 (login de produção) precisa DELE no painel do Clerk.
+
+## (anterior) 25/10, FIM DO DIA: PERFIL "Onde você já foi" NO AR e MERGEADO
 
 Ele disse *"pode subir e juntar"*. Semear (tabela `fui_da_pessoa` conferida no Turso) → `vercel --prod --yes` (1ª
 "fetch failed", 2ª ok) = `dpl_HEozMjcPyGXbJos4962dZdZJKkRa`. `conferir-no-ar`: alias ok; home, /trilhas, 3 fichas 200;

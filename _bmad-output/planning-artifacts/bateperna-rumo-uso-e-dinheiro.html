@@ -1,0 +1,242 @@
+<title>Rumo do BatePerna</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: uma coluna de leitura no celular, blocos por decisão; o papel e a terracota do próprio app. */
+:root {
+  --chao: #E7DFD0; --papel: #F8F2E6; --papel-2: #F0E8D8; --tinta: #2A2016; --tinta-2: #5E503C;
+  --fio: #E2D8C6; --terra: #A5522A; --terra-claro: #EEDDCB;
+  --ok: #245234; --ok-bg: #E2EDE2; --alerta: #8C2A20; --alerta-bg: #F4DBD4; --cuidado: #71470B; --cuidado-bg: #FCEDC8;
+  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  --maq: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --chao: #100D08; --papel: #1B1710; --papel-2: #241E15; --tinta: #EFE6D5; --tinta-2: #B9AD92; --fio: #33291B;
+  --terra: #CE7C4B; --terra-claro: #38291B; --ok: #8FCBA0; --ok-bg: #16271C; --alerta: #EBA498; --alerta-bg: #2C1712;
+  --cuidado: #E8C583; --cuidado-bg: #302209; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --chao: #100D08; --papel: #1B1710; --papel-2: #241E15; --tinta: #EFE6D5; --tinta-2: #B9AD92; --fio: #33291B;
+  --terra: #CE7C4B; --terra-claro: #38291B; --ok: #8FCBA0; --ok-bg: #16271C; --alerta: #EBA498; --alerta-bg: #2C1712;
+  --cuidado: #E8C583; --cuidado-bg: #302209; color-scheme: dark }
+
+body { background: var(--chao); color: var(--tinta); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
+.folha {
+  max-width: 44rem; margin: 0 auto; background: var(--papel);
+  padding-block: 1.6rem 3rem;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 2.2rem;
+}
+@media (min-width: 46rem) { .folha { margin-block: 1.5rem; border: 1px solid var(--fio); border-radius: 20px; padding-left: 2.2rem; padding-right: 2.2rem; } }
+.rotulo { font-family: var(--maq); font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--tinta-2); margin: 0; }
+h1 { font-family: var(--serif); font-weight: 600; font-size: 2.1rem; line-height: 1.08; margin: .35rem 0 .5rem; text-wrap: balance; }
+h2 { font-family: var(--serif); font-weight: 600; font-size: 1.45rem; line-height: 1.15; margin: 0; text-wrap: balance; }
+h3 { font-size: 1.02rem; margin: 0; line-height: 1.3; }
+p { margin: 0; max-width: 65ch; }
+.sec { display: flex; flex-direction: column; gap: .9rem; }
+.lead { color: var(--tinta-2); font-size: 1.05rem; }
+ul.pontos { margin: 0; padding-left: 1.1rem; display: grid; gap: .45rem; max-width: 65ch; }
+
+.numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: .6rem; }
+.num { background: var(--papel-2); border: 1px solid var(--fio); border-radius: 12px; padding: .7rem .8rem; display: flex; flex-direction: column; gap: .15rem; }
+.num b { font-family: var(--serif); font-size: 1.7rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.num span { font-size: .85rem; color: var(--tinta-2); }
+
+.aviso { border-radius: 12px; padding: .85rem 1rem; display: flex; flex-direction: column; gap: .35rem; }
+.aviso.forte { background: var(--alerta-bg); color: var(--alerta); }
+.aviso.forte p { color: var(--tinta); }
+.aviso.morno { background: var(--cuidado-bg); }
+.aviso.morno strong { color: var(--cuidado); }
+
+.itens { list-style: none; margin: 0; padding: 0; display: grid; gap: .7rem; }
+.item { border: 1px solid var(--fio); border-radius: 14px; padding: .85rem .95rem; display: flex; flex-direction: column; gap: .4rem; background: var(--papel); }
+.item p { font-size: .95rem; }
+.marcas { display: flex; flex-wrap: wrap; gap: .35rem; }
+.m { font-family: var(--maq); font-size: .68rem; font-weight: 700; letter-spacing: .04em; border-radius: 99px; padding: .15rem .55rem; border: 1px solid var(--fio); color: var(--tinta-2); }
+.m.peq { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+.m.med { background: var(--cuidado-bg); color: var(--cuidado); border-color: transparent; }
+.m.gra { background: var(--alerta-bg); color: var(--alerta); border-color: transparent; }
+.m.voz { background: var(--terra-claro); color: var(--terra); border-color: transparent; }
+
+.tabela { overflow-x: auto; border: 1px solid var(--fio); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 34rem; font-size: .9rem; }
+th, td { text-align: left; padding: .6rem .7rem; border-bottom: 1px solid var(--fio); vertical-align: top; }
+th { font-family: var(--maq); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--tinta-2); background: var(--papel-2); }
+tr:last-child td { border-bottom: 0; }
+td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+ol.passos { margin: 0; padding: 0; list-style: none; display: grid; gap: .8rem; counter-reset: passo; }
+ol.passos li { counter-increment: passo; display: grid; grid-template-columns: 2.1rem 1fr; gap: .2rem .7rem; }
+ol.passos li::before { content: counter(passo); grid-row: span 2; font-family: var(--serif); font-size: 1.5rem; font-weight: 600; color: var(--terra); line-height: 1.1; }
+ol.passos li p { font-size: .95rem; color: var(--tinta-2); grid-column: 2; }
+ol.passos li h3 { grid-column: 2; }
+
+.perguntas { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
+.perguntas li { background: var(--terra-claro); border-radius: 12px; padding: .7rem .9rem; font-size: .97rem; }
+.fontes { font-size: .82rem; color: var(--tinta-2); display: grid; gap: .3rem; padding-left: 1.1rem; margin: 0; }
+.fontes a { color: var(--terra); overflow-wrap: anywhere; }
+.nota { font-size: .85rem; color: var(--tinta-2); }
+a:focus-visible { outline: 2px solid var(--terra); outline-offset: 2px; }
+</style>
+
+<main class="folha">
+  <header class="sec">
+    <p class="rotulo">BatePerna · 25/10/2026 · quatro agentes, um resumo</p>
+    <h1>Rumo do BatePerna: uso e dinheiro</h1>
+    <p class="lead">Quatro agentes olharam o app ao mesmo tempo: a jornada de quem usa, o celular por dentro, o mercado e o próximo passo de produto. Ninguém mexeu no código. Abaixo está o que acharam, a ordem que eu recomendo e o que só você pode decidir.</p>
+  </header>
+
+  <section class="sec">
+    <p class="rotulo">Em quatro linhas</p>
+    <ul class="pontos">
+      <li><strong>O básico está sólido.</strong> O app é leve no celular, abre fichas sem sinal e não usa nada pesado.</li>
+      <li><strong>Duas coisas espantam gente hoje.</strong> O login é a versão de teste do Clerk, em inglês, e o "✓ Fui" sem sinal diz que falhou quando na verdade guardou.</li>
+      <li><strong>O app não mede uso.</strong> Sem número não dá para saber se falta gente chegando ou gente voltando. E sem número não há o que mostrar a quem pagaria.</li>
+      <li><strong>O dinheiro realista vem de fora para dentro.</strong> Prefeitura, Sebrae, pousada e condutor pagam por gente levada ao lugar. Assinatura só faz sentido com milhares de usuários.</li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <p class="rotulo">O que o banco mostra hoje</p>
+    <div class="numeros">
+      <div class="num"><b>9</b><span>"✓ Fui" em 83 dias (desde 04/08)</span></div>
+      <div class="num"><b>1</b><span>pessoa logada até hoje</span></div>
+      <div class="num"><b>2</b><span>lugares mandados por quem usa</span></div>
+      <div class="num"><b>0</b><span>medição de visitas: não existe</span></div>
+    </div>
+    <p class="nota">Leitura só de consulta no banco, em 25/10. O placar do "✓ Fui" é anônimo, então parte desses 9 pode ser sua.</p>
+  </section>
+
+  <section class="sec">
+    <div class="aviso forte">
+      <p class="rotulo" style="color:inherit">Cadeado antes de cobrar qualquer coisa</p>
+      <p><strong>O carimbo usa o Open-Meteo grátis, e o grátis é só para uso não comercial.</strong> Os termos deles dizem que site ou app com assinatura ou anúncio é comercial. O plano pago custa por volta de US$ 29 por mês (uns R$ 160). Doação voluntária é permitida no grátis. Antes de vender destaque ou patrocínio, vale um e-mail para info@open-meteo.com perguntando se conta como comercial.</p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <p class="rotulo">Consertar já · o que tira gente do app</p>
+    <h2>Oito consertos de uso, por ordem</h2>
+    <ol class="itens">
+      <li class="item">
+        <h3>Login em português e com o nome BatePerna</h3>
+        <p>Tocar "Você" sem estar logado leva a uma tela em inglês, escrita "Development mode", com o nome de outra marca e sem volta para o app. Parece golpe. Precisa da instância de produção do Clerk, com o domínio do app, e do login em português.</p>
+        <div class="marcas"><span class="m peq">custo pequeno</span><span class="m voz">precisa de você no painel do Clerk</span></div>
+      </li>
+      <li class="item">
+        <h3>"✓ Fui" sem sinal diz que deu erro, mas guardou</h3>
+        <p>Na trilha, sem sinal, o relato fica guardado e sobe sozinho depois, mas a tela diz "não deu pra registrar agora". A pessoa toca de novo. A tela deveria dizer que anotou e manda quando tiver sinal.</p>
+        <div class="marcas"><span class="m peq">custo pequeno</span><span class="m voz">uma frase sua</span></div>
+      </li>
+      <li class="item">
+        <h3>Letra clara demais para ler no sol</h3>
+        <p>O tom de cinza dos rótulos e do próprio botão "✓ Fui" tem contraste 2,9 para 1, quando o mínimo recomendado é 4,5. No sol, na trilha, some. É um ajuste de cor.</p>
+        <div class="marcas"><span class="m peq">custo pequeno</span></div>
+      </li>
+      <li class="item">
+        <h3>Botões pequenos demais para o dedo</h3>
+        <p>"Escolher onde estou" (o caminho de quem não liga o GPS, o seu caso) mede 32 pixels de altura; "Filtrar" também. O mínimo confortável é 44. Também "Abrir no mapa", o "✓ Fui" e a distância.</p>
+        <div class="marcas"><span class="m peq">custo pequeno</span></div>
+      </li>
+      <li class="item">
+        <h3>A ficha não volta para "Hoje"</h3>
+        <p>Na ficha não há barra embaixo, e a marca no canto leva às Trilhas, não ao Hoje. No app instalado no iPhone, sem botão de voltar, a pessoa se perde.</p>
+        <div class="marcas"><span class="m peq">custo pequeno</span></div>
+      </li>
+      <li class="item">
+        <h3>De noite o selo diz "Pode ir" antes de virar "Fechado agora"</h3>
+        <p>O horário só é conferido depois que a página carrega. Com sinal lento, a primeira coisa lida é o contrário da verdade.</p>
+        <div class="marcas"><span class="m med">custo médio</span></div>
+      </li>
+      <li class="item">
+        <h3>Sem sinal, uma página não guardada vira erro do navegador</h3>
+        <p>No app instalado isso é um beco sem saída. Uma página "sem conexão" com link para as Trilhas guardadas resolve.</p>
+        <div class="marcas"><span class="m peq">custo pequeno</span><span class="m voz">uma frase sua</span></div>
+      </li>
+      <li class="item">
+        <h3>As três fichas do começo não dizem a cidade</h3>
+        <p>Rampa do Pepê, Véu de Noiva e Pedra Furada estão sem cidade no banco. Sem GPS, a pessoa não sabe se o lugar fica a 40 ou a 200 km. Você preenche pelo painel; eu não invento.</p>
+        <div class="marcas"><span class="m peq">custo zero de código</span><span class="m voz">você responde</span></div>
+      </li>
+    </ol>
+  </section>
+
+  <section class="sec">
+    <p class="rotulo">Melhorar em seguida</p>
+    <ul class="pontos">
+      <li><strong>De noite, "Amanhã" em vez de "Hoje não".</strong> É quando se planeja o dia seguinte, e fechado por horário não é perigo: a cor vermelha engana.</li>
+      <li><strong>Ordenar por distância</strong> quando a pessoa escolhe a cidade; hoje um lugar a 186 km aparece antes de um a 99 km.</li>
+      <li><strong>Trocar "latitude e longitude"</strong> no questionário de quem manda por "marque no mapa onde fica a entrada".</li>
+      <li><strong>Uma linha na primeira visita</strong> dizendo que o selo sai da chuva das últimas horas.</li>
+      <li><strong>Atalho até o "✓ Fui"</strong> (fica no fim de duas telas e meia) e, depois do "Valeu", um link para "Onde você já foi".</li>
+      <li><strong>Busca do Google:</strong> o app não tem robots.txt nem sitemap; home e Trilhas não têm título próprio.</li>
+      <li><strong>Link no WhatsApp com imagem.</strong> Hoje vai só texto; a imagem é decisão sua, e nunca com o carimbo congelado.</li>
+      <li><strong>Sinal fraco:</strong> a ficha guardada pode levar até 6 segundos para aparecer, porque o app espera a rede primeiro.</li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <p class="rotulo">Como ganhar dinheiro · sete modelos, do mais cedo ao mais tarde</p>
+    <h2>Quem paga, quanto e o que precisa antes</h2>
+    <div class="tabela">
+      <table>
+        <thead><tr><th>Modelo</th><th>Quem paga</th><th>Quanto</th><th>Risco à confiança</th><th>Precisa antes</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Apoio por Pix</strong> ("Apoie o BatePerna", depois do "✓ Fui")</td><td>quem usa muito</td><td class="n">R$ 5–20 por vez*</td><td>nenhum</td><td>nada; único que não exige o plano pago do Open-Meteo</td></tr>
+          <tr><td><strong>Patrocínio de prefeitura, Sebrae ou Semas</strong>, com selo "Apoio" e relatório de uso</td><td>órgãos de turismo</td><td class="n">R$ 5–30 mil/ano por município*</td><td>baixo, se nunca tocar no carimbo nem na ficha</td><td>10–20 lugares num roteiro e números de uso</td></tr>
+          <tr><td><strong>Condutores credenciados</strong> (Cadastur) num bloco marcado na ficha</td><td>guias locais</td><td class="n">R$ 20–50/mês*</td><td>médio-baixo</td><td>pessoas clicando em "ir com guia"</td></tr>
+          <tr><td><strong>"No caminho"</strong>: pousada, restaurante, borracharia, sempre rotulado "Anúncio"</td><td>negócios locais</td><td class="n">R$ 30–100/mês*</td><td>médio-alto</td><td>uns 2–5 mil usuários ativos na área</td></tr>
+          <tr><td><strong>Assinatura</strong> (alertas, offline, histórico; o carimbo segue grátis)</td><td>quem usa muito</td><td class="n">R$ 30–50/ano</td><td>médio</td><td>uns 10 mil usuários ativos por mês*</td></tr>
+          <tr><td><strong>Afiliados</strong> (hospedagem, equipamento)</td><td>Booking, lojas</td><td class="n">baixo com pouco tráfego*</td><td>médio</td><td>depois do "No caminho"</td></tr>
+          <tr><td><strong>Relatórios para órgãos públicos</strong> (como estava o chão, demanda por lugar, anônimo)</td><td>secretarias, Sebrae</td><td class="n">R$ 5–20 mil/ano*</td><td>baixo, cuidado com a LGPD</td><td>centenas de "✓ Fui" por mês</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="nota">* estimativa do agente, sem fonte. Os demais números têm fonte (lista no fim). Descartado: anúncio automático do Google (paga pouco no Brasil e põe propaganda que você não controla ao lado do carimbo). A regra de não disfarçar propaganda já é lei: o art. 36 do Código de Defesa do Consumidor exige que publicidade seja identificável.</p>
+    <div class="aviso morno">
+      <p><strong>Dinheiro que já existe na região.</strong> O Sebrae-PE investiu cerca de R$ 900 mil em roteiros em abril de 2026, um deles de ecoturismo: Bonito, São Benedito do Sul e Buíque/Catimbau. A Semas-PE abriu edital de R$ 500 mil para observação de aves no interior. No Natal de 2025, Bonito teve 91% de ocupação hoteleira. A conversa com essas pessoas começa com "este mês N pessoas abriram a Véu de Noiva", e hoje esse número não existe.</p>
+    </div>
+    <p class="nota">Preço de referência no Brasil: Climatempo sem anúncio custa R$ 39,90 por ano. Fora: Wikiloc €19,99 por ano, AllTrails US$ 35,99, Windy US$ 34,99. Em apps com versão grátis, perto de 2% de quem baixa vira pagante. Cobrar por Pix na web evita os 15% da loja.</p>
+  </section>
+
+  <section class="sec">
+    <p class="rotulo">A ordem que eu recomendo</p>
+    <h2>Seis passos, do conserto à primeira receita</h2>
+    <ol class="passos">
+      <li><h3>Consertos de confiança</h3><p>Os quatro primeiros acima: login, "✓ Fui" sem sinal, contraste e botões. É o que faz a pessoa ficar. Uma rodada curta.</p></li>
+      <li><h3>Números no seu painel</h3><p>Visitas por lugar por dia (contagem agregada, sem dado pessoal, no seu banco), "✓ Fui" por semana, pessoas logadas, lugares mandados. Fecha a dúvida "não chega ou não volta?" e é o primeiro argumento para quem paga.</p></li>
+      <li><h3>Botão de apoio por Pix e o e-mail ao Open-Meteo</h3><p>A chave Pix fica no banco, editável pelo painel. Pouco dinheiro, mas é sinal de valor, e não dispara custo nenhum.</p></li>
+      <li><h3>Compartilhar a ficha e ligar ao canal</h3><p>Um botão "mandar pra alguém" na ficha (o cartão do WhatsApp já existe) e, se o canal estiver publicando, um link para o vídeo na ficha e o link da ficha na descrição do vídeo.</p></li>
+      <li><h3>Adensar um roteiro</h3><p>10 a 20 lugares num lugar só, como Bonito, São Benedito do Sul e Buíque, que já têm verba e guias do Sebrae. Com os números do passo 2, levar uma proposta de piloto ao Sebrae-PE ou à prefeitura.</p></li>
+      <li><h3>Condutores, depois "No caminho"</h3><p>Só com gente usando. Abrir MEI e contratar o plano do Open-Meteo quando o primeiro real comercial estiver garantido.</p></li>
+    </ol>
+  </section>
+
+  <section class="sec">
+    <p class="rotulo">O que só você responde</p>
+    <ul class="perguntas">
+      <li>Posso começar já pelos consertos de confiança (passo 1)? O login precisa que você crie a instância de produção no painel do Clerk; eu te guio passo a passo.</li>
+      <li>Quer os números no seu painel (passo 2)?</li>
+      <li>O canal de vídeo está publicando? Isso decide o passo 4.</li>
+      <li>As cidades da Rampa do Pepê, da Véu de Noiva e da Pedra Furada: você preenche pelo painel?</li>
+      <li>Qual roteiro faz sentido adensar primeiro, e você tem viagens para isso?</li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <p class="rotulo">Fontes do estudo de mercado</p>
+    <ul class="fontes">
+      <li>Open-Meteo, termos e preço: <a href="https://open-meteo.com/en/terms">open-meteo.com/en/terms</a> · <a href="https://openmeteo.substack.com/p/api-subscriptions-for-commercial">openmeteo.substack.com</a></li>
+      <li>Sebrae-PE, roteiros de ecoturismo: <a href="https://movimentoeconomico.com.br/turismo-3/2026/04/19/agreste-de-pernambuco-ganha-novos-roteiros-de-ecoturismo-e-artesanato/">movimentoeconomico.com.br</a></li>
+      <li>Semas-PE, edital de aves: <a href="https://movimentoeconomico.com.br/economia/turismo/2026/01/18/edital-estadual-impulsiona-turismo-de-observacao-de-aves-no-interior-de-pe/">movimentoeconomico.com.br</a></li>
+      <li>Ocupação hoteleira: <a href="https://www.diariodepernambuco.com.br/economia/2025/12/11703975-pernambuco-registra-alta-de-26-na-ocupacao-hoteleira-para-o-reveillon-2025.html">diariodepernambuco.com.br</a></li>
+      <li>Ecoturismo no Brasil (Sebrae, Ecoar): <a href="https://agenciasebrae.com.br/cultura-empreendedora/atividades-relacionadas-ao-meio-ambiente-ja-respondem-por-60-do-faturamento-do-turismo-no-brasil">agenciasebrae.com.br</a></li>
+      <li>Cadastur, guias: <a href="https://diariodoturismo.com.br/pernambuco-lanca-linha-de-credito-para-guias-de-turismo/">diariodoturismo.com.br</a></li>
+      <li>Climatempo: <a href="https://www.climatempo.com.br/planos">climatempo.com.br/planos</a> · Windy: <a href="https://community.windy.com/topic/37725/35-premium-subscription-price-hike">community.windy.com</a></li>
+      <li>AllTrails: <a href="https://techcrunch.com/2025/05/12/alltrails-debuts-a-80-year-membership-that-includes-ai-powered-smart-routes">techcrunch.com</a> · Wikiloc: <a href="https://productforeveryone.substack.com/p/product-analysis-wikiloc">productforeveryone.substack.com</a></li>
+      <li>Komoot: <a href="https://www.bikeradar.com/news/komoot-acquisition">bikeradar.com</a> · Outdooractive: <a href="https://corporate.outdooractive.com/oa-blog-en/how-outdooractive-became-a-successful-platform">outdooractive.com</a></li>
+      <li>Conversão de assinatura: <a href="https://revenuecat.com/state-of-subscription-apps-2025">revenuecat.com</a> (número secundário, a conferir)</li>
+      <li>GetYourGuide: <a href="https://www.getyourguide.supply/join/how-much-does-getyourguide-charge">getyourguide.supply</a> · Pix Automático: <a href="https://www.diariodepernambuco.com.br/economia/2025/06/3894853-pix-automatico-confira-como-funciona-a-nova-ferramenta.html">diariodepernambuco.com.br</a></li>
+      <li>Publicidade identificada (CDC art. 36): <a href="https://meusitejuridico.editorajuspodivm.com.br/2018/10/09/art-36-cdc-violacao-principio-da-identificacao-da-publicidade/">meusitejuridico.editorajuspodivm.com.br</a></li>
+    </ul>
+  </section>
+</main>
