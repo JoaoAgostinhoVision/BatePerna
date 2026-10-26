@@ -5,7 +5,9 @@ import "../ficha.css";
 import "../home.css";
 import "./contribuir.css";
 import { ClerkProvider } from "@clerk/nextjs";
+import { ptBR } from "@clerk/localizations";
 import { clerkConfigurado } from "@/lib/clerk-configurado";
+import { ENTRAR } from "@/lib/entrar";
 
 /** O CLERK NO NAVEGADOR, SÓ NAS TELAS DE QUEM MANDA UM LUGAR (ruling do
  *  controlador na revisão da Task 13, feito na Task 14, por cima da decisão "Clerk sem `<ClerkProvider>`"
@@ -48,5 +50,11 @@ export default function LayoutDeQuemContribui({ children }: { children: ReactNod
     </div>
   );
   if (!clerkConfigurado()) return tela;
-  return <ClerkProvider>{tela}</ClerkProvider>;
+  // 25/10: o Clerk fala português (`ptBR`) e manda entrar DENTRO do app
+  // (`ENTRAR`), nunca no portal hospedado dele, que era em inglês.
+  return (
+    <ClerkProvider localization={ptBR} signInUrl={ENTRAR} signUpUrl={ENTRAR}>
+      {tela}
+    </ClerkProvider>
+  );
 }

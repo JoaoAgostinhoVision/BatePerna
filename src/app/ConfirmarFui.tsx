@@ -30,7 +30,15 @@ import { anotarFui } from "@/lib/fui-no-aparelho";
  *  *"guardei, mando depois"* seria redação minha na tela, e isso é palavra dele.
  *  Está anotado no `docs/RESUME.md` como pergunta, não como dívida escondida. */
 type Placar = { foram: number; barro: number };
-type Fase = "idle" | "perguntando" | "enviando" | "contado" | "erro";
+type Fase = "idle" | "perguntando" | "enviando" | "contado" | "guardado" | "erro";
+
+/** SEM SINAL, O RELATO FICOU GUARDADO (25/10, consertos de confiança do estudo
+ *  "uso e dinheiro"). A fila do aparelho manda sozinha quando o sinal volta
+ *  (`escoar`), mas a tela dizia "não deu pra registrar agora, tenta de novo":
+ *  a pessoa achava que tinha perdido e tocava de novo. O erro ficou só pra
+ *  recusa de verdade (400), onde não há o que guardar. */
+// PENDENTE: redação minha (25/10), esperando a leitura do João.
+export const FUI_GUARDADO = "Guardado no celular. Sobe sozinho quando tiver sinal.";
 
 /** Só um placar de verdade vira placar (I1 da auditoria da 12b): o GET de um
  *  lugar que não está no ar devolve `null`, e qualquer corpo que não tenha os
@@ -218,7 +226,7 @@ export default function ConfirmarFui({
       // fosse pintada primeiro e a gravação falhasse, a pessoa veria "tenta de
       // novo" com o relato perdido de verdade.
       guardar(relato);
-      setFase("erro");
+      setFase("guardado");
       return;
     }
     setPlacar(novo);
@@ -242,6 +250,7 @@ export default function ConfirmarFui({
       )}
       {fase === "enviando" && <div className="soon">enviando…</div>}
       {fase === "contado" && <div className="obrigado">Valeu — anotado 🙏</div>}
+      {fase === "guardado" && <div className="obrigado">{FUI_GUARDADO}</div>}
       {fase === "erro" && (
         <div className="erro">
           não deu pra registrar agora, tenta de novo

@@ -24,6 +24,9 @@ const PORTAS = new Map([
   [path.join(SRC, "lib", "contribuidor-sessao.ts"), "@clerk/nextjs/server"],
   [path.join(SRC, "middleware.ts"), "@clerk/nextjs/server"],
   [path.join(SRC, "app", "contribuir", "layout.tsx"), "@clerk/nextjs"],
+  // A quarta porta (25/10): a tela de entrar DENTRO do app, que desenha o
+  // `<SignIn>` do Clerk em vez de mandar pro portal hospedado dele (em inglês).
+  [path.join(SRC, "app", "contribuir", "entrar", "[[...entrar]]", "page.tsx"), "@clerk/nextjs"],
 ]);
 
 describe("o Clerk entra só pelas portas dele", () => {
@@ -52,7 +55,7 @@ describe("o Clerk entra só pelas portas dele", () => {
     expect(fora.map((f) => path.relative(process.cwd(), f))).toEqual([]);
   });
 
-  it("e as três portas importam mesmo (o guarda não está cego)", () => {
+  it("e as quatro portas importam mesmo (o guarda não está cego)", () => {
     for (const [p, pacote] of PORTAS) {
       expect(readFileSync(p, "utf8"), path.relative(process.cwd(), p)).toMatch(new RegExp(`from\\s+["']${pacote}["']`));
     }

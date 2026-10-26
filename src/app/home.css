@@ -163,6 +163,11 @@
   letter-spacing: .07em;
 }
 .bp .filtro-abrir:active { opacity: .6; }
+/* O DEDO MAIOR QUE O DESENHO (25/10): o botão segue com 32px — a altura da
+   linha entra na conta da dobra (`ALTURA_LINHA_FILTRO_PX`) —, mas a área de
+   toque cresce 6px pra cima e pra baixo, até os 44px. */
+.bp .filtro-abrir { position: relative; }
+.bp .filtro-abrir::after { content: ""; position: absolute; inset: -6px 0; }
 
 /* Em FLUXO NORMAL, nunca `position: absolute`: o painel empurra a folha pra
    baixo (sanfona). Flutuando, ele viraria cortina por cima do mapa — e aí
@@ -184,7 +189,7 @@
 }
 /* 36px de alvo: menor que isso o dedo erra o chip vizinho. */
 .bp .chip {
-  min-height: 36px; padding: .35rem .8rem; border-radius: 20px;
+  min-height: 44px; padding: .35rem .8rem; border-radius: 20px;
   border: 1px solid var(--line); background: var(--screen); color: var(--ink-soft);
   font-family: var(--type); font-size: .72rem; font-weight: 650;
 }
@@ -348,7 +353,7 @@
    inferior ESQUERDO do mapa (o crédito do OpenStreetMap já ocupa o direito),
    escura pra ler sobre qualquer tile. */
 .bp .mapa-pilula {
-  position: absolute; left: 6px; bottom: 6px; z-index: 2; min-height: 32px;
+  position: absolute; left: 6px; bottom: 6px; z-index: 2; min-height: 44px;
   font-family: var(--type); font-size: .68rem; font-weight: 650;
   background: rgba(0, 0, 0, .62); color: #e6e0d4; border: none; border-radius: 20px;
   padding: .4rem .8rem;

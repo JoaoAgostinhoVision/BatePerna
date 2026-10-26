@@ -9,7 +9,9 @@
   --surface-2: #F0E8D8;
   --ink: #2A2016;
   --ink-soft: #6A5B47;
-  --ink-faint: #9C8D75;
+  /* 25/10: era #9C8D75 (2,91:1 na tela) — o "✓ Fui" e os rótulos sumiam ao
+     sol. Agora passa de 4,5:1 na tela e no cartão (tests/lib/contraste-ao-sol). */
+  --ink-faint: #6F614A;
   --line: #E2D8C6;
   --accent: #A5522A;
   --accent-soft: #EEDDCB;
@@ -46,7 +48,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --ground: #100D08; --screen: #1B1710; --surface-2: #241E15;
-    --ink: #EFE6D5; --ink-soft: #B0A488; --ink-faint: #7C7157; --line: #2E2719;
+    --ink: #EFE6D5; --ink-soft: #B0A488; --ink-faint: #9A8E72; --line: #2E2719;
     --accent: #CE7C4B; --accent-soft: #38291B;
     --go: #5FA877; --go-ink: #8FCBA0; --go-bg: #16271C; --go-line: #2C4735;
     --stop: #DA6154; --stop-ink: #EBA498; --stop-bg: #2C1712; --stop-line: #57271F;
@@ -282,7 +284,7 @@ html, body { background: var(--ground); }
    [slug]/page.tsx.) Mais legível que a coordenada (é texto pra ler, não
    referência técnica) e mais discreto que o nome do waypoint. */
 .bp .wp-body .fatos { font-size: .78rem; color: var(--ink-soft); margin-top: .3rem; }
-.bp .maplink { flex: none; text-decoration: none; font-weight: 650; font-size: .82rem; color: #fff; background: var(--accent); padding: .5rem .8rem; border-radius: 10px; white-space: nowrap; }
+.bp .maplink { flex: none; min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; font-weight: 650; font-size: .82rem; color: #fff; background: var(--accent); padding: .5rem .8rem; border-radius: 10px; white-space: nowrap; }
 .bp .maplink:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 /* A cadeia do trajeto (Tarefa 10): as etapas do caminho, abaixo do cartão do
    lugar. Cada uma reaproveita o `.waypoint`/`.wp-body` do cartão de cima, sem o
@@ -292,7 +294,7 @@ html, body { background: var(--ground); }
 
 /* distância: convite discreto, resposta discreta — o carimbo continua sendo
    a coisa mais alta da ficha */
-.bp .dist-btn { margin-top: .35rem; padding: 0; border: 0; background: none;
+.bp .dist-btn { margin-top: 0; min-height: 44px; padding: 0; border: 0; background: none;
   font-family: var(--sans); font-size: .78rem; font-weight: 600; color: var(--accent);
   text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .bp .dist-btn:disabled { color: var(--ink-faint); text-decoration: none; cursor: default; }
@@ -331,11 +333,11 @@ html, body { background: var(--ground); }
 .bp .ticket .hora, .bp .ticket .dias { font-weight: 650; }
 
 .bp .confirmar { margin: 1.3rem 1.2rem 0; padding: .9rem 1rem; border-radius: 14px; border: 1px dashed var(--line); text-align: center; color: var(--ink-faint); }
-.bp .confirmar .btn { display: inline-block; font-weight: 650; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 99px; padding: .5rem 1.15rem; margin-bottom: .4rem; }
+.bp .confirmar .btn { display: inline-block; min-height: 44px; font-weight: 650; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 99px; padding: .5rem 1.15rem; margin-bottom: .4rem; }
 .bp .confirmar .soon { font-family: var(--type); font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; }
 .bp .confirmar .perg .q { font-size: .96rem; color: var(--ink-soft); margin-bottom: .55rem; }
 .bp .confirmar .opts { display: flex; gap: .5rem; justify-content: center; }
-.bp .confirmar .opt { font-weight: 650; border-radius: 99px; padding: .5rem 1rem; border: 1px solid var(--line); cursor: pointer; background: var(--surface-2); color: var(--ink); }
+.bp .confirmar .opt { min-height: 44px; font-weight: 650; border-radius: 99px; padding: .5rem 1rem; border: 1px solid var(--line); cursor: pointer; background: var(--surface-2); color: var(--ink); }
 .bp .confirmar .opt.seco { border-color: var(--go-line); color: var(--go-ink); }
 .bp .confirmar .opt.barro { border-color: var(--stop-line); color: var(--stop-ink); }
 .bp .confirmar .obrigado { font-weight: 650; color: var(--ink); }

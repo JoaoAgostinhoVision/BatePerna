@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
-import ConfirmarFui from "@/app/ConfirmarFui";
+import ConfirmarFui, { FUI_GUARDADO } from "@/app/ConfirmarFui";
 import { CHAVE_FILA, CHAVE_FILA_VELHA, diaRecife } from "@/lib/fila-relato";
 
 afterEach(() => { cleanup(); localStorage.clear(); vi.restoreAllMocks(); });
@@ -48,7 +48,7 @@ describe("ConfirmarFui", () => {
     await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Deu pra ir/ }));
-    await screen.findByText(/tenta de novo/i);
+    await screen.findByText(FUI_GUARDADO);
   });
 
   it("já contou hoje (localStorage) + GET do mount falha: mostra Valeu, não mostra placar vazio contraditório", async () => {
@@ -153,7 +153,7 @@ describe("o relato não se perde sem sinal", () => {
     fireEvent.click(screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Tava ruim/ }));
 
-    await screen.findByText(/tenta de novo/i); // a tela continua dizendo a verdade
+    await screen.findByText(FUI_GUARDADO); // a tela continua dizendo a verdade
     expect(naFila()).toHaveLength(1);
     expect(naFila()[0]).toMatchObject({ slug: "rampa-do-pepe", tipo: "barro" });
   });
@@ -166,7 +166,7 @@ describe("o relato não se perde sem sinal", () => {
     await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Deu pra ir/ }));
-    await screen.findByText(/tenta de novo/i);
+    await screen.findByText(FUI_GUARDADO);
     expect(naFila(), "a tela de erro apareceu antes de guardar").toHaveLength(1);
   });
 
@@ -176,7 +176,7 @@ describe("o relato não se perde sem sinal", () => {
     await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Tava ruim/ }));
-    await screen.findByText(/tenta de novo/i);
+    await screen.findByText(FUI_GUARDADO);
 
     // O celular voltou pro bolso e saiu de novo — o mesmo gatilho que o carimbo
     // usa pra reler a chuva. É quando o sinal costuma ter voltado.
@@ -198,7 +198,7 @@ describe("o relato não se perde sem sinal", () => {
     await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Deu pra ir/ }));
-    await screen.findByText(/tenta de novo/i);
+    await screen.findByText(FUI_GUARDADO);
 
     document.dispatchEvent(new Event("visibilitychange"));
     await new Promise((r) => setTimeout(r, 0));
@@ -413,7 +413,7 @@ describe("o relato carrega a identidade do lugar", () => {
     await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Deu pra ir/ }));
-    await screen.findByText(/tenta de novo/i);
+    await screen.findByText(FUI_GUARDADO);
     expect(naFila()).toEqual([{ slug: A, tipo: "seco", dia: hoje(), lugar: P }]);
   });
 
@@ -523,7 +523,7 @@ describe("o relato carrega a identidade do lugar", () => {
     await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Deu pra ir/ }));
-    await screen.findByText(/tenta de novo/i);
+    await screen.findByText(FUI_GUARDADO);
     expect(naFila()).toEqual([{ slug: A, tipo: "seco", dia: hoje(), lugar: P }]);
   });
 
@@ -591,13 +591,13 @@ describe("o relato carrega a identidade do lugar", () => {
     expect(naFila()).toHaveLength(2);
   });
 
-  it.each(NAO_PLACAR)("%s no envio online: o relato é GUARDADO e a tela é de erro", async (_nome, resposta) => {
+  it.each(NAO_PLACAR)("%s no envio online: o relato é GUARDADO e a tela diz que guardou", async (_nome, resposta) => {
     rede(sempre(resposta), null);
     render(<ConfirmarFui slug={A} lugar={P} />);
     await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Deu pra ir/ }));
-    await screen.findByText(/tenta de novo/i);
+    await screen.findByText(FUI_GUARDADO);
     expect(naFila()).toEqual([{ slug: A, tipo: "seco", dia: hoje(), lugar: P }]);
     expect(screen.queryByText(/anotado/i)).toBeNull();
     expect(localStorage.getItem(`bp:contou:L${P}:${hoje()}`)).toBeNull();
@@ -659,7 +659,7 @@ describe("a tela e as duas chaves da fila", () => {
     await waitFor(() => screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Fui/ }));
     fireEvent.click(screen.getByRole("button", { name: /Tava ruim/ }));
-    await screen.findByText(/tenta de novo/i);
+    await screen.findByText(FUI_GUARDADO);
     expect(localStorage.getItem(CHAVE_FILA_VELHA)).toBeNull();
     expect(JSON.parse(localStorage.getItem(CHAVE_FILA) ?? "[]")).toEqual([
       { slug: A, tipo: "barro", dia: hoje(), lugar: P },

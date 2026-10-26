@@ -389,6 +389,8 @@ const NAO_SAO_FRASE: Readonly<Record<string, readonly string[]>> = {
   // `CHAVE_FUI` = a chave do `localStorage` das idas anotadas no aparelho
   // (25/10, o perfil dela): nunca vai à tela de ninguém.
   "src/lib/fui-no-aparelho.ts": ["CHAVE_FUI"],
+  // `ENTRAR` = o endereço da tela de entrar dentro do app (25/10): é URL, não frase.
+  "src/lib/entrar.ts": ["ENTRAR"],
 };
 
 /** As constantes de texto exportadas que nasceram depois da BASE, em todo

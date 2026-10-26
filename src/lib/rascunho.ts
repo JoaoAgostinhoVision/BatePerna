@@ -44,7 +44,8 @@ export function slugDoNome(nome: string): string {
  *  exige esta lista igual, nas duas direções, e um outro caso
  *  exige que nenhuma tenha hífen. Pasta de rota nova sem reserva, ou com hífen,
  *  fica vermelha. */
-export const SLUGS_RESERVADOS: readonly string[] = ["admin", "api", "chuva", "contribuir", "icones", "trilhas", "novo"];
+// "entrar" (25/10): `/contribuir/entrar`, a tela de entrar dentro do app.
+export const SLUGS_RESERVADOS: readonly string[] = ["admin", "api", "chuva", "contribuir", "icones", "trilhas", "novo", "entrar"];
 
 /** O nome com a cidade entre parênteses, quando há cidade — é como uma frase do
  *  painel distingue dois lugares de mesmo nome. Sem cidade, só o nome: nunca
