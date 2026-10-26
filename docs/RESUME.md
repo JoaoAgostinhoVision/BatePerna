@@ -2,7 +2,17 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, MADRUGADA: CONSERTOS DE CONFIANÇA na branch + ele escolheu "TROCAR TUDO" (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 26/10: CONSERTOS DE CONFIANÇA NO AR; esperando ELE decidir o domínio (vence TUDO abaixo)
+
+Ele disse *"pode subir os consertos"*. Deploy no ar; conferido: /, /trilhas, ficha e /contribuir/entrar 200; /contribuir
+sem sessão → 307 pra `/contribuir/entrar?redirect_url=…` (dentro do app). Visto no navegador a 375 px: login em
+português, na moldura do app, terracota; o cartão passava da borda e foi consertado (`elements.cardBox` 100%) e
+republicado. Ainda aparece "Continuar em clerk-amber-magnet" e "Development mode" → **ações DELE no painel do Clerk**
+(renomear a aplicação pra BatePerna; produção exige domínio próprio). `main` mergeado e pushado.
+→ Próximo: ele responde se compra domínio (e qual). Com domínio: spec da migração "trocar tudo" (Cloudflare + MET
+Norway + municípios IBGE) + Clerk produção. Sem domínio: trocar só chuva e busca de cidade, hospedagem fica na Vercel.
+
+## (anterior) 25/10, MADRUGADA: CONSERTOS DE CONFIANÇA na branch + ele escolheu "TROCAR TUDO"
 
 Ele disse *"começa aqui"* (passo 1 do estudo) e *"temos que substituir o que usamos que precisa de pagar caso a gente
 comece a usar comercialmente"*. **Consertos feitos** na branch `consertos-de-confianca` (`ab62889`, NÃO no ar):
