@@ -182,6 +182,8 @@ const LIDAS_EM_25_10: Readonly<Record<string, readonly string[]>> = {
   // O perfil dela (25/10): as cinco palavras novas, lidas no mesmo dia.
   "src/app/contribuir/palavras.ts": ["TITULO_VOCE", "TITULO_FUI", "FUI_VAZIO", "FOI_EM"],
   "src/app/BarraNavegacao.tsx": ["ITEM_VOCE"],
+  // Os consertos de confiança (25/10): a frase do "✓ Fui" guardado sem sinal.
+  "src/app/ConfirmarFui.tsx": ["FUI_GUARDADO"],
 };
 /** As frases ANTIGAS que ele leu em 25/10: arquivo e nome. */
 const ANTIGAS_LIDAS_EM_25_10: readonly (readonly [string, string])[] = [["src/app/admin/campos/palavras.ts", "DESFAZER"]];
@@ -755,7 +757,7 @@ describe("toda frase nova desta rodada nasce marcada", () => {
       ),
     );
     expect(problemas).toEqual([]);
-    expect(Object.values(LIDAS_EM_25_10).flat().length).toBe(6);
+    expect(Object.values(LIDAS_EM_25_10).flat().length).toBe(7);
   });
 
   it(`toda marca LIDA de ${LIDAS_EM_25} em src é de um nome da lista de 25/10 ou de uma frase antiga que ele leu nesse dia`, () => {
@@ -774,8 +776,8 @@ describe("toda frase nova desta rodada nasce marcada", () => {
       return porArquivo.get(arquivo)!.has(linha) ? [] : [`${arquivo}:${linha + 1}: ${ler(arquivo)[linha].trim()}`];
     });
     expect(fora).toEqual([]);
-    // Não-vacuidade: as seis frases novas e a antiga.
-    expect(marcas.length).toBe(7);
+    // Não-vacuidade: as sete frases novas e a antiga.
+    expect(marcas.length).toBe(8);
   });
 
   it.each(ALVOS_LIDOS_EM_20_10)("%s: %s — o alvo existe, numa linha só, com a LIDA de 20/10 e sem PENDENTE", (arquivo, alvo) => {

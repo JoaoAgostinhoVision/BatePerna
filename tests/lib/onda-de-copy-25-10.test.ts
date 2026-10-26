@@ -25,3 +25,9 @@ describe("as palavras do perfil que o João leu em 25/10, ao pé da letra", () =
     expect((await import("@/app/BarraNavegacao")).ITEM_VOCE).toBe("Você");
   });
 });
+
+describe("a frase do Fui guardado que o João escolheu em 25/10", () => {
+  it("FUI_GUARDADO", async () => {
+    expect((await import("@/app/ConfirmarFui")).FUI_GUARDADO).toBe("Valeu — guardei no celular e mando quando tiver sinal 🙏");
+  });
+});

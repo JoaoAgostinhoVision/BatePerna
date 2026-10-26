@@ -37,8 +37,8 @@ type Fase = "idle" | "perguntando" | "enviando" | "contado" | "guardado" | "erro
  *  (`escoar`), mas a tela dizia "não deu pra registrar agora, tenta de novo":
  *  a pessoa achava que tinha perdido e tocava de novo. O erro ficou só pra
  *  recusa de verdade (400), onde não há o que guardar. */
-// PENDENTE: redação minha (25/10), esperando a leitura do João.
-export const FUI_GUARDADO = "Guardado no celular. Sobe sozinho quando tiver sinal.";
+// LIDA: o João escolheu esta frase no chat, lendo-a por extenso, em 2026-10-25. Redação minha, com o "Valeu" e o 🙏 do "anotado".
+export const FUI_GUARDADO = "Valeu — guardei no celular e mando quando tiver sinal 🙏";
 
 /** Só um placar de verdade vira placar (I1 da auditoria da 12b): o GET de um
  *  lugar que não está no ar devolve `null`, e qualquer corpo que não tenha os
