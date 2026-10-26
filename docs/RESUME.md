@@ -2,7 +2,26 @@
 
 > **Este arquivo mora em `docs/RESUME.md` e é versionado — é a única coisa que sobrevive à sessão.**
 
-## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, NOITE: ESTUDO "uso e dinheiro" PUBLICADO, esperando as respostas dele (vence TUDO abaixo)
+## ▶ SE O JOÃO DISSER SÓ "CONTINUA" — 25/10, MADRUGADA: CONSERTOS DE CONFIANÇA na branch + ele escolheu "TROCAR TUDO" (vence TUDO abaixo)
+
+Ele disse *"começa aqui"* (passo 1 do estudo) e *"temos que substituir o que usamos que precisa de pagar caso a gente
+comece a usar comercialmente"*. **Consertos feitos** na branch `consertos-de-confianca` (`ab62889`, NÃO no ar):
+tela de entrar DENTRO do app (`/contribuir/entrar`, `<SignIn withSignUp>`, `@clerk/localizations` ptBR, `signInUrl` no
+middleware e no provider; quarta porta no guarda; "entrar" reservado); "✓ Fui" sem sinal → fase `guardado` com
+`FUI_GUARDADO` = "Valeu — guardei no celular e mando quando tiver sinal 🙏" (LIDA 25/10, escolha dele); `--ink-faint`
+#6F614A / #9A8E72 (≥4,5:1); 44px nos alvos (o "Filtrar" só na área de toque, por `::after`, pra não mexer na dobra).
+3391/3391, tsc, build, mutar 42/0/0. 🔴 A chave do Clerk no ar é `pk_test` (instância de DESENVOLVIMENTO): o selo
+"Development mode" continua até haver instância de produção, que exige DOMÍNIO PRÓPRIO; e o nome "clerk-amber-magnet"
+some se ele renomear a aplicação no painel do Clerk.
+**Estudo de dependências** (agente, 25/10): só doação por Pix não muda nada; a 1ª receita não-doação torna comercial a
+Vercel Hobby (Pro US$20/mês) e a Open-Meteo grátis (Standard US$29/mês) — previsão E geocodificação. OSM tiles, Nominatim,
+Clerk (até 50 mil/mês) e Turso podem esperar (Turso tem cláusula ambígua). **Ele escolheu "trocar tudo, custo perto de
+zero"**: chuva → MET Norway (CC BY 4.0) + cron próprio guardando a série horária no Turso; busca de cidade → tabela de
+municípios de PE (IBGE) no banco; hospedagem → Cloudflare Workers (OpenNext). Projeto GRANDE: precisa spec + plano.
+→ Próximo: ok dele pro deploy dos consertos; decidir domínio próprio (afeta Clerk produção E a saída da Vercel, porque
+`bateperna.vercel.app` some na migração e quebra links); então spec da migração (brainstorming curto → writing-plans → SDD).
+
+## (anterior) 25/10, NOITE: ESTUDO "uso e dinheiro" PUBLICADO
 
 Ele pediu: *"use os agentes para tentar fazer que esse app fique mais utilizável… e estudado como eu posso ganhar
 dinheiro… arroche o nó"*. Quatro agentes em paralelo (só leitura): jornada de uso, técnica/PWA/acesso, mercado, produto.
