@@ -20,7 +20,12 @@ export default function Entrar() {
         routing="path"
         path={ENTRAR}
         withSignUp
-        appearance={{ variables: { colorPrimary: "#A5522A", fontFamily: "inherit", borderRadius: "12px" } }}
+        appearance={{
+          variables: { colorPrimary: "#A5522A", fontFamily: "inherit", borderRadius: "12px" },
+          // Medido a 375 px no ar (25/10): o cartão do Clerk tem largura fixa e
+          // passava da borda direita da moldura. Aqui ele ocupa a coluna.
+          elements: { rootBox: { width: "100%" }, cardBox: { width: "100%", maxWidth: "100%" } },
+        }}
       />
     </main>
   );
